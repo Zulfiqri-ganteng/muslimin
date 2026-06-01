@@ -317,21 +317,21 @@
         </section>
 
         <!-- ===================== NAVIGASI WIZARD ===================== -->
-        <div class="mt-6 flex items-center justify-between gap-3">
-            <button type="button" id="prevBtn" class="btn-nav-secondary invisible">
-                <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7"/></svg>
-                Sebelumnya
-            </button>
-            <div class="flex items-center gap-3">
-                <span id="submitHint" class="hidden text-right text-xs text-slate-400 max-w-[170px] leading-snug">
-                    Lengkapi data wajib &amp; centang pernyataan untuk <?= $isEdit ? 'menyimpan' : 'mengirim' ?>.
-                </span>
+        <div class="mt-6 space-y-3">
+            <p id="submitHint" class="hidden text-center text-xs text-slate-400 leading-snug">
+                Lengkapi data wajib &amp; centang pernyataan untuk <?= $isEdit ? 'menyimpan' : 'mengirim' ?>.
+            </p>
+            <div class="flex items-center justify-between gap-2 sm:gap-3">
+                <button type="button" id="prevBtn" class="btn-nav-secondary invisible">
+                    <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7"/></svg>
+                    Kembali
+                </button>
                 <button type="button" id="nextBtn" class="btn-nav-primary">
                     Lanjut
                     <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7"/></svg>
                 </button>
                 <button type="submit" id="submitBtn" class="btn-nav-gold hidden">
-                    <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/></svg>
+                    <svg class="w-5 h-5 shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/></svg>
                     <?= $isEdit ? 'Simpan Perbaikan' : 'Kirim Kesediaan' ?>
                 </button>
             </div>
@@ -362,9 +362,9 @@
     .step-dot.is-done { @apply cursor-pointer; }
 
     /* Tombol navigasi */
-    .btn-nav-secondary { @apply inline-flex items-center gap-1.5 rounded-xl border border-slate-300 bg-white px-5 py-3 text-sm font-semibold text-slate-600 hover:bg-slate-50 transition active:scale-95; }
-    .btn-nav-primary { @apply inline-flex items-center gap-1.5 rounded-xl bg-brand-600 px-7 py-3 text-sm font-bold text-white shadow-lg shadow-brand-600/20 hover:bg-brand-700 transition active:scale-95; }
-    .btn-nav-gold { @apply inline-flex items-center gap-2 rounded-xl bg-gold-500 px-7 py-3 text-sm font-bold text-brand-900 shadow-lg shadow-gold-500/20 hover:bg-gold-400 transition active:scale-95; }
+    .btn-nav-secondary { @apply inline-flex items-center justify-center gap-1.5 whitespace-nowrap rounded-xl border border-slate-300 bg-white px-4 sm:px-5 py-3 text-sm font-semibold text-slate-600 hover:bg-slate-50 transition active:scale-95; }
+    .btn-nav-primary { @apply inline-flex items-center justify-center gap-1.5 whitespace-nowrap rounded-xl bg-brand-600 px-6 sm:px-7 py-3 text-sm font-bold text-white shadow-lg shadow-brand-600/20 hover:bg-brand-700 transition active:scale-95; }
+    .btn-nav-gold { @apply inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-xl bg-gold-500 px-5 sm:px-7 py-3 text-sm font-bold text-brand-900 shadow-lg shadow-gold-500/20 hover:bg-gold-400 transition active:scale-95; }
 </style>
 
 <style>

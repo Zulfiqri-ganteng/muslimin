@@ -14,6 +14,15 @@ class Form extends BaseController
         $this->settings = new SettingModel();
     }
 
+    /** Landing page / beranda sistem. */
+    public function home()
+    {
+        return view('public/home', [
+            'title'   => 'Beranda',
+            'setting' => $this->settings->get(),
+        ]);
+    }
+
     /** Halaman form publik untuk guru. */
     public function index()
     {

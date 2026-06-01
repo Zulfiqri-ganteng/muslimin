@@ -5,7 +5,8 @@ use CodeIgniter\Router\RouteCollection;
 /** @var RouteCollection $routes */
 
 // ===================== PUBLIK (GURU) =====================
-$routes->get('/', 'Form::index');
+$routes->get('/', 'Form::home');
+$routes->get('isi', 'Form::index');
 $routes->post('kirim', 'Form::submit');
 $routes->get('terima-kasih', 'Form::success');
 $routes->get('tutup', 'Form::closed');
