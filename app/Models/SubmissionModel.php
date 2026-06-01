@@ -16,7 +16,7 @@ class SubmissionModel extends Model
         'pendidikan_terakhir', 'guru_mapel', 'status_kepegawaian', 'nomor_hp',
         'mapel_diampu', 'total_jam', 'tugas_tambahan', 'tugas_lainnya',
         'kesediaan_jam', 'preferensi', 'ketersediaan_hari', 'keterangan_tambahan',
-        'bersedia_mengajar', 'komitmen_setuju', 'status', 'catatan_admin', 'ip_address',
+        'bersedia_mengajar', 'komitmen_setuju', 'status', 'catatan_admin', 'edit_token', 'ip_address',
     ];
 
     protected $useTimestamps = true;

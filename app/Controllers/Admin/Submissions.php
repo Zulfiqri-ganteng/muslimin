@@ -69,10 +69,23 @@ class Submissions extends BaseController
             return redirect()->to(site_url('admin/submissions'))->with('error', 'Data tidak ditemukan.');
         }
 
-        $this->model->update($id, [
-            'status'        => $this->request->getPost('status') ?: 'baru',
+        $status = $this->request->getPost('status') ?: 'baru';
+        $update = [
+            'status'        => $status,
             'catatan_admin' => trim((string) $this->request->getPost('catatan_admin')),
-        ]);
+        ];
+
+        // "Perlu Revisi" (ditolak): buatkan token agar guru bisa membuka tautan revisi.
+        // Status lain: hapus token supaya tautan lama tidak bisa dipakai lagi.
+        if ($status === 'ditolak') {
+            if (empty($row['edit_token'])) {
+                $update['edit_token'] = bin2hex(random_bytes(20));
+            }
+        } else {
+            $update['edit_token'] = null;
+        }
+
+        $this->model->update($id, $update);
 
         return redirect()->to(site_url('admin/submissions/view/' . $id))->with('success', 'Status kesediaan berhasil diperbarui.');
     }

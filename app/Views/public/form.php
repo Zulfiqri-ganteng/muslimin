@@ -24,9 +24,32 @@
         'Melaksanakan tugas tambahan dengan penuh tanggung jawab.',
         'Mencapai target kinerja yang ditetapkan sekolah.',
     ];
-    // Label langkah untuk stepper
     $stepLabels = ['Identitas', 'Mata Pelajaran', 'Tugas Tambahan', 'Jam Mengajar', 'Lampiran', 'Pernyataan'];
     $err = session('errors') ?? [];
+
+    // ---- Mode: pengisian baru ATAU revisi (ter-isi data lama) ----
+    $d          = $data ?? [];                       // data lama (sudah di-decode) saat mode revisi
+    $isEdit     = ! empty($editToken);
+    $formAction = $isEdit ? site_url('revisi/' . $editToken) : site_url('kirim');
+
+    // Nilai field: utamakan old() (saat validasi gagal), lalu data lama
+    $fv = static function (string $field, $default = '') use ($d) {
+        $o = old($field);
+        return $o !== null ? $o : ($d[$field] ?? $default);
+    };
+
+    // Pilihan yang sudah ter-set (radio / checkbox / array)
+    $selStatus = old('status_kepegawaian') ?? ($d['status_kepegawaian'] ?? '');
+    $selTugas  = old('tugas')              ?? ($d['tugas_tambahan'] ?? []);
+    $selJam    = old('jam_kesediaan')      ?? ($d['kesediaan_jam'] ?? []);
+    $selHari   = old('hari')               ?? ($d['ketersediaan_hari'] ?? []);
+    $selPref   = old('pref');
+    if ($selPref === null) {
+        $selPref = [];
+        foreach (($d['preferensi'] ?? []) as $p) {
+            $selPref[$p['prioritas']] = $p['mapel'];
+        }
+    }
 ?>
 
 <div class="max-w-3xl mx-auto px-4 py-6 sm:py-10" id="formTop">
@@ -47,6 +70,17 @@
             </p>
         </div>
     </div>
+
+    <!-- ===================== BANNER MODE REVISI ===================== -->
+    <?php if ($isEdit): ?>
+        <div class="mt-5 rounded-xl bg-amber-50 border border-amber-200 px-5 py-4">
+            <p class="font-semibold text-amber-800">✎ Anda sedang memperbaiki data kesediaan.</p>
+            <?php if (! empty($adminNote)): ?>
+                <p class="mt-1 text-sm text-amber-700"><span class="font-medium">Catatan admin:</span> <?= esc($adminNote) ?></p>
+            <?php endif; ?>
+            <p class="mt-1 text-xs text-amber-600">Perbaiki bagian yang perlu, lalu simpan. Tautan ini hanya berlaku satu kali.</p>
+        </div>
+    <?php endif; ?>
 
     <!-- ===================== ALERT ERROR ===================== -->
     <?php if (session('error') || ! empty($err)): ?>
@@ -78,7 +112,7 @@
         </div>
     </div>
 
-    <form action="<?= site_url('kirim') ?>" method="post" enctype="multipart/form-data" id="formKesediaan" class="mt-6">
+    <form action="<?= $formAction ?>" method="post" enctype="multipart/form-data" id="formKesediaan" class="mt-6">
         <?= csrf_field() ?>
 
         <!-- ===================== STEP 1 — IDENTITAS GURU ===================== -->
@@ -90,39 +124,39 @@
             <div class="p-6 grid grid-cols-1 sm:grid-cols-2 gap-5">
                 <div class="sm:col-span-2">
                     <label class="lbl">Nama Lengkap <span class="text-red-500">*</span></label>
-                    <input type="text" name="nama_lengkap" value="<?= old('nama_lengkap') ?>" required class="inp" placeholder="Nama lengkap beserta gelar">
+                    <input type="text" name="nama_lengkap" value="<?= esc($fv('nama_lengkap'), 'attr') ?>" required class="inp" placeholder="Nama lengkap beserta gelar">
                 </div>
                 <div>
                     <label class="lbl">NIP / NUPTK <span class="text-red-500">*</span></label>
-                    <input type="text" name="nip_nuptk" value="<?= old('nip_nuptk') ?>" required class="inp" placeholder="Nomor NIP / NUPTK">
-                    <p class="text-xs text-slate-400 mt-1">Satu NIP/NUPTK hanya bisa mengisi 1 kali.</p>
+                    <input type="text" name="nip_nuptk" value="<?= esc($fv('nip_nuptk'), 'attr') ?>" required class="inp" placeholder="Nomor NIP / NUPTK">
+                    <?php if (! $isEdit): ?><p class="text-xs text-slate-400 mt-1">Satu NIP/NUPTK hanya bisa mengisi 1 kali.</p><?php endif; ?>
                 </div>
                 <div>
                     <label class="lbl">Nomor HP / WhatsApp <span class="text-red-500">*</span></label>
-                    <input type="text" name="nomor_hp" value="<?= old('nomor_hp') ?>" required class="inp" placeholder="08xxxxxxxxxx">
+                    <input type="text" name="nomor_hp" value="<?= esc($fv('nomor_hp'), 'attr') ?>" required class="inp" placeholder="08xxxxxxxxxx">
                 </div>
                 <div>
                     <label class="lbl">Tempat Lahir</label>
-                    <input type="text" name="tempat_lahir" value="<?= old('tempat_lahir') ?>" class="inp" placeholder="Kota kelahiran">
+                    <input type="text" name="tempat_lahir" value="<?= esc($fv('tempat_lahir'), 'attr') ?>" class="inp" placeholder="Kota kelahiran">
                 </div>
                 <div>
                     <label class="lbl">Tanggal Lahir</label>
-                    <input type="date" name="tanggal_lahir" value="<?= old('tanggal_lahir') ?>" class="inp">
+                    <input type="date" name="tanggal_lahir" value="<?= esc($fv('tanggal_lahir'), 'attr') ?>" class="inp">
                 </div>
                 <div>
                     <label class="lbl">Pendidikan Terakhir</label>
-                    <input type="text" name="pendidikan_terakhir" value="<?= old('pendidikan_terakhir') ?>" class="inp" placeholder="Contoh: S1 Pendidikan Matematika">
+                    <input type="text" name="pendidikan_terakhir" value="<?= esc($fv('pendidikan_terakhir'), 'attr') ?>" class="inp" placeholder="Contoh: S1 Pendidikan Matematika">
                 </div>
                 <div>
                     <label class="lbl">Jabatan — Guru Mata Pelajaran</label>
-                    <input type="text" name="guru_mapel" value="<?= old('guru_mapel') ?>" class="inp" placeholder="Contoh: Matematika">
+                    <input type="text" name="guru_mapel" value="<?= esc($fv('guru_mapel'), 'attr') ?>" class="inp" placeholder="Contoh: Matematika">
                 </div>
                 <div class="sm:col-span-2">
                     <label class="lbl">Status Kepegawaian <span class="text-red-500">*</span></label>
                     <div class="mt-2 flex flex-wrap gap-2">
                         <?php foreach (['PNS', 'PPPK', 'GTY', 'GTT'] as $st): ?>
                             <label class="radio-pill">
-                                <input type="radio" name="status_kepegawaian" value="<?= $st ?>" class="peer sr-only" <?= old('status_kepegawaian') === $st ? 'checked' : '' ?> required>
+                                <input type="radio" name="status_kepegawaian" value="<?= $st ?>" class="peer sr-only" <?= $selStatus === $st ? 'checked' : '' ?> required>
                                 <span class="pill-label"><?= $st ?></span>
                             </label>
                         <?php endforeach; ?>
@@ -178,9 +212,9 @@
             <div class="p-6">
                 <p class="text-sm text-slate-500 mb-4">Saya bersedia menerima tugas tambahan sesuai kebutuhan sekolah (centang yang sesuai):</p>
                 <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                    <?php $oldTugas = old('tugas') ?? []; foreach ($tugasOpt as $t): ?>
+                    <?php foreach ($tugasOpt as $t): ?>
                         <label class="check-card">
-                            <input type="checkbox" name="tugas[]" value="<?= esc($t) ?>" class="peer sr-only" <?= in_array($t, $oldTugas, true) ? 'checked' : '' ?>>
+                            <input type="checkbox" name="tugas[]" value="<?= esc($t, 'attr') ?>" class="peer sr-only" <?= in_array($t, $selTugas, true) ? 'checked' : '' ?>>
                             <span class="check-box"></span>
                             <span class="text-sm text-slate-700"><?= esc($t) ?></span>
                         </label>
@@ -188,7 +222,7 @@
                 </div>
                 <div class="mt-4">
                     <label class="lbl">Tugas lainnya</label>
-                    <input type="text" name="tugas_lainnya" value="<?= old('tugas_lainnya') ?>" class="inp" placeholder="Tugas tambahan lain (opsional)">
+                    <input type="text" name="tugas_lainnya" value="<?= esc($fv('tugas_lainnya'), 'attr') ?>" class="inp" placeholder="Tugas tambahan lain (opsional)">
                 </div>
             </div>
         </section>
@@ -200,9 +234,9 @@
                 <h2 class="text-white font-bold text-lg">Kesediaan Jam Mengajar</h2>
             </div>
             <div class="p-6 space-y-3">
-                <?php $oldJamK = old('jam_kesediaan') ?? []; foreach ($jamOpt as $j): ?>
+                <?php foreach ($jamOpt as $j): ?>
                     <label class="check-card">
-                        <input type="checkbox" name="jam_kesediaan[]" value="<?= esc($j) ?>" class="peer sr-only" <?= in_array($j, $oldJamK, true) ? 'checked' : '' ?>>
+                        <input type="checkbox" name="jam_kesediaan[]" value="<?= esc($j, 'attr') ?>" class="peer sr-only" <?= in_array($j, $selJam, true) ? 'checked' : '' ?>>
                         <span class="check-box"></span>
                         <span class="text-sm text-slate-700"><?= esc($j) ?></span>
                     </label>
@@ -223,10 +257,10 @@
                         <span class="text-gold-500">★</span> A. Preferensi Mata Pelajaran
                     </h3>
                     <div class="space-y-2">
-                        <?php $oldPref = old('pref') ?? []; for ($i = 1; $i <= 3; $i++): ?>
+                        <?php for ($i = 1; $i <= 3; $i++): ?>
                             <div class="flex items-center gap-3">
                                 <span class="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-slate-100 text-slate-600 text-sm font-bold"><?= $i ?></span>
-                                <input type="text" name="pref[<?= $i ?>]" value="<?= esc($oldPref[$i] ?? '') ?>" class="inp" placeholder="Prioritas <?= $i ?> &mdash; mata pelajaran">
+                                <input type="text" name="pref[<?= $i ?>]" value="<?= esc($selPref[$i] ?? '', 'attr') ?>" class="inp" placeholder="Prioritas <?= $i ?> &mdash; mata pelajaran">
                             </div>
                         <?php endfor; ?>
                     </div>
@@ -235,14 +269,14 @@
                 <div>
                     <h3 class="font-semibold text-brand-700 mb-3 flex items-center gap-2">📅 B. Ketersediaan Hari Mengajar</h3>
                     <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                        <?php $oldHari = old('hari') ?? []; foreach ($hariList as $h): ?>
+                        <?php foreach ($hariList as $h): ?>
                             <div class="flex items-center justify-between rounded-lg border border-slate-200 px-4 py-2">
                                 <span class="text-sm font-medium text-slate-700"><?= $h ?></span>
                                 <div class="flex gap-1.5">
-                                    <?php foreach (['Ya', 'Tidak'] as $v): ?>
+                                    <?php foreach (['Ya', 'Tidak'] as $opt): ?>
                                         <label class="radio-pill-sm">
-                                            <input type="radio" name="hari[<?= $h ?>]" value="<?= $v ?>" class="peer sr-only" <?= (($oldHari[$h] ?? '') === $v) ? 'checked' : '' ?>>
-                                            <span class="pill-label-sm <?= $v === 'Ya' ? 'data-ya' : 'data-no' ?>"><?= $v ?></span>
+                                            <input type="radio" name="hari[<?= $h ?>]" value="<?= $opt ?>" class="peer sr-only" <?= (($selHari[$h] ?? '') === $opt) ? 'checked' : '' ?>>
+                                            <span class="pill-label-sm <?= $opt === 'Ya' ? 'data-ya' : 'data-no' ?>"><?= $opt ?></span>
                                         </label>
                                     <?php endforeach; ?>
                                 </div>
@@ -253,7 +287,7 @@
                 <!-- C. Keterangan Tambahan -->
                 <div>
                     <h3 class="font-semibold text-brand-700 mb-3 flex items-center gap-2">✎ C. Keterangan Tambahan</h3>
-                    <textarea name="keterangan_tambahan" rows="3" class="inp" placeholder="Catatan / keterangan tambahan (opsional)"><?= old('keterangan_tambahan') ?></textarea>
+                    <textarea name="keterangan_tambahan" rows="3" class="inp" placeholder="Catatan / keterangan tambahan (opsional)"><?= esc($fv('keterangan_tambahan')) ?></textarea>
                 </div>
             </div>
         </section>
@@ -275,7 +309,7 @@
                 </div>
 
                 <label class="check-card mt-5 !items-start bg-brand-50 border-brand-200">
-                    <input type="checkbox" name="komitmen_setuju" value="1" class="peer sr-only" required <?= old('komitmen_setuju') ? 'checked' : '' ?>>
+                    <input type="checkbox" name="komitmen_setuju" value="1" class="peer sr-only" required <?= $fv('komitmen_setuju') ? 'checked' : '' ?>>
                     <span class="check-box mt-0.5"></span>
                     <span class="text-sm text-slate-700 font-medium">Saya menyatakan <b>bersedia</b> melaksanakan tugas mengajar T.P. <?= $tahun ?> dan menyetujui seluruh komitmen di atas. <span class="text-red-500">*</span></span>
                 </label>
@@ -294,7 +328,7 @@
             </button>
             <button type="submit" id="submitBtn" class="btn-nav-gold hidden">
                 <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/></svg>
-                Kirim Kesediaan
+                <?= $isEdit ? 'Simpan Perbaikan' : 'Kirim Kesediaan' ?>
             </button>
         </div>
     </form>
@@ -333,9 +367,10 @@
 <?= $this->section('scripts') ?>
 <script>
     /* ---------- Tabel Mata Pelajaran ---------- */
-    const oldMapel = <?= json_encode(old('mapel') ?: []) ?>;
-    const oldKelas = <?= json_encode(old('kelas') ?: []) ?>;
-    const oldJamM  = <?= json_encode(old('jam') ?: []) ?>;
+    const oldMapel  = <?= json_encode(old('mapel') ?: []) ?>;
+    const oldKelas  = <?= json_encode(old('kelas') ?: []) ?>;
+    const oldJamM   = <?= json_encode(old('jam') ?: []) ?>;
+    const editMapel = <?= json_encode($d['mapel_diampu'] ?? []) ?>;
 
     const body    = document.getElementById('mapelBody');
     const totalEl = document.getElementById('totalJam');
@@ -353,8 +388,8 @@
         tr.className = 'border-b border-slate-100';
         tr.innerHTML = `
             <td class="px-3 py-2 text-center text-slate-500 row-no"></td>
-            <td class="px-2 py-2"><input type="text" name="mapel[]" value="${mapel.replace(/"/g,'&quot;')}" class="w-full rounded-md border border-slate-200 px-2.5 py-1.5 text-sm focus:border-brand-500 focus:ring-1 focus:ring-brand-500/30 outline-none" placeholder="Mata pelajaran"></td>
-            <td class="px-2 py-2"><input type="text" name="kelas[]" value="${kelas.replace(/"/g,'&quot;')}" class="w-full rounded-md border border-slate-200 px-2.5 py-1.5 text-sm focus:border-brand-500 focus:ring-1 focus:ring-brand-500/30 outline-none" placeholder="X / XI"></td>
+            <td class="px-2 py-2"><input type="text" name="mapel[]" value="${String(mapel).replace(/"/g,'&quot;')}" class="w-full rounded-md border border-slate-200 px-2.5 py-1.5 text-sm focus:border-brand-500 focus:ring-1 focus:ring-brand-500/30 outline-none" placeholder="Mata pelajaran"></td>
+            <td class="px-2 py-2"><input type="text" name="kelas[]" value="${String(kelas).replace(/"/g,'&quot;')}" class="w-full rounded-md border border-slate-200 px-2.5 py-1.5 text-sm focus:border-brand-500 focus:ring-1 focus:ring-brand-500/30 outline-none" placeholder="X / XI"></td>
             <td class="px-2 py-2"><input type="number" min="0" name="jam[]" value="${jam}" class="jam-input w-full rounded-md border border-slate-200 px-2.5 py-1.5 text-sm text-center focus:border-brand-500 focus:ring-1 focus:ring-brand-500/30 outline-none" placeholder="0"></td>
             <td class="px-2 py-2 text-center"><button type="button" class="del-row text-slate-300 hover:text-red-500"><svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg></button></td>`;
         body.appendChild(tr);
@@ -365,8 +400,11 @@
         renumber();
     }
     document.getElementById('addMapel').addEventListener('click', () => addRow());
+
     if (oldMapel.length) {
         oldMapel.forEach((m, i) => addRow(m || '', oldKelas[i] || '', oldJamM[i] || ''));
+    } else if (editMapel.length) {
+        editMapel.forEach(m => addRow(m.mapel || '', m.kelas || '', m.jam || ''));
     } else {
         addRow(); addRow(); addRow();
     }
@@ -402,17 +440,15 @@
 
     function validateStep(idx) {
         const stepEl = steps[idx];
-        // Field biasa (teks, tanggal, dll) yang wajib
         const fields = stepEl.querySelectorAll('input:not([type=radio]):not([type=checkbox]), select, textarea');
         for (const f of fields) {
             if (!f.checkValidity()) { f.reportValidity(); return false; }
         }
-        // Grup radio wajib (mis. Status Kepegawaian)
         const reqRadios = Array.from(stepEl.querySelectorAll('input[type=radio][required]'));
         const names = [...new Set(reqRadios.map(r => r.name))];
         for (const n of names) {
-            const checked = stepEl.querySelector('input[name="' + (window.CSS && CSS.escape ? CSS.escape(n) : n) + '"]:checked');
-            if (!checked) {
+            const sel = 'input[name="' + (window.CSS && CSS.escape ? CSS.escape(n) : n) + '"]:checked';
+            if (!stepEl.querySelector(sel)) {
                 alert('Silakan pilih ' + (n === 'status_kepegawaian' ? 'Status Kepegawaian' : 'pilihan yang wajib') + ' terlebih dahulu.');
                 return false;
             }
@@ -427,7 +463,6 @@
     prevBtn.addEventListener('click', () => {
         if (current > 0) { current--; render(); }
     });
-    // Klik nomor langkah yang sudah dilewati untuk mundur
     dots.forEach((d, i) => d.addEventListener('click', () => {
         if (i < current) { current = i; render(); }
     }));
@@ -438,7 +473,7 @@
     document.getElementById('formKesediaan').addEventListener('submit', () => {
         submitBtn.disabled = true;
         submitBtn.classList.add('opacity-60', 'cursor-wait');
-        submitBtn.innerHTML = 'Mengirim...';
+        submitBtn.innerHTML = 'Menyimpan...';
     });
 </script>
 <?= $this->endSection() ?>

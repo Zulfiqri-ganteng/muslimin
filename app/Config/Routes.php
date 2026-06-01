@@ -10,6 +10,10 @@ $routes->post('kirim', 'Form::submit');
 $routes->get('terima-kasih', 'Form::success');
 $routes->get('tutup', 'Form::closed');
 
+// Revisi (tautan token dari admin — form ter-isi data lama)
+$routes->get('revisi/(:segment)', 'Form::edit/$1');
+$routes->post('revisi/(:segment)', 'Form::updateSubmission/$1');
+
 // ===================== ADMIN =====================
 $routes->group('admin', static function ($routes) {
     // Autentikasi (tanpa filter)
