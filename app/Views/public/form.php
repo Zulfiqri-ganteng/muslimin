@@ -24,10 +24,12 @@
         'Melaksanakan tugas tambahan dengan penuh tanggung jawab.',
         'Mencapai target kinerja yang ditetapkan sekolah.',
     ];
+    // Label langkah untuk stepper
+    $stepLabels = ['Identitas', 'Mata Pelajaran', 'Tugas Tambahan', 'Jam Mengajar', 'Lampiran', 'Pernyataan'];
     $err = session('errors') ?? [];
 ?>
 
-<div class="max-w-3xl mx-auto px-4 py-6 sm:py-10">
+<div class="max-w-3xl mx-auto px-4 py-6 sm:py-10" id="formTop">
 
     <!-- ===================== HEADER ===================== -->
     <div class="bg-gradient-to-br from-brand-700 to-brand-900 rounded-2xl shadow-xl overflow-hidden">
@@ -57,11 +59,30 @@
         </div>
     <?php endif; ?>
 
-    <form action="<?= site_url('kirim') ?>" method="post" enctype="multipart/form-data" id="formKesediaan" class="mt-6 space-y-6">
+    <!-- ===================== STEPPER ===================== -->
+    <div class="mt-6 bg-white rounded-2xl shadow-sm border border-slate-200 p-4 sm:p-5">
+        <div class="flex items-center justify-between mb-3">
+            <p class="text-sm font-semibold text-brand-700">Langkah <span id="curStep">1</span> dari <?= count($stepLabels) ?></p>
+            <p class="text-xs font-medium text-slate-400" id="stepTitle"><?= esc($stepLabels[0]) ?></p>
+        </div>
+        <div class="h-2 w-full rounded-full bg-slate-100 overflow-hidden">
+            <div id="progressBar" class="h-full bg-brand-600 transition-all duration-300" style="width: <?= round(100 / count($stepLabels)) ?>%"></div>
+        </div>
+        <div class="mt-4 hidden sm:flex items-start justify-between gap-1" id="stepDots">
+            <?php foreach ($stepLabels as $i => $lbl): ?>
+                <button type="button" class="step-dot flex-1" data-goto="<?= $i ?>">
+                    <span class="dot-circle"><?= $i + 1 ?></span>
+                    <span class="dot-label"><?= esc($lbl) ?></span>
+                </button>
+            <?php endforeach; ?>
+        </div>
+    </div>
+
+    <form action="<?= site_url('kirim') ?>" method="post" enctype="multipart/form-data" id="formKesediaan" class="mt-6">
         <?= csrf_field() ?>
 
-        <!-- ===================== A. IDENTITAS GURU ===================== -->
-        <section class="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
+        <!-- ===================== STEP 1 — IDENTITAS GURU ===================== -->
+        <section class="wizard-step bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden" data-title="Identitas Guru">
             <div class="bg-brand-700 px-6 py-4 flex items-center gap-3">
                 <span class="flex h-8 w-8 items-center justify-center rounded-lg bg-white/15 text-white text-sm font-bold">1</span>
                 <h2 class="text-white font-bold text-lg">Identitas Guru</h2>
@@ -110,14 +131,16 @@
             </div>
         </section>
 
-        <!-- ===================== B. MATA PELAJARAN YANG DIAMPU ===================== -->
-        <section class="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
+        <!-- ===================== STEP 2 — MATA PELAJARAN YANG DIAMPU ===================== -->
+        <section class="wizard-step hidden bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden" data-title="Mata Pelajaran yang Diampu">
             <div class="bg-brand-700 px-6 py-4 flex items-center gap-3">
                 <span class="flex h-8 w-8 items-center justify-center rounded-lg bg-white/15 text-white text-sm font-bold">2</span>
                 <h2 class="text-white font-bold text-lg">Mata Pelajaran yang Diampu</h2>
             </div>
             <div class="p-6">
-                <p class="text-sm text-slate-500 mb-4">Bersedia melaksanakan tugas mengajar pada Tahun Pelajaran <?= $tahun ?> sesuai penugasan dari Kepala Sekolah.</p>
+                <div class="rounded-xl bg-brand-50 border border-brand-100 px-4 py-3 text-sm text-brand-800 mb-4">
+                    Bersedia melaksanakan tugas mengajar pada Tahun Pelajaran <?= $tahun ?> sesuai penugasan yang diberikan oleh Kepala Sekolah.
+                </div>
                 <div class="overflow-x-auto">
                     <table class="w-full text-sm" id="mapelTable">
                         <thead>
@@ -146,8 +169,8 @@
             </div>
         </section>
 
-        <!-- ===================== C. TUGAS TAMBAHAN ===================== -->
-        <section class="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
+        <!-- ===================== STEP 3 — TUGAS TAMBAHAN ===================== -->
+        <section class="wizard-step hidden bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden" data-title="Kesediaan Tugas Tambahan">
             <div class="bg-brand-700 px-6 py-4 flex items-center gap-3">
                 <span class="flex h-8 w-8 items-center justify-center rounded-lg bg-white/15 text-white text-sm font-bold">3</span>
                 <h2 class="text-white font-bold text-lg">Kesediaan Tugas Tambahan</h2>
@@ -170,16 +193,16 @@
             </div>
         </section>
 
-        <!-- ===================== D. KESEDIAAN JAM MENGAJAR ===================== -->
-        <section class="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
+        <!-- ===================== STEP 4 — KESEDIAAN JAM MENGAJAR ===================== -->
+        <section class="wizard-step hidden bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden" data-title="Kesediaan Jam Mengajar">
             <div class="bg-brand-700 px-6 py-4 flex items-center gap-3">
                 <span class="flex h-8 w-8 items-center justify-center rounded-lg bg-white/15 text-white text-sm font-bold">4</span>
                 <h2 class="text-white font-bold text-lg">Kesediaan Jam Mengajar</h2>
             </div>
             <div class="p-6 space-y-3">
-                <?php $oldJam = old('jam_kesediaan') ?? []; foreach ($jamOpt as $j): ?>
+                <?php $oldJamK = old('jam_kesediaan') ?? []; foreach ($jamOpt as $j): ?>
                     <label class="check-card">
-                        <input type="checkbox" name="jam_kesediaan[]" value="<?= esc($j) ?>" class="peer sr-only" <?= in_array($j, $oldJam, true) ? 'checked' : '' ?>>
+                        <input type="checkbox" name="jam_kesediaan[]" value="<?= esc($j) ?>" class="peer sr-only" <?= in_array($j, $oldJamK, true) ? 'checked' : '' ?>>
                         <span class="check-box"></span>
                         <span class="text-sm text-slate-700"><?= esc($j) ?></span>
                     </label>
@@ -187,8 +210,8 @@
             </div>
         </section>
 
-        <!-- ===================== E. LAMPIRAN ===================== -->
-        <section class="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
+        <!-- ===================== STEP 5 — LAMPIRAN ===================== -->
+        <section class="wizard-step hidden bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden" data-title="Lampiran Kesediaan">
             <div class="bg-brand-700 px-6 py-4 flex items-center gap-3">
                 <span class="flex h-8 w-8 items-center justify-center rounded-lg bg-white/15 text-white text-sm font-bold">5</span>
                 <h2 class="text-white font-bold text-lg">Lampiran Kesediaan</h2>
@@ -235,8 +258,8 @@
             </div>
         </section>
 
-        <!-- ===================== F. KOMITMEN & PERNYATAAN ===================== -->
-        <section class="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
+        <!-- ===================== STEP 6 — KOMITMEN & PERNYATAAN ===================== -->
+        <section class="wizard-step hidden bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden" data-title="Komitmen &amp; Pernyataan">
             <div class="bg-brand-700 px-6 py-4 flex items-center gap-3">
                 <span class="flex h-8 w-8 items-center justify-center rounded-lg bg-white/15 text-white text-sm font-bold">6</span>
                 <h2 class="text-white font-bold text-lg">Komitmen &amp; Pernyataan</h2>
@@ -259,10 +282,17 @@
             </div>
         </section>
 
-        <!-- ===================== SUBMIT ===================== -->
-        <div class="flex flex-col sm:flex-row items-center justify-between gap-3 pt-2">
-            <p class="text-xs text-slate-400">Pastikan data sudah benar sebelum mengirim.</p>
-            <button type="submit" id="submitBtn" class="w-full sm:w-auto inline-flex items-center justify-center gap-2 bg-gold-500 hover:bg-gold-400 text-brand-900 font-bold px-8 py-3.5 rounded-xl shadow-lg shadow-gold-500/20 transition active:scale-95">
+        <!-- ===================== NAVIGASI WIZARD ===================== -->
+        <div class="mt-6 flex items-center justify-between gap-3">
+            <button type="button" id="prevBtn" class="btn-nav-secondary invisible">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7"/></svg>
+                Sebelumnya
+            </button>
+            <button type="button" id="nextBtn" class="btn-nav-primary">
+                Lanjut
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7"/></svg>
+            </button>
+            <button type="submit" id="submitBtn" class="btn-nav-gold hidden">
                 <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/></svg>
                 Kirim Kesediaan
             </button>
@@ -283,29 +313,41 @@
     .check-card input:checked ~ .check-box { @apply border-brand-600 bg-brand-600; }
     .check-card input:checked ~ .check-box::after { content: '✓'; @apply text-white text-xs font-bold; }
     .check-card:has(input:checked) { @apply border-brand-300 bg-brand-50; }
+
+    /* Stepper */
+    .step-dot .dot-circle { @apply mx-auto flex h-9 w-9 items-center justify-center rounded-full border-2 border-slate-200 bg-white text-sm font-bold text-slate-400 transition; }
+    .step-dot .dot-label { @apply block mt-1.5 text-center text-[11px] font-medium text-slate-400 transition; }
+    .step-dot.is-active .dot-circle { @apply border-brand-600 bg-brand-600 text-white; }
+    .step-dot.is-done .dot-circle { @apply border-brand-600 bg-brand-100 text-brand-700; }
+    .step-dot.is-active .dot-label, .step-dot.is-done .dot-label { @apply text-brand-700; }
+    .step-dot.is-done { @apply cursor-pointer; }
+
+    /* Tombol navigasi */
+    .btn-nav-secondary { @apply inline-flex items-center gap-1.5 rounded-xl border border-slate-300 bg-white px-5 py-3 text-sm font-semibold text-slate-600 hover:bg-slate-50 transition active:scale-95; }
+    .btn-nav-primary { @apply inline-flex items-center gap-1.5 rounded-xl bg-brand-600 px-7 py-3 text-sm font-bold text-white shadow-lg shadow-brand-600/20 hover:bg-brand-700 transition active:scale-95; }
+    .btn-nav-gold { @apply inline-flex items-center gap-2 rounded-xl bg-gold-500 px-7 py-3 text-sm font-bold text-brand-900 shadow-lg shadow-gold-500/20 hover:bg-gold-400 transition active:scale-95; }
 </style>
 
 <?= $this->endSection() ?>
 
 <?= $this->section('scripts') ?>
 <script>
+    /* ---------- Tabel Mata Pelajaran ---------- */
     const oldMapel = <?= json_encode(old('mapel') ?: []) ?>;
     const oldKelas = <?= json_encode(old('kelas') ?: []) ?>;
-    const oldJam   = <?= json_encode(old('jam') ?: []) ?>;
+    const oldJamM  = <?= json_encode(old('jam') ?: []) ?>;
 
-    const body     = document.getElementById('mapelBody');
-    const totalEl  = document.getElementById('totalJam');
+    const body    = document.getElementById('mapelBody');
+    const totalEl = document.getElementById('totalJam');
 
     function recalc() {
         let t = 0;
         body.querySelectorAll('input[name="jam[]"]').forEach(i => t += parseInt(i.value) || 0);
         totalEl.textContent = t;
     }
-
     function renumber() {
         body.querySelectorAll('tr').forEach((tr, i) => tr.querySelector('.row-no').textContent = i + 1);
     }
-
     function addRow(mapel = '', kelas = '', jam = '') {
         const tr = document.createElement('tr');
         tr.className = 'border-b border-slate-100';
@@ -322,22 +364,81 @@
         });
         renumber();
     }
-
     document.getElementById('addMapel').addEventListener('click', () => addRow());
-
-    // Inisialisasi: kembalikan data lama atau 3 baris kosong
     if (oldMapel.length) {
-        oldMapel.forEach((m, i) => addRow(m || '', oldKelas[i] || '', oldJam[i] || ''));
+        oldMapel.forEach((m, i) => addRow(m || '', oldKelas[i] || '', oldJamM[i] || ''));
     } else {
         addRow(); addRow(); addRow();
     }
     recalc();
 
-    // Cegah double submit
+    /* ---------- Navigasi Wizard ---------- */
+    const steps     = Array.from(document.querySelectorAll('.wizard-step'));
+    const dots      = Array.from(document.querySelectorAll('.step-dot'));
+    const prevBtn   = document.getElementById('prevBtn');
+    const nextBtn   = document.getElementById('nextBtn');
+    const submitBtn = document.getElementById('submitBtn');
+    const curStepEl = document.getElementById('curStep');
+    const titleEl   = document.getElementById('stepTitle');
+    const barEl     = document.getElementById('progressBar');
+    const formTop   = document.getElementById('formTop');
+    let current = 0;
+
+    function render(scroll = true) {
+        steps.forEach((s, i) => s.classList.toggle('hidden', i !== current));
+        dots.forEach((d, i) => {
+            d.classList.toggle('is-active', i === current);
+            d.classList.toggle('is-done', i < current);
+        });
+        curStepEl.textContent = current + 1;
+        titleEl.textContent   = steps[current].dataset.title.replace('&amp;', '&');
+        barEl.style.width     = ((current + 1) / steps.length * 100) + '%';
+        prevBtn.classList.toggle('invisible', current === 0);
+        const last = current === steps.length - 1;
+        nextBtn.classList.toggle('hidden', last);
+        submitBtn.classList.toggle('hidden', !last);
+        if (scroll) window.scrollTo({ top: formTop.offsetTop - 16, behavior: 'smooth' });
+    }
+
+    function validateStep(idx) {
+        const stepEl = steps[idx];
+        // Field biasa (teks, tanggal, dll) yang wajib
+        const fields = stepEl.querySelectorAll('input:not([type=radio]):not([type=checkbox]), select, textarea');
+        for (const f of fields) {
+            if (!f.checkValidity()) { f.reportValidity(); return false; }
+        }
+        // Grup radio wajib (mis. Status Kepegawaian)
+        const reqRadios = Array.from(stepEl.querySelectorAll('input[type=radio][required]'));
+        const names = [...new Set(reqRadios.map(r => r.name))];
+        for (const n of names) {
+            const checked = stepEl.querySelector('input[name="' + (window.CSS && CSS.escape ? CSS.escape(n) : n) + '"]:checked');
+            if (!checked) {
+                alert('Silakan pilih ' + (n === 'status_kepegawaian' ? 'Status Kepegawaian' : 'pilihan yang wajib') + ' terlebih dahulu.');
+                return false;
+            }
+        }
+        return true;
+    }
+
+    nextBtn.addEventListener('click', () => {
+        if (!validateStep(current)) return;
+        if (current < steps.length - 1) { current++; render(); }
+    });
+    prevBtn.addEventListener('click', () => {
+        if (current > 0) { current--; render(); }
+    });
+    // Klik nomor langkah yang sudah dilewati untuk mundur
+    dots.forEach((d, i) => d.addEventListener('click', () => {
+        if (i < current) { current = i; render(); }
+    }));
+
+    render(false);
+
+    /* ---------- Cegah double submit ---------- */
     document.getElementById('formKesediaan').addEventListener('submit', () => {
-        const b = document.getElementById('submitBtn');
-        b.disabled = true; b.classList.add('opacity-60', 'cursor-wait');
-        b.innerHTML = 'Mengirim...';
+        submitBtn.disabled = true;
+        submitBtn.classList.add('opacity-60', 'cursor-wait');
+        submitBtn.innerHTML = 'Mengirim...';
     });
 </script>
 <?= $this->endSection() ?>
