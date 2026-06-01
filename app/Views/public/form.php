@@ -322,14 +322,19 @@
                 <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7"/></svg>
                 Sebelumnya
             </button>
-            <button type="button" id="nextBtn" class="btn-nav-primary">
-                Lanjut
-                <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7"/></svg>
-            </button>
-            <button type="submit" id="submitBtn" class="btn-nav-gold hidden">
-                <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/></svg>
-                <?= $isEdit ? 'Simpan Perbaikan' : 'Kirim Kesediaan' ?>
-            </button>
+            <div class="flex items-center gap-3">
+                <span id="submitHint" class="hidden text-right text-xs text-slate-400 max-w-[170px] leading-snug">
+                    Lengkapi data wajib &amp; centang pernyataan untuk <?= $isEdit ? 'menyimpan' : 'mengirim' ?>.
+                </span>
+                <button type="button" id="nextBtn" class="btn-nav-primary">
+                    Lanjut
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7"/></svg>
+                </button>
+                <button type="submit" id="submitBtn" class="btn-nav-gold hidden">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/></svg>
+                    <?= $isEdit ? 'Simpan Perbaikan' : 'Kirim Kesediaan' ?>
+                </button>
+            </div>
         </div>
     </form>
 </div>
@@ -360,6 +365,15 @@
     .btn-nav-secondary { @apply inline-flex items-center gap-1.5 rounded-xl border border-slate-300 bg-white px-5 py-3 text-sm font-semibold text-slate-600 hover:bg-slate-50 transition active:scale-95; }
     .btn-nav-primary { @apply inline-flex items-center gap-1.5 rounded-xl bg-brand-600 px-7 py-3 text-sm font-bold text-white shadow-lg shadow-brand-600/20 hover:bg-brand-700 transition active:scale-95; }
     .btn-nav-gold { @apply inline-flex items-center gap-2 rounded-xl bg-gold-500 px-7 py-3 text-sm font-bold text-brand-900 shadow-lg shadow-gold-500/20 hover:bg-gold-400 transition active:scale-95; }
+</style>
+
+<style>
+    /* Animasi transisi antar-langkah & kemunculan tombol */
+    @keyframes stepIn { from { opacity: 0; transform: translateY(14px); } to { opacity: 1; transform: translateY(0); } }
+    @keyframes popIn  { 0% { opacity: 0; transform: scale(.85); } 60% { transform: scale(1.04); } 100% { opacity: 1; transform: scale(1); } }
+    .step-anim { animation: stepIn .38s cubic-bezier(.16,.84,.44,1) both; }
+    .pop-anim  { animation: popIn .32s cubic-bezier(.16,.84,.44,1) both; }
+    @media (prefers-reduced-motion: reduce) { .step-anim, .pop-anim { animation: none; } }
 </style>
 
 <?= $this->endSection() ?>
@@ -416,10 +430,12 @@
     const prevBtn   = document.getElementById('prevBtn');
     const nextBtn   = document.getElementById('nextBtn');
     const submitBtn = document.getElementById('submitBtn');
+    const submitHint= document.getElementById('submitHint');
     const curStepEl = document.getElementById('curStep');
     const titleEl   = document.getElementById('stepTitle');
     const barEl     = document.getElementById('progressBar');
     const formTop   = document.getElementById('formTop');
+    const formEl    = document.getElementById('formKesediaan');
     let current = 0;
 
     function render(scroll = true) {
@@ -434,8 +450,53 @@
         prevBtn.classList.toggle('invisible', current === 0);
         const last = current === steps.length - 1;
         nextBtn.classList.toggle('hidden', last);
-        submitBtn.classList.toggle('hidden', !last);
+        updateSubmitVisibility();
+
+        // animasi: langkah aktif "masuk"
+        const el = steps[current];
+        el.classList.remove('step-anim');
+        void el.offsetWidth;            // paksa reflow agar animasi terulang
+        el.classList.add('step-anim');
+
         if (scroll) window.scrollTo({ top: formTop.offsetTop - 16, behavior: 'smooth' });
+    }
+
+    // Cek semua field WAJIB sudah terisi (Nama, NIP, HP, Status, centang pernyataan)
+    function isComplete() {
+        const req = formEl.querySelectorAll('[required]');
+        for (const f of req) {
+            if (f.type === 'radio') {
+                const nm = (window.CSS && CSS.escape) ? CSS.escape(f.name) : f.name;
+                if (!formEl.querySelector('input[name="' + nm + '"]:checked')) return false;
+            } else if (f.type === 'checkbox') {
+                if (!f.checked) return false;
+            } else if (!String(f.value).trim()) {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    // Tombol "Kirim" hanya muncul di langkah terakhir & saat data wajib lengkap
+    function updateSubmitVisibility() {
+        const last = current === steps.length - 1;
+        if (!last) {
+            submitBtn.classList.add('hidden');
+            submitHint.classList.add('hidden');
+            return;
+        }
+        const ok = isComplete();
+        if (ok) {
+            if (submitBtn.classList.contains('hidden')) {
+                submitBtn.classList.remove('hidden');
+                submitBtn.classList.remove('pop-anim');
+                void submitBtn.offsetWidth;
+                submitBtn.classList.add('pop-anim');
+            }
+        } else {
+            submitBtn.classList.add('hidden');
+        }
+        submitHint.classList.toggle('hidden', ok);
     }
 
     function validateStep(idx) {
@@ -467,13 +528,21 @@
         if (i < current) { current = i; render(); }
     }));
 
+    // Re-cek kelengkapan setiap kali ada perubahan input (untuk tombol Kirim)
+    formEl.addEventListener('input', updateSubmitVisibility);
+    formEl.addEventListener('change', updateSubmitVisibility);
+
     render(false);
 
-    /* ---------- Cegah double submit ---------- */
-    document.getElementById('formKesediaan').addEventListener('submit', () => {
+    /* ---------- Loading state + cegah double submit ---------- */
+    formEl.addEventListener('submit', () => {
         submitBtn.disabled = true;
-        submitBtn.classList.add('opacity-60', 'cursor-wait');
-        submitBtn.innerHTML = 'Menyimpan...';
+        submitBtn.classList.add('opacity-70', 'cursor-wait');
+        submitBtn.innerHTML =
+            '<svg class="animate-spin w-5 h-5" fill="none" viewBox="0 0 24 24">' +
+            '<circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>' +
+            '<path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path>' +
+            '</svg> <?= $isEdit ? 'Menyimpan...' : 'Mengirim...' ?>';
     });
 </script>
 <?= $this->endSection() ?>
