@@ -58,6 +58,12 @@ Vagrantfile
 .claude/
 
 #-------------------------
+# Tailwind standalone CLI (binary 39MB — jangan di-commit, unduh manual saat perlu)
+#-------------------------
+/tailwindcss.exe
+/tailwindcss
+
+#-------------------------
 # Temporary Files
 #-------------------------
 /writable/cache/*

@@ -127,9 +127,9 @@
                     <input type="text" name="nama_lengkap" value="<?= esc($fv('nama_lengkap'), 'attr') ?>" required class="inp" placeholder="Nama lengkap beserta gelar">
                 </div>
                 <div>
-                    <label class="lbl">NIP / NUPTK <span class="text-red-500">*</span></label>
-                    <input type="text" name="nip_nuptk" value="<?= esc($fv('nip_nuptk'), 'attr') ?>" required class="inp" placeholder="Nomor NIP / NUPTK">
-                    <?php if (! $isEdit): ?><p class="text-xs text-slate-400 mt-1">Satu NIP/NUPTK hanya bisa mengisi 1 kali.</p><?php endif; ?>
+                    <label class="lbl">NIP / NUPTK <span class="text-xs font-normal text-slate-400">(opsional)</span></label>
+                    <input type="text" name="nip_nuptk" value="<?= esc($fv('nip_nuptk'), 'attr') ?>" class="inp" placeholder="Kosongkan bila belum punya">
+                    <?php if (! $isEdit): ?><p class="text-xs text-slate-400 mt-1">Bila diisi, satu NIP/NUPTK hanya dapat mengisi 1 kali.</p><?php endif; ?>
                 </div>
                 <div>
                     <label class="lbl">Nomor HP / WhatsApp <span class="text-red-500">*</span></label>
@@ -338,43 +338,6 @@
         </div>
     </form>
 </div>
-
-<style type="text/tailwindcss">
-    .lbl { @apply block text-sm font-medium text-slate-600 mb-1.5; }
-    .inp { @apply w-full rounded-lg border border-slate-300 px-3.5 py-2.5 text-sm text-slate-800 placeholder-slate-400 focus:border-brand-500 focus:ring-2 focus:ring-brand-500/20 outline-none transition; }
-    .radio-pill .pill-label { @apply cursor-pointer inline-block rounded-lg border-2 border-slate-200 px-5 py-2 text-sm font-semibold text-slate-500 transition; }
-    .radio-pill input:checked + .pill-label { @apply border-brand-600 bg-brand-600 text-white; }
-    .radio-pill-sm .pill-label-sm { @apply cursor-pointer inline-block rounded-md border border-slate-200 px-3 py-1 text-xs font-semibold text-slate-500 transition; }
-    .radio-pill-sm input:checked + .data-ya { @apply border-green-600 bg-green-600 text-white; }
-    .radio-pill-sm input:checked + .data-no { @apply border-red-500 bg-red-500 text-white; }
-    .check-card { @apply flex items-center gap-3 cursor-pointer rounded-lg border border-slate-200 px-4 py-3 hover:bg-slate-50 transition; }
-    .check-box { @apply flex h-5 w-5 shrink-0 items-center justify-center rounded border-2 border-slate-300 transition; }
-    .check-card input:checked ~ .check-box { @apply border-brand-600 bg-brand-600; }
-    .check-card input:checked ~ .check-box::after { content: '✓'; @apply text-white text-xs font-bold; }
-    .check-card:has(input:checked) { @apply border-brand-300 bg-brand-50; }
-
-    /* Stepper */
-    .step-dot .dot-circle { @apply mx-auto flex h-9 w-9 items-center justify-center rounded-full border-2 border-slate-200 bg-white text-sm font-bold text-slate-400 transition; }
-    .step-dot .dot-label { @apply block mt-1.5 text-center text-[11px] font-medium text-slate-400 transition; }
-    .step-dot.is-active .dot-circle { @apply border-brand-600 bg-brand-600 text-white; }
-    .step-dot.is-done .dot-circle { @apply border-brand-600 bg-brand-100 text-brand-700; }
-    .step-dot.is-active .dot-label, .step-dot.is-done .dot-label { @apply text-brand-700; }
-    .step-dot.is-done { @apply cursor-pointer; }
-
-    /* Tombol navigasi */
-    .btn-nav-secondary { @apply inline-flex items-center justify-center gap-1.5 whitespace-nowrap rounded-xl border border-slate-300 bg-white px-4 sm:px-5 py-3 text-sm font-semibold text-slate-600 hover:bg-slate-50 transition active:scale-95; }
-    .btn-nav-primary { @apply inline-flex items-center justify-center gap-1.5 whitespace-nowrap rounded-xl bg-brand-600 px-6 sm:px-7 py-3 text-sm font-bold text-white shadow-lg shadow-brand-600/20 hover:bg-brand-700 transition active:scale-95; }
-    .btn-nav-gold { @apply inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-xl bg-gold-500 px-5 sm:px-7 py-3 text-sm font-bold text-brand-900 shadow-lg shadow-gold-500/20 hover:bg-gold-400 transition active:scale-95; }
-</style>
-
-<style>
-    /* Animasi transisi antar-langkah & kemunculan tombol */
-    @keyframes stepIn { from { opacity: 0; transform: translateY(14px); } to { opacity: 1; transform: translateY(0); } }
-    @keyframes popIn  { 0% { opacity: 0; transform: scale(.85); } 60% { transform: scale(1.04); } 100% { opacity: 1; transform: scale(1); } }
-    .step-anim { animation: stepIn .38s cubic-bezier(.16,.84,.44,1) both; }
-    .pop-anim  { animation: popIn .32s cubic-bezier(.16,.84,.44,1) both; }
-    @media (prefers-reduced-motion: reduce) { .step-anim, .pop-anim { animation: none; } }
-</style>
 
 <?= $this->endSection() ?>
 

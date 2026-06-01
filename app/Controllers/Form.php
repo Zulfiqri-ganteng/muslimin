@@ -56,7 +56,7 @@ class Form extends BaseController
 
         $rules = [
             'nama_lengkap'       => 'required|max_length[150]',
-            'nip_nuptk'          => 'required|max_length[60]|is_unique[submissions.nip_nuptk]',
+            'nip_nuptk'          => 'permit_empty|max_length[60]|is_unique[submissions.nip_nuptk]',
             'nomor_hp'           => 'required|max_length[30]',
             'status_kepegawaian' => 'required|in_list[PNS,PPPK,GTY,GTT]',
             'komitmen_setuju'    => 'required',
@@ -112,7 +112,7 @@ class Form extends BaseController
 
         $rules = [
             'nama_lengkap'       => 'required|max_length[150]',
-            'nip_nuptk'          => 'required|max_length[60]|is_unique[submissions.nip_nuptk,id,' . (int) $row['id'] . ']',
+            'nip_nuptk'          => 'permit_empty|max_length[60]|is_unique[submissions.nip_nuptk,id,' . (int) $row['id'] . ']',
             'nomor_hp'           => 'required|max_length[30]',
             'status_kepegawaian' => 'required|in_list[PNS,PPPK,GTY,GTT]',
             'komitmen_setuju'    => 'required',
@@ -200,7 +200,7 @@ class Form extends BaseController
 
         return [
             'nama_lengkap'        => trim($post['nama_lengkap']),
-            'nip_nuptk'           => trim($post['nip_nuptk']),
+            'nip_nuptk'           => trim($post['nip_nuptk'] ?? '') ?: null,
             'tempat_lahir'        => trim($post['tempat_lahir'] ?? ''),
             'tanggal_lahir'       => ($post['tanggal_lahir'] ?? '') ?: null,
             'pendidikan_terakhir' => trim($post['pendidikan_terakhir'] ?? ''),

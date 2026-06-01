@@ -5,10 +5,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Login Admin &mdash; Kesediaan Guru</title>
     <meta name="robots" content="noindex">
-    <script src="https://cdn.tailwindcss.com"></script>
-    <script>tailwind.config={theme:{extend:{colors:{brand:{50:'#eff6ff',100:'#dbeafe',500:'#1e6fd6',600:'#1b5fb8',700:'#1a3a6b',800:'#15315a',900:'#0f2545'},gold:{400:'#fcc419',500:'#f5a623'}}}}};</script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-    <style>body{font-family:'Inter',system-ui,sans-serif;}</style>
+    <link rel="stylesheet" href="<?= base_url('assets/css/app.css') ?>?v=<?= @filemtime(FCPATH . 'assets/css/app.css') ?>">
 </head>
 <body class="min-h-screen bg-gradient-to-br from-brand-700 to-brand-900 flex items-center justify-center p-4">
     <div class="w-full max-w-md">

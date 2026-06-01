@@ -47,7 +47,7 @@
                     $ttl = $row['tempat_lahir'];
                     if ($row['tanggal_lahir']) $ttl .= ($ttl ? ', ' : '') . date('d F Y', strtotime($row['tanggal_lahir']));
                     $fields = [
-                        'NIP / NUPTK'        => $row['nip_nuptk'],
+                        'NIP / NUPTK'        => $row['nip_nuptk'] ?: '-',
                         'Nomor HP'           => $row['nomor_hp'],
                         'Tempat, Tgl Lahir'  => $ttl ?: '-',
                         'Pendidikan Terakhir'=> $row['pendidikan_terakhir'] ?: '-',
