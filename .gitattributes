@@ -1,0 +1,22 @@
+# Normalisasi line ending agar konsisten antara Windows (lokal) & Linux (hosting)
+* text=auto
+
+# Skrip shell WAJIB LF (kalau CRLF, bash di server gagal menjalankannya)
+*.sh    text eol=lf
+spark   text eol=lf
+
+# File batch Windows tetap CRLF
+*.bat   text eol=crlf
+*.cmd   text eol=crlf
+
+# File biner — jangan diutak-atik
+*.png   binary
+*.jpg   binary
+*.jpeg  binary
+*.gif   binary
+*.ico   binary
+*.webp  binary
+*.pdf   binary
+*.ttf   binary
+*.woff  binary
+*.woff2 binary

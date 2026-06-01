@@ -1,0 +1,15 @@
+# ============================================================
+#  Arahkan semua request ke folder public/ (CodeIgniter 4)
+#  Berguna bila document root domain menunjuk ke folder ini
+#  sehingga situs bisa diakses tanpa "/public/" pada URL.
+# ============================================================
+<IfModule mod_rewrite.c>
+    RewriteEngine On
+    RewriteCond %{REQUEST_URI} !^/public/
+    RewriteRule ^(.*)$ public/$1 [L]
+</IfModule>
+
+# Lindungi file sensitif
+<FilesMatch "^(\.env|composer\.(json|lock)|spark)$">
+    Require all denied
+</FilesMatch>
