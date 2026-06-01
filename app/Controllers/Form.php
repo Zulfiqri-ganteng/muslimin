@@ -112,7 +112,7 @@ class Form extends BaseController
 
         $rules = [
             'nama_lengkap'       => 'required|max_length[150]',
-            'nip_nuptk'          => 'required|max_length[60]|is_unique[submissions.nip_nuptk,id,' . $row['id'] . ']',
+            'nip_nuptk'          => 'required|max_length[60]|is_unique[submissions.nip_nuptk,id,' . (int) $row['id'] . ']',
             'nomor_hp'           => 'required|max_length[30]',
             'status_kepegawaian' => 'required|in_list[PNS,PPPK,GTY,GTT]',
             'komitmen_setuju'    => 'required',

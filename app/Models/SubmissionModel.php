@@ -65,7 +65,10 @@ class SubmissionModel extends Model
             $byStatus[$s] = $this->where('status_kepegawaian', $s)->countAllResults(true);
         }
 
-        $today = $this->where('DATE(created_at)', date('Y-m-d'))->countAllResults(true);
+        // Pakai rentang tanggal (bukan DATE(created_at)) agar indeks created_at terpakai.
+        $today = $this->where('created_at >=', date('Y-m-d') . ' 00:00:00')
+                      ->where('created_at <=', date('Y-m-d') . ' 23:59:59')
+                      ->countAllResults(true);
 
         return [
             'total'    => $total,
