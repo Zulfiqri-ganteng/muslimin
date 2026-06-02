@@ -2,7 +2,7 @@
 <?= $this->section('content') ?>
 
 <?php
-    $hariList = ['Senin','Selasa','Rabu','Kamis','Jumat','Sabtu'];
+    $hariList = ['Senin','Selasa','Rabu','Kamis','Jumat'];
     $statusBadge = [
         'baru'         => ['Baru', 'bg-blue-100 text-blue-700'],
         'diverifikasi' => ['Diverifikasi', 'bg-green-100 text-green-700'],
@@ -39,20 +39,21 @@
                     <div class="flex h-14 w-14 items-center justify-center rounded-full bg-brand-100 text-brand-700 font-extrabold text-xl"><?= strtoupper(substr($row['nama_lengkap'],0,1)) ?></div>
                     <div>
                         <p class="text-lg font-bold text-slate-800"><?= esc($row['nama_lengkap']) ?></p>
-                        <p class="text-sm text-slate-400">Guru Mata Pelajaran <?= esc($row['guru_mapel'] ?: '-') ?></p>
+                        <p class="text-sm text-slate-400">Guru Mapel <?= esc($row['guru_mapel'] ?: '-') ?></p>
+                        <?php if (empty($row['bersedia_mengajar'])): ?>
+                            <span class="mt-1 inline-block text-xs font-bold px-2.5 py-1 rounded-full bg-red-100 text-red-700">TIDAK BERSEDIA</span>
+                        <?php else: ?>
+                            <span class="mt-1 inline-block text-xs font-bold px-2.5 py-1 rounded-full bg-green-100 text-green-700">BERSEDIA</span>
+                        <?php endif; ?>
                     </div>
                 </div>
                 <dl class="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-3 text-sm">
                     <?php
-                    $ttl = $row['tempat_lahir'];
-                    if ($row['tanggal_lahir']) $ttl .= ($ttl ? ', ' : '') . date('d F Y', strtotime($row['tanggal_lahir']));
                     $fields = [
-                        'NIP / NUPTK'        => $row['nip_nuptk'] ?: '-',
-                        'Nomor HP'           => $row['nomor_hp'],
-                        'Tempat, Tgl Lahir'  => $ttl ?: '-',
-                        'Pendidikan Terakhir'=> $row['pendidikan_terakhir'] ?: '-',
-                        'Status Kepegawaian' => $row['status_kepegawaian'],
-                        'Dikirim pada'       => date('d/m/Y H:i', strtotime($row['created_at'])),
+                        'Nomor HP'            => $row['nomor_hp'] ?: '-',
+                        'Pendidikan Terakhir' => $row['pendidikan_terakhir'] ?: '-',
+                        'Status Kepegawaian'  => $row['status_kepegawaian'] ?: '-',
+                        'Dikirim pada'        => date('d/m/Y H:i', strtotime($row['created_at'])),
                     ];
                     foreach ($fields as $k => $v): ?>
                         <div>
@@ -71,14 +72,13 @@
                 <?php if (! empty($row['mapel_diampu'])): ?>
                     <table class="w-full text-sm">
                         <thead><tr class="text-left text-slate-500 border-b border-slate-100">
-                            <th class="pb-2 w-8">No</th><th class="pb-2">Mata Pelajaran</th><th class="pb-2">Kelas</th><th class="pb-2 text-center">Jam</th>
+                            <th class="pb-2 w-8">No</th><th class="pb-2">Mata Pelajaran</th><th class="pb-2">Kelas</th>
                         </tr></thead>
                         <tbody class="divide-y divide-slate-50">
                             <?php foreach ($row['mapel_diampu'] as $i => $m): ?>
-                                <tr><td class="py-2 text-slate-400"><?= $i+1 ?></td><td class="py-2 font-medium text-slate-700"><?= esc($m['mapel']) ?></td><td class="py-2 text-slate-600"><?= esc($m['kelas']) ?></td><td class="py-2 text-center text-slate-600"><?= esc($m['jam']) ?></td></tr>
+                                <tr><td class="py-2 text-slate-400"><?= $i+1 ?></td><td class="py-2 font-medium text-slate-700"><?= esc($m['mapel']) ?></td><td class="py-2 text-slate-600"><?= esc($m['kelas']) ?></td></tr>
                             <?php endforeach; ?>
                         </tbody>
-                        <tfoot><tr class="font-bold text-slate-800 border-t border-slate-200"><td colspan="3" class="pt-2 text-right">Total Jam/Minggu</td><td class="pt-2 text-center"><?= $row['total_jam'] ?></td></tr></tfoot>
                     </table>
                 <?php else: ?><p class="text-slate-400 text-sm">Tidak ada data.</p><?php endif; ?>
             </div>
@@ -89,14 +89,9 @@
             <div class="bg-white rounded-2xl border border-slate-200 shadow-sm p-6">
                 <h2 class="font-bold text-slate-800 mb-3">Tugas Tambahan</h2>
                 <?php if (! empty($row['tugas_tambahan'])): ?>
-                    <ul class="space-y-1.5 text-sm">
-                        <?php foreach ($row['tugas_tambahan'] as $t): ?>
-                            <li class="flex items-start gap-2 text-slate-600"><span class="text-green-500 mt-0.5">✓</span><?= esc($t) ?></li>
-                        <?php endforeach; ?>
-                    </ul>
-                <?php else: ?><p class="text-slate-400 text-sm">Tidak ada.</p><?php endif; ?>
-                <?php if (! empty($row['tugas_lainnya'])): ?>
-                    <p class="mt-3 text-sm text-slate-600"><span class="text-slate-400">Lainnya:</span> <?= esc($row['tugas_lainnya']) ?></p>
+                    <p class="inline-flex items-center gap-2 text-sm font-semibold text-green-700"><span>✓</span> Bersedia menerima tugas tambahan</p>
+                <?php else: ?>
+                    <p class="text-sm text-slate-500">Tidak bersedia / belum mengisi.</p>
                 <?php endif; ?>
             </div>
             <div class="bg-white rounded-2xl border border-slate-200 shadow-sm p-6">
@@ -168,29 +163,14 @@
         </script>
         <?php endif; ?>
 
-        <!-- Preferensi -->
-        <div class="bg-white rounded-2xl border border-slate-200 shadow-sm p-6">
-            <h2 class="font-bold text-slate-800 mb-3">Preferensi Mapel</h2>
-            <?php if (! empty($row['preferensi'])): ?>
-                <ol class="space-y-2 text-sm">
-                    <?php foreach ($row['preferensi'] as $p): ?>
-                        <li class="flex items-center gap-2.5">
-                            <span class="flex h-6 w-6 items-center justify-center rounded-md bg-gold-400 text-brand-900 text-xs font-bold"><?= esc($p['prioritas']) ?></span>
-                            <span class="text-slate-700"><?= esc($p['mapel']) ?></span>
-                        </li>
-                    <?php endforeach; ?>
-                </ol>
-            <?php else: ?><p class="text-slate-400 text-sm">Tidak ada.</p><?php endif; ?>
-        </div>
-
         <!-- Ketersediaan Hari -->
         <div class="bg-white rounded-2xl border border-slate-200 shadow-sm p-6">
             <h2 class="font-bold text-slate-800 mb-3">Ketersediaan Hari</h2>
-            <div class="grid grid-cols-2 gap-2 text-sm">
-                <?php foreach ($hariList as $h): $v = $row['ketersediaan_hari'][$h] ?? '-'; ?>
+            <div class="space-y-2 text-sm">
+                <?php foreach ($hariList as $h): $sesi = $row['ketersediaan_hari'][$h] ?? []; ?>
                     <div class="flex items-center justify-between rounded-lg bg-slate-50 px-3 py-1.5">
                         <span class="text-slate-600"><?= $h ?></span>
-                        <span class="font-semibold <?= $v==='Ya'?'text-green-600':($v==='Tidak'?'text-red-500':'text-slate-300') ?>"><?= esc($v) ?></span>
+                        <span class="font-semibold <?= $sesi ? 'text-green-600' : 'text-slate-300' ?>"><?= $sesi ? esc(implode(' & ', (array) $sesi)) : '-' ?></span>
                     </div>
                 <?php endforeach; ?>
             </div>

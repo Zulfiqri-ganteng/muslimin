@@ -54,13 +54,16 @@ class Form extends BaseController
             return redirect()->to(site_url('tutup'));
         }
 
+        $bersedia = $this->request->getPost('bersedia');
         $rules = [
-            'nama_lengkap'       => 'required|max_length[150]',
-            'nip_nuptk'          => 'permit_empty|max_length[60]|is_unique[submissions.nip_nuptk]',
-            'nomor_hp'           => 'required|max_length[30]',
-            'status_kepegawaian' => 'required|in_list[PNS,PPPK,GTY,GTT]',
-            'komitmen_setuju'    => 'required',
+            'nama_lengkap' => 'required|max_length[150]',
+            'bersedia'     => 'required|in_list[ya,tidak]',
         ];
+        if ($bersedia === 'ya') {
+            $rules['nomor_hp']           = 'required|max_length[30]';
+            $rules['status_kepegawaian'] = 'required|in_list[PNS,PPPK,GTY,GTT]';
+            $rules['komitmen_setuju']    = 'required';
+        }
 
         if (! $this->validate($rules, $this->validationMessages())) {
             return redirect()->back()->withInput()->with('errors', $this->validator->getErrors());
@@ -110,13 +113,16 @@ class Form extends BaseController
             ]);
         }
 
+        $bersedia = $this->request->getPost('bersedia');
         $rules = [
-            'nama_lengkap'       => 'required|max_length[150]',
-            'nip_nuptk'          => 'permit_empty|max_length[60]|is_unique[submissions.nip_nuptk,id,' . (int) $row['id'] . ']',
-            'nomor_hp'           => 'required|max_length[30]',
-            'status_kepegawaian' => 'required|in_list[PNS,PPPK,GTY,GTT]',
-            'komitmen_setuju'    => 'required',
+            'nama_lengkap' => 'required|max_length[150]',
+            'bersedia'     => 'required|in_list[ya,tidak]',
         ];
+        if ($bersedia === 'ya') {
+            $rules['nomor_hp']           = 'required|max_length[30]';
+            $rules['status_kepegawaian'] = 'required|in_list[PNS,PPPK,GTY,GTT]';
+            $rules['komitmen_setuju']    = 'required';
+        }
 
         if (! $this->validate($rules, $this->validationMessages())) {
             return redirect()->to(site_url('revisi/' . $token))->withInput()->with('errors', $this->validator->getErrors());
@@ -150,9 +156,9 @@ class Form extends BaseController
     private function validationMessages(): array
     {
         return [
-            'nip_nuptk' => [
-                'is_unique' => 'NIP/NUPTK ini sudah pernah mengisi formulir. Satu NIP/NUPTK hanya dapat mengisi satu kali. Hubungi admin bila perlu mengubah data.',
-                'required'  => 'NIP/NUPTK wajib diisi.',
+            'bersedia' => [
+                'required' => 'Silakan pilih kesediaan Anda terlebih dahulu.',
+                'in_list'  => 'Pilihan kesediaan tidak valid.',
             ],
             'komitmen_setuju' => [
                 'required' => 'Anda harus menyetujui pernyataan kesediaan & komitmen.',
@@ -163,60 +169,50 @@ class Form extends BaseController
     /** Susun array data kesediaan dari input POST (dipakai submit & revisi). */
     private function buildData(array $post): array
     {
-        // --- Mata pelajaran yang diampu ---
-        $mapel  = [];
-        $total  = 0;
-        $mNames = $post['mapel'] ?? [];
-        $kelas  = $post['kelas'] ?? [];
-        $jam    = $post['jam'] ?? [];
-        foreach ($mNames as $i => $nm) {
+        // Mata pelajaran yang diampu (tanpa jam)
+        $mapel = [];
+        foreach (($post['mapel'] ?? []) as $i => $nm) {
             $nm = trim((string) $nm);
             if ($nm === '') {
                 continue;
             }
-            $j       = (int) ($jam[$i] ?? 0);
-            $total  += $j;
             $mapel[] = [
                 'mapel' => $nm,
-                'kelas' => trim((string) ($kelas[$i] ?? '')),
-                'jam'   => $j,
+                'kelas' => trim((string) ($post['kelas'][$i] ?? '')),
             ];
         }
 
-        // --- Preferensi mata pelajaran ---
-        $pref = [];
-        foreach (($post['pref'] ?? []) as $prio => $val) {
-            $val = trim((string) $val);
-            if ($val !== '') {
-                $pref[] = ['prioritas' => (int) $prio, 'mapel' => $val];
+        // Ketersediaan hari -> sesi (Pagi/Siang)
+        $hari = [];
+        foreach (($post['hari'] ?? []) as $h => $sesi) {
+            $pilih = array_values(array_filter((array) $sesi, static fn ($s) => in_array($s, ['Pagi', 'Siang'], true)));
+            if ($pilih) {
+                $hari[$h] = $pilih;
             }
         }
 
-        // --- Ketersediaan hari ---
-        $hari = [];
-        foreach (($post['hari'] ?? []) as $h => $val) {
-            $hari[$h] = $val;
-        }
+        $bersedia      = ($post['bersedia'] ?? '') === 'ya';
+        $tugasBersedia = ! empty($post['tugas_bersedia']);
 
         return [
-            'nama_lengkap'        => trim($post['nama_lengkap']),
-            'nip_nuptk'           => trim($post['nip_nuptk'] ?? '') ?: null,
-            'tempat_lahir'        => trim($post['tempat_lahir'] ?? ''),
-            'tanggal_lahir'       => ($post['tanggal_lahir'] ?? '') ?: null,
+            'nama_lengkap'        => trim($post['nama_lengkap'] ?? ''),
+            'nip_nuptk'           => null,
+            'tempat_lahir'        => null,
+            'tanggal_lahir'       => null,
             'pendidikan_terakhir' => trim($post['pendidikan_terakhir'] ?? ''),
             'guru_mapel'          => trim($post['guru_mapel'] ?? ''),
-            'status_kepegawaian'  => $post['status_kepegawaian'],
-            'nomor_hp'            => trim($post['nomor_hp']),
+            'status_kepegawaian'  => ($post['status_kepegawaian'] ?? '') ?: null,
+            'nomor_hp'            => trim($post['nomor_hp'] ?? ''),
             'mapel_diampu'        => json_encode($mapel, JSON_UNESCAPED_UNICODE),
-            'total_jam'           => $total,
-            'tugas_tambahan'      => json_encode(array_values($post['tugas'] ?? []), JSON_UNESCAPED_UNICODE),
-            'tugas_lainnya'       => trim($post['tugas_lainnya'] ?? ''),
+            'total_jam'           => 0,
+            'tugas_tambahan'      => json_encode($tugasBersedia ? ['Bersedia menerima tugas tambahan'] : [], JSON_UNESCAPED_UNICODE),
+            'tugas_lainnya'       => null,
             'kesediaan_jam'       => json_encode(array_values($post['jam_kesediaan'] ?? []), JSON_UNESCAPED_UNICODE),
-            'preferensi'          => json_encode($pref, JSON_UNESCAPED_UNICODE),
+            'preferensi'          => json_encode([], JSON_UNESCAPED_UNICODE),
             'ketersediaan_hari'   => json_encode($hari, JSON_UNESCAPED_UNICODE),
             'keterangan_tambahan' => trim($post['keterangan_tambahan'] ?? ''),
-            'bersedia_mengajar'   => 1,
-            'komitmen_setuju'     => 1,
+            'bersedia_mengajar'   => $bersedia ? 1 : 0,
+            'komitmen_setuju'     => ($bersedia && ! empty($post['komitmen_setuju'])) ? 1 : 0,
         ];
     }
 }

@@ -69,40 +69,40 @@ class Export extends BaseController
         $sheet->setTitle('Kesediaan Guru');
 
         // Judul
-        $sheet->mergeCells('A1:N1')->setCellValue('A1', 'REKAP KESEDIAAN GURU MENGAJAR');
-        $sheet->mergeCells('A2:N2')->setCellValue('A2', strtoupper($setting['school_name']) . ' — T.P. ' . $setting['academic_year']);
+        $sheet->mergeCells('A1:J1')->setCellValue('A1', 'REKAP KESEDIAAN GURU MENGAJAR');
+        $sheet->mergeCells('A2:J2')->setCellValue('A2', strtoupper($setting['school_name']) . ' — T.P. ' . $setting['academic_year']);
         $sheet->getStyle('A1')->getFont()->setBold(true)->setSize(14);
         $sheet->getStyle('A2')->getFont()->setBold(true)->setSize(11);
         $sheet->getStyle('A1:A2')->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER);
 
         // Header
-        $headers = ['No', 'Nama Lengkap', 'NIP/NUPTK', 'Tempat, Tgl Lahir', 'Pendidikan', 'Mapel (Jabatan)',
-            'Status', 'No. HP', 'Mata Pelajaran Diampu', 'Total Jam', 'Tugas Tambahan', 'Preferensi', 'Hari Bersedia', 'Tgl Isi'];
+        $headers = ['No', 'Nama Lengkap', 'Guru Mapel', 'Status', 'No. HP',
+            'Mata Pelajaran Diampu', 'Tugas Tambahan', 'Hari (Pagi/Siang)', 'Kesediaan', 'Tgl Isi'];
         $col = 'A'; $r = 4;
         foreach ($headers as $h) {
             $sheet->setCellValue($col . $r, $h);
             $col++;
         }
-        $sheet->getStyle('A4:N4')->getFont()->setBold(true)->getColor()->setRGB('FFFFFF');
-        $sheet->getStyle('A4:N4')->getFill()->setFillType(Fill::FILL_SOLID)->getStartColor()->setRGB('1A3A6B');
-        $sheet->getStyle('A4:N4')->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER);
+        $sheet->getStyle('A4:J4')->getFont()->setBold(true)->getColor()->setRGB('FFFFFF');
+        $sheet->getStyle('A4:J4')->getFill()->setFillType(Fill::FILL_SOLID)->getStartColor()->setRGB('1A3A6B');
+        $sheet->getStyle('A4:J4')->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER);
 
         // Data
         $r = 5;
         foreach ($rows as $i => $d) {
-            $ttl = $d['tempat_lahir'];
-            if ($d['tanggal_lahir']) $ttl .= ($ttl ? ', ' : '') . date('d-m-Y', strtotime($d['tanggal_lahir']));
-
-            $mapel = implode(", ", array_map(fn ($m) => "{$m['mapel']} ({$m['kelas']}/{$m['jam']}jam)", $d['mapel_diampu'] ?: []));
-            $tugas = implode(", ", $d['tugas_tambahan'] ?: []);
-            if (! empty($d['tugas_lainnya'])) $tugas .= ($tugas ? ", " : "") . $d['tugas_lainnya'];
-            $pref  = implode(", ", array_map(fn ($p) => "{$p['prioritas']}. {$p['mapel']}", $d['preferensi'] ?: []));
-            $hari  = implode(", ", array_keys(array_filter($d['ketersediaan_hari'] ?: [], fn ($v) => $v === 'Ya')));
+            $mapel = implode(", ", array_map(fn ($m) => $m['mapel'] . ($m['kelas'] ? " ({$m['kelas']})" : ''), $d['mapel_diampu'] ?: []));
+            $tugas = ! empty($d['tugas_tambahan']) ? 'Bersedia' : '-';
+            $hari  = [];
+            foreach (($d['ketersediaan_hari'] ?: []) as $h => $s) {
+                if ($s) $hari[] = $h . ': ' . implode('/', (array) $s);
+            }
+            $hariStr = $hari ? implode(", ", $hari) : '-';
 
             $sheet->fromArray([
-                $i + 1, $d['nama_lengkap'], "'" . $d['nip_nuptk'], $ttl, $d['pendidikan_terakhir'],
-                $d['guru_mapel'], $d['status_kepegawaian'], "'" . $d['nomor_hp'], $mapel, $d['total_jam'],
-                $tugas, $pref, $hari, date('d-m-Y', strtotime($d['created_at'])),
+                $i + 1, $d['nama_lengkap'], $d['guru_mapel'], $d['status_kepegawaian'],
+                "'" . $d['nomor_hp'], $mapel, $tugas, $hariStr,
+                empty($d['bersedia_mengajar']) ? 'TIDAK BERSEDIA' : 'Bersedia',
+                date('d-m-Y', strtotime($d['created_at'])),
             ], null, 'A' . $r, true);
             $r++;
         }
@@ -110,10 +110,10 @@ class Export extends BaseController
         // Border & lebar kolom
         $last = $r - 1;
         if ($last >= 5) {
-            $sheet->getStyle('A4:N' . $last)->getBorders()->getAllBorders()->setBorderStyle(Border::BORDER_THIN);
-            $sheet->getStyle('A5:N' . $last)->getAlignment()->setVertical(Alignment::VERTICAL_TOP)->setWrapText(true);
+            $sheet->getStyle('A4:J' . $last)->getBorders()->getAllBorders()->setBorderStyle(Border::BORDER_THIN);
+            $sheet->getStyle('A5:J' . $last)->getAlignment()->setVertical(Alignment::VERTICAL_TOP)->setWrapText(true);
         }
-        foreach (['A'=>5,'B'=>26,'C'=>20,'D'=>22,'E'=>20,'F'=>16,'G'=>8,'H'=>15,'I'=>34,'J'=>8,'K'=>26,'L'=>22,'M'=>24,'N'=>12] as $c => $w) {
+        foreach (['A'=>5,'B'=>28,'C'=>18,'D'=>8,'E'=>15,'F'=>40,'G'=>12,'H'=>30,'I'=>16,'J'=>12] as $c => $w) {
             $sheet->getColumnDimension($c)->setWidth($w);
         }
 

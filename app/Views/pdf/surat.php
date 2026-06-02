@@ -1,9 +1,8 @@
 <?php
-    $hariList = ['Senin','Selasa','Rabu','Kamis','Jumat','Sabtu'];
+    $hariList = ['Senin','Selasa','Rabu','Kamis','Jumat'];
     $logoPath = (! empty($setting['logo']) && is_file(FCPATH . 'uploads/' . $setting['logo']))
         ? FCPATH . 'uploads/' . $setting['logo'] : null;
-    $ttl = $row['tempat_lahir'];
-    if ($row['tanggal_lahir']) $ttl .= ($ttl ? ', ' : '') . date('d F Y', strtotime($row['tanggal_lahir']));
+    $bersedia = ! empty($row['bersedia_mengajar']);
     $komitmen = [
         'Melaksanakan proses pembelajaran sesuai ketentuan yang berlaku.',
         'Menyusun perangkat ajar secara lengkap dan tepat waktu.',
@@ -45,112 +44,95 @@
     .sec-title { font-weight: bold; margin: 10px 0 3px; color: #1a3a6b; }
     ol.komit { margin: 3px 0 3px 16px; padding: 0; }
     ol.komit li { margin-bottom: 1px; text-align: justify; }
+    ul.list { margin: 3px 0 3px 16px; padding: 0; }
     .ttd { width: 100%; margin-top: 24px; }
     .ttd td { vertical-align: top; text-align: center; width: 50%; font-size: 10.5px; }
     .ttd .space { height: 64px; }
     .materai { border: 1px dashed #999; padding: 6px 4px; font-size: 8px; color: #888; display: inline-block; margin: 4px 0; }
-    .tag { display: inline-block; border: 1px solid #1a3a6b; border-radius: 3px; padding: 1px 6px; margin: 1px; font-size: 9.5px; }
     .muted { color: #777; }
+    .warn { border: 1px solid #c0392b; background: #fdecea; color: #922; padding: 6px 10px; margin: 8px 0; }
 </style>
 </head>
 <body>
 
-    <!-- KOP SURAT -->
     <div class="kop">
-        <table>
-            <tr>
-                <?php if ($logoPath): ?><td class="logo"><img src="<?= $logoPath ?>"></td><?php endif; ?>
-                <td class="name">
-                    <?php if (! empty($setting['school_level'])): ?><h1>PEMERINTAH / YAYASAN — <?= esc(strtoupper($setting['school_level'])) ?></h1><?php endif; ?>
-                    <h2><?= esc(strtoupper($setting['school_name'])) ?></h2>
-                    <p>
-                        <?= esc($setting['address']) ?><?= $setting['city'] ? ', ' . esc($setting['city']) : '' ?>
-                        <?php if ($setting['phone'] || $setting['email']): ?><br>
-                            <?= $setting['phone'] ? 'Telp: ' . esc($setting['phone']) : '' ?>
-                            <?= $setting['email'] ? ' &middot; Email: ' . esc($setting['email']) : '' ?>
-                        <?php endif; ?>
-                    </p>
-                </td>
-            </tr>
-        </table>
+        <table><tr>
+            <?php if ($logoPath): ?><td class="logo"><img src="<?= $logoPath ?>"></td><?php endif; ?>
+            <td class="name">
+                <?php if (! empty($setting['school_level'])): ?><h1><?= esc(strtoupper($setting['school_level'])) ?></h1><?php endif; ?>
+                <h2><?= esc(strtoupper($setting['school_name'])) ?></h2>
+                <p>
+                    <?= esc($setting['address']) ?><?= $setting['city'] ? ', ' . esc($setting['city']) : '' ?>
+                    <?php if ($setting['phone'] || $setting['email']): ?><br>
+                        <?= $setting['phone'] ? 'Telp: ' . esc($setting['phone']) : '' ?>
+                        <?= $setting['email'] ? ' &middot; Email: ' . esc($setting['email']) : '' ?>
+                    <?php endif; ?>
+                </p>
+            </td>
+        </tr></table>
     </div>
 
-    <!-- JUDUL -->
     <div class="title">
         <h3>Surat Pernyataan Kesediaan Guru Mengajar</h3>
         <p>Tahun Pelajaran <?= esc($setting['academic_year']) ?></p>
     </div>
 
-    <p class="intro">Yang bertanda tangan di bawah ini menyatakan kesediaan untuk melaksanakan tugas mengajar dan tugas tambahan sesuai penugasan dari Kepala Sekolah:</p>
+    <p class="intro">Yang bertanda tangan di bawah ini:</p>
 
-    <!-- IDENTITAS -->
     <table class="data">
         <tr><td class="lbl">Nama Lengkap</td><td class="sep">:</td><td><b><?= esc($row['nama_lengkap']) ?></b></td></tr>
-        <tr><td class="lbl">NIP / NUPTK</td><td class="sep">:</td><td><?= esc($row['nip_nuptk']) ?></td></tr>
-        <tr><td class="lbl">Tempat, Tanggal Lahir</td><td class="sep">:</td><td><?= esc($ttl ?: '-') ?></td></tr>
         <tr><td class="lbl">Pendidikan Terakhir</td><td class="sep">:</td><td><?= esc($row['pendidikan_terakhir'] ?: '-') ?></td></tr>
-        <tr><td class="lbl">Jabatan</td><td class="sep">:</td><td>Guru Mata Pelajaran <?= esc($row['guru_mapel'] ?: '-') ?></td></tr>
-        <tr><td class="lbl">Status Kepegawaian</td><td class="sep">:</td><td><?= esc($row['status_kepegawaian']) ?></td></tr>
-        <tr><td class="lbl">Nomor HP</td><td class="sep">:</td><td><?= esc($row['nomor_hp']) ?></td></tr>
+        <tr><td class="lbl">Guru Mapel</td><td class="sep">:</td><td><?= esc($row['guru_mapel'] ?: '-') ?></td></tr>
+        <tr><td class="lbl">Status Kepegawaian</td><td class="sep">:</td><td><?= esc($row['status_kepegawaian'] ?: '-') ?></td></tr>
+        <tr><td class="lbl">Nomor HP</td><td class="sep">:</td><td><?= esc($row['nomor_hp'] ?: '-') ?></td></tr>
+        <tr><td class="lbl">Kesediaan Mengajar</td><td class="sep">:</td><td><b><?= $bersedia ? 'BERSEDIA' : 'TIDAK BERSEDIA' ?></b></td></tr>
     </table>
 
-    <!-- MATA PELAJARAN -->
-    <div class="sec-title">A. Mata Pelajaran yang Diampu</div>
-    <table class="grid">
-        <thead><tr><th style="width:8%">No</th><th>Mata Pelajaran</th><th style="width:20%">Kelas</th><th style="width:18%">Jam/Minggu</th></tr></thead>
-        <tbody>
-            <?php if (! empty($row['mapel_diampu'])): foreach ($row['mapel_diampu'] as $i => $m): ?>
-                <tr><td style="text-align:center"><?= $i+1 ?></td><td><?= esc($m['mapel']) ?></td><td style="text-align:center"><?= esc($m['kelas']) ?></td><td style="text-align:center"><?= esc($m['jam']) ?></td></tr>
-            <?php endforeach; else: ?>
-                <tr><td colspan="4" style="text-align:center" class="muted">—</td></tr>
-            <?php endif; ?>
-            <tr><td colspan="3" style="text-align:right"><b>TOTAL JAM / MINGGU</b></td><td style="text-align:center"><b><?= $row['total_jam'] ?></b></td></tr>
-        </tbody>
-    </table>
+    <?php if (! $bersedia): ?>
+        <div class="warn">Guru yang bersangkutan menyatakan <b>TIDAK BERSEDIA</b> mengisi/melaksanakan tugas mengajar. Mohon dikonfirmasi kepada pihak sekolah.</div>
+    <?php else: ?>
+        <p class="intro">menyatakan <b>bersedia</b> melaksanakan tugas mengajar dan tugas tambahan sesuai penugasan dari Kepala Sekolah, dengan rincian:</p>
 
-    <!-- TUGAS TAMBAHAN -->
-    <div class="sec-title">B. Kesediaan Tugas Tambahan</div>
-    <div>
-        <?php if (! empty($row['tugas_tambahan'])): foreach ($row['tugas_tambahan'] as $t): ?>
-            <span class="tag"><?= esc($t) ?></span>
-        <?php endforeach; endif; ?>
-        <?php if (! empty($row['tugas_lainnya'])): ?><span class="tag"><?= esc($row['tugas_lainnya']) ?></span><?php endif; ?>
-        <?php if (empty($row['tugas_tambahan']) && empty($row['tugas_lainnya'])): ?><span class="muted">Tidak ada tugas tambahan dipilih.</span><?php endif; ?>
-    </div>
+        <div class="sec-title">A. Mata Pelajaran yang Diampu</div>
+        <table class="grid">
+            <thead><tr><th style="width:8%">No</th><th>Mata Pelajaran</th><th style="width:28%">Kelas</th></tr></thead>
+            <tbody>
+                <?php if (! empty($row['mapel_diampu'])): foreach ($row['mapel_diampu'] as $i => $m): ?>
+                    <tr><td style="text-align:center"><?= $i+1 ?></td><td><?= esc($m['mapel']) ?></td><td style="text-align:center"><?= esc($m['kelas']) ?></td></tr>
+                <?php endforeach; else: ?>
+                    <tr><td colspan="3" style="text-align:center" class="muted">—</td></tr>
+                <?php endif; ?>
+            </tbody>
+        </table>
 
-    <!-- LAMPIRAN -->
-    <table style="width:100%; margin-top:8px"><tr>
-        <td style="width:50%; vertical-align:top">
-            <div class="sec-title">C. Preferensi Mata Pelajaran</div>
-            <?php if (! empty($row['preferensi'])): ?>
-                <ol class="komit"><?php foreach ($row['preferensi'] as $p): ?><li><?= esc($p['mapel']) ?></li><?php endforeach; ?></ol>
-            <?php else: ?><span class="muted">—</span><?php endif; ?>
-        </td>
-        <td style="width:50%; vertical-align:top">
-            <div class="sec-title">D. Ketersediaan Hari Mengajar</div>
-            <table class="grid"><tr>
-                <?php foreach ($hariList as $h): ?><th><?= substr($h,0,3) ?></th><?php endforeach; ?>
-            </tr><tr>
-                <?php foreach ($hariList as $h): $v = $row['ketersediaan_hari'][$h] ?? '-'; ?>
-                    <td style="text-align:center"><?= esc($v === 'Ya' ? '✓' : ($v === 'Tidak' ? '✗' : '-')) ?></td>
-                <?php endforeach; ?>
-            </tr></table>
-        </td>
-    </tr></table>
+        <div class="sec-title">B. Kesediaan Tugas Tambahan</div>
+        <p style="margin:2px 0"><?= ! empty($row['tugas_tambahan']) ? '✓ Bersedia menerima tugas tambahan sesuai kebutuhan sekolah.' : '<span class="muted">Tidak menyatakan bersedia menerima tugas tambahan.</span>' ?></p>
 
-    <!-- KOMITMEN -->
-    <div class="sec-title">E. Komitmen Pelaksanaan Tugas</div>
-    <p style="margin:2px 0">Saya berkomitmen untuk:</p>
-    <ol class="komit"><?php foreach ($komitmen as $k): ?><li><?= esc($k) ?></li><?php endforeach; ?></ol>
+        <div class="sec-title">C. Kesediaan Jam Mengajar</div>
+        <?php if (! empty($row['kesediaan_jam'])): ?>
+            <ul class="list"><?php foreach ($row['kesediaan_jam'] as $j): ?><li><?= esc($j) ?></li><?php endforeach; ?></ul>
+        <?php else: ?><p class="muted" style="margin:2px 0">—</p><?php endif; ?>
 
-    <?php if (! empty($row['keterangan_tambahan'])): ?>
-        <div class="sec-title">F. Keterangan Tambahan</div>
-        <p style="text-align:justify"><?= nl2br(esc($row['keterangan_tambahan'])) ?></p>
+        <div class="sec-title">D. Ketersediaan Hari Mengajar</div>
+        <table class="grid">
+            <tr><?php foreach ($hariList as $h): ?><th><?= $h ?></th><?php endforeach; ?></tr>
+            <tr><?php foreach ($hariList as $h): $s = $row['ketersediaan_hari'][$h] ?? []; ?>
+                <td style="text-align:center"><?= $s ? esc(implode(' & ', (array) $s)) : '-' ?></td>
+            <?php endforeach; ?></tr>
+        </table>
+
+        <div class="sec-title">E. Komitmen Pelaksanaan Tugas</div>
+        <p style="margin:2px 0">Saya berkomitmen untuk:</p>
+        <ol class="komit"><?php foreach ($komitmen as $k): ?><li><?= esc($k) ?></li><?php endforeach; ?></ol>
+
+        <?php if (! empty($row['keterangan_tambahan'])): ?>
+            <div class="sec-title">F. Keterangan Tambahan</div>
+            <p style="text-align:justify"><?= nl2br(esc($row['keterangan_tambahan'])) ?></p>
+        <?php endif; ?>
+
+        <p class="intro" style="margin-top:10px">Demikian surat pernyataan ini saya buat dengan sebenarnya untuk digunakan sebagaimana mestinya. Apabila di kemudian hari saya tidak melaksanakan tugas sesuai komitmen yang telah disepakati, saya bersedia menerima pembinaan dan ketentuan yang berlaku di sekolah.</p>
     <?php endif; ?>
 
-    <p class="intro" style="margin-top:10px">Demikian surat pernyataan ini saya buat dengan sebenarnya untuk digunakan sebagaimana mestinya. Apabila di kemudian hari saya tidak melaksanakan tugas sesuai komitmen yang telah disepakati, saya bersedia menerima pembinaan dan ketentuan yang berlaku di sekolah.</p>
-
-    <!-- TANDA TANGAN -->
     <table class="ttd">
         <tr>
             <td>Mengetahui,<br>Kepala Sekolah</td>
@@ -158,11 +140,11 @@
         </tr>
         <tr>
             <td><div class="space"></div></td>
-            <td><div class="materai">Materai<br>Rp10.000</div></td>
+            <td><?php if ($bersedia): ?><div class="materai">Materai<br>Rp10.000</div><?php else: ?><div class="space"></div><?php endif; ?></td>
         </tr>
         <tr>
             <td><b><u><?= esc($setting['headmaster_name'] ?: '..............................') ?></u></b><br>NIP. <?= esc($setting['headmaster_nip'] ?: '..............................') ?></td>
-            <td><b><u><?= esc($row['nama_lengkap']) ?></u></b><br>NIP. <?= esc($row['nip_nuptk']) ?></td>
+            <td><b><u><?= esc($row['nama_lengkap']) ?></u></b></td>
         </tr>
     </table>
 

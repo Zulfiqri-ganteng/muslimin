@@ -46,37 +46,38 @@
         <thead>
             <tr>
                 <th style="width:3%">No</th>
-                <th style="width:14%">Nama Lengkap</th>
-                <th style="width:11%">NIP/NUPTK</th>
-                <th style="width:9%">Mapel</th>
+                <th style="width:16%">Nama Lengkap</th>
+                <th style="width:10%">Guru Mapel</th>
                 <th style="width:5%">Status</th>
-                <th style="width:9%">No. HP</th>
-                <th style="width:21%">Mata Pelajaran Diampu</th>
-                <th style="width:4%">Jam</th>
-                <th style="width:14%">Tugas Tambahan</th>
-                <th style="width:10%">Hari Bersedia</th>
+                <th style="width:10%">No. HP</th>
+                <th style="width:24%">Mata Pelajaran Diampu</th>
+                <th style="width:7%">Tugas Tmbh.</th>
+                <th style="width:15%">Hari (Pagi/Siang)</th>
+                <th style="width:10%">Kesediaan</th>
             </tr>
         </thead>
         <tbody>
             <?php if (empty($rows)): ?>
-                <tr><td colspan="10" class="ctr">Belum ada data.</td></tr>
+                <tr><td colspan="9" class="ctr">Belum ada data.</td></tr>
             <?php else: foreach ($rows as $i => $d):
-                $mapel = implode('; ', array_map(fn ($m) => "{$m['mapel']} ({$m['kelas']}: {$m['jam']}j)", $d['mapel_diampu'] ?: []));
-                $tugas = implode(', ', $d['tugas_tambahan'] ?: []);
-                if (! empty($d['tugas_lainnya'])) $tugas .= ($tugas ? ', ' : '') . $d['tugas_lainnya'];
-                $hari  = implode(', ', array_map(fn ($h) => substr($h, 0, 3), array_keys(array_filter($d['ketersediaan_hari'] ?: [], fn ($v) => $v === 'Ya'))));
+                $mapel = implode('; ', array_map(fn ($m) => $m['mapel'] . ($m['kelas'] ? " ({$m['kelas']})" : ''), $d['mapel_diampu'] ?: []));
+                $tugas = ! empty($d['tugas_tambahan']) ? 'Bersedia' : '-';
+                $hari  = [];
+                foreach (($d['ketersediaan_hari'] ?: []) as $h => $s) {
+                    if ($s) $hari[] = substr($h, 0, 3) . ': ' . implode('/', (array) $s);
+                }
+                $hariStr = $hari ? implode(', ', $hari) : '-';
             ?>
                 <tr>
                     <td class="ctr"><?= $i+1 ?></td>
                     <td><?= esc($d['nama_lengkap']) ?></td>
-                    <td><?= esc($d['nip_nuptk']) ?></td>
-                    <td><?= esc($d['guru_mapel']) ?></td>
-                    <td class="ctr"><?= esc($d['status_kepegawaian']) ?></td>
-                    <td><?= esc($d['nomor_hp']) ?></td>
+                    <td><?= esc($d['guru_mapel'] ?: '-') ?></td>
+                    <td class="ctr"><?= esc($d['status_kepegawaian'] ?: '-') ?></td>
+                    <td><?= esc($d['nomor_hp'] ?: '-') ?></td>
                     <td><?= esc($mapel ?: '-') ?></td>
-                    <td class="ctr"><?= $d['total_jam'] ?></td>
-                    <td><?= esc($tugas ?: '-') ?></td>
-                    <td><?= esc($hari ?: '-') ?></td>
+                    <td class="ctr"><?= $tugas ?></td>
+                    <td><?= esc($hariStr) ?></td>
+                    <td class="ctr"><?= empty($d['bersedia_mengajar']) ? 'TIDAK' : 'Bersedia' ?></td>
                 </tr>
             <?php endforeach; endif; ?>
         </tbody>
