@@ -9,9 +9,9 @@
         <p class="mt-3 text-slate-500 leading-relaxed">
             Terima kasih <b class="text-slate-700"><?= esc(session('nama') ?? 'Bapak/Ibu Guru') ?></b>.
             <?php if (session('revisi')): ?>
-                Perbaikan data kesediaan Anda telah kami simpan dan akan ditinjau ulang oleh admin sekolah.
+                Perbaikan data Anda telah kami simpan dan akan ditinjau ulang oleh admin sekolah.
             <?php else: ?>
-                Data kesediaan mengajar Anda telah kami terima dan akan diproses oleh admin sekolah.
+                Data Anda telah kami terima dan akan diproses oleh admin sekolah.
             <?php endif; ?>
         </p>
         <div class="mt-6 rounded-xl bg-slate-50 border border-slate-200 px-5 py-4 text-sm text-slate-500">
