@@ -24,11 +24,11 @@
     <nav class="relative max-w-6xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between">
         <div class="flex items-center gap-2.5">
             <?php if (! empty($setting['logo'])): ?>
-                <img src="<?= base_url('uploads/' . esc($setting['logo'])) ?>" alt="Logo" class="h-9 w-9 rounded-lg bg-white/10 object-contain p-0.5">
+                <img src="<?= base_url('uploads/' . esc($setting['logo'])) ?>" alt="Logo" class="h-12 w-12 object-contain shrink-0">
             <?php else: ?>
-                <span class="flex h-9 w-9 items-center justify-center rounded-lg bg-gold-400 text-brand-900 font-extrabold">S</span>
+                <span class="flex h-12 w-12 items-center justify-center rounded-lg bg-gold-400 text-brand-900 font-extrabold text-lg shrink-0">S</span>
             <?php endif; ?>
-            <span class="text-white font-bold tracking-tight"><?= esc($systemName) ?></span>
+            <span class="text-white font-bold text-lg tracking-tight"><?= esc($systemName) ?></span>
         </div>
         <a href="<?= site_url('admin/login') ?>" class="inline-flex items-center gap-1.5 rounded-lg border border-white/20 px-3.5 py-1.5 text-sm font-semibold text-white/90 hover:bg-white/10 transition">
             <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M11 16l-4-4m0 0l4-4m-4 4h14m-5 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"/></svg>
