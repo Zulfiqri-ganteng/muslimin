@@ -48,7 +48,9 @@
     <div class="bg-gradient-to-br from-brand-700 to-brand-900 rounded-2xl shadow-xl overflow-hidden">
         <div class="px-6 py-8 sm:px-10 sm:py-10 text-center text-white">
             <?php if (! empty($setting['logo'])): ?>
-                <img src="<?= base_url('uploads/' . esc($setting['logo'])) ?>" alt="Logo" class="h-16 mx-auto mb-4 object-contain">
+                <span class="mx-auto mb-4 flex h-20 w-20 items-center justify-center rounded-full bg-white shadow-lg ring-4 ring-white/15">
+                    <img src="<?= base_url('uploads/' . esc($setting['logo'])) ?>" alt="Logo" class="h-14 w-14 object-contain">
+                </span>
             <?php endif; ?>
             <p class="text-brand-200 text-sm font-medium tracking-wide uppercase"><?= esc($setting['school_name'] ?? '') ?></p>
             <h1 class="mt-1 text-2xl sm:text-3xl font-extrabold leading-tight">Format Kesediaan Guru Mengajar</h1>
