@@ -4,7 +4,7 @@
 <?php
     // ====== Identitas sistem (ubah di sini bila perlu) ======
     $systemName = 'SIKAGU';
-    $systemTag  = 'Sistem Informasi Kesediaan Guru Mengajar';
+    $systemTag  = 'Sistem Informasi Guru';
     // ========================================================
     $tahun  = esc($setting['academic_year'] ?? '2026/2027');
     $isOpen = ! empty($setting['form_open']);
