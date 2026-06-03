@@ -35,8 +35,8 @@
     body { font-size: 11px; color: #1a1a1a; line-height: 1.45; }
     .kop { border-bottom: 3px double #1a3a6b; padding-bottom: 8px; margin-bottom: 4px; }
     .kop table { width: 100%; }
-    .kop .logo { width: 70px; text-align: center; vertical-align: middle; }
-    .kop .logo img { max-width: 64px; max-height: 64px; }
+    .kop .logo { width: 92px; text-align: center; vertical-align: middle; }
+    .kop .logo img { max-width: 84px; max-height: 84px; }
     .kop .name { text-align: center; vertical-align: middle; }
     .kop .name h1 { margin: 0; font-size: 16px; color: #1a3a6b; letter-spacing: .5px; }
     .kop .name h2 { margin: 0; font-size: 18px; color: #1a3a6b; }

@@ -21,8 +21,8 @@
     body { font-size: 9px; color: #1a1a1a; }
     .kop { border-bottom: 2px solid #1a3a6b; padding-bottom: 6px; margin-bottom: 8px; }
     .kop table { width: 100%; }
-    .kop .logo { width: 50px; text-align: center; }
-    .kop .logo img { max-width: 46px; max-height: 46px; }
+    .kop .logo { width: 66px; text-align: center; }
+    .kop .logo img { max-width: 60px; max-height: 60px; }
     .kop h2 { margin: 0; font-size: 14px; color: #1a3a6b; }
     .kop p { margin: 1px 0 0; font-size: 8px; color: #444; }
     .title { text-align: center; margin: 4px 0 8px; }

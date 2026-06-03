@@ -24,9 +24,11 @@
     <nav class="relative max-w-6xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between">
         <div class="flex items-center gap-2.5">
             <?php if (! empty($setting['logo'])): ?>
-                <img src="<?= base_url('uploads/' . esc($setting['logo'])) ?>" alt="Logo" class="h-12 w-12 object-contain shrink-0">
+                <span class="flex h-12 w-12 items-center justify-center rounded-xl bg-white shadow-sm shrink-0 p-1">
+                    <img src="<?= base_url('uploads/' . esc($setting['logo'])) ?>" alt="Logo" class="h-full w-full object-contain">
+                </span>
             <?php else: ?>
-                <span class="flex h-12 w-12 items-center justify-center rounded-lg bg-gold-400 text-brand-900 font-extrabold text-lg shrink-0">S</span>
+                <span class="flex h-12 w-12 items-center justify-center rounded-xl bg-gold-400 text-brand-900 font-extrabold text-lg shrink-0">S</span>
             <?php endif; ?>
             <span class="text-white font-bold text-lg tracking-tight"><?= esc($systemName) ?></span>
         </div>
