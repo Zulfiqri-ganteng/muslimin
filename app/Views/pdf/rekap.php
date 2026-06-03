@@ -1,6 +1,15 @@
 <?php
-    $logoPath = (! empty($setting['logo']) && is_file(FCPATH . 'uploads/' . $setting['logo']))
-        ? FCPATH . 'uploads/' . $setting['logo'] : null;
+    $logoData = null;
+    if (! empty($setting['logo'])) {
+        $lp = FCPATH . 'uploads/' . $setting['logo'];
+        if (is_file($lp)) {
+            $mime = function_exists('mime_content_type') ? (mime_content_type($lp) ?: 'image/png') : 'image/png';
+            $logoData = 'data:' . $mime . ';base64,' . base64_encode((string) @file_get_contents($lp));
+        }
+    }
+    $alamat = trim((string) ($setting['address'] ?? ''));
+    $kota   = trim((string) ($setting['city'] ?? ''));
+    $lokasi = ($kota && stripos($alamat, $kota) === false) ? ($alamat ? $alamat . ', ' . $kota : $kota) : $alamat;
 ?>
 <!DOCTYPE html>
 <html>
@@ -29,10 +38,10 @@
 <body>
     <div class="kop">
         <table><tr>
-            <?php if ($logoPath): ?><td class="logo"><img src="<?= $logoPath ?>"></td><?php endif; ?>
+            <?php if ($logoData): ?><td class="logo"><img src="<?= $logoData ?>"></td><?php endif; ?>
             <td style="text-align:center">
                 <h2><?= esc(strtoupper($setting['school_name'])) ?></h2>
-                <p><?= esc($setting['address']) ?><?= $setting['city'] ? ', ' . esc($setting['city']) : '' ?></p>
+                <p><?= esc($lokasi) ?></p>
             </td>
         </tr></table>
     </div>

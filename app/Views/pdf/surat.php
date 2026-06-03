@@ -1,7 +1,18 @@
 <?php
     $hariList = ['Senin','Selasa','Rabu','Kamis','Jumat'];
-    $logoPath = (! empty($setting['logo']) && is_file(FCPATH . 'uploads/' . $setting['logo']))
-        ? FCPATH . 'uploads/' . $setting['logo'] : null;
+    // Logo di-embed sebagai data URI (base64) agar pasti tampil di Dompdf
+    $logoData = null;
+    if (! empty($setting['logo'])) {
+        $lp = FCPATH . 'uploads/' . $setting['logo'];
+        if (is_file($lp)) {
+            $mime = function_exists('mime_content_type') ? (mime_content_type($lp) ?: 'image/png') : 'image/png';
+            $logoData = 'data:' . $mime . ';base64,' . base64_encode((string) @file_get_contents($lp));
+        }
+    }
+    // Lokasi: hindari "BEKASI, Bekasi" (kota sudah ada di alamat)
+    $alamat = trim((string) ($setting['address'] ?? ''));
+    $kota   = trim((string) ($setting['city'] ?? ''));
+    $lokasi = ($kota && stripos($alamat, $kota) === false) ? ($alamat ? $alamat . ', ' . $kota : $kota) : $alamat;
     $bersedia = ! empty($row['bersedia_mengajar']);
     $komitmen = [
         'Melaksanakan proses pembelajaran sesuai ketentuan yang berlaku.',
@@ -57,12 +68,11 @@
 
     <div class="kop">
         <table><tr>
-            <?php if ($logoPath): ?><td class="logo"><img src="<?= $logoPath ?>"></td><?php endif; ?>
+            <?php if ($logoData): ?><td class="logo"><img src="<?= $logoData ?>"></td><?php endif; ?>
             <td class="name">
-                <?php if (! empty($setting['school_level'])): ?><h1><?= esc(strtoupper($setting['school_level'])) ?></h1><?php endif; ?>
                 <h2><?= esc(strtoupper($setting['school_name'])) ?></h2>
                 <p>
-                    <?= esc($setting['address']) ?><?= $setting['city'] ? ', ' . esc($setting['city']) : '' ?>
+                    <?= esc($lokasi) ?>
                     <?php if ($setting['phone'] || $setting['email']): ?><br>
                         <?= $setting['phone'] ? 'Telp: ' . esc($setting['phone']) : '' ?>
                         <?= $setting['email'] ? ' &middot; Email: ' . esc($setting['email']) : '' ?>
