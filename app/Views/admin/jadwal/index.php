@@ -28,7 +28,11 @@
                     Tingkat <b><?= esc($kelas['tingkat']) ?></b> · Shift
                     <span class="inline-flex rounded-full px-2 py-0.5 text-xs font-semibold <?= $shift === 'pagi' ? 'bg-amber-100 text-amber-700' : 'bg-indigo-100 text-indigo-700' ?>"><?= ucfirst($shift) ?></span>
                 </div>
-                <div class="flex gap-2">
+                <div class="flex flex-wrap gap-2">
+                    <button type="button" @click="genOpen=true" class="inline-flex items-center gap-1.5 rounded-lg bg-violet-600 hover:bg-violet-700 text-white text-sm font-semibold px-3.5 py-2.5 transition">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
+                        Generate Otomatis
+                    </button>
                     <a href="<?= site_url('admin/cetak/jadwal-kelas/' . $kelasId . '/excel') ?>" class="inline-flex items-center gap-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-semibold px-3.5 py-2.5 transition">
                         <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg>
                         Excel
@@ -127,6 +131,27 @@
         </div>
     <?php endif; ?>
 
+    <!-- Modal Generate Otomatis -->
+    <div x-show="genOpen" x-cloak x-transition.opacity.duration.200ms class="fixed inset-0 z-50 flex items-center justify-center p-4">
+        <div class="absolute inset-0 bg-black/40" @click="genOpen=false"></div>
+        <div class="relative bg-white rounded-2xl shadow-xl w-full max-w-md p-6">
+            <h3 class="font-bold text-lg text-slate-800 mb-2">Generate Jadwal Otomatis</h3>
+            <p class="text-sm text-slate-500 mb-4">Sistem mengisi sel berdasarkan penugasan kelas ini, menghormati ketersediaan guru (R3) dan menghindari bentrok guru (R1). Penugasan yang tak muat akan dilaporkan.</p>
+            <form method="post" action="<?= site_url('admin/jadwal/generate') ?>">
+                <?= csrf_field() ?>
+                <input type="hidden" name="kelas_id" value="<?= $kelasId ?>">
+                <label class="flex items-start gap-2 text-sm text-slate-600 mb-5">
+                    <input type="checkbox" name="reset" value="1" class="mt-0.5 rounded border-slate-300 text-violet-600 focus:ring-violet-500">
+                    <span><b>Kosongkan dulu</b> jadwal kelas ini sebelum generate (buat ulang dari nol). Jika tidak dicentang, hanya mengisi sel yang masih kosong.</span>
+                </label>
+                <div class="flex justify-end gap-2">
+                    <button type="button" @click="genOpen=false" class="rounded-lg border border-slate-300 text-slate-600 text-sm font-semibold px-4 py-2.5 hover:bg-slate-50">Batal</button>
+                    <button class="rounded-lg bg-violet-600 hover:bg-violet-700 text-white text-sm font-semibold px-5 py-2.5">Generate Sekarang</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
     <!-- Toast -->
     <div x-show="toast.show" x-cloak x-transition.opacity
          class="fixed bottom-5 right-5 z-[80] max-w-sm rounded-xl px-4 py-3 text-sm font-medium shadow-lg"
@@ -144,6 +169,7 @@ function jadwalGrid() {
         cells: <?= json_encode($grid ?: new \stdClass()) ?>,
         palet: <?= json_encode($palet ?: []) ?>,
         drag: null,
+        genOpen: false,
         toast: { show: false, msg: '', type: 'ok' },
 
         init() {},

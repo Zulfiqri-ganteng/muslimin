@@ -98,11 +98,16 @@ $routes->group('admin', static function ($routes) {
         $routes->post('jadwal/place', 'Admin\Jadwal::place');
         $routes->post('jadwal/remove', 'Admin\Jadwal::remove');
         $routes->post('jadwal/move', 'Admin\Jadwal::move');
+        $routes->post('jadwal/generate', 'Admin\Jadwal::generate');
 
         // ===== LAPORAN KURIKULUM =====
         $routes->get('kurikulum/dashboard', 'Admin\Kurikulum::dashboard');
         $routes->get('kurikulum/rekap', 'Admin\Kurikulum::rekap');
         $routes->get('kurikulum/bentrok', 'Admin\Kurikulum::bentrok');
+
+        // ===== AUDIT LOG =====
+        $routes->get('audit', 'Admin\AuditLog::index');
+        $routes->get('audit/purge', 'Admin\AuditLog::purge');
 
         // ===== CETAK / EXPORT KURIKULUM (PDF & Excel) =====
         $routes->get('cetak/jadwal-kelas/(:num)/(:segment)', 'Admin\Cetak::jadwalKelas/$1/$2');

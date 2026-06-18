@@ -77,6 +77,30 @@ class Jadwal extends BaseController
         ]);
     }
 
+    // ===================== GENERATE OTOMATIS =====================
+    public function generate()
+    {
+        $kelasId = (int) $this->request->getPost('kelas_id');
+        $reset   = (bool) $this->request->getPost('reset');
+        if (! $kelasId) {
+            return redirect()->back()->with('error', 'Kelas belum dipilih.');
+        }
+
+        $hasil = (new \App\Libraries\JadwalGenerator())->generate($kelasId, $reset);
+
+        if (! $hasil['ok']) {
+            return redirect()->to(site_url('admin/jadwal?kelas_id=' . $kelasId))->with('error', $hasil['message']);
+        }
+
+        $this->audit->record('create', 'jadwal', $kelasId, 'Generate otomatis: ' . $hasil['placed'] . ' JP');
+
+        if (! empty($hasil['failed'])) {
+            $det = array_map(static fn ($f) => $f['kode_mapel'] . ' (kurang ' . $f['kurang'] . ' JP)', $hasil['failed']);
+            session()->setFlashdata('error', $hasil['message'] . ' Belum tertempatkan: ' . implode(', ', $det));
+        }
+        return redirect()->to(site_url('admin/jadwal?kelas_id=' . $kelasId))->with('success', $hasil['message']);
+    }
+
     // ===================== AJAX: TEMPATKAN (palet -> sel kosong) =====================
     public function place()
     {
