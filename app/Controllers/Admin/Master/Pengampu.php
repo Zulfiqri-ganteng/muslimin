@@ -89,6 +89,7 @@ class Pengampu extends BaseController
 
         $this->audit->record('create', 'pengampu', $id, 'Tambah penugasan kelas#' . $kelasId);
         cache()->delete('rekap_beban');
+        cache()->delete('dash_kurikulum');
 
         return redirect()->to(site_url('admin/master/pengampu?kelas_id=' . $kelasId))->with('success', 'Penugasan disimpan.');
     }
@@ -109,6 +110,7 @@ class Pengampu extends BaseController
         }
         $this->audit->record('update', 'pengampu', $id, 'Ubah penugasan');
         cache()->delete('rekap_beban');
+        cache()->delete('dash_kurikulum');
 
         return redirect()->to(site_url('admin/master/pengampu?kelas_id=' . $row['kelas_id']))->with('success', 'Penugasan diperbarui.');
     }
@@ -120,6 +122,7 @@ class Pengampu extends BaseController
         $this->model->delete($id);
         $this->audit->record('delete', 'pengampu', $id, 'Hapus penugasan');
         cache()->delete('rekap_beban');
+        cache()->delete('dash_kurikulum');
 
         return redirect()->to(site_url('admin/master/pengampu?kelas_id=' . ($row['kelas_id'] ?? '')))->with('success', 'Penugasan dihapus.');
     }

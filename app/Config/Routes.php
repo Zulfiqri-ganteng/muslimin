@@ -70,6 +70,10 @@ $routes->group('admin', static function ($routes) {
             $routes->post('pengampu/(:num)', 'Admin\Master\Pengampu::update/$1');
             $routes->get('pengampu/delete/(:num)', 'Admin\Master\Pengampu::delete/$1');
 
+            // Ketersediaan Guru
+            $routes->get('ketersediaan', 'Admin\Master\Ketersediaan::index');
+            $routes->post('ketersediaan', 'Admin\Master\Ketersediaan::save');
+
             // Jurusan
             $routes->get('jurusan', 'Admin\Master\Jurusan::index');
             $routes->post('jurusan', 'Admin\Master\Jurusan::store');
@@ -88,6 +92,22 @@ $routes->group('admin', static function ($routes) {
             $routes->post('jam/(:num)', 'Admin\Master\JamPelajaran::update/$1');
             $routes->get('jam/delete/(:num)', 'Admin\Master\JamPelajaran::delete/$1');
         });
+
+        // ===== PENJADWALAN =====
+        $routes->get('jadwal', 'Admin\Jadwal::index');
+        $routes->post('jadwal/place', 'Admin\Jadwal::place');
+        $routes->post('jadwal/remove', 'Admin\Jadwal::remove');
+        $routes->post('jadwal/move', 'Admin\Jadwal::move');
+
+        // ===== LAPORAN KURIKULUM =====
+        $routes->get('kurikulum/dashboard', 'Admin\Kurikulum::dashboard');
+        $routes->get('kurikulum/rekap', 'Admin\Kurikulum::rekap');
+        $routes->get('kurikulum/bentrok', 'Admin\Kurikulum::bentrok');
+
+        // ===== CETAK / EXPORT KURIKULUM (PDF & Excel) =====
+        $routes->get('cetak/jadwal-kelas/(:num)/(:segment)', 'Admin\Cetak::jadwalKelas/$1/$2');
+        $routes->get('cetak/jadwal-guru/(:num)/(:segment)', 'Admin\Cetak::jadwalGuru/$1/$2');
+        $routes->get('cetak/rekap/(:segment)', 'Admin\Cetak::rekap/$1');
 
         // Export
         $routes->get('export/excel', 'Admin\Export::excel');
