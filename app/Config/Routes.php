@@ -33,6 +33,37 @@ $routes->group('admin', static function ($routes) {
         $routes->post('submissions/status/(:num)', 'Admin\Submissions::updateStatus/$1');
         $routes->get('submissions/delete/(:num)', 'Admin\Submissions::delete/$1');
 
+        // ===== MASTER DATA (Penjadwalan KBM) =====
+        $routes->group('master', static function ($routes) {
+            // Guru
+            $routes->get('guru', 'Admin\Master\Guru::index');
+            $routes->post('guru', 'Admin\Master\Guru::store');
+            $routes->post('guru/(:num)', 'Admin\Master\Guru::update/$1');
+            $routes->get('guru/delete/(:num)', 'Admin\Master\Guru::delete/$1');
+            $routes->get('guru/export', 'Admin\Master\Guru::export');
+            $routes->get('guru/template', 'Admin\Master\Guru::template');
+            $routes->post('guru/import', 'Admin\Master\Guru::import');
+            $routes->get('guru/import-kesediaan', 'Admin\Master\Guru::importFromSubmissions');
+
+            // Jurusan
+            $routes->get('jurusan', 'Admin\Master\Jurusan::index');
+            $routes->post('jurusan', 'Admin\Master\Jurusan::store');
+            $routes->post('jurusan/(:num)', 'Admin\Master\Jurusan::update/$1');
+            $routes->get('jurusan/delete/(:num)', 'Admin\Master\Jurusan::delete/$1');
+
+            // Hari
+            $routes->get('hari', 'Admin\Master\Hari::index');
+            $routes->post('hari', 'Admin\Master\Hari::store');
+            $routes->post('hari/(:num)', 'Admin\Master\Hari::update/$1');
+            $routes->get('hari/delete/(:num)', 'Admin\Master\Hari::delete/$1');
+
+            // Jam Pelajaran
+            $routes->get('jam', 'Admin\Master\JamPelajaran::index');
+            $routes->post('jam', 'Admin\Master\JamPelajaran::store');
+            $routes->post('jam/(:num)', 'Admin\Master\JamPelajaran::update/$1');
+            $routes->get('jam/delete/(:num)', 'Admin\Master\JamPelajaran::delete/$1');
+        });
+
         // Export
         $routes->get('export/excel', 'Admin\Export::excel');
         $routes->get('export/rekap-pdf', 'Admin\Export::recapPdf');
