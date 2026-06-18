@@ -39,6 +39,9 @@
         ]],
     ];
     $admin = session('admin') ?? [];
+    $setting = (new \App\Models\SettingModel())->get();
+    $schoolName = $setting['school_name'] ?? 'Panel Admin';
+    $schoolLogo = ! empty($setting['logo']) ? base_url('uploads/' . $setting['logo']) : null;
 
     // helper render satu link menu
     $renderLink = static function (array $it) use ($cur) {
@@ -63,9 +66,13 @@
     <!-- Brand -->
     <div class="h-16 flex items-center gap-2.5 px-5 border-b border-white/10 shrink-0"
          :class="collapsed && !sidebar ? 'lg:px-0 lg:justify-center' : ''">
-        <div class="flex h-9 w-9 items-center justify-center rounded-lg bg-gold-400 text-brand-900 font-extrabold shrink-0">K</div>
-        <div class="leading-tight" x-show="!collapsed || sidebar">
-            <p class="font-bold text-sm">Panel Admin</p>
+        <?php if ($schoolLogo): ?>
+            <img src="<?= esc($schoolLogo) ?>" alt="Logo" class="h-9 w-9 rounded-lg object-cover bg-white shrink-0">
+        <?php else: ?>
+            <div class="flex h-9 w-9 items-center justify-center rounded-lg bg-gold-400 text-brand-900 font-extrabold shrink-0"><?= strtoupper(substr($schoolName, 0, 1)) ?></div>
+        <?php endif; ?>
+        <div class="leading-tight overflow-hidden" x-show="!collapsed || sidebar">
+            <p class="font-bold text-sm truncate" title="<?= esc($schoolName) ?>"><?= esc($schoolName) ?></p>
             <p class="text-[11px] text-brand-200">Sistem Akademik Sekolah</p>
         </div>
     </div>
