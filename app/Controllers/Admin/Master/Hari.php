@@ -48,6 +48,7 @@ class Hari extends BaseController
             'nama'   => trim((string) $this->request->getPost('nama')),
             'urutan' => (int) $this->request->getPost('urutan'),
             'aktif'  => $this->request->getPost('aktif') ? 1 : 0,
+            'id'     => $id, // isi placeholder {id} pada rule is_unique saat edit
         ];
 
         if (! $this->model->update($id, $data)) {

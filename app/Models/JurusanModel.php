@@ -17,6 +17,7 @@ class JurusanModel extends Model
     protected $deletedField   = 'deleted_at';
 
     protected $validationRules = [
+        'id'   => 'permit_empty|is_natural',
         'kode' => 'required|max_length[20]|is_unique[jurusan.kode,id,{id}]',
         'nama' => 'required|max_length[100]',
     ];

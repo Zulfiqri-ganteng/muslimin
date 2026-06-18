@@ -47,6 +47,7 @@ class Jurusan extends BaseController
         $data = [
             'kode' => strtoupper(trim((string) $this->request->getPost('kode'))),
             'nama' => trim((string) $this->request->getPost('nama')),
+            'id'   => $id, // isi placeholder {id} pada rule is_unique saat edit
         ];
 
         if (! $this->model->update($id, $data)) {

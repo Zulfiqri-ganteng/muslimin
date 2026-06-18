@@ -13,6 +13,7 @@ class HariModel extends Model
     protected $useTimestamps = false;
 
     protected $validationRules = [
+        'id'     => 'permit_empty|is_natural',
         'nama'   => 'required|max_length[15]|is_unique[hari.nama,id,{id}]',
         'urutan' => 'required|is_natural_no_zero',
     ];

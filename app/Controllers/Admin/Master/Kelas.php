@@ -73,6 +73,7 @@ class Kelas extends BaseController
     {
         $id   = (int) $id;
         $data = $this->collect();
+        $data['id'] = $id; // isi placeholder {id} pada rule is_unique saat edit
         if (! $this->model->update($id, $data)) {
             return redirect()->back()->withInput()->with('errors', $this->model->errors());
         }
@@ -204,7 +205,7 @@ class Kelas extends BaseController
 
             $existing = $this->model->withDeleted()->where('nama_kelas', $nama)->first();
             if ($existing) {
-                $this->model->protect(false)->update($existing['id'], $payload + ['deleted_at' => null]);
+                $this->model->protect(false)->update($existing['id'], $payload + ['deleted_at' => null, 'id' => $existing['id']]);
                 $this->model->protect(true);
                 $upd++;
             } else {

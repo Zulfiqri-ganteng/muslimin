@@ -17,6 +17,7 @@ class KelasModel extends Model
     protected $deletedField   = 'deleted_at';
 
     protected $validationRules = [
+        'id'            => 'permit_empty|is_natural',
         'nama_kelas'    => 'required|max_length[50]|is_unique[kelas.nama_kelas,id,{id}]',
         'tingkat'       => 'required|in_list[X,XI,XII]',
         'shift'         => 'required|in_list[pagi,siang]',

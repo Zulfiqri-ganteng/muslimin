@@ -11,8 +11,21 @@
     <link rel="stylesheet" href="<?= base_url('assets/css/app.css') ?>?v=<?= @filemtime(FCPATH . 'assets/css/app.css') ?>">
 </head>
 <body class="bg-slate-100 text-slate-800 antialiased"
-      x-data="{ sidebar:false, collapsed: JSON.parse(localStorage.getItem('sb_collapsed')||'false') }"
-      x-init="$watch('collapsed', v => localStorage.setItem('sb_collapsed', v))">
+      x-data="{ sidebar:false, collapsed: JSON.parse(localStorage.getItem('sb_collapsed')||'false'), loading:false }"
+      x-init="$watch('collapsed', v => localStorage.setItem('sb_collapsed', v));
+              document.addEventListener('submit', e => { if (e.target.tagName === 'FORM' && !e.target.hasAttribute('data-noload')) loading = true; });
+              window.addEventListener('pageshow', () => loading = false);">
+
+<!-- ===================== LOADING OVERLAY (global, semua form) ===================== -->
+<div x-show="loading" x-cloak x-transition.opacity.duration.150ms class="fixed inset-0 z-[70] flex items-center justify-center bg-white/60 backdrop-blur-sm">
+    <div class="flex flex-col items-center gap-3">
+        <svg class="animate-spin h-10 w-10 text-brand-600" fill="none" viewBox="0 0 24 24">
+            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path>
+        </svg>
+        <p class="text-sm font-semibold text-brand-700">Memproses…</p>
+    </div>
+</div>
 
 <?php
     $cur = uri_string();

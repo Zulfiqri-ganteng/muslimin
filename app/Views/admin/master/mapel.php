@@ -87,8 +87,14 @@ foreach ($allGuru as $id => $label) {
                                 </button>
                             </td>
                             <td class="px-6 py-3 text-right whitespace-nowrap">
-                                <button @click='openEdit(<?= json_encode($r) ?>)' class="text-brand-600 hover:text-brand-800 font-medium">Edit</button>
-                                <a href="<?= site_url('admin/master/mapel/delete/' . $r['id']) ?>" onclick="return confirm('Hapus mapel ini?')" class="ml-3 text-red-500 hover:text-red-700 font-medium">Hapus</a>
+                                <div class="inline-flex items-center justify-end gap-1">
+                                    <button @click='openEdit(<?= json_encode($r) ?>)' title="Edit" class="inline-flex h-8 w-8 items-center justify-center rounded-lg text-brand-600 hover:bg-brand-50 transition">
+                                        <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/></svg>
+                                    </button>
+                                    <a href="<?= site_url('admin/master/mapel/delete/' . $r['id']) ?>" onclick="return confirm('Hapus mapel ini?')" title="Hapus" class="inline-flex h-8 w-8 items-center justify-center rounded-lg text-red-500 hover:bg-red-50 transition">
+                                        <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
+                                    </a>
+                                </div>
                             </td>
                         </tr>
                     <?php endforeach; endif; ?>
@@ -101,7 +107,7 @@ foreach ($allGuru as $id => $label) {
     </div>
 
     <!-- Modal Tambah/Edit -->
-    <div x-show="open" x-cloak class="fixed inset-0 z-50 flex items-center justify-center p-4">
+    <div x-show="open" x-cloak x-transition.opacity.duration.200ms class="fixed inset-0 z-50 flex items-center justify-center p-4">
         <div class="absolute inset-0 bg-black/40" @click="open=false"></div>
         <div class="relative bg-white rounded-2xl shadow-xl w-full max-w-lg p-6">
             <h3 class="font-bold text-lg text-slate-800 mb-4" x-text="mode==='add' ? 'Tambah Mata Pelajaran' : 'Edit Mata Pelajaran'"></h3>
@@ -141,7 +147,7 @@ foreach ($allGuru as $id => $label) {
     </div>
 
     <!-- Modal Kompetensi -->
-    <div x-show="kompOpen" x-cloak class="fixed inset-0 z-50 flex items-center justify-center p-4">
+    <div x-show="kompOpen" x-cloak x-transition.opacity.duration.200ms class="fixed inset-0 z-50 flex items-center justify-center p-4">
         <div class="absolute inset-0 bg-black/40" @click="kompOpen=false"></div>
         <div class="relative bg-white rounded-2xl shadow-xl w-full max-w-md p-6 max-h-[85vh] flex flex-col">
             <h3 class="font-bold text-lg text-slate-800 mb-1">Guru Pengampu</h3>
@@ -172,7 +178,7 @@ foreach ($allGuru as $id => $label) {
     </div>
 
     <!-- Modal Import -->
-    <div x-show="importOpen" x-cloak class="fixed inset-0 z-50 flex items-center justify-center p-4">
+    <div x-show="importOpen" x-cloak x-transition.opacity.duration.200ms class="fixed inset-0 z-50 flex items-center justify-center p-4">
         <div class="absolute inset-0 bg-black/40" @click="importOpen=false"></div>
         <div class="relative bg-white rounded-2xl shadow-xl w-full max-w-md p-6">
             <h3 class="font-bold text-lg text-slate-800 mb-4">Import Mata Pelajaran</h3>

@@ -17,6 +17,7 @@ class GuruModel extends Model
     protected $deletedField   = 'deleted_at';
 
     protected $validationRules = [
+        'id'            => 'permit_empty|is_natural',
         'kode_guru'     => 'required|max_length[20]|is_unique[guru.kode_guru,id,{id}]',
         'nama'          => 'required|max_length[150]',
         'nip'           => 'permit_empty|max_length[60]',

@@ -17,6 +17,7 @@ class MataPelajaranModel extends Model
     protected $deletedField   = 'deleted_at';
 
     protected $validationRules = [
+        'id'         => 'permit_empty|is_natural',
         'kode_mapel' => 'required|max_length[20]|is_unique[mata_pelajaran.kode_mapel,id,{id}]',
         'nama_mapel' => 'required|max_length[150]',
         'kelompok'   => 'permit_empty|max_length[50]',
