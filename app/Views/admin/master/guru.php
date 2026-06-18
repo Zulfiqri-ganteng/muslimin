@@ -1,6 +1,13 @@
 <?= $this->extend('layouts/admin') ?>
 <?= $this->section('content') ?>
 
+<?= view('admin/partials/help', [
+    'helpKey'   => 'guru',
+    'helpTitle' => 'Master Guru',
+    'helpBody'  => '<p>Daftar semua guru pengajar. Tambah satu per satu, <b>Import</b> dari Excel (unduh template dulu), atau <b>Impor dari Data Kesediaan</b> yang sudah masuk.</p>
+        <p class="mt-1"><b>Maks Beban</b> = batas jam mengajar (JP) per minggu untuk guru itu — dipakai untuk menandai guru yang kelebihan/kekurangan jam. Mata pelajaran yang dikuasai guru (kompetensi) diatur di menu <b>Mata Pelajaran ▸ Atur Guru</b>.</p>',
+]) ?>
+
 <div x-data="guruPage()">
     <!-- Toolbar -->
     <div class="bg-white rounded-2xl border border-slate-200 shadow-sm p-4 mb-5">

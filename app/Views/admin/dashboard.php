@@ -1,6 +1,13 @@
 <?= $this->extend('layouts/admin') ?>
 <?= $this->section('content') ?>
 
+<?= view('admin/partials/help', [
+    'helpKey'   => 'dashboard',
+    'helpTitle' => 'Selamat datang di Sistem Akademik Sekolah',
+    'helpBody'  => '<p>Pusat kendali kurikulum sekolah. Ringkasan data & statistik tampil di bawah.</p>
+        <p class="mt-1"><b>Alur kerja yang disarankan:</b> 1) Isi <b>Master Data</b> (Guru → Mata Pelajaran → Jurusan → Kelas) ▸ 2) Atur <b>Penugasan</b> (siapa mengajar apa & berapa JP) ▸ 3) Atur <b>Hari & Jam</b> ▸ 4) Susun <b>Jadwal KBM</b> (tahap berikutnya).</p>',
+]) ?>
+
 <?php
     $cards = [
         ['Total Kesediaan', $stats['total'], 'bg-brand-600', 'M17 20h5v-2a4 4 0 00-3-3.87M9 20H4v-2a4 4 0 013-3.87m6-1.13a4 4 0 100-8 4 4 0 000 8z'],

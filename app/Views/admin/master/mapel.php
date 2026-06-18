@@ -8,6 +8,13 @@ foreach ($allGuru as $id => $label) {
     $guruJs[] = ['id' => (int) $id, 'label' => $label];
 }
 ?>
+<?= view('admin/partials/help', [
+    'helpKey'   => 'mapel',
+    'helpTitle' => 'Master Mata Pelajaran',
+    'helpBody'  => '<p>Daftar mata pelajaran beserta <b>JP/minggu standar</b> (jumlah jam pelajaran yang dibutuhkan tiap minggu, mis. Pemrograman Dasar = 8 JP).</p>
+        <p class="mt-1">Tombol <b>Atur Guru</b> menentukan guru mana saja yang <b>berkompetensi</b> mengajar mapel tersebut. Daftar ini dipakai untuk menyaring pilihan guru saat membuat <b>Penugasan</b>.</p>',
+]) ?>
+
 <div x-data="mapelPage()">
     <!-- Toolbar -->
     <div class="bg-white rounded-2xl border border-slate-200 shadow-sm p-4 mb-5">

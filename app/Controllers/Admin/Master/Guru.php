@@ -203,7 +203,8 @@ class Guru extends BaseController
             // Upsert berdasarkan kode_guru (termasuk yg soft-deleted)
             $existing = $this->model->withDeleted()->where('kode_guru', $kode)->first();
             if ($existing) {
-                $this->model->update($existing['id'], $payload + ['deleted_at' => null]);
+                $this->model->protect(false)->update($existing['id'], $payload + ['deleted_at' => null]);
+                $this->model->protect(true);
                 $upd++;
             } else {
                 $this->model->insert($payload);

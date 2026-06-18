@@ -1,6 +1,12 @@
 <?= $this->extend('layouts/admin') ?>
 <?= $this->section('content') ?>
 
+<?= view('admin/partials/help', [
+    'helpKey'   => 'hari',
+    'helpTitle' => 'Master Hari',
+    'helpBody'  => '<p>Hari yang berstatus <b>Aktif</b> akan muncul sebagai kolom pada grid Jadwal KBM nanti. Nonaktifkan hari yang tidak ada kegiatan belajar (mis. bila Sabtu libur). <b>Urutan</b> menentukan posisi tampil.</p>',
+]) ?>
+
 <div x-data="hariPage()">
     <div class="flex items-center justify-between mb-5">
         <p class="text-sm text-slate-500">Hari aktif akan tampil sebagai kolom pada grid jadwal.</p>

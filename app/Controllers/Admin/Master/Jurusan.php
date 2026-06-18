@@ -36,6 +36,7 @@ class Jurusan extends BaseController
             return redirect()->back()->withInput()->with('errors', $this->model->errors());
         }
         $this->audit->record('create', 'jurusan', $this->model->getInsertID(), 'Tambah jurusan ' . $data['kode']);
+        cache()->delete('opt_jurusan');
 
         return redirect()->to(site_url('admin/master/jurusan'))->with('success', 'Jurusan berhasil ditambahkan.');
     }
@@ -52,6 +53,7 @@ class Jurusan extends BaseController
             return redirect()->back()->withInput()->with('errors', $this->model->errors());
         }
         $this->audit->record('update', 'jurusan', $id, 'Ubah jurusan ' . $data['kode']);
+        cache()->delete('opt_jurusan');
 
         return redirect()->to(site_url('admin/master/jurusan'))->with('success', 'Jurusan berhasil diperbarui.');
     }
@@ -61,6 +63,7 @@ class Jurusan extends BaseController
         $id = (int) $id;
         $this->model->delete($id);
         $this->audit->record('delete', 'jurusan', $id, 'Hapus jurusan');
+        cache()->delete('opt_jurusan');
 
         return redirect()->to(site_url('admin/master/jurusan'))->with('success', 'Jurusan dihapus.');
     }

@@ -1,6 +1,13 @@
 <?= $this->extend('layouts/admin') ?>
 <?= $this->section('content') ?>
 
+<?= view('admin/partials/help', [
+    'helpKey'   => 'jam',
+    'helpTitle' => 'Master Jam Pelajaran',
+    'helpBody'  => '<p>Slot waktu KBM per <b>shift</b> (Pagi & Siang dikelola terpisah lewat tab di atas). Durasi dihitung otomatis dari selisih waktu mulai–selesai.</p>
+        <p class="mt-1">Centang <b>ISTIRAHAT</b> untuk baris jeda — baris ini muncul di jadwal tapi <b>tidak dihitung</b> sebagai jam mengajar.</p>',
+]) ?>
+
 <div x-data="jamPage()">
     <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-5">
         <!-- Tab shift -->

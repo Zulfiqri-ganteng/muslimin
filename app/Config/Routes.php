@@ -55,6 +55,21 @@ $routes->group('admin', static function ($routes) {
             $routes->get('mapel/template', 'Admin\Master\MataPelajaran::template');
             $routes->post('mapel/import', 'Admin\Master\MataPelajaran::import');
 
+            // Kelas
+            $routes->get('kelas', 'Admin\Master\Kelas::index');
+            $routes->post('kelas', 'Admin\Master\Kelas::store');
+            $routes->post('kelas/(:num)', 'Admin\Master\Kelas::update/$1');
+            $routes->get('kelas/delete/(:num)', 'Admin\Master\Kelas::delete/$1');
+            $routes->get('kelas/export', 'Admin\Master\Kelas::export');
+            $routes->get('kelas/template', 'Admin\Master\Kelas::template');
+            $routes->post('kelas/import', 'Admin\Master\Kelas::import');
+
+            // Pengampu (penugasan)
+            $routes->get('pengampu', 'Admin\Master\Pengampu::index');
+            $routes->post('pengampu', 'Admin\Master\Pengampu::store');
+            $routes->post('pengampu/(:num)', 'Admin\Master\Pengampu::update/$1');
+            $routes->get('pengampu/delete/(:num)', 'Admin\Master\Pengampu::delete/$1');
+
             // Jurusan
             $routes->get('jurusan', 'Admin\Master\Jurusan::index');
             $routes->post('jurusan', 'Admin\Master\Jurusan::store');

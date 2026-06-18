@@ -1,6 +1,12 @@
 <?= $this->extend('layouts/admin') ?>
 <?= $this->section('content') ?>
 
+<?= view('admin/partials/help', [
+    'helpKey'   => 'kesediaan',
+    'helpTitle' => 'Data Kesediaan Guru',
+    'helpBody'  => '<p>Rekap isian formulir kesediaan mengajar yang dikirim guru (preferensi mapel, hari/jam tersedia, tugas tambahan). Data ini bisa <b>diimpor menjadi Master Guru</b> lewat menu Guru ▸ Import ▸ Impor dari Data Kesediaan.</p>',
+]) ?>
+
 <!-- Toolbar -->
 <div class="bg-white rounded-2xl border border-slate-200 shadow-sm p-4 mb-5">
     <div class="flex flex-col lg:flex-row lg:items-center gap-3">

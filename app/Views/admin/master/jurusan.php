@@ -1,6 +1,12 @@
 <?= $this->extend('layouts/admin') ?>
 <?= $this->section('content') ?>
 
+<?= view('admin/partials/help', [
+    'helpKey'   => 'jurusan',
+    'helpTitle' => 'Master Jurusan',
+    'helpBody'  => '<p>Kompetensi keahlian sekolah (mis. TKJT, MPLB, AKL). Jurusan dipakai untuk mengelompokkan <b>Kelas</b> dan ditampilkan pada laporan/jadwal.</p>',
+]) ?>
+
 <div x-data="jurusanPage()">
     <!-- Header -->
     <div class="flex items-center justify-between mb-5">

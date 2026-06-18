@@ -24,4 +24,17 @@ class JurusanModel extends Model
         'kode' => ['is_unique' => 'Kode jurusan sudah dipakai.', 'required' => 'Kode wajib diisi.'],
         'nama' => ['required' => 'Nama jurusan wajib diisi.'],
     ];
+
+    /** Opsi jurusan untuk dropdown (id => "KODE - nama"), di-cache. */
+    public function options(): array
+    {
+        return cache()->remember('opt_jurusan', 21600, function () {
+            $rows = $this->orderBy('kode', 'ASC')->findAll();
+            $out  = [];
+            foreach ($rows as $r) {
+                $out[$r['id']] = $r['kode'] . ' - ' . $r['nama'];
+            }
+            return $out;
+        });
+    }
 }
