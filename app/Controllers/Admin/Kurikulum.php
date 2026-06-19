@@ -12,7 +12,14 @@ use App\Models\PengampuModel;
 class Kurikulum extends BaseController
 {
     // ===================== DASHBOARD KURIKULUM =====================
+    // Dashboard kurikulum kini disatukan ke dashboard utama (admin/dashboard).
     public function dashboard()
+    {
+        return redirect()->to(site_url('admin/dashboard'));
+    }
+
+    /** Data statistik kurikulum (dipakai dashboard terpadu), di-cache 30 menit. */
+    public static function dashboardData(): array
     {
         $data = cache('dash_kurikulum');
         if (! $data) {
@@ -41,13 +48,11 @@ class Kurikulum extends BaseController
                 'bentrok'     => $bentrok,
                 'kurang'      => $kurang,
                 'lebih'       => $lebih,
-                // chart: 12 guru beban terbesar
                 'chart'       => array_slice($beban, 0, 12),
             ];
-            cache()->save('dash_kurikulum', $data, 1800); // 30 menit
+            cache()->save('dash_kurikulum', $data, 1800);
         }
-
-        return view('admin/kurikulum/dashboard', $data + ['title' => 'Dashboard Kurikulum']);
+        return $data;
     }
 
     // ===================== REKAP BEBAN MENGAJAR =====================

@@ -4,8 +4,12 @@ use CodeIgniter\Router\RouteCollection;
 
 /** @var RouteCollection $routes */
 
-// ===================== PUBLIK (GURU) =====================
-$routes->get('/', 'Form::home');
+// ===================== PUBLIK =====================
+$routes->get('/', 'Publik::home');
+$routes->get('jadwal-kelas', 'Publik::jadwalKelas');
+$routes->get('jadwal-guru', 'Publik::jadwalGuru');
+
+// Form kesediaan guru (sekunder)
 $routes->get('isi', 'Form::index');
 $routes->post('kirim', 'Form::submit');
 $routes->get('terima-kasih', 'Form::success');

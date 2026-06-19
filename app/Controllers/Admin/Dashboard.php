@@ -3,8 +3,8 @@
 namespace App\Controllers\Admin;
 
 use App\Controllers\BaseController;
-use App\Models\SubmissionModel;
 use App\Models\SettingModel;
+use App\Models\SubmissionModel;
 
 class Dashboard extends BaseController
 {
@@ -14,7 +14,8 @@ class Dashboard extends BaseController
 
         return view('admin/dashboard', [
             'title'   => 'Dashboard',
-            'stats'   => $model->getStats(),
+            'kur'     => Kurikulum::dashboardData(),          // statistik penjadwalan
+            'stats'   => $model->getStats(),                  // statistik kesediaan
             'setting' => (new SettingModel())->get(),
             'recent'  => $model->orderBy('created_at', 'DESC')->findAll(5),
         ]);
