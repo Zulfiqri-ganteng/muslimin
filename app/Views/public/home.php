@@ -12,6 +12,16 @@
             <p class="mt-3 text-brand-100">Sistem Akademik &middot; Tahun Pelajaran <?= esc($setting['academic_year']) ?></p>
         <?php endif; ?>
 
+        <?php if (! empty($now['label'])): ?>
+            <p class="mt-3 inline-flex items-center gap-2 rounded-full bg-white/15 px-3 py-1 text-sm text-white">
+                <span class="h-2 w-2 rounded-full bg-emerald-400 animate-pulse"></span>
+                Sekarang: <?= esc($now['hariNama']) ?>, <?= esc($now['label']) ?>
+            </p>
+        <?php elseif (! empty($now['hariNama'])): ?>
+            <p class="mt-3 text-sm text-brand-200">Hari ini: <?= esc($now['hariNama']) ?></p>
+        <?php endif; ?>
+
+        <?php if ($jadwalOn): ?>
         <!-- Pencarian jadwal kelas cepat -->
         <form action="<?= site_url('jadwal-kelas') ?>" method="get" class="mt-7 flex flex-col sm:flex-row gap-2 max-w-xl">
             <select name="kelas_id" class="flex-1 rounded-xl border-0 px-4 py-3 text-slate-700 text-sm focus:ring-2 focus:ring-gold-400 outline-none">
@@ -22,8 +32,30 @@
             </select>
             <button class="rounded-xl bg-gold-400 hover:bg-gold-500 text-brand-900 font-bold px-6 py-3 text-sm transition">Lihat Jadwal</button>
         </form>
+        <?php endif; ?>
     </div>
 </section>
+
+<?php if (! empty($pengumuman)): ?>
+<!-- PENGUMUMAN -->
+<section class="mt-6">
+    <h2 class="font-bold text-slate-800 mb-3 flex items-center gap-2">
+        <svg class="w-5 h-5 text-gold-500" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M11 5.882V19.24a1.76 1.76 0 01-3.417.592l-2.147-6.15M18 13a3 3 0 100-6M5.436 13.683A4.001 4.001 0 017 6h1.832c4.1 0 7.625-1.234 9.168-3v14c-1.543-1.766-5.067-3-9.168-3H7a3.988 3.988 0 01-1.564-.317z"/></svg>
+        Pengumuman
+    </h2>
+    <div class="space-y-3">
+        <?php foreach ($pengumuman as $p): ?>
+            <div class="bg-white rounded-2xl border border-slate-200 shadow-sm p-5">
+                <div class="flex items-center justify-between gap-3">
+                    <h3 class="font-bold text-slate-800"><?= esc($p['judul']) ?></h3>
+                    <span class="text-xs text-slate-400 shrink-0"><?= esc(date('d M Y', strtotime($p['created_at']))) ?></span>
+                </div>
+                <p class="text-sm text-slate-600 mt-1.5 whitespace-pre-line"><?= esc($p['isi']) ?></p>
+            </div>
+        <?php endforeach; ?>
+    </div>
+</section>
+<?php endif; ?>
 
 <!-- STATISTIK -->
 <section class="grid grid-cols-1 sm:grid-cols-3 gap-4 mt-6">

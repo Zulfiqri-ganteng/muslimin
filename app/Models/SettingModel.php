@@ -14,7 +14,7 @@ class SettingModel extends Model
     protected $allowedFields = [
         'school_name', 'school_level', 'logo', 'headmaster_name', 'headmaster_nip',
         'city', 'academic_year', 'address', 'phone', 'email', 'website',
-        'form_open', 'form_intro',
+        'form_open', 'form_intro', 'jadwal_publik',
     ];
 
     protected $useTimestamps = true;

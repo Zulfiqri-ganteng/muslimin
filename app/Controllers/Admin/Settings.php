@@ -39,6 +39,7 @@ class Settings extends BaseController
             'website'         => trim((string) $this->request->getPost('website')),
             'form_intro'      => trim((string) $this->request->getPost('form_intro')),
             'form_open'       => $this->request->getPost('form_open') ? 1 : 0,
+            'jadwal_publik'   => $this->request->getPost('jadwal_publik') ? 1 : 0,
         ];
 
         // Upload logo (opsional)

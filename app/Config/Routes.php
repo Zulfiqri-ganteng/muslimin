@@ -8,6 +8,8 @@ use CodeIgniter\Router\RouteCollection;
 $routes->get('/', 'Publik::home');
 $routes->get('jadwal-kelas', 'Publik::jadwalKelas');
 $routes->get('jadwal-guru', 'Publik::jadwalGuru');
+$routes->get('jadwal-kelas/(:num)/pdf', 'Publik::cetakKelas/$1');
+$routes->get('jadwal-guru/(:num)/pdf', 'Publik::cetakGuru/$1');
 
 // Form kesediaan guru (sekunder)
 $routes->get('isi', 'Form::index');
@@ -108,6 +110,12 @@ $routes->group('admin', static function ($routes) {
         $routes->get('kurikulum/dashboard', 'Admin\Kurikulum::dashboard');
         $routes->get('kurikulum/rekap', 'Admin\Kurikulum::rekap');
         $routes->get('kurikulum/bentrok', 'Admin\Kurikulum::bentrok');
+
+        // ===== PENGUMUMAN =====
+        $routes->get('pengumuman', 'Admin\Pengumuman::index');
+        $routes->post('pengumuman', 'Admin\Pengumuman::store');
+        $routes->post('pengumuman/(:num)', 'Admin\Pengumuman::update/$1');
+        $routes->get('pengumuman/delete/(:num)', 'Admin\Pengumuman::delete/$1');
 
         // ===== AUDIT LOG =====
         $routes->get('audit', 'Admin\AuditLog::index');

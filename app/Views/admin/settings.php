@@ -94,6 +94,13 @@
                     <span class="block text-xs text-slate-400">Jika dimatikan, guru tidak bisa mengisi form (ditampilkan halaman "ditutup").</span>
                 </span>
             </label>
+            <label class="flex items-center gap-3 cursor-pointer rounded-xl border border-slate-200 p-4 hover:bg-slate-50">
+                <input type="checkbox" name="jadwal_publik" value="1" class="h-5 w-5 rounded border-slate-300 text-brand-600 focus:ring-brand-500" <?= ($setting['jadwal_publik'] ?? 1) ? 'checked' : '' ?>>
+                <span>
+                    <span class="block text-sm font-semibold text-slate-700">Tampilkan jadwal ke publik</span>
+                    <span class="block text-xs text-slate-400">Jika dimatikan, halaman Jadwal Kelas/Guru di situs publik disembunyikan.</span>
+                </span>
+            </label>
         </div>
     </div>
 
