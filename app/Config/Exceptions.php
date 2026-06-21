@@ -31,9 +31,12 @@ class Exceptions extends BaseConfig
      * Any status codes here will NOT be logged if logging is turned on.
      * By default, only 404 (Page Not Found) exceptions are ignored.
      *
+     * 400 ditambahkan: request nyasar dari ekstensi browser (mis. "/@vite/client")
+     * memicu BadRequestException 400 — bukan bug aplikasi, cukup diabaikan dari log.
+     *
      * @var list<int>
      */
-    public array $ignoreCodes = [404];
+    public array $ignoreCodes = [404, 400];
 
     /**
      * --------------------------------------------------------------------------
