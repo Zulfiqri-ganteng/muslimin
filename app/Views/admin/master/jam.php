@@ -40,28 +40,46 @@
                 <?php if (empty($rows)): ?>
                     <tr><td colspan="5" class="px-6 py-10 text-center text-slate-400">Belum ada jam untuk shift ini.</td></tr>
                 <?php else: foreach ($rows as $r): ?>
-                    <tr class="hover:bg-slate-50 <?= $r['is_istirahat'] ? 'bg-amber-50/50' : '' ?>">
-                        <td class="px-6 py-3 font-bold text-brand-700"><?= $r['is_istirahat'] ? '—' : esc($r['jam_ke']) ?></td>
-                        <td class="px-6 py-3"><?= esc(substr($r['waktu_mulai'], 0, 5)) ?> – <?= esc(substr($r['waktu_selesai'], 0, 5)) ?></td>
-                        <td class="px-6 py-3 text-slate-500"><?= esc($r['durasi']) ?> menit</td>
-                        <td class="px-6 py-3">
-                            <?php if ($r['is_istirahat']): ?>
-                                <span class="inline-flex rounded-full bg-amber-100 text-amber-700 px-2.5 py-0.5 text-xs font-semibold">Istirahat</span>
-                            <?php else: ?>
+                    <?php if ($r['is_istirahat']): ?>
+                        <!-- Baris ISTIRAHAT: tampil sebagai pemisah di tengah -->
+                        <tr class="bg-amber-50">
+                            <td colspan="5" class="px-6 py-2.5">
+                                <div class="flex items-center justify-center gap-3">
+                                    <span class="hidden sm:block flex-1 border-t border-dashed border-amber-300"></span>
+                                    <span class="inline-flex items-center gap-1.5 rounded-full bg-amber-100 text-amber-700 px-3 py-1 text-xs font-bold tracking-wide whitespace-nowrap">
+                                        ISTIRAHAT · <?= esc(substr($r['waktu_mulai'], 0, 5)) ?> – <?= esc(substr($r['waktu_selesai'], 0, 5)) ?>
+                                        <span class="font-normal text-amber-600">(<?= esc($r['durasi']) ?> menit)</span>
+                                    </span>
+                                    <button type="button" @click='openEdit(<?= json_encode($r) ?>)' title="Edit" class="inline-flex h-7 w-7 items-center justify-center rounded-lg text-amber-600 hover:bg-amber-100 transition">
+                                        <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/></svg>
+                                    </button>
+                                    <a href="<?= site_url('admin/master/jam/delete/' . $r['id']) ?>" onclick="return confirm('Hapus jam istirahat ini?')" title="Hapus" class="inline-flex h-7 w-7 items-center justify-center rounded-lg text-red-500 hover:bg-red-50 transition">
+                                        <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
+                                    </a>
+                                    <span class="hidden sm:block flex-1 border-t border-dashed border-amber-300"></span>
+                                </div>
+                            </td>
+                        </tr>
+                    <?php else: ?>
+                        <tr class="hover:bg-slate-50">
+                            <td class="px-6 py-3 font-bold text-brand-700"><?= esc($r['jam_ke']) ?></td>
+                            <td class="px-6 py-3"><?= esc(substr($r['waktu_mulai'], 0, 5)) ?> – <?= esc(substr($r['waktu_selesai'], 0, 5)) ?></td>
+                            <td class="px-6 py-3 text-slate-500"><?= esc($r['durasi']) ?> menit</td>
+                            <td class="px-6 py-3">
                                 <span class="inline-flex rounded-full bg-slate-100 text-slate-600 px-2.5 py-0.5 text-xs font-semibold">KBM</span>
-                            <?php endif; ?>
-                        </td>
-                        <td class="px-6 py-3 text-right whitespace-nowrap">
-                            <div class="inline-flex items-center justify-end gap-1">
-                                <button @click='openEdit(<?= json_encode($r) ?>)' title="Edit" class="inline-flex h-8 w-8 items-center justify-center rounded-lg text-brand-600 hover:bg-brand-50 transition">
-                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/></svg>
-                                </button>
-                                <a href="<?= site_url('admin/master/jam/delete/' . $r['id']) ?>" onclick="return confirm('Hapus jam ini?')" title="Hapus" class="inline-flex h-8 w-8 items-center justify-center rounded-lg text-red-500 hover:bg-red-50 transition">
-                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
-                                </a>
-                            </div>
-                        </td>
-                    </tr>
+                            </td>
+                            <td class="px-6 py-3 text-right whitespace-nowrap">
+                                <div class="inline-flex items-center justify-end gap-1">
+                                    <button type="button" @click='openEdit(<?= json_encode($r) ?>)' title="Edit" class="inline-flex h-8 w-8 items-center justify-center rounded-lg text-brand-600 hover:bg-brand-50 transition">
+                                        <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/></svg>
+                                    </button>
+                                    <a href="<?= site_url('admin/master/jam/delete/' . $r['id']) ?>" onclick="return confirm('Hapus jam ini?')" title="Hapus" class="inline-flex h-8 w-8 items-center justify-center rounded-lg text-red-500 hover:bg-red-50 transition">
+                                        <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
+                                    </a>
+                                </div>
+                            </td>
+                        </tr>
+                    <?php endif; ?>
                 <?php endforeach; endif; ?>
             </tbody>
         </table>

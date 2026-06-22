@@ -40,7 +40,7 @@ class Jadwal extends BaseController
 
         $hari = (new HariModel())->aktifUrut();
         $jam  = (new JamPelajaranModel())->where('shift', $shift)
-            ->orderBy('jam_ke', 'ASC')->findAll(); // termasuk istirahat (utk baris pemisah)
+            ->orderBy('waktu_mulai', 'ASC')->findAll(); // termasuk istirahat (urut waktu → pemisah di tengah)
 
         $grid = $kelasId ? $this->model->gridForKelas($kelasId) : [];
 

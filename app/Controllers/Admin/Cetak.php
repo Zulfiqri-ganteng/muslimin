@@ -35,7 +35,7 @@ class Cetak extends BaseController
             return redirect()->to(site_url('admin/jadwal'))->with('error', 'Kelas tidak ditemukan.');
         }
         $hari = (new HariModel())->aktifUrut();
-        $jam  = (new JamPelajaranModel())->where('shift', $kelas['shift'])->orderBy('jam_ke', 'ASC')->findAll();
+        $jam  = (new JamPelajaranModel())->where('shift', $kelas['shift'])->orderBy('waktu_mulai', 'ASC')->findAll();
         $grid = (new JadwalModel())->gridForKelas($id);
 
         $title    = 'JADWAL KBM — ' . $kelas['nama_kelas'];

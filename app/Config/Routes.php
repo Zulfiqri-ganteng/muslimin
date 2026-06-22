@@ -49,6 +49,7 @@ $routes->group('admin', static function ($routes) {
             $routes->get('guru/export', 'Admin\Master\Guru::export');
             $routes->get('guru/template', 'Admin\Master\Guru::template');
             $routes->post('guru/import', 'Admin\Master\Guru::import');
+            $routes->post('guru/bulk-delete', 'Admin\Master\Guru::bulkDelete');
             $routes->get('guru/import-kesediaan', 'Admin\Master\Guru::importFromSubmissions');
 
             // Mata Pelajaran
@@ -60,6 +61,7 @@ $routes->group('admin', static function ($routes) {
             $routes->get('mapel/export', 'Admin\Master\MataPelajaran::export');
             $routes->get('mapel/template', 'Admin\Master\MataPelajaran::template');
             $routes->post('mapel/import', 'Admin\Master\MataPelajaran::import');
+            $routes->post('mapel/bulk-delete', 'Admin\Master\MataPelajaran::bulkDelete');
 
             // Kelas
             $routes->get('kelas', 'Admin\Master\Kelas::index');
@@ -69,6 +71,7 @@ $routes->group('admin', static function ($routes) {
             $routes->get('kelas/export', 'Admin\Master\Kelas::export');
             $routes->get('kelas/template', 'Admin\Master\Kelas::template');
             $routes->post('kelas/import', 'Admin\Master\Kelas::import');
+            $routes->post('kelas/bulk-delete', 'Admin\Master\Kelas::bulkDelete');
 
             // Pengampu (penugasan)
             $routes->get('pengampu', 'Admin\Master\Pengampu::index');

@@ -5,7 +5,10 @@
     'helpKey'   => 'kelas',
     'helpTitle' => 'Master Kelas / Rombel',
     'helpBody'  => '<p>Daftar rombongan belajar (mis. X TKJT 1). Tetapkan <b>tingkat</b> (X/XI/XII), <b>jurusan</b>, <b>wali kelas</b>, dan <b>shift</b>.</p>
-        <p class="mt-1"><b>Shift</b> (Pagi/Siang) menentukan set jam pelajaran yang dipakai kelas tersebut saat penjadwalan. Bisa juga <b>Import</b> dari Excel.</p>',
+        <p class="mt-1">• <b>Import (memasukkan data)</b> — unggah Excel, baris akan <b>ditambahkan otomatis</b> (nama kelas yang sama diperbarui).<br>
+        • <b>Export (mengeluarkan data)</b> — mengunduh seluruh kelas yang ada menjadi file Excel.<br>
+        • <b>Hapus Terpilih / Hapus Semua</b> — centang baris atau hapus seluruh data sekaligus.</p>
+        <p class="mt-1"><b>Shift</b> (Pagi/Siang) menentukan set jam pelajaran yang dipakai kelas tersebut saat penjadwalan.</p>',
 ]) ?>
 
 <div x-data="kelasPage()">
@@ -43,12 +46,24 @@
                     <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"/></svg>
                     Import
                 </button>
-                <a href="<?= site_url('admin/master/kelas/export') ?>" class="inline-flex items-center gap-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-semibold px-4 py-2.5 transition">
+                <a href="<?= site_url('admin/master/kelas/export') ?>" title="Keluarkan semua kelas ke file Excel" class="inline-flex items-center gap-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-semibold px-4 py-2.5 transition">
                     <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg>
                     Export
                 </a>
+                <button type="button" @click="submitBulk('selected')" x-show="bulkSelected>0" x-cloak class="inline-flex items-center gap-1.5 rounded-lg bg-red-600 hover:bg-red-700 text-white text-sm font-semibold px-4 py-2.5 transition">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
+                    Hapus Terpilih (<span x-text="bulkSelected"></span>)
+                </button>
+                <button type="button" @click="submitBulk('all')" class="inline-flex items-center gap-1.5 rounded-lg border border-red-300 text-red-600 hover:bg-red-50 text-sm font-semibold px-4 py-2.5 transition">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
+                    Hapus Semua
+                </button>
             </div>
         </div>
+        <form method="post" action="<?= site_url('admin/master/kelas/bulk-delete') ?>" x-ref="bulkForm" class="hidden">
+            <?= csrf_field() ?>
+            <input type="hidden" name="mode" value="">
+        </form>
     </div>
 
     <!-- Tabel -->
@@ -60,6 +75,7 @@
             <table class="w-full text-sm">
                 <thead class="bg-slate-50 text-slate-500 text-left">
                     <tr>
+                        <th class="pl-6 pr-2 py-3 w-10"><input type="checkbox" @change="toggleAll($event)" title="Pilih semua di halaman ini" class="rounded border-slate-300 text-brand-600 focus:ring-brand-500"></th>
                         <th class="px-6 py-3 font-semibold">Nama Kelas</th>
                         <th class="px-6 py-3 font-semibold w-20">Tingkat</th>
                         <th class="px-6 py-3 font-semibold w-24">Jurusan</th>
@@ -70,9 +86,10 @@
                 </thead>
                 <tbody class="divide-y divide-slate-100">
                     <?php if (empty($rows)): ?>
-                        <tr><td colspan="6" class="px-6 py-10 text-center text-slate-400">Belum ada kelas. Tambah manual atau import Excel.</td></tr>
+                        <tr><td colspan="7" class="px-6 py-10 text-center text-slate-400">Belum ada kelas. Tambah manual atau import Excel.</td></tr>
                     <?php else: foreach ($rows as $r): ?>
                         <tr class="hover:bg-slate-50">
+                            <td class="pl-6 pr-2 py-3"><input type="checkbox" class="row-check rounded border-slate-300 text-brand-600 focus:ring-brand-500" value="<?= (int) $r['id'] ?>" @change="refresh()"></td>
                             <td class="px-6 py-3 font-bold text-brand-700"><?= esc($r['nama_kelas']) ?></td>
                             <td class="px-6 py-3"><span class="inline-flex rounded bg-slate-100 text-slate-600 px-2 py-0.5 text-xs font-bold"><?= esc($r['tingkat']) ?></span></td>
                             <td class="px-6 py-3 text-slate-500"><?= esc($r['jurusan_kode'] ?: '—') ?></td>
@@ -100,7 +117,7 @@
             </table>
         </div>
         <?php if ($pager): ?>
-            <div class="px-6 py-4 border-t border-slate-100"><?= $pager->only(['q', 'tingkat', 'shift'])->links() ?></div>
+            <div class="px-6 py-4 border-t border-slate-100"><?= $pager->only(['q', 'tingkat', 'shift'])->links('default', 'admin') ?></div>
         <?php endif; ?>
     </div>
 
@@ -159,7 +176,7 @@
             <h3 class="font-bold text-lg text-slate-800 mb-4">Import Kelas</h3>
             <form method="post" action="<?= site_url('admin/master/kelas/import') ?>" enctype="multipart/form-data">
                 <?= csrf_field() ?>
-                <p class="text-sm text-slate-500 mb-3">Unggah Excel sesuai template. Nama kelas sama akan diperbarui. Jurusan dicocokkan dari kode, wali dari kode/nama guru.</p>
+                <p class="text-sm text-slate-500 mb-3"><b>Import = memasukkan data.</b> Unggah Excel sesuai template — semua baris akan <b>ditambahkan</b> ke daftar. Nama kelas yang sudah ada akan diperbarui. Jurusan dicocokkan dari kode, wali dari kode/nama guru.</p>
                 <input type="file" name="file" accept=".xlsx,.xls" required
                        class="w-full text-sm border border-slate-300 rounded-lg p-2 file:mr-3 file:rounded-md file:border-0 file:bg-brand-50 file:px-3 file:py-1.5 file:text-brand-700 file:font-semibold">
                 <a href="<?= site_url('admin/master/kelas/template') ?>" class="inline-block mt-3 text-sm text-brand-600 hover:underline">⬇ Unduh template Excel</a>
@@ -181,6 +198,25 @@ function kelasPage() {
         open: false, importOpen: false, mode: 'add', actionUrl: '',
         base: '<?= site_url('admin/master/kelas') ?>',
         form: { nama_kelas:'', tingkat:'X', shift:'pagi', jurusan_id:'', wali_kelas_id:'' },
+        // ---- hapus massal ----
+        bulkSelected: 0,
+        refresh() { this.bulkSelected = document.querySelectorAll('.row-check:checked').length; },
+        toggleAll(e) { document.querySelectorAll('.row-check').forEach(c => c.checked = e.target.checked); this.refresh(); },
+        submitBulk(mode) {
+            const form = this.$refs.bulkForm;
+            form.querySelectorAll('input[name="ids[]"]').forEach(n => n.remove());
+            if (mode === 'all') {
+                if (!confirm('HAPUS SEMUA kelas? Tindakan ini tidak dapat dibatalkan.')) return;
+                form.querySelector('[name=mode]').value = 'all';
+            } else {
+                const checked = [...document.querySelectorAll('.row-check:checked')];
+                if (checked.length === 0) { alert('Centang dulu data yang ingin dihapus.'); return; }
+                if (!confirm('Hapus ' + checked.length + ' kelas terpilih?')) return;
+                checked.forEach(c => { const i = document.createElement('input'); i.type='hidden'; i.name='ids[]'; i.value=c.value; form.appendChild(i); });
+                form.querySelector('[name=mode]').value = 'selected';
+            }
+            form.submit();
+        },
         openAdd() { this.mode='add'; this.form={nama_kelas:'',tingkat:'X',shift:'pagi',jurusan_id:'',wali_kelas_id:''}; this.actionUrl=this.base; this.open=true; },
         openEdit(r) { this.mode='edit'; this.form={nama_kelas:r.nama_kelas,tingkat:r.tingkat,shift:r.shift,jurusan_id:r.jurusan_id||'',wali_kelas_id:r.wali_kelas_id||''}; this.actionUrl=this.base+'/'+r.id; this.open=true; },
     }

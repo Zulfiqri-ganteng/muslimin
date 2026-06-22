@@ -23,9 +23,10 @@ class JamPelajaranModel extends Model
         'waktu_selesai' => 'required',
     ];
 
-    /** Jam KBM (bukan istirahat) per shift, urut jam_ke. */
+    /** Semua slot per shift (termasuk istirahat), urut menurut waktu mulai
+     *  agar baris istirahat tampil pada posisi waktunya, bukan di akhir. */
     public function urutShift(string $shift): array
     {
-        return $this->where('shift', $shift)->orderBy('jam_ke', 'ASC')->findAll();
+        return $this->where('shift', $shift)->orderBy('waktu_mulai', 'ASC')->findAll();
     }
 }

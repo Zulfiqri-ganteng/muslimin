@@ -38,7 +38,7 @@ class Guru extends BaseController
             $builder = $builder->where('status_guru', $status);
         }
 
-        $rows  = $builder->orderBy('nama', 'ASC')->paginate(15);
+        $rows  = $builder->orderBy('nama', 'ASC')->paginate(10);
         $pager = $this->model->pager;
 
         return view('admin/master/guru', [
@@ -85,6 +85,26 @@ class Guru extends BaseController
         cache()->delete('opt_guru');
 
         return redirect()->to(site_url('admin/master/guru'))->with('success', 'Guru dihapus.');
+    }
+
+    /** Hapus banyak data sekaligus: mode 'selected' (ids terpilih) atau 'all' (semua). */
+    public function bulkDelete()
+    {
+        $mode = (string) $this->request->getPost('mode');
+        if ($mode === 'all') {
+            $ids = array_column($this->model->select('id')->findAll(), 'id');
+        } else {
+            $ids = array_values(array_filter(array_map('intval', (array) $this->request->getPost('ids'))));
+        }
+        if (empty($ids)) {
+            return redirect()->to(site_url('admin/master/guru'))->with('error', 'Tidak ada data yang dipilih untuk dihapus.');
+        }
+
+        $this->model->delete($ids);
+        cache()->delete('opt_guru');
+        $this->audit->record('delete', 'guru', null, 'Hapus massal ' . count($ids) . ' guru (' . $mode . ')');
+
+        return redirect()->to(site_url('admin/master/guru'))->with('success', count($ids) . ' guru dihapus.');
     }
 
     private function collect(): array

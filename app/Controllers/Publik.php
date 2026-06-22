@@ -69,7 +69,7 @@ class Publik extends BaseController
         $hari = $jam = $grid = [];
         if ($kelas) {
             $hari = (new HariModel())->aktifUrut();
-            $jam  = (new JamPelajaranModel())->where('shift', $shift)->orderBy('jam_ke', 'ASC')->findAll();
+            $jam  = (new JamPelajaranModel())->where('shift', $shift)->orderBy('waktu_mulai', 'ASC')->findAll();
             $grid = (new JadwalModel())->gridForKelas($kelasId);
         }
 
@@ -122,7 +122,7 @@ class Publik extends BaseController
             return redirect()->to(site_url('jadwal-kelas'));
         }
         $hari = (new HariModel())->aktifUrut();
-        $jam  = (new JamPelajaranModel())->where('shift', $kelas['shift'])->orderBy('jam_ke', 'ASC')->findAll();
+        $jam  = (new JamPelajaranModel())->where('shift', $kelas['shift'])->orderBy('waktu_mulai', 'ASC')->findAll();
         $grid = (new JadwalModel())->gridForKelas((int) $id);
 
         $this->streamPdf(view('pdf/jadwal_grid', [

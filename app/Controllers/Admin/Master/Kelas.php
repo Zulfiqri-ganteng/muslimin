@@ -41,7 +41,7 @@ class Kelas extends BaseController
             $builder = $builder->where('kelas.shift', $shift);
         }
 
-        $rows  = $builder->orderBy('kelas.tingkat', 'ASC')->orderBy('kelas.nama_kelas', 'ASC')->paginate(15);
+        $rows  = $builder->orderBy('kelas.tingkat', 'ASC')->orderBy('kelas.nama_kelas', 'ASC')->paginate(10);
         $pager = $this->model->pager;
 
         return view('admin/master/kelas', [
@@ -91,6 +91,26 @@ class Kelas extends BaseController
         $this->audit->record('delete', 'kelas', $id, 'Hapus kelas');
 
         return redirect()->to(site_url('admin/master/kelas'))->with('success', 'Kelas dihapus.');
+    }
+
+    /** Hapus banyak kelas sekaligus: mode 'selected' (ids terpilih) atau 'all' (semua). */
+    public function bulkDelete()
+    {
+        $mode = (string) $this->request->getPost('mode');
+        if ($mode === 'all') {
+            $ids = array_column($this->model->select('id')->findAll(), 'id');
+        } else {
+            $ids = array_values(array_filter(array_map('intval', (array) $this->request->getPost('ids'))));
+        }
+        if (empty($ids)) {
+            return redirect()->to(site_url('admin/master/kelas'))->with('error', 'Tidak ada data yang dipilih untuk dihapus.');
+        }
+
+        $this->model->delete($ids);
+        cache()->delete('opt_kelas');
+        $this->audit->record('delete', 'kelas', null, 'Hapus massal ' . count($ids) . ' kelas (' . $mode . ')');
+
+        return redirect()->to(site_url('admin/master/kelas'))->with('success', count($ids) . ' kelas dihapus.');
     }
 
     private function collect(): array
