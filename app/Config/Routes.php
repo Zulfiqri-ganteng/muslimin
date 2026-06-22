@@ -91,12 +91,22 @@ $routes->group('admin', static function ($routes) {
             $routes->post('jurusan', 'Admin\Master\Jurusan::store');
             $routes->post('jurusan/(:num)', 'Admin\Master\Jurusan::update/$1');
             $routes->get('jurusan/delete/(:num)', 'Admin\Master\Jurusan::delete/$1');
+            $routes->get('jurusan/export', 'Admin\Master\Jurusan::export');
+            $routes->get('jurusan/template', 'Admin\Master\Jurusan::template');
+            $routes->post('jurusan/import-preview', 'Admin\Master\Jurusan::importPreview');
+            $routes->post('jurusan/import-commit', 'Admin\Master\Jurusan::importCommit');
+            $routes->post('jurusan/bulk-delete', 'Admin\Master\Jurusan::bulkDelete');
 
             // Hari
             $routes->get('hari', 'Admin\Master\Hari::index');
             $routes->post('hari', 'Admin\Master\Hari::store');
             $routes->post('hari/(:num)', 'Admin\Master\Hari::update/$1');
             $routes->get('hari/delete/(:num)', 'Admin\Master\Hari::delete/$1');
+            $routes->get('hari/export', 'Admin\Master\Hari::export');
+            $routes->get('hari/template', 'Admin\Master\Hari::template');
+            $routes->post('hari/import-preview', 'Admin\Master\Hari::importPreview');
+            $routes->post('hari/import-commit', 'Admin\Master\Hari::importCommit');
+            $routes->post('hari/bulk-delete', 'Admin\Master\Hari::bulkDelete');
 
             // Jam Pelajaran
             $routes->get('jam', 'Admin\Master\JamPelajaran::index');
