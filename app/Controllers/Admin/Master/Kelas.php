@@ -30,6 +30,10 @@ class Kelas extends BaseController
         $q       = trim((string) $this->request->getGet('q'));
         $tingkat = trim((string) $this->request->getGet('tingkat'));
         $shift   = trim((string) $this->request->getGet('shift'));
+        $per     = (int) $this->request->getGet('per');
+        if (! in_array($per, [10, 20, 30, 40, 50], true)) {
+            $per = 10;
+        }
 
         $builder = $this->model->withRelations();
         if ($q !== '') {
@@ -42,7 +46,7 @@ class Kelas extends BaseController
             $builder = $builder->where('kelas.shift', $shift);
         }
 
-        $rows  = $builder->orderBy('kelas.tingkat', 'ASC')->orderBy('kelas.nama_kelas', 'ASC')->paginate(10);
+        $rows  = $builder->orderBy('kelas.tingkat', 'ASC')->orderBy('kelas.nama_kelas', 'ASC')->paginate($per);
         $pager = $this->model->pager;
 
         return view('admin/master/kelas', [
@@ -52,6 +56,7 @@ class Kelas extends BaseController
             'q'           => $q,
             'tingkat'     => $tingkat,
             'shift'       => $shift,
+            'per'         => $per,
             'total'       => $pager ? $pager->getTotal() : count($rows),
             'jurusanOpts' => (new JurusanModel())->options(),
             'guruOpts'    => (new GuruModel())->options(),

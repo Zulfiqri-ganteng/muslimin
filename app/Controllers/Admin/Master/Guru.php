@@ -27,6 +27,10 @@ class Guru extends BaseController
     {
         $q      = trim((string) $this->request->getGet('q'));
         $status = trim((string) $this->request->getGet('status'));
+        $per    = (int) $this->request->getGet('per');
+        if (! in_array($per, [10, 20, 30, 40, 50], true)) {
+            $per = 10;
+        }
 
         $builder = $this->model;
         if ($q !== '') {
@@ -38,7 +42,7 @@ class Guru extends BaseController
             $builder = $builder->where('status_guru', $status);
         }
 
-        $rows  = $builder->orderBy('nama', 'ASC')->paginate(10);
+        $rows  = $builder->orderBy('nama', 'ASC')->paginate($per);
         $pager = $this->model->pager;
 
         return view('admin/master/guru', [
@@ -47,6 +51,7 @@ class Guru extends BaseController
             'pager'  => $pager,
             'q'      => $q,
             'status' => $status,
+            'per'    => $per,
             'total'  => $pager ? $pager->getTotal() : count($rows),
         ]);
     }

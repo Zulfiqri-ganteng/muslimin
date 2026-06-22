@@ -30,6 +30,10 @@ class MataPelajaran extends BaseController
     {
         $q        = trim((string) $this->request->getGet('q'));
         $kelompok = trim((string) $this->request->getGet('kelompok'));
+        $per      = (int) $this->request->getGet('per');
+        if (! in_array($per, [10, 20, 30, 40, 50], true)) {
+            $per = 10;
+        }
 
         $builder = $this->model;
         if ($q !== '') {
@@ -41,7 +45,7 @@ class MataPelajaran extends BaseController
             $builder = $builder->where('kelompok', $kelompok);
         }
 
-        $rows  = $builder->orderBy('nama_mapel', 'ASC')->paginate(10);
+        $rows  = $builder->orderBy('nama_mapel', 'ASC')->paginate($per);
         $pager = $this->model->pager;
 
         // Peta kompetensi hanya untuk mapel yang tampil (1 query, efisien).
@@ -54,6 +58,7 @@ class MataPelajaran extends BaseController
             'pager'    => $pager,
             'q'        => $q,
             'kelompok' => $kelompok,
+            'per'      => $per,
             'total'    => $pager ? $pager->getTotal() : count($rows),
             'allGuru'  => (new GuruModel())->options(),
             'kompMap'  => $kompMap,
