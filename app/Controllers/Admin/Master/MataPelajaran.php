@@ -195,7 +195,7 @@ class MataPelajaran extends BaseController
         return [
             ['key' => 'kode_mapel', 'label' => 'Kode Mapel', 'type' => 'text',   'required' => true, 'width' => 120],
             ['key' => 'nama_mapel', 'label' => 'Nama Mapel', 'type' => 'text',   'required' => true, 'width' => 280],
-            ['key' => 'kelompok',   'label' => 'Kelompok',   'type' => 'select', 'options' => $this->kelompokList(), 'width' => 180],
+            ['key' => 'kelompok',   'label' => 'Kelompok',   'type' => 'datalist', 'options' => $this->kelompokList(), 'width' => 180],
             ['key' => 'jp_default', 'label' => 'JP / Minggu', 'type' => 'number', 'width' => 100],
         ];
     }

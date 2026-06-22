@@ -180,7 +180,7 @@ class Kelas extends BaseController
         return [
             ['key' => 'nama_kelas',   'label' => 'Nama Kelas',       'type' => 'text',   'required' => true, 'width' => 160],
             ['key' => 'tingkat',      'label' => 'Tingkat',          'type' => 'select', 'options' => ['X', 'XI', 'XII'], 'width' => 100],
-            ['key' => 'jurusan_kode', 'label' => 'Kode Jurusan',     'type' => 'select', 'options' => $jurusanKodes, 'width' => 130],
+            ['key' => 'jurusan_kode', 'label' => 'Kode Jurusan',     'type' => 'datalist', 'options' => $jurusanKodes, 'width' => 130],
             ['key' => 'wali',         'label' => 'Wali (kode/nama)', 'type' => 'text',   'width' => 200],
             ['key' => 'shift',        'label' => 'Shift',            'type' => 'select', 'options' => ['pagi', 'siang'], 'width' => 110],
         ];

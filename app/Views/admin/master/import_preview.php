@@ -9,6 +9,21 @@
  * @var string $commitUrl URL tujuan simpan
  * @var string $backUrl   URL batal
  */
+// Gabungkan nilai yang ADA di data ke daftar opsi select (agar nilai hasil impor
+// selalu tampil & terpilih walau belum terdaftar di master). Datalist tak perlu ini.
+foreach ($cols as &$c) {
+    if (($c['type'] ?? '') === 'select') {
+        $opts = $c['options'] ?? [];
+        foreach ($rows as $r) {
+            $v = trim((string) ($r[$c['key']] ?? ''));
+            if ($v !== '' && ! in_array($v, $opts, true)) {
+                $opts[] = $v;
+            }
+        }
+        $c['options'] = $opts;
+    }
+}
+unset($c);
 $colsJs = $cols;
 ?>
 <div x-data="importPreview()" class="space-y-5">
@@ -30,6 +45,11 @@ $colsJs = $cols;
     <!-- Tabel editor -->
     <form method="post" action="<?= esc($commitUrl) ?>" @submit="prepare()">
         <?= csrf_field() ?>
+        <?php foreach ($cols as $c): if (($c['type'] ?? '') === 'datalist'): ?>
+            <datalist id="dl_<?= esc($c['key']) ?>">
+                <?php foreach (($c['options'] ?? []) as $opt): ?><option value="<?= esc($opt) ?>"></option><?php endforeach; ?>
+            </datalist>
+        <?php endif; endforeach; ?>
         <div class="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
             <div class="overflow-x-auto">
                 <table class="w-full text-sm">
@@ -64,6 +84,10 @@ $colsJs = $cols;
                                                     <option value="<?= esc($opt) ?>"><?= esc($opt) ?></option>
                                                 <?php endforeach; ?>
                                             </select>
+                                        <?php elseif ($type === 'datalist'): ?>
+                                            <input type="text" list="dl_<?= esc($key) ?>"
+                                                   x-model="row['<?= esc($key, 'js') ?>']"
+                                                   class="w-full rounded-lg border border-slate-300 px-2 py-1.5 text-sm focus:border-brand-500 outline-none">
                                         <?php else: ?>
                                             <input type="<?= $type === 'number' ? 'number' : 'text' ?>"
                                                    x-model="row['<?= esc($key, 'js') ?>']"
