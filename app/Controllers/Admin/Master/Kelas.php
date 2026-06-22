@@ -172,55 +172,140 @@ class Kelas extends BaseController
         $this->streamXlsx($ss, 'Template-Import-Kelas');
     }
 
-    // ===================== IMPORT EXCEL =====================
-    public function import()
+    // ===================== KONFIG KOLOM IMPORT =====================
+    private function importCols(): array
+    {
+        $jurusanKodes = array_column((new JurusanModel())->select('kode')->orderBy('kode', 'ASC')->findAll(), 'kode');
+
+        return [
+            ['key' => 'nama_kelas',   'label' => 'Nama Kelas',       'type' => 'text',   'required' => true, 'width' => 160],
+            ['key' => 'tingkat',      'label' => 'Tingkat',          'type' => 'select', 'options' => ['X', 'XI', 'XII'], 'width' => 100],
+            ['key' => 'jurusan_kode', 'label' => 'Kode Jurusan',     'type' => 'select', 'options' => $jurusanKodes, 'width' => 130],
+            ['key' => 'wali',         'label' => 'Wali (kode/nama)', 'type' => 'text',   'width' => 200],
+            ['key' => 'shift',        'label' => 'Shift',            'type' => 'select', 'options' => ['pagi', 'siang'], 'width' => 110],
+        ];
+    }
+
+    /** Baca file Excel → baris assoc sesuai urutan kolom template. Null bila gagal (flash diset). */
+    private function readUpload(): ?array
     {
         $file = $this->request->getFile('file');
         if (! $file || ! $file->isValid()) {
-            return redirect()->back()->with('error', 'File tidak valid.');
+            session()->setFlashdata('error', 'File tidak valid.');
+            return null;
         }
         if (! in_array($file->getExtension(), ['xlsx', 'xls'], true)) {
-            return redirect()->back()->with('error', 'File harus berformat Excel (.xlsx / .xls).');
+            session()->setFlashdata('error', 'File harus berformat Excel (.xlsx / .xls).');
+            return null;
         }
-
         try {
             $sheet = IOFactory::load($file->getTempName())->getActiveSheet();
             $data  = $sheet->toArray(null, true, true, false);
         } catch (\Throwable $e) {
-            return redirect()->back()->with('error', 'Gagal membaca file: ' . $e->getMessage());
+            session()->setFlashdata('error', 'Gagal membaca file: ' . $e->getMessage());
+            return null;
         }
 
+        $keys = array_column($this->importCols(), 'key');
+        $rows = [];
+        foreach ($data as $i => $row) {
+            if ($i === 0) {
+                continue;
+            }
+            $assoc = [];
+            foreach ($keys as $c => $k) {
+                $assoc[$k] = trim((string) ($row[$c] ?? ''));
+            }
+            if (implode('', $assoc) === '') {
+                continue;
+            }
+            $rows[] = $assoc;
+        }
+        return $rows;
+    }
+
+    // ===================== IMPORT: PRATINJAU (dapat diedit) =====================
+    public function importPreview()
+    {
+        $rows = $this->readUpload();
+        if ($rows === null) {
+            return redirect()->to(site_url('admin/master/kelas'));
+        }
+        if (empty($rows)) {
+            return redirect()->to(site_url('admin/master/kelas'))->with('error', 'File tidak berisi data.');
+        }
+
+        $existing = [];
+        foreach ($this->model->withDeleted()->select('nama_kelas')->findAll() as $k) {
+            $existing[strtoupper((string) $k['nama_kelas'])] = true;
+        }
+        foreach ($rows as &$r) {
+            $r['_status'] = isset($existing[strtoupper($r['nama_kelas'] ?? '')]) ? 'perbarui' : 'baru';
+        }
+        unset($r);
+
+        return view('admin/master/import_preview', [
+            'title'     => 'Pratinjau Impor Kelas',
+            'subtitle'  => 'Master Kelas',
+            'cols'      => $this->importCols(),
+            'rows'      => $rows,
+            'commitUrl' => site_url('admin/master/kelas/import-commit'),
+            'backUrl'   => site_url('admin/master/kelas'),
+        ]);
+    }
+
+    // ===================== IMPORT: SIMPAN HASIL EDIT =====================
+    public function importCommit()
+    {
+        $rows = (array) $this->request->getPost('rows');
+        if (empty($rows)) {
+            return redirect()->to(site_url('admin/master/kelas'))->with('error', 'Tidak ada data untuk disimpan.');
+        }
+
+        [$ins, $upd, $skip, $errors] = $this->upsertRows($rows);
+
+        cache()->delete('opt_kelas');
+        $this->audit->record('import', 'kelas', null, "Import kelas: +{$ins} baru, {$upd} update, {$skip} dilewati");
+
+        $msg = "Import selesai: {$ins} baru, {$upd} diperbarui, {$skip} dilewati.";
+        if ($errors) {
+            return redirect()->to(site_url('admin/master/kelas'))->with('error', $msg . ' | ' . implode(' ', array_slice($errors, 0, 5)));
+        }
+        return redirect()->to(site_url('admin/master/kelas'))->with('success', $msg);
+    }
+
+    /** Upsert kumpulan baris assoc (by nama_kelas, termasuk yg soft-deleted). */
+    private function upsertRows(array $rows): array
+    {
         // peta lookup (1 query masing-masing)
         $jurusanMap = [];
         foreach ((new JurusanModel())->select('id, kode')->findAll() as $j) {
             $jurusanMap[strtoupper($j['kode'])] = (int) $j['id'];
         }
-        $guruModel = new GuruModel();
         $guruByKode = [];
-        foreach ($guruModel->select('id, kode_guru, nama')->findAll() as $g) {
+        foreach ((new GuruModel())->select('id, kode_guru, nama')->findAll() as $g) {
             $guruByKode[strtoupper($g['kode_guru'])] = (int) $g['id'];
             $guruByKode[strtoupper($g['nama'])]      = (int) $g['id'];
         }
 
-        $ins = 0; $upd = 0; $skip = 0;
+        $ins = 0; $upd = 0; $skip = 0; $errors = [];
         $db  = db_connect();
         $db->transStart();
 
-        foreach ($data as $i => $row) {
-            if ($i === 0) {
-                continue;
-            }
-            $nama = trim((string) ($row[0] ?? ''));
+        foreach ($rows as $i => $row) {
+            $nama = trim((string) ($row['nama_kelas'] ?? ''));
             if ($nama === '') {
+                $skip++;
                 continue;
             }
-            $tingkat = strtoupper(trim((string) ($row[1] ?? '')));
+            $tingkat = strtoupper(trim((string) ($row['tingkat'] ?? '')));
+            $shift   = strtolower(trim((string) ($row['shift'] ?? '')));
             $payload = [
                 'nama_kelas'    => $nama,
                 'tingkat'       => in_array($tingkat, ['X', 'XI', 'XII'], true) ? $tingkat : 'X',
-                'jurusan_id'    => $jurusanMap[strtoupper(trim((string) ($row[2] ?? '')))] ?? null,
-                'wali_kelas_id' => $guruByKode[strtoupper(trim((string) ($row[3] ?? '')))] ?? null,
-                'shift'         => in_array(strtolower(trim((string) ($row[4] ?? ''))), ['pagi', 'siang'], true) ? strtolower(trim((string) $row[4])) : 'pagi',
+                'jurusan_id'    => $jurusanMap[strtoupper(trim((string) ($row['jurusan_kode'] ?? '')))] ?? null,
+                'wali_kelas_id' => $guruByKode[strtoupper(trim((string) ($row['wali'] ?? '')))] ?? null,
+                'shift'         => in_array($shift, ['pagi', 'siang'], true) ? $shift : 'pagi',
             ];
 
             $existing = $this->model->withDeleted()->where('nama_kelas', $nama)->first();
@@ -236,13 +321,10 @@ class Kelas extends BaseController
 
         $db->transComplete();
         if ($db->transStatus() === false) {
-            return redirect()->back()->with('error', 'Import dibatalkan karena kesalahan database.');
+            $errors[] = 'Sebagian gagal disimpan karena kesalahan database.';
         }
 
-        cache()->delete('opt_kelas');
-        $this->audit->record('import', 'kelas', null, "Import kelas: +{$ins} baru, {$upd} update, {$skip} dilewati");
-
-        return redirect()->to(site_url('admin/master/kelas'))->with('success', "Import selesai: {$ins} baru, {$upd} diperbarui.");
+        return [$ins, $upd, $skip, $errors];
     }
 
     // ---------------------------------------------------------------

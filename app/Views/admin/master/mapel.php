@@ -199,15 +199,15 @@ foreach ($allGuru as $id => $label) {
         <div class="absolute inset-0 bg-black/40" @click="importOpen=false"></div>
         <div class="relative bg-white rounded-2xl shadow-xl w-full max-w-md p-6">
             <h3 class="font-bold text-lg text-slate-800 mb-4">Import Mata Pelajaran</h3>
-            <form method="post" action="<?= site_url('admin/master/mapel/import') ?>" enctype="multipart/form-data">
+            <form method="post" action="<?= site_url('admin/master/mapel/import-preview') ?>" enctype="multipart/form-data">
                 <?= csrf_field() ?>
-                <p class="text-sm text-slate-500 mb-3"><b>Import = memasukkan data.</b> Unggah Excel sesuai template — semua baris akan <b>ditambahkan</b> ke daftar. Kode mapel yang sudah ada akan diperbarui (tidak dobel).</p>
+                <p class="text-sm text-slate-500 mb-3"><b>Import = memasukkan data.</b> Unggah Excel sesuai template. Data akan tampil dalam <b>pratinjau yang bisa diedit</b> sebelum disimpan. Kode mapel yang sudah ada akan diperbarui (tidak dobel).</p>
                 <input type="file" name="file" accept=".xlsx,.xls" required
                        class="w-full text-sm border border-slate-300 rounded-lg p-2 file:mr-3 file:rounded-md file:border-0 file:bg-brand-50 file:px-3 file:py-1.5 file:text-brand-700 file:font-semibold">
                 <a href="<?= site_url('admin/master/mapel/template') ?>" class="inline-block mt-3 text-sm text-brand-600 hover:underline">⬇ Unduh template Excel</a>
                 <div class="flex justify-end gap-2 mt-6">
                     <button type="button" @click="importOpen=false" class="rounded-lg border border-slate-300 text-slate-600 text-sm font-semibold px-4 py-2.5 hover:bg-slate-50">Batal</button>
-                    <button class="rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-semibold px-5 py-2.5">Unggah & Import</button>
+                    <button class="rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-semibold px-5 py-2.5">Unggah & Pratinjau</button>
                 </div>
             </form>
         </div>

@@ -174,54 +174,140 @@ class Guru extends BaseController
         $this->streamXlsx($ss, 'Template-Import-Guru');
     }
 
-    // ===================== IMPORT EXCEL =====================
-    public function import()
+    // ===================== KONFIG KOLOM IMPORT =====================
+    private function importCols(): array
+    {
+        return [
+            ['key' => 'nip',           'label' => 'NIP',         'type' => 'text',   'width' => 150],
+            ['key' => 'kode_guru',     'label' => 'Kode Guru',   'type' => 'text',   'required' => true, 'width' => 110],
+            ['key' => 'nama',          'label' => 'Nama Guru',   'type' => 'text',   'required' => true, 'width' => 220],
+            ['key' => 'jenis_kelamin', 'label' => 'JK',          'type' => 'select', 'options' => ['L', 'P'], 'width' => 90],
+            ['key' => 'status_guru',   'label' => 'Status',      'type' => 'select', 'options' => ['PNS', 'PPPK', 'GTY', 'GTT'], 'width' => 110],
+            ['key' => 'max_beban',     'label' => 'Maks JP',     'type' => 'number', 'width' => 90],
+            ['key' => 'keterangan',    'label' => 'Keterangan',  'type' => 'text',   'width' => 180],
+        ];
+    }
+
+    /** Baca file Excel → baris assoc sesuai urutan kolom template. Null bila gagal (flash diset). */
+    private function readUpload(): ?array
     {
         $file = $this->request->getFile('file');
         if (! $file || ! $file->isValid()) {
-            return redirect()->back()->with('error', 'File tidak valid.');
+            session()->setFlashdata('error', 'File tidak valid.');
+            return null;
         }
         if (! in_array($file->getExtension(), ['xlsx', 'xls'], true)) {
-            return redirect()->back()->with('error', 'File harus berformat Excel (.xlsx / .xls).');
+            session()->setFlashdata('error', 'File harus berformat Excel (.xlsx / .xls).');
+            return null;
         }
-
         try {
             $sheet = IOFactory::load($file->getTempName())->getActiveSheet();
-            $data  = $sheet->toArray(null, true, true, false); // index numerik
+            $data  = $sheet->toArray(null, true, true, false);
         } catch (\Throwable $e) {
-            return redirect()->back()->with('error', 'Gagal membaca file: ' . $e->getMessage());
+            session()->setFlashdata('error', 'Gagal membaca file: ' . $e->getMessage());
+            return null;
         }
 
-        $ins = 0; $upd = 0; $skip = 0; $errors = [];
-        $db = db_connect();
-        $db->transStart();
-
+        $keys = array_column($this->importCols(), 'key');
+        $rows = [];
         foreach ($data as $i => $row) {
             if ($i === 0) {
                 continue; // header
             }
-            $nip   = trim((string) ($row[0] ?? ''));
-            $kode  = trim((string) ($row[1] ?? ''));
-            $nama  = trim((string) ($row[2] ?? ''));
+            $assoc = [];
+            foreach ($keys as $c => $k) {
+                $assoc[$k] = trim((string) ($row[$c] ?? ''));
+            }
+            // lewati baris yang seluruh selnya kosong
+            if (implode('', $assoc) === '') {
+                continue;
+            }
+            $rows[] = $assoc;
+        }
+        return $rows;
+    }
+
+    // ===================== IMPORT: PRATINJAU (dapat diedit) =====================
+    public function importPreview()
+    {
+        $rows = $this->readUpload();
+        if ($rows === null) {
+            return redirect()->to(site_url('admin/master/guru'));
+        }
+        if (empty($rows)) {
+            return redirect()->to(site_url('admin/master/guru'))->with('error', 'File tidak berisi data.');
+        }
+
+        // tandai baru / perbarui berdasarkan kode_guru yang sudah ada
+        $existing = [];
+        foreach ($this->model->withDeleted()->select('kode_guru')->findAll() as $g) {
+            $existing[strtoupper((string) $g['kode_guru'])] = true;
+        }
+        foreach ($rows as &$r) {
+            $r['_status'] = isset($existing[strtoupper($r['kode_guru'] ?? '')]) ? 'perbarui' : 'baru';
+        }
+        unset($r);
+
+        return view('admin/master/import_preview', [
+            'title'     => 'Pratinjau Impor Guru',
+            'subtitle'  => 'Master Guru',
+            'cols'      => $this->importCols(),
+            'rows'      => $rows,
+            'commitUrl' => site_url('admin/master/guru/import-commit'),
+            'backUrl'   => site_url('admin/master/guru'),
+        ]);
+    }
+
+    // ===================== IMPORT: SIMPAN HASIL EDIT =====================
+    public function importCommit()
+    {
+        $rows = (array) $this->request->getPost('rows');
+        if (empty($rows)) {
+            return redirect()->to(site_url('admin/master/guru'))->with('error', 'Tidak ada data untuk disimpan.');
+        }
+
+        [$ins, $upd, $skip, $errors] = $this->upsertRows($rows);
+
+        cache()->delete('opt_guru');
+        $this->audit->record('import', 'guru', null, "Import guru: +{$ins} baru, {$upd} update, {$skip} dilewati");
+
+        $msg = "Import selesai: {$ins} baru, {$upd} diperbarui, {$skip} dilewati.";
+        if ($errors) {
+            return redirect()->to(site_url('admin/master/guru'))->with('error', $msg . ' | ' . implode(' ', array_slice($errors, 0, 5)));
+        }
+        return redirect()->to(site_url('admin/master/guru'))->with('success', $msg);
+    }
+
+    /** Upsert kumpulan baris assoc (by kode_guru, termasuk yg soft-deleted). */
+    private function upsertRows(array $rows): array
+    {
+        $ins = 0; $upd = 0; $skip = 0; $errors = [];
+        $db = db_connect();
+        $db->transStart();
+
+        foreach ($rows as $i => $row) {
+            $kode = trim((string) ($row['kode_guru'] ?? ''));
+            $nama = trim((string) ($row['nama'] ?? ''));
             if ($kode === '' && $nama === '') {
-                continue; // baris kosong
+                continue;
             }
             if ($kode === '' || $nama === '') {
                 $skip++; $errors[] = 'Baris ' . ($i + 1) . ': kode/nama kosong.';
                 continue;
             }
 
+            $jk     = strtoupper(trim((string) ($row['jenis_kelamin'] ?? '')));
+            $status = strtoupper(trim((string) ($row['status_guru'] ?? '')));
             $payload = [
-                'nip'           => $nip ?: null,
+                'nip'           => trim((string) ($row['nip'] ?? '')) ?: null,
                 'kode_guru'     => $kode,
                 'nama'          => $nama,
-                'jenis_kelamin' => in_array(strtoupper(trim((string) ($row[3] ?? ''))), ['L', 'P'], true) ? strtoupper(trim((string) $row[3])) : null,
-                'status_guru'   => in_array(strtoupper(trim((string) ($row[4] ?? ''))), ['PNS', 'PPPK', 'GTY', 'GTT'], true) ? strtoupper(trim((string) $row[4])) : null,
-                'max_beban'     => (int) ($row[5] ?? 24) ?: 24,
-                'keterangan'    => trim((string) ($row[6] ?? '')) ?: null,
+                'jenis_kelamin' => in_array($jk, ['L', 'P'], true) ? $jk : null,
+                'status_guru'   => in_array($status, ['PNS', 'PPPK', 'GTY', 'GTT'], true) ? $status : null,
+                'max_beban'     => (int) ($row['max_beban'] ?? 24) ?: 24,
+                'keterangan'    => trim((string) ($row['keterangan'] ?? '')) ?: null,
             ];
 
-            // Upsert berdasarkan kode_guru (termasuk yg soft-deleted)
             $existing = $this->model->withDeleted()->where('kode_guru', $kode)->first();
             if ($existing) {
                 $this->model->protect(false)->update($existing['id'], $payload + ['deleted_at' => null, 'id' => $existing['id']]);
@@ -235,17 +321,10 @@ class Guru extends BaseController
 
         $db->transComplete();
         if ($db->transStatus() === false) {
-            return redirect()->back()->with('error', 'Import dibatalkan karena terjadi kesalahan database.');
+            $errors[] = 'Sebagian gagal disimpan karena kesalahan database.';
         }
 
-        cache()->delete('opt_guru');
-        $this->audit->record('import', 'guru', null, "Import guru: +{$ins} baru, {$upd} update, {$skip} dilewati");
-
-        $msg = "Import selesai: {$ins} baru, {$upd} diperbarui, {$skip} dilewati.";
-        if ($errors) {
-            return redirect()->to(site_url('admin/master/guru'))->with('error', $msg . ' | ' . implode(' ', array_slice($errors, 0, 5)));
-        }
-        return redirect()->to(site_url('admin/master/guru'))->with('success', $msg);
+        return [$ins, $upd, $skip, $errors];
     }
 
     // ===================== IMPOR DARI DATA KESEDIAAN LAMA =====================

@@ -189,47 +189,128 @@ class MataPelajaran extends BaseController
         $this->streamXlsx($ss, 'Template-Import-Mapel');
     }
 
-    // ===================== IMPORT EXCEL =====================
-    public function import()
+    // ===================== KONFIG KOLOM IMPORT =====================
+    private function importCols(): array
+    {
+        return [
+            ['key' => 'kode_mapel', 'label' => 'Kode Mapel', 'type' => 'text',   'required' => true, 'width' => 120],
+            ['key' => 'nama_mapel', 'label' => 'Nama Mapel', 'type' => 'text',   'required' => true, 'width' => 280],
+            ['key' => 'kelompok',   'label' => 'Kelompok',   'type' => 'select', 'options' => $this->kelompokList(), 'width' => 180],
+            ['key' => 'jp_default', 'label' => 'JP / Minggu', 'type' => 'number', 'width' => 100],
+        ];
+    }
+
+    /** Baca file Excel → baris assoc sesuai urutan kolom template. Null bila gagal (flash diset). */
+    private function readUpload(): ?array
     {
         $file = $this->request->getFile('file');
         if (! $file || ! $file->isValid()) {
-            return redirect()->back()->with('error', 'File tidak valid.');
+            session()->setFlashdata('error', 'File tidak valid.');
+            return null;
         }
         if (! in_array($file->getExtension(), ['xlsx', 'xls'], true)) {
-            return redirect()->back()->with('error', 'File harus berformat Excel (.xlsx / .xls).');
+            session()->setFlashdata('error', 'File harus berformat Excel (.xlsx / .xls).');
+            return null;
         }
-
         try {
             $sheet = IOFactory::load($file->getTempName())->getActiveSheet();
             $data  = $sheet->toArray(null, true, true, false);
         } catch (\Throwable $e) {
-            return redirect()->back()->with('error', 'Gagal membaca file: ' . $e->getMessage());
+            session()->setFlashdata('error', 'Gagal membaca file: ' . $e->getMessage());
+            return null;
         }
 
-        $ins = 0; $upd = 0; $skip = 0;
-        $db  = db_connect();
-        $db->transStart();
-
+        $keys = array_column($this->importCols(), 'key');
+        $rows = [];
         foreach ($data as $i => $row) {
             if ($i === 0) {
                 continue;
             }
-            $kode = strtoupper(trim((string) ($row[0] ?? '')));
-            $nama = trim((string) ($row[1] ?? ''));
+            $assoc = [];
+            foreach ($keys as $c => $k) {
+                $assoc[$k] = trim((string) ($row[$c] ?? ''));
+            }
+            if (implode('', $assoc) === '') {
+                continue;
+            }
+            $rows[] = $assoc;
+        }
+        return $rows;
+    }
+
+    // ===================== IMPORT: PRATINJAU (dapat diedit) =====================
+    public function importPreview()
+    {
+        $rows = $this->readUpload();
+        if ($rows === null) {
+            return redirect()->to(site_url('admin/master/mapel'));
+        }
+        if (empty($rows)) {
+            return redirect()->to(site_url('admin/master/mapel'))->with('error', 'File tidak berisi data.');
+        }
+
+        $existing = [];
+        foreach ($this->model->withDeleted()->select('kode_mapel')->findAll() as $m) {
+            $existing[strtoupper((string) $m['kode_mapel'])] = true;
+        }
+        foreach ($rows as &$r) {
+            $r['_status'] = isset($existing[strtoupper($r['kode_mapel'] ?? '')]) ? 'perbarui' : 'baru';
+        }
+        unset($r);
+
+        return view('admin/master/import_preview', [
+            'title'     => 'Pratinjau Impor Mata Pelajaran',
+            'subtitle'  => 'Master Mata Pelajaran',
+            'cols'      => $this->importCols(),
+            'rows'      => $rows,
+            'commitUrl' => site_url('admin/master/mapel/import-commit'),
+            'backUrl'   => site_url('admin/master/mapel'),
+        ]);
+    }
+
+    // ===================== IMPORT: SIMPAN HASIL EDIT =====================
+    public function importCommit()
+    {
+        $rows = (array) $this->request->getPost('rows');
+        if (empty($rows)) {
+            return redirect()->to(site_url('admin/master/mapel'))->with('error', 'Tidak ada data untuk disimpan.');
+        }
+
+        [$ins, $upd, $skip, $errors] = $this->upsertRows($rows);
+
+        cache()->delete('opt_mapel');
+        $this->audit->record('import', 'mata_pelajaran', null, "Import mapel: +{$ins} baru, {$upd} update, {$skip} dilewati");
+
+        $msg = "Import selesai: {$ins} baru, {$upd} diperbarui, {$skip} dilewati.";
+        if ($errors) {
+            return redirect()->to(site_url('admin/master/mapel'))->with('error', $msg . ' | ' . implode(' ', array_slice($errors, 0, 5)));
+        }
+        return redirect()->to(site_url('admin/master/mapel'))->with('success', $msg);
+    }
+
+    /** Upsert kumpulan baris assoc (by kode_mapel, termasuk yg soft-deleted). */
+    private function upsertRows(array $rows): array
+    {
+        $ins = 0; $upd = 0; $skip = 0; $errors = [];
+        $db  = db_connect();
+        $db->transStart();
+
+        foreach ($rows as $i => $row) {
+            $kode = strtoupper(trim((string) ($row['kode_mapel'] ?? '')));
+            $nama = trim((string) ($row['nama_mapel'] ?? ''));
             if ($kode === '' && $nama === '') {
                 continue;
             }
             if ($kode === '' || $nama === '') {
-                $skip++;
+                $skip++; $errors[] = 'Baris ' . ($i + 1) . ': kode/nama kosong.';
                 continue;
             }
 
             $payload = [
                 'kode_mapel' => $kode,
                 'nama_mapel' => $nama,
-                'kelompok'   => trim((string) ($row[2] ?? '')) ?: null,
-                'jp_default' => (int) ($row[3] ?? 2) ?: 2,
+                'kelompok'   => trim((string) ($row['kelompok'] ?? '')) ?: null,
+                'jp_default' => (int) ($row['jp_default'] ?? 2) ?: 2,
             ];
 
             $existing = $this->model->withDeleted()->where('kode_mapel', $kode)->first();
@@ -245,13 +326,10 @@ class MataPelajaran extends BaseController
 
         $db->transComplete();
         if ($db->transStatus() === false) {
-            return redirect()->back()->with('error', 'Import dibatalkan karena kesalahan database.');
+            $errors[] = 'Sebagian gagal disimpan karena kesalahan database.';
         }
 
-        cache()->delete('opt_mapel');
-        $this->audit->record('import', 'mata_pelajaran', null, "Import mapel: +{$ins} baru, {$upd} update, {$skip} dilewati");
-
-        return redirect()->to(site_url('admin/master/mapel'))->with('success', "Import selesai: {$ins} baru, {$upd} diperbarui, {$skip} dilewati.");
+        return [$ins, $upd, $skip, $errors];
     }
 
     // ---------------------------------------------------------------

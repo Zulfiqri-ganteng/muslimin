@@ -48,7 +48,8 @@ $routes->group('admin', static function ($routes) {
             $routes->get('guru/delete/(:num)', 'Admin\Master\Guru::delete/$1');
             $routes->get('guru/export', 'Admin\Master\Guru::export');
             $routes->get('guru/template', 'Admin\Master\Guru::template');
-            $routes->post('guru/import', 'Admin\Master\Guru::import');
+            $routes->post('guru/import-preview', 'Admin\Master\Guru::importPreview');
+            $routes->post('guru/import-commit', 'Admin\Master\Guru::importCommit');
             $routes->post('guru/bulk-delete', 'Admin\Master\Guru::bulkDelete');
             $routes->get('guru/import-kesediaan', 'Admin\Master\Guru::importFromSubmissions');
 
@@ -60,7 +61,8 @@ $routes->group('admin', static function ($routes) {
             $routes->post('mapel/kompetensi/(:num)', 'Admin\Master\MataPelajaran::kompetensi/$1');
             $routes->get('mapel/export', 'Admin\Master\MataPelajaran::export');
             $routes->get('mapel/template', 'Admin\Master\MataPelajaran::template');
-            $routes->post('mapel/import', 'Admin\Master\MataPelajaran::import');
+            $routes->post('mapel/import-preview', 'Admin\Master\MataPelajaran::importPreview');
+            $routes->post('mapel/import-commit', 'Admin\Master\MataPelajaran::importCommit');
             $routes->post('mapel/bulk-delete', 'Admin\Master\MataPelajaran::bulkDelete');
 
             // Kelas
@@ -70,7 +72,8 @@ $routes->group('admin', static function ($routes) {
             $routes->get('kelas/delete/(:num)', 'Admin\Master\Kelas::delete/$1');
             $routes->get('kelas/export', 'Admin\Master\Kelas::export');
             $routes->get('kelas/template', 'Admin\Master\Kelas::template');
-            $routes->post('kelas/import', 'Admin\Master\Kelas::import');
+            $routes->post('kelas/import-preview', 'Admin\Master\Kelas::importPreview');
+            $routes->post('kelas/import-commit', 'Admin\Master\Kelas::importCommit');
             $routes->post('kelas/bulk-delete', 'Admin\Master\Kelas::bulkDelete');
 
             // Pengampu (penugasan)
