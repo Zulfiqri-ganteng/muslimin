@@ -17,6 +17,7 @@ class Kelas extends BaseController
 {
     protected KelasModel $model;
     protected AuditModel $audit;
+    protected string $importNote = '';
 
     public function __construct()
     {
@@ -268,6 +269,9 @@ class Kelas extends BaseController
         $this->audit->record('import', 'kelas', null, "Import kelas: +{$ins} baru, {$upd} update, {$skip} dilewati");
 
         $msg = "Import selesai: {$ins} baru, {$upd} diperbarui, {$skip} dilewati.";
+        if ($this->importNote !== '') {
+            $msg .= ' ' . $this->importNote;
+        }
         if ($errors) {
             return redirect()->to(site_url('admin/master/kelas'))->with('error', $msg . ' | ' . implode(' ', array_slice($errors, 0, 5)));
         }
@@ -277,10 +281,11 @@ class Kelas extends BaseController
     /** Upsert kumpulan baris assoc (by nama_kelas, termasuk yg soft-deleted). */
     private function upsertRows(array $rows): array
     {
-        // peta lookup (1 query masing-masing)
-        $jurusanMap = [];
-        foreach ((new JurusanModel())->select('id, kode')->findAll() as $j) {
-            $jurusanMap[strtoupper($j['kode'])] = (int) $j['id'];
+        // peta lookup jurusan (termasuk soft-deleted, agar UNIQUE kode tak bentrok)
+        $jurusanModel = new JurusanModel();
+        $jurusanMap   = []; // KODE => ['id'=>.., 'deleted'=>bool]
+        foreach ($jurusanModel->withDeleted()->select('id, kode, deleted_at')->findAll() as $j) {
+            $jurusanMap[strtoupper((string) $j['kode'])] = ['id' => (int) $j['id'], 'deleted' => $j['deleted_at'] !== null];
         }
         $guruByKode = [];
         foreach ((new GuruModel())->select('id, kode_guru, nama')->findAll() as $g) {
@@ -289,6 +294,7 @@ class Kelas extends BaseController
         }
 
         $ins = 0; $upd = 0; $skip = 0; $errors = [];
+        $createdJurusan = []; // kode jurusan yang dibuat otomatis saat impor
         $db  = db_connect();
         $db->transStart();
 
@@ -298,12 +304,31 @@ class Kelas extends BaseController
                 $skip++;
                 continue;
             }
+
+            // --- resolusi jurusan: cocokkan kode, buat otomatis bila belum ada ---
+            $jurId   = null;
+            $jurKode = strtoupper(trim((string) ($row['jurusan_kode'] ?? '')));
+            if ($jurKode !== '') {
+                if (! isset($jurusanMap[$jurKode])) {
+                    $jurusanModel->insert(['kode' => $jurKode, 'nama' => $jurKode]);
+                    $jurusanMap[$jurKode] = ['id' => (int) $jurusanModel->getInsertID(), 'deleted' => false];
+                    $createdJurusan[$jurKode] = true;
+                } elseif ($jurusanMap[$jurKode]['deleted']) {
+                    // pulihkan jurusan yang sebelumnya dihapus agar bisa dipakai lagi
+                    $jurusanModel->protect(false)->update($jurusanMap[$jurKode]['id'], ['deleted_at' => null, 'id' => $jurusanMap[$jurKode]['id']]);
+                    $jurusanModel->protect(true);
+                    $jurusanMap[$jurKode]['deleted'] = false;
+                    $createdJurusan[$jurKode] = true;
+                }
+                $jurId = $jurusanMap[$jurKode]['id'];
+            }
+
             $tingkat = strtoupper(trim((string) ($row['tingkat'] ?? '')));
             $shift   = strtolower(trim((string) ($row['shift'] ?? '')));
             $payload = [
                 'nama_kelas'    => $nama,
                 'tingkat'       => in_array($tingkat, ['X', 'XI', 'XII'], true) ? $tingkat : 'X',
-                'jurusan_id'    => $jurusanMap[strtoupper(trim((string) ($row['jurusan_kode'] ?? '')))] ?? null,
+                'jurusan_id'    => $jurId,
                 'wali_kelas_id' => $guruByKode[strtoupper(trim((string) ($row['wali'] ?? '')))] ?? null,
                 'shift'         => in_array($shift, ['pagi', 'siang'], true) ? $shift : 'pagi',
             ];
@@ -322,6 +347,11 @@ class Kelas extends BaseController
         $db->transComplete();
         if ($db->transStatus() === false) {
             $errors[] = 'Sebagian gagal disimpan karena kesalahan database.';
+        }
+
+        if ($createdJurusan) {
+            cache()->delete('opt_jurusan');
+            $this->importNote = 'Jurusan baru dibuat otomatis: ' . implode(', ', array_keys($createdJurusan)) . ' (lengkapi namanya di menu Jurusan bila perlu).';
         }
 
         return [$ins, $upd, $skip, $errors];
