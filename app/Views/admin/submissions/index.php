@@ -22,6 +22,11 @@
                     <option value="<?= $s ?>" <?= $status === $s ? 'selected' : '' ?>><?= $s ?></option>
                 <?php endforeach; ?>
             </select>
+            <select name="per" onchange="this.form.submit()" title="Jumlah data per halaman" class="rounded-lg border border-slate-300 px-3 py-2.5 text-sm focus:border-brand-500 outline-none">
+                <?php foreach ([10, 20, 30, 40, 50] as $n): ?>
+                    <option value="<?= $n ?>" <?= ($per ?? 10) === $n ? 'selected' : '' ?>>Tampilkan <?= $n ?></option>
+                <?php endforeach; ?>
+            </select>
             <button class="rounded-lg bg-brand-700 hover:bg-brand-800 text-white text-sm font-semibold px-5 py-2.5 transition">Cari</button>
             <?php if ($q || $status): ?>
                 <a href="<?= site_url('admin/submissions') ?>" class="rounded-lg border border-slate-300 text-slate-600 text-sm font-semibold px-4 py-2.5 hover:bg-slate-50 transition text-center">Reset</a>
@@ -50,7 +55,7 @@
         <div class="p-12 text-center">
             <p class="text-slate-400">Belum ada data<?= ($q || $status) ? ' yang cocok dengan filter' : '' ?>.</p>
         </div>
-    <?php else: ?>
+    <?php else: $offset = $pager ? ($pager->getCurrentPage() - 1) * ($per ?? 10) : 0; ?>
         <div class="overflow-x-auto">
             <table class="w-full text-sm">
                 <thead>
@@ -68,7 +73,7 @@
                 <tbody class="divide-y divide-slate-100">
                     <?php foreach ($rows as $i => $r): ?>
                         <tr class="hover:bg-slate-50 transition">
-                            <td class="px-4 py-3 text-slate-400"><?= $i + 1 ?></td>
+                            <td class="px-4 py-3 text-slate-400"><?= $offset + $i + 1 ?></td>
                             <td class="px-4 py-3">
                                 <p class="font-semibold text-slate-700"><?= esc($r['nama_lengkap']) ?></p>
                                 <p class="text-xs text-slate-400 md:hidden"><?= esc($r['nip_nuptk']) ?></p>
@@ -92,7 +97,7 @@
         </div>
         <?php if ($pager): ?>
             <div class="px-6 py-4 border-t border-slate-100">
-                <?= $pager->only(['q', 'status'])->links() ?>
+                <?= $pager->only(['q', 'status', 'per'])->links('default', 'admin') ?>
             </div>
         <?php endif; ?>
     <?php endif; ?>
