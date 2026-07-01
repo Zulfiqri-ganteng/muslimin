@@ -65,6 +65,27 @@ $kurCards = [
     <?php endif; ?>
 </div>
 
+<div class="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-4">
+    <a href="<?= site_url('admin/absensi') ?>" class="group rounded-2xl border border-slate-200 bg-white p-5 shadow-sm hover:shadow transition flex items-center gap-4">
+        <span class="shrink-0 flex h-12 w-12 items-center justify-center rounded-xl bg-emerald-600 text-white">
+            <svg class="w-6 h-6" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"/></svg>
+        </span>
+        <div class="min-w-0">
+            <p class="font-bold text-slate-800 group-hover:text-brand-700">Absensi Guru Harian</p>
+            <p class="text-sm text-slate-400">Catat kehadiran per sesi mengajar &rarr;</p>
+        </div>
+    </a>
+    <a href="<?= site_url('admin/absensi/rekap') ?>" class="group rounded-2xl border border-slate-200 bg-white p-5 shadow-sm hover:shadow transition flex items-center gap-4">
+        <span class="shrink-0 flex h-12 w-12 items-center justify-center rounded-xl bg-brand-600 text-white">
+            <svg class="w-6 h-6" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
+        </span>
+        <div class="min-w-0">
+            <p class="font-bold text-slate-800 group-hover:text-brand-700">Rekap Absensi</p>
+            <p class="text-sm text-slate-400">Rekap kehadiran untuk gaji &rarr;</p>
+        </div>
+    </a>
+</div>
+
 <!-- ================= KESEDIAAN GURU ================= -->
 <div class="flex items-center gap-2 mb-3 mt-8">
     <span class="h-5 w-1.5 rounded-full bg-gold-500"></span>
