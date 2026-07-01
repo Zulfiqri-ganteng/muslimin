@@ -131,6 +131,7 @@ $routes->group('admin', static function ($routes) {
         $routes->get('absensi', 'Admin\Absensi::index');
         $routes->post('absensi/save', 'Admin\Absensi::save');
         $routes->get('absensi/rekap', 'Admin\Absensi::rekap');
+        $routes->get('absensi/rekap/guru/(:num)', 'Admin\Absensi::rekapGuru/$1');
         $routes->get('absensi/rekap/(:segment)', 'Admin\Absensi::rekap/$1');
 
         // ===== LAPORAN KURIKULUM =====

@@ -73,7 +73,12 @@
                     <?php foreach ($rows as $i => $r): ?>
                         <tr class="hover:bg-slate-50/60">
                             <td class="px-4 py-2.5 text-center text-slate-400"><?= $i + 1 ?></td>
-                            <td class="px-4 py-2.5"><span class="text-slate-400"><?= esc($r['kode']) ?></span> · <span class="font-semibold text-slate-700"><?= esc($r['nama']) ?></span></td>
+                            <td class="px-4 py-2.5">
+                                <a href="<?= site_url('admin/absensi/rekap/guru/' . (int) $r['id']) . $qs ?>" class="group inline-flex items-center gap-1.5 hover:text-brand-700">
+                                    <span class="text-slate-400"><?= esc($r['kode']) ?></span> · <span class="font-semibold text-slate-700 group-hover:text-brand-700 group-hover:underline"><?= esc($r['nama']) ?></span>
+                                    <svg class="w-3.5 h-3.5 text-slate-300 group-hover:text-brand-500" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7"/></svg>
+                                </a>
+                            </td>
                             <td class="px-4 py-2.5 text-center font-bold text-slate-700"><?= (int) $r['total'] ?></td>
                             <?php foreach (array_keys($cols) as $k): $v = (int) $r[$k]; ?>
                                 <td class="px-4 py-2.5 text-center <?= $v > 0 ? $cols[$k][1] . ' font-bold' : 'text-slate-300' ?>"><?= $v ?></td>

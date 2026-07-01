@@ -64,6 +64,46 @@
     </div>
 <?php else: ?>
 
+<!-- ===================== BAGIKAN KE WHATSAPP ===================== -->
+<div x-data="{ waOpen:false, waText:'', waNomor:'' }" class="mb-4">
+    <button type="button" @click="waText = buildAbsensiPesan(); waOpen = true"
+            class="inline-flex items-center gap-2 rounded-xl bg-green-600 hover:bg-green-700 text-white font-bold px-5 py-2.5 text-sm transition">
+        <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 24 24"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51l-.57-.01c-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.71.306 1.263.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg>
+        Bagikan ke WhatsApp
+    </button>
+
+    <!-- Modal -->
+    <div x-show="waOpen" x-cloak class="fixed inset-0 z-[80] flex items-center justify-center p-4">
+        <div class="absolute inset-0 bg-black/40" @click="waOpen=false"></div>
+        <div class="relative bg-white rounded-2xl shadow-xl w-full max-w-lg overflow-hidden" x-transition>
+            <div class="px-5 py-4 border-b border-slate-100 flex items-center justify-between">
+                <h3 class="font-bold text-slate-800">Bagikan Absensi ke WhatsApp</h3>
+                <button type="button" @click="waOpen=false" class="text-slate-400 hover:text-slate-600"><svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg></button>
+            </div>
+            <div class="p-5 space-y-3">
+                <p class="text-xs text-slate-500">Teks di bawah dibuat dari status yang sedang tampil (termasuk perubahan yang belum disimpan). <b>Silakan revisi</b> dulu bila perlu. Kosongkan nomor untuk memilih kontak/grup langsung di WhatsApp.</p>
+                <div>
+                    <label class="block text-xs font-semibold text-slate-500 mb-1">Nomor tujuan (opsional)</label>
+                    <input type="text" x-model="waNomor" placeholder="cth: 6281234567890" class="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm outline-none focus:border-brand-500">
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold text-slate-500 mb-1">Pesan</label>
+                    <textarea x-model="waText" rows="12" class="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm outline-none focus:border-brand-500 leading-relaxed"></textarea>
+                </div>
+            </div>
+            <div class="px-5 py-4 border-t border-slate-100 flex items-center justify-end gap-2">
+                <button type="button" @click="navigator.clipboard && navigator.clipboard.writeText(waText)" class="rounded-lg border border-slate-300 px-4 py-2 text-sm font-semibold text-slate-600 hover:bg-slate-50">Salin</button>
+                <button type="button" @click="waOpen=false" class="rounded-lg border border-slate-300 px-4 py-2 text-sm font-semibold text-slate-600 hover:bg-slate-50">Tutup</button>
+                <a :href="'https://wa.me/' + waNomor.replace(/[^0-9]/g,'') + '?text=' + encodeURIComponent(waText)" target="_blank" @click="waOpen=false"
+                   class="inline-flex items-center gap-2 rounded-lg bg-green-600 hover:bg-green-700 text-white font-bold px-5 py-2 text-sm">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M5 12h14M12 5l7 7-7 7"/></svg>
+                    Kirim
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+
 <form method="post" action="<?= site_url('admin/absensi/save') ?>">
     <?= csrf_field() ?>
     <input type="hidden" name="tanggal" value="<?= esc($tanggal) ?>">
@@ -91,10 +131,13 @@
 
                 <!-- Daftar sesi guru -->
                 <div class="divide-y divide-slate-100">
-                    <?php foreach ($g['sesi'] as $s): ?>
+                    <?php foreach ($g['sesi'] as $s):
+                        $info = 'Jam ' . $s['jam_ke'] . ' (' . substr($s['waktu_mulai'], 0, 5) . '–' . substr($s['waktu_selesai'], 0, 5) . ') · ' . $s['nama_kelas'] . ' · ' . $s['nama_mapel'];
+                    ?>
                         <div x-data="{ gid: <?= (int) $s['guru_id'] ?>, st: '<?= esc($s['status'], 'js') ?>', jm: '<?= esc($s['jam_masuk'], 'js') ?>', ket: '<?= esc($s['keterangan'], 'js') ?>' }"
                              x-on:absen-setall.window="if ($event.detail.gid === gid) { st = $event.detail.val; if (st === 'hadir') { jm = ''; ket = ''; } }"
-                             class="p-4 border-l-4 transition"
+                             data-guru="<?= esc($g['nama'], 'attr') ?>" data-info="<?= esc($info, 'attr') ?>"
+                             class="absen-row p-4 border-l-4 transition"
                              :class="{
                                 'border-emerald-400': st==='hadir', 'border-amber-400': st==='telat',
                                 'border-sky-400': st==='izin', 'border-violet-400': st==='sakit', 'border-red-400': st==='alpa'
@@ -118,7 +161,7 @@
 
                                 <!-- Status -->
                                 <div class="shrink-0">
-                                    <select name="rows[<?= $i ?>][status]" x-model="st"
+                                    <select name="rows[<?= $i ?>][status]" x-model="st" data-role="status"
                                             class="rounded-lg border border-slate-300 px-3 py-2 text-sm font-semibold focus:border-brand-500 focus:ring-2 focus:ring-brand-500/20 outline-none">
                                         <?php foreach ($statusOpts as $k => $lbl): ?>
                                             <option value="<?= $k ?>"><?= esc($lbl) ?></option>
@@ -129,11 +172,11 @@
                                 <!-- Jam masuk + keterangan (muncul bila bukan hadir) -->
                                 <div class="flex flex-col sm:flex-row gap-2 flex-1" x-show="st !== 'hadir'" x-cloak>
                                     <div>
-                                        <input type="time" name="rows[<?= $i ?>][jam_masuk]" x-model="jm"
+                                        <input type="time" name="rows[<?= $i ?>][jam_masuk]" x-model="jm" data-role="jm"
                                                class="w-full sm:w-32 rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-brand-500 outline-none"
                                                title="Jam masuk (opsional)">
                                     </div>
-                                    <input type="text" name="rows[<?= $i ?>][keterangan]" x-model="ket" maxlength="255"
+                                    <input type="text" name="rows[<?= $i ?>][keterangan]" x-model="ket" data-role="ket" maxlength="255"
                                            placeholder="Keterangan (opsional)…"
                                            class="flex-1 rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-brand-500 outline-none">
                                 </div>
@@ -158,4 +201,59 @@
 
 <?php endif; ?>
 
+<?= $this->endSection() ?>
+
+<?= $this->section('scripts') ?>
+<?php
+    $bulanFull = [1 => 'Januari', 2 => 'Februari', 3 => 'Maret', 4 => 'April', 5 => 'Mei', 6 => 'Juni', 7 => 'Juli', 8 => 'Agustus', 9 => 'September', 10 => 'Oktober', 11 => 'November', 12 => 'Desember'];
+    $tsIdx   = strtotime($tanggal);
+    $tglIndo = (int) date('j', $tsIdx) . ' ' . $bulanFull[(int) date('n', $tsIdx)] . ' ' . date('Y', $tsIdx);
+?>
+<script>
+    const ABSEN_HEADER = {
+        hari:    <?= json_encode($namaHari) ?>,
+        tanggal: <?= json_encode($tglIndo) ?>,
+        sekolah: <?= json_encode($sekolah) ?>
+    };
+
+    // Bangun pesan WhatsApp dari status yang sedang tampil (baca DOM live).
+    function buildAbsensiPesan() {
+        const stLabel = { telat: 'Telat', izin: 'Izin', sakit: 'Sakit', alpa: 'Tidak Hadir' };
+        const grup = {}, order = [];
+        document.querySelectorAll('.absen-row').forEach(function (r) {
+            const sel = r.querySelector('[data-role=status]');
+            if (!sel) return;
+            const st = sel.value;
+            if (st === 'hadir') return;
+            const guru = r.dataset.guru || '-';
+            if (!grup[guru]) { grup[guru] = []; order.push(guru); }
+            grup[guru].push({
+                info: r.dataset.info || '',
+                st:   st,
+                jm:   (r.querySelector('[data-role=jm]') || {}).value || '',
+                ket:  (r.querySelector('[data-role=ket]') || {}).value || ''
+            });
+        });
+
+        let msg = '*ABSENSI GURU*\n' + ABSEN_HEADER.hari + ', ' + ABSEN_HEADER.tanggal + '\n' + ABSEN_HEADER.sekolah + '\n\n';
+        if (order.length === 0) {
+            return msg + 'Semua guru *HADIR*. ✅\n\nTerima kasih.';
+        }
+        msg += 'Guru tidak hadir / telat:\n\n';
+        let n = 1;
+        order.forEach(function (guru) {
+            msg += n + '. *' + guru + '*\n';
+            grup[guru].forEach(function (it) {
+                let line = '   • ' + (stLabel[it.st] || it.st);
+                if (it.st === 'telat' && it.jm) line += ' (masuk ' + it.jm + ')';
+                if (it.info) line += ' — ' + it.info;
+                msg += line + '\n';
+                if (it.ket) msg += '     _' + it.ket + '_\n';
+            });
+            msg += '\n';
+            n++;
+        });
+        return msg + 'Terima kasih.';
+    }
+</script>
 <?= $this->endSection() ?>

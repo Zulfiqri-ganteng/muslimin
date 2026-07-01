@@ -11,7 +11,6 @@ use App\Models\JadwalModel;
 use App\Models\SettingModel;
 use Dompdf\Dompdf;
 use Dompdf\Options;
-use PhpOffice\PhpSpreadsheet\Cell\Coordinate;
 use PhpOffice\PhpSpreadsheet\Spreadsheet;
 use PhpOffice\PhpSpreadsheet\Style\Alignment;
 use PhpOffice\PhpSpreadsheet\Style\Border;
@@ -71,6 +70,7 @@ class Absensi extends BaseController
             'grup'      => array_values($grup),
             'ringkas'   => $ringkas,
             'total'     => count($sessions),
+            'sekolah'   => (new SettingModel())->get()['school_name'] ?? '',
         ]);
     }
 
@@ -116,19 +116,46 @@ class Absensi extends BaseController
         ]);
     }
 
+    /** Rincian ketidakhadiran satu guru pada rentang. */
+    public function rekapGuru($id = 0)
+    {
+        [$dari, $sampai] = $this->rentang();
+        $guru            = (new GuruModel())->find((int) $id);
+        if (! $guru) {
+            return redirect()->to(site_url('admin/absensi/rekap'))->with('error', 'Guru tidak ditemukan.');
+        }
+
+        $detail = (new AbsensiGuruModel())->detailForGuru((int) $id, $dari, $sampai);
+        $total  = $this->projectTotals($dari, $sampai)[(int) $id] ?? 0;
+
+        $cnt = ['telat' => 0, 'izin' => 0, 'sakit' => 0, 'alpa' => 0];
+        foreach ($detail as $d) {
+            if (isset($cnt[$d['status']])) {
+                $cnt[$d['status']]++;
+            }
+        }
+        $ringkas = [
+            'total' => $total,
+            'hadir' => max(0, $total - array_sum($cnt)),
+        ] + $cnt;
+
+        return view('admin/absensi/rekap_guru', [
+            'title'   => 'Rincian Absensi — ' . $guru['nama'],
+            'guru'    => $guru, 'detail' => $detail, 'ringkas' => $ringkas,
+            'dari'    => $dari, 'sampai' => $sampai,
+        ]);
+    }
+
     /**
-     * Rekap per guru pada rentang tanggal. Total sesi diproyeksikan dari jadwal
-     * (jumlah sesi guru pada tiap hari aktif × banyak kemunculan hari itu di
-     * rentang). Hadir = total − (telat+izin+sakit+alpa).
-     *
-     * @return list<array{kode:string,nama:string,total:int,hadir:int,telat:int,izin:int,sakit:int,alpa:int}>
+     * Total sesi terjadwal per guru pada rentang, key gid => total.
+     * Proyeksi jadwal: jumlah sesi guru pada tiap hari aktif × kemunculan hari
+     * itu di rentang (maks 400 hari sebagai pengaman).
      */
-    private function rekapData(string $dari, string $sampai): array
+    private function projectTotals(string $dari, string $sampai): array
     {
         $counts    = (new JadwalModel())->countPerGuruHari();
         $hariModel = new HariModel();
 
-        // Proyeksikan total sesi ke rentang tanggal (maks 400 hari sebagai pengaman).
         $weekdayHari  = [];
         $totalPerGuru = [];
         $cursor       = strtotime($dari);
@@ -151,6 +178,17 @@ class Absensi extends BaseController
             $cursor = strtotime('+1 day', $cursor);
             $guard++;
         }
+        return $totalPerGuru;
+    }
+
+    /**
+     * Rekap per guru pada rentang tanggal. Hadir = total − (telat+izin+sakit+alpa).
+     *
+     * @return list<array{id:int,kode:string,nama:string,total:int,hadir:int,telat:int,izin:int,sakit:int,alpa:int}>
+     */
+    private function rekapData(string $dari, string $sampai): array
+    {
+        $totalPerGuru = $this->projectTotals($dari, $sampai);
 
         // Pengecualian per guru.
         $exc = [];
@@ -179,6 +217,7 @@ class Absensi extends BaseController
             $hadir = max(0, $total - ($telat + $izin + $sakit + $alpa));
 
             $rows[] = [
+                'id'    => (int) $gid,
                 'kode'  => $guruMap[$gid]['kode_guru'], 'nama' => $guruMap[$gid]['nama'],
                 'total' => $total, 'hadir' => $hadir,
                 'telat' => $telat, 'izin' => $izin, 'sakit' => $sakit, 'alpa' => $alpa,

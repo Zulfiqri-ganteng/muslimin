@@ -112,4 +112,25 @@ class AbsensiGuruModel extends Model
             ->groupBy('guru_id, status')
             ->findAll();
     }
+
+    /**
+     * Rincian ketidakhadiran satu guru pada rentang tanggal (untuk halaman
+     * rincian). Join master untuk tampilkan kelas/mapel/jam. LEFT JOIN agar
+     * baris tetap muncul walau master terkait sudah dihapus.
+     */
+    public function detailForGuru(int $guruId, string $dari, string $sampai): array
+    {
+        return $this->select('absensi_guru.tanggal, absensi_guru.status, absensi_guru.jam_masuk, absensi_guru.keterangan,
+                kelas.nama_kelas, mata_pelajaran.nama_mapel,
+                jam_pelajaran.jam_ke, jam_pelajaran.waktu_mulai, jam_pelajaran.waktu_selesai')
+            ->join('kelas', 'kelas.id = absensi_guru.kelas_id', 'left')
+            ->join('mata_pelajaran', 'mata_pelajaran.id = absensi_guru.mapel_id', 'left')
+            ->join('jam_pelajaran', 'jam_pelajaran.id = absensi_guru.jam_id', 'left')
+            ->where('absensi_guru.guru_id', $guruId)
+            ->where('absensi_guru.tanggal >=', $dari)
+            ->where('absensi_guru.tanggal <=', $sampai)
+            ->orderBy('absensi_guru.tanggal', 'ASC')
+            ->orderBy('jam_pelajaran.waktu_mulai', 'ASC')
+            ->findAll();
+    }
 }
