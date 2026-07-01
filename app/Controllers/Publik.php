@@ -3,6 +3,7 @@
 namespace App\Controllers;
 
 use App\Models\AbsensiGuruModel;
+use App\Models\AbsensiHariModel;
 use App\Models\GuruModel;
 use App\Models\HariModel;
 use App\Models\JadwalModel;
@@ -128,7 +129,10 @@ class Publik extends BaseController
         $hariNama  = $hari['nama'] ?? '';
         $hariAktif = $hari && (int) $hari['aktif'] === 1;
 
-        $sessions = $hariAktif ? (new JadwalModel())->sessionsForHari((int) $hari['id']) : [];
+        // Hanya tampilkan bila hari ini SUDAH diabsen admin (tercatat).
+        // Kalau belum, jangan tampilkan daftar "hadir" (belum divalidasi).
+        $recorded = (new AbsensiHariModel())->isRecorded($tanggal);
+        $sessions = ($hariAktif && $recorded) ? (new JadwalModel())->sessionsForHari((int) $hari['id']) : [];
         $absen    = (new AbsensiGuruModel())->forDate($tanggal);
 
         $grup    = [];
@@ -151,6 +155,7 @@ class Publik extends BaseController
             'title'     => 'Absensi Guru', 'setting' => $setting,
             'tanggal'   => $tanggal, 'hariNama' => $hariNama, 'hariAktif' => $hariAktif,
             'grup'      => array_values($grup), 'ringkas' => $ringkas, 'total' => count($sessions),
+            'recorded'  => $recorded,
         ]);
     }
 

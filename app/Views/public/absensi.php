@@ -39,6 +39,12 @@
 
 <?php if (! $hariAktif): ?>
     <div class="bg-white rounded-2xl border border-slate-200 shadow-sm p-10 text-center text-slate-400">Tanggal ini bukan hari sekolah aktif.</div>
+<?php elseif (! $recorded): ?>
+    <div class="bg-white rounded-2xl border border-slate-200 shadow-sm p-10 text-center">
+        <svg class="w-10 h-10 mx-auto text-slate-300 mb-3" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
+        <p class="text-slate-500 font-semibold">Absensi tanggal ini belum tersedia.</p>
+        <p class="text-sm text-slate-400 mt-1">Data kehadiran akan tampil setelah diinput oleh pihak sekolah.</p>
+    </div>
 <?php elseif ($total === 0): ?>
     <div class="bg-white rounded-2xl border border-slate-200 shadow-sm p-10 text-center text-slate-400">Belum ada jadwal pada hari <?= esc($hariNama) ?>.</div>
 <?php else: ?>
