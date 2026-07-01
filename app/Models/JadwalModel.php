@@ -55,6 +55,29 @@ class JadwalModel extends Model
         return $map;
     }
 
+    /**
+     * Semua sesi mengajar pada satu hari (lintas kelas), untuk absensi harian.
+     * Diurutkan per nama guru lalu jam, agar mudah dikelompokkan per guru.
+     */
+    public function sessionsForHari(int $hariId): array
+    {
+        return $this->select('jadwal.id AS jadwal_id, jadwal.kelas_id, jadwal.guru_id,
+                jadwal.jam_id, jadwal.hari_id, pengampu.mapel_id,
+                guru.nama AS guru_nama, guru.kode_guru,
+                kelas.nama_kelas, kelas.shift,
+                mata_pelajaran.nama_mapel, mata_pelajaran.kode_mapel,
+                jam_pelajaran.jam_ke, jam_pelajaran.waktu_mulai, jam_pelajaran.waktu_selesai')
+            ->join('pengampu', 'pengampu.id = jadwal.pengampu_id')
+            ->join('mata_pelajaran', 'mata_pelajaran.id = pengampu.mapel_id')
+            ->join('guru', 'guru.id = jadwal.guru_id')
+            ->join('kelas', 'kelas.id = jadwal.kelas_id')
+            ->join('jam_pelajaran', 'jam_pelajaran.id = jadwal.jam_id')
+            ->where('jadwal.hari_id', $hariId)
+            ->orderBy('guru.nama', 'ASC')
+            ->orderBy('jam_pelajaran.waktu_mulai', 'ASC')
+            ->findAll();
+    }
+
     /** Sel kelas pada slot tertentu (R2 bentrok kelas). */
     public function cellOccupied(int $kelasId, int $hariId, int $jamId): ?array
     {

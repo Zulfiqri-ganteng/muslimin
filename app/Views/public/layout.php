@@ -7,6 +7,7 @@ $menu = [
     ['', 'Beranda'],
     ['jadwal-kelas', 'Jadwal Kelas'],
     ['jadwal-guru', 'Jadwal Guru'],
+    ['absensi', 'Absensi'],
 ];
 ?>
 <!DOCTYPE html>

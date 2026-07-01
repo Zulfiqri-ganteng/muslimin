@@ -1,0 +1,115 @@
+<?php
+
+namespace App\Models;
+
+use CodeIgniter\Model;
+
+/**
+ * Absensi manual guru per sesi mengajar.
+ *
+ * Prinsip "hanya simpan pengecualian": baris HANYA ada bila status != 'hadir'.
+ * Tidak adanya baris untuk sebuah sesi = guru HADIR. Ini menjaga DB tetap
+ * ringan (shared hosting) & cocok dengan alur "default hadir, tinggal centang
+ * yang tidak hadir".
+ */
+class AbsensiGuruModel extends Model
+{
+    protected $table         = 'absensi_guru';
+    protected $primaryKey    = 'id';
+    protected $returnType    = 'array';
+    protected $useTimestamps = true;
+    protected $createdField  = 'created_at';
+    protected $updatedField  = 'updated_at';
+    protected $allowedFields = [
+        'tanggal', 'jadwal_id', 'guru_id', 'kelas_id', 'mapel_id', 'hari_id',
+        'jam_id', 'status', 'jam_masuk', 'keterangan', 'created_by',
+    ];
+
+    /** Status yang valid. 'hadir' = default (tak disimpan sebagai baris). */
+    public const STATUSES = ['hadir', 'telat', 'izin', 'sakit', 'alpa'];
+
+    /** Pengecualian pada satu tanggal, key "kelas_id-jam_id" => baris. */
+    public function forDate(string $tanggal): array
+    {
+        $map = [];
+        foreach ($this->where('tanggal', $tanggal)->findAll() as $r) {
+            $map[$r['kelas_id'] . '-' . $r['jam_id']] = $r;
+        }
+        return $map;
+    }
+
+    /**
+     * Simpan absensi satu tanggal (transaksi). Untuk tiap sesi yang dikirim:
+     * - status 'hadir'      → hapus baris pengecualian bila ada.
+     * - status selain hadir → insert / update baris.
+     * Sesi yang tak dikirim TIDAK disentuh (mis. jadwal lama yang sudah dihapus).
+     *
+     * @param array $items tiap elemen: kelas_id, jam_id, guru_id, hari_id,
+     *                     mapel_id, jadwal_id, status, jam_masuk, keterangan
+     */
+    public function syncDate(string $tanggal, array $items, ?int $adminId = null): void
+    {
+        $existing = [];
+        foreach ($this->where('tanggal', $tanggal)->findAll() as $e) {
+            $existing[$e['kelas_id'] . '-' . $e['jam_id']] = $e;
+        }
+
+        $this->db->transStart();
+        foreach ($items as $it) {
+            $kelasId = (int) ($it['kelas_id'] ?? 0);
+            $jamId   = (int) ($it['jam_id'] ?? 0);
+            if ($kelasId === 0 || $jamId === 0) {
+                continue;
+            }
+            $status = $it['status'] ?? 'hadir';
+            if (! in_array($status, self::STATUSES, true)) {
+                $status = 'hadir';
+            }
+            $key = $kelasId . '-' . $jamId;
+            $cur = $existing[$key] ?? null;
+
+            if ($status === 'hadir') {
+                if ($cur) {
+                    $this->delete($cur['id']);
+                }
+                continue;
+            }
+
+            $jamMasuk = trim((string) ($it['jam_masuk'] ?? ''));
+            $ket      = trim((string) ($it['keterangan'] ?? ''));
+            $data = [
+                'tanggal'    => $tanggal,
+                'jadwal_id'  => ((int) ($it['jadwal_id'] ?? 0)) ?: null,
+                'guru_id'    => (int) ($it['guru_id'] ?? 0),
+                'kelas_id'   => $kelasId,
+                'mapel_id'   => ((int) ($it['mapel_id'] ?? 0)) ?: null,
+                'hari_id'    => (int) ($it['hari_id'] ?? 0),
+                'jam_id'     => $jamId,
+                'status'     => $status,
+                'jam_masuk'  => $jamMasuk !== '' ? $jamMasuk : null,
+                'keterangan' => $ket !== '' ? mb_substr($ket, 0, 255) : null,
+                'created_by' => $adminId,
+            ];
+
+            if ($cur) {
+                $this->update($cur['id'], $data);
+            } else {
+                $this->insert($data);
+            }
+        }
+        $this->db->transComplete();
+    }
+
+    /**
+     * Rekap jumlah status per guru pada rentang tanggal (untuk laporan/gaji).
+     * Hanya menghitung pengecualian; "hadir" dihitung di luar dari total sesi.
+     */
+    public function rekapRange(string $dari, string $sampai): array
+    {
+        return $this->select('guru_id, status, COUNT(*) AS jml')
+            ->where('tanggal >=', $dari)
+            ->where('tanggal <=', $sampai)
+            ->groupBy('guru_id, status')
+            ->findAll();
+    }
+}

@@ -2,6 +2,7 @@
 
 namespace App\Controllers;
 
+use App\Models\AbsensiGuruModel;
 use App\Models\GuruModel;
 use App\Models\HariModel;
 use App\Models\JadwalModel;
@@ -107,6 +108,49 @@ class Publik extends BaseController
             'title' => 'Jadwal Guru', 'setting' => $setting,
             'guruOpts' => $guruOpts, 'guruId' => $guruId, 'guru' => $guru,
             'hari' => $hari, 'jam' => $jam, 'grid' => $grid, 'now' => $this->nowContext(),
+        ]);
+    }
+
+    /** Absensi guru harian (publik). Pilih tanggal → status kehadiran per sesi. */
+    public function absensi()
+    {
+        $setting = $this->settings->get();
+        if (! $this->jadwalPublik($setting)) {
+            return $this->blokir($setting);
+        }
+
+        $raw     = trim((string) $this->request->getGet('tanggal'));
+        $ts      = $raw !== '' ? strtotime($raw) : time();
+        $tanggal = $ts ? date('Y-m-d', $ts) : date('Y-m-d');
+        $ts      = strtotime($tanggal);
+
+        $hari      = (new HariModel())->byWeekday((int) date('N', $ts));
+        $hariNama  = $hari['nama'] ?? '';
+        $hariAktif = $hari && (int) $hari['aktif'] === 1;
+
+        $sessions = $hariAktif ? (new JadwalModel())->sessionsForHari((int) $hari['id']) : [];
+        $absen    = (new AbsensiGuruModel())->forDate($tanggal);
+
+        $grup    = [];
+        $ringkas = ['hadir' => 0, 'telat' => 0, 'izin' => 0, 'sakit' => 0, 'alpa' => 0];
+        foreach ($sessions as $s) {
+            $ex              = $absen[$s['kelas_id'] . '-' . $s['jam_id']] ?? null;
+            $s['status']     = $ex['status'] ?? 'hadir';
+            $s['jam_masuk']  = $ex && $ex['jam_masuk'] ? substr($ex['jam_masuk'], 0, 5) : '';
+            $s['keterangan'] = $ex['keterangan'] ?? '';
+            $ringkas[$s['status']] = ($ringkas[$s['status']] ?? 0) + 1;
+
+            $gid = (int) $s['guru_id'];
+            if (! isset($grup[$gid])) {
+                $grup[$gid] = ['nama' => $s['guru_nama'], 'sesi' => []];
+            }
+            $grup[$gid]['sesi'][] = $s;
+        }
+
+        return view('public/absensi', [
+            'title'     => 'Absensi Guru', 'setting' => $setting,
+            'tanggal'   => $tanggal, 'hariNama' => $hariNama, 'hariAktif' => $hariAktif,
+            'grup'      => array_values($grup), 'ringkas' => $ringkas, 'total' => count($sessions),
         ]);
     }
 

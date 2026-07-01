@@ -10,6 +10,7 @@ $routes->get('jadwal-kelas', 'Publik::jadwalKelas');
 $routes->get('jadwal-guru', 'Publik::jadwalGuru');
 $routes->get('jadwal-kelas/(:num)/pdf', 'Publik::cetakKelas/$1');
 $routes->get('jadwal-guru/(:num)/pdf', 'Publik::cetakGuru/$1');
+$routes->get('absensi', 'Publik::absensi');
 
 // Form kesediaan guru (sekunder)
 $routes->get('isi', 'Form::index');
@@ -125,6 +126,10 @@ $routes->group('admin', static function ($routes) {
         $routes->get('jadwal/template', 'Admin\Jadwal::template');
         $routes->post('jadwal/import-preview', 'Admin\Jadwal::importPreview');
         $routes->post('jadwal/import-commit', 'Admin\Jadwal::importCommit');
+
+        // ===== ABSENSI GURU (manual, per sesi) =====
+        $routes->get('absensi', 'Admin\Absensi::index');
+        $routes->post('absensi/save', 'Admin\Absensi::save');
 
         // ===== LAPORAN KURIKULUM =====
         $routes->get('kurikulum/dashboard', 'Admin\Kurikulum::dashboard');
