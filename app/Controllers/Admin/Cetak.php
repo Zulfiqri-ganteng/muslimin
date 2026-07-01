@@ -56,9 +56,8 @@ class Cetak extends BaseController
             return redirect()->to(site_url('admin/kurikulum/rekap'))->with('error', 'Guru tidak ditemukan.');
         }
         $hari = (new HariModel())->aktifUrut();
-        // jam dua shift (tanpa istirahat) — guru bisa mengajar pagi & siang
-        $jam  = (new JamPelajaranModel())->where('is_istirahat', 0)
-            ->orderBy('shift', 'ASC')->orderBy('jam_ke', 'ASC')->findAll();
+        // jam dua shift + istirahat (urut waktu → istirahat di tengah tiap shift)
+        $jam  = (new JamPelajaranModel())->orderBy('shift', 'ASC')->orderBy('waktu_mulai', 'ASC')->findAll();
         $grid = (new JadwalModel())->gridForGuru($id);
 
         $title    = 'JADWAL MENGAJAR — ' . $guru['kode_guru'] . ' · ' . $guru['nama'];

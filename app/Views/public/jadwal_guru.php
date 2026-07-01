@@ -37,25 +37,29 @@
                 </thead>
                 <tbody>
                     <?php $prevShift = null; foreach ($jam as $j): ?>
-                        <?php if ($j['shift'] !== $prevShift): $prevShift = $j['shift']; ?>
-                            <tr><td colspan="<?= count($hari) + 1 ?>" class="bg-brand-700 text-white text-xs font-bold uppercase tracking-widest px-4 py-2 text-center">Shift <?= esc(ucfirst($j['shift'])) ?></td></tr>
-                        <?php endif; ?>
-                        <tr class="hover:bg-slate-50/50">
-                            <td class="px-3 py-2 border-b border-slate-100 whitespace-nowrap align-top">
-                                <span class="font-bold text-brand-700">Jam <?= esc($j['jam_ke']) ?></span><br>
-                                <span class="text-slate-400 text-xs"><?= esc(substr($j['waktu_mulai'], 0, 5)) ?>–<?= esc(substr($j['waktu_selesai'], 0, 5)) ?></span>
-                            </td>
-                            <?php foreach ($hari as $h): $c = $grid[$h['id'] . '-' . $j['id']] ?? null; $td = (int) $h['id'] === ($now['hariId'] ?? 0); ?>
-                                <td class="p-1.5 border-b border-l border-slate-100 align-top <?= $td ? 'bg-brand-50/60' : '' ?>">
-                                    <?php if ($c): ?>
-                                        <div class="rounded-lg bg-emerald-50 border border-emerald-100 p-1.5">
-                                            <p class="text-emerald-700 text-sm leading-tight"><?= esc($c['nama_kelas']) ?></p>
-                                            <p class="text-sm font-bold text-emerald-800 leading-tight"><?= esc($c['nama_mapel']) ?></p>
-                                        </div>
-                                    <?php endif; ?>
+                        <?php if (! empty($j['is_istirahat'])): ?>
+                            <tr><td colspan="<?= count($hari) + 1 ?>" class="bg-amber-50 text-amber-700 text-center text-xs font-semibold py-1.5 border-b border-slate-100 tracking-wider">ISTIRAHAT (<?= esc(substr($j['waktu_mulai'], 0, 5)) ?>–<?= esc(substr($j['waktu_selesai'], 0, 5)) ?>)</td></tr>
+                        <?php else: ?>
+                            <?php if ($j['shift'] !== $prevShift): $prevShift = $j['shift']; ?>
+                                <tr><td colspan="<?= count($hari) + 1 ?>" class="bg-brand-700 text-white text-xs font-bold uppercase tracking-widest px-4 py-2 text-center">Shift <?= esc(ucfirst($j['shift'])) ?></td></tr>
+                            <?php endif; ?>
+                            <tr class="hover:bg-slate-50/50">
+                                <td class="px-3 py-2 border-b border-slate-100 whitespace-nowrap align-top">
+                                    <span class="font-bold text-brand-700">Jam <?= esc($j['jam_ke']) ?></span><br>
+                                    <span class="text-slate-400 text-xs"><?= esc(substr($j['waktu_mulai'], 0, 5)) ?>–<?= esc(substr($j['waktu_selesai'], 0, 5)) ?></span>
                                 </td>
-                            <?php endforeach; ?>
-                        </tr>
+                                <?php foreach ($hari as $h): $c = $grid[$h['id'] . '-' . $j['id']] ?? null; $td = (int) $h['id'] === ($now['hariId'] ?? 0); ?>
+                                    <td class="p-1.5 border-b border-l border-slate-100 align-top <?= $td ? 'bg-brand-50/60' : '' ?>">
+                                        <?php if ($c): ?>
+                                            <div class="rounded-lg bg-emerald-50 border border-emerald-100 p-1.5">
+                                                <p class="text-emerald-700 text-sm leading-tight"><?= esc($c['nama_kelas']) ?></p>
+                                                <p class="text-sm font-bold text-emerald-800 leading-tight"><?= esc($c['nama_mapel']) ?></p>
+                                            </div>
+                                        <?php endif; ?>
+                                    </td>
+                                <?php endforeach; ?>
+                            </tr>
+                        <?php endif; ?>
                     <?php endforeach; ?>
                 </tbody>
             </table>
