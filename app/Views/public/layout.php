@@ -7,8 +7,10 @@ $menu = [
     ['', 'Beranda'],
     ['jadwal-kelas', 'Jadwal Kelas'],
     ['jadwal-guru', 'Jadwal Guru'],
-    ['absensi', 'Absensi'],
 ];
+if ((int) ($setting['absensi_publik'] ?? 1) === 1) {
+    $menu[] = ['absensi', 'Absensi'];
+}
 ?>
 <!DOCTYPE html>
 <html lang="id">

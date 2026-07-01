@@ -78,6 +78,20 @@ class JadwalModel extends Model
             ->findAll();
     }
 
+    /**
+     * Jumlah sesi terjadwal per guru per hari, key [guru_id][hari_id] => jml.
+     * Dipakai memproyeksikan total sesi mengajar ke sebuah rentang tanggal
+     * (untuk rekap absensi: hadir = total sesi − pengecualian).
+     */
+    public function countPerGuruHari(): array
+    {
+        $map = [];
+        foreach ($this->select('guru_id, hari_id, COUNT(*) AS jml')->groupBy('guru_id, hari_id')->findAll() as $r) {
+            $map[(int) $r['guru_id']][(int) $r['hari_id']] = (int) $r['jml'];
+        }
+        return $map;
+    }
+
     /** Sel kelas pada slot tertentu (R2 bentrok kelas). */
     public function cellOccupied(int $kelasId, int $hariId, int $jamId): ?array
     {

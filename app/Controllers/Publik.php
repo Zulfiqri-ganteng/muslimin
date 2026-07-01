@@ -115,7 +115,7 @@ class Publik extends BaseController
     public function absensi()
     {
         $setting = $this->settings->get();
-        if (! $this->jadwalPublik($setting)) {
+        if ((int) ($setting['absensi_publik'] ?? 1) !== 1) {
             return $this->blokir($setting);
         }
 

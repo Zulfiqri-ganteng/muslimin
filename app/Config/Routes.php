@@ -130,6 +130,8 @@ $routes->group('admin', static function ($routes) {
         // ===== ABSENSI GURU (manual, per sesi) =====
         $routes->get('absensi', 'Admin\Absensi::index');
         $routes->post('absensi/save', 'Admin\Absensi::save');
+        $routes->get('absensi/rekap', 'Admin\Absensi::rekap');
+        $routes->get('absensi/rekap/(:segment)', 'Admin\Absensi::rekap/$1');
 
         // ===== LAPORAN KURIKULUM =====
         $routes->get('kurikulum/dashboard', 'Admin\Kurikulum::dashboard');

@@ -1,6 +1,12 @@
 <?= $this->extend('layouts/admin') ?>
 <?= $this->section('content') ?>
 
+<?= view('admin/partials/help', [
+    'helpKey'   => 'settings',
+    'helpTitle' => 'Pengaturan Sekolah & Tampilan Publik',
+    'helpBody'  => '<p>Identitas sekolah di sini dipakai pada kop surat, PDF, dan halaman publik. Di bagian bawah ada saklar tampilan publik: <b>Buka pengisian form</b>, <b>Tampilkan jadwal ke publik</b>, dan <b>Tampilkan absensi ke publik</b>. Matikan salah satu untuk menyembunyikan halaman terkait dari pengunjung situs.</p>',
+]) ?>
+
 <form method="post" action="<?= site_url('admin/settings') ?>" enctype="multipart/form-data" class="max-w-3xl">
     <?= csrf_field() ?>
 
@@ -99,6 +105,13 @@
                 <span>
                     <span class="block text-sm font-semibold text-slate-700">Tampilkan jadwal ke publik</span>
                     <span class="block text-xs text-slate-400">Jika dimatikan, halaman Jadwal Kelas/Guru di situs publik disembunyikan.</span>
+                </span>
+            </label>
+            <label class="flex items-center gap-3 cursor-pointer rounded-xl border border-slate-200 p-4 hover:bg-slate-50">
+                <input type="checkbox" name="absensi_publik" value="1" class="h-5 w-5 rounded border-slate-300 text-brand-600 focus:ring-brand-500" <?= ($setting['absensi_publik'] ?? 1) ? 'checked' : '' ?>>
+                <span>
+                    <span class="block text-sm font-semibold text-slate-700">Tampilkan absensi ke publik</span>
+                    <span class="block text-xs text-slate-400">Jika dimatikan, halaman Absensi Guru di situs publik disembunyikan (pengelolaan di admin tetap jalan).</span>
                 </span>
             </label>
         </div>
