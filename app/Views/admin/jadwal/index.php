@@ -13,50 +13,74 @@
 
 <?php $kelas = $kelas ?? null; ?>
 <div x-data="jadwalGrid()" x-init="init()">
-    <!-- Pemilih kelas -->
+    <!-- Toolbar -->
     <div class="bg-white rounded-2xl border border-slate-200 shadow-sm p-4 mb-5">
-        <form method="get" class="flex flex-col sm:flex-row sm:items-center gap-3">
-            <div class="flex items-center gap-2 flex-1">
-                <label class="text-sm font-semibold text-slate-600 shrink-0">Kelas:</label>
-                <select name="kelas_id" onchange="this.form.submit()" class="rounded-lg border border-slate-300 px-3 py-2.5 text-sm focus:border-brand-500 outline-none flex-1 min-w-[200px]">
+        <div class="flex flex-col lg:flex-row lg:items-center gap-4">
+            <!-- Kiri: pemilih kelas + info -->
+            <form method="get" class="flex items-center gap-2 flex-1 min-w-0">
+                <label class="text-sm font-semibold text-slate-600 shrink-0">Kelas</label>
+                <select name="kelas_id" onchange="this.form.submit()" class="rounded-lg border border-slate-300 px-3 py-2.5 text-sm focus:border-brand-500 outline-none flex-1 min-w-[180px] max-w-xs">
                     <?php if (empty($kelasOpts)): ?>
                         <option value="">— belum ada kelas —</option>
                     <?php else: foreach ($kelasOpts as $id => $label): ?>
                         <option value="<?= $id ?>" <?= $kelasId === (int) $id ? 'selected' : '' ?>><?= esc($label) ?></option>
                     <?php endforeach; endif; ?>
                 </select>
-            </div>
-            <button type="button" @click="importOpen=true" class="inline-flex items-center gap-1.5 rounded-lg bg-sky-600 hover:bg-sky-700 text-white text-sm font-semibold px-3.5 py-2.5 transition shrink-0">
-                <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"/></svg>
-                Import Excel
-            </button>
-            <?php if ($kelas): ?>
-                <div class="text-sm text-slate-500">
-                    Tingkat <b><?= esc($kelas['tingkat']) ?></b> · Shift
-                    <span class="inline-flex rounded-full px-2 py-0.5 text-xs font-semibold <?= $shift === 'pagi' ? 'bg-amber-100 text-amber-700' : 'bg-indigo-100 text-indigo-700' ?>"><?= ucfirst($shift) ?></span>
-                </div>
-                <div class="flex flex-wrap gap-2">
+                <?php if ($kelas): ?>
+                    <span class="hidden sm:inline-flex items-center gap-1.5 rounded-full bg-slate-100 text-slate-600 px-3 py-1.5 text-xs font-semibold shrink-0">
+                        <?= esc($kelas['tingkat']) ?>
+                        <span class="text-slate-300">·</span>
+                        <span class="<?= $shift === 'pagi' ? 'text-amber-600' : 'text-indigo-600' ?>"><?= ucfirst($shift) ?></span>
+                    </span>
+                <?php endif; ?>
+            </form>
+
+            <!-- Kanan: aksi -->
+            <div class="flex flex-wrap items-center gap-2 lg:justify-end">
+                <?php if ($kelas): ?>
                     <button type="button" @click="genOpen=true" class="inline-flex items-center gap-1.5 rounded-lg bg-violet-600 hover:bg-violet-700 text-white text-sm font-semibold px-3.5 py-2.5 transition">
                         <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
-                        Generate Otomatis
+                        Generate
                     </button>
-                    <a href="<?= site_url('admin/cetak/jadwal-kelas/' . $kelasId . '/excel') ?>" class="inline-flex items-center gap-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-semibold px-3.5 py-2.5 transition">
-                        <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg>
-                        Excel
-                    </a>
-                    <a href="<?= site_url('admin/cetak/jadwal-kelas/' . $kelasId . '/pdf') ?>" target="_blank" class="inline-flex items-center gap-1.5 rounded-lg bg-red-600 hover:bg-red-700 text-white text-sm font-semibold px-3.5 py-2.5 transition">
-                        <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M19 7h-3V4a2 2 0 00-2-2H10a2 2 0 00-2 2v3H5a2 2 0 00-2 2v6a2 2 0 002 2h1v3a1 1 0 001 1h10a1 1 0 001-1v-3h1a2 2 0 002-2V9a2 2 0 00-2-2z"/></svg>
-                        PDF
-                    </a>
+                <?php endif; ?>
+                <button type="button" @click="importOpen=true" class="inline-flex items-center gap-1.5 rounded-lg bg-sky-600 hover:bg-sky-700 text-white text-sm font-semibold px-3.5 py-2.5 transition">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"/></svg>
+                    Import
+                </button>
+
+                <?php if ($kelas): ?>
+                    <span class="hidden sm:block w-px h-6 bg-slate-200 mx-0.5"></span>
+
+                    <!-- Ekspor (dropdown Excel/PDF) -->
+                    <div x-data="{ openExp: false }" class="relative" @click.outside="openExp=false">
+                        <button type="button" @click="openExp=!openExp" class="inline-flex items-center gap-1.5 rounded-lg border border-slate-300 bg-white text-slate-600 hover:bg-slate-50 text-sm font-semibold px-3.5 py-2.5 transition">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 10v6m0 0l-3-3m3 3l3-3M4 6a2 2 0 012-2h5l2 2h5a2 2 0 012 2v9a2 2 0 01-2 2H6a2 2 0 01-2-2V6z"/></svg>
+                            Ekspor
+                            <svg class="w-3.5 h-3.5 text-slate-400" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7"/></svg>
+                        </button>
+                        <div x-show="openExp" x-cloak x-transition.opacity.duration.150ms
+                             class="absolute right-0 lg:right-0 mt-1.5 w-44 rounded-xl border border-slate-200 bg-white shadow-lg py-1.5 z-30">
+                            <a href="<?= site_url('admin/cetak/jadwal-kelas/' . $kelasId . '/excel') ?>" class="flex items-center gap-2.5 px-4 py-2 text-sm text-slate-700 hover:bg-slate-50">
+                                <svg class="w-4 h-4 text-emerald-600" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12h6m-6 4h6M9 8h6M5 4h14a1 1 0 011 1v14a1 1 0 01-1 1H5a1 1 0 01-1-1V5a1 1 0 011-1z"/></svg>
+                                Unduh Excel
+                            </a>
+                            <a href="<?= site_url('admin/cetak/jadwal-kelas/' . $kelasId . '/pdf') ?>" target="_blank" class="flex items-center gap-2.5 px-4 py-2 text-sm text-slate-700 hover:bg-slate-50">
+                                <svg class="w-4 h-4 text-red-600" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M19 7h-3V4a2 2 0 00-2-2H10a2 2 0 00-2 2v3H5a2 2 0 00-2 2v6a2 2 0 002 2h1v3a1 1 0 001 1h10a1 1 0 001-1v-3h1a2 2 0 002-2V9a2 2 0 00-2-2z"/></svg>
+                                Cetak PDF
+                            </a>
+                        </div>
+                    </div>
+
+                    <!-- Hapus massal (ghost) -->
                     <button type="button" @click="toggleBulk()"
                             class="inline-flex items-center gap-1.5 rounded-lg text-sm font-semibold px-3.5 py-2.5 transition border"
-                            :class="selectMode ? 'bg-slate-700 text-white border-slate-700' : 'bg-white text-slate-600 border-slate-300 hover:bg-slate-50'">
+                            :class="selectMode ? 'bg-slate-700 text-white border-slate-700' : 'bg-white text-slate-500 border-slate-300 hover:bg-red-50 hover:text-red-600 hover:border-red-200'">
                         <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
-                        <span x-text="selectMode ? 'Selesai Memilih' : 'Hapus Massal'"></span>
+                        <span x-text="selectMode ? 'Selesai' : 'Hapus Massal'"></span>
                     </button>
-                </div>
-            <?php endif; ?>
-        </form>
+                <?php endif; ?>
+            </div>
+        </div>
     </div>
 
     <?php if (! $kelasId): ?>
@@ -96,14 +120,13 @@
                             <div :draggable="p.sisa > 0" @dragstart="startPalette($event, p)"
                                  :class="p.sisa > 0 ? 'cursor-grab hover:border-brand-400 hover:shadow' : 'opacity-40 cursor-not-allowed'"
                                  class="rounded-xl border border-slate-200 bg-slate-50 p-2.5 transition select-none">
-                                <div class="flex items-center justify-between gap-2">
-                                    <span class="font-bold text-brand-700 text-sm" x-text="p.kode_mapel"></span>
-                                    <span class="text-[11px] font-bold rounded-full px-2 py-0.5"
+                                <div class="flex items-start justify-between gap-2">
+                                    <span class="font-bold text-brand-700 text-[13px] leading-tight line-clamp-2" :title="p.nama_mapel" x-text="p.nama_mapel"></span>
+                                    <span class="text-[11px] font-bold rounded-full px-2 py-0.5 shrink-0"
                                           :class="p.sisa === 0 ? 'bg-emerald-100 text-emerald-700' : (p.sisa < 0 ? 'bg-red-100 text-red-700' : 'bg-amber-100 text-amber-700')"
                                           x-text="'sisa ' + p.sisa + '/' + p.jp"></span>
                                 </div>
-                                <p class="text-xs text-slate-500 truncate" x-text="p.nama_mapel"></p>
-                                <p class="text-[11px] text-slate-400 truncate"><span x-text="p.kode_guru"></span> · <span x-text="p.guru_nama"></span></p>
+                                <p class="text-[11px] text-slate-400 truncate mt-0.5" :title="p.guru_nama" x-text="p.guru_nama"></p>
                             </div>
                         </template>
                     </div>
@@ -152,8 +175,12 @@
                                                         class="absolute top-0.5 right-0.5 hidden group-hover:flex h-5 w-5 items-center justify-center rounded-full bg-red-500 text-white text-xs">×</button>
                                                 <span x-show="selectMode" class="absolute top-0.5 right-0.5 h-4 w-4 rounded flex items-center justify-center text-[10px] font-bold border"
                                                       :class="selected['<?= $k ?>'] ? 'bg-red-500 border-red-500 text-white' : 'bg-white border-slate-300 text-transparent'">✓</span>
-                                                <p class="font-bold text-brand-700 text-sm leading-tight" x-text="cells['<?= $k ?>']?.kode_mapel"></p>
-                                                <p class="text-[11px] text-slate-500 leading-tight" x-text="cells['<?= $k ?>']?.kode_guru + ' · ' + (cells['<?= $k ?>']?.guru_nama || '')"></p>
+                                                <p class="font-bold text-brand-700 text-[13px] leading-tight line-clamp-2"
+                                                   :title="cells['<?= $k ?>']?.nama_mapel"
+                                                   x-text="cells['<?= $k ?>']?.nama_mapel || cells['<?= $k ?>']?.kode_mapel"></p>
+                                                <p class="text-[11px] text-slate-500 leading-tight truncate"
+                                                   :title="cells['<?= $k ?>']?.guru_nama"
+                                                   x-text="cells['<?= $k ?>']?.guru_nama || cells['<?= $k ?>']?.kode_guru"></p>
                                             </div>
                                             <!-- sel kosong -->
                                             <div x-show="!cells['<?= $k ?>']" class="flex h-full min-h-[3rem] items-center justify-center text-slate-200">
