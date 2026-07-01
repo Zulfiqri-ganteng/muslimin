@@ -12,9 +12,12 @@ use App\Models\KelasModel;
 use App\Models\KetersediaanGuruModel;
 use App\Models\MataPelajaranModel;
 use App\Models\PengampuModel;
+use App\Models\SettingModel;
+use PhpOffice\PhpSpreadsheet\Cell\Coordinate;
 use PhpOffice\PhpSpreadsheet\IOFactory;
 use PhpOffice\PhpSpreadsheet\Spreadsheet;
 use PhpOffice\PhpSpreadsheet\Style\Alignment;
+use PhpOffice\PhpSpreadsheet\Style\Border;
 use PhpOffice\PhpSpreadsheet\Style\Fill;
 use PhpOffice\PhpSpreadsheet\Writer\Xlsx;
 
@@ -178,6 +181,64 @@ class Jadwal extends BaseController
         ]);
     }
 
+    // ===================== AJAX: HAPUS MASSAL =====================
+    public function bulkRemove()
+    {
+        $kelasId = (int) $this->request->getPost('kelas_id');
+        $mode    = (string) $this->request->getPost('mode'); // 'selected' | 'all'
+
+        if ($mode === 'all') {
+            if (! $kelasId) {
+                return $this->fail('Kelas tidak valid.');
+            }
+            $ids = array_map(static fn ($r) => (int) $r['id'], $this->model->select('id')->where('kelas_id', $kelasId)->findAll());
+        } else {
+            $ids = array_values(array_filter(array_map('intval', (array) $this->request->getPost('ids'))));
+        }
+        if (empty($ids)) {
+            return $this->fail('Tidak ada sel yang dipilih.');
+        }
+
+        // Ambil baris valid (opsional dibatasi ke kelas terpilih) untuk keamanan + kunci sel.
+        $rows    = $this->model->whereIn('id', $ids)->findAll();
+        $removed = [];
+        foreach ($rows as $r) {
+            if ($kelasId && (int) $r['kelas_id'] !== $kelasId) {
+                continue;
+            }
+            $removed[] = ['id' => (int) $r['id'], 'key' => $r['hari_id'] . '-' . $r['jam_id']];
+        }
+        $delIds = array_column($removed, 'id');
+        if (empty($delIds)) {
+            return $this->fail('Tidak ada sel yang cocok untuk dihapus.');
+        }
+
+        $this->model->delete($delIds);
+        $this->afterChange();
+        $this->audit->record('delete', 'jadwal', null, 'Hapus massal ' . count($delIds) . ' sel jadwal kelas#' . $kelasId);
+
+        return $this->ok([
+            'removedKeys' => array_column($removed, 'key'),
+            'sisaAll'     => $this->sisaPengampu($kelasId),
+            'count'       => count($delIds),
+        ]);
+    }
+
+    /** Sisa JP tiap pengampu satu kelas (untuk refresh palet setelah hapus massal). */
+    private function sisaPengampu(int $kelasId): array
+    {
+        if (! $kelasId) {
+            return [];
+        }
+        $placed = $this->model->placedCountByKelas($kelasId);
+        $out    = [];
+        foreach ((new PengampuModel())->forKelas($kelasId) as $p) {
+            $pid   = (int) $p['id'];
+            $out[] = ['pengampu_id' => $pid, 'sisa' => (int) $p['jp'] - ($placed[$pid] ?? 0)];
+        }
+        return $out;
+    }
+
     // ===================== AJAX: PINDAH / TUKAR =====================
     public function move()
     {
@@ -259,31 +320,82 @@ class Jadwal extends BaseController
 
     // ===================== IMPORT DARI EXCEL =====================
 
-    /** Unduh template Excel untuk impor jadwal (format baris/list). */
+    /**
+     * Unduh template Excel untuk impor jadwal — format GRID (Jam × Hari) mengikuti
+     * tampilan cetak/export, per kelas. Isi tiap sel dengan mapel (guru diambil
+     * otomatis dari Penugasan) atau "Mapel / Guru" untuk menentukan guru langsung.
+     */
     public function template()
     {
+        $kelasModel = new KelasModel();
+        $kelasId    = (int) $this->request->getGet('kelas_id');
+        $kelas      = $kelasId ? $kelasModel->find($kelasId) : null;
+        if (! $kelas) {
+            $kelas = $kelasModel->orderBy('nama_kelas', 'ASC')->first();
+        }
+        $shift     = $kelas['shift'] ?? 'pagi';
+        $namaKelas = $kelas['nama_kelas'] ?? '(NAMA KELAS)';
+
+        $hari    = (new HariModel())->aktifUrut();
+        $jam     = (new JamPelajaranModel())->where('shift', $shift)->orderBy('waktu_mulai', 'ASC')->findAll();
+        $setting = (new SettingModel())->get() ?: ['school_name' => 'SEKOLAH', 'academic_year' => ''];
+
         $ss    = new Spreadsheet();
         $sheet = $ss->getActiveSheet();
-        $sheet->setTitle('Template Jadwal');
+        $sheet->setTitle('Jadwal');
 
-        $headers = ['Kelas', 'Hari', 'Jam ke', 'Mapel (kode/nama)', 'Guru (kode/nama)'];
-        $sheet->fromArray($headers, null, 'A1', true);
-        $sheet->getStyle('A1:E1')->getFont()->setBold(true)->getColor()->setRGB('FFFFFF');
-        $sheet->getStyle('A1:E1')->getFill()->setFillType(Fill::FILL_SOLID)->getStartColor()->setRGB('1A3A6B');
-        $sheet->getStyle('A1:E1')->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER);
+        $colCount = count($hari) + 1;
+        $lastCol  = Coordinate::stringFromColumnIndex(max(2, $colCount));
 
-        // contoh: satu mapel 2 JP berurutan
-        $contoh = [
-            ['X TKJ 1', 'Senin', 1, 'MTK', 'Budi'],
-            ['X TKJ 1', 'Senin', 2, 'MTK', 'Budi'],
-            ['X TKJ 1', 'Senin', 3, 'BIND', 'Ani'],
-        ];
-        $sheet->fromArray($contoh, null, 'A2', true);
-        foreach (['A' => 18, 'B' => 14, 'C' => 10, 'D' => 26, 'E' => 26] as $c => $w) {
-            $sheet->getColumnDimension($c)->setWidth($w);
+        // Judul (dipakai importer untuk mengenali kelas — JANGAN ubah nama kelas di sini)
+        $sheet->mergeCells("A1:{$lastCol}1")->setCellValue('A1', 'JADWAL KBM — ' . $namaKelas);
+        $sheet->mergeCells("A2:{$lastCol}2")->setCellValue('A2', strtoupper($setting['school_name']) . ' — T.P. ' . $setting['academic_year']);
+        $sheet->getStyle('A1')->getFont()->setBold(true)->setSize(13);
+        $sheet->getStyle('A1:A2')->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER);
+
+        // Header (baris 4)
+        $r = 4;
+        $sheet->setCellValue('A' . $r, 'Jam');
+        $c = 2;
+        foreach ($hari as $h) {
+            $sheet->setCellValue(Coordinate::stringFromColumnIndex($c++) . $r, $h['nama']);
+        }
+        $sheet->getStyle("A{$r}:{$lastCol}{$r}")->getFont()->setBold(true)->getColor()->setRGB('FFFFFF');
+        $sheet->getStyle("A{$r}:{$lastCol}{$r}")->getFill()->setFillType(Fill::FILL_SOLID)->getStartColor()->setRGB('1A3A6B');
+        $sheet->getStyle("A{$r}:{$lastCol}{$r}")->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER);
+
+        // Body (baris jam + baris istirahat sebagai pemisah) — sel dibiarkan KOSONG untuk diisi
+        $r = 5;
+        foreach ($jam as $j) {
+            if (! empty($j['is_istirahat'])) {
+                $sheet->mergeCells("A{$r}:{$lastCol}{$r}")
+                    ->setCellValue('A' . $r, 'ISTIRAHAT (' . substr($j['waktu_mulai'], 0, 5) . '-' . substr($j['waktu_selesai'], 0, 5) . ')');
+                $sheet->getStyle("A{$r}")->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER);
+                $sheet->getStyle("A{$r}:{$lastCol}{$r}")->getFill()->setFillType(Fill::FILL_SOLID)->getStartColor()->setRGB('FFF3CD');
+                $r++;
+                continue;
+            }
+            $sheet->setCellValue('A' . $r, 'Jam ' . $j['jam_ke'] . ' (' . substr($j['waktu_mulai'], 0, 5) . '-' . substr($j['waktu_selesai'], 0, 5) . ')');
+            $r++;
         }
 
-        $this->streamXlsx($ss, 'Template-Import-Jadwal');
+        $lastRow = $r - 1;
+        $sheet->getStyle("A4:{$lastCol}{$lastRow}")->getBorders()->getAllBorders()->setBorderStyle(Border::BORDER_THIN);
+        $sheet->getStyle("A4:{$lastCol}{$lastRow}")->getAlignment()->setVertical(Alignment::VERTICAL_CENTER)->setWrapText(true);
+        if ($colCount >= 2) {
+            $sheet->getStyle('B5:' . $lastCol . $lastRow)->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER);
+        }
+        $sheet->getColumnDimension('A')->setWidth(24);
+        for ($i = 2; $i <= $colCount; $i++) {
+            $sheet->getColumnDimension(Coordinate::stringFromColumnIndex($i))->setWidth(22);
+        }
+
+        // Petunjuk pengisian (di bawah tabel; diabaikan saat impor)
+        $noteRow = $lastRow + 2;
+        $sheet->setCellValue('A' . $noteRow, 'CARA ISI: tulis MAPEL di tiap sel (guru otomatis dari Penugasan). Untuk tentukan guru langsung, tulis: Mapel / Guru. Kosongkan sel jika tidak ada pelajaran. Jangan ubah judul & kolom Jam.');
+        $sheet->getStyle('A' . $noteRow)->getFont()->setItalic(true)->getColor()->setRGB('64748B');
+
+        $this->streamXlsx($ss, 'Template-Jadwal-' . preg_replace('/[^a-z0-9]+/i', '-', $namaKelas));
     }
 
     /** Konfigurasi kolom impor (dipakai template, pembaca file, & pratinjau). */
@@ -311,7 +423,7 @@ class Jadwal extends BaseController
         ];
     }
 
-    /** Baca file Excel → baris assoc sesuai urutan kolom template. Null bila gagal (flash diset). */
+    /** Baca file Excel → baris assoc [kelas,hari,jam,mapel,guru]. Null bila gagal (flash diset). */
     private function readUpload(): ?array
     {
         $file = $this->request->getFile('file');
@@ -325,13 +437,99 @@ class Jadwal extends BaseController
         }
         try {
             $sheet = IOFactory::load($file->getTempName())->getActiveSheet();
-            $data  = $sheet->toArray(null, true, true, false);
+            $data  = $sheet->toArray(null, true, true, false); // kolom 0-index
         } catch (\Throwable $e) {
             session()->setFlashdata('error', 'Gagal membaca file: ' . $e->getMessage());
             return null;
         }
 
-        $keys = array_column($this->importCols(), 'key');
+        // Utamakan format GRID (Jam × Hari) sesuai template; fallback ke format baris lama.
+        $rows = $this->parseGrid($data);
+        if ($rows === null) {
+            $rows = $this->parseList($data);
+        }
+        return $rows;
+    }
+
+    /**
+     * Parse GRID (Jam baris × Hari kolom). Kembalikan baris [kelas,hari,jam,mapel,guru]
+     * atau null bila bukan format grid (agar bisa fallback ke parser baris).
+     */
+    private function parseGrid(array $data): ?array
+    {
+        // Cari baris header: kolom A === "Jam".
+        $headerIdx = null;
+        foreach ($data as $i => $row) {
+            if (strtolower(trim((string) ($row[0] ?? ''))) === 'jam') {
+                $headerIdx = $i;
+                break;
+            }
+        }
+        if ($headerIdx === null) {
+            return null;
+        }
+
+        // Nama kelas dari judul ("JADWAL KBM — X TKJ 1") di baris sebelum header.
+        $kelasName = '';
+        for ($i = 0; $i < $headerIdx; $i++) {
+            $t = trim((string) ($data[$i][0] ?? ''));
+            if ($t !== '' && stripos($t, 'JADWAL') !== false) {
+                if (($p = mb_strpos($t, '—')) !== false) {
+                    $kelasName = trim(mb_substr($t, $p + 1));
+                } elseif (($p = strrpos($t, '-')) !== false) {
+                    $kelasName = trim(substr($t, $p + 1));
+                }
+                break;
+            }
+        }
+
+        // Kolom hari dari baris header.
+        $header   = $data[$headerIdx];
+        $hariCols = []; // colIndex => nama hari
+        for ($c = 1, $n = count($header); $c < $n; $c++) {
+            $h = trim((string) ($header[$c] ?? ''));
+            if ($h !== '') {
+                $hariCols[$c] = $h;
+            }
+        }
+        if (empty($hariCols)) {
+            return null;
+        }
+
+        // Baris jam → sel per hari.
+        $out = [];
+        for ($i = $headerIdx + 1, $n = count($data); $i < $n; $i++) {
+            $row   = $data[$i];
+            $label = trim((string) ($row[0] ?? ''));
+            if ($label === '' || stripos($label, 'istirahat') !== false) {
+                continue;
+            }
+            if (! preg_match('/(\d+)/', $label, $m)) {
+                continue; // baris catatan/lain
+            }
+            $jamKe = (int) $m[1];
+            foreach ($hariCols as $c => $hariName) {
+                $val = trim((string) ($row[$c] ?? ''));
+                if ($val === '') {
+                    continue;
+                }
+                // Sel bisa "Mapel", "Mapel / Guru", atau dua baris "Mapel\nGuru".
+                $parts = preg_split('/\s*[\/\r\n]+\s*/', $val, 2);
+                $mapel = trim((string) ($parts[0] ?? ''));
+                $guru  = trim((string) ($parts[1] ?? ''));
+                if ($mapel === '') {
+                    continue;
+                }
+                $out[] = ['kelas' => $kelasName, 'hari' => $hariName, 'jam' => $jamKe, 'mapel' => $mapel, 'guru' => $guru];
+            }
+        }
+        return $out;
+    }
+
+    /** Parser format baris lama (Kelas,Hari,Jam ke,Mapel,Guru) sebagai fallback. */
+    private function parseList(array $data): array
+    {
+        $keys = ['kelas', 'hari', 'jam', 'mapel', 'guru'];
         $rows = [];
         foreach ($data as $i => $row) {
             if ($i === 0) {
@@ -349,6 +547,25 @@ class Jadwal extends BaseController
         return $rows;
     }
 
+    /** Peta guru dari Penugasan: "KELAS|MAPEL(kode/nama)" => nama guru. Untuk auto-isi kolom guru. */
+    private function pengampuGuruMap(): array
+    {
+        $map  = [];
+        $rows = db_connect()->table('pengampu p')
+            ->select('k.nama_kelas, m.kode_mapel, m.nama_mapel, g.nama AS guru_nama')
+            ->join('kelas k', 'k.id = p.kelas_id')
+            ->join('mata_pelajaran m', 'm.id = p.mapel_id')
+            ->join('guru g', 'g.id = p.guru_id')
+            ->where('p.deleted_at', null)
+            ->get()->getResultArray();
+        foreach ($rows as $r) {
+            $kk = strtoupper((string) $r['nama_kelas']);
+            $map[$kk . '|' . strtoupper((string) $r['kode_mapel'])] = $r['guru_nama'];
+            $map[$kk . '|' . strtoupper((string) $r['nama_mapel'])] = $r['guru_nama'];
+        }
+        return $map;
+    }
+
     /** Pratinjau impor (dapat diedit sebelum disimpan). */
     public function importPreview()
     {
@@ -357,8 +574,25 @@ class Jadwal extends BaseController
             return redirect()->to(site_url('admin/jadwal'));
         }
         if (empty($rows)) {
-            return redirect()->to(site_url('admin/jadwal'))->with('error', 'File tidak berisi data.');
+            return redirect()->to(site_url('admin/jadwal'))->with('error', 'File belum diisi (semua sel kosong).');
         }
+
+        // Kelas cadangan bila judul tak terbaca: pakai kelas yang sedang dipilih.
+        $fallbackKelas = '';
+        if ($kid = (int) $this->request->getPost('kelas_id')) {
+            $fallbackKelas = (string) ((new KelasModel())->find($kid)['nama_kelas'] ?? '');
+        }
+        // Auto-isi guru dari Penugasan bila sel hanya berisi mapel.
+        $guruMap = $this->pengampuGuruMap();
+        foreach ($rows as &$r) {
+            if (($r['kelas'] ?? '') === '' && $fallbackKelas !== '') {
+                $r['kelas'] = $fallbackKelas;
+            }
+            if (($r['guru'] ?? '') === '') {
+                $r['guru'] = $guruMap[strtoupper((string) ($r['kelas'] ?? '')) . '|' . strtoupper((string) ($r['mapel'] ?? ''))] ?? '';
+            }
+        }
+        unset($r);
 
         // Tandai baris yang akan MENGGANTI slot terisi (kelas+hari+jam) vs baris baru.
         $occupied = [];

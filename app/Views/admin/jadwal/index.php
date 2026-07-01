@@ -48,6 +48,12 @@
                         <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M19 7h-3V4a2 2 0 00-2-2H10a2 2 0 00-2 2v3H5a2 2 0 00-2 2v6a2 2 0 002 2h1v3a1 1 0 001 1h10a1 1 0 001-1v-3h1a2 2 0 002-2V9a2 2 0 00-2-2z"/></svg>
                         PDF
                     </a>
+                    <button type="button" @click="toggleBulk()"
+                            class="inline-flex items-center gap-1.5 rounded-lg text-sm font-semibold px-3.5 py-2.5 transition border"
+                            :class="selectMode ? 'bg-slate-700 text-white border-slate-700' : 'bg-white text-slate-600 border-slate-300 hover:bg-slate-50'">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
+                        <span x-text="selectMode ? 'Selesai Memilih' : 'Hapus Massal'"></span>
+                    </button>
                 </div>
             <?php endif; ?>
         </form>
@@ -58,6 +64,25 @@
     <?php elseif (empty($jam) || empty($hari)): ?>
         <div class="bg-white rounded-2xl border border-slate-200 shadow-sm p-10 text-center text-slate-400">Belum ada hari aktif atau jam pelajaran untuk shift <?= esc($shift) ?>. Atur di menu Hari & Jam Pelajaran.</div>
     <?php else: ?>
+        <!-- ============ BAR HAPUS MASSAL ============ -->
+        <div x-show="selectMode" x-cloak x-transition
+             class="mb-4 flex flex-col sm:flex-row sm:items-center gap-3 rounded-2xl border border-slate-200 bg-slate-50 shadow-sm px-4 py-3">
+            <p class="text-sm text-slate-600 flex-1">
+                Mode hapus massal aktif. <b>Klik sel</b> yang ingin dihapus, lalu tekan <b>Hapus Terpilih</b>.
+                <span class="inline-flex items-center rounded-full bg-red-100 text-red-700 px-2 py-0.5 text-xs font-semibold ml-1"><span x-text="selectedCount()"></span> dipilih</span>
+            </p>
+            <div class="flex flex-wrap gap-2">
+                <button type="button" @click="selectAll()" class="rounded-lg border border-slate-300 text-slate-600 text-sm font-semibold px-3 py-2 hover:bg-white transition">Pilih Semua</button>
+                <button type="button" @click="clearSelection()" class="rounded-lg border border-slate-300 text-slate-600 text-sm font-semibold px-3 py-2 hover:bg-white transition">Batal Pilih</button>
+                <button type="button" @click="bulkDelete()" :disabled="selectedCount()===0"
+                        class="inline-flex items-center gap-1.5 rounded-lg bg-red-600 hover:bg-red-700 disabled:opacity-40 disabled:cursor-not-allowed text-white text-sm font-semibold px-3.5 py-2 transition">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
+                    Hapus Terpilih (<span x-text="selectedCount()"></span>)
+                </button>
+                <button type="button" @click="clearAll()" class="rounded-lg border border-red-300 text-red-600 text-sm font-semibold px-3 py-2 hover:bg-red-50 transition">Kosongkan Semua</button>
+            </div>
+        </div>
+
         <div class="grid grid-cols-1 lg:grid-cols-[260px_1fr] gap-5">
             <!-- ============ PALET MAPEL ============ -->
             <div class="bg-white rounded-2xl border border-slate-200 shadow-sm p-4 h-max lg:sticky lg:top-20">
@@ -115,11 +140,18 @@
                                             @dragover.prevent @dragenter.prevent
                                             @drop="onDrop($event, <?= (int) $h['id'] ?>, <?= (int) $j['id'] ?>)">
                                             <!-- sel terisi -->
-                                            <div x-show="cells['<?= $k ?>']" x-cloak draggable="true"
+                                            <div x-show="cells['<?= $k ?>']" x-cloak
+                                                 :draggable="!selectMode"
                                                  @dragstart="startCell($event, '<?= $k ?>')"
-                                                 class="group relative h-full rounded-lg bg-brand-50 border border-brand-200 p-1.5 cursor-grab transition hover:shadow">
-                                                <button @click.stop="removeCell('<?= $k ?>')" title="Hapus"
+                                                 @click="selectMode && toggleSelect('<?= $k ?>')"
+                                                 class="group relative h-full rounded-lg p-1.5 border transition"
+                                                 :class="selectMode
+                                                     ? (selected['<?= $k ?>'] ? 'bg-red-50 border-red-500 ring-2 ring-red-400 cursor-pointer' : 'bg-brand-50 border-brand-200 cursor-pointer hover:border-red-300')
+                                                     : 'bg-brand-50 border-brand-200 cursor-grab hover:shadow'">
+                                                <button x-show="!selectMode" @click.stop="removeCell('<?= $k ?>')" title="Hapus"
                                                         class="absolute top-0.5 right-0.5 hidden group-hover:flex h-5 w-5 items-center justify-center rounded-full bg-red-500 text-white text-xs">×</button>
+                                                <span x-show="selectMode" class="absolute top-0.5 right-0.5 h-4 w-4 rounded flex items-center justify-center text-[10px] font-bold border"
+                                                      :class="selected['<?= $k ?>'] ? 'bg-red-500 border-red-500 text-white' : 'bg-white border-slate-300 text-transparent'">✓</span>
                                                 <p class="font-bold text-brand-700 text-sm leading-tight" x-text="cells['<?= $k ?>']?.kode_mapel"></p>
                                                 <p class="text-[11px] text-slate-500 leading-tight" x-text="cells['<?= $k ?>']?.kode_guru + ' · ' + (cells['<?= $k ?>']?.guru_nama || '')"></p>
                                             </div>
@@ -164,12 +196,13 @@
         <div class="absolute inset-0 bg-black/40" @click="importOpen=false"></div>
         <div class="relative bg-white rounded-2xl shadow-xl w-full max-w-lg p-6">
             <h3 class="font-bold text-lg text-slate-800 mb-2">Import Jadwal dari Excel</h3>
-            <p class="text-sm text-slate-500 mb-4">Unggah file Excel berformat <b>baris</b> (satu baris = satu jam pelajaran). Kolom: <b>Kelas, Hari, Jam ke, Mapel, Guru</b>. Setelah diunggah Anda bisa <b>memeriksa & mengedit</b> data sebelum disimpan.</p>
+            <p class="text-sm text-slate-500 mb-4">Unggah file Excel berformat <b>grid</b> (Jam × Hari, sama seperti hasil cetak/Excel). Isi tiap sel dengan <b>nama/kode mapel</b> — guru diambil otomatis dari <b>Penugasan</b>. (Opsional: tulis <b>Mapel / Guru</b> untuk menentukan guru langsung.) Setelah diunggah Anda bisa <b>memeriksa & mengedit</b> sebelum disimpan.</p>
             <div class="rounded-xl bg-sky-50 border border-sky-100 p-3 mb-4 text-sm text-sky-800">
-                Belum punya filenya? <a href="<?= site_url('admin/jadwal/template') ?>" class="font-semibold underline">Unduh template Excel</a> lalu isi sesuai jadwal asli.
+                Belum punya filenya? <a href="<?= site_url('admin/jadwal/template' . ($kelasId ? '?kelas_id=' . $kelasId : '')) ?>" class="font-semibold underline">Unduh template Excel<?= $kelas ? ' (' . esc($kelas['nama_kelas']) . ')' : '' ?></a> lalu isi grid-nya sesuai jadwal asli.
             </div>
             <form method="post" action="<?= site_url('admin/jadwal/import-preview') ?>" enctype="multipart/form-data">
                 <?= csrf_field() ?>
+                <input type="hidden" name="kelas_id" value="<?= (int) $kelasId ?>">
                 <input type="file" name="file" accept=".xlsx,.xls" required
                        class="block w-full text-sm text-slate-600 mb-5 file:mr-3 file:rounded-lg file:border-0 file:bg-brand-700 file:text-white file:px-4 file:py-2 file:text-sm file:font-semibold hover:file:bg-brand-800 border border-slate-300 rounded-lg">
                 <div class="flex justify-end gap-2">
@@ -199,9 +232,66 @@ function jadwalGrid() {
         drag: null,
         genOpen: false,
         importOpen: false,
+        selectMode: false,
+        selected: {},
         toast: { show: false, msg: '', type: 'ok' },
 
         init() {},
+
+        // ---- hapus massal ----
+        toggleBulk() {
+            this.selectMode = !this.selectMode;
+            if (!this.selectMode) this.selected = {};
+        },
+        toggleSelect(key) {
+            if (!this.cells[key]) return;
+            if (this.selected[key]) delete this.selected[key];
+            else this.selected[key] = true;
+        },
+        selectedCount() { return Object.keys(this.selected).length; },
+        selectAll() {
+            const sel = {};
+            Object.keys(this.cells).forEach(k => { if (this.cells[k]) sel[k] = true; });
+            this.selected = sel;
+        },
+        clearSelection() { this.selected = {}; },
+        applySisaAll(list) {
+            (list || []).forEach(s => {
+                const p = this.palet.find(x => x.id === s.pengampu_id);
+                if (p) p.sisa = s.sisa;
+            });
+        },
+        // bangun body dgn dukungan array (ids[]) untuk fetch
+        body(o) {
+            const p = new URLSearchParams();
+            for (const [k, v] of Object.entries(o)) {
+                if (Array.isArray(v)) v.forEach(x => p.append(k + '[]', x));
+                else p.append(k, v);
+            }
+            return p;
+        },
+        async bulkDelete() {
+            const keys = Object.keys(this.selected).filter(k => this.cells[k]);
+            if (!keys.length) return this.notify('Belum ada sel dipilih.', 'err');
+            const ids = keys.map(k => this.cells[k].id);
+            const r = await this.post('<?= site_url('admin/jadwal/bulk-remove') ?>', this.body({ mode: 'selected', kelas_id: this.kelasId, ids }));
+            if (!r.ok) return this.notify(r.msg, 'err');
+            (r.removedKeys || keys).forEach(k => delete this.cells[k]);
+            this.applySisaAll(r.sisaAll);
+            this.selected = {};
+            this.notify((r.count || keys.length) + ' sel dihapus.');
+        },
+        async clearAll() {
+            if (!Object.keys(this.cells).length) return this.notify('Jadwal sudah kosong.', 'err');
+            if (!confirm('Kosongkan SEMUA jadwal kelas ini? Tindakan ini tidak bisa dibatalkan.')) return;
+            const r = await this.post('<?= site_url('admin/jadwal/bulk-remove') ?>', this.body({ mode: 'all', kelas_id: this.kelasId }));
+            if (!r.ok) return this.notify(r.msg, 'err');
+            this.cells = {};
+            this.applySisaAll(r.sisaAll);
+            this.selected = {};
+            this.selectMode = false;
+            this.notify((r.count || 0) + ' sel dihapus. Jadwal dikosongkan.');
+        },
 
         notify(msg, type = 'ok') {
             this.toast = { show: true, msg, type };

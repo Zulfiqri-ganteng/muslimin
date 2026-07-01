@@ -119,6 +119,7 @@ $routes->group('admin', static function ($routes) {
         $routes->get('jadwal', 'Admin\Jadwal::index');
         $routes->post('jadwal/place', 'Admin\Jadwal::place');
         $routes->post('jadwal/remove', 'Admin\Jadwal::remove');
+        $routes->post('jadwal/bulk-remove', 'Admin\Jadwal::bulkRemove');
         $routes->post('jadwal/move', 'Admin\Jadwal::move');
         $routes->post('jadwal/generate', 'Admin\Jadwal::generate');
         $routes->get('jadwal/template', 'Admin\Jadwal::template');
