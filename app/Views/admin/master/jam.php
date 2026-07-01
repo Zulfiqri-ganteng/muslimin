@@ -9,20 +9,23 @@
 ]) ?>
 
 <div x-data="jamPage()">
-    <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-5">
-        <!-- Tab shift -->
-        <div class="inline-flex rounded-lg border border-slate-300 bg-white p-1 text-sm font-semibold">
-            <?php foreach (['pagi' => 'Pagi', 'siang' => 'Siang'] as $key => $label): ?>
-                <a href="<?= site_url('admin/master/jam?shift=' . $key) ?>"
-                   class="px-4 py-1.5 rounded-md transition <?= $shift === $key ? 'bg-brand-700 text-white' : 'text-slate-600 hover:bg-slate-100' ?>">
-                    <?= $label ?>
-                </a>
-            <?php endforeach; ?>
+    <!-- Toolbar -->
+    <div class="bg-white rounded-2xl border border-slate-200 shadow-sm p-4 mb-5">
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+            <!-- Tab shift -->
+            <div class="inline-flex rounded-lg border border-slate-300 bg-white p-1 text-sm font-semibold">
+                <?php foreach (['pagi' => 'Pagi', 'siang' => 'Siang'] as $key => $label): ?>
+                    <a href="<?= site_url('admin/master/jam?shift=' . $key) ?>"
+                       class="px-4 py-1.5 rounded-md transition <?= $shift === $key ? 'bg-brand-700 text-white' : 'text-slate-600 hover:bg-slate-100' ?>">
+                        <?= $label ?>
+                    </a>
+                <?php endforeach; ?>
+            </div>
+            <button @click="openAdd()" class="inline-flex items-center gap-1.5 rounded-lg bg-brand-700 hover:bg-brand-800 text-white text-sm font-semibold px-3.5 py-2.5 transition">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4"/></svg>
+                Tambah Jam (<?= ucfirst($shift) ?>)
+            </button>
         </div>
-        <button @click="openAdd()" class="inline-flex items-center gap-1.5 rounded-lg bg-brand-700 hover:bg-brand-800 text-white text-sm font-semibold px-4 py-2.5 transition">
-            <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4"/></svg>
-            Tambah Jam (<?= ucfirst($shift) ?>)
-        </button>
     </div>
 
     <div class="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">

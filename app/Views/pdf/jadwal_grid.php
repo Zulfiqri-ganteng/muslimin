@@ -13,7 +13,9 @@
     th { background: #1A3A6B; color: #fff; }
     td.jam { text-align: left; white-space: nowrap; background: #f1f5f9; font-weight: bold; }
     tr.istirahat td { background: #fff3cd; color: #92400e; font-weight: bold; letter-spacing: 1px; }
-    .mapel { font-weight: bold; color: #1A3A6B; }
+    tr.shift td { background: #1A3A6B; color: #fff; font-weight: bold; letter-spacing: 2px; text-align: center; }
+    .mapel { font-weight: bold; color: #1A3A6B; font-size: 10px; }
+    .cell2 { color: #475569; font-size: 10px; }
     .sub { color: #64748b; font-size: 9px; }
     .foot { margin-top: 10px; font-size: 9px; color: #94a3b8; text-align: right; }
 </style>
@@ -32,22 +34,25 @@
             </tr>
         </thead>
         <tbody>
-            <?php foreach ($jam as $j): ?>
+            <?php $prevShift = null; foreach ($jam as $j): ?>
                 <?php if (! empty($j['is_istirahat'])): ?>
                     <tr class="istirahat"><td colspan="<?= count($hari) + 1 ?>">ISTIRAHAT (<?= esc(substr($j['waktu_mulai'], 0, 5)) ?>&ndash;<?= esc(substr($j['waktu_selesai'], 0, 5)) ?>)</td></tr>
                 <?php else: ?>
+                    <?php if ($mode === 'guru' && $j['shift'] !== $prevShift): $prevShift = $j['shift']; ?>
+                        <tr class="shift"><td colspan="<?= count($hari) + 1 ?>">SHIFT <?= esc(strtoupper($j['shift'])) ?></td></tr>
+                    <?php endif; ?>
                     <tr>
                         <td class="jam">
-                            <?= ($mode === 'guru' ? ucfirst($j['shift']) . ' ' : '') ?>Jam <?= esc($j['jam_ke']) ?><br>
+                            Jam <?= esc($j['jam_ke']) ?><br>
                             <span class="sub"><?= esc(substr($j['waktu_mulai'], 0, 5)) ?>&ndash;<?= esc(substr($j['waktu_selesai'], 0, 5)) ?></span>
                         </td>
                         <?php foreach ($hari as $h): $c = $grid[$h['id'] . '-' . $j['id']] ?? null; ?>
                             <td>
                                 <?php if ($c): ?>
                                     <?php if ($mode === 'kelas'): ?>
-                                        <span class="mapel"><?= esc($c['nama_mapel']) ?></span><br><span class="sub"><?= esc($c['guru_nama']) ?></span>
+                                        <span class="mapel"><?= esc($c['nama_mapel']) ?></span><br><span class="cell2"><?= esc($c['guru_nama']) ?></span>
                                     <?php else: ?>
-                                        <span class="mapel"><?= esc($c['nama_kelas']) ?></span><br><span class="sub"><?= esc($c['nama_mapel']) ?></span>
+                                        <span class="cell2"><?= esc($c['nama_kelas']) ?></span><br><span class="mapel"><?= esc($c['nama_mapel']) ?></span>
                                     <?php endif; ?>
                                 <?php endif; ?>
                             </td>

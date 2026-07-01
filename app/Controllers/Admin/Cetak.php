@@ -125,7 +125,8 @@ class Cetak extends BaseController
         $sheet->getStyle("A{$r}:{$lastCol}{$r}")->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER);
 
         // body
-        $r = 5;
+        $r         = 5;
+        $prevShift = null;
         foreach ($jam as $j) {
             if (! empty($j['is_istirahat'])) {
                 $sheet->mergeCells("A{$r}:{$lastCol}{$r}")
@@ -135,7 +136,16 @@ class Cetak extends BaseController
                 $r++;
                 continue;
             }
-            $label = ($mode === 'guru' ? ucfirst($j['shift']) . ' ' : '') . 'Jam ' . $j['jam_ke']
+            // Pemisah shift (hanya mode guru yang lintas shift), sama seperti PDF.
+            if ($mode === 'guru' && $j['shift'] !== $prevShift) {
+                $prevShift = $j['shift'];
+                $sheet->mergeCells("A{$r}:{$lastCol}{$r}")->setCellValue('A' . $r, 'SHIFT ' . strtoupper($j['shift']));
+                $sheet->getStyle("A{$r}:{$lastCol}{$r}")->getFont()->setBold(true)->getColor()->setRGB('FFFFFF');
+                $sheet->getStyle("A{$r}:{$lastCol}{$r}")->getFill()->setFillType(Fill::FILL_SOLID)->getStartColor()->setRGB('1A3A6B');
+                $sheet->getStyle("A{$r}")->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER);
+                $r++;
+            }
+            $label = 'Jam ' . $j['jam_ke']
                 . ' (' . substr($j['waktu_mulai'], 0, 5) . '-' . substr($j['waktu_selesai'], 0, 5) . ')';
             $sheet->setCellValue('A' . $r, $label);
             $c = 2;
