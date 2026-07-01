@@ -4,12 +4,19 @@ namespace App\Controllers\Admin;
 
 use App\Controllers\BaseController;
 use App\Models\AuditModel;
+use App\Models\GuruModel;
 use App\Models\HariModel;
 use App\Models\JadwalModel;
 use App\Models\JamPelajaranModel;
 use App\Models\KelasModel;
 use App\Models\KetersediaanGuruModel;
+use App\Models\MataPelajaranModel;
 use App\Models\PengampuModel;
+use PhpOffice\PhpSpreadsheet\IOFactory;
+use PhpOffice\PhpSpreadsheet\Spreadsheet;
+use PhpOffice\PhpSpreadsheet\Style\Alignment;
+use PhpOffice\PhpSpreadsheet\Style\Fill;
+use PhpOffice\PhpSpreadsheet\Writer\Xlsx;
 
 class Jadwal extends BaseController
 {
@@ -248,6 +255,309 @@ class Jadwal extends BaseController
                 ['cell' => $this->cellPayload($newTgt, (int) $from['hari_id'], (int) $from['jam_id'], $pt)],
             ],
         ]);
+    }
+
+    // ===================== IMPORT DARI EXCEL =====================
+
+    /** Unduh template Excel untuk impor jadwal (format baris/list). */
+    public function template()
+    {
+        $ss    = new Spreadsheet();
+        $sheet = $ss->getActiveSheet();
+        $sheet->setTitle('Template Jadwal');
+
+        $headers = ['Kelas', 'Hari', 'Jam ke', 'Mapel (kode/nama)', 'Guru (kode/nama)'];
+        $sheet->fromArray($headers, null, 'A1', true);
+        $sheet->getStyle('A1:E1')->getFont()->setBold(true)->getColor()->setRGB('FFFFFF');
+        $sheet->getStyle('A1:E1')->getFill()->setFillType(Fill::FILL_SOLID)->getStartColor()->setRGB('1A3A6B');
+        $sheet->getStyle('A1:E1')->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER);
+
+        // contoh: satu mapel 2 JP berurutan
+        $contoh = [
+            ['X TKJ 1', 'Senin', 1, 'MTK', 'Budi'],
+            ['X TKJ 1', 'Senin', 2, 'MTK', 'Budi'],
+            ['X TKJ 1', 'Senin', 3, 'BIND', 'Ani'],
+        ];
+        $sheet->fromArray($contoh, null, 'A2', true);
+        foreach (['A' => 18, 'B' => 14, 'C' => 10, 'D' => 26, 'E' => 26] as $c => $w) {
+            $sheet->getColumnDimension($c)->setWidth($w);
+        }
+
+        $this->streamXlsx($ss, 'Template-Import-Jadwal');
+    }
+
+    /** Konfigurasi kolom impor (dipakai template, pembaca file, & pratinjau). */
+    private function importCols(): array
+    {
+        $kelasNames = array_column((new KelasModel())->select('nama_kelas')->orderBy('nama_kelas', 'ASC')->findAll(), 'nama_kelas');
+        $hariNames  = array_column((new HariModel())->orderBy('urutan', 'ASC')->findAll(), 'nama');
+        $mapelList  = [];
+        foreach ((new MataPelajaranModel())->select('kode_mapel, nama_mapel')->orderBy('nama_mapel', 'ASC')->findAll() as $m) {
+            $mapelList[] = $m['kode_mapel'];
+            $mapelList[] = $m['nama_mapel'];
+        }
+        $guruList = [];
+        foreach ((new GuruModel())->select('kode_guru, nama')->orderBy('nama', 'ASC')->findAll() as $g) {
+            $guruList[] = $g['kode_guru'];
+            $guruList[] = $g['nama'];
+        }
+
+        return [
+            ['key' => 'kelas', 'label' => 'Kelas',             'type' => 'datalist', 'options' => $kelasNames, 'required' => true, 'width' => 160],
+            ['key' => 'hari',  'label' => 'Hari',              'type' => 'select',   'options' => $hariNames,  'required' => true, 'width' => 120],
+            ['key' => 'jam',   'label' => 'Jam ke',            'type' => 'number',   'required' => true, 'width' => 90],
+            ['key' => 'mapel', 'label' => 'Mapel (kode/nama)', 'type' => 'datalist', 'options' => $mapelList,  'required' => true, 'width' => 200],
+            ['key' => 'guru',  'label' => 'Guru (kode/nama)',  'type' => 'datalist', 'options' => $guruList,   'required' => true, 'width' => 200],
+        ];
+    }
+
+    /** Baca file Excel → baris assoc sesuai urutan kolom template. Null bila gagal (flash diset). */
+    private function readUpload(): ?array
+    {
+        $file = $this->request->getFile('file');
+        if (! $file || ! $file->isValid()) {
+            session()->setFlashdata('error', 'File tidak valid.');
+            return null;
+        }
+        if (! in_array($file->getExtension(), ['xlsx', 'xls'], true)) {
+            session()->setFlashdata('error', 'File harus berformat Excel (.xlsx / .xls).');
+            return null;
+        }
+        try {
+            $sheet = IOFactory::load($file->getTempName())->getActiveSheet();
+            $data  = $sheet->toArray(null, true, true, false);
+        } catch (\Throwable $e) {
+            session()->setFlashdata('error', 'Gagal membaca file: ' . $e->getMessage());
+            return null;
+        }
+
+        $keys = array_column($this->importCols(), 'key');
+        $rows = [];
+        foreach ($data as $i => $row) {
+            if ($i === 0) {
+                continue; // header
+            }
+            $assoc = [];
+            foreach ($keys as $c => $k) {
+                $assoc[$k] = trim((string) ($row[$c] ?? ''));
+            }
+            if (implode('', $assoc) === '') {
+                continue;
+            }
+            $rows[] = $assoc;
+        }
+        return $rows;
+    }
+
+    /** Pratinjau impor (dapat diedit sebelum disimpan). */
+    public function importPreview()
+    {
+        $rows = $this->readUpload();
+        if ($rows === null) {
+            return redirect()->to(site_url('admin/jadwal'));
+        }
+        if (empty($rows)) {
+            return redirect()->to(site_url('admin/jadwal'))->with('error', 'File tidak berisi data.');
+        }
+
+        // Tandai baris yang akan MENGGANTI slot terisi (kelas+hari+jam) vs baris baru.
+        $occupied = [];
+        foreach ($this->model
+            ->select('kelas.nama_kelas, hari.nama AS hari_nama, jam_pelajaran.jam_ke')
+            ->join('kelas', 'kelas.id = jadwal.kelas_id')
+            ->join('hari', 'hari.id = jadwal.hari_id')
+            ->join('jam_pelajaran', 'jam_pelajaran.id = jadwal.jam_id')
+            ->findAll() as $o) {
+            $occupied[$this->slotKey($o['nama_kelas'], $o['hari_nama'], (string) $o['jam_ke'])] = true;
+        }
+        foreach ($rows as &$r) {
+            $r['_status'] = isset($occupied[$this->slotKey($r['kelas'] ?? '', $r['hari'] ?? '', $r['jam'] ?? '')]) ? 'perbarui' : 'baru';
+        }
+        unset($r);
+
+        return view('admin/master/import_preview', [
+            'title'     => 'Pratinjau Impor Jadwal',
+            'subtitle'  => 'Jadwal KBM',
+            'cols'      => $this->importCols(),
+            'rows'      => $rows,
+            'commitUrl' => site_url('admin/jadwal/import-commit'),
+            'backUrl'   => site_url('admin/jadwal'),
+        ]);
+    }
+
+    /** Simpan hasil impor (upsert per slot kelas+hari+jam). */
+    public function importCommit()
+    {
+        $rows = (array) $this->request->getPost('rows');
+        if (empty($rows)) {
+            return redirect()->to(site_url('admin/jadwal'))->with('error', 'Tidak ada data untuk disimpan.');
+        }
+
+        // --- peta lookup ---
+        $kelasMap = []; // NAMA => ['id','shift']
+        foreach ((new KelasModel())->select('id, nama_kelas, shift')->findAll() as $k) {
+            $kelasMap[strtoupper($k['nama_kelas'])] = ['id' => (int) $k['id'], 'shift' => $k['shift']];
+        }
+        $hariMap = []; // NAMA => id
+        foreach ((new HariModel())->findAll() as $h) {
+            $hariMap[strtoupper($h['nama'])] = (int) $h['id'];
+        }
+        $jamMap = []; // "shift-jamKe" => id (tanpa istirahat)
+        foreach ((new JamPelajaranModel())->where('is_istirahat', 0)->findAll() as $j) {
+            $jamMap[$j['shift'] . '-' . (int) $j['jam_ke']] = (int) $j['id'];
+        }
+        $mapelMap = []; // KODE/NAMA => id
+        foreach ((new MataPelajaranModel())->select('id, kode_mapel, nama_mapel')->findAll() as $m) {
+            $mapelMap[strtoupper($m['kode_mapel'])] = (int) $m['id'];
+            $mapelMap[strtoupper($m['nama_mapel'])] = (int) $m['id'];
+        }
+        $guruMap = []; // KODE/NAMA => id
+        foreach ((new GuruModel())->select('id, kode_guru, nama')->findAll() as $g) {
+            $guruMap[strtoupper($g['kode_guru'])] = (int) $g['id'];
+            $guruMap[strtoupper($g['nama'])]      = (int) $g['id'];
+        }
+
+        // --- hitung JP per (kelas,mapel,guru) di file → untuk jp pengampu baru ---
+        $jpFile = [];
+        foreach ($rows as $row) {
+            $kk = strtoupper(trim((string) ($row['kelas'] ?? '')));
+            $mm = strtoupper(trim((string) ($row['mapel'] ?? '')));
+            $gg = strtoupper(trim((string) ($row['guru'] ?? '')));
+            if ($kk === '' || $mm === '' || $gg === '') {
+                continue;
+            }
+            $jpFile["{$kk}|{$mm}|{$gg}"] = ($jpFile["{$kk}|{$mm}|{$gg}"] ?? 0) + 1;
+        }
+
+        $pengampuModel = new PengampuModel();
+        $taId = $this->activeTaId();
+        $ins = 0; $upd = 0; $skip = 0; $errors = [];
+
+        $db = db_connect();
+        $db->transStart();
+
+        foreach ($rows as $i => $row) {
+            $ln       = $i + 1;
+            $kelasKey = strtoupper(trim((string) ($row['kelas'] ?? '')));
+            $hariKey  = strtoupper(trim((string) ($row['hari'] ?? '')));
+            $jamKe    = (int) ($row['jam'] ?? 0);
+            $mapelKey = strtoupper(trim((string) ($row['mapel'] ?? '')));
+            $guruKey  = strtoupper(trim((string) ($row['guru'] ?? '')));
+
+            if ($kelasKey === '' || $hariKey === '' || $jamKe <= 0 || $mapelKey === '' || $guruKey === '') {
+                $skip++;
+                continue;
+            }
+            if (! isset($kelasMap[$kelasKey])) { $errors[] = "Baris {$ln}: kelas \"{$row['kelas']}\" tidak dikenal."; $skip++; continue; }
+            if (! isset($hariMap[$hariKey]))   { $errors[] = "Baris {$ln}: hari \"{$row['hari']}\" tidak dikenal.";   $skip++; continue; }
+            if (! isset($mapelMap[$mapelKey])) { $errors[] = "Baris {$ln}: mapel \"{$row['mapel']}\" tidak dikenal."; $skip++; continue; }
+            if (! isset($guruMap[$guruKey]))   { $errors[] = "Baris {$ln}: guru \"{$row['guru']}\" tidak dikenal.";   $skip++; continue; }
+
+            $kelas   = $kelasMap[$kelasKey];
+            $kelasId = $kelas['id'];
+            $hariId  = $hariMap[$hariKey];
+            $jamId   = $jamMap[$kelas['shift'] . '-' . $jamKe] ?? null;
+            if ($jamId === null) {
+                $errors[] = "Baris {$ln}: jam ke-{$jamKe} tidak ada untuk shift {$kelas['shift']} (kelas {$row['kelas']}).";
+                $skip++;
+                continue;
+            }
+            $mapelId = $mapelMap[$mapelKey];
+            $guruId  = $guruMap[$guruKey];
+
+            // pengampu (kelas+mapel+guru): pakai yang ada / buat otomatis / pulihkan yg terhapus
+            $pengampuId = $this->resolvePengampu($pengampuModel, $kelasId, $mapelId, $guruId, (int) ($jpFile["{$kelasKey}|{$mapelKey}|{$guruKey}"] ?? 1));
+
+            $existing = $this->model->cellOccupied($kelasId, $hariId, $jamId);
+
+            // R1: guru sudah mengajar kelas lain pada slot yang sama?
+            if ($c = $this->model->guruConflict($guruId, $hariId, $jamId, $existing['id'] ?? null)) {
+                $errors[] = "Baris {$ln}: guru bentrok — sudah mengajar kelas {$c['nama_kelas']} pada {$row['hari']} jam ke-{$jamKe}.";
+                $skip++;
+                continue;
+            }
+
+            $payload = [
+                'tahun_ajaran_id' => $taId,
+                'kelas_id'        => $kelasId,
+                'hari_id'         => $hariId,
+                'jam_id'          => $jamId,
+                'pengampu_id'     => $pengampuId,
+                'guru_id'         => $guruId,
+                'created_by'      => session('admin')['id'] ?? null,
+            ];
+
+            try {
+                if ($existing) {
+                    $this->model->update((int) $existing['id'], $payload);
+                    $upd++;
+                } else {
+                    $this->model->insert($payload);
+                    $ins++;
+                }
+            } catch (\Throwable $e) {
+                $errors[] = "Baris {$ln}: gagal disimpan (" . $e->getMessage() . ').';
+                $skip++;
+            }
+        }
+
+        $db->transComplete();
+        if ($db->transStatus() === false) {
+            return redirect()->to(site_url('admin/jadwal'))->with('error', 'Impor dibatalkan karena kesalahan database.');
+        }
+
+        $this->afterChange();
+        cache()->delete('opt_kelas');
+        $this->audit->record('import', 'jadwal', null, "Import jadwal: +{$ins} baru, {$upd} diganti, {$skip} dilewati");
+
+        $msg = "Impor selesai: {$ins} slot baru, {$upd} diganti, {$skip} dilewati.";
+        if ($errors) {
+            $msg .= ' Sebagian dilewati: ' . implode(' ', array_slice($errors, 0, 8));
+            if (count($errors) > 8) {
+                $msg .= ' …(' . (count($errors) - 8) . ' lainnya).';
+            }
+            return redirect()->to(site_url('admin/jadwal'))->with('error', $msg);
+        }
+        return redirect()->to(site_url('admin/jadwal'))->with('success', $msg);
+    }
+
+    /** Cari pengampu (kelas+mapel+guru); buat/pulihkan bila belum ada. Kembalikan id. */
+    private function resolvePengampu(PengampuModel $model, int $kelasId, int $mapelId, int $guruId, int $jpBaru): int
+    {
+        $existing = $model->withDeleted()
+            ->where('kelas_id', $kelasId)->where('mapel_id', $mapelId)->where('guru_id', $guruId)->first();
+        if ($existing) {
+            if ($existing['deleted_at'] !== null) {
+                $model->protect(false)->update($existing['id'], ['deleted_at' => null, 'id' => $existing['id']]);
+                $model->protect(true);
+            }
+            return (int) $existing['id'];
+        }
+        // cegah bentrok UNIQUE(kelas,mapel): guru berbeda untuk mapel yang sama di kelas ini →
+        // perbarui guru pada penugasan yang ada agar impor tetap jalan.
+        $sameKelasMapel = $model->withDeleted()->where('kelas_id', $kelasId)->where('mapel_id', $mapelId)->first();
+        if ($sameKelasMapel) {
+            $model->protect(false)->update($sameKelasMapel['id'], ['guru_id' => $guruId, 'deleted_at' => null, 'id' => $sameKelasMapel['id']]);
+            $model->protect(true);
+            return (int) $sameKelasMapel['id'];
+        }
+        $model->insert(['kelas_id' => $kelasId, 'mapel_id' => $mapelId, 'guru_id' => $guruId, 'jp' => max(1, $jpBaru)]);
+        return (int) $model->getInsertID();
+    }
+
+    /** Kunci slot unik dari nama (dinormalisasi) untuk penanda status pratinjau. */
+    private function slotKey(string $kelas, string $hari, string $jam): string
+    {
+        return strtoupper(trim($kelas)) . '|' . strtoupper(trim($hari)) . '|' . (int) $jam;
+    }
+
+    private function streamXlsx(Spreadsheet $ss, string $filename): void
+    {
+        header('Content-Type: application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+        header('Content-Disposition: attachment; filename="' . $filename . '.xlsx"');
+        header('Cache-Control: max-age=0');
+        (new Xlsx($ss))->save('php://output');
+        exit;
     }
 
     // ===================== HELPER =====================

@@ -121,6 +121,9 @@ $routes->group('admin', static function ($routes) {
         $routes->post('jadwal/remove', 'Admin\Jadwal::remove');
         $routes->post('jadwal/move', 'Admin\Jadwal::move');
         $routes->post('jadwal/generate', 'Admin\Jadwal::generate');
+        $routes->get('jadwal/template', 'Admin\Jadwal::template');
+        $routes->post('jadwal/import-preview', 'Admin\Jadwal::importPreview');
+        $routes->post('jadwal/import-commit', 'Admin\Jadwal::importCommit');
 
         // ===== LAPORAN KURIKULUM =====
         $routes->get('kurikulum/dashboard', 'Admin\Kurikulum::dashboard');

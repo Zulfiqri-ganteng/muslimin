@@ -53,11 +53,9 @@ class JadwalGenerator
 
         // --- state awal ---
         $classOcc = [];               // "h-j" => true (sel kelas terisi)
-        $perDay   = [];               // [pengampuId][hari] => jumlah
-        $placedBy = [];               // [pengampuId] => jumlah terpasang
+        $placedBy = [];               // [pengampuId] => jumlah terpasang (sebelum generate)
         foreach ($jadwal->where('kelas_id', $kelasId)->findAll() as $r) {
             $classOcc[$r['hari_id'] . '-' . $r['jam_id']]   = true;
-            $perDay[(int) $r['pengampu_id']][(int) $r['hari_id']] = ($perDay[(int) $r['pengampu_id']][(int) $r['hari_id']] ?? 0) + 1;
             $placedBy[(int) $r['pengampu_id']] = ($placedBy[(int) $r['pengampu_id']] ?? 0) + 1;
         }
 
@@ -97,19 +95,24 @@ class JadwalGenerator
             ];
         }
 
-        // urut: paling sulit dulu (feasible kecil), lalu sisa terbesar
+        // Urut penugasan: paling sulit ditempatkan dulu (feasible kecil) supaya guru
+        // yang jamnya sempit tidak kehabisan slot; tie-break sisa JP terbesar lalu
+        // kode mapel agar hasil DETERMINISTIK (tidak acak antar-generate).
         usort($tasks, static function ($a, $b) {
-            return [$a['feasible'], -$a['sisa']] <=> [$b['feasible'], -$b['sisa']];
+            return [$a['feasible'], -$a['sisa'], $a['kode_mapel']] <=> [$b['feasible'], -$b['sisa'], $b['kode_mapel']];
         });
 
-        // --- penempatan ---
-        $placed = 0;
-        $failed = [];
+        // --- penempatan: tiap penugasan mengisi slot kosong TERAWAL (urut hari→jam),
+        // sehingga JP mapel yang sama jatuh pada sel BERURUTAN (blok rapi), bukan
+        // tersebar acak antar hari. ---
+        $placed    = 0;
+        $failed    = [];
+        $placedNow = []; // [pengampuId] => jumlah terpasang pada proses ini
         foreach ($tasks as $t) {
             $pid = $t['pengampu_id']; $guruId = $t['guru_id'];
             $need = $t['sisa'];
             for ($n = 0; $n < $need; $n++) {
-                $slot = $this->pickSlot($classOcc, $guruBusy, $ketNo, $perDay, $pid, $guruId, $haris, $jams);
+                $slot = $this->pickSlot($classOcc, $guruBusy, $ketNo, $guruId, $haris, $jams);
                 if ($slot === null) {
                     break; // tak ada slot layak lagi untuk penugasan ini
                 }
@@ -120,19 +123,17 @@ class JadwalGenerator
                     'pengampu_id' => $pid, 'guru_id' => $guruId,
                     'created_by' => session('admin')['id'] ?? null,
                 ]);
-                $classOcc[$h . '-' . $j]               = true;
+                $classOcc[$h . '-' . $j]                = true;
                 $guruBusy[$guruId . '-' . $h . '-' . $j] = true;
-                $perDay[$pid][$h]                       = ($perDay[$pid][$h] ?? 0) + 1;
+                $placedNow[$pid]                        = ($placedNow[$pid] ?? 0) + 1;
                 $placed++;
             }
         }
 
-        // hitung yang gagal: bandingkan target vs terpasang akhir
+        // hitung yang gagal: sisa target dikurangi yang berhasil terpasang barusan
         foreach ($tasks as $t) {
-            $pid = $t['pengampu_id'];
-            $terpasang = array_sum($perDay[$pid] ?? []);
-            $target    = ($placedBy[$pid] ?? 0) + $t['sisa'];
-            $kurang    = $target - $terpasang;
+            $pid    = $t['pengampu_id'];
+            $kurang = $t['sisa'] - ($placedNow[$pid] ?? 0);
             if ($kurang > 0) {
                 $failed[] = [
                     'kode_mapel' => $t['kode_mapel'], 'nama_mapel' => $t['nama_mapel'],
@@ -172,23 +173,22 @@ class JadwalGenerator
         return true;
     }
 
-    /** Pilih slot terbaik: sebar antar hari (perDay terkecil), lalu hari & jam paling awal. */
-    private function pickSlot(array $classOcc, array $guruBusy, array $ketNo, array $perDay, int $pid, int $guruId, array $haris, array $jams): ?array
+    /**
+     * Slot kosong layak PALING AWAL menurut urutan baca (hari sesuai urutan → jam ke-1..n).
+     * $haris sudah terurut (aktifUrut) & $jams terurut jam_ke, jadi penempatan berurutan
+     * membuat JP mapel yang sama menempati sel bersebelahan (blok rapi), mengisi hari
+     * demi hari alih-alih menyebar acak.
+     */
+    private function pickSlot(array $classOcc, array $guruBusy, array $ketNo, int $guruId, array $haris, array $jams): ?array
     {
-        $best = null; $bestLoad = PHP_INT_MAX;
         foreach ($haris as $h) {
-            $load = $perDay[$pid][$h] ?? 0;
-            if ($load >= $bestLoad) {
-                continue; // hari ini tak mungkin lebih baik
-            }
             foreach ($jams as $j) {
                 if ($this->slotOk($classOcc, $guruBusy, $ketNo, $guruId, $h, $j)) {
-                    $best = [$h, $j]; $bestLoad = $load;
-                    break; // jam paling awal pada hari terbaik ini
+                    return [$h, $j];
                 }
             }
         }
-        return $best;
+        return null;
     }
 
     private function activeTaId($db): ?int

@@ -2,10 +2,13 @@
 <?= $this->section('content') ?>
 
 <?= view('admin/partials/help', [
-    'helpKey'   => 'jadwal',
-    'helpTitle' => 'Jadwal KBM — susun dengan tarik & lepas',
-    'helpBody'  => '<p>Pilih kelas, lalu <b>seret kartu mapel</b> dari panel kiri ke sel hari/jam. Seret antar sel untuk <b>memindah</b>; lepas di sel terisi untuk <b>menukar</b>. Klik tanda × untuk menghapus.</p>
-        <p class="mt-1">Sistem otomatis menolak bila: guru bentrok jam sama (R1), sel sudah terisi (R2), guru tak tersedia (R3), atau kuota JP penuh (R4). Angka <b>sisa</b> pada kartu = JP yang belum terpasang.</p>',
+    'helpKey'   => 'jadwal_v2',
+    'helpTitle' => 'Jadwal KBM — susun manual, generate, atau import Excel',
+    'helpBody'  => '<p>Ada <b>3 cara</b> mengisi jadwal:</p>
+        <p class="mt-1">1) <b>Manual (tarik & lepas):</b> pilih kelas, lalu seret kartu mapel dari panel kiri ke sel hari/jam. Seret antar sel untuk <b>memindah</b>; lepas di sel terisi untuk <b>menukar</b>. Klik tanda × untuk menghapus.</p>
+        <p class="mt-1">2) <b>Generate Otomatis:</b> sistem mengisi sel secara <b>rapi &amp; berurutan</b> — JP mapel yang sama ditaruh bersebelahan, mengisi hari demi hari (bukan acak). Cocok untuk draf awal, lalu rapikan manual.</p>
+        <p class="mt-1">3) <b>Import Excel:</b> bila jadwal asli sudah ada di Excel, klik <b>Import Excel</b> → unduh template (kolom: Kelas, Hari, Jam ke, Mapel, Guru) → unggah → <b>periksa/edit pratinjau</b> → Simpan. Bisa satu file untuk banyak kelas sekaligus.</p>
+        <p class="mt-2">Sistem otomatis menolak/melewati bila: guru bentrok jam sama (R1), sel sudah terisi (R2), guru tak tersedia (R3), atau kuota JP penuh (R4). Angka <b>sisa</b> pada kartu = JP yang belum terpasang.</p>',
 ]) ?>
 
 <?php $kelas = $kelas ?? null; ?>
@@ -23,6 +26,10 @@
                     <?php endforeach; endif; ?>
                 </select>
             </div>
+            <button type="button" @click="importOpen=true" class="inline-flex items-center gap-1.5 rounded-lg bg-sky-600 hover:bg-sky-700 text-white text-sm font-semibold px-3.5 py-2.5 transition shrink-0">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"/></svg>
+                Import Excel
+            </button>
             <?php if ($kelas): ?>
                 <div class="text-sm text-slate-500">
                     Tingkat <b><?= esc($kelas['tingkat']) ?></b> · Shift
@@ -136,7 +143,7 @@
         <div class="absolute inset-0 bg-black/40" @click="genOpen=false"></div>
         <div class="relative bg-white rounded-2xl shadow-xl w-full max-w-md p-6">
             <h3 class="font-bold text-lg text-slate-800 mb-2">Generate Jadwal Otomatis</h3>
-            <p class="text-sm text-slate-500 mb-4">Sistem mengisi sel berdasarkan penugasan kelas ini, menghormati ketersediaan guru (R3) dan menghindari bentrok guru (R1). Penugasan yang tak muat akan dilaporkan.</p>
+            <p class="text-sm text-slate-500 mb-4">Sistem mengisi sel secara <b>rapi &amp; berurutan</b> (JP mapel sama bersebelahan, mengisi hari demi hari) berdasarkan penugasan kelas ini, sambil menghormati ketersediaan guru (R3) dan menghindari bentrok guru (R1). Penugasan yang tak muat akan dilaporkan.</p>
             <form method="post" action="<?= site_url('admin/jadwal/generate') ?>">
                 <?= csrf_field() ?>
                 <input type="hidden" name="kelas_id" value="<?= $kelasId ?>">
@@ -147,6 +154,27 @@
                 <div class="flex justify-end gap-2">
                     <button type="button" @click="genOpen=false" class="rounded-lg border border-slate-300 text-slate-600 text-sm font-semibold px-4 py-2.5 hover:bg-slate-50">Batal</button>
                     <button class="rounded-lg bg-violet-600 hover:bg-violet-700 text-white text-sm font-semibold px-5 py-2.5">Generate Sekarang</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Modal Import Excel -->
+    <div x-show="importOpen" x-cloak x-transition.opacity.duration.200ms class="fixed inset-0 z-50 flex items-center justify-center p-4">
+        <div class="absolute inset-0 bg-black/40" @click="importOpen=false"></div>
+        <div class="relative bg-white rounded-2xl shadow-xl w-full max-w-lg p-6">
+            <h3 class="font-bold text-lg text-slate-800 mb-2">Import Jadwal dari Excel</h3>
+            <p class="text-sm text-slate-500 mb-4">Unggah file Excel berformat <b>baris</b> (satu baris = satu jam pelajaran). Kolom: <b>Kelas, Hari, Jam ke, Mapel, Guru</b>. Setelah diunggah Anda bisa <b>memeriksa & mengedit</b> data sebelum disimpan.</p>
+            <div class="rounded-xl bg-sky-50 border border-sky-100 p-3 mb-4 text-sm text-sky-800">
+                Belum punya filenya? <a href="<?= site_url('admin/jadwal/template') ?>" class="font-semibold underline">Unduh template Excel</a> lalu isi sesuai jadwal asli.
+            </div>
+            <form method="post" action="<?= site_url('admin/jadwal/import-preview') ?>" enctype="multipart/form-data">
+                <?= csrf_field() ?>
+                <input type="file" name="file" accept=".xlsx,.xls" required
+                       class="block w-full text-sm text-slate-600 mb-5 file:mr-3 file:rounded-lg file:border-0 file:bg-brand-700 file:text-white file:px-4 file:py-2 file:text-sm file:font-semibold hover:file:bg-brand-800 border border-slate-300 rounded-lg">
+                <div class="flex justify-end gap-2">
+                    <button type="button" @click="importOpen=false" class="rounded-lg border border-slate-300 text-slate-600 text-sm font-semibold px-4 py-2.5 hover:bg-slate-50">Batal</button>
+                    <button type="submit" class="rounded-lg bg-sky-600 hover:bg-sky-700 text-white text-sm font-semibold px-5 py-2.5">Lanjut ke Pratinjau</button>
                 </div>
             </form>
         </div>
@@ -170,6 +198,7 @@ function jadwalGrid() {
         palet: <?= json_encode($palet ?: []) ?>,
         drag: null,
         genOpen: false,
+        importOpen: false,
         toast: { show: false, msg: '', type: 'ok' },
 
         init() {},

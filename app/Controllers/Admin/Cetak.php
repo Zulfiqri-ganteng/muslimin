@@ -143,20 +143,26 @@ class Cetak extends BaseController
                 $cell = $grid[$h['id'] . '-' . $j['id']] ?? null;
                 $val  = '';
                 if ($cell) {
+                    // Sama persis dengan versi PDF: baris-1 mapel, baris-2 guru (kelas)
+                    // atau baris-1 kelas, baris-2 mapel (guru).
                     $val = $mode === 'kelas'
-                        ? $cell['kode_mapel'] . " / " . $cell['kode_guru']
-                        : $cell['nama_kelas'] . " / " . $cell['kode_mapel'];
+                        ? $cell['nama_mapel'] . "\n" . $cell['guru_nama']
+                        : $cell['nama_kelas'] . "\n" . $cell['nama_mapel'];
                 }
-                $sheet->setCellValue(Coordinate::stringFromColumnIndex($c++) . $r, $val);
+                $sheet->setCellValueExplicit(Coordinate::stringFromColumnIndex($c++) . $r, $val, \PhpOffice\PhpSpreadsheet\Cell\DataType::TYPE_STRING);
             }
             $r++;
         }
 
         $sheet->getStyle("A4:{$lastCol}" . ($r - 1))->getBorders()->getAllBorders()->setBorderStyle(Border::BORDER_THIN);
         $sheet->getStyle("A4:{$lastCol}" . ($r - 1))->getAlignment()->setVertical(Alignment::VERTICAL_CENTER)->setWrapText(true);
+        // Sel hari (kolom B..akhir) rata tengah seperti PDF; kolom "Jam" tetap rata kiri.
+        if ($colCount >= 2) {
+            $sheet->getStyle('B5:' . $lastCol . ($r - 1))->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER);
+        }
         $sheet->getColumnDimension('A')->setWidth(24);
         for ($i = 2; $i <= $colCount; $i++) {
-            $sheet->getColumnDimension(Coordinate::stringFromColumnIndex($i))->setWidth(18);
+            $sheet->getColumnDimension(Coordinate::stringFromColumnIndex($i))->setWidth(22);
         }
 
         return $this->streamXlsx($ss, $filename);

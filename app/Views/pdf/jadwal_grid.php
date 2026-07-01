@@ -45,9 +45,9 @@
                             <td>
                                 <?php if ($c): ?>
                                     <?php if ($mode === 'kelas'): ?>
-                                        <span class="mapel"><?= esc($c['kode_mapel']) ?></span><br><span class="sub"><?= esc($c['kode_guru']) ?></span>
+                                        <span class="mapel"><?= esc($c['nama_mapel']) ?></span><br><span class="sub"><?= esc($c['guru_nama']) ?></span>
                                     <?php else: ?>
-                                        <span class="mapel"><?= esc($c['nama_kelas']) ?></span><br><span class="sub"><?= esc($c['kode_mapel']) ?></span>
+                                        <span class="mapel"><?= esc($c['nama_kelas']) ?></span><br><span class="sub"><?= esc($c['nama_mapel']) ?></span>
                                     <?php endif; ?>
                                 <?php endif; ?>
                             </td>
