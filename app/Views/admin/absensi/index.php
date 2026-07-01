@@ -2,9 +2,11 @@
 <?= $this->section('content') ?>
 
 <?= view('admin/partials/help', [
-    'helpKey'   => 'absensi',
+    'helpKey'   => 'absensi_v2',
     'helpTitle' => 'Cara mengisi absensi guru',
-    'helpBody'  => '<p>Pilih <b>tanggal</b>, sistem menampilkan semua sesi mengajar hari itu dari jadwal KBM. Semua <b>default Hadir</b> — Anda cukup menandai guru yang <b>Telat / Izin / Sakit / Alpa (Tidak Hadir)</b>. Saat status bukan Hadir, muncul kolom <b>Jam Masuk</b> (isi bebas sesuai aturan Anda) dan <b>Keterangan</b>. Gunakan <b>Set semua</b> di tiap guru untuk menandai seluruh sesinya sekaligus. Klik <b>Simpan Absensi</b>. Data ini juga tampil di halaman publik.</p>',
+    'helpBody'  => '<p>Pilih <b>tanggal</b>, sistem menampilkan semua sesi mengajar hari itu dari jadwal KBM. Semua <b>default Hadir</b> — Anda cukup menandai guru yang <b>Telat / Izin / Sakit / Alpa (Tidak Hadir)</b>. Saat status bukan Hadir, muncul kolom <b>Jam Masuk</b> (isi bebas sesuai aturan Anda) dan <b>Keterangan</b>. Gunakan <b>Set semua</b> di tiap guru untuk menandai seluruh sesinya sekaligus.</p>'
+        . '<p class="mt-2"><b>Penting:</b> klik <b>Simpan Absensi</b> agar hari ini <b>tercatat</b> dan ikut dihitung di Rekap — hari yang tidak Anda simpan (libur/belum dikelola) tidak dihitung. Jika salah menyimpan hari libur, gunakan <b>Batalkan pencatatan</b> untuk mereset hari itu.</p>'
+        . '<p class="mt-2">Tombol <b>Bagikan ke WhatsApp</b> menyiapkan daftar guru yang tidak hadir/telat hari itu (teks bisa Anda revisi dulu). Data absensi juga tampil di halaman publik bila diaktifkan di Pengaturan.</p>',
 ]) ?>
 
 <?php
@@ -52,6 +54,30 @@
             </span>
         </div>
     </div>
+
+    <?php if ($hariAktif && $total > 0): ?>
+        <div class="mt-4 pt-3 border-t border-slate-100 flex flex-wrap items-center justify-between gap-2">
+            <?php if ($recorded): ?>
+                <span class="inline-flex items-center gap-1.5 rounded-lg bg-emerald-50 border border-emerald-200 px-3 py-1.5 text-xs font-bold text-emerald-700">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/></svg>
+                    Hari ini sudah diabsen — dihitung di rekap
+                </span>
+                <form method="post" action="<?= site_url('admin/absensi/unrecord') ?>" onsubmit="return confirm('Batalkan pencatatan absensi tanggal ini?\n\nSemua tandaan hari ini akan DIHAPUS dan hari ini tidak akan dihitung di rekap.')">
+                    <?= csrf_field() ?>
+                    <input type="hidden" name="tanggal" value="<?= esc($tanggal) ?>">
+                    <button type="submit" class="inline-flex items-center gap-1 text-xs font-semibold text-red-600 hover:text-red-700">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
+                        Batalkan pencatatan
+                    </button>
+                </form>
+            <?php else: ?>
+                <span class="inline-flex items-center gap-1.5 rounded-lg bg-amber-50 border border-amber-200 px-3 py-1.5 text-xs font-bold text-amber-700">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                    Belum diabsen — klik <b>Simpan Absensi</b> untuk mencatat hari ini ke rekap
+                </span>
+            <?php endif; ?>
+        </div>
+    <?php endif; ?>
 </div>
 
 <?php if (! $hariAktif): ?>

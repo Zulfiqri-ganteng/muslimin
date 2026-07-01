@@ -2,9 +2,9 @@
 <?= $this->section('content') ?>
 
 <?= view('admin/partials/help', [
-    'helpKey'   => 'rekap_absensi',
+    'helpKey'   => 'rekap_absensi_v2',
     'helpTitle' => 'Rekap Absensi Guru',
-    'helpBody'  => '<p>Ringkasan kehadiran tiap guru pada rentang tanggal yang dipilih. <b>Total Sesi</b> dihitung dari jadwal KBM (jumlah sesi guru pada hari aktif dalam rentang). <b>Hadir</b> = Total − (Telat + Izin + Sakit + Alpa). Ubah <b>Dari</b>/<b>Sampai</b> lalu klik Tampilkan. Gunakan tombol <b>Export</b> untuk PDF atau Excel sebagai lampiran perhitungan gaji.</p>',
+    'helpBody'  => '<p>Ringkasan kehadiran tiap guru pada rentang tanggal yang dipilih. Rekap <b>hanya menghitung hari yang sudah diabsen</b> (hari yang Anda buka lalu klik Simpan Absensi) — hari libur atau yang belum dikelola tidak dihitung. <b>Total Sesi</b> = jumlah sesi guru pada hari-hari tercatat itu; <b>Hadir</b> = Total − (Telat + Izin + Sakit + Alpa). Ubah <b>Dari</b>/<b>Sampai</b> lalu klik Tampilkan. Gunakan tombol <b>Export</b> untuk PDF atau Excel sebagai lampiran perhitungan gaji.</p>',
 ]) ?>
 
 <?php
@@ -48,14 +48,16 @@
 </div>
 
 <?php if (empty($rows)): ?>
-    <div class="bg-white rounded-2xl border border-slate-200 shadow-sm p-10 text-center text-slate-400">
-        Belum ada data pada periode ini. Pastikan jadwal KBM sudah tersusun.
+    <div class="bg-white rounded-2xl border border-slate-200 shadow-sm p-10 text-center">
+        <svg class="w-10 h-10 mx-auto text-slate-300 mb-3" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
+        <p class="text-slate-500 font-semibold">Belum ada hari yang diabsen pada periode ini.</p>
+        <p class="text-sm text-slate-400 mt-1">Rekap akan terisi setelah Anda membuka tanggal di menu <a href="<?= site_url('admin/absensi') ?>" class="text-brand-600 underline">Absensi Guru</a> lalu klik <b>Simpan Absensi</b>.</p>
     </div>
 <?php else: ?>
     <div class="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
         <div class="px-5 py-3.5 border-b border-slate-100 flex items-center justify-between gap-3">
             <p class="font-bold text-slate-800">Periode <?= esc($dari) ?> s/d <?= esc($sampai) ?></p>
-            <p class="text-sm text-slate-400"><?= count($rows) ?> guru</p>
+            <p class="text-sm text-slate-400"><?= (int) ($hariTercatat ?? 0) ?> hari diabsen &middot; <?= count($rows) ?> guru</p>
         </div>
         <div class="overflow-x-auto">
             <table class="w-full text-sm">

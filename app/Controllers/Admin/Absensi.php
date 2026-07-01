@@ -4,6 +4,7 @@ namespace App\Controllers\Admin;
 
 use App\Controllers\BaseController;
 use App\Models\AbsensiGuruModel;
+use App\Models\AbsensiHariModel;
 use App\Models\AuditModel;
 use App\Models\GuruModel;
 use App\Models\HariModel;
@@ -71,6 +72,7 @@ class Absensi extends BaseController
             'ringkas'   => $ringkas,
             'total'     => count($sessions),
             'sekolah'   => (new SettingModel())->get()['school_name'] ?? '',
+            'recorded'  => (new AbsensiHariModel())->isRecorded($tanggal),
         ]);
     }
 
@@ -79,12 +81,28 @@ class Absensi extends BaseController
         $tanggal = $this->normalTanggal($this->request->getPost('tanggal'));
         $rows    = $this->request->getPost('rows');
         $rows    = is_array($rows) ? $rows : [];
+        $adminId = session('admin')['id'] ?? null;
 
-        (new AbsensiGuruModel())->syncDate($tanggal, $rows, session('admin')['id'] ?? null);
+        (new AbsensiGuruModel())->syncDate($tanggal, $rows, $adminId);
+        // Tandai hari ini sudah diabsen agar masuk hitungan rekap.
+        (new AbsensiHariModel())->mark($tanggal, $adminId);
         (new AuditModel())->record('update', 'absensi_guru', null, 'Simpan absensi ' . $tanggal);
 
         return redirect()->to(site_url('admin/absensi') . '?tanggal=' . $tanggal)
             ->with('success', 'Absensi tanggal ' . $tanggal . ' berhasil disimpan.');
+    }
+
+    /** Batalkan pencatatan satu hari: hapus registry + semua tandaan hari itu. */
+    public function unrecord()
+    {
+        $tanggal = $this->normalTanggal($this->request->getPost('tanggal'));
+
+        (new AbsensiGuruModel())->where('tanggal', $tanggal)->delete();
+        (new AbsensiHariModel())->unmark($tanggal);
+        (new AuditModel())->record('delete', 'absensi_hari', null, 'Batal catat absensi ' . $tanggal);
+
+        return redirect()->to(site_url('admin/absensi') . '?tanggal=' . $tanggal)
+            ->with('success', 'Pencatatan absensi tanggal ' . $tanggal . ' dibatalkan. Hari ini kembali "belum diabsen".');
     }
 
     // ===================== REKAP =====================
@@ -111,8 +129,9 @@ class Absensi extends BaseController
         }
 
         return view('admin/absensi/rekap', [
-            'title'  => 'Rekap Absensi Guru',
-            'rows'   => $rows, 'dari' => $dari, 'sampai' => $sampai, 'sum' => $sum,
+            'title'       => 'Rekap Absensi Guru',
+            'rows'        => $rows, 'dari' => $dari, 'sampai' => $sampai, 'sum' => $sum,
+            'hariTercatat' => count((new AbsensiHariModel())->datesInRange($dari, $sampai)),
         ]);
     }
 
@@ -148,23 +167,26 @@ class Absensi extends BaseController
 
     /**
      * Total sesi terjadwal per guru pada rentang, key gid => total.
-     * Proyeksi jadwal: jumlah sesi guru pada tiap hari aktif × kemunculan hari
-     * itu di rentang (maks 400 hari sebagai pengaman).
+     * HANYA menghitung tanggal yang sudah diabsen (ada di registry absensi_hari):
+     * untuk tiap tanggal tercatat → tambahkan jumlah sesi guru pada hari itu.
+     * Hari libur / belum dipakai otomatis tak terhitung.
      */
     private function projectTotals(string $dari, string $sampai): array
     {
+        $dates = (new AbsensiHariModel())->datesInRange($dari, $sampai);
+        if (empty($dates)) {
+            return [];
+        }
+
         $counts    = (new JadwalModel())->countPerGuruHari();
         $hariModel = new HariModel();
 
         $weekdayHari  = [];
         $totalPerGuru = [];
-        $cursor       = strtotime($dari);
-        $end          = strtotime($sampai);
-        $guard        = 0;
-        while ($cursor !== false && $cursor <= $end && $guard <= 400) {
-            $n = (int) date('N', $cursor);
+        foreach ($dates as $tgl) {
+            $n = (int) date('N', strtotime($tgl));
             if (! array_key_exists($n, $weekdayHari)) {
-                $h              = $hariModel->byWeekday($n);
+                $h               = $hariModel->byWeekday($n);
                 $weekdayHari[$n] = ($h && (int) $h['aktif'] === 1) ? (int) $h['id'] : 0;
             }
             $hid = $weekdayHari[$n];
@@ -175,8 +197,6 @@ class Absensi extends BaseController
                     }
                 }
             }
-            $cursor = strtotime('+1 day', $cursor);
-            $guard++;
         }
         return $totalPerGuru;
     }
