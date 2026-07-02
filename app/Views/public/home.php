@@ -9,7 +9,7 @@
         <p class="text-brand-200 font-semibold mb-2">Selamat datang di</p>
         <h1 class="text-3xl sm:text-5xl font-extrabold leading-tight"><?= esc($setting['school_name'] ?? 'Sekolah') ?></h1>
         <?php if (! empty($setting['academic_year'])): ?>
-            <p class="mt-3 text-brand-100">Sistem Akademik &middot; Tahun Pelajaran <?= esc($setting['academic_year']) ?></p>
+            <p class="mt-3 text-brand-100">Sistem Informasi Akademik &middot; Tahun Pelajaran <?= esc($setting['academic_year']) ?></p>
         <?php endif; ?>
 
         <?php if (! empty($now['label'])): ?>
