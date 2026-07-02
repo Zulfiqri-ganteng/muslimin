@@ -1,17 +1,20 @@
 #!/bin/bash
 # ============================================================================
-#  Deploy script — Sistem Kesediaan Guru Mengajar (domain: zulfiqri.site)
+#  Deploy script — Sistem Kesediaan Guru Mengajar (domain: kangmuslim.com)
 #  Mengikuti pola deploy project "galajuara".
 #
 #  Cara pakai di hosting cPanel:
 #    1. Pastikan repo sudah di-clone ke $PROJECT (lihat PANDUAN.md bagian Deploy).
 #    2. Jalankan manual lewat Terminal cPanel/SSH:
-#         bash /home/zulh7811/public_html/zulfiqri.site/deploy/deploy.sh
+#         bash "$HOME/kangmuslim/deploy/deploy.sh"
 #       ATAU pasang sebagai Cron Job di cPanel.
+#
+#  Catatan: path memakai $HOME agar otomatis mengikuti akun cPanel
+#  (tidak perlu hardcode /home/<username>/).
 # ============================================================================
 
-LOGFILE="$HOME/deploy/deploy-zulfiqri-site.log"
-PROJECT="/home/zulh7811/public_html/zulfiqri.site"
+LOGFILE="$HOME/deploy/deploy-kangmuslim.log"
+PROJECT="$HOME/kangmuslim"
 GIT="/usr/local/cpanel/3rdparty/lib/path-bin/git"
 PHP="/usr/local/bin/php"
 

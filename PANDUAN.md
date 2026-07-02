@@ -61,46 +61,43 @@ Password : admin123
 
 ## 4. Deploy ke cPanel via Git (alur seperti project galajuara)
 
-Domain target: **zulfiqri.site** → akan diarahkan ke `public_html/zulfiqri.site/public`.
+Domain target: **kangmuslim.com** (domain utama hosting) → diarahkan ke `~/kangmuslim/public`.
 Alur: `git push` dari lokal → di hosting jalankan deploy (pull + migrate). Folder `vendor/`
 ikut di repo, jadi **tidak perlu** `composer install` di server.
 
-### A. Push ke GitHub (dari komputer lokal — sekali setup)
-Repo: `https://github.com/Zulfiqri-ganteng/<nama-repo>.git`
-```bash
-# di folder project (sudah saya init & commit)
-git remote add origin https://github.com/Zulfiqri-ganteng/<nama-repo>.git
-git branch -M main
-git push -u origin main
-```
+> Catatan path: `~` = `$HOME` = `/home/<username-cpanel>`. Semua langkah di bawah
+> memakai `~` agar tidak bergantung pada nama akun cPanel.
+
+### A. Push ke GitHub (dari komputer lokal — sudah jalan)
+Repo: `https://github.com/Zulfiqri-ganteng/muslimin.git` (remote `origin` sudah terpasang).
 Update berikutnya cukup: `git add . && git commit -m "pesan" && git push`
 
 ### B. Siapkan Database di cPanel
-1. cPanel → **MySQL Databases** → buat database `zulh7811_muslimin` + user + password,
+1. cPanel → **MySQL Databases** → buat database `<akun>_muslimin` + user + password,
    lalu **Add User To Database** (All Privileges).
 2. *(Opsional)* Tidak perlu import SQL — tabel & akun admin dibuat otomatis oleh
    `php spark migrate` saat deploy.
 
-### C. Clone Repo ke Folder Domain (sekali setup)
+### C. Clone Repo ke Folder Project (sekali setup)
 **Lewat cPanel → Git™ Version Control → Create:**
-- *Clone URL:* `https://github.com/Zulfiqri-ganteng/<nama-repo>.git`
-- *Repository Path:* `/home/zulh7811/public_html/zulfiqri.site`
-  (jika folder sudah ada & tidak kosong, kosongkan dulu via File Manager)
+- *Clone URL:* `https://github.com/Zulfiqri-ganteng/muslimin.git`
+- *Repository Path:* `kangmuslim`  (mis. `/home/<akun>/kangmuslim`)
 
 > Repo privat butuh **GitHub Personal Access Token** pada URL:
-> `https://<token>@github.com/Zulfiqri-ganteng/<nama-repo>.git`
+> `https://<token>@github.com/Zulfiqri-ganteng/muslimin.git`
 
 ### D. Arahkan Document Root Domain
-cPanel → **Domains** → `zulfiqri.site` → **Manage** → ubah *Document Root* menjadi:
+cPanel → **Domains** → `kangmuslim.com` → **Manage** → ubah *Document Root* menjadi:
 ```
-/home/zulh7811/public_html/zulfiqri.site/public
+/home/<akun>/kangmuslim/public
 ```
-(Sama seperti galajuara yang menunjuk ke `.../public`.)
+(Domain utama pun docroot-nya bisa diubah dari menu Domains. Menunjuk ke `.../public`,
+sama seperti galajuara.)
 
 ### E. Buat File `.env` Produksi (sekali setup)
 Lewat Terminal cPanel / SSH, di folder project:
 ```bash
-cd /home/zulh7811/public_html/zulfiqri.site
+cd ~/kangmuslim
 cp .env.production.example .env
 php spark key:generate          # generate kunci enkripsi unik
 # lalu edit .env → isi nama DB, user, password sesuai langkah B
@@ -108,7 +105,7 @@ php spark key:generate          # generate kunci enkripsi unik
 
 ### F. Deploy Pertama & Selanjutnya
 ```bash
-bash /home/zulh7811/public_html/zulfiqri.site/deploy/deploy.sh
+bash ~/kangmuslim/deploy/deploy.sh
 ```
 Script `deploy/deploy.sh` (sudah disiapkan, pola galajuara) akan:
 `git fetch` → `git reset --hard origin/main` → `git clean -fd` →
@@ -127,7 +124,7 @@ Script `deploy/deploy.sh` (sudah disiapkan, pola galajuara) akan:
 ## 5. Pemakaian Singkat
 
 1. Admin login → **Pengaturan Sekolah** → isi nama sekolah, logo, kepala sekolah, dll.
-2. Bagikan link form ke guru: `https://zulfiqri.it.com/` (atau `.../public/`).
+2. Bagikan link form ke guru: `https://kangmuslim.com/` (atau `.../public/`).
 3. Guru mengisi & mengirim.
 4. Admin → **Data Kesediaan** → lihat detail, **Cetak Surat (PDF)**, atau **Export Excel/Rekap PDF**.
 5. Jika periode selesai → matikan **"Buka pengisian form"** di Pengaturan.
