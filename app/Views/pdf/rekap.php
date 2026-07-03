@@ -1,46 +1,121 @@
 <?php
-    $logoData = null;
-    if (! empty($setting['logo'])) {
-        $lp = FCPATH . 'uploads/' . $setting['logo'];
-        if (is_file($lp)) {
-            $mime = function_exists('mime_content_type') ? (mime_content_type($lp) ?: 'image/png') : 'image/png';
-            $logoData = 'data:' . $mime . ';base64,' . base64_encode((string) @file_get_contents($lp));
-        }
+$logoData = null;
+if (! empty($setting['logo'])) {
+    $lp = FCPATH . 'uploads/' . $setting['logo'];
+    if (is_file($lp)) {
+        $mime = function_exists('mime_content_type') ? (mime_content_type($lp) ?: 'image/png') : 'image/png';
+        $logoData = 'data:' . $mime . ';base64,' . base64_encode((string) @file_get_contents($lp));
     }
-    $alamat = trim((string) ($setting['address'] ?? ''));
-    $kota   = trim((string) ($setting['city'] ?? ''));
-    $lokasi = ($kota && stripos($alamat, $kota) === false) ? ($alamat ? $alamat . ', ' . $kota : $kota) : $alamat;
+}
+$alamat = trim((string) ($setting['address'] ?? ''));
+$kota   = trim((string) ($setting['city'] ?? ''));
+$lokasi = ($kota && stripos($alamat, $kota) === false) ? ($alamat ? $alamat . ', ' . $kota : $kota) : $alamat;
 ?>
 <!DOCTYPE html>
 <html>
+
 <head>
-<meta charset="utf-8">
-<style>
-    * { font-family: 'DejaVu Sans', sans-serif; }
-    @page { margin: 1cm 1.2cm; }
-    body { font-size: 9px; color: #1a1a1a; }
-    .kop { border-bottom: 2px solid #1a3a6b; padding-bottom: 6px; margin-bottom: 8px; }
-    .kop table { width: 100%; }
-    .kop .logo { width: 66px; text-align: center; }
-    .kop .logo img { max-width: 60px; max-height: 60px; }
-    .kop h2 { margin: 0; font-size: 14px; color: #1a3a6b; }
-    .kop p { margin: 1px 0 0; font-size: 8px; color: #444; }
-    .title { text-align: center; margin: 4px 0 8px; }
-    .title h3 { margin: 0; font-size: 12px; text-transform: uppercase; }
-    .title p { margin: 1px 0 0; font-size: 9px; }
-    table.grid { width: 100%; border-collapse: collapse; }
-    table.grid th, table.grid td { border: 1px solid #666; padding: 3px 4px; vertical-align: top; }
-    table.grid th { background: #1a3a6b; color: #fff; text-align: center; font-size: 8.5px; }
-    .ctr { text-align: center; }
-    .foot { margin-top: 12px; font-size: 8px; text-align: right; color: #555; }
-</style>
+    <meta charset="utf-8">
+    <style>
+        * {
+            font-family: 'DejaVu Sans', sans-serif;
+        }
+
+        @page {
+            margin: 1cm 1.2cm;
+        }
+
+        body {
+            font-size: 9px;
+            color: #1a1a1a;
+        }
+
+        .kop {
+            border-bottom: 2px solid #1a3a6b;
+            padding-bottom: 6px;
+            margin-bottom: 8px;
+        }
+
+        .kop table {
+            width: 100%;
+        }
+
+        .kop .logo {
+            width: 66px;
+            text-align: center;
+        }
+
+        .kop .logo img {
+            max-width: 60px;
+            max-height: 60px;
+        }
+
+        .kop h2 {
+            margin: 0;
+            font-size: 14px;
+            color: #1a3a6b;
+        }
+
+        .kop p {
+            margin: 1px 0 0;
+            font-size: 8px;
+            color: #444;
+        }
+
+        .title {
+            text-align: center;
+            margin: 4px 0 8px;
+        }
+
+        .title h3 {
+            margin: 0;
+            font-size: 12px;
+            text-transform: uppercase;
+        }
+
+        .title p {
+            margin: 1px 0 0;
+            font-size: 9px;
+        }
+
+        table.grid {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        table.grid th,
+        table.grid td {
+            border: 1px solid #666;
+            padding: 3px 4px;
+            vertical-align: top;
+        }
+
+        table.grid th {
+            background: #1a3a6b;
+            color: #fff;
+            text-align: center;
+            font-size: 8.5px;
+        }
+
+        .ctr {
+            text-align: center;
+        }
+
+        .foot {
+            margin-top: 12px;
+            font-size: 8px;
+            text-align: right;
+            color: #555;
+        }
+    </style>
 </head>
+
 <body>
     <?= kop_pdf() ?>
 
     <div class="title">
         <h3>Rekapitulasi Kesediaan Guru Mengajar</h3>
-        <p>Tahun Pelajaran <?= esc($setting['academic_year']) ?><?= $status ? ' &middot; Status: ' . esc($status) : '' ?> &middot; Total: <?= count($rows) ?> guru</p>
+        <p>Tahun Ajaran <?= esc($setting['academic_year']) ?><?= $status ? ' &middot; Status: ' . esc($status) : '' ?> &middot; Total: <?= count($rows) ?> guru</p>
     </div>
 
     <table class="grid">
@@ -59,31 +134,35 @@
         </thead>
         <tbody>
             <?php if (empty($rows)): ?>
-                <tr><td colspan="9" class="ctr">Belum ada data.</td></tr>
-            <?php else: foreach ($rows as $i => $d):
-                $mapel = implode('; ', array_map(fn ($m) => $m['mapel'] . ($m['kelas'] ? " ({$m['kelas']})" : ''), $d['mapel_diampu'] ?: []));
-                $tugas = ! empty($d['tugas_tambahan']) ? 'Bersedia' : '-';
-                $hari  = [];
-                foreach (($d['ketersediaan_hari'] ?: []) as $h => $s) {
-                    if ($s) $hari[] = substr($h, 0, 3) . ': ' . implode('/', (array) $s);
-                }
-                $hariStr = $hari ? implode(', ', $hari) : '-';
-            ?>
                 <tr>
-                    <td class="ctr"><?= $i+1 ?></td>
-                    <td><?= esc($d['nama_lengkap']) ?></td>
-                    <td><?= esc($d['guru_mapel'] ?: '-') ?></td>
-                    <td class="ctr"><?= esc($d['status_kepegawaian'] ?: '-') ?></td>
-                    <td><?= esc($d['nomor_hp'] ?: '-') ?></td>
-                    <td><?= esc($mapel ?: '-') ?></td>
-                    <td class="ctr"><?= $tugas ?></td>
-                    <td><?= esc($hariStr) ?></td>
-                    <td class="ctr"><?= empty($d['bersedia_mengajar']) ? 'TIDAK' : 'Bersedia' ?></td>
+                    <td colspan="9" class="ctr">Belum ada data.</td>
                 </tr>
-            <?php endforeach; endif; ?>
+                <?php else: foreach ($rows as $i => $d):
+                    $mapel = implode('; ', array_map(fn($m) => $m['mapel'] . ($m['kelas'] ? " ({$m['kelas']})" : ''), $d['mapel_diampu'] ?: []));
+                    $tugas = ! empty($d['tugas_tambahan']) ? 'Bersedia' : '-';
+                    $hari  = [];
+                    foreach (($d['ketersediaan_hari'] ?: []) as $h => $s) {
+                        if ($s) $hari[] = substr($h, 0, 3) . ': ' . implode('/', (array) $s);
+                    }
+                    $hariStr = $hari ? implode(', ', $hari) : '-';
+                ?>
+                    <tr>
+                        <td class="ctr"><?= $i + 1 ?></td>
+                        <td><?= esc($d['nama_lengkap']) ?></td>
+                        <td><?= esc($d['guru_mapel'] ?: '-') ?></td>
+                        <td class="ctr"><?= esc($d['status_kepegawaian'] ?: '-') ?></td>
+                        <td><?= esc($d['nomor_hp'] ?: '-') ?></td>
+                        <td><?= esc($mapel ?: '-') ?></td>
+                        <td class="ctr"><?= $tugas ?></td>
+                        <td><?= esc($hariStr) ?></td>
+                        <td class="ctr"><?= empty($d['bersedia_mengajar']) ? 'TIDAK' : 'Bersedia' ?></td>
+                    </tr>
+            <?php endforeach;
+            endif; ?>
         </tbody>
     </table>
 
     <div class="foot">Dicetak: <?= date('d F Y, H:i') ?> WIB</div>
 </body>
+
 </html>

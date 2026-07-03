@@ -1,4 +1,5 @@
 <?php
+
 /**
  * Grid jadwal untuk PDF (mode 'kelas' = satu shift; mode 'guru' = per shift per halaman).
  *
@@ -12,26 +13,104 @@
 ?>
 <!DOCTYPE html>
 <html lang="id">
+
 <head>
-<meta charset="UTF-8">
-<style>
-    * { font-family: "DejaVu Sans", sans-serif; }
-    body { margin: 0; color: #1e293b; font-size: 10px; }
-    .head { text-align: center; margin-bottom: 10px; }
-    .head h1 { margin: 0; font-size: 14px; }
-    .head p { margin: 2px 0; font-size: 10px; color: #475569; }
-    .shifttag { display: inline-block; background: #1A3A6B; color: #fff; padding: 3px 16px; font-size: 11px; font-weight: bold; letter-spacing: 2px; margin-top: 4px; }
-    table { width: 100%; border-collapse: collapse; }
-    th, td { border: 0.7px solid #94a3b8; padding: 4px 5px; text-align: center; vertical-align: middle; }
-    th { background: #1A3A6B; color: #fff; }
-    td.jam { text-align: left; white-space: nowrap; background: #f1f5f9; font-weight: bold; }
-    tr.istirahat td { background: #fff3cd; color: #92400e; font-weight: bold; letter-spacing: 1px; }
-    .mapel { font-weight: bold; color: #1A3A6B; font-size: 10px; }
-    .cell2 { color: #475569; font-size: 10px; }
-    .sub { color: #64748b; font-size: 9px; }
-    .foot { margin-top: 10px; font-size: 9px; color: #94a3b8; text-align: right; }
-</style>
+    <meta charset="UTF-8">
+    <style>
+        * {
+            font-family: "DejaVu Sans", sans-serif;
+        }
+
+        body {
+            margin: 0;
+            color: #1e293b;
+            font-size: 10px;
+        }
+
+        .head {
+            text-align: center;
+            margin-bottom: 10px;
+        }
+
+        .head h1 {
+            margin: 0;
+            font-size: 14px;
+        }
+
+        .head p {
+            margin: 2px 0;
+            font-size: 10px;
+            color: #475569;
+        }
+
+        .shifttag {
+            display: inline-block;
+            background: #1A3A6B;
+            color: #fff;
+            padding: 3px 16px;
+            font-size: 11px;
+            font-weight: bold;
+            letter-spacing: 2px;
+            margin-top: 4px;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        th,
+        td {
+            border: 0.7px solid #94a3b8;
+            padding: 4px 5px;
+            text-align: center;
+            vertical-align: middle;
+        }
+
+        th {
+            background: #1A3A6B;
+            color: #fff;
+        }
+
+        td.jam {
+            text-align: left;
+            white-space: nowrap;
+            background: #f1f5f9;
+            font-weight: bold;
+        }
+
+        tr.istirahat td {
+            background: #fff3cd;
+            color: #92400e;
+            font-weight: bold;
+            letter-spacing: 1px;
+        }
+
+        .mapel {
+            font-weight: bold;
+            color: #1A3A6B;
+            font-size: 10px;
+        }
+
+        .cell2 {
+            color: #475569;
+            font-size: 10px;
+        }
+
+        .sub {
+            color: #64748b;
+            font-size: 9px;
+        }
+
+        .foot {
+            margin-top: 10px;
+            font-size: 9px;
+            color: #94a3b8;
+            text-align: right;
+        }
+    </style>
 </head>
+
 <body>
     <?php
     // Mode guru: pisah per shift → tiap shift satu tabel di HALAMAN sendiri (page-break).
@@ -51,7 +130,7 @@
             <?= kop_pdf() ?>
             <div class="head">
                 <h1><?= esc($title) ?></h1>
-                <p>Tahun Pelajaran <?= esc($setting['academic_year'] ?? '') ?></p>
+                <p>Tahun Ajaran <?= esc($setting['academic_year'] ?? '') ?></p>
                 <?php if ($mode === 'guru'): ?><span class="shifttag">SHIFT <?= esc(strtoupper($shift)) ?></span><?php endif; ?>
             </div>
 
@@ -65,7 +144,9 @@
                 <tbody>
                     <?php foreach ($jamSec as $j): ?>
                         <?php if (! empty($j['is_istirahat'])): ?>
-                            <tr class="istirahat"><td colspan="<?= count($hari) + 1 ?>">ISTIRAHAT (<?= esc(substr($j['waktu_mulai'], 0, 5)) ?>&ndash;<?= esc(substr($j['waktu_selesai'], 0, 5)) ?>)</td></tr>
+                            <tr class="istirahat">
+                                <td colspan="<?= count($hari) + 1 ?>">ISTIRAHAT (<?= esc(substr($j['waktu_mulai'], 0, 5)) ?>&ndash;<?= esc(substr($j['waktu_selesai'], 0, 5)) ?>)</td>
+                            </tr>
                         <?php else: ?>
                             <tr>
                                 <td class="jam">
@@ -94,4 +175,5 @@
 
     <p class="foot">Dicetak <?= date('d-m-Y H:i') ?></p>
 </body>
+
 </html>

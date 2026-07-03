@@ -22,7 +22,9 @@
                     <?php if (! empty($setting['logo'])): ?>
                         <img src="<?= base_url('uploads/' . esc($setting['logo'])) ?>" class="h-full w-full object-contain" alt="Logo">
                     <?php else: ?>
-                        <svg class="w-8 h-8 text-slate-300" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
+                        <svg class="w-8 h-8 text-slate-300" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                        </svg>
                     <?php endif; ?>
                 </div>
                 <div>
@@ -69,7 +71,7 @@
                     <input type="text" name="website" value="<?= esc($setting['website']) ?>" class="inp" placeholder="zulfiqri.it.com">
                 </div>
                 <div>
-                    <label class="lbl">Tahun Pelajaran</label>
+                    <label class="lbl">Tahun Ajaran</label>
                     <input type="text" name="academic_year" value="<?= esc($setting['academic_year']) ?>" class="inp" placeholder="2026/2027">
                 </div>
             </div>
@@ -77,7 +79,9 @@
     </div>
 
     <div class="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden mt-5">
-        <div class="px-6 py-4 border-b border-slate-100"><h2 class="font-bold text-slate-800">Kepala Sekolah &amp; Form</h2></div>
+        <div class="px-6 py-4 border-b border-slate-100">
+            <h2 class="font-bold text-slate-800">Kepala Sekolah &amp; Form</h2>
+        </div>
         <div class="p-6 space-y-5">
             <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
@@ -119,7 +123,9 @@
 
     <div class="mt-5 flex justify-end">
         <button class="inline-flex items-center gap-2 bg-brand-700 hover:bg-brand-800 text-white font-semibold px-7 py-3 rounded-xl transition active:scale-95">
-            <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/></svg>
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7" />
+            </svg>
             Simpan Pengaturan
         </button>
     </div>

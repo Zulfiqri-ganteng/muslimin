@@ -2,44 +2,44 @@
 <?= $this->section('content') ?>
 
 <?php
-    $tahun  = esc($setting['academic_year'] ?? '2026/2027');
-    $jamOpt = [
-        'Bersedia mengajar sesuai beban kerja yang ditetapkan sekolah.',
-        'Bersedia mengajar lintas kelas/program keahlian sesuai kompetensi.',
-        'Bersedia mengajar pada jadwal pagi.',
-        'Bersedia mengajar pada jadwal siang.',
-        'Bersedia mengajar pada jadwal pagi & siang.',
-    ];
-    $hariList = ['Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat'];
-    $sesiList = ['Pagi', 'Siang'];
-    $komitmen = [
-        'Melaksanakan proses pembelajaran sesuai ketentuan yang berlaku.',
-        'Menyusun perangkat ajar secara lengkap dan tepat waktu.',
-        'Melaksanakan asesmen dan evaluasi pembelajaran secara objektif.',
-        'Menjaga disiplin, etika profesi, dan nama baik sekolah.',
-        'Mendukung seluruh program sekolah.',
-        'Mengikuti rapat, pelatihan, workshop, dan kegiatan sekolah yang ditugaskan.',
-        'Melaksanakan tugas tambahan dengan penuh tanggung jawab.',
-        'Mencapai target kinerja yang ditetapkan sekolah.',
-    ];
-    $stepLabels = ['Kesediaan', 'Identitas', 'Mata Pelajaran', 'Tugas & Jam', 'Lampiran', 'Pernyataan'];
-    $err = session('errors') ?? [];
+$tahun  = esc($setting['academic_year'] ?? '2026/2027');
+$jamOpt = [
+    'Bersedia mengajar sesuai beban kerja yang ditetapkan sekolah.',
+    'Bersedia mengajar lintas kelas/program keahlian sesuai kompetensi.',
+    'Bersedia mengajar pada jadwal pagi.',
+    'Bersedia mengajar pada jadwal siang.',
+    'Bersedia mengajar pada jadwal pagi & siang.',
+];
+$hariList = ['Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat'];
+$sesiList = ['Pagi', 'Siang'];
+$komitmen = [
+    'Melaksanakan proses pembelajaran sesuai ketentuan yang berlaku.',
+    'Menyusun perangkat ajar secara lengkap dan tepat waktu.',
+    'Melaksanakan asesmen dan evaluasi pembelajaran secara objektif.',
+    'Menjaga disiplin, etika profesi, dan nama baik sekolah.',
+    'Mendukung seluruh program sekolah.',
+    'Mengikuti rapat, pelatihan, workshop, dan kegiatan sekolah yang ditugaskan.',
+    'Melaksanakan tugas tambahan dengan penuh tanggung jawab.',
+    'Mencapai target kinerja yang ditetapkan sekolah.',
+];
+$stepLabels = ['Kesediaan', 'Identitas', 'Mata Pelajaran', 'Tugas & Jam', 'Lampiran', 'Pernyataan'];
+$err = session('errors') ?? [];
 
-    // ---- Mode: pengisian baru ATAU revisi ----
-    $d          = $data ?? [];
-    $isEdit     = ! empty($editToken);
-    $formAction = $isEdit ? site_url('revisi/' . $editToken) : site_url('kirim');
+// ---- Mode: pengisian baru ATAU revisi ----
+$d          = $data ?? [];
+$isEdit     = ! empty($editToken);
+$formAction = $isEdit ? site_url('revisi/' . $editToken) : site_url('kirim');
 
-    $fv = static function (string $field, $default = '') use ($d) {
-        $o = old($field);
-        return $o !== null ? $o : ($d[$field] ?? $default);
-    };
+$fv = static function (string $field, $default = '') use ($d) {
+    $o = old($field);
+    return $o !== null ? $o : ($d[$field] ?? $default);
+};
 
-    $selBersedia = old('bersedia') ?? (isset($d['bersedia_mengajar']) ? ($d['bersedia_mengajar'] ? 'ya' : 'tidak') : '');
-    $selStatus   = old('status_kepegawaian') ?? ($d['status_kepegawaian'] ?? '');
-    $tugasChecked= (old('tugas_bersedia') ?? (! empty($d['tugas_tambahan']) ? '1' : '')) ? true : false;
-    $selJam      = old('jam_kesediaan') ?? ($d['kesediaan_jam'] ?? []);
-    $selHari     = old('hari') ?? ($d['ketersediaan_hari'] ?? []);
+$selBersedia = old('bersedia') ?? (isset($d['bersedia_mengajar']) ? ($d['bersedia_mengajar'] ? 'ya' : 'tidak') : '');
+$selStatus   = old('status_kepegawaian') ?? ($d['status_kepegawaian'] ?? '');
+$tugasChecked = (old('tugas_bersedia') ?? (! empty($d['tugas_tambahan']) ? '1' : '')) ? true : false;
+$selJam      = old('jam_kesediaan') ?? ($d['kesediaan_jam'] ?? []);
+$selHari     = old('hari') ?? ($d['ketersediaan_hari'] ?? []);
 ?>
 
 <div class="max-w-3xl mx-auto px-4 py-6 sm:py-10" id="formTop">
@@ -54,7 +54,7 @@
             <?php endif; ?>
             <p class="text-brand-200 text-sm font-medium tracking-wide uppercase"><?= esc($setting['school_name'] ?? '') ?></p>
             <h1 class="mt-1 text-2xl sm:text-3xl font-extrabold leading-tight">Format Kesediaan Guru Mengajar</h1>
-            <span class="inline-block mt-3 bg-gold-400 text-brand-900 text-sm font-bold px-4 py-1.5 rounded-full">Tahun Pelajaran <?= $tahun ?></span>
+            <span class="inline-block mt-3 bg-gold-400 text-brand-900 text-sm font-bold px-4 py-1.5 rounded-full">Tahun Ajaran <?= $tahun ?></span>
         </div>
     </div>
 
@@ -166,7 +166,7 @@
             </div>
             <div class="p-6">
                 <div class="rounded-xl bg-brand-50 border border-brand-100 px-4 py-3 text-sm text-brand-800 mb-4">
-                    Bersedia melaksanakan tugas mengajar pada Tahun Pelajaran <?= $tahun ?> sesuai penugasan yang diberikan oleh Kepala Sekolah.
+                    Bersedia melaksanakan tugas mengajar pada Tahun Ajaran <?= $tahun ?> sesuai penugasan yang diberikan oleh Kepala Sekolah.
                 </div>
                 <div class="overflow-x-auto">
                     <table class="w-full text-sm">
@@ -182,7 +182,9 @@
                     </table>
                 </div>
                 <button type="button" id="addMapel" class="mt-3 inline-flex items-center gap-1.5 text-sm font-semibold text-brand-600 hover:text-brand-800">
-                    <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4"/></svg>
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4" />
+                    </svg>
                     Tambah baris mata pelajaran
                 </button>
             </div>
@@ -279,14 +281,20 @@
             <p id="submitHint" class="hidden text-center text-xs text-slate-400 leading-snug">Lengkapi data wajib untuk <?= $isEdit ? 'menyimpan' : 'mengirim' ?>.</p>
             <div class="flex items-center justify-between gap-2 sm:gap-3">
                 <button type="button" id="prevBtn" class="btn-nav-secondary invisible">
-                    <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7"/></svg>
+                    <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7" />
+                    </svg>
                     Kembali
                 </button>
                 <button type="button" id="nextBtn" class="btn-nav-primary">Lanjut
-                    <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7"/></svg>
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7" />
+                    </svg>
                 </button>
                 <button type="submit" id="submitBtn" class="btn-nav-gold hidden">
-                    <svg class="w-5 h-5 shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/></svg>
+                    <svg class="w-5 h-5 shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7" />
+                    </svg>
                     <?= $isEdit ? 'Simpan Perbaikan' : 'Kirim' ?>
                 </button>
             </div>
@@ -299,12 +307,15 @@
 <?= $this->section('scripts') ?>
 <script>
     /* ---- Tabel Mata Pelajaran (tanpa jam) ---- */
-    const oldMapel  = <?= json_encode(old('mapel') ?: []) ?>;
-    const oldKelas  = <?= json_encode(old('kelas') ?: []) ?>;
+    const oldMapel = <?= json_encode(old('mapel') ?: []) ?>;
+    const oldKelas = <?= json_encode(old('kelas') ?: []) ?>;
     const editMapel = <?= json_encode($d['mapel_diampu'] ?? []) ?>;
     const body = document.getElementById('mapelBody');
 
-    function renumber() { body.querySelectorAll('tr').forEach((tr, i) => tr.querySelector('.row-no').textContent = i + 1); }
+    function renumber() {
+        body.querySelectorAll('tr').forEach((tr, i) => tr.querySelector('.row-no').textContent = i + 1);
+    }
+
     function addRow(mapel = '', kelas = '') {
         const tr = document.createElement('tr');
         tr.className = 'border-b border-slate-100';
@@ -314,49 +325,75 @@
             <td class="px-2 py-2"><input type="text" name="kelas[]" value="${String(kelas).replace(/"/g,'&quot;')}" class="w-full rounded-md border border-slate-200 px-2.5 py-1.5 text-sm focus:border-brand-500 focus:ring-1 focus:ring-brand-500/30 outline-none" placeholder="X / XI / XII"></td>
             <td class="px-2 py-2 text-center"><button type="button" class="del-row text-slate-300 hover:text-red-500"><svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg></button></td>`;
         body.appendChild(tr);
-        tr.querySelector('.del-row').addEventListener('click', () => { if (body.children.length > 1) { tr.remove(); renumber(); } });
+        tr.querySelector('.del-row').addEventListener('click', () => {
+            if (body.children.length > 1) {
+                tr.remove();
+                renumber();
+            }
+        });
         renumber();
     }
     document.getElementById('addMapel').addEventListener('click', () => addRow());
-    if (oldMapel.length) { oldMapel.forEach((m, i) => addRow(m || '', oldKelas[i] || '')); }
-    else if (editMapel.length) { editMapel.forEach(m => addRow(m.mapel || '', m.kelas || '')); }
-    else { addRow(); addRow(); addRow(); }
+    if (oldMapel.length) {
+        oldMapel.forEach((m, i) => addRow(m || '', oldKelas[i] || ''));
+    } else if (editMapel.length) {
+        editMapel.forEach(m => addRow(m.mapel || '', m.kelas || ''));
+    } else {
+        addRow();
+        addRow();
+        addRow();
+    }
 
     /* ---- Wizard ---- */
-    const steps     = Array.from(document.querySelectorAll('.wizard-step'));
-    const dots      = Array.from(document.querySelectorAll('.step-dot'));
-    const prevBtn   = document.getElementById('prevBtn');
-    const nextBtn   = document.getElementById('nextBtn');
+    const steps = Array.from(document.querySelectorAll('.wizard-step'));
+    const dots = Array.from(document.querySelectorAll('.step-dot'));
+    const prevBtn = document.getElementById('prevBtn');
+    const nextBtn = document.getElementById('nextBtn');
     const submitBtn = document.getElementById('submitBtn');
-    const submitHint= document.getElementById('submitHint');
-    const declineMsg= document.getElementById('declineMsg');
+    const submitHint = document.getElementById('submitHint');
+    const declineMsg = document.getElementById('declineMsg');
     const curStepEl = document.getElementById('curStep');
-    const titleEl   = document.getElementById('stepTitle');
-    const barEl     = document.getElementById('progressBar');
-    const formTop   = document.getElementById('formTop');
-    const formEl    = document.getElementById('formKesediaan');
+    const titleEl = document.getElementById('stepTitle');
+    const barEl = document.getElementById('progressBar');
+    const formTop = document.getElementById('formTop');
+    const formEl = document.getElementById('formKesediaan');
     let current = 0;
 
-    const valOf   = (n) => { const e = formEl.querySelector('[name="' + n + '"]'); return e ? String(e.value).trim() : ''; };
-    const radioOf = (n) => { const r = formEl.querySelector('input[name="' + n + '"]:checked'); return r ? r.value : ''; };
+    const valOf = (n) => {
+        const e = formEl.querySelector('[name="' + n + '"]');
+        return e ? String(e.value).trim() : '';
+    };
+    const radioOf = (n) => {
+        const r = formEl.querySelector('input[name="' + n + '"]:checked');
+        return r ? r.value : '';
+    };
     const willing = () => radioOf('bersedia');
-    const namaOk  = () => valOf('nama_lengkap') !== '';
+    const namaOk = () => valOf('nama_lengkap') !== '';
+
     function isComplete() {
         return namaOk() && willing() === 'ya' && valOf('nomor_hp') !== '' &&
-               radioOf('status_kepegawaian') !== '' && formEl.querySelector('[name="komitmen_setuju"]').checked;
+            radioOf('status_kepegawaian') !== '' && formEl.querySelector('[name="komitmen_setuju"]').checked;
     }
 
     function render(scroll = true) {
         steps.forEach((s, i) => s.classList.toggle('hidden', i !== current));
-        dots.forEach((d, i) => { d.classList.toggle('is-active', i === current); d.classList.toggle('is-done', i < current); });
+        dots.forEach((d, i) => {
+            d.classList.toggle('is-active', i === current);
+            d.classList.toggle('is-done', i < current);
+        });
         curStepEl.textContent = current + 1;
-        titleEl.textContent   = steps[current].dataset.title.replace('&amp;', '&');
-        barEl.style.width     = ((current + 1) / steps.length * 100) + '%';
+        titleEl.textContent = steps[current].dataset.title.replace('&amp;', '&');
+        barEl.style.width = ((current + 1) / steps.length * 100) + '%';
         prevBtn.classList.toggle('invisible', current === 0);
         updateNav();
         const el = steps[current];
-        el.classList.remove('step-anim'); void el.offsetWidth; el.classList.add('step-anim');
-        if (scroll) window.scrollTo({ top: formTop.offsetTop - 16, behavior: 'smooth' });
+        el.classList.remove('step-anim');
+        void el.offsetWidth;
+        el.classList.add('step-anim');
+        if (scroll) window.scrollTo({
+            top: formTop.offsetTop - 16,
+            behavior: 'smooth'
+        });
     }
 
     function updateNav() {
@@ -380,7 +417,9 @@
             const ok = isComplete();
             if (ok && submitBtn.classList.contains('hidden')) {
                 submitBtn.classList.remove('hidden');
-                submitBtn.classList.remove('pop-anim'); void submitBtn.offsetWidth; submitBtn.classList.add('pop-anim');
+                submitBtn.classList.remove('pop-anim');
+                void submitBtn.offsetWidth;
+                submitBtn.classList.add('pop-anim');
             } else if (!ok) {
                 submitBtn.classList.add('hidden');
             }
@@ -391,20 +430,49 @@
     function validateStep(idx) {
         if (idx === 0) {
             const nm = formEl.querySelector('[name="nama_lengkap"]');
-            if (!nm.value.trim()) { alert('Mohon isi Nama Lengkap.'); nm.focus(); return false; }
-            if (willing() === '') { alert('Silakan pilih kesediaan Anda terlebih dahulu.'); return false; }
+            if (!nm.value.trim()) {
+                alert('Mohon isi Nama Lengkap.');
+                nm.focus();
+                return false;
+            }
+            if (willing() === '') {
+                alert('Silakan pilih kesediaan Anda terlebih dahulu.');
+                return false;
+            }
         }
         if (idx === 1) {
             const hp = formEl.querySelector('[name="nomor_hp"]');
-            if (!hp.value.trim()) { alert('Mohon isi Nomor HP / WhatsApp.'); hp.focus(); return false; }
-            if (radioOf('status_kepegawaian') === '') { alert('Silakan pilih Status Kepegawaian.'); return false; }
+            if (!hp.value.trim()) {
+                alert('Mohon isi Nomor HP / WhatsApp.');
+                hp.focus();
+                return false;
+            }
+            if (radioOf('status_kepegawaian') === '') {
+                alert('Silakan pilih Status Kepegawaian.');
+                return false;
+            }
         }
         return true;
     }
 
-    nextBtn.addEventListener('click', () => { if (validateStep(current) && current < steps.length - 1) { current++; render(); } });
-    prevBtn.addEventListener('click', () => { if (current > 0) { current--; render(); } });
-    dots.forEach((d, i) => d.addEventListener('click', () => { if (i < current) { current = i; render(); } }));
+    nextBtn.addEventListener('click', () => {
+        if (validateStep(current) && current < steps.length - 1) {
+            current++;
+            render();
+        }
+    });
+    prevBtn.addEventListener('click', () => {
+        if (current > 0) {
+            current--;
+            render();
+        }
+    });
+    dots.forEach((d, i) => d.addEventListener('click', () => {
+        if (i < current) {
+            current = i;
+            render();
+        }
+    }));
     formEl.addEventListener('input', updateNav);
     formEl.addEventListener('change', updateNav);
 

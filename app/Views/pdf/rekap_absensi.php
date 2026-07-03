@@ -1,4 +1,5 @@
 <?php
+
 /**
  * Rekap absensi guru (PDF).
  *
@@ -10,27 +11,75 @@
 ?>
 <!DOCTYPE html>
 <html lang="id">
+
 <head>
-<meta charset="UTF-8">
-<style>
-    * { font-family: "DejaVu Sans", sans-serif; }
-    body { margin: 0; color: #1e293b; font-size: 10px; }
-    .head { text-align: center; margin-bottom: 12px; }
-    .head h1 { margin: 0; font-size: 15px; }
-    .head p { margin: 2px 0; font-size: 10px; color: #475569; }
-    table { width: 100%; border-collapse: collapse; }
-    th, td { border: 0.7px solid #94a3b8; padding: 4px 6px; }
-    th { background: #1A3A6B; color: #fff; }
-    .c { text-align: center; }
-    .total td { font-weight: bold; background: #eef2ff; }
-    .foot { margin-top: 8px; font-size: 9px; color: #94a3b8; text-align: right; }
-</style>
+    <meta charset="UTF-8">
+    <style>
+        * {
+            font-family: "DejaVu Sans", sans-serif;
+        }
+
+        body {
+            margin: 0;
+            color: #1e293b;
+            font-size: 10px;
+        }
+
+        .head {
+            text-align: center;
+            margin-bottom: 12px;
+        }
+
+        .head h1 {
+            margin: 0;
+            font-size: 15px;
+        }
+
+        .head p {
+            margin: 2px 0;
+            font-size: 10px;
+            color: #475569;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        th,
+        td {
+            border: 0.7px solid #94a3b8;
+            padding: 4px 6px;
+        }
+
+        th {
+            background: #1A3A6B;
+            color: #fff;
+        }
+
+        .c {
+            text-align: center;
+        }
+
+        .total td {
+            font-weight: bold;
+            background: #eef2ff;
+        }
+
+        .foot {
+            margin-top: 8px;
+            font-size: 9px;
+            color: #94a3b8;
+            text-align: right;
+        }
+    </style>
 </head>
+
 <body>
     <?= kop_pdf() ?>
     <div class="head">
         <h1>REKAP ABSENSI GURU</h1>
-        <p>Tahun Pelajaran <?= esc($setting['academic_year'] ?? '') ?></p>
+        <p>Tahun Ajaran <?= esc($setting['academic_year'] ?? '') ?></p>
         <p>Periode <?= esc($dari) ?> s/d <?= esc($sampai) ?></p>
     </div>
 
@@ -54,7 +103,9 @@
                 </tr>
             </thead>
             <tbody>
-                <?php foreach ($rows as $i => $r): foreach ($sum as $k => $_) { $sum[$k] += (int) $r[$k]; } ?>
+                <?php foreach ($rows as $i => $r): foreach ($sum as $k => $_) {
+                        $sum[$k] += (int) $r[$k];
+                    } ?>
                     <tr>
                         <td class="c"><?= $i + 1 ?></td>
                         <td><?= esc($r['kode']) ?></td>
@@ -82,4 +133,5 @@
 
     <p class="foot">Dicetak <?= date('d-m-Y H:i') ?></p>
 </body>
+
 </html>
