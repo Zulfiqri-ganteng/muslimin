@@ -219,6 +219,6 @@ class Pengampu extends BaseMaster
             $r++;
         }
 
-        $this->streamXlsx($ss, 'Penugasan-Mengajar-' . date('Ymd-His'));
+        $this->streamXlsx($ss, 'Penugasan-Mengajar-' . date('Ymd-His'), 'G');
     }
 }

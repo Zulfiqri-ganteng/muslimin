@@ -123,7 +123,7 @@ class Hari extends BaseMaster
             $r++;
         }
 
-        $this->streamXlsx($ss, 'Master-Hari-' . date('Ymd-His'));
+        $this->streamXlsx($ss, 'Master-Hari-' . date('Ymd-His'), 'D');
     }
 
     public function template()

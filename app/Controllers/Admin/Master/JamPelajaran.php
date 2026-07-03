@@ -219,7 +219,7 @@ class JamPelajaran extends BaseMaster
             $r++;
         }
 
-        $this->streamXlsx($ss, 'Master-Jam-' . date('Ymd-His'));
+        $this->streamXlsx($ss, 'Master-Jam-' . date('Ymd-His'), 'G');
     }
 
     public function template()

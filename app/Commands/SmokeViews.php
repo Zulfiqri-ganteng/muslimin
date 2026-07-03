@@ -124,6 +124,30 @@ class SmokeViews extends BaseCommand
                 ],
                 'grid'     => ['1-1' => ['hari_id' => 1, 'jam_id' => 1, 'shift' => 'pagi', 'kode_mapel' => 'PD', 'nama_mapel' => 'Pemrograman Dasar', 'nama_kelas' => 'X TKJT 1']],
             ],
+            'pdf/jadwal_grid' => [
+                'title'   => 'JADWAL PELAJARAN — X TKJT 1',
+                'setting' => ['school_name' => 'SMK Uji', 'academic_year' => '2026/2027'],
+                'hari'    => [['id' => 1, 'nama' => 'Senin', 'urutan' => 1, 'aktif' => 1]],
+                'jam'     => [
+                    ['id' => 1, 'shift' => 'pagi', 'jam_ke' => 1, 'waktu_mulai' => '07:00:00', 'waktu_selesai' => '07:45:00', 'durasi' => 45, 'is_istirahat' => 0],
+                    ['id' => 2, 'shift' => 'pagi', 'jam_ke' => 2, 'waktu_mulai' => '09:00:00', 'waktu_selesai' => '09:15:00', 'durasi' => 15, 'is_istirahat' => 1],
+                ],
+                'grid'    => ['1-1' => ['nama_mapel' => 'Pemrograman Dasar', 'guru_nama' => 'Muslimin', 'nama_kelas' => 'X TKJT 1', 'kode_mapel' => 'PD']],
+                'mode'    => 'kelas',
+            ],
+            'pdf/rekap_beban' => [
+                'setting' => ['school_name' => 'SMK Uji', 'academic_year' => '2026/2027'],
+                'grouped' => [[
+                    'kode_guru' => '27', 'guru_nama' => 'Muslimin', 'total' => 10, 'max_beban' => 24,
+                    'items'     => [['mapel' => 'Pemrograman Dasar', 'kelas' => 'X TKJT 1', 'jp' => 4]],
+                ]],
+            ],
+            'pdf/rekap_absensi' => [
+                'setting' => ['school_name' => 'SMK Uji', 'academic_year' => '2026/2027'],
+                'dari'    => '2026-07-01',
+                'sampai'  => '2026-07-31',
+                'rows'    => [['kode' => '27', 'nama' => 'Muslimin', 'total' => 12, 'hadir' => 11, 'telat' => 0, 'izin' => 1, 'sakit' => 0, 'alpa' => 0]],
+            ],
             'admin/master/import_preview' => [
                 'title'    => 'Pratinjau Impor', 'subtitle' => 'Master Guru',
                 'cols'     => [
@@ -149,6 +173,30 @@ class SmokeViews extends BaseCommand
                 $fail = true;
                 CLI::error('FAIL ' . $viewName . ' → ' . $e->getMessage() . ' @ ' . $e->getFile() . ':' . $e->getLine());
             }
+        }
+
+        // Uji nyata: kop_excel_prepend harus menghasilkan file xlsx yang valid.
+        try {
+            $ss    = new \PhpOffice\PhpSpreadsheet\Spreadsheet();
+            $sheet = $ss->getActiveSheet();
+            $sheet->fromArray(['No', 'Nama'], null, 'A1', true);
+            $sheet->setCellValue('A2', 1);
+            $sheet->setCellValue('B2', 'Uji');
+            $sheet->setCellValue('B3', '=SUM(A2:A2)');
+            kop_excel_prepend($sheet, 'B');
+
+            $tmp = WRITEPATH . 'cache/smoke_kop.xlsx';
+            (new \PhpOffice\PhpSpreadsheet\Writer\Xlsx($ss))->save($tmp);
+            $reloaded = \PhpOffice\PhpSpreadsheet\IOFactory::load($tmp)->getActiveSheet();
+            // header tabel harus bergeser ke baris 6 (5 baris KOP di atasnya)
+            if ((string) $reloaded->getCell('A6')->getValue() !== 'No') {
+                throw new \RuntimeException('Isi sheet tidak bergeser 5 baris seperti seharusnya.');
+            }
+            @unlink($tmp);
+            CLI::write('OK   kop_excel_prepend (xlsx valid, isi bergeser benar)', 'green');
+        } catch (\Throwable $e) {
+            $fail = true;
+            CLI::error('FAIL kop_excel_prepend → ' . $e->getMessage());
         }
 
         restore_error_handler();

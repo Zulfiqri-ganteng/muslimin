@@ -256,7 +256,7 @@ class Absensi extends BaseController
         $sheet->setTitle('Rekap Absensi');
 
         $sheet->mergeCells('A1:I1')->setCellValue('A1', 'REKAP ABSENSI GURU');
-        $sheet->mergeCells('A2:I2')->setCellValue('A2', strtoupper($setting['school_name'] ?? '') . ' — T.P. ' . ($setting['academic_year'] ?? ''));
+        $sheet->mergeCells('A2:I2')->setCellValue('A2', 'Tahun Pelajaran ' . ($setting['academic_year'] ?? ''));
         $sheet->mergeCells('A3:I3')->setCellValue('A3', 'Periode ' . $dari . ' s/d ' . $sampai);
         $sheet->getStyle('A1')->getFont()->setBold(true)->setSize(14);
         $sheet->getStyle('A1:A3')->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER);
@@ -300,6 +300,8 @@ class Absensi extends BaseController
         foreach (['A' => 5, 'B' => 10, 'C' => 30, 'D' => 11, 'E' => 9, 'F' => 9, 'G' => 9, 'H' => 9, 'I' => 9] as $col => $w) {
             $sheet->getColumnDimension($col)->setWidth($w);
         }
+
+        kop_excel_prepend($sheet, 'I');
 
         $this->streamXlsx($ss, 'Rekap-Absensi-' . $dari . '_' . $sampai);
         return null;

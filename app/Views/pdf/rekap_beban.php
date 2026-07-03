@@ -1,3 +1,11 @@
+<?php
+/**
+ * Rekap beban mengajar (PDF).
+ *
+ * @var array $setting Pengaturan sekolah
+ * @var array $grouped Data beban per guru
+ */
+?>
 <!DOCTYPE html>
 <html lang="id">
 <head>
@@ -19,9 +27,10 @@
 </style>
 </head>
 <body>
+    <?= kop_pdf() ?>
     <div class="head">
         <h1>REKAP BEBAN MENGAJAR</h1>
-        <p><?= esc(strtoupper($setting['school_name'])) ?> &mdash; Tahun Pelajaran <?= esc($setting['academic_year'] ?? '') ?></p>
+        <p>Tahun Pelajaran <?= esc($setting['academic_year'] ?? '') ?></p>
     </div>
 
     <?php if (empty($grouped)): ?>

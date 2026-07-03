@@ -109,7 +109,7 @@ class Jurusan extends BaseMaster
             $r++;
         }
 
-        $this->streamXlsx($ss, 'Master-Jurusan-' . date('Ymd-His'));
+        $this->streamXlsx($ss, 'Master-Jurusan-' . date('Ymd-His'), 'C');
     }
 
     public function template()

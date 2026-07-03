@@ -166,7 +166,7 @@ class MataPelajaran extends BaseMaster
             $r++;
         }
 
-        $this->streamXlsx($ss, 'Master-Mapel-' . date('Ymd-His'));
+        $this->streamXlsx($ss, 'Master-Mapel-' . date('Ymd-His'), 'E');
     }
 
     public function template()

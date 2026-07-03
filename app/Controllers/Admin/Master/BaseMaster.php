@@ -402,9 +402,16 @@ abstract class BaseMaster extends BaseController
         return $sheet;
     }
 
-    /** Stream file .xlsx ke browser sebagai unduhan. */
-    protected function streamXlsx(Spreadsheet $ss, string $filename): void
+    /**
+     * Stream file .xlsx ke browser sebagai unduhan.
+     * Isi $kopLastCol (mis. 'H') untuk menambah KOP sekolah di baris teratas —
+     * dipakai pada EXPORT; template import dibiarkan polos agar mudah diparse.
+     */
+    protected function streamXlsx(Spreadsheet $ss, string $filename, ?string $kopLastCol = null): void
     {
+        if ($kopLastCol !== null) {
+            kop_excel_prepend($ss->getActiveSheet(), $kopLastCol);
+        }
         header('Content-Type: application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
         header('Content-Disposition: attachment; filename="' . $filename . '.xlsx"');
         header('Cache-Control: max-age=0');

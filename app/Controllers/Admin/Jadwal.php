@@ -348,7 +348,7 @@ class Jadwal extends BaseController
         $lastCol  = Coordinate::stringFromColumnIndex(max(2, $colCount));
 
         // Judul (dipakai importer untuk mengenali kelas — JANGAN ubah nama kelas di sini)
-        $sheet->mergeCells("A1:{$lastCol}1")->setCellValue('A1', 'JADWAL KBM — ' . $namaKelas);
+        $sheet->mergeCells("A1:{$lastCol}1")->setCellValue('A1', 'JADWAL PELAJARAN — ' . $namaKelas);
         $sheet->mergeCells("A2:{$lastCol}2")->setCellValue('A2', strtoupper($setting['school_name']) . ' — T.P. ' . $setting['academic_year']);
         $sheet->getStyle('A1')->getFont()->setBold(true)->setSize(13);
         $sheet->getStyle('A1:A2')->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER);

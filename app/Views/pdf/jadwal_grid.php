@@ -1,3 +1,15 @@
+<?php
+/**
+ * Grid jadwal untuk PDF (mode 'kelas' = satu shift; mode 'guru' = per shift per halaman).
+ *
+ * @var string $title   Judul dokumen
+ * @var array  $setting Pengaturan sekolah
+ * @var array  $hari    Hari aktif terurut
+ * @var array  $jam     Slot jam (termasuk istirahat)
+ * @var array  $grid    Peta sel (kunci "hariId-jamId")
+ * @var string $mode    'kelas' | 'guru'
+ */
+?>
 <!DOCTYPE html>
 <html lang="id">
 <head>
@@ -36,9 +48,10 @@
     ?>
     <?php foreach ($sections as $shift => $jamSec): ?>
         <div <?= $first ? '' : 'style="page-break-before: always;"' ?>>
+            <?= kop_pdf() ?>
             <div class="head">
                 <h1><?= esc($title) ?></h1>
-                <p><?= esc(strtoupper($setting['school_name'])) ?> &mdash; Tahun Pelajaran <?= esc($setting['academic_year'] ?? '') ?></p>
+                <p>Tahun Pelajaran <?= esc($setting['academic_year'] ?? '') ?></p>
                 <?php if ($mode === 'guru'): ?><span class="shifttag">SHIFT <?= esc(strtoupper($shift)) ?></span><?php endif; ?>
             </div>
 

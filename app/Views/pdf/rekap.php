@@ -36,15 +36,7 @@
 </style>
 </head>
 <body>
-    <div class="kop">
-        <table><tr>
-            <?php if ($logoData): ?><td class="logo"><img src="<?= $logoData ?>"></td><?php endif; ?>
-            <td style="text-align:center">
-                <h2><?= esc(strtoupper($setting['school_name'])) ?></h2>
-                <p><?= esc($lokasi) ?></p>
-            </td>
-        </tr></table>
-    </div>
+    <?= kop_pdf() ?>
 
     <div class="title">
         <h3>Rekapitulasi Kesediaan Guru Mengajar</h3>

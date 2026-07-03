@@ -70,7 +70,7 @@ class Export extends BaseController
 
         // Judul
         $sheet->mergeCells('A1:J1')->setCellValue('A1', 'REKAP KESEDIAAN GURU MENGAJAR');
-        $sheet->mergeCells('A2:J2')->setCellValue('A2', strtoupper($setting['school_name']) . ' — T.P. ' . $setting['academic_year']);
+        $sheet->mergeCells('A2:J2')->setCellValue('A2', 'Tahun Pelajaran ' . $setting['academic_year']);
         $sheet->getStyle('A1')->getFont()->setBold(true)->setSize(14);
         $sheet->getStyle('A2')->getFont()->setBold(true)->setSize(11);
         $sheet->getStyle('A1:A2')->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER);
@@ -116,6 +116,8 @@ class Export extends BaseController
         foreach (['A'=>5,'B'=>28,'C'=>18,'D'=>8,'E'=>15,'F'=>40,'G'=>12,'H'=>30,'I'=>16,'J'=>12] as $c => $w) {
             $sheet->getColumnDimension($c)->setWidth($w);
         }
+
+        kop_excel_prepend($sheet, 'J');
 
         $filename = 'Rekap-Kesediaan-Guru-' . date('Ymd-His') . '.xlsx';
         header('Content-Type: application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');

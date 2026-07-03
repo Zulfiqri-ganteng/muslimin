@@ -148,7 +148,7 @@ class Guru extends BaseMaster
             $r++;
         }
 
-        $this->streamXlsx($ss, 'Master-Guru-' . date('Ymd-His'));
+        $this->streamXlsx($ss, 'Master-Guru-' . date('Ymd-His'), 'H');
     }
 
     public function template()

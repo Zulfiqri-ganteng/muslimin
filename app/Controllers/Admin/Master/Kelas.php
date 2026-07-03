@@ -152,7 +152,7 @@ class Kelas extends BaseMaster
             $r++;
         }
 
-        $this->streamXlsx($ss, 'Master-Kelas-' . date('Ymd-His'));
+        $this->streamXlsx($ss, 'Master-Kelas-' . date('Ymd-His'), 'F');
     }
 
     public function template()

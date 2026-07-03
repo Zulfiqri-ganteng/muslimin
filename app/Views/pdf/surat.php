@@ -66,21 +66,7 @@
 </head>
 <body>
 
-    <div class="kop">
-        <table><tr>
-            <?php if ($logoData): ?><td class="logo"><img src="<?= $logoData ?>"></td><?php endif; ?>
-            <td class="name">
-                <h2><?= esc(strtoupper($setting['school_name'])) ?></h2>
-                <p>
-                    <?= esc($lokasi) ?>
-                    <?php if ($setting['phone'] || $setting['email']): ?><br>
-                        <?= $setting['phone'] ? 'Telp: ' . esc($setting['phone']) : '' ?>
-                        <?= $setting['email'] ? ' &middot; Email: ' . esc($setting['email']) : '' ?>
-                    <?php endif; ?>
-                </p>
-            </td>
-        </tr></table>
-    </div>
+    <?= kop_pdf() ?>
 
     <div class="title">
         <h3>Surat Pernyataan Kesediaan Guru Mengajar</h3>

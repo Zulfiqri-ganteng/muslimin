@@ -38,7 +38,7 @@ class Cetak extends BaseController
         $jam  = (new JamPelajaranModel())->where('shift', $kelas['shift'])->orderBy('waktu_mulai', 'ASC')->findAll();
         $grid = (new JadwalModel())->gridForKelas($id);
 
-        $title    = 'JADWAL KBM — ' . $kelas['nama_kelas'];
+        $title    = 'JADWAL PELAJARAN — ' . $kelas['nama_kelas'];
         $filename = 'Jadwal-' . $this->slug($kelas['nama_kelas']);
 
         if ($format === 'excel') {
@@ -108,7 +108,7 @@ class Cetak extends BaseController
         $lastCol  = Coordinate::stringFromColumnIndex($colCount);
 
         $sheet->mergeCells("A1:{$lastCol}1")->setCellValue('A1', $title);
-        $sheet->mergeCells("A2:{$lastCol}2")->setCellValue('A2', strtoupper($this->setting()['school_name']) . ' — T.P. ' . $this->setting()['academic_year']);
+        $sheet->mergeCells("A2:{$lastCol}2")->setCellValue('A2', 'Tahun Pelajaran ' . $this->setting()['academic_year']);
         $sheet->getStyle('A1')->getFont()->setBold(true)->setSize(13);
         $sheet->getStyle('A1:A2')->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER);
 
@@ -174,6 +174,8 @@ class Cetak extends BaseController
             $sheet->getColumnDimension(Coordinate::stringFromColumnIndex($i))->setWidth(22);
         }
 
+        kop_excel_prepend($sheet, $lastCol);
+
         return $this->streamXlsx($ss, $filename);
     }
 
@@ -187,7 +189,7 @@ class Cetak extends BaseController
         $sheet->setTitle('Rekap Beban');
 
         $sheet->mergeCells('A1:F1')->setCellValue('A1', 'REKAP BEBAN MENGAJAR');
-        $sheet->mergeCells('A2:F2')->setCellValue('A2', strtoupper($this->setting()['school_name']) . ' — T.P. ' . $this->setting()['academic_year']);
+        $sheet->mergeCells('A2:F2')->setCellValue('A2', 'Tahun Pelajaran ' . $this->setting()['academic_year']);
         $sheet->getStyle('A1')->getFont()->setBold(true)->setSize(14);
         $sheet->getStyle('A1:A2')->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER);
 
@@ -245,6 +247,8 @@ class Cetak extends BaseController
         $ref->getColumnDimension('B')->setWidth(30);
 
         $ss->setActiveSheetIndex(0);
+        kop_excel_prepend($ss->getSheet(0), 'F');
+
         return $this->streamXlsx($ss, 'Rekap-Beban-Mengajar');
     }
 

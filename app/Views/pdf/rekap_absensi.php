@@ -1,3 +1,13 @@
+<?php
+/**
+ * Rekap absensi guru (PDF).
+ *
+ * @var array  $setting Pengaturan sekolah
+ * @var array  $rows    Baris rekap per guru
+ * @var string $dari    Tanggal awal periode
+ * @var string $sampai  Tanggal akhir periode
+ */
+?>
 <!DOCTYPE html>
 <html lang="id">
 <head>
@@ -17,9 +27,10 @@
 </style>
 </head>
 <body>
+    <?= kop_pdf() ?>
     <div class="head">
         <h1>REKAP ABSENSI GURU</h1>
-        <p><?= esc(strtoupper($setting['school_name'] ?? '')) ?> &mdash; Tahun Pelajaran <?= esc($setting['academic_year'] ?? '') ?></p>
+        <p>Tahun Pelajaran <?= esc($setting['academic_year'] ?? '') ?></p>
         <p>Periode <?= esc($dari) ?> s/d <?= esc($sampai) ?></p>
     </div>
 
