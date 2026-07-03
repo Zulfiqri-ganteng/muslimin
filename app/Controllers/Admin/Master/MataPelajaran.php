@@ -2,66 +2,69 @@
 
 namespace App\Controllers\Admin\Master;
 
-use App\Controllers\BaseController;
-use App\Models\AuditModel;
 use App\Models\GuruMapelModel;
 use App\Models\GuruModel;
 use App\Models\MataPelajaranModel;
-use PhpOffice\PhpSpreadsheet\IOFactory;
+use CodeIgniter\Database\BaseConnection;
+use CodeIgniter\Model;
 use PhpOffice\PhpSpreadsheet\Spreadsheet;
-use PhpOffice\PhpSpreadsheet\Style\Alignment;
-use PhpOffice\PhpSpreadsheet\Style\Fill;
-use PhpOffice\PhpSpreadsheet\Writer\Xlsx;
 
-class MataPelajaran extends BaseController
+class MataPelajaran extends BaseMaster
 {
-    protected MataPelajaranModel $model;
+    protected string $module     = 'mapel';
+    protected string $auditTable = 'mata_pelajaran';
+    protected string $routeBase  = 'admin/master/mapel';
+    protected string $entity     = 'mata pelajaran';
+    protected string $titleLabel = 'Master Mata Pelajaran';
+
     protected GuruMapelModel $kompetensi;
-    protected AuditModel $audit;
 
     public function __construct()
     {
-        $this->model      = new MataPelajaranModel();
+        parent::__construct();
         $this->kompetensi = new GuruMapelModel();
-        $this->audit      = new AuditModel();
+    }
+
+    protected function makeModel(): Model
+    {
+        return new MataPelajaranModel();
     }
 
     public function index()
     {
         $q        = trim((string) $this->request->getGet('q'));
         $kelompok = trim((string) $this->request->getGet('kelompok'));
-        $per      = (int) $this->request->getGet('per');
-        if (! in_array($per, [10, 20, 30, 40, 50], true)) {
-            $per = 10;
-        }
+        $per      = $this->perPage();
+        $page     = $this->pageNo();
 
-        $builder = $this->model;
-        if ($q !== '') {
-            $builder = $builder->groupStart()
-                ->like('nama_mapel', $q)->orLike('kode_mapel', $q)
-                ->groupEnd();
-        }
-        if ($kelompok !== '') {
-            $builder = $builder->where('kelompok', $kelompok);
-        }
+        $data = $this->cachedList("list|q={$q}|k={$kelompok}|per={$per}|p={$page}", function () use ($q, $kelompok, $per, $page) {
+            $builder = $this->model;
+            if ($q !== '') {
+                $builder = $builder->groupStart()
+                    ->like('nama_mapel', $q)->orLike('kode_mapel', $q)
+                    ->groupEnd();
+            }
+            if ($kelompok !== '') {
+                $builder = $builder->where('kelompok', $kelompok);
+            }
+            $rows = $builder->orderBy('nama_mapel', 'ASC')->paginate($per, 'default', $page);
 
-        $rows  = $builder->orderBy('nama_mapel', 'ASC')->paginate($per);
-        $pager = $this->model->pager;
+            // Peta kompetensi hanya untuk mapel yang tampil (1 query, efisien).
+            $kompMap = $this->kompetensi->mapForMapelIds(array_column($rows, 'id'));
 
-        // Peta kompetensi hanya untuk mapel yang tampil (1 query, efisien).
-        $mapelIds = array_column($rows, 'id');
-        $kompMap  = $this->kompetensi->mapForMapelIds($mapelIds);
+            return ['rows' => $rows, 'total' => $this->model->pager->getTotal(), 'kompMap' => $kompMap];
+        });
 
         return view('admin/master/mapel', [
-            'title'    => 'Master Mata Pelajaran',
-            'rows'     => $rows,
-            'pager'    => $pager,
-            'q'        => $q,
-            'kelompok' => $kelompok,
-            'per'      => $per,
-            'total'    => $pager ? $pager->getTotal() : count($rows),
-            'allGuru'  => (new GuruModel())->options(),
-            'kompMap'  => $kompMap,
+            'title'        => $this->titleLabel,
+            'rows'         => $data['rows'],
+            'pager'        => $this->storePager($page, $per, $data['total']),
+            'q'            => $q,
+            'kelompok'     => $kelompok,
+            'per'          => $per,
+            'total'        => $data['total'],
+            'allGuru'      => (new GuruModel())->options(),
+            'kompMap'      => $data['kompMap'],
             'kelompokList' => $this->kelompokList(),
         ]);
     }
@@ -72,65 +75,38 @@ class MataPelajaran extends BaseController
         if (! $this->model->insert($data)) {
             return redirect()->back()->withInput()->with('errors', $this->model->errors());
         }
-        $this->audit->record('create', 'mata_pelajaran', $this->model->getInsertID(), 'Tambah mapel ' . $data['nama_mapel']);
-        cache()->delete('opt_mapel');
+        master_data_changed($this->module);
+        $this->audit->record('create', $this->auditTable, $this->model->getInsertID(), 'Tambah mapel ' . $data['nama_mapel']);
 
-        return redirect()->to(site_url('admin/master/mapel'))->with('success', 'Mata pelajaran ditambahkan.');
+        return $this->goIndex('Mata pelajaran ditambahkan.');
     }
 
+    /** @param int|string $id */
     public function update($id)
     {
-        $id   = (int) $id;
-        $data = $this->collect();
+        $id         = (int) $id;
+        $data       = $this->collect();
         $data['id'] = $id; // isi placeholder {id} pada rule is_unique saat edit
         if (! $this->model->update($id, $data)) {
             return redirect()->back()->withInput()->with('errors', $this->model->errors());
         }
-        $this->audit->record('update', 'mata_pelajaran', $id, 'Ubah mapel ' . $data['nama_mapel']);
-        cache()->delete('opt_mapel');
+        master_data_changed($this->module);
+        $this->audit->record('update', $this->auditTable, $id, 'Ubah mapel ' . $data['nama_mapel']);
 
-        return redirect()->to(site_url('admin/master/mapel'))->with('success', 'Mata pelajaran diperbarui.');
+        return $this->goIndex('Mata pelajaran diperbarui.');
     }
 
-    public function delete($id)
-    {
-        $id = (int) $id;
-        $this->model->delete($id);
-        cache()->delete('opt_mapel');
-        $this->audit->record('delete', 'mata_pelajaran', $id, 'Hapus mapel');
-
-        return redirect()->to(site_url('admin/master/mapel'))->with('success', 'Mata pelajaran dihapus.');
-    }
-
-    /** Hapus banyak mapel sekaligus: mode 'selected' (ids terpilih) atau 'all' (semua). */
-    public function bulkDelete()
-    {
-        $mode = (string) $this->request->getPost('mode');
-        if ($mode === 'all') {
-            $ids = array_column($this->model->select('id')->findAll(), 'id');
-        } else {
-            $ids = array_values(array_filter(array_map('intval', (array) $this->request->getPost('ids'))));
-        }
-        if (empty($ids)) {
-            return redirect()->to(site_url('admin/master/mapel'))->with('error', 'Tidak ada data yang dipilih untuk dihapus.');
-        }
-
-        $this->model->delete($ids);
-        cache()->delete('opt_mapel');
-        $this->audit->record('delete', 'mata_pelajaran', null, 'Hapus massal ' . count($ids) . ' mapel (' . $mode . ')');
-
-        return redirect()->to(site_url('admin/master/mapel'))->with('success', count($ids) . ' mata pelajaran dihapus.');
-    }
-
-    /** Simpan kompetensi (daftar guru) untuk satu mapel. */
+    /** Simpan kompetensi (daftar guru yang boleh mengampu) untuk satu mapel. */
+    /** @param int|string $id */
     public function kompetensi($id)
     {
         $id      = (int) $id;
         $guruIds = (array) $this->request->getPost('guru_ids');
         $this->kompetensi->sync($id, $guruIds);
+        master_data_changed($this->module);
         $this->audit->record('update', 'guru_mapel', $id, 'Atur kompetensi: ' . count($guruIds) . ' guru');
 
-        return redirect()->to(site_url('admin/master/mapel'))->with('success', 'Kompetensi guru pengampu diperbarui.');
+        return $this->goIndex('Kompetensi guru pengampu diperbarui.');
     }
 
     private function collect(): array
@@ -148,202 +124,100 @@ class MataPelajaran extends BaseController
         return ['Umum', 'Kejuruan', 'Dasar-dasar Kejuruan', 'Muatan Lokal', 'Pilihan'];
     }
 
-    // ===================== EXPORT EXCEL =====================
+    /**
+     * Anti-orphan: hapus mapel ikut membersihkan kompetensi guru,
+     * penugasan yang memakai mapel ini beserta jadwalnya, dan melepas
+     * referensi pada absensi.
+     */
+    protected function cleanupRelations(BaseConnection $db, array $ids): void
+    {
+        $db->table('guru_mapel')->whereIn('mapel_id', $ids)->delete();
+
+        $pengampuIds = array_map('intval', array_column(
+            $db->table('pengampu')->select('id')->whereIn('mapel_id', $ids)->get()->getResultArray(),
+            'id'
+        ));
+        if ($pengampuIds !== []) {
+            $db->table('jadwal')->whereIn('pengampu_id', $pengampuIds)->delete();
+            $db->table('pengampu')->whereIn('id', $pengampuIds)->where('deleted_at', null)
+                ->update(['deleted_at' => date('Y-m-d H:i:s')]);
+        }
+
+        $db->table('absensi_guru')->whereIn('mapel_id', $ids)->update(['mapel_id' => null]);
+    }
+
+    // ===================== EXPORT & TEMPLATE =====================
+
     public function export()
     {
         $rows = $this->model->orderBy('nama_mapel', 'ASC')->findAll();
 
         $ss    = new Spreadsheet();
-        $sheet = $ss->getActiveSheet();
-        $sheet->setTitle('Master Mapel');
-
-        $headers = ['No', 'Kode Mapel', 'Nama Mapel', 'Kelompok', 'JP / Minggu'];
-        $sheet->fromArray($headers, null, 'A1', true);
-        $sheet->getStyle('A1:E1')->getFont()->setBold(true)->getColor()->setRGB('FFFFFF');
-        $sheet->getStyle('A1:E1')->getFill()->setFillType(Fill::FILL_SOLID)->getStartColor()->setRGB('1A3A6B');
-        $sheet->getStyle('A1:E1')->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER);
+        $sheet = $this->sheetWithHeader(
+            $ss,
+            'Master Mapel',
+            ['No', 'Kode Mapel', 'Nama Mapel', 'Kelompok', 'JP / Minggu'],
+            ['A' => 5, 'B' => 14, 'C' => 36, 'D' => 22, 'E' => 12]
+        );
 
         $r = 2;
         foreach ($rows as $i => $d) {
             $sheet->fromArray([$i + 1, $d['kode_mapel'], $d['nama_mapel'], $d['kelompok'], $d['jp_default']], null, 'A' . $r, true);
             $r++;
         }
-        foreach (['A' => 5, 'B' => 14, 'C' => 36, 'D' => 22, 'E' => 12] as $c => $w) {
-            $sheet->getColumnDimension($c)->setWidth($w);
-        }
 
         $this->streamXlsx($ss, 'Master-Mapel-' . date('Ymd-His'));
     }
 
-    // ===================== TEMPLATE IMPORT =====================
     public function template()
     {
         $ss    = new Spreadsheet();
-        $sheet = $ss->getActiveSheet();
-        $sheet->setTitle('Template Mapel');
-
-        $headers = ['Kode Mapel', 'Nama Mapel', 'Kelompok', 'JP / Minggu'];
-        $sheet->fromArray($headers, null, 'A1', true);
-        $sheet->getStyle('A1:D1')->getFont()->setBold(true)->getColor()->setRGB('FFFFFF');
-        $sheet->getStyle('A1:D1')->getFill()->setFillType(Fill::FILL_SOLID)->getStartColor()->setRGB('1A3A6B');
+        $sheet = $this->sheetWithHeader(
+            $ss,
+            'Template Mapel',
+            ['Kode Mapel', 'Nama Mapel', 'Kelompok', 'JP / Minggu'],
+            ['A' => 14, 'B' => 36, 'C' => 22, 'D' => 12]
+        );
         $sheet->fromArray(['PD', 'Pemrograman Dasar', 'Kejuruan', 8], null, 'A2', true);
-        foreach (['A' => 14, 'B' => 36, 'C' => 22, 'D' => 12] as $c => $w) {
-            $sheet->getColumnDimension($c)->setWidth($w);
-        }
 
         $this->streamXlsx($ss, 'Template-Import-Mapel');
     }
 
-    // ===================== KONFIG KOLOM IMPORT =====================
-    private function importCols(): array
+    // ===================== KONFIG IMPOR =====================
+
+    protected function importCols(): array
     {
         return [
-            ['key' => 'kode_mapel', 'label' => 'Kode Mapel', 'type' => 'text',   'required' => true, 'width' => 120],
-            ['key' => 'nama_mapel', 'label' => 'Nama Mapel', 'type' => 'text',   'required' => true, 'width' => 280],
-            ['key' => 'kelompok',   'label' => 'Kelompok',   'type' => 'datalist', 'options' => $this->kelompokList(), 'width' => 180],
-            ['key' => 'jp_default', 'label' => 'JP / Minggu', 'type' => 'number', 'width' => 100],
+            ['key' => 'kode_mapel', 'label' => 'Kode Mapel',  'type' => 'text',     'required' => true, 'width' => 120],
+            ['key' => 'nama_mapel', 'label' => 'Nama Mapel',  'type' => 'text',     'required' => true, 'width' => 280],
+            ['key' => 'kelompok',   'label' => 'Kelompok',    'type' => 'datalist', 'options' => $this->kelompokList(), 'width' => 180],
+            ['key' => 'jp_default', 'label' => 'JP / Minggu', 'type' => 'number',   'width' => 100],
         ];
     }
 
-    /** Baca file Excel → baris assoc sesuai urutan kolom template. Null bila gagal (flash diset). */
-    private function readUpload(): ?array
+    protected function matchField(): string
     {
-        $file = $this->request->getFile('file');
-        if (! $file || ! $file->isValid()) {
-            session()->setFlashdata('error', 'File tidak valid.');
+        return 'kode_mapel';
+    }
+
+    protected function normalizeImportRow(array $row, int $line, ?string &$error): ?array
+    {
+        $kode = strtoupper(trim((string) ($row['kode_mapel'] ?? '')));
+        $nama = trim((string) ($row['nama_mapel'] ?? ''));
+        if ($kode === '' && $nama === '') {
             return null;
         }
-        if (! in_array($file->getExtension(), ['xlsx', 'xls'], true)) {
-            session()->setFlashdata('error', 'File harus berformat Excel (.xlsx / .xls).');
-            return null;
-        }
-        try {
-            $sheet = IOFactory::load($file->getTempName())->getActiveSheet();
-            $data  = $sheet->toArray(null, true, true, false);
-        } catch (\Throwable $e) {
-            session()->setFlashdata('error', 'Gagal membaca file: ' . $e->getMessage());
+        if ($kode === '' || $nama === '') {
+            $error = 'Baris ' . $line . ': kode/nama kosong.';
+
             return null;
         }
 
-        $keys = array_column($this->importCols(), 'key');
-        $rows = [];
-        foreach ($data as $i => $row) {
-            if ($i === 0) {
-                continue;
-            }
-            $assoc = [];
-            foreach ($keys as $c => $k) {
-                $assoc[$k] = trim((string) ($row[$c] ?? ''));
-            }
-            if (implode('', $assoc) === '') {
-                continue;
-            }
-            $rows[] = $assoc;
-        }
-        return $rows;
-    }
-
-    // ===================== IMPORT: PRATINJAU (dapat diedit) =====================
-    public function importPreview()
-    {
-        $rows = $this->readUpload();
-        if ($rows === null) {
-            return redirect()->to(site_url('admin/master/mapel'));
-        }
-        if (empty($rows)) {
-            return redirect()->to(site_url('admin/master/mapel'))->with('error', 'File tidak berisi data.');
-        }
-
-        $existing = [];
-        foreach ($this->model->withDeleted()->select('kode_mapel')->findAll() as $m) {
-            $existing[strtoupper((string) $m['kode_mapel'])] = true;
-        }
-        foreach ($rows as &$r) {
-            $r['_status'] = isset($existing[strtoupper($r['kode_mapel'] ?? '')]) ? 'perbarui' : 'baru';
-        }
-        unset($r);
-
-        return view('admin/master/import_preview', [
-            'title'     => 'Pratinjau Impor Mata Pelajaran',
-            'subtitle'  => 'Master Mata Pelajaran',
-            'cols'      => $this->importCols(),
-            'rows'      => $rows,
-            'commitUrl' => site_url('admin/master/mapel/import-commit'),
-            'backUrl'   => site_url('admin/master/mapel'),
-        ]);
-    }
-
-    // ===================== IMPORT: SIMPAN HASIL EDIT =====================
-    public function importCommit()
-    {
-        $rows = (array) $this->request->getPost('rows');
-        if (empty($rows)) {
-            return redirect()->to(site_url('admin/master/mapel'))->with('error', 'Tidak ada data untuk disimpan.');
-        }
-
-        [$ins, $upd, $skip, $errors] = $this->upsertRows($rows);
-
-        cache()->delete('opt_mapel');
-        $this->audit->record('import', 'mata_pelajaran', null, "Import mapel: +{$ins} baru, {$upd} update, {$skip} dilewati");
-
-        $msg = "Import selesai: {$ins} baru, {$upd} diperbarui, {$skip} dilewati.";
-        if ($errors) {
-            return redirect()->to(site_url('admin/master/mapel'))->with('error', $msg . ' | ' . implode(' ', array_slice($errors, 0, 5)));
-        }
-        return redirect()->to(site_url('admin/master/mapel'))->with('success', $msg);
-    }
-
-    /** Upsert kumpulan baris assoc (by kode_mapel, termasuk yg soft-deleted). */
-    private function upsertRows(array $rows): array
-    {
-        $ins = 0; $upd = 0; $skip = 0; $errors = [];
-        $db  = db_connect();
-        $db->transStart();
-
-        foreach ($rows as $i => $row) {
-            $kode = strtoupper(trim((string) ($row['kode_mapel'] ?? '')));
-            $nama = trim((string) ($row['nama_mapel'] ?? ''));
-            if ($kode === '' && $nama === '') {
-                continue;
-            }
-            if ($kode === '' || $nama === '') {
-                $skip++; $errors[] = 'Baris ' . ($i + 1) . ': kode/nama kosong.';
-                continue;
-            }
-
-            $payload = [
-                'kode_mapel' => $kode,
-                'nama_mapel' => $nama,
-                'kelompok'   => trim((string) ($row['kelompok'] ?? '')) ?: null,
-                'jp_default' => (int) ($row['jp_default'] ?? 2) ?: 2,
-            ];
-
-            $existing = $this->model->withDeleted()->where('kode_mapel', $kode)->first();
-            if ($existing) {
-                $this->model->protect(false)->update($existing['id'], $payload + ['deleted_at' => null, 'id' => $existing['id']]);
-                $this->model->protect(true);
-                $upd++;
-            } else {
-                $this->model->insert($payload);
-                $ins++;
-            }
-        }
-
-        $db->transComplete();
-        if ($db->transStatus() === false) {
-            $errors[] = 'Sebagian gagal disimpan karena kesalahan database.';
-        }
-
-        return [$ins, $upd, $skip, $errors];
-    }
-
-    // ---------------------------------------------------------------
-    private function streamXlsx(Spreadsheet $ss, string $filename): void
-    {
-        header('Content-Type: application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
-        header('Content-Disposition: attachment; filename="' . $filename . '.xlsx"');
-        header('Cache-Control: max-age=0');
-        (new Xlsx($ss))->save('php://output');
-        exit;
+        return [
+            'kode_mapel' => $kode,
+            'nama_mapel' => $nama,
+            'kelompok'   => trim((string) ($row['kelompok'] ?? '')) ?: null,
+            'jp_default' => (int) ($row['jp_default'] ?? 2) ?: 2,
+        ];
     }
 }

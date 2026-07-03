@@ -1,10 +1,10 @@
-<?= $this->extend('layouts/admin') ?>
-<?= $this->section('content') ?>
 <?php
 /**
- * Pratinjau impor yang dapat diedit.
+ * Pratinjau impor yang dapat diedit — dipakai semua modul master.
+ * Logika JavaScript ada di komponen `importPreview` (assets/js/admin/app.js).
+ *
  * @var string $subtitle  Nama master (mis. "Master Guru")
- * @var array  $cols      Daftar kolom: ['key','label','type'(text|number|select),'options'?,'width'?]
+ * @var array  $cols      Daftar kolom: ['key','label','type'(text|number|select|datalist),'options'?,'required'?,'width'?]
  * @var array  $rows      Baris hasil baca Excel (assoc, boleh ada kunci '_status')
  * @var string $commitUrl URL tujuan simpan
  * @var string $backUrl   URL batal
@@ -24,15 +24,19 @@ foreach ($cols as &$c) {
     }
 }
 unset($c);
-$colsJs = $cols;
 ?>
-<div x-data="importPreview()" class="space-y-5">
+<?= $this->extend('layouts/admin') ?>
+<?= $this->section('content') ?>
+
+<div x-data="importPreview" class="space-y-5"
+     data-cols="<?= esc(json_encode(array_column($cols, 'key')), 'attr') ?>"
+     data-rows="<?= esc(json_encode(array_values($rows)), 'attr') ?>">
     <!-- Header -->
     <div class="bg-white rounded-2xl border border-slate-200 shadow-sm p-5">
         <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
             <div>
                 <h2 class="font-bold text-lg text-slate-800">Pratinjau Impor — <?= esc($subtitle) ?></h2>
-                <p class="text-sm text-slate-500 mt-1">Periksa & <b>edit langsung</b> data di bawah sebelum disimpan. Anda bisa mengubah sel, menghapus baris, atau menambah baris baru. Klik <b>Simpan</b> bila sudah benar.</p>
+                <p class="text-sm text-slate-500 mt-1">Periksa &amp; <b>edit langsung</b> data di bawah sebelum disimpan. Anda bisa mengubah sel, menghapus baris, atau menambah baris baru. Klik <b>Simpan</b> bila sudah benar.</p>
             </div>
             <div class="flex items-center gap-2 text-sm">
                 <span class="inline-flex items-center gap-1.5 rounded-lg bg-emerald-50 text-emerald-700 px-3 py-1.5 font-semibold">
@@ -46,8 +50,8 @@ $colsJs = $cols;
     <form method="post" action="<?= esc($commitUrl) ?>" @submit="prepare()">
         <?= csrf_field() ?>
         <?php foreach ($cols as $c): if (($c['type'] ?? '') === 'datalist'): ?>
-            <datalist id="dl_<?= esc($c['key']) ?>">
-                <?php foreach (($c['options'] ?? []) as $opt): ?><option value="<?= esc($opt) ?>"></option><?php endforeach; ?>
+            <datalist id="dl_<?= esc($c['key'], 'attr') ?>">
+                <?php foreach (($c['options'] ?? []) as $opt): ?><option value="<?= esc($opt, 'attr') ?>"></option><?php endforeach; ?>
             </datalist>
         <?php endif; endforeach; ?>
         <div class="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
@@ -59,7 +63,7 @@ $colsJs = $cols;
                             <th class="px-3 py-3 font-semibold w-28">Status</th>
                             <?php foreach ($cols as $c): ?>
                                 <th class="px-3 py-3 font-semibold" <?= isset($c['width']) ? 'style="min-width:' . (int) $c['width'] . 'px"' : '' ?>>
-                                    <?= esc($c['label']) ?><?= !empty($c['required']) ? ' <span class="text-red-500">*</span>' : '' ?>
+                                    <?= esc($c['label']) ?><?= ! empty($c['required']) ? ' <span class="text-red-500">*</span>' : '' ?>
                                 </th>
                             <?php endforeach; ?>
                             <th class="px-3 py-3 font-semibold w-14 text-center">Aksi</th>
@@ -81,11 +85,11 @@ $colsJs = $cols;
                                                     class="w-full rounded-lg border border-slate-300 px-2 py-1.5 text-sm focus:border-brand-500 outline-none">
                                                 <option value="">—</option>
                                                 <?php foreach (($c['options'] ?? []) as $opt): ?>
-                                                    <option value="<?= esc($opt) ?>"><?= esc($opt) ?></option>
+                                                    <option value="<?= esc($opt, 'attr') ?>"><?= esc($opt) ?></option>
                                                 <?php endforeach; ?>
                                             </select>
                                         <?php elseif ($type === 'datalist'): ?>
-                                            <input type="text" list="dl_<?= esc($key) ?>"
+                                            <input type="text" list="dl_<?= esc($key, 'attr') ?>"
                                                    x-model="row['<?= esc($key, 'js') ?>']"
                                                    class="w-full rounded-lg border border-slate-300 px-2 py-1.5 text-sm focus:border-brand-500 outline-none">
                                         <?php else: ?>
@@ -129,40 +133,4 @@ $colsJs = $cols;
     </form>
 </div>
 
-<?= $this->endSection() ?>
-
-<?= $this->section('scripts') ?>
-<script>
-function importPreview() {
-    return {
-        cols: <?= json_encode(array_map(fn ($c) => $c['key'], $colsJs)) ?>,
-        rows: (<?= json_encode(array_values($rows)) ?> || []).map((r, i) => ({ ...r, _uid: 'r' + i + '_' + Date.now(), _status: r._status || 'baru' })),
-        addRow() {
-            const blank = { _uid: 'n' + Date.now() + Math.random(), _status: 'baru' };
-            this.cols.forEach(k => blank[k] = '');
-            this.rows.push(blank);
-        },
-        removeRow(i) { this.rows.splice(i, 1); },
-        // Bangun input tersembunyi rows[i][key] tepat sebelum submit (abaikan baris kosong).
-        prepare() {
-            const box = this.$refs.payload;
-            box.innerHTML = '';
-            let n = 0;
-            this.rows.forEach(row => {
-                // lewati baris yang semua kolomnya kosong
-                const isEmpty = this.cols.every(k => !String(row[k] ?? '').trim());
-                if (isEmpty) return;
-                this.cols.forEach(k => {
-                    const inp = document.createElement('input');
-                    inp.type = 'hidden';
-                    inp.name = 'rows[' + n + '][' + k + ']';
-                    inp.value = row[k] ?? '';
-                    box.appendChild(inp);
-                });
-                n++;
-            });
-        },
-    };
-}
-</script>
 <?= $this->endSection() ?>

@@ -1,23 +1,36 @@
+<?php
+/**
+ * Halaman Ketersediaan Guru — grid toggle slot "tidak tersedia".
+ *
+ * @var array  $guruOpts    Opsi guru (id => label)
+ * @var int    $guruId      Guru terpilih
+ * @var string $shift       Shift aktif (pagi/siang)
+ * @var array  $hari        Hari aktif terurut
+ * @var array  $jam         Jam KBM shift aktif
+ * @var array  $unavailable Set slot tidak tersedia (kunci "hariId-jamId")
+ */
+$jamIds = array_map(static fn ($j) => (int) $j['id'], $jam);
+?>
 <?= $this->extend('layouts/admin') ?>
 <?= $this->section('content') ?>
 
 <?= view('admin/partials/help', [
     'helpKey'   => 'ketersediaan',
     'helpTitle' => 'Ketersediaan Guru',
-    'helpBody'  => '<p>Tandai jam/hari di mana guru <b>TIDAK dapat</b> mengajar (mis. sedang kuliah, tugas lain). Pilih guru & shift, lalu klik sel untuk men-toggle. Sel hijau = tersedia, merah = tidak tersedia.</p>
+    'helpBody'  => '<p>Tandai jam/hari di mana guru <b>TIDAK dapat</b> mengajar (mis. sedang kuliah, tugas lain). Pilih guru &amp; shift, lalu klik sel untuk men-toggle. Sel hijau = tersedia, merah = tidak tersedia.</p>
         <p class="mt-1">Klik nama <b>hari</b> untuk menandai/menghapus satu kolom sekaligus. Data ini dipakai sistem agar tidak menempatkan guru pada jam yang tak tersedia (aturan bentrok R3). Jangan lupa <b>Simpan</b>.</p>',
 ]) ?>
 
-<?php
-$jamIds = array_map(static fn ($j) => (int) $j['id'], $jam);
-?>
-<div x-data="ketPage(<?= esc(json_encode(array_keys($unavailable)), 'attr') ?>, <?= esc(json_encode($jamIds), 'attr') ?>)">
+<div x-data="ketPage"
+     data-selected="<?= esc(json_encode(array_keys($unavailable)), 'attr') ?>"
+     data-jam-ids="<?= esc(json_encode($jamIds), 'attr') ?>">
+
     <!-- Pemilih guru + shift -->
     <div class="bg-white rounded-2xl border border-slate-200 shadow-sm p-4 mb-5">
         <form method="get" class="flex flex-col sm:flex-row sm:items-center gap-3">
             <div class="flex items-center gap-2 flex-1">
                 <label class="text-sm font-semibold text-slate-600 shrink-0">Guru:</label>
-                <select name="guru_id" onchange="this.form.submit()" class="rounded-lg border border-slate-300 px-3 py-2.5 text-sm focus:border-brand-500 outline-none flex-1 min-w-[200px]">
+                <select name="guru_id" data-autosubmit class="rounded-lg border border-slate-300 px-3 py-2.5 text-sm focus:border-brand-500 outline-none flex-1 min-w-[200px]">
                     <?php if (empty($guruOpts)): ?>
                         <option value="">— belum ada guru —</option>
                     <?php else: foreach ($guruOpts as $id => $label): ?>
@@ -105,27 +118,5 @@ $jamIds = array_map(static fn ($j) => (int) $j['id'], $jam);
 <?= $this->endSection() ?>
 
 <?= $this->section('scripts') ?>
-<script>
-function ketPage(initSel, jamIds) {
-    return {
-        sel: Array.isArray(initSel) ? initSel : [],
-        jamIds: jamIds || [],
-        has(k) { return this.sel.includes(k); },
-        toggle(k) {
-            const i = this.sel.indexOf(k);
-            if (i === -1) this.sel.push(k); else this.sel.splice(i, 1);
-        },
-        toggleDay(hariId) {
-            const keys = this.jamIds.map(j => hariId + '-' + j);
-            const allOn = keys.every(k => this.sel.includes(k));
-            if (allOn) {
-                this.sel = this.sel.filter(k => !keys.includes(k));
-            } else {
-                keys.forEach(k => { if (!this.sel.includes(k)) this.sel.push(k); });
-            }
-        },
-        clearAll() { this.sel = []; },
-    }
-}
-</script>
+<script defer src="<?= base_url('assets/js/admin/master/ketersediaan.js') ?>?v=<?= @filemtime(FCPATH . 'assets/js/admin/master/ketersediaan.js') ?>"></script>
 <?= $this->endSection() ?>

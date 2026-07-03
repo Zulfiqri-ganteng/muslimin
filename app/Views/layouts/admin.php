@@ -6,16 +6,10 @@
     <title><?= esc($title ?? 'Admin') ?> &mdash; Panel Admin</title>
     <meta name="robots" content="noindex">
     <?= view('partials/favicon') ?>
-    <script defer src="https://cdn.jsdelivr.net/npm/@alpinejs/collapse@3.x.x/dist/cdn.min.js"></script>
-    <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="<?= base_url('assets/css/app.css') ?>?v=<?= @filemtime(FCPATH . 'assets/css/app.css') ?>">
 </head>
-<body class="bg-slate-100 text-slate-800 antialiased"
-      x-data="{ sidebar:false, collapsed: JSON.parse(localStorage.getItem('sb_collapsed')||'false'), loading:false }"
-      x-init="$watch('collapsed', v => localStorage.setItem('sb_collapsed', v));
-              document.addEventListener('submit', e => { if (e.target.tagName === 'FORM' && !e.target.hasAttribute('data-noload')) loading = true; });
-              window.addEventListener('pageshow', () => loading = false);">
+<body class="bg-slate-100 text-slate-800 antialiased" x-data="adminLayout">
 
 <!-- ===================== LOADING OVERLAY (global, semua form) ===================== -->
 <div x-show="loading" x-cloak x-transition.opacity.duration.150ms class="fixed inset-0 z-[70] flex items-center justify-center bg-white/60 backdrop-blur-sm">
@@ -108,12 +102,8 @@
         <?php foreach ($groups as $g): ?>
             <?php if ($g['title'] === null): ?>
                 <?php foreach ($g['items'] as $it) { $renderLink($it); } ?>
-            <?php else:
-                // grup terbuka default; tetap terbuka jika halaman aktif ada di dalamnya
-                $groupActive = false;
-                foreach ($g['items'] as $it) { if (str_starts_with($cur, $it[0])) { $groupActive = true; break; } }
-            ?>
-                <div x-data="{ open: <?= $groupActive ? 'true' : 'true' ?> }" class="pt-2">
+            <?php else: // grup terbuka secara default ?>
+                <div x-data="{ open: true }" class="pt-2">
                     <!-- Judul grup (klik untuk buka/tutup) - hanya saat lebar -->
                     <button type="button" @click="open=!open" x-show="!collapsed || sidebar"
                             class="w-full flex items-center justify-between px-3.5 py-1.5 text-[10px] font-bold uppercase tracking-wider text-brand-300 hover:text-white transition">
@@ -196,6 +186,10 @@
     </main>
 </div>
 
+<?php // Skrip halaman dimuat lebih dulu (defer = urut dokumen), lalu util global, terakhir Alpine. ?>
 <?= $this->renderSection('scripts') ?>
+<script defer src="<?= base_url('assets/js/admin/app.js') ?>?v=<?= @filemtime(FCPATH . 'assets/js/admin/app.js') ?>"></script>
+<script defer src="<?= base_url('assets/js/vendor/alpine-collapse.min.js') ?>?v=<?= @filemtime(FCPATH . 'assets/js/vendor/alpine-collapse.min.js') ?>"></script>
+<script defer src="<?= base_url('assets/js/vendor/alpine.min.js') ?>?v=<?= @filemtime(FCPATH . 'assets/js/vendor/alpine.min.js') ?>"></script>
 </body>
 </html>

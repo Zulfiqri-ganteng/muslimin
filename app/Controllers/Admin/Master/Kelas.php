@@ -2,62 +2,71 @@
 
 namespace App\Controllers\Admin\Master;
 
-use App\Controllers\BaseController;
-use App\Models\AuditModel;
 use App\Models\GuruModel;
 use App\Models\JurusanModel;
 use App\Models\KelasModel;
-use PhpOffice\PhpSpreadsheet\IOFactory;
+use CodeIgniter\Database\BaseConnection;
+use CodeIgniter\Model;
 use PhpOffice\PhpSpreadsheet\Spreadsheet;
-use PhpOffice\PhpSpreadsheet\Style\Alignment;
-use PhpOffice\PhpSpreadsheet\Style\Fill;
-use PhpOffice\PhpSpreadsheet\Writer\Xlsx;
 
-class Kelas extends BaseController
+class Kelas extends BaseMaster
 {
-    protected KelasModel $model;
-    protected AuditModel $audit;
-    protected string $importNote = '';
+    protected string $module     = 'kelas';
+    protected string $auditTable = 'kelas';
+    protected string $routeBase  = 'admin/master/kelas';
+    protected string $entity     = 'kelas';
+    protected string $titleLabel = 'Master Kelas';
 
-    public function __construct()
+    /** Peta lookup impor (diisi sekali saat upsert berjalan). */
+    private ?array $jurusanMap = null;
+    private array $guruByKode  = [];
+    private array $createdJurusan = [];
+    private ?JurusanModel $jurusanModel = null;
+
+    protected function makeModel(): Model
     {
-        $this->model = new KelasModel();
-        $this->audit = new AuditModel();
+        return new KelasModel();
     }
 
     public function index()
     {
         $q       = trim((string) $this->request->getGet('q'));
         $tingkat = trim((string) $this->request->getGet('tingkat'));
-        $shift   = trim((string) $this->request->getGet('shift'));
-        $per     = (int) $this->request->getGet('per');
-        if (! in_array($per, [10, 20, 30, 40, 50], true)) {
-            $per = 10;
+        if (! in_array($tingkat, ['X', 'XI', 'XII'], true)) {
+            $tingkat = '';
         }
+        $shift = trim((string) $this->request->getGet('shift'));
+        if (! in_array($shift, ['pagi', 'siang'], true)) {
+            $shift = '';
+        }
+        $per  = $this->perPage();
+        $page = $this->pageNo();
 
-        $builder = $this->model->withRelations();
-        if ($q !== '') {
-            $builder = $builder->like('kelas.nama_kelas', $q);
-        }
-        if (in_array($tingkat, ['X', 'XI', 'XII'], true)) {
-            $builder = $builder->where('kelas.tingkat', $tingkat);
-        }
-        if (in_array($shift, ['pagi', 'siang'], true)) {
-            $builder = $builder->where('kelas.shift', $shift);
-        }
+        $data = $this->cachedList("list|q={$q}|t={$tingkat}|sh={$shift}|per={$per}|p={$page}", function () use ($q, $tingkat, $shift, $per, $page) {
+            $builder = $this->model->withRelations();
+            if ($q !== '') {
+                $builder = $builder->like('kelas.nama_kelas', $q);
+            }
+            if ($tingkat !== '') {
+                $builder = $builder->where('kelas.tingkat', $tingkat);
+            }
+            if ($shift !== '') {
+                $builder = $builder->where('kelas.shift', $shift);
+            }
+            $rows = $builder->orderBy('kelas.tingkat', 'ASC')->orderBy('kelas.nama_kelas', 'ASC')->paginate($per, 'default', $page);
 
-        $rows  = $builder->orderBy('kelas.tingkat', 'ASC')->orderBy('kelas.nama_kelas', 'ASC')->paginate($per);
-        $pager = $this->model->pager;
+            return ['rows' => $rows, 'total' => $this->model->pager->getTotal()];
+        });
 
         return view('admin/master/kelas', [
-            'title'       => 'Master Kelas',
-            'rows'        => $rows,
-            'pager'       => $pager,
+            'title'       => $this->titleLabel,
+            'rows'        => $data['rows'],
+            'pager'       => $this->storePager($page, $per, $data['total']),
             'q'           => $q,
             'tingkat'     => $tingkat,
             'shift'       => $shift,
             'per'         => $per,
-            'total'       => $pager ? $pager->getTotal() : count($rows),
+            'total'       => $data['total'],
             'jurusanOpts' => (new JurusanModel())->options(),
             'guruOpts'    => (new GuruModel())->options(),
         ]);
@@ -69,54 +78,25 @@ class Kelas extends BaseController
         if (! $this->model->insert($data)) {
             return redirect()->back()->withInput()->with('errors', $this->model->errors());
         }
-        $this->audit->record('create', 'kelas', $this->model->getInsertID(), 'Tambah kelas ' . $data['nama_kelas']);
-        cache()->delete('opt_kelas');
+        master_data_changed($this->module);
+        $this->audit->record('create', $this->auditTable, $this->model->getInsertID(), 'Tambah kelas ' . $data['nama_kelas']);
 
-        return redirect()->to(site_url('admin/master/kelas'))->with('success', 'Kelas ditambahkan.');
+        return $this->goIndex('Kelas ditambahkan.');
     }
 
+    /** @param int|string $id */
     public function update($id)
     {
-        $id   = (int) $id;
-        $data = $this->collect();
+        $id         = (int) $id;
+        $data       = $this->collect();
         $data['id'] = $id; // isi placeholder {id} pada rule is_unique saat edit
         if (! $this->model->update($id, $data)) {
             return redirect()->back()->withInput()->with('errors', $this->model->errors());
         }
-        $this->audit->record('update', 'kelas', $id, 'Ubah kelas ' . $data['nama_kelas']);
-        cache()->delete('opt_kelas');
+        master_data_changed($this->module);
+        $this->audit->record('update', $this->auditTable, $id, 'Ubah kelas ' . $data['nama_kelas']);
 
-        return redirect()->to(site_url('admin/master/kelas'))->with('success', 'Kelas diperbarui.');
-    }
-
-    public function delete($id)
-    {
-        $id = (int) $id;
-        $this->model->delete($id);
-        cache()->delete('opt_kelas');
-        $this->audit->record('delete', 'kelas', $id, 'Hapus kelas');
-
-        return redirect()->to(site_url('admin/master/kelas'))->with('success', 'Kelas dihapus.');
-    }
-
-    /** Hapus banyak kelas sekaligus: mode 'selected' (ids terpilih) atau 'all' (semua). */
-    public function bulkDelete()
-    {
-        $mode = (string) $this->request->getPost('mode');
-        if ($mode === 'all') {
-            $ids = array_column($this->model->select('id')->findAll(), 'id');
-        } else {
-            $ids = array_values(array_filter(array_map('intval', (array) $this->request->getPost('ids'))));
-        }
-        if (empty($ids)) {
-            return redirect()->to(site_url('admin/master/kelas'))->with('error', 'Tidak ada data yang dipilih untuk dihapus.');
-        }
-
-        $this->model->delete($ids);
-        cache()->delete('opt_kelas');
-        $this->audit->record('delete', 'kelas', null, 'Hapus massal ' . count($ids) . ' kelas (' . $mode . ')');
-
-        return redirect()->to(site_url('admin/master/kelas'))->with('success', count($ids) . ' kelas dihapus.');
+        return $this->goIndex('Kelas diperbarui.');
     }
 
     private function collect(): array
@@ -130,20 +110,39 @@ class Kelas extends BaseController
         ];
     }
 
-    // ===================== EXPORT EXCEL =====================
+    /**
+     * Anti-orphan: hapus kelas ikut membersihkan penugasan kelas itu,
+     * jadwal, dan absensi yang menempel padanya.
+     */
+    protected function cleanupRelations(BaseConnection $db, array $ids): void
+    {
+        $pengampuIds = array_map('intval', array_column(
+            $db->table('pengampu')->select('id')->whereIn('kelas_id', $ids)->get()->getResultArray(),
+            'id'
+        ));
+        if ($pengampuIds !== []) {
+            $db->table('jadwal')->whereIn('pengampu_id', $pengampuIds)->delete();
+            $db->table('pengampu')->whereIn('id', $pengampuIds)->where('deleted_at', null)
+                ->update(['deleted_at' => date('Y-m-d H:i:s')]);
+        }
+
+        $db->table('jadwal')->whereIn('kelas_id', $ids)->delete();
+        $db->table('absensi_guru')->whereIn('kelas_id', $ids)->delete();
+    }
+
+    // ===================== EXPORT & TEMPLATE =====================
+
     public function export()
     {
         $rows = $this->model->withRelations()->orderBy('kelas.tingkat', 'ASC')->orderBy('kelas.nama_kelas', 'ASC')->findAll();
 
         $ss    = new Spreadsheet();
-        $sheet = $ss->getActiveSheet();
-        $sheet->setTitle('Master Kelas');
-
-        $headers = ['No', 'Nama Kelas', 'Tingkat', 'Jurusan', 'Wali Kelas', 'Shift'];
-        $sheet->fromArray($headers, null, 'A1', true);
-        $sheet->getStyle('A1:F1')->getFont()->setBold(true)->getColor()->setRGB('FFFFFF');
-        $sheet->getStyle('A1:F1')->getFill()->setFillType(Fill::FILL_SOLID)->getStartColor()->setRGB('1A3A6B');
-        $sheet->getStyle('A1:F1')->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER);
+        $sheet = $this->sheetWithHeader(
+            $ss,
+            'Master Kelas',
+            ['No', 'Nama Kelas', 'Tingkat', 'Jurusan', 'Wali Kelas', 'Shift'],
+            ['A' => 5, 'B' => 18, 'C' => 10, 'D' => 12, 'E' => 28, 'F' => 10]
+        );
 
         $r = 2;
         foreach ($rows as $i => $d) {
@@ -152,223 +151,116 @@ class Kelas extends BaseController
             ], null, 'A' . $r, true);
             $r++;
         }
-        foreach (['A' => 5, 'B' => 18, 'C' => 10, 'D' => 12, 'E' => 28, 'F' => 10] as $c => $w) {
-            $sheet->getColumnDimension($c)->setWidth($w);
-        }
 
         $this->streamXlsx($ss, 'Master-Kelas-' . date('Ymd-His'));
     }
 
-    // ===================== TEMPLATE IMPORT =====================
     public function template()
     {
         $ss    = new Spreadsheet();
-        $sheet = $ss->getActiveSheet();
-        $sheet->setTitle('Template Kelas');
-
-        $headers = ['Nama Kelas', 'Tingkat (X/XI/XII)', 'Kode Jurusan', 'Kode/Nama Wali Kelas', 'Shift (pagi/siang)'];
-        $sheet->fromArray($headers, null, 'A1', true);
-        $sheet->getStyle('A1:E1')->getFont()->setBold(true)->getColor()->setRGB('FFFFFF');
-        $sheet->getStyle('A1:E1')->getFill()->setFillType(Fill::FILL_SOLID)->getStartColor()->setRGB('1A3A6B');
+        $sheet = $this->sheetWithHeader(
+            $ss,
+            'Template Kelas',
+            ['Nama Kelas', 'Tingkat (X/XI/XII)', 'Kode Jurusan', 'Kode/Nama Wali Kelas', 'Shift (pagi/siang)'],
+            ['A' => 18, 'B' => 18, 'C' => 14, 'D' => 22, 'E' => 18]
+        );
         $sheet->fromArray(['X TKJT 1', 'X', 'TKJT', '27', 'pagi'], null, 'A2', true);
-        foreach (['A' => 18, 'B' => 18, 'C' => 14, 'D' => 22, 'E' => 18] as $c => $w) {
-            $sheet->getColumnDimension($c)->setWidth($w);
-        }
 
         $this->streamXlsx($ss, 'Template-Import-Kelas');
     }
 
-    // ===================== KONFIG KOLOM IMPORT =====================
-    private function importCols(): array
+    // ===================== KONFIG IMPOR =====================
+
+    public function importCommit(): \CodeIgniter\HTTP\RedirectResponse
+    {
+        $result = parent::importCommit();
+        if ($this->createdJurusan !== []) {
+            master_data_changed('jurusan'); // ada jurusan baru dibuat otomatis saat impor
+        }
+
+        return $result;
+    }
+
+    protected function importCols(): array
     {
         $jurusanKodes = array_column((new JurusanModel())->select('kode')->orderBy('kode', 'ASC')->findAll(), 'kode');
 
         return [
-            ['key' => 'nama_kelas',   'label' => 'Nama Kelas',       'type' => 'text',   'required' => true, 'width' => 160],
-            ['key' => 'tingkat',      'label' => 'Tingkat',          'type' => 'select', 'options' => ['X', 'XI', 'XII'], 'width' => 100],
+            ['key' => 'nama_kelas',   'label' => 'Nama Kelas',       'type' => 'text',     'required' => true, 'width' => 160],
+            ['key' => 'tingkat',      'label' => 'Tingkat',          'type' => 'select',   'options' => ['X', 'XI', 'XII'], 'width' => 100],
             ['key' => 'jurusan_kode', 'label' => 'Kode Jurusan',     'type' => 'datalist', 'options' => $jurusanKodes, 'width' => 130],
-            ['key' => 'wali',         'label' => 'Wali (kode/nama)', 'type' => 'text',   'width' => 200],
-            ['key' => 'shift',        'label' => 'Shift',            'type' => 'select', 'options' => ['pagi', 'siang'], 'width' => 110],
+            ['key' => 'wali',         'label' => 'Wali (kode/nama)', 'type' => 'text',     'width' => 200],
+            ['key' => 'shift',        'label' => 'Shift',            'type' => 'select',   'options' => ['pagi', 'siang'], 'width' => 110],
         ];
     }
 
-    /** Baca file Excel → baris assoc sesuai urutan kolom template. Null bila gagal (flash diset). */
-    private function readUpload(): ?array
+    protected function matchField(): string
     {
-        $file = $this->request->getFile('file');
-        if (! $file || ! $file->isValid()) {
-            session()->setFlashdata('error', 'File tidak valid.');
-            return null;
-        }
-        if (! in_array($file->getExtension(), ['xlsx', 'xls'], true)) {
-            session()->setFlashdata('error', 'File harus berformat Excel (.xlsx / .xls).');
-            return null;
-        }
-        try {
-            $sheet = IOFactory::load($file->getTempName())->getActiveSheet();
-            $data  = $sheet->toArray(null, true, true, false);
-        } catch (\Throwable $e) {
-            session()->setFlashdata('error', 'Gagal membaca file: ' . $e->getMessage());
+        return 'nama_kelas';
+    }
+
+    protected function normalizeImportRow(array $row, int $line, ?string &$error): ?array
+    {
+        $this->prepareImportMaps();
+
+        $nama = trim((string) ($row['nama_kelas'] ?? ''));
+        if ($nama === '') {
+            $error = 'Baris ' . $line . ': nama kelas kosong.';
+
             return null;
         }
 
-        $keys = array_column($this->importCols(), 'key');
-        $rows = [];
-        foreach ($data as $i => $row) {
-            if ($i === 0) {
-                continue;
+        // --- resolusi jurusan: cocokkan kode, buat otomatis bila belum ada ---
+        $jurId   = null;
+        $jurKode = strtoupper(trim((string) ($row['jurusan_kode'] ?? '')));
+        if ($jurKode !== '') {
+            if (! isset($this->jurusanMap[$jurKode])) {
+                $this->jurusanModel->insert(['kode' => $jurKode, 'nama' => $jurKode]);
+                $this->jurusanMap[$jurKode]     = ['id' => (int) $this->jurusanModel->getInsertID(), 'deleted' => false];
+                $this->createdJurusan[$jurKode] = true;
+            } elseif ($this->jurusanMap[$jurKode]['deleted']) {
+                // pulihkan jurusan yang sebelumnya dihapus agar bisa dipakai lagi
+                $jid = $this->jurusanMap[$jurKode]['id'];
+                $this->jurusanModel->protect(false)->update($jid, ['deleted_at' => null, 'id' => $jid]);
+                $this->jurusanModel->protect(true);
+                $this->jurusanMap[$jurKode]['deleted'] = false;
+                $this->createdJurusan[$jurKode]        = true;
             }
-            $assoc = [];
-            foreach ($keys as $c => $k) {
-                $assoc[$k] = trim((string) ($row[$c] ?? ''));
-            }
-            if (implode('', $assoc) === '') {
-                continue;
-            }
-            $rows[] = $assoc;
+            $jurId = $this->jurusanMap[$jurKode]['id'];
         }
-        return $rows;
+        if ($this->createdJurusan !== []) {
+            $this->importNote = 'Jurusan baru dibuat otomatis: ' . implode(', ', array_keys($this->createdJurusan)) . ' (lengkapi namanya di menu Jurusan bila perlu).';
+        }
+
+        $tingkat = strtoupper(trim((string) ($row['tingkat'] ?? '')));
+        $shift   = strtolower(trim((string) ($row['shift'] ?? '')));
+
+        return [
+            'nama_kelas'    => $nama,
+            'tingkat'       => in_array($tingkat, ['X', 'XI', 'XII'], true) ? $tingkat : 'X',
+            'jurusan_id'    => $jurId,
+            'wali_kelas_id' => $this->guruByKode[strtoupper(trim((string) ($row['wali'] ?? '')))] ?? null,
+            'shift'         => in_array($shift, ['pagi', 'siang'], true) ? $shift : 'pagi',
+        ];
     }
 
-    // ===================== IMPORT: PRATINJAU (dapat diedit) =====================
-    public function importPreview()
+    /** Siapkan peta lookup jurusan & guru sekali saja untuk seluruh baris impor. */
+    private function prepareImportMaps(): void
     {
-        $rows = $this->readUpload();
-        if ($rows === null) {
-            return redirect()->to(site_url('admin/master/kelas'));
-        }
-        if (empty($rows)) {
-            return redirect()->to(site_url('admin/master/kelas'))->with('error', 'File tidak berisi data.');
+        if ($this->jurusanMap !== null) {
+            return;
         }
 
-        $existing = [];
-        foreach ($this->model->withDeleted()->select('nama_kelas')->findAll() as $k) {
-            $existing[strtoupper((string) $k['nama_kelas'])] = true;
-        }
-        foreach ($rows as &$r) {
-            $r['_status'] = isset($existing[strtoupper($r['nama_kelas'] ?? '')]) ? 'perbarui' : 'baru';
-        }
-        unset($r);
-
-        return view('admin/master/import_preview', [
-            'title'     => 'Pratinjau Impor Kelas',
-            'subtitle'  => 'Master Kelas',
-            'cols'      => $this->importCols(),
-            'rows'      => $rows,
-            'commitUrl' => site_url('admin/master/kelas/import-commit'),
-            'backUrl'   => site_url('admin/master/kelas'),
-        ]);
-    }
-
-    // ===================== IMPORT: SIMPAN HASIL EDIT =====================
-    public function importCommit()
-    {
-        $rows = (array) $this->request->getPost('rows');
-        if (empty($rows)) {
-            return redirect()->to(site_url('admin/master/kelas'))->with('error', 'Tidak ada data untuk disimpan.');
+        $this->jurusanModel = new JurusanModel();
+        $this->jurusanMap   = []; // KODE => ['id' => .., 'deleted' => bool]
+        foreach ($this->jurusanModel->withDeleted()->select('id, kode, deleted_at')->findAll() as $j) {
+            $this->jurusanMap[strtoupper((string) $j['kode'])] = ['id' => (int) $j['id'], 'deleted' => $j['deleted_at'] !== null];
         }
 
-        [$ins, $upd, $skip, $errors] = $this->upsertRows($rows);
-
-        cache()->delete('opt_kelas');
-        $this->audit->record('import', 'kelas', null, "Import kelas: +{$ins} baru, {$upd} update, {$skip} dilewati");
-
-        $msg = "Import selesai: {$ins} baru, {$upd} diperbarui, {$skip} dilewati.";
-        if ($this->importNote !== '') {
-            $msg .= ' ' . $this->importNote;
-        }
-        if ($errors) {
-            return redirect()->to(site_url('admin/master/kelas'))->with('error', $msg . ' | ' . implode(' ', array_slice($errors, 0, 5)));
-        }
-        return redirect()->to(site_url('admin/master/kelas'))->with('success', $msg);
-    }
-
-    /** Upsert kumpulan baris assoc (by nama_kelas, termasuk yg soft-deleted). */
-    private function upsertRows(array $rows): array
-    {
-        // peta lookup jurusan (termasuk soft-deleted, agar UNIQUE kode tak bentrok)
-        $jurusanModel = new JurusanModel();
-        $jurusanMap   = []; // KODE => ['id'=>.., 'deleted'=>bool]
-        foreach ($jurusanModel->withDeleted()->select('id, kode, deleted_at')->findAll() as $j) {
-            $jurusanMap[strtoupper((string) $j['kode'])] = ['id' => (int) $j['id'], 'deleted' => $j['deleted_at'] !== null];
-        }
-        $guruByKode = [];
+        $this->guruByKode = [];
         foreach ((new GuruModel())->select('id, kode_guru, nama')->findAll() as $g) {
-            $guruByKode[strtoupper($g['kode_guru'])] = (int) $g['id'];
-            $guruByKode[strtoupper($g['nama'])]      = (int) $g['id'];
+            $this->guruByKode[strtoupper($g['kode_guru'])] = (int) $g['id'];
+            $this->guruByKode[strtoupper($g['nama'])]      = (int) $g['id'];
         }
-
-        $ins = 0; $upd = 0; $skip = 0; $errors = [];
-        $createdJurusan = []; // kode jurusan yang dibuat otomatis saat impor
-        $db  = db_connect();
-        $db->transStart();
-
-        foreach ($rows as $i => $row) {
-            $nama = trim((string) ($row['nama_kelas'] ?? ''));
-            if ($nama === '') {
-                $skip++;
-                continue;
-            }
-
-            // --- resolusi jurusan: cocokkan kode, buat otomatis bila belum ada ---
-            $jurId   = null;
-            $jurKode = strtoupper(trim((string) ($row['jurusan_kode'] ?? '')));
-            if ($jurKode !== '') {
-                if (! isset($jurusanMap[$jurKode])) {
-                    $jurusanModel->insert(['kode' => $jurKode, 'nama' => $jurKode]);
-                    $jurusanMap[$jurKode] = ['id' => (int) $jurusanModel->getInsertID(), 'deleted' => false];
-                    $createdJurusan[$jurKode] = true;
-                } elseif ($jurusanMap[$jurKode]['deleted']) {
-                    // pulihkan jurusan yang sebelumnya dihapus agar bisa dipakai lagi
-                    $jurusanModel->protect(false)->update($jurusanMap[$jurKode]['id'], ['deleted_at' => null, 'id' => $jurusanMap[$jurKode]['id']]);
-                    $jurusanModel->protect(true);
-                    $jurusanMap[$jurKode]['deleted'] = false;
-                    $createdJurusan[$jurKode] = true;
-                }
-                $jurId = $jurusanMap[$jurKode]['id'];
-            }
-
-            $tingkat = strtoupper(trim((string) ($row['tingkat'] ?? '')));
-            $shift   = strtolower(trim((string) ($row['shift'] ?? '')));
-            $payload = [
-                'nama_kelas'    => $nama,
-                'tingkat'       => in_array($tingkat, ['X', 'XI', 'XII'], true) ? $tingkat : 'X',
-                'jurusan_id'    => $jurId,
-                'wali_kelas_id' => $guruByKode[strtoupper(trim((string) ($row['wali'] ?? '')))] ?? null,
-                'shift'         => in_array($shift, ['pagi', 'siang'], true) ? $shift : 'pagi',
-            ];
-
-            $existing = $this->model->withDeleted()->where('nama_kelas', $nama)->first();
-            if ($existing) {
-                $this->model->protect(false)->update($existing['id'], $payload + ['deleted_at' => null, 'id' => $existing['id']]);
-                $this->model->protect(true);
-                $upd++;
-            } else {
-                $this->model->insert($payload);
-                $ins++;
-            }
-        }
-
-        $db->transComplete();
-        if ($db->transStatus() === false) {
-            $errors[] = 'Sebagian gagal disimpan karena kesalahan database.';
-        }
-
-        if ($createdJurusan) {
-            cache()->delete('opt_jurusan');
-            $this->importNote = 'Jurusan baru dibuat otomatis: ' . implode(', ', array_keys($createdJurusan)) . ' (lengkapi namanya di menu Jurusan bila perlu).';
-        }
-
-        return [$ins, $upd, $skip, $errors];
-    }
-
-    // ---------------------------------------------------------------
-    private function streamXlsx(Spreadsheet $ss, string $filename): void
-    {
-        header('Content-Type: application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
-        header('Content-Disposition: attachment; filename="' . $filename . '.xlsx"');
-        header('Cache-Control: max-age=0');
-        (new Xlsx($ss))->save('php://output');
-        exit;
     }
 }

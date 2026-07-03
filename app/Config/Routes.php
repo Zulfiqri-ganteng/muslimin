@@ -82,6 +82,8 @@ $routes->group('admin', static function ($routes) {
             $routes->post('pengampu', 'Admin\Master\Pengampu::store');
             $routes->post('pengampu/(:num)', 'Admin\Master\Pengampu::update/$1');
             $routes->get('pengampu/delete/(:num)', 'Admin\Master\Pengampu::delete/$1');
+            $routes->get('pengampu/export', 'Admin\Master\Pengampu::export');
+            $routes->post('pengampu/bulk-delete', 'Admin\Master\Pengampu::bulkDelete');
 
             // Ketersediaan Guru
             $routes->get('ketersediaan', 'Admin\Master\Ketersediaan::index');
@@ -114,6 +116,11 @@ $routes->group('admin', static function ($routes) {
             $routes->post('jam', 'Admin\Master\JamPelajaran::store');
             $routes->post('jam/(:num)', 'Admin\Master\JamPelajaran::update/$1');
             $routes->get('jam/delete/(:num)', 'Admin\Master\JamPelajaran::delete/$1');
+            $routes->get('jam/export', 'Admin\Master\JamPelajaran::export');
+            $routes->get('jam/template', 'Admin\Master\JamPelajaran::template');
+            $routes->post('jam/import-preview', 'Admin\Master\JamPelajaran::importPreview');
+            $routes->post('jam/import-commit', 'Admin\Master\JamPelajaran::importCommit');
+            $routes->post('jam/bulk-delete', 'Admin\Master\JamPelajaran::bulkDelete');
         });
 
         // ===== PENJADWALAN =====

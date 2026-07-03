@@ -22,30 +22,38 @@ class SettingModel extends Model
     protected $updatedField  = 'updated_at';
 
     /**
-     * Ambil baris pengaturan tunggal (id = 1). Buat default bila belum ada.
+     * Ambil baris pengaturan tunggal (id = 1) dengan cache — dipanggil layout
+     * di setiap halaman, jadi tanpa cache akan memukul DB terus-menerus.
+     * Buat default bila belum ada.
      */
     public function get(): array
     {
-        $row = $this->find(1);
-        if (! $row) {
-            $this->insert([
-                'id'            => 1,
-                'school_name'   => 'NAMA SEKOLAH ANDA',
-                'city'          => 'Bekasi',
-                'academic_year' => '2026/2027',
-                'form_open'     => 1,
-            ], false);
+        return cache()->remember('app_setting', 21600, function () {
             $row = $this->find(1);
-        }
-        return $row;
+            if (! $row) {
+                $this->insert([
+                    'id'            => 1,
+                    'school_name'   => 'NAMA SEKOLAH ANDA',
+                    'city'          => 'Bekasi',
+                    'academic_year' => '2026/2027',
+                    'form_open'     => 1,
+                ], false);
+                $row = $this->find(1);
+            }
+
+            return $row;
+        });
     }
 
     /**
-     * Simpan pengaturan (selalu id = 1).
+     * Simpan pengaturan (selalu id = 1) + bersihkan cache-nya.
      */
     public function store(array $data): bool
     {
         $data['id'] = 1;
-        return $this->save($data);
+        $ok = $this->save($data);
+        cache()->delete('app_setting');
+
+        return $ok;
     }
 }

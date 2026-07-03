@@ -25,16 +25,21 @@ class Ketersediaan extends BaseController
         $guruOpts = (new GuruModel())->options();
 
         $guruId = (int) $this->request->getGet('guru_id');
-        if ($guruId === 0 && ! empty($guruOpts)) {
+        if (($guruId === 0 || ! isset($guruOpts[$guruId])) && $guruOpts !== []) {
             $guruId = (int) array_key_first($guruOpts);
         }
         $shift = in_array($this->request->getGet('shift'), ['pagi', 'siang'], true)
             ? $this->request->getGet('shift') : 'pagi';
 
-        $hari = (new HariModel())->aktifUrut();
-        // hanya jam KBM (bukan istirahat) pada shift terpilih
-        $jam = (new JamPelajaranModel())->where('shift', $shift)->where('is_istirahat', 0)
-            ->orderBy('jam_ke', 'ASC')->findAll();
+        // daftar hari aktif & jam KBM per shift jarang berubah → cache per modul
+        $hari = master_cache('hari', 'aktif_urut', 3600, static fn () => (new HariModel())->aktifUrut());
+        $jam  = master_cache('jam', 'kbm_' . $shift, 3600, static fn () => (new JamPelajaranModel())
+            ->where('shift', $shift)->where('is_istirahat', 0)
+            ->orderBy('jam_ke', 'ASC')->findAll());
+
+        $unavailable = $guruId
+            ? master_cache('ketersediaan', 'guru_' . $guruId, 3600, fn () => $this->model->unavailableSet($guruId))
+            : [];
 
         return view('admin/master/ketersediaan', [
             'title'       => 'Ketersediaan Guru',
@@ -43,7 +48,7 @@ class Ketersediaan extends BaseController
             'shift'       => $shift,
             'hari'        => $hari,
             'jam'         => $jam,
-            'unavailable' => $guruId ? $this->model->unavailableSet($guruId) : [],
+            'unavailable' => $unavailable,
         ]);
     }
 
@@ -65,6 +70,7 @@ class Ketersediaan extends BaseController
         ));
 
         $this->model->syncShift($guruId, $shiftJamIds, $unavailable);
+        master_data_changed('ketersediaan');
         $this->audit->record('update', 'ketersediaan_guru', $guruId, "Atur ketersediaan ({$shift}): " . count($unavailable) . ' slot tidak tersedia');
 
         return redirect()->to(site_url('admin/master/ketersediaan?guru_id=' . $guruId . '&shift=' . $shift))

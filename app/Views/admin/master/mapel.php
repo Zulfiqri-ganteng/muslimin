@@ -1,13 +1,25 @@
-<?= $this->extend('layouts/admin') ?>
-<?= $this->section('content') ?>
-
 <?php
-// Siapkan data untuk JS (aman: di-encode)
+/**
+ * Halaman Master Mata Pelajaran — pola tampilan mengikuti Master Guru.
+ *
+ * @var string                         $q            Kata kunci pencarian
+ * @var string                         $kelompok     Filter kelompok mapel
+ * @var int                            $per          Baris per halaman
+ * @var array                          $rows         Baris mapel halaman ini
+ * @var \CodeIgniter\Pager\Pager|null  $pager        Paginasi
+ * @var int                            $total        Total seluruh data
+ * @var array                          $allGuru      Opsi guru (id => "kode - nama")
+ * @var array                          $kompMap      Peta kompetensi (mapel_id => [guru_id])
+ * @var string[]                       $kelompokList Pilihan kelompok mapel
+ */
 $guruJs = [];
 foreach ($allGuru as $id => $label) {
     $guruJs[] = ['id' => (int) $id, 'label' => $label];
 }
 ?>
+<?= $this->extend('layouts/admin') ?>
+<?= $this->section('content') ?>
+
 <?= view('admin/partials/help', [
     'helpKey'   => 'mapel',
     'helpTitle' => 'Master Mata Pelajaran',
@@ -18,71 +30,32 @@ foreach ($allGuru as $id => $label) {
         <p class="mt-1">Tombol <b>Atur Guru</b> menentukan guru mana saja yang <b>berkompetensi</b> mengajar mapel tersebut, dipakai saat membuat <b>Penugasan</b>.</p>',
 ]) ?>
 
-<div x-data="mapelPage()">
-    <!-- Toolbar -->
-    <div class="bg-white rounded-2xl border border-slate-200 shadow-sm p-4 mb-5">
-        <div class="flex flex-col lg:flex-row lg:items-center gap-3">
-            <form method="get" class="flex flex-1 flex-col sm:flex-row gap-2">
-                <div class="relative flex-1">
-                    <svg class="w-5 h-5 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
-                    <input type="text" name="q" value="<?= esc($q) ?>" placeholder="Cari nama atau kode mapel..."
-                           class="w-full rounded-lg border border-slate-300 pl-10 pr-3 py-2.5 text-sm focus:border-brand-500 focus:ring-2 focus:ring-brand-500/20 outline-none">
-                </div>
-                <select name="kelompok" class="rounded-lg border border-slate-300 px-3 py-2.5 text-sm focus:border-brand-500 outline-none">
-                    <option value="">Semua Kelompok</option>
-                    <?php foreach ($kelompokList as $k): ?>
-                        <option value="<?= esc($k) ?>" <?= $kelompok === $k ? 'selected' : '' ?>><?= esc($k) ?></option>
-                    <?php endforeach; ?>
-                </select>
-                <select name="per" onchange="this.form.submit()" title="Jumlah data per halaman" class="rounded-lg border border-slate-300 px-3 py-2.5 text-sm focus:border-brand-500 outline-none">
-                    <?php foreach ([10, 20, 30, 40, 50] as $n): ?>
-                        <option value="<?= $n ?>" <?= $per === $n ? 'selected' : '' ?>>Tampilkan <?= $n ?></option>
-                    <?php endforeach; ?>
-                </select>
-                <button class="rounded-lg bg-brand-700 hover:bg-brand-800 text-white text-sm font-semibold px-5 py-2.5 transition">Cari</button>
-                <?php if ($q || $kelompok): ?>
-                    <a href="<?= site_url('admin/master/mapel') ?>" class="rounded-lg border border-slate-300 text-slate-600 text-sm font-semibold px-4 py-2.5 hover:bg-slate-50 transition text-center">Reset</a>
-                <?php endif; ?>
-            </form>
-            <div class="flex flex-wrap items-center gap-2 lg:justify-end">
-                <!-- Aksi utama -->
-                <button @click="openAdd()" class="inline-flex items-center gap-1.5 rounded-lg bg-brand-700 hover:bg-brand-800 text-white text-sm font-semibold px-3.5 py-2.5 transition">
-                    <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4"/></svg>
-                    Tambah
-                </button>
-                <button @click="importOpen=true" class="inline-flex items-center gap-1.5 rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-semibold px-3.5 py-2.5 transition">
-                    <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg>
-                    Import
-                </button>
+<div x-data="mapelPage"
+     data-base="<?= site_url('admin/master/mapel') ?>"
+     data-entity="mata pelajaran"
+     data-defaults="<?= esc(json_encode(['kode_mapel' => '', 'nama_mapel' => '', 'kelompok' => '', 'jp_default' => 2]), 'attr') ?>"
+     data-all-guru="<?= esc(json_encode($guruJs), 'attr') ?>"
+     data-komp-map="<?= esc(json_encode($kompMap ?: new \stdClass()), 'attr') ?>">
 
-                <span class="hidden sm:block w-px h-6 bg-slate-200 mx-0.5"></span>
-
-                <!-- Export (ringan) -->
-                <a href="<?= site_url('admin/master/mapel/export') ?>" title="Keluarkan semua mata pelajaran ke file Excel" class="inline-flex items-center gap-1.5 rounded-lg border border-slate-300 bg-white text-slate-600 hover:bg-slate-50 text-sm font-semibold px-3.5 py-2.5 transition">
-                    <svg class="w-4 h-4 text-emerald-600" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 10v6m0 0l-3-3m3 3l3-3M4 6a2 2 0 012-2h5l2 2h5a2 2 0 012 2v9a2 2 0 01-2 2H6a2 2 0 01-2-2V6z"/></svg>
-                    Export
-                </a>
-
-                <!-- Hapus (sekunder) -->
-                <button type="button" @click="submitBulk('selected')" x-show="bulkSelected>0" x-cloak class="inline-flex items-center gap-1.5 rounded-lg bg-red-600 hover:bg-red-700 text-white text-sm font-semibold px-3.5 py-2.5 transition">
-                    <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
-                    Hapus Terpilih (<span x-text="bulkSelected"></span>)
-                </button>
-                <button type="button" @click="submitBulk('all')" class="inline-flex items-center gap-1.5 rounded-lg border text-sm font-semibold px-3.5 py-2.5 transition bg-white text-slate-500 border-slate-300 hover:bg-red-50 hover:text-red-600 hover:border-red-200">
-                    <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
-                    Hapus Semua
-                </button>
-            </div>
-        </div>
-        <form method="post" action="<?= site_url('admin/master/mapel/bulk-delete') ?>" x-ref="bulkForm" class="hidden">
-            <?= csrf_field() ?>
-            <input type="hidden" name="mode" value="">
-        </form>
-    </div>
+    <?= view('admin/master/partials/toolbar', [
+        'baseUrl'           => site_url('admin/master/mapel'),
+        'searchPlaceholder' => 'Cari nama atau kode mapel...',
+        'q'                 => $q,
+        'filters'           => [[
+            'name'    => 'kelompok',
+            'value'   => $kelompok,
+            'all'     => 'Semua Kelompok',
+            'options' => array_combine($kelompokList, $kelompokList),
+        ]],
+        'per'               => $per,
+        'exportUrl'         => site_url('admin/master/mapel/export'),
+        'exportTitle'       => 'Keluarkan semua mata pelajaran ke file Excel',
+        'bulkUrl'           => site_url('admin/master/mapel/bulk-delete'),
+    ]) ?>
 
     <!-- Tabel -->
     <div class="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
-        <div class="px-6 py-4 border-b border-slate-100">
+        <div class="px-6 py-4 border-b border-slate-100 flex items-center justify-between">
             <h2 class="font-bold text-slate-800">Daftar Mata Pelajaran <span class="text-slate-400 font-normal">(<?= $total ?>)</span></h2>
         </div>
         <div class="overflow-x-auto">
@@ -109,21 +82,19 @@ foreach ($allGuru as $id => $label) {
                             <td class="px-6 py-3 text-slate-500"><?= esc($r['kelompok'] ?: '—') ?></td>
                             <td class="px-6 py-3 text-slate-500"><?= esc($r['jp_default']) ?> JP</td>
                             <td class="px-6 py-3">
-                                <button @click="openKompetensi(<?= (int) $r['id'] ?>, '<?= esc($r['nama_mapel'], 'js') ?>')"
+                                <button type="button" @click="openKompetensiEl($el)"
+                                        data-id="<?= (int) $r['id'] ?>" data-nama="<?= esc($r['nama_mapel'], 'attr') ?>"
                                         class="inline-flex items-center gap-1.5 rounded-lg border border-slate-300 px-2.5 py-1 text-xs font-semibold text-slate-600 hover:bg-slate-50">
                                     <span class="inline-flex items-center justify-center rounded-full bg-brand-100 text-brand-700 w-5 h-5 text-[11px] font-bold"><?= $jml ?></span>
                                     Atur Guru
                                 </button>
                             </td>
                             <td class="px-6 py-3 text-right whitespace-nowrap">
-                                <div class="inline-flex items-center justify-end gap-1">
-                                    <button @click='openEdit(<?= json_encode($r) ?>)' title="Edit" class="inline-flex h-8 w-8 items-center justify-center rounded-lg text-brand-600 hover:bg-brand-50 transition">
-                                        <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/></svg>
-                                    </button>
-                                    <a href="<?= site_url('admin/master/mapel/delete/' . $r['id']) ?>" onclick="return confirm('Hapus mapel ini?')" title="Hapus" class="inline-flex h-8 w-8 items-center justify-center rounded-lg text-red-500 hover:bg-red-50 transition">
-                                        <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
-                                    </a>
-                                </div>
+                                <?= view('admin/master/partials/row_actions', [
+                                    'row'       => $r,
+                                    'deleteUrl' => site_url('admin/master/mapel/delete/' . $r['id']),
+                                    'confirm'   => 'Hapus mapel ini?',
+                                ]) ?>
                             </td>
                         </tr>
                     <?php endforeach; endif; ?>
@@ -131,7 +102,9 @@ foreach ($allGuru as $id => $label) {
             </table>
         </div>
         <?php if ($pager): ?>
-            <div class="px-6 py-4 border-t border-slate-100"><?= $pager->only(['q', 'kelompok', 'per'])->links('default', 'admin') ?></div>
+            <div class="px-6 py-4 border-t border-slate-100">
+                <?= $pager->only(['q', 'kelompok', 'per'])->links('default', 'admin') ?>
+            </div>
         <?php endif; ?>
     </div>
 
@@ -175,7 +148,7 @@ foreach ($allGuru as $id => $label) {
         </div>
     </div>
 
-    <!-- Modal Kompetensi -->
+    <!-- Modal Kompetensi (Atur Guru) -->
     <div x-show="kompOpen" x-cloak x-transition.opacity.duration.200ms class="fixed inset-0 z-50 flex items-center justify-center p-4">
         <div class="absolute inset-0 bg-black/40" @click="kompOpen=false"></div>
         <div class="relative bg-white rounded-2xl shadow-xl w-full max-w-md p-6 max-h-[85vh] flex flex-col">
@@ -206,67 +179,16 @@ foreach ($allGuru as $id => $label) {
         </div>
     </div>
 
-    <!-- Modal Import -->
-    <div x-show="importOpen" x-cloak x-transition.opacity.duration.200ms class="fixed inset-0 z-50 flex items-center justify-center p-4">
-        <div class="absolute inset-0 bg-black/40" @click="importOpen=false"></div>
-        <div class="relative bg-white rounded-2xl shadow-xl w-full max-w-md p-6">
-            <h3 class="font-bold text-lg text-slate-800 mb-4">Import Mata Pelajaran</h3>
-            <form method="post" action="<?= site_url('admin/master/mapel/import-preview') ?>" enctype="multipart/form-data">
-                <?= csrf_field() ?>
-                <p class="text-sm text-slate-500 mb-3"><b>Import = memasukkan data.</b> Unggah Excel sesuai template. Data akan tampil dalam <b>pratinjau yang bisa diedit</b> sebelum disimpan. Kode mapel yang sudah ada akan diperbarui (tidak dobel).</p>
-                <input type="file" name="file" accept=".xlsx,.xls" required
-                       class="w-full text-sm border border-slate-300 rounded-lg p-2 file:mr-3 file:rounded-md file:border-0 file:bg-brand-50 file:px-3 file:py-1.5 file:text-brand-700 file:font-semibold">
-                <a href="<?= site_url('admin/master/mapel/template') ?>" class="inline-block mt-3 text-sm text-brand-600 hover:underline">⬇ Unduh template Excel</a>
-                <div class="flex justify-end gap-2 mt-6">
-                    <button type="button" @click="importOpen=false" class="rounded-lg border border-slate-300 text-slate-600 text-sm font-semibold px-4 py-2.5 hover:bg-slate-50">Batal</button>
-                    <button class="rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-semibold px-5 py-2.5">Unggah & Pratinjau</button>
-                </div>
-            </form>
-        </div>
-    </div>
+    <?= view('admin/master/partials/modal_import', [
+        'importTitle'  => 'Import Mata Pelajaran',
+        'importAction' => site_url('admin/master/mapel/import-preview'),
+        'templateUrl'  => site_url('admin/master/mapel/template'),
+        'importNote'   => '<b>Import = memasukkan data.</b> Unggah Excel sesuai template. Data akan tampil dalam <b>pratinjau yang bisa diedit</b> sebelum disimpan. Kode mapel yang sudah ada akan diperbarui (tidak dobel).',
+    ]) ?>
 </div>
 
 <?= $this->endSection() ?>
 
 <?= $this->section('scripts') ?>
-<script>
-function mapelPage() {
-    return {
-        open: false, importOpen: false, kompOpen: false, mode: 'add', actionUrl: '',
-        base: '<?= site_url('admin/master/mapel') ?>',
-        form: { kode_mapel:'', nama_mapel:'', kelompok:'', jp_default:2 },
-        // ---- hapus massal ----
-        bulkSelected: 0,
-        refresh() { this.bulkSelected = document.querySelectorAll('.row-check:checked').length; },
-        toggleAll(e) { document.querySelectorAll('.row-check').forEach(c => c.checked = e.target.checked); this.refresh(); },
-        submitBulk(mode) {
-            const form = this.$refs.bulkForm;
-            form.querySelectorAll('input[name="ids[]"]').forEach(n => n.remove());
-            if (mode === 'all') {
-                if (!confirm('HAPUS SEMUA mata pelajaran? Tindakan ini tidak dapat dibatalkan.')) return;
-                form.querySelector('[name=mode]').value = 'all';
-            } else {
-                const checked = [...document.querySelectorAll('.row-check:checked')];
-                if (checked.length === 0) { alert('Centang dulu data yang ingin dihapus.'); return; }
-                if (!confirm('Hapus ' + checked.length + ' mapel terpilih?')) return;
-                checked.forEach(c => { const i = document.createElement('input'); i.type='hidden'; i.name='ids[]'; i.value=c.value; form.appendChild(i); });
-                form.querySelector('[name=mode]').value = 'selected';
-            }
-            form.submit();
-        },
-        // kompetensi
-        allGuru: <?= json_encode($guruJs) ?>,
-        kompMap: <?= json_encode($kompMap ?: new \stdClass()) ?>,
-        selected: [], kompUrl: '', kompMapel: '',
-        openAdd() { this.mode='add'; this.form={kode_mapel:'',nama_mapel:'',kelompok:'',jp_default:2}; this.actionUrl=this.base; this.open=true; },
-        openEdit(r) { this.mode='edit'; this.form={kode_mapel:r.kode_mapel,nama_mapel:r.nama_mapel,kelompok:r.kelompok||'',jp_default:r.jp_default}; this.actionUrl=this.base+'/'+r.id; this.open=true; },
-        openKompetensi(id, nama) {
-            this.kompMapel = nama;
-            this.kompUrl = this.base + '/kompetensi/' + id;
-            this.selected = (this.kompMap[id] || []).map(Number);
-            this.kompOpen = true;
-        },
-    }
-}
-</script>
+<script defer src="<?= base_url('assets/js/admin/master/mapel.js') ?>?v=<?= @filemtime(FCPATH . 'assets/js/admin/master/mapel.js') ?>"></script>
 <?= $this->endSection() ?>
