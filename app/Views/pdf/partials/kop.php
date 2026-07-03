@@ -9,27 +9,31 @@
 $logo   = kop_logo_base64($setting);
 $lokasi = kop_lokasi($setting);
 $kontak = kop_kontak($setting);
+// Jenjang + nama digabung jadi SATU baris besar: "SMK BINA NUSA (BINUS)".
 $level  = trim((string) ($setting['school_level'] ?? ''));
+$nama   = trim((string) ($setting['school_name'] ?? ''));
+$namaLengkap = trim($level . ' ' . $nama);
+$tahun  = trim((string) ($setting['academic_year'] ?? ''));
 ?>
-<div style="border-bottom: 3px double #1a3a6b; padding-bottom: 6px; margin-bottom: 10px;">
+<div style="border-bottom: 3px double #1a3a6b; padding-bottom: 6px; margin-bottom: 12px;">
     <table style="width:100%; border-collapse:collapse;">
         <tr>
-            <td style="width:76px; text-align:center; vertical-align:middle; border:0; padding:0; background:none;">
-                <?php if ($logo): ?><img src="<?= $logo ?>" style="max-width:66px; max-height:66px;"><?php endif; ?>
+            <td style="width:110px; text-align:center; vertical-align:middle; border:0; padding:0; background:none;">
+                <?php if ($logo): ?><img src="<?= $logo ?>" style="max-width:96px; max-height:96px;"><?php endif; ?>
             </td>
             <td style="text-align:center; vertical-align:middle; border:0; padding:0; background:none;">
-                <?php if ($level !== ''): ?>
-                    <div style="font-size:10px; letter-spacing:1px; color:#334155;"><?= esc(strtoupper($level)) ?></div>
-                <?php endif; ?>
-                <div style="font-size:17px; font-weight:bold; color:#1a3a6b; letter-spacing:.5px;"><?= esc(strtoupper((string) ($setting['school_name'] ?? ''))) ?></div>
+                <div style="font-size:21px; font-weight:bold; color:#1a3a6b; letter-spacing:.5px;"><?= esc(strtoupper($namaLengkap)) ?></div>
                 <?php if ($lokasi !== ''): ?>
-                    <div style="font-size:9px; color:#475569; margin-top:2px;"><?= esc($lokasi) ?></div>
+                    <div style="font-size:9.5px; color:#475569; margin-top:3px;"><?= esc($lokasi) ?></div>
                 <?php endif; ?>
                 <?php if ($kontak !== ''): ?>
-                    <div style="font-size:9px; color:#475569;"><?= esc($kontak) ?></div>
+                    <div style="font-size:9.5px; color:#475569;"><?= esc($kontak) ?></div>
+                <?php endif; ?>
+                <?php if ($tahun !== ''): ?>
+                    <div style="font-size:9.5px; font-weight:bold; color:#1a3a6b; margin-top:1px;">Tahun Ajaran <?= esc($tahun) ?></div>
                 <?php endif; ?>
             </td>
-            <td style="width:76px; border:0; padding:0; background:none;"></td>
+            <td style="width:110px; border:0; padding:0; background:none;"></td>
         </tr>
     </table>
 </div>
