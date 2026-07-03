@@ -45,6 +45,68 @@
     window.readJson = readJson;
 
     /* ---------------------------------------------------------------
+     * Pilih baris & hapus massal (SEMUA halaman master) — plain JS
+     * global tanpa ketergantungan komponen halaman:
+     *   .js-check-all   : checkbox header (pilih semua baris)
+     *   .row-check      : checkbox tiap baris
+     *   [data-bulk]     : tombol hapus ("selected" | "all")
+     *   .js-bulk-form   : form tersembunyi tujuan POST
+     *                     (data-label = nama entitas, data-warn = peringatan ekstra)
+     * ------------------------------------------------------------- */
+    function updateBulkUI() {
+        var total   = document.querySelectorAll('.row-check').length;
+        var checked = document.querySelectorAll('.row-check:checked').length;
+        var allOn   = total > 0 && checked === total;
+
+        document.querySelectorAll('.js-bulk-count').forEach(function (n) { n.textContent = checked; });
+        document.querySelectorAll('[data-bulk="selected"]').forEach(function (b) { b.classList.toggle('hidden', checked === 0); });
+        document.querySelectorAll('[data-bulk="all"]').forEach(function (b) { b.classList.toggle('hidden', !allOn); });
+
+        var master = document.querySelector('.js-check-all');
+        if (master) { master.checked = allOn; }
+    }
+
+    document.addEventListener('change', function (e) {
+        if (e.target.classList && e.target.classList.contains('js-check-all')) {
+            var on = e.target.checked;
+            document.querySelectorAll('.row-check').forEach(function (c) { c.checked = on; });
+            updateBulkUI();
+        } else if (e.target.classList && e.target.classList.contains('row-check')) {
+            updateBulkUI();
+        }
+    });
+
+    document.addEventListener('click', function (e) {
+        var btn = e.target.closest('[data-bulk]');
+        if (!btn) { return; }
+        var form = document.querySelector('.js-bulk-form');
+        if (!form) { return; }
+
+        var mode  = btn.getAttribute('data-bulk');
+        var label = form.getAttribute('data-label') || 'data';
+        var warn  = form.getAttribute('data-warn') || '';
+
+        form.querySelectorAll('input[name="ids[]"]').forEach(function (n) { n.remove(); });
+
+        if (mode === 'all') {
+            if (!window.confirm('HAPUS SEMUA ' + label + '? Tindakan ini menghapus seluruh daftar dan tidak dapat dibatalkan.' + warn)) { return; }
+        } else {
+            var checked = Array.prototype.slice.call(document.querySelectorAll('.row-check:checked'));
+            if (checked.length === 0) { window.alert('Centang dulu data yang ingin dihapus.'); return; }
+            if (!window.confirm('Hapus ' + checked.length + ' ' + label + ' terpilih?' + warn)) { return; }
+            checked.forEach(function (c) {
+                var i = document.createElement('input');
+                i.type = 'hidden';
+                i.name = 'ids[]';
+                i.value = c.value;
+                form.appendChild(i);
+            });
+        }
+        form.querySelector('[name=mode]').value = mode;
+        form.submit();
+    });
+
+    /* ---------------------------------------------------------------
      * 4. masterList — pabrik komponen halaman daftar master data.
      *    Konfigurasi lewat atribut data-* pada elemen root:
      *      data-base     : URL dasar modul (untuk aksi simpan/edit)

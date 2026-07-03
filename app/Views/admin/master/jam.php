@@ -39,6 +39,8 @@ ob_start(); ?>
         'exportTitle' => 'Keluarkan seluruh jam pelajaran (kedua shift) ke file Excel',
         'bulkUrl'     => site_url('admin/master/jam/bulk-delete'),
         'bulkHidden'  => ['shift' => $shift],
+        'bulkLabel'   => 'jam pelajaran shift ' . $shift,
+        'bulkWarn'    => 'Jadwal pada slot tersebut ikut terhapus.',
     ]) ?>
 
     <!-- Tabel -->
@@ -50,7 +52,7 @@ ob_start(); ?>
             <table class="w-full text-sm">
                 <thead class="bg-slate-50 text-slate-500 text-left">
                     <tr>
-                        <th class="pl-6 pr-2 py-3 w-10"><input type="checkbox" @change="toggleAll($event)" title="Pilih semua di halaman ini" class="rounded border-slate-300 text-brand-600 focus:ring-brand-500"></th>
+                        <th class="pl-6 pr-2 py-3 w-10"><input type="checkbox" title="Pilih semua di halaman ini" class="js-check-all rounded border-slate-300 text-brand-600 focus:ring-brand-500"></th>
                         <th class="px-6 py-3 font-semibold w-24">Jam Ke</th>
                         <th class="px-6 py-3 font-semibold">Waktu</th>
                         <th class="px-6 py-3 font-semibold w-28">Durasi</th>
@@ -65,7 +67,7 @@ ob_start(); ?>
                         <?php if ($r['is_istirahat']): ?>
                             <!-- Baris ISTIRAHAT: tampil sebagai pemisah di tengah -->
                             <tr class="bg-amber-50">
-                                <td class="pl-6 pr-2 py-2.5"><input type="checkbox" class="row-check rounded border-slate-300 text-brand-600 focus:ring-brand-500" value="<?= (int) $r['id'] ?>" @change="refresh()"></td>
+                                <td class="pl-6 pr-2 py-2.5"><input type="checkbox" class="row-check rounded border-slate-300 text-brand-600 focus:ring-brand-500" value="<?= (int) $r['id'] ?>"></td>
                                 <td colspan="5" class="px-6 py-2.5">
                                     <div class="flex items-center justify-center gap-3">
                                         <span class="hidden sm:block flex-1 border-t border-dashed border-amber-300"></span>
@@ -87,7 +89,7 @@ ob_start(); ?>
                             </tr>
                         <?php else: ?>
                             <tr class="hover:bg-slate-50">
-                                <td class="pl-6 pr-2 py-3"><input type="checkbox" class="row-check rounded border-slate-300 text-brand-600 focus:ring-brand-500" value="<?= (int) $r['id'] ?>" @change="refresh()"></td>
+                                <td class="pl-6 pr-2 py-3"><input type="checkbox" class="row-check rounded border-slate-300 text-brand-600 focus:ring-brand-500" value="<?= (int) $r['id'] ?>"></td>
                                 <td class="px-6 py-3 font-bold text-brand-700"><?= esc($r['jam_ke']) ?></td>
                                 <td class="px-6 py-3"><?= esc(substr($r['waktu_mulai'], 0, 5)) ?> – <?= esc(substr($r['waktu_selesai'], 0, 5)) ?></td>
                                 <td class="px-6 py-3 text-slate-500"><?= esc($r['durasi']) ?> menit</td>

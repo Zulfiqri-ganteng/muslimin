@@ -53,6 +53,8 @@ ob_start(); ?>
         'exportTitle' => 'Keluarkan seluruh penugasan (semua kelas) ke file Excel',
         'bulkUrl'     => site_url('admin/master/pengampu/bulk-delete'),
         'bulkHidden'  => ['kelas_id' => $kelasId],
+        'bulkLabel'   => 'penugasan pada kelas ini',
+        'bulkWarn'    => 'Jadwal yang memakai penugasan tersebut ikut terhapus.',
     ]) ?>
 
     <!-- Tabel penugasan -->
@@ -65,7 +67,7 @@ ob_start(); ?>
             <table class="w-full text-sm">
                 <thead class="bg-slate-50 text-slate-500 text-left">
                     <tr>
-                        <th class="pl-6 pr-2 py-3 w-10"><input type="checkbox" @change="toggleAll($event)" title="Pilih semua di halaman ini" class="rounded border-slate-300 text-brand-600 focus:ring-brand-500"></th>
+                        <th class="pl-6 pr-2 py-3 w-10"><input type="checkbox" title="Pilih semua di halaman ini" class="js-check-all rounded border-slate-300 text-brand-600 focus:ring-brand-500"></th>
                         <th class="px-6 py-3 font-semibold w-20">Kode</th>
                         <th class="px-6 py-3 font-semibold">Mata Pelajaran</th>
                         <th class="px-6 py-3 font-semibold">Guru Pengampu</th>
@@ -78,7 +80,7 @@ ob_start(); ?>
                         <tr><td colspan="6" class="px-6 py-10 text-center text-slate-400"><?= $kelasId ? 'Belum ada penugasan untuk kelas ini.' : 'Pilih kelas terlebih dahulu (atau tambahkan kelas).' ?></td></tr>
                     <?php else: foreach ($rows as $r): $beda = (int) $r['jp'] !== (int) $r['jp_default']; ?>
                         <tr class="hover:bg-slate-50">
-                            <td class="pl-6 pr-2 py-3"><input type="checkbox" class="row-check rounded border-slate-300 text-brand-600 focus:ring-brand-500" value="<?= (int) $r['id'] ?>" @change="refresh()"></td>
+                            <td class="pl-6 pr-2 py-3"><input type="checkbox" class="row-check rounded border-slate-300 text-brand-600 focus:ring-brand-500" value="<?= (int) $r['id'] ?>"></td>
                             <td class="px-6 py-3 font-bold text-brand-700"><?= esc($r['kode_mapel']) ?></td>
                             <td class="px-6 py-3 font-medium"><?= esc($r['nama_mapel']) ?></td>
                             <td class="px-6 py-3 text-slate-600"><span class="text-slate-400"><?= esc($r['kode_guru']) ?></span> · <?= esc($r['guru_nama']) ?></td>

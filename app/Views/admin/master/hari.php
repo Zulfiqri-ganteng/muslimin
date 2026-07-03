@@ -40,6 +40,8 @@
         'exportUrl'         => site_url('admin/master/hari/export'),
         'exportTitle'       => 'Keluarkan semua hari ke file Excel',
         'bulkUrl'           => site_url('admin/master/hari/bulk-delete'),
+        'bulkLabel'         => 'hari',
+        'bulkWarn'          => 'Jadwal pada hari tersebut ikut terhapus.',
     ]) ?>
 
     <!-- Tabel -->
@@ -51,7 +53,7 @@
             <table class="w-full text-sm">
                 <thead class="bg-slate-50 text-slate-500 text-left">
                     <tr>
-                        <th class="pl-6 pr-2 py-3 w-10"><input type="checkbox" @change="toggleAll($event)" title="Pilih semua di halaman ini" class="rounded border-slate-300 text-brand-600 focus:ring-brand-500"></th>
+                        <th class="pl-6 pr-2 py-3 w-10"><input type="checkbox" title="Pilih semua di halaman ini" class="js-check-all rounded border-slate-300 text-brand-600 focus:ring-brand-500"></th>
                         <th class="px-6 py-3 font-semibold w-20">Urutan</th>
                         <th class="px-6 py-3 font-semibold">Nama Hari</th>
                         <th class="px-6 py-3 font-semibold w-28">Status</th>
@@ -63,7 +65,7 @@
                         <tr><td colspan="5" class="px-6 py-10 text-center text-slate-400">Belum ada data hari. Tambah manual atau import Excel.</td></tr>
                     <?php else: foreach ($rows as $r): ?>
                         <tr class="hover:bg-slate-50">
-                            <td class="pl-6 pr-2 py-3"><input type="checkbox" class="row-check rounded border-slate-300 text-brand-600 focus:ring-brand-500" value="<?= (int) $r['id'] ?>" @change="refresh()"></td>
+                            <td class="pl-6 pr-2 py-3"><input type="checkbox" class="row-check rounded border-slate-300 text-brand-600 focus:ring-brand-500" value="<?= (int) $r['id'] ?>"></td>
                             <td class="px-6 py-3 text-slate-500"><?= esc($r['urutan']) ?></td>
                             <td class="px-6 py-3 font-medium"><?= esc($r['nama']) ?></td>
                             <td class="px-6 py-3">

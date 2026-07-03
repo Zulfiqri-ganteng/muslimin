@@ -43,6 +43,8 @@
         'exportUrl'         => site_url('admin/master/guru/export'),
         'exportTitle'       => 'Keluarkan semua data guru ke file Excel',
         'bulkUrl'           => site_url('admin/master/guru/bulk-delete'),
+        'bulkLabel'         => 'data guru',
+        'bulkWarn'          => 'Penugasan, jadwal, dan data terkait guru tersebut ikut terhapus.',
     ]) ?>
 
     <!-- Tabel -->
@@ -54,7 +56,7 @@
             <table class="w-full text-sm">
                 <thead class="bg-slate-50 text-slate-500 text-left">
                     <tr>
-                        <th class="pl-6 pr-2 py-3 w-10"><input type="checkbox" @change="toggleAll($event)" title="Pilih semua di halaman ini" class="rounded border-slate-300 text-brand-600 focus:ring-brand-500"></th>
+                        <th class="pl-6 pr-2 py-3 w-10"><input type="checkbox" title="Pilih semua di halaman ini" class="js-check-all rounded border-slate-300 text-brand-600 focus:ring-brand-500"></th>
                         <th class="px-6 py-3 font-semibold w-16">Kode</th>
                         <th class="px-6 py-3 font-semibold">Nama Guru</th>
                         <th class="px-6 py-3 font-semibold">NIP</th>
@@ -69,7 +71,7 @@
                         <tr><td colspan="8" class="px-6 py-10 text-center text-slate-400">Belum ada data guru. Tambah manual, import Excel, atau impor dari data kesediaan.</td></tr>
                     <?php else: foreach ($rows as $r): ?>
                         <tr class="hover:bg-slate-50">
-                            <td class="pl-6 pr-2 py-3"><input type="checkbox" class="row-check rounded border-slate-300 text-brand-600 focus:ring-brand-500" value="<?= (int) $r['id'] ?>" @change="refresh()"></td>
+                            <td class="pl-6 pr-2 py-3"><input type="checkbox" class="row-check rounded border-slate-300 text-brand-600 focus:ring-brand-500" value="<?= (int) $r['id'] ?>"></td>
                             <td class="px-6 py-3 font-bold text-brand-700"><?= esc($r['kode_guru']) ?></td>
                             <td class="px-6 py-3 font-medium"><?= esc($r['nama']) ?></td>
                             <td class="px-6 py-3 text-slate-500"><?= esc($r['nip'] ?: '—') ?></td>

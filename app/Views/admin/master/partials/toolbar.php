@@ -33,6 +33,8 @@ $exportUrl   = $exportUrl ?? null;
 $exportTitle = $exportTitle ?? 'Keluarkan semua data ke file Excel';
 $bulkUrl     = $bulkUrl ?? null;
 $bulkHidden  = $bulkHidden ?? [];
+$bulkLabel   = $bulkLabel ?? 'data';   // nama entitas pada teks konfirmasi hapus
+$bulkWarn    = $bulkWarn ?? '';        // kalimat peringatan tambahan (opsional)
 
 $adaFilterAktif = $q !== '';
 foreach ($filters as $f) {
@@ -68,13 +70,13 @@ ob_start(); ?>
     <?php endif; ?>
 
     <?php if ($bulkUrl): ?>
-        <!-- Muncul hanya saat ada baris tercentang -->
-        <button type="button" @click="submitBulk('selected')" x-show="bulkSelected>0" x-cloak class="inline-flex items-center gap-1.5 rounded-lg bg-red-600 hover:bg-red-700 text-white text-sm font-semibold px-3.5 py-2.5 transition">
+        <!-- Muncul hanya saat ada baris tercentang (ditangani global di assets/js/admin/app.js) -->
+        <button type="button" data-bulk="selected" class="hidden inline-flex items-center gap-1.5 rounded-lg bg-red-600 hover:bg-red-700 text-white text-sm font-semibold px-3.5 py-2.5 transition">
             <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
-            Hapus Terpilih (<span x-text="bulkSelected"></span>)
+            Hapus Terpilih (<span class="js-bulk-count">0</span>)
         </button>
         <!-- Muncul hanya saat SEMUA baris tercentang (select all) -->
-        <button type="button" @click="submitBulk('all')" x-show="allChecked" x-cloak class="inline-flex items-center gap-1.5 rounded-lg border text-sm font-semibold px-3.5 py-2.5 transition bg-white text-red-600 border-red-200 hover:bg-red-50">
+        <button type="button" data-bulk="all" class="hidden inline-flex items-center gap-1.5 rounded-lg border text-sm font-semibold px-3.5 py-2.5 transition bg-white text-red-600 border-red-200 hover:bg-red-50">
             <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
             Hapus Semua
         </button>
@@ -126,7 +128,8 @@ ob_start(); ?>
 
     <?php if ($bulkUrl): ?>
         <!-- form tersembunyi untuk hapus massal -->
-        <form method="post" action="<?= $bulkUrl ?>" x-ref="bulkForm" class="hidden">
+        <form method="post" action="<?= $bulkUrl ?>" class="hidden js-bulk-form"
+              data-label="<?= esc($bulkLabel, 'attr') ?>" data-warn="<?= esc($bulkWarn !== '' ? ' ' . $bulkWarn : '', 'attr') ?>">
             <?= csrf_field() ?>
             <input type="hidden" name="mode" value="">
             <?php foreach ($bulkHidden as $name => $val): ?>

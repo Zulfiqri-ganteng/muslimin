@@ -53,6 +53,8 @@
         'exportUrl'         => site_url('admin/master/kelas/export'),
         'exportTitle'       => 'Keluarkan semua kelas ke file Excel',
         'bulkUrl'           => site_url('admin/master/kelas/bulk-delete'),
+        'bulkLabel'         => 'kelas',
+        'bulkWarn'          => 'Penugasan & jadwal kelas tersebut ikut terhapus.',
     ]) ?>
 
     <!-- Tabel -->
@@ -64,7 +66,7 @@
             <table class="w-full text-sm">
                 <thead class="bg-slate-50 text-slate-500 text-left">
                     <tr>
-                        <th class="pl-6 pr-2 py-3 w-10"><input type="checkbox" @change="toggleAll($event)" title="Pilih semua di halaman ini" class="rounded border-slate-300 text-brand-600 focus:ring-brand-500"></th>
+                        <th class="pl-6 pr-2 py-3 w-10"><input type="checkbox" title="Pilih semua di halaman ini" class="js-check-all rounded border-slate-300 text-brand-600 focus:ring-brand-500"></th>
                         <th class="px-6 py-3 font-semibold">Nama Kelas</th>
                         <th class="px-6 py-3 font-semibold w-20">Tingkat</th>
                         <th class="px-6 py-3 font-semibold w-24">Jurusan</th>
@@ -78,7 +80,7 @@
                         <tr><td colspan="7" class="px-6 py-10 text-center text-slate-400">Belum ada kelas. Tambah manual atau import Excel.</td></tr>
                     <?php else: foreach ($rows as $r): ?>
                         <tr class="hover:bg-slate-50">
-                            <td class="pl-6 pr-2 py-3"><input type="checkbox" class="row-check rounded border-slate-300 text-brand-600 focus:ring-brand-500" value="<?= (int) $r['id'] ?>" @change="refresh()"></td>
+                            <td class="pl-6 pr-2 py-3"><input type="checkbox" class="row-check rounded border-slate-300 text-brand-600 focus:ring-brand-500" value="<?= (int) $r['id'] ?>"></td>
                             <td class="px-6 py-3 font-bold text-brand-700"><?= esc($r['nama_kelas']) ?></td>
                             <td class="px-6 py-3"><span class="inline-flex rounded bg-slate-100 text-slate-600 px-2 py-0.5 text-xs font-bold"><?= esc($r['tingkat']) ?></span></td>
                             <td class="px-6 py-3 text-slate-500"><?= esc($r['jurusan_kode'] ?: '—') ?></td>
