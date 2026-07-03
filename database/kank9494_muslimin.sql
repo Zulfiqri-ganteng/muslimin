@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Host: localhost:3306
--- Waktu pembuatan: 01 Jul 2026 pada 20.54
+-- Waktu pembuatan: 03 Jul 2026 pada 22.05
 -- Versi server: 10.11.18-MariaDB-cll-lve
 -- Versi PHP: 8.4.22
 
@@ -18,8 +18,64 @@ SET time_zone = "+00:00";
 /*!40101 SET NAMES utf8mb4 */;
 
 --
--- Database: `zulh7811_kang-m`
+-- Database: `kank9494_muslimin`
 --
+
+-- --------------------------------------------------------
+
+--
+-- Struktur dari tabel `absensi_guru`
+--
+
+CREATE TABLE `absensi_guru` (
+  `id` int(11) UNSIGNED NOT NULL,
+  `tanggal` date NOT NULL,
+  `jadwal_id` int(11) UNSIGNED DEFAULT NULL,
+  `guru_id` int(11) UNSIGNED NOT NULL,
+  `kelas_id` int(11) UNSIGNED NOT NULL,
+  `mapel_id` int(11) UNSIGNED DEFAULT NULL,
+  `hari_id` int(11) UNSIGNED NOT NULL,
+  `jam_id` int(11) UNSIGNED NOT NULL,
+  `status` enum('hadir','telat','izin','sakit','alpa') NOT NULL DEFAULT 'hadir',
+  `jam_masuk` time DEFAULT NULL,
+  `keterangan` varchar(255) DEFAULT NULL,
+  `created_by` int(11) UNSIGNED DEFAULT NULL,
+  `created_at` datetime DEFAULT NULL,
+  `updated_at` datetime DEFAULT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+--
+-- Dumping data untuk tabel `absensi_guru`
+--
+
+INSERT INTO `absensi_guru` (`id`, `tanggal`, `jadwal_id`, `guru_id`, `kelas_id`, `mapel_id`, `hari_id`, `jam_id`, `status`, `jam_masuk`, `keterangan`, `created_by`, `created_at`, `updated_at`) VALUES
+(1, '2026-07-02', NULL, 48, 1, 9, 5, 1, 'telat', NULL, NULL, 1, '2026-07-02 05:35:22', '2026-07-02 05:35:22'),
+(2, '2026-07-02', NULL, 27, 1, 15, 5, 2, 'izin', NULL, NULL, 1, '2026-07-02 05:35:22', '2026-07-02 05:35:22'),
+(3, '2026-07-03', NULL, 32, 56, 11, 6, 7, 'telat', '07:20:00', NULL, 1, '2026-07-03 01:16:01', '2026-07-03 01:16:01'),
+(4, '2026-07-03', NULL, 31, 56, 1, 6, 3, 'sakit', NULL, NULL, 1, '2026-07-03 01:16:01', '2026-07-03 01:16:01'),
+(5, '2026-07-03', NULL, 31, 56, 1, 6, 4, 'sakit', NULL, NULL, 1, '2026-07-03 01:16:01', '2026-07-03 01:16:01');
+
+-- --------------------------------------------------------
+
+--
+-- Struktur dari tabel `absensi_hari`
+--
+
+CREATE TABLE `absensi_hari` (
+  `id` int(11) UNSIGNED NOT NULL,
+  `tanggal` date NOT NULL,
+  `created_by` int(11) UNSIGNED DEFAULT NULL,
+  `created_at` datetime DEFAULT NULL,
+  `updated_at` datetime DEFAULT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+--
+-- Dumping data untuk tabel `absensi_hari`
+--
+
+INSERT INTO `absensi_hari` (`id`, `tanggal`, `created_by`, `created_at`, `updated_at`) VALUES
+(1, '2026-07-02', 1, '2026-07-02 05:35:22', '2026-07-02 05:35:22'),
+(2, '2026-07-03', 1, '2026-07-03 01:16:01', '2026-07-03 01:16:01');
 
 -- --------------------------------------------------------
 
@@ -577,7 +633,245 @@ INSERT INTO `audit_log` (`id`, `admin_id`, `aksi`, `tabel`, `record_id`, `deskri
 (506, 1, 'create', 'jadwal', 128, 'Tempatkan 1 kelas#1', '154.19.39.89', '2026-07-01 19:42:16'),
 (507, 1, 'create', 'jadwal', 129, 'Tempatkan 1 kelas#1', '154.19.39.89', '2026-07-01 19:42:18'),
 (508, 1, 'create', 'jadwal', 130, 'Tempatkan 1 kelas#1', '154.19.39.89', '2026-07-01 19:42:21'),
-(509, 1, 'update', 'guru_mapel', 15, 'Atur kompetensi: 2 guru', '154.19.39.89', '2026-07-01 19:44:56');
+(509, 1, 'update', 'guru_mapel', 15, 'Atur kompetensi: 2 guru', '154.19.39.89', '2026-07-01 19:44:56'),
+(510, 1, 'create', 'pengampu', 39, 'Tambah penugasan kelas#43', '154.19.39.89', '2026-07-01 21:06:34'),
+(511, 1, 'create', 'jadwal', 131, 'Tempatkan 9 kelas#43', '154.19.39.89', '2026-07-01 21:06:59'),
+(512, 1, 'create', 'jadwal', 132, 'Tempatkan 9 kelas#43', '154.19.39.89', '2026-07-01 21:07:04'),
+(513, 1, 'create', 'jadwal', 133, 'Tempatkan 9 kelas#43', '154.19.39.89', '2026-07-01 21:07:06'),
+(514, 1, 'create', 'jadwal', 134, 'Tempatkan 9 kelas#43', '154.19.39.89', '2026-07-01 21:07:08'),
+(515, 1, 'delete', 'jadwal', 93, 'Hapus sel jadwal', '154.19.39.89', '2026-07-01 21:10:07'),
+(516, 1, 'delete', 'jadwal', 78, 'Hapus sel jadwal', '154.19.39.89', '2026-07-01 21:10:08'),
+(517, 1, 'delete', 'jadwal', 79, 'Hapus sel jadwal', '154.19.39.89', '2026-07-01 21:10:13');
+INSERT INTO `audit_log` (`id`, `admin_id`, `aksi`, `tabel`, `record_id`, `deskripsi`, `ip_address`, `created_at`) VALUES
+(518, 1, 'delete', 'jadwal', 94, 'Hapus sel jadwal', '154.19.39.89', '2026-07-01 21:10:15'),
+(519, 1, 'delete', 'jadwal', 95, 'Hapus sel jadwal', '154.19.39.89', '2026-07-01 21:10:17'),
+(520, 1, 'delete', 'jadwal', 96, 'Hapus sel jadwal', '154.19.39.89', '2026-07-01 21:10:18'),
+(521, 1, 'delete', 'jadwal', 97, 'Hapus sel jadwal', '154.19.39.89', '2026-07-01 21:10:23'),
+(522, 1, 'delete', 'jadwal', 98, 'Hapus sel jadwal', '154.19.39.89', '2026-07-01 21:10:24'),
+(523, 1, 'delete', 'jadwal', 106, 'Hapus sel jadwal', '154.19.39.89', '2026-07-01 21:10:26'),
+(524, 1, 'delete', 'jadwal', 114, 'Hapus sel jadwal', '154.19.39.89', '2026-07-01 21:10:28'),
+(525, 1, 'delete', 'jadwal', 122, 'Hapus sel jadwal', '154.19.39.89', '2026-07-01 21:10:29'),
+(526, 1, 'delete', 'jadwal', 124, 'Hapus sel jadwal', '154.19.39.89', '2026-07-01 21:10:31'),
+(527, 1, 'delete', 'jadwal', 103, 'Hapus sel jadwal', '154.19.39.89', '2026-07-01 21:10:33'),
+(528, 1, 'delete', 'jadwal', 111, 'Hapus sel jadwal', '154.19.39.89', '2026-07-01 21:10:34'),
+(529, 1, 'delete', 'jadwal', 112, 'Hapus sel jadwal', '154.19.39.89', '2026-07-01 21:10:36'),
+(530, 1, 'delete', 'jadwal', 104, 'Hapus sel jadwal', '154.19.39.89', '2026-07-01 21:10:37'),
+(531, 1, 'delete', 'jadwal', 105, 'Hapus sel jadwal', '154.19.39.89', '2026-07-01 21:10:38'),
+(532, 1, 'delete', 'jadwal', 113, 'Hapus sel jadwal', '154.19.39.89', '2026-07-01 21:10:40'),
+(533, 1, 'delete', 'jadwal', 120, 'Hapus sel jadwal', '154.19.39.89', '2026-07-01 21:10:41'),
+(534, 1, 'delete', 'jadwal', 119, 'Hapus sel jadwal', '154.19.39.89', '2026-07-01 21:10:42'),
+(535, 1, 'delete', 'jadwal', 121, 'Hapus sel jadwal', '154.19.39.89', '2026-07-01 21:10:43'),
+(536, 1, 'delete', 'jadwal', 99, 'Hapus sel jadwal', '154.19.39.89', '2026-07-01 21:10:47'),
+(537, 1, 'delete', 'jadwal', 100, 'Hapus sel jadwal', '154.19.39.89', '2026-07-01 21:10:49'),
+(538, 1, 'delete', 'jadwal', 101, 'Hapus sel jadwal', '154.19.39.89', '2026-07-01 21:10:50'),
+(539, 1, 'delete', 'jadwal', 102, 'Hapus sel jadwal', '154.19.39.89', '2026-07-01 21:10:51'),
+(540, 1, 'delete', 'jadwal', 110, 'Hapus sel jadwal', '154.19.39.89', '2026-07-01 21:10:52'),
+(541, 1, 'delete', 'jadwal', 109, 'Hapus sel jadwal', '154.19.39.89', '2026-07-01 21:10:53'),
+(542, 1, 'delete', 'jadwal', 108, 'Hapus sel jadwal', '154.19.39.89', '2026-07-01 21:10:54'),
+(543, 1, 'delete', 'jadwal', 107, 'Hapus sel jadwal', '154.19.39.89', '2026-07-01 21:10:55'),
+(544, 1, 'delete', 'jadwal', 115, 'Hapus sel jadwal', '154.19.39.89', '2026-07-01 21:10:57'),
+(545, 1, 'delete', 'jadwal', 116, 'Hapus sel jadwal', '154.19.39.89', '2026-07-01 21:10:59'),
+(546, 1, 'delete', 'jadwal', 117, 'Hapus sel jadwal', '154.19.39.89', '2026-07-01 21:11:01'),
+(547, 1, 'delete', 'jadwal', 118, 'Hapus sel jadwal', '154.19.39.89', '2026-07-01 21:11:02'),
+(548, 1, 'delete', 'jadwal', 127, 'Hapus sel jadwal', '154.19.39.89', '2026-07-01 21:11:03'),
+(549, 1, 'delete', 'jadwal', 128, 'Hapus sel jadwal', '154.19.39.89', '2026-07-01 21:11:05'),
+(550, 1, 'delete', 'jadwal', 129, 'Hapus sel jadwal', '154.19.39.89', '2026-07-01 21:11:06'),
+(551, 1, 'delete', 'jadwal', 130, 'Hapus sel jadwal', '154.19.39.89', '2026-07-01 21:11:08'),
+(552, 1, 'delete', 'jadwal', 126, 'Hapus sel jadwal', '154.19.39.89', '2026-07-01 21:11:13'),
+(553, 1, 'delete', 'jadwal', 125, 'Hapus sel jadwal', '154.19.39.89', '2026-07-01 21:11:15'),
+(554, 1, 'delete', 'jadwal', 123, 'Hapus sel jadwal', '154.19.39.89', '2026-07-01 21:11:16'),
+(555, 1, 'create', 'jadwal', 1, 'Generate otomatis: 40 JP', '154.19.39.89', '2026-07-01 21:11:33'),
+(556, 1, 'update', 'jadwal', 144, 'Tukar sel jadwal', '154.19.39.89', '2026-07-01 21:16:40'),
+(557, 1, 'update', 'jadwal', 146, 'Tukar sel jadwal', '154.19.39.89', '2026-07-01 21:17:01'),
+(558, 1, 'update', 'jadwal', 143, 'Tukar sel jadwal', '154.19.39.89', '2026-07-01 21:17:08'),
+(559, 1, 'update', 'jadwal', 140, 'Tukar sel jadwal', '154.19.39.89', '2026-07-01 21:17:12'),
+(560, 1, 'update', 'jadwal', 182, 'Tukar sel jadwal', '154.19.39.89', '2026-07-01 21:17:18'),
+(561, 1, 'update', 'jadwal', 155, 'Tukar sel jadwal', '154.19.39.89', '2026-07-01 21:17:50'),
+(562, 1, 'update', 'jadwal', 141, 'Tukar sel jadwal', '154.19.39.89', '2026-07-01 21:18:05'),
+(563, 1, 'update', 'jadwal', 137, 'Tukar sel jadwal', '154.19.39.89', '2026-07-01 21:18:15'),
+(564, 1, 'update', 'jadwal', 154, 'Tukar sel jadwal', '154.19.39.89', '2026-07-01 21:18:20'),
+(565, 1, 'delete', 'jadwal', 139, 'Hapus sel jadwal', '154.19.39.89', '2026-07-01 21:49:22'),
+(566, 1, 'delete', 'jadwal', 142, 'Hapus sel jadwal', '154.19.39.89', '2026-07-01 21:49:24'),
+(567, 1, 'delete', 'jadwal', 145, 'Hapus sel jadwal', '154.19.39.89', '2026-07-01 21:49:25'),
+(568, 1, 'delete', 'jadwal', 175, 'Hapus sel jadwal', '154.19.39.89', '2026-07-01 21:49:27'),
+(569, 1, 'delete', 'jadwal', 177, 'Hapus sel jadwal', '154.19.39.89', '2026-07-01 21:49:32'),
+(570, 1, 'delete', 'jadwal', 181, 'Hapus sel jadwal', '154.19.39.89', '2026-07-01 21:49:33'),
+(571, 1, 'delete', 'jadwal', 183, 'Hapus sel jadwal', '154.19.39.89', '2026-07-01 21:49:34'),
+(572, 1, 'delete', 'jadwal', 187, 'Hapus sel jadwal', '154.19.39.89', '2026-07-01 21:49:35'),
+(573, 1, 'delete', 'jadwal', 159, 'Hapus sel jadwal', '154.19.39.89', '2026-07-01 21:49:38'),
+(574, 1, 'delete', 'jadwal', 136, 'Hapus sel jadwal', '154.19.39.89', '2026-07-01 21:49:40'),
+(575, 1, 'delete', 'jadwal', 189, 'Hapus sel jadwal', '154.19.39.89', '2026-07-01 21:49:42'),
+(576, 1, 'delete', 'jadwal', 152, 'Hapus sel jadwal', '154.19.39.89', '2026-07-01 21:49:43'),
+(577, 1, 'delete', 'jadwal', 191, 'Hapus sel jadwal', '154.19.39.89', '2026-07-01 21:49:44'),
+(578, 1, 'delete', 'jadwal', 163, 'Hapus sel jadwal', '154.19.39.89', '2026-07-01 21:49:45'),
+(579, 1, 'delete', 'jadwal', 166, 'Hapus sel jadwal', '154.19.39.89', '2026-07-01 21:49:48'),
+(580, 1, 'delete', 'jadwal', 169, 'Hapus sel jadwal', '154.19.39.89', '2026-07-01 21:49:49'),
+(581, 1, 'delete', 'jadwal', 190, 'Hapus sel jadwal', '154.19.39.89', '2026-07-01 21:50:11'),
+(582, 1, 'delete', 'jadwal', 184, 'Hapus sel jadwal', '154.19.39.89', '2026-07-01 21:50:12'),
+(583, 1, 'delete', 'jadwal', 180, 'Hapus sel jadwal', '154.19.39.89', '2026-07-01 21:50:14'),
+(584, 1, 'delete', 'jadwal', 178, 'Hapus sel jadwal', '154.19.39.89', '2026-07-01 21:50:16'),
+(585, 1, 'delete', 'jadwal', 149, 'Hapus sel jadwal', '154.19.39.89', '2026-07-01 21:50:17'),
+(586, 1, 'delete', 'jadwal', 153, 'Hapus sel jadwal', '154.19.39.89', '2026-07-01 21:50:20'),
+(587, 1, 'delete', 'jadwal', 157, 'Hapus sel jadwal', '154.19.39.89', '2026-07-01 21:50:22'),
+(588, 1, 'delete', 'jadwal', 185, 'Hapus sel jadwal', '154.19.39.89', '2026-07-01 21:50:23'),
+(589, 1, 'delete', 'jadwal', 164, 'Hapus sel jadwal', '154.19.39.89', '2026-07-01 21:50:26'),
+(590, 1, 'delete', 'jadwal', 167, 'Hapus sel jadwal', '154.19.39.89', '2026-07-01 21:50:27'),
+(591, 1, 'delete', 'jadwal', 170, 'Hapus sel jadwal', '154.19.39.89', '2026-07-01 21:50:29'),
+(592, 1, 'delete', 'jadwal', 171, 'Hapus sel jadwal', '154.19.39.89', '2026-07-01 21:50:30'),
+(593, 1, 'delete', 'jadwal', 150, 'Hapus sel jadwal', '154.19.39.89', '2026-07-01 21:50:37'),
+(594, 1, 'delete', 'jadwal', 192, 'Hapus sel jadwal', '154.19.39.89', '2026-07-01 21:50:39'),
+(595, 1, 'delete', 'jadwal', 158, 'Hapus sel jadwal', '154.19.39.89', '2026-07-01 21:50:41'),
+(596, 1, 'delete', 'jadwal', 161, 'Hapus sel jadwal', '154.19.39.89', '2026-07-01 21:50:42'),
+(597, 1, 'delete', 'jadwal', 168, 'Hapus sel jadwal', '154.19.39.89', '2026-07-01 21:50:45'),
+(598, 1, 'delete', 'jadwal', 172, 'Hapus sel jadwal', '154.19.39.89', '2026-07-01 21:50:46'),
+(599, 1, 'delete', 'jadwal', 173, 'Hapus sel jadwal', '154.19.39.89', '2026-07-01 21:50:47'),
+(600, 1, 'delete', 'jadwal', 174, 'Hapus sel jadwal', '154.19.39.89', '2026-07-01 21:50:49'),
+(601, 1, 'delete', 'jadwal', 165, 'Hapus sel jadwal', '154.19.39.89', '2026-07-01 21:50:51'),
+(602, 1, 'delete', 'jadwal', 162, 'Hapus sel jadwal', '154.19.39.89', '2026-07-01 21:50:52'),
+(603, 1, 'delete', 'jadwal', 176, 'Hapus sel jadwal', '154.19.39.89', '2026-07-01 21:50:53'),
+(604, 1, 'delete', 'jadwal', 188, 'Hapus sel jadwal', '154.19.39.89', '2026-07-01 21:50:55'),
+(605, 1, 'delete', 'jadwal', 131, 'Hapus sel jadwal', '154.19.39.89', '2026-07-01 21:58:08'),
+(606, 1, 'delete', 'jadwal', 132, 'Hapus sel jadwal', '154.19.39.89', '2026-07-01 21:58:09'),
+(607, 1, 'delete', 'jadwal', 133, 'Hapus sel jadwal', '154.19.39.89', '2026-07-01 21:58:10'),
+(608, 1, 'delete', 'jadwal', 134, 'Hapus sel jadwal', '154.19.39.89', '2026-07-01 21:58:11'),
+(609, 1, 'import', 'jadwal', NULL, 'Import jadwal: +7 baru, 0 diganti, 5 dilewati', '154.19.39.89', '2026-07-01 22:10:39'),
+(610, 1, 'delete', 'jadwal', NULL, 'Hapus massal 7 sel jadwal kelas#56', '154.19.39.89', '2026-07-01 22:15:46'),
+(611, 1, 'create', 'jadwal', 56, 'Generate otomatis: 7 JP', '154.19.39.89', '2026-07-01 22:21:24'),
+(612, 1, 'delete', 'jadwal', 200, 'Hapus sel jadwal', '154.19.39.89', '2026-07-01 22:21:32'),
+(613, 1, 'delete', 'jadwal', 201, 'Hapus sel jadwal', '154.19.39.89', '2026-07-01 22:21:33'),
+(614, 1, 'delete', 'jadwal', 202, 'Hapus sel jadwal', '154.19.39.89', '2026-07-01 22:21:34'),
+(615, 1, 'delete', 'jadwal', 203, 'Hapus sel jadwal', '154.19.39.89', '2026-07-01 22:21:36'),
+(616, 1, 'delete', 'jadwal', 204, 'Hapus sel jadwal', '154.19.39.89', '2026-07-01 22:21:37'),
+(617, 1, 'delete', 'jadwal', 205, 'Hapus sel jadwal', '154.19.39.89', '2026-07-01 22:21:39'),
+(618, 1, 'delete', 'jadwal', 206, 'Hapus sel jadwal', '154.19.39.89', '2026-07-01 22:21:40'),
+(619, 1, 'delete', 'pengampu', 41, 'Hapus penugasan', '154.19.39.89', '2026-07-01 22:27:09'),
+(620, 1, 'delete', 'pengampu', 40, 'Hapus penugasan', '154.19.39.89', '2026-07-01 22:27:12'),
+(621, 1, 'import', 'jadwal', NULL, 'Import jadwal: +4 baru, 0 diganti, 8 dilewati', '154.19.39.89', '2026-07-01 22:33:25'),
+(622, 1, 'delete', 'jadwal', NULL, 'Hapus massal 4 sel jadwal kelas#56', '154.19.39.89', '2026-07-01 22:35:10'),
+(623, 1, 'delete', 'pengampu', 40, 'Hapus penugasan', '154.19.39.89', '2026-07-01 22:35:20'),
+(624, 1, 'import', 'jadwal', NULL, 'Import jadwal: +7 baru, 0 diganti, 5 dilewati', '154.19.39.89', '2026-07-01 22:35:44'),
+(625, 1, 'create', 'jadwal', 218, 'Tempatkan 6 kelas#1', '154.19.39.89', '2026-07-02 04:35:45'),
+(626, 1, 'delete', 'jadwal', 218, 'Hapus sel jadwal', '154.19.39.89', '2026-07-02 04:37:48'),
+(627, 1, 'create', 'jadwal', 219, 'Tempatkan 6 kelas#1', '154.19.39.89', '2026-07-02 04:38:59'),
+(628, 1, 'create', 'jadwal', 220, 'Tempatkan 11 kelas#1', '154.19.39.89', '2026-07-02 04:39:03'),
+(629, 1, 'update', 'absensi_guru', NULL, 'Simpan absensi 2026-07-02', '154.19.39.89', '2026-07-02 05:35:22'),
+(630, 1, 'delete', 'jadwal', NULL, 'Hapus massal 7 sel jadwal kelas#56', '154.19.39.89', '2026-07-02 18:17:05'),
+(631, 1, 'delete', 'pengampu', 41, 'Hapus penugasan', '154.19.39.89', '2026-07-02 18:17:13'),
+(632, 1, 'delete', 'pengampu', 40, 'Hapus penugasan', '154.19.39.89', '2026-07-02 18:17:16'),
+(633, 1, 'delete', 'pengampu', 34, 'Hapus penugasan', '154.19.39.89', '2026-07-02 18:17:40'),
+(634, 1, 'delete', 'pengampu', 31, 'Hapus penugasan', '154.19.39.89', '2026-07-02 18:17:44'),
+(635, 1, 'delete', 'pengampu', 33, 'Hapus penugasan', '154.19.39.89', '2026-07-02 18:17:47'),
+(636, 1, 'delete', 'pengampu', 36, 'Hapus penugasan', '154.19.39.89', '2026-07-02 18:17:49'),
+(637, 1, 'delete', 'pengampu', 32, 'Hapus penugasan', '154.19.39.89', '2026-07-02 18:17:52'),
+(638, 1, 'delete', 'pengampu', 37, 'Hapus penugasan', '154.19.39.89', '2026-07-02 18:17:55'),
+(639, 1, 'delete', 'pengampu', 38, 'Hapus penugasan', '154.19.39.89', '2026-07-02 18:17:58'),
+(640, 1, 'delete', 'pengampu', 30, 'Hapus penugasan', '154.19.39.89', '2026-07-02 18:18:00'),
+(641, 1, 'delete', 'pengampu', 28, 'Hapus penugasan', '154.19.39.89', '2026-07-02 18:18:03'),
+(642, 1, 'delete', 'pengampu', 35, 'Hapus penugasan', '154.19.39.89', '2026-07-02 18:18:06'),
+(643, 1, 'delete', 'pengampu', 29, 'Hapus penugasan', '154.19.39.89', '2026-07-02 18:18:08'),
+(644, 1, 'delete', 'pengampu', 39, 'Hapus penugasan', '154.19.39.89', '2026-07-02 18:18:17'),
+(645, 1, 'import', 'jadwal', NULL, 'Import jadwal: +28 baru, 0 diganti, 12 dilewati', '154.19.39.89', '2026-07-02 18:32:25'),
+(646, 1, 'update', 'mata_pelajaran', 4, 'Ubah mapel Bahasa Indonesia', '154.19.39.89', '2026-07-02 18:33:57'),
+(647, 1, 'update', 'mata_pelajaran', 11, 'Ubah mapel Matematika', '154.19.39.89', '2026-07-02 18:36:17'),
+(648, 1, 'delete', 'jadwal', NULL, 'Hapus massal 28 sel jadwal kelas#56', '154.19.39.89', '2026-07-02 18:36:46'),
+(649, 1, 'delete', 'pengampu', 46, 'Hapus penugasan', '154.19.39.89', '2026-07-02 18:36:56'),
+(650, 1, 'delete', 'pengampu', 41, 'Hapus penugasan', '154.19.39.89', '2026-07-02 18:37:00'),
+(651, 1, 'delete', 'pengampu', 40, 'Hapus penugasan', '154.19.39.89', '2026-07-02 18:37:03'),
+(652, 1, 'delete', 'pengampu', 45, 'Hapus penugasan', '154.19.39.89', '2026-07-02 18:37:06'),
+(653, 1, 'delete', 'pengampu', 43, 'Hapus penugasan', '154.19.39.89', '2026-07-02 18:37:10'),
+(654, 1, 'delete', 'pengampu', 44, 'Hapus penugasan', '154.19.39.89', '2026-07-02 18:37:14'),
+(655, 1, 'delete', 'pengampu', 47, 'Hapus penugasan', '154.19.39.89', '2026-07-02 18:37:17'),
+(656, 1, 'delete', 'pengampu', 42, 'Hapus penugasan', '154.19.39.89', '2026-07-02 18:37:20'),
+(657, 1, 'import', 'jadwal', NULL, 'Import jadwal: +40 baru, 0 diganti, 0 dilewati', '154.19.39.89', '2026-07-02 18:37:51'),
+(658, 1, 'update', 'pengampu', 41, 'Ubah penugasan', '154.19.39.89', '2026-07-02 18:39:45'),
+(659, 1, 'update', 'absensi_guru', NULL, 'Simpan absensi 2026-07-03', '154.19.39.89', '2026-07-03 01:16:01'),
+(660, 1, 'update', 'mata_pelajaran', 22, 'Ubah mapel Administrasi Sistem Jaringan', '154.19.39.89', '2026-07-03 08:02:59'),
+(661, 1, 'update', 'mata_pelajaran', 24, 'Ubah mapel Administrasi Sistem Jaringan', '154.19.39.89', '2026-07-03 08:03:09'),
+(662, 1, 'update', 'mata_pelajaran', 28, 'Ubah mapel Praktik Akuntansi lembaga/instansi pemerintah', '154.19.39.89', '2026-07-03 16:36:44'),
+(663, 1, 'delete', 'jadwal', 219, 'Hapus sel jadwal', '154.19.39.89', '2026-07-03 16:40:32'),
+(664, 1, 'delete', 'jadwal', 220, 'Hapus sel jadwal', '154.19.39.89', '2026-07-03 16:40:33'),
+(665, 1, 'import', 'jadwal', NULL, 'Import jadwal: +0 baru, 0 diganti, 40 dilewati', '154.19.39.89', '2026-07-03 16:47:14'),
+(666, 1, 'delete', 'jadwal', NULL, 'Hapus massal 40 sel jadwal kelas#56', '154.19.39.89', '2026-07-03 16:49:00'),
+(667, 1, 'delete', 'pengampu', 48, 'Hapus penugasan', '154.19.39.89', '2026-07-03 16:49:12'),
+(668, 1, 'delete', 'pengampu', 46, 'Hapus penugasan', '154.19.39.89', '2026-07-03 16:49:15'),
+(669, 1, 'delete', 'pengampu', 41, 'Hapus penugasan', '154.19.39.89', '2026-07-03 16:49:17'),
+(670, 1, 'delete', 'pengampu', 40, 'Hapus penugasan', '154.19.39.89', '2026-07-03 16:49:20'),
+(671, 1, 'delete', 'pengampu', 50, 'Hapus penugasan', '154.19.39.89', '2026-07-03 16:49:22'),
+(672, 1, 'delete', 'pengampu', 45, 'Hapus penugasan', '154.19.39.89', '2026-07-03 16:49:24'),
+(673, 1, 'delete', 'pengampu', 43, 'Hapus penugasan', '154.19.39.89', '2026-07-03 16:49:27'),
+(674, 1, 'delete', 'pengampu', 44, 'Hapus penugasan', '154.19.39.89', '2026-07-03 16:49:32'),
+(675, 1, 'delete', 'pengampu', 49, 'Hapus penugasan', '154.19.39.89', '2026-07-03 16:49:34'),
+(676, 1, 'delete', 'pengampu', 47, 'Hapus penugasan', '154.19.39.89', '2026-07-03 16:49:36'),
+(677, 1, 'delete', 'pengampu', 42, 'Hapus penugasan', '154.19.39.89', '2026-07-03 16:49:40'),
+(678, 1, 'import', 'jadwal', NULL, 'Import jadwal: +40 baru, 0 diganti, 0 dilewati', '154.19.39.89', '2026-07-03 16:50:12'),
+(679, 1, 'import', 'jadwal', NULL, 'Import jadwal: +37 baru, 0 diganti, 3 dilewati', '154.19.39.89', '2026-07-03 16:51:40'),
+(680, 1, 'update', 'mata_pelajaran', 5, 'Ubah mapel Bahasa Indonesia', '154.19.39.89', '2026-07-03 16:53:07'),
+(681, 1, 'update', 'mata_pelajaran', 6, 'Ubah mapel Pendidikan Jasmani, Olahraga dan Kesehatan', '154.19.39.89', '2026-07-03 16:53:34'),
+(682, 1, 'update', 'mata_pelajaran', 7, 'Ubah mapel Pendidikan Jasmani, Olahraga dan Kesehatan', '154.19.39.89', '2026-07-03 16:53:52'),
+(683, 1, 'update', 'mata_pelajaran', 34, 'Ubah mapel Komunikasi di Tempat Kerja', '154.19.39.89', '2026-07-03 16:54:09'),
+(684, 1, 'update', 'mata_pelajaran', 35, 'Ubah mapel Komunikasi di Tempat Kerja', '154.19.39.89', '2026-07-03 16:54:23'),
+(685, 1, 'update', 'mata_pelajaran', 12, 'Ubah mapel Matematika', '154.19.39.89', '2026-07-03 16:54:37'),
+(686, 1, 'update', 'mata_pelajaran', 21, 'Ubah mapel Pemasangan dan Konfigurasi Perangkat Jaringan', '154.19.39.89', '2026-07-03 16:54:52'),
+(687, 1, 'update', 'mata_pelajaran', 23, 'Ubah mapel Pemasangan dan Konfigurasi Perangkat Jaringan', '154.19.39.89', '2026-07-03 16:55:12'),
+(688, 1, 'update', 'mata_pelajaran', 7, 'Ubah mapel Pendidikan Jasmani, Olahraga dan Kesehatan', '154.19.39.89', '2026-07-03 16:58:26'),
+(689, 1, 'update', 'guru_mapel', 6, 'Atur kompetensi: 2 guru', '154.19.39.89', '2026-07-03 16:59:01'),
+(690, 1, 'update', 'guru_mapel', 7, 'Atur kompetensi: 2 guru', '154.19.39.89', '2026-07-03 16:59:38'),
+(691, 1, 'update', 'guru_mapel', 3, 'Atur kompetensi: 3 guru', '154.19.39.89', '2026-07-03 17:01:13'),
+(692, 1, 'update', 'guru_mapel', 32, 'Atur kompetensi: 2 guru', '154.19.39.89', '2026-07-03 17:01:51'),
+(693, 1, 'update', 'guru_mapel', 26, 'Atur kompetensi: 1 guru', '154.19.39.89', '2026-07-03 17:02:20'),
+(694, 1, 'update', 'guru_mapel', 25, 'Atur kompetensi: 3 guru', '154.19.39.89', '2026-07-03 17:02:50'),
+(695, 1, 'update', 'guru_mapel', 44, 'Atur kompetensi: 3 guru', '154.19.39.89', '2026-07-03 17:03:43'),
+(696, 1, 'update', 'guru_mapel', 11, 'Atur kompetensi: 3 guru', '154.19.39.89', '2026-07-03 17:04:23'),
+(697, 1, 'delete', 'jadwal', NULL, 'Hapus massal 37 sel jadwal kelas#1', '154.19.39.89', '2026-07-03 17:05:01'),
+(698, 1, 'delete', 'pengampu', 34, 'Hapus penugasan', '154.19.39.89', '2026-07-03 17:05:25'),
+(699, 1, 'delete', 'pengampu', 31, 'Hapus penugasan', '154.19.39.89', '2026-07-03 17:05:28'),
+(700, 1, 'delete', 'pengampu', 32, 'Hapus penugasan', '154.19.39.89', '2026-07-03 17:05:30'),
+(701, 1, 'delete', 'pengampu', 37, 'Hapus penugasan', '154.19.39.89', '2026-07-03 17:05:32'),
+(702, 1, 'delete', 'pengampu', 30, 'Hapus penugasan', '154.19.39.89', '2026-07-03 17:05:34'),
+(703, 1, 'delete', 'pengampu', 28, 'Hapus penugasan', '154.19.39.89', '2026-07-03 17:05:37'),
+(704, 1, 'delete', 'pengampu', 35, 'Hapus penugasan', '154.19.39.89', '2026-07-03 17:05:39'),
+(705, 1, 'delete', 'pengampu', 29, 'Hapus penugasan', '154.19.39.89', '2026-07-03 17:05:41'),
+(706, 1, 'delete', 'pengampu', 36, 'Hapus penugasan', '154.19.39.89', '2026-07-03 17:05:44'),
+(707, 1, 'delete', 'pengampu', 33, 'Hapus penugasan', '154.19.39.89', '2026-07-03 17:05:46'),
+(708, 1, 'import', 'jadwal', NULL, 'Import jadwal: +40 baru, 0 diganti, 0 dilewati', '154.19.39.89', '2026-07-03 17:06:45'),
+(709, 1, 'update', 'pengampu', 51, 'Ubah penugasan', '154.19.39.89', '2026-07-03 17:09:07'),
+(710, 1, 'update', 'pengampu', 53, 'Ubah penugasan', '154.19.39.89', '2026-07-03 17:09:21'),
+(711, 1, 'update', 'pengampu', 52, 'Ubah penugasan', '154.19.39.89', '2026-07-03 17:09:28'),
+(712, 1, 'delete', 'jadwal', 369, 'Hapus sel jadwal', '154.19.39.89', '2026-07-03 17:10:17'),
+(713, 1, 'delete', 'jadwal', 374, 'Hapus sel jadwal', '154.19.39.89', '2026-07-03 17:10:22'),
+(714, 1, 'delete', 'jadwal', 379, 'Hapus sel jadwal', '154.19.39.89', '2026-07-03 17:10:24'),
+(715, 1, 'delete', 'jadwal', 384, 'Hapus sel jadwal', '154.19.39.89', '2026-07-03 17:10:26'),
+(716, 1, 'create', 'jadwal', 406, 'Tempatkan 3B kelas#1', '154.19.39.89', '2026-07-03 17:10:32'),
+(717, 1, 'create', 'jadwal', 407, 'Tempatkan 3B kelas#1', '154.19.39.89', '2026-07-03 17:10:34'),
+(718, 1, 'create', 'jadwal', 408, 'Tempatkan 3B kelas#1', '154.19.39.89', '2026-07-03 17:10:35'),
+(719, 1, 'delete', 'jadwal', NULL, 'Hapus massal 39 sel jadwal kelas#1', '154.19.39.89', '2026-07-03 17:10:52'),
+(720, 1, 'delete', 'jadwal', NULL, 'Hapus massal 40 sel jadwal kelas#56', '154.19.39.89', '2026-07-03 17:13:42'),
+(721, 1, 'delete', 'pengampu', 48, 'Hapus penugasan', '154.19.39.89', '2026-07-03 17:13:59'),
+(722, 1, 'delete', 'pengampu', 46, 'Hapus penugasan', '154.19.39.89', '2026-07-03 17:14:02'),
+(723, 1, 'delete', 'pengampu', 41, 'Hapus penugasan', '154.19.39.89', '2026-07-03 17:14:03'),
+(724, 1, 'delete', 'pengampu', 40, 'Hapus penugasan', '154.19.39.89', '2026-07-03 17:14:05'),
+(725, 1, 'delete', 'pengampu', 50, 'Hapus penugasan', '154.19.39.89', '2026-07-03 17:14:08'),
+(726, 1, 'delete', 'pengampu', 45, 'Hapus penugasan', '154.19.39.89', '2026-07-03 17:14:10'),
+(727, 1, 'delete', 'pengampu', 43, 'Hapus penugasan', '154.19.39.89', '2026-07-03 17:14:13'),
+(728, 1, 'delete', 'pengampu', 44, 'Hapus penugasan', '154.19.39.89', '2026-07-03 17:14:15'),
+(729, 1, 'delete', 'pengampu', 49, 'Hapus penugasan', '154.19.39.89', '2026-07-03 17:14:17'),
+(730, 1, 'delete', 'pengampu', 47, 'Hapus penugasan', '154.19.39.89', '2026-07-03 17:14:19'),
+(731, 1, 'delete', 'pengampu', 42, 'Hapus penugasan', '154.19.39.89', '2026-07-03 17:14:22'),
+(732, 1, 'delete', 'pengampu', 51, 'Hapus penugasan', '154.19.39.89', '2026-07-03 17:14:28'),
+(733, 1, 'delete', 'pengampu', 31, 'Hapus penugasan', '154.19.39.89', '2026-07-03 17:14:30'),
+(734, 1, 'delete', 'pengampu', 33, 'Hapus penugasan', '154.19.39.89', '2026-07-03 17:14:33'),
+(735, 1, 'delete', 'pengampu', 36, 'Hapus penugasan', '154.19.39.89', '2026-07-03 17:14:35'),
+(736, 1, 'delete', 'pengampu', 53, 'Hapus penugasan', '154.19.39.89', '2026-07-03 17:14:38'),
+(737, 1, 'delete', 'pengampu', 37, 'Hapus penugasan', '154.19.39.89', '2026-07-03 17:14:40'),
+(738, 1, 'delete', 'pengampu', 52, 'Hapus penugasan', '154.19.39.89', '2026-07-03 17:14:42'),
+(739, 1, 'delete', 'pengampu', 30, 'Hapus penugasan', '154.19.39.89', '2026-07-03 17:14:44'),
+(740, 1, 'delete', 'pengampu', 28, 'Hapus penugasan', '154.19.39.89', '2026-07-03 17:14:47'),
+(741, 1, 'delete', 'pengampu', 35, 'Hapus penugasan', '154.19.39.89', '2026-07-03 17:14:49'),
+(742, 1, 'delete', 'pengampu', 29, 'Hapus penugasan', '154.19.39.89', '2026-07-03 17:14:52'),
+(743, 1, 'delete', 'mata_pelajaran', NULL, 'Hapus massal 45 mapel (all)', '154.19.39.89', '2026-07-03 17:15:10'),
+(744, 1, 'import', 'mata_pelajaran', NULL, 'Import mapel: +12 baru, 32 update, 0 dilewati', '154.19.39.89', '2026-07-03 17:24:12'),
+(745, 1, 'update', 'guru_mapel', 46, 'Atur kompetensi: 1 guru', '154.19.39.89', '2026-07-03 17:25:46'),
+(746, 1, 'update', 'guru_mapel', 47, 'Atur kompetensi: 1 guru', '154.19.39.89', '2026-07-03 17:26:04');
 
 -- --------------------------------------------------------
 
@@ -704,7 +998,28 @@ INSERT INTO `guru_mapel` (`id`, `guru_id`, `mapel_id`, `created_at`) VALUES
 (35, 33, 4, '2026-07-01 19:31:40'),
 (36, 24, 4, '2026-07-01 19:31:40'),
 (37, 9, 15, '2026-07-01 19:44:56'),
-(38, 27, 15, '2026-07-01 19:44:56');
+(38, 27, 15, '2026-07-01 19:44:56'),
+(39, 6, 6, '2026-07-03 16:59:01'),
+(40, 5, 6, '2026-07-03 16:59:01'),
+(41, 6, 7, '2026-07-03 16:59:38'),
+(42, 5, 7, '2026-07-03 16:59:38'),
+(43, 15, 3, '2026-07-03 17:01:13'),
+(44, 29, 3, '2026-07-03 17:01:13'),
+(45, 43, 3, '2026-07-03 17:01:13'),
+(46, 40, 32, '2026-07-03 17:01:51'),
+(47, 48, 32, '2026-07-03 17:01:51'),
+(48, 25, 26, '2026-07-03 17:02:20'),
+(49, 20, 25, '2026-07-03 17:02:50'),
+(50, 21, 25, '2026-07-03 17:02:50'),
+(51, 1, 25, '2026-07-03 17:02:50'),
+(52, 10, 44, '2026-07-03 17:03:43'),
+(53, 33, 44, '2026-07-03 17:03:43'),
+(54, 48, 44, '2026-07-03 17:03:43'),
+(55, 46, 11, '2026-07-03 17:04:23'),
+(56, 36, 11, '2026-07-03 17:04:23'),
+(57, 32, 11, '2026-07-03 17:04:23'),
+(58, 24, 46, '2026-07-03 17:25:46'),
+(59, 26, 47, '2026-07-03 17:26:04');
 
 -- --------------------------------------------------------
 
@@ -756,47 +1071,7 @@ CREATE TABLE `jadwal` (
 INSERT INTO `jadwal` (`id`, `tahun_ajaran_id`, `kelas_id`, `hari_id`, `jam_id`, `pengampu_id`, `guru_id`, `created_by`, `created_at`, `updated_at`) VALUES
 (7, NULL, 104, 1, 14, 12, 34, 1, '2026-06-22 22:19:59', '2026-06-22 22:19:59'),
 (8, NULL, 104, 3, 14, 12, 34, 1, '2026-06-22 22:19:59', '2026-06-22 22:19:59'),
-(9, NULL, 113, 1, 15, 16, 34, 1, '2026-06-22 22:25:59', '2026-06-22 22:25:59'),
-(78, NULL, 1, 1, 2, 28, 27, 1, '2026-07-01 19:36:11', '2026-07-01 19:38:04'),
-(79, NULL, 1, 1, 3, 28, 27, 1, '2026-07-01 19:36:11', '2026-07-01 19:38:10'),
-(93, NULL, 1, 1, 1, 28, 27, 1, '2026-07-01 19:37:49', '2026-07-01 19:37:55'),
-(94, NULL, 1, 1, 4, 28, 27, 1, '2026-07-01 19:39:12', '2026-07-01 19:39:15'),
-(95, NULL, 1, 1, 7, 29, 48, 1, '2026-07-01 19:39:34', '2026-07-01 19:39:38'),
-(96, NULL, 1, 1, 8, 29, 48, 1, '2026-07-01 19:39:42', '2026-07-01 19:39:45'),
-(97, NULL, 1, 1, 9, 30, 43, 1, '2026-07-01 19:39:48', '2026-07-01 19:39:48'),
-(98, NULL, 1, 1, 13, 30, 43, 1, '2026-07-01 19:39:50', '2026-07-01 19:39:50'),
-(99, NULL, 1, 3, 1, 31, 12, 1, '2026-07-01 19:40:09', '2026-07-01 19:40:09'),
-(100, NULL, 1, 3, 2, 31, 12, 1, '2026-07-01 19:40:11', '2026-07-01 19:40:11'),
-(101, NULL, 1, 3, 3, 31, 12, 1, '2026-07-01 19:40:14', '2026-07-01 19:40:14'),
-(102, NULL, 1, 3, 4, 31, 12, 1, '2026-07-01 19:40:16', '2026-07-01 19:40:16'),
-(103, NULL, 1, 3, 7, 32, 46, 1, '2026-07-01 19:40:20', '2026-07-01 19:40:20'),
-(104, NULL, 1, 3, 8, 32, 46, 1, '2026-07-01 19:40:22', '2026-07-01 19:40:22'),
-(105, NULL, 1, 3, 9, 32, 46, 1, '2026-07-01 19:40:23', '2026-07-01 19:40:23'),
-(106, NULL, 1, 3, 13, 32, 46, 1, '2026-07-01 19:40:26', '2026-07-01 19:40:26'),
-(107, NULL, 1, 4, 1, 33, 19, 1, '2026-07-01 19:40:42', '2026-07-01 19:40:42'),
-(108, NULL, 1, 4, 2, 33, 19, 1, '2026-07-01 19:40:43', '2026-07-01 19:40:43'),
-(109, NULL, 1, 4, 3, 33, 19, 1, '2026-07-01 19:40:45', '2026-07-01 19:40:45'),
-(110, NULL, 1, 4, 4, 33, 19, 1, '2026-07-01 19:40:47', '2026-07-01 19:40:47'),
-(111, NULL, 1, 4, 7, 33, 19, 1, '2026-07-01 19:40:50', '2026-07-01 19:40:50'),
-(112, NULL, 1, 4, 8, 33, 19, 1, '2026-07-01 19:40:52', '2026-07-01 19:40:52'),
-(113, NULL, 1, 4, 9, 33, 19, 1, '2026-07-01 19:40:54', '2026-07-01 19:40:54'),
-(114, NULL, 1, 4, 13, 33, 19, 1, '2026-07-01 19:40:56', '2026-07-01 19:40:56'),
-(115, NULL, 1, 5, 1, 34, 26, 1, '2026-07-01 19:41:09', '2026-07-01 19:41:09'),
-(116, NULL, 1, 5, 2, 34, 26, 1, '2026-07-01 19:41:11', '2026-07-01 19:41:11'),
-(117, NULL, 1, 5, 3, 34, 26, 1, '2026-07-01 19:41:12', '2026-07-01 19:41:12'),
-(118, NULL, 1, 5, 4, 34, 26, 1, '2026-07-01 19:41:14', '2026-07-01 19:41:14'),
-(119, NULL, 1, 5, 8, 35, 14, 1, '2026-07-01 19:41:19', '2026-07-01 19:41:38'),
-(120, NULL, 1, 5, 7, 35, 14, 1, '2026-07-01 19:41:21', '2026-07-01 19:41:37'),
-(121, NULL, 1, 5, 9, 36, 7, 1, '2026-07-01 19:41:40', '2026-07-01 19:41:40'),
-(122, NULL, 1, 5, 13, 36, 7, 1, '2026-07-01 19:41:42', '2026-07-01 19:41:42'),
-(123, NULL, 1, 6, 9, 36, 7, 1, '2026-07-01 19:41:59', '2026-07-01 19:41:59'),
-(124, NULL, 1, 6, 13, 36, 7, 1, '2026-07-01 19:42:03', '2026-07-01 19:42:03'),
-(125, NULL, 1, 6, 8, 38, 5, 1, '2026-07-01 19:42:08', '2026-07-01 19:42:08'),
-(126, NULL, 1, 6, 7, 38, 5, 1, '2026-07-01 19:42:10', '2026-07-01 19:42:10'),
-(127, NULL, 1, 6, 4, 38, 5, 1, '2026-07-01 19:42:13', '2026-07-01 19:42:13'),
-(128, NULL, 1, 6, 3, 37, 4, 1, '2026-07-01 19:42:16', '2026-07-01 19:42:16'),
-(129, NULL, 1, 6, 2, 37, 4, 1, '2026-07-01 19:42:18', '2026-07-01 19:42:18'),
-(130, NULL, 1, 6, 1, 37, 4, 1, '2026-07-01 19:42:21', '2026-07-01 19:42:21');
+(9, NULL, 113, 1, 15, 16, 34, 1, '2026-06-22 22:25:59', '2026-06-22 22:25:59');
 
 -- --------------------------------------------------------
 
@@ -1139,51 +1414,63 @@ CREATE TABLE `mata_pelajaran` (
 --
 
 INSERT INTO `mata_pelajaran` (`id`, `kode_mapel`, `nama_mapel`, `kelompok`, `jp_default`, `deleted_at`, `created_at`, `updated_at`) VALUES
-(1, '1 PAI', 'Pendidikan Agama Islam & Budi Pekerti', 'Umum', 3, NULL, '2026-06-18 20:18:16', '2026-06-18 20:18:16'),
-(2, '1', 'Pendidikan Agama Islam dan Budi Pekerti', 'Umum', 3, NULL, '2026-06-21 06:49:11', '2026-06-21 06:49:11'),
-(3, '2', 'Pendidikan Pancasila', 'Umum', 2, NULL, '2026-06-21 06:49:11', '2026-06-21 06:49:11'),
-(4, '3A', 'Bahasa Indonesia (10-11)', 'Umum', 4, NULL, '2026-06-21 06:49:11', '2026-06-21 06:49:11'),
-(5, '3B', 'Bahasa Indonesia (12)', 'Umum', 3, NULL, '2026-06-21 06:49:11', '2026-06-21 06:49:11'),
-(6, '4A', 'Pendidikan Jasmani, Olahraga dan Kesehatan (10)', 'Umum', 3, NULL, '2026-06-21 06:49:11', '2026-06-21 06:49:11'),
-(7, '4B', 'Pendidikan Jasmani, Olahraga dan Kesehatan (11)', 'Umum', 2, NULL, '2026-06-21 06:49:11', '2026-06-21 06:49:11'),
-(8, '5', 'Sejarah', 'Umum', 2, NULL, '2026-06-21 06:49:11', '2026-06-21 06:49:11'),
-(9, '6', 'Seni Musik', 'Umum', 2, NULL, '2026-06-21 06:49:11', '2026-06-21 06:49:11'),
-(10, '7', 'Bahasa Jepang', 'Umum', 2, NULL, '2026-06-21 06:49:11', '2026-06-21 06:49:11'),
-(11, '8A', 'Matematika (10 & 12)', 'Kejuruan', 4, NULL, '2026-06-21 06:49:11', '2026-06-21 06:49:11'),
-(12, '8B', 'Matematika (11)', 'Kejuruan', 3, NULL, '2026-06-21 06:49:11', '2026-06-21 06:49:11'),
-(13, '9', 'Bahasa Inggris', 'Kejuruan', 4, NULL, '2026-06-21 06:49:11', '2026-06-21 06:49:11'),
-(14, '10', 'Informatika', 'Kejuruan', 4, NULL, '2026-06-21 06:49:11', '2026-06-21 06:49:11'),
-(15, '11', 'Projek Ilmu Pengetahuan Alam dan Sosial', 'Kejuruan', 4, NULL, '2026-06-21 06:49:11', '2026-06-21 06:49:11'),
-(16, '12A', 'Dasar-dasar Teknik Jaringan Komputer dan Telekomunikasi', 'Kejuruan', 8, NULL, '2026-06-21 06:49:11', '2026-06-21 06:49:11'),
-(17, '12B', 'Dasar-dasar Akuntansi', 'Kejuruan', 8, NULL, '2026-06-21 06:49:11', '2026-06-21 06:49:11'),
-(18, '12C', 'Dasar-dasar Manajemen Perkantoran', 'Kejuruan', 8, NULL, '2026-06-21 06:49:11', '2026-06-21 06:49:11'),
-(19, '13A', 'Perencanaan dan \nPengalamatan \nJaringan', 'Kejuruan', 2, NULL, '2026-06-21 06:49:11', '2026-06-21 06:49:11'),
-(20, '13B', 'Teknologi Jaringan \nKabel dan Nirkabel', 'Kejuruan', 4, NULL, '2026-06-21 06:49:11', '2026-06-21 06:49:11'),
-(21, '13C1', 'Pemasangan dan Konfigurasi Perangkat Jaringan (11)', 'Kejuruan', 6, NULL, '2026-06-21 06:49:11', '2026-06-21 06:49:11'),
-(22, '13D1', 'Administrasi Sistem Jaringan (11)', 'Kejuruan', 2, NULL, '2026-06-21 06:49:11', '2026-06-21 06:49:11'),
-(23, '13C2', 'Pemasangan dan Konfigurasi Perangkat Jaringan (12)', 'Kejuruan', 6, NULL, '2026-06-21 06:49:11', '2026-06-21 06:49:11'),
-(24, '13D2', 'Administrasi Sistem Jaringan (12)', 'Kejuruan', 4, NULL, '2026-06-21 06:49:11', '2026-06-21 06:49:11'),
-(25, '14', 'Keamanan Jaringan', 'Kejuruan', 8, NULL, '2026-06-21 06:49:11', '2026-06-21 06:49:11'),
-(26, '15A', 'Ekonomi bisnis \ndan administrasi \numum', 'Kejuruan', 4, NULL, '2026-06-21 06:49:11', '2026-06-21 06:49:11'),
-(27, '15B', 'Akuntansi \nperusahaan jasa, \ndagang dan \nmanufaktur', 'Kejuruan', 6, NULL, '2026-06-21 06:49:11', '2026-06-21 06:49:11'),
-(28, '15C', 'Akuntansi \nlembaga/instansi \npemerintah', 'Kejuruan', 4, NULL, '2026-06-21 06:49:11', '2026-06-21 06:49:11'),
-(29, '15D', 'Akuntansi \nkeuangan', 'Kejuruan', 8, NULL, '2026-06-21 06:49:11', '2026-06-21 06:49:11'),
-(30, '15E', 'Komputer \nakuntansi', 'Kejuruan', 4, NULL, '2026-06-21 06:49:11', '2026-06-21 06:49:11'),
-(31, '15F', 'Perpajakan', 'Kejuruan', 6, NULL, '2026-06-21 06:49:11', '2026-06-21 06:49:11'),
-(32, '16A', 'Ekonomi dan Bisnis', 'Kejuruan', 2, NULL, '2026-06-21 06:49:11', '2026-06-21 06:49:11'),
-(33, '16B', 'Pengelolaan Administrasi Umum', 'Kejuruan', 4, NULL, '2026-06-21 06:49:11', '2026-06-21 06:49:11'),
-(34, '16C1', 'Komunikasi di Tempat Kerja (11)', 'Kejuruan', 4, NULL, '2026-06-21 06:49:11', '2026-06-21 06:49:11'),
-(35, '16C2', 'Komunikasi di Tempat Kerja (12)', 'Kejuruan', 2, NULL, '2026-06-21 06:49:11', '2026-06-21 06:49:11'),
-(36, '16D', 'Pengelolaan Kearsipan', 'Kejuruan', 2, NULL, '2026-06-21 06:49:11', '2026-06-21 06:49:11'),
-(37, '16E', 'Teknologi kantor', 'Kejuruan', 4, NULL, '2026-06-21 06:49:11', '2026-06-21 06:49:11'),
-(38, '16F', 'Pengelolaan Rapat/pertemuan', 'Kejuruan', 4, NULL, '2026-06-21 06:49:11', '2026-06-21 06:49:11'),
-(39, '16G', 'Pengelolaan Keuangan Sederhana', 'Kejuruan', 2, NULL, '2026-06-21 06:49:11', '2026-06-21 06:49:11'),
-(40, '16H', 'Pengelolaan Sumberdaya Manusia (SDM)', 'Kejuruan', 4, NULL, '2026-06-21 06:49:11', '2026-06-21 06:49:11'),
-(41, '16I', 'Pengelolaan Sarana dan Prasarana', 'Kejuruan', 4, NULL, '2026-06-21 06:49:11', '2026-06-21 06:49:11'),
-(42, '16J', 'Pengelolan Humas dan Keprotokolan', 'Kejuruan', 4, NULL, '2026-06-21 06:49:11', '2026-06-21 06:49:11'),
-(43, '17', 'Kecerdasan Koding Artificial', 'Kejuruan', 4, NULL, '2026-06-21 06:49:11', '2026-06-21 06:49:11'),
-(44, '18', 'KIK', 'Kejuruan', 5, NULL, '2026-06-21 06:49:11', '2026-06-21 06:49:11'),
-(45, '19', 'Praktik Kerja Lapangan', 'Kejuruan', 36, NULL, '2026-06-21 06:49:11', '2026-06-21 06:49:11');
+(1, '1 PAI', 'Pendidikan Agama Islam & Budi Pekerti', 'Umum', 3, '2026-07-03 17:15:10', '2026-06-18 20:18:16', '2026-07-03 17:15:10'),
+(2, '1', 'Pendidikan Agama Islam dan Budi Pekerti', 'Umum', 3, NULL, '2026-06-21 06:49:11', '2026-07-03 17:24:12'),
+(3, '2', 'Pendidikan Pancasila', 'Umum', 2, NULL, '2026-06-21 06:49:11', '2026-07-03 17:24:12'),
+(4, '3A', 'Bahasa Indonesia', 'Umum', 4, '2026-07-03 17:15:10', '2026-06-21 06:49:11', '2026-07-03 17:15:10'),
+(5, '3B', 'Bahasa Indonesia', 'Umum', 3, '2026-07-03 17:15:10', '2026-06-21 06:49:11', '2026-07-03 17:15:10'),
+(6, '4A', 'Pendidikan Jasmani, Olahraga dan Kesehatan', 'Umum', 3, '2026-07-03 17:15:10', '2026-06-21 06:49:11', '2026-07-03 17:15:10'),
+(7, '4B', 'Pendidikan Jasmani, Olahraga dan Kesehatan', 'Umum', 2, '2026-07-03 17:15:10', '2026-06-21 06:49:11', '2026-07-03 17:15:10'),
+(8, '5', 'Sejarah', 'Umum', 2, NULL, '2026-06-21 06:49:11', '2026-07-03 17:24:12'),
+(9, '6', 'Seni Musik', 'Umum', 2, NULL, '2026-06-21 06:49:11', '2026-07-03 17:24:12'),
+(10, '7', 'Bahasa Jepang', 'Umum', 2, NULL, '2026-06-21 06:49:11', '2026-07-03 17:24:12'),
+(11, '8A', 'Matematika', 'Kejuruan', 4, '2026-07-03 17:15:10', '2026-06-21 06:49:11', '2026-07-03 17:15:10'),
+(12, '8B', 'Matematika', 'Kejuruan', 3, '2026-07-03 17:15:10', '2026-06-21 06:49:11', '2026-07-03 17:15:10'),
+(13, '9', 'Bahasa Inggris', 'Kejuruan', 4, NULL, '2026-06-21 06:49:11', '2026-07-03 17:24:12'),
+(14, '10', 'Informatika', 'Kejuruan', 4, NULL, '2026-06-21 06:49:11', '2026-07-03 17:24:12'),
+(15, '11', 'Projek Ilmu Pengetahuan Alam dan Sosial', 'Kejuruan', 4, NULL, '2026-06-21 06:49:11', '2026-07-03 17:24:12'),
+(16, '12A', 'Dasar-dasar Teknik Jaringan Komputer dan Telekomunikasi', 'Kejuruan', 8, NULL, '2026-06-21 06:49:11', '2026-07-03 17:24:12'),
+(17, '12B', 'Dasar-dasar Akuntansi', 'Kejuruan', 8, NULL, '2026-06-21 06:49:11', '2026-07-03 17:24:12'),
+(18, '12C', 'Dasar-dasar Manajemen Perkantoran', 'Kejuruan', 8, NULL, '2026-06-21 06:49:11', '2026-07-03 17:24:12'),
+(19, '13A', 'Perencanaan dan \r\nPengalamatan \r\nJaringan', 'Kejuruan', 2, NULL, '2026-06-21 06:49:11', '2026-07-03 17:24:12'),
+(20, '13B', 'Teknologi Jaringan \r\nKabel dan Nirkabel', 'Kejuruan', 4, NULL, '2026-06-21 06:49:11', '2026-07-03 17:24:12'),
+(21, '13C1', 'Pemasangan dan Konfigurasi Perangkat Jaringan', 'Kejuruan', 6, '2026-07-03 17:15:10', '2026-06-21 06:49:11', '2026-07-03 17:15:10'),
+(22, '13D1', 'Administrasi Sistem Jaringan', 'Kejuruan', 2, '2026-07-03 17:15:10', '2026-06-21 06:49:11', '2026-07-03 17:15:10'),
+(23, '13C2', 'Pemasangan dan Konfigurasi Perangkat Jaringan', 'Kejuruan', 6, '2026-07-03 17:15:10', '2026-06-21 06:49:11', '2026-07-03 17:15:10'),
+(24, '13D2', 'Administrasi Sistem Jaringan', 'Kejuruan', 4, '2026-07-03 17:15:10', '2026-06-21 06:49:11', '2026-07-03 17:15:10'),
+(25, '14', 'Keamanan Jaringan', 'Kejuruan', 8, NULL, '2026-06-21 06:49:11', '2026-07-03 17:24:12'),
+(26, '15A', 'Ekonomi bisnis \r\ndan administrasi \r\numum', 'Kejuruan', 4, NULL, '2026-06-21 06:49:11', '2026-07-03 17:24:12'),
+(27, '15B', 'Akuntansi \r\nperusahaan jasa, \r\ndagang dan \r\nmanufaktur', 'Kejuruan', 6, NULL, '2026-06-21 06:49:11', '2026-07-03 17:24:12'),
+(28, '15C', 'Praktik Akuntansi \r\nlembaga/instansi \r\npemerintah', 'Kejuruan', 4, NULL, '2026-06-21 06:49:11', '2026-07-03 17:24:12'),
+(29, '15D', 'Akuntansi \r\nkeuangan', 'Kejuruan', 8, NULL, '2026-06-21 06:49:11', '2026-07-03 17:24:12'),
+(30, '15E', 'Komputer \r\nakuntansi', 'Kejuruan', 4, NULL, '2026-06-21 06:49:11', '2026-07-03 17:24:12'),
+(31, '15F', 'Perpajakan', 'Kejuruan', 6, NULL, '2026-06-21 06:49:11', '2026-07-03 17:24:12'),
+(32, '16A', 'Ekonomi dan Bisnis', 'Kejuruan', 2, NULL, '2026-06-21 06:49:11', '2026-07-03 17:24:12'),
+(33, '16B', 'Pengelolaan Administrasi Umum', 'Kejuruan', 4, NULL, '2026-06-21 06:49:11', '2026-07-03 17:24:12'),
+(34, '16C1', 'Komunikasi di Tempat Kerja', 'Kejuruan', 4, '2026-07-03 17:15:10', '2026-06-21 06:49:11', '2026-07-03 17:15:10'),
+(35, '16C2', 'Komunikasi di Tempat Kerja', 'Kejuruan', 2, '2026-07-03 17:15:10', '2026-06-21 06:49:11', '2026-07-03 17:15:10'),
+(36, '16D', 'Pengelolaan Kearsipan', 'Kejuruan', 2, NULL, '2026-06-21 06:49:11', '2026-07-03 17:24:12'),
+(37, '16E', 'Teknologi kantor', 'Kejuruan', 4, NULL, '2026-06-21 06:49:11', '2026-07-03 17:24:12'),
+(38, '16F', 'Pengelolaan Rapat/pertemuan', 'Kejuruan', 4, NULL, '2026-06-21 06:49:11', '2026-07-03 17:24:12'),
+(39, '16G', 'Pengelolaan Keuangan Sederhana', 'Kejuruan', 2, NULL, '2026-06-21 06:49:11', '2026-07-03 17:24:12'),
+(40, '16H', 'Pengelolaan Sumberdaya Manusia (SDM)', 'Kejuruan', 4, NULL, '2026-06-21 06:49:11', '2026-07-03 17:24:12'),
+(41, '16I', 'Pengelolaan Sarana dan Prasarana', 'Kejuruan', 4, NULL, '2026-06-21 06:49:11', '2026-07-03 17:24:12'),
+(42, '16J', 'Pengelolan Humas dan Keprotokolan', 'Kejuruan', 4, NULL, '2026-06-21 06:49:11', '2026-07-03 17:24:12'),
+(43, '17', 'Kecerdasan Koding Artificial', 'Kejuruan', 4, NULL, '2026-06-21 06:49:11', '2026-07-03 17:24:12'),
+(44, '18', 'Kreativitas, Inovasi, dan Kewirausahaan', 'Kejuruan', 5, NULL, '2026-06-21 06:49:11', '2026-07-03 17:24:12'),
+(45, '19', 'Praktik Kerja Lapangan', 'Kejuruan', 36, NULL, '2026-06-21 06:49:11', '2026-07-03 17:24:12'),
+(46, '3A (10-11)', 'Bahasa Indonesia', 'Umum', 4, NULL, '2026-07-03 17:24:12', '2026-07-03 17:24:12'),
+(47, '3B (12)', 'Bahasa Indonesia', 'Umum', 3, NULL, '2026-07-03 17:24:12', '2026-07-03 17:24:12'),
+(48, '4A (10)', 'Pendidikan Jasmani, Olahraga dan Kesehatan', 'Umum', 3, NULL, '2026-07-03 17:24:12', '2026-07-03 17:24:12'),
+(49, '4B (11)', 'Pendidikan Jasmani, Olahraga dan Kesehatan', 'Umum', 2, NULL, '2026-07-03 17:24:12', '2026-07-03 17:24:12'),
+(50, '8A (10 & 12)', 'Matematika', 'Kejuruan', 4, NULL, '2026-07-03 17:24:12', '2026-07-03 17:24:12'),
+(51, '8B (11)', 'Matematika', 'Kejuruan', 3, NULL, '2026-07-03 17:24:12', '2026-07-03 17:24:12'),
+(52, '13C1 (11)', 'Pemasangan dan Konfigurasi Perangkat Jaringan', 'Kejuruan', 6, NULL, '2026-07-03 17:24:12', '2026-07-03 17:24:12'),
+(53, '13D1 (11)', 'Administrasi Sistem Jaringan', 'Kejuruan', 2, NULL, '2026-07-03 17:24:12', '2026-07-03 17:24:12'),
+(54, '13C2 (12)', 'Pemasangan dan Konfigurasi Perangkat Jaringan', 'Kejuruan', 6, NULL, '2026-07-03 17:24:12', '2026-07-03 17:24:12'),
+(55, '13D2 (12)', 'Administrasi Sistem Jaringan', 'Kejuruan', 4, NULL, '2026-07-03 17:24:12', '2026-07-03 17:24:12'),
+(56, '16C1 (11)', 'Komunikasi di Tempat Kerja', 'Kejuruan', 4, NULL, '2026-07-03 17:24:12', '2026-07-03 17:24:12'),
+(57, '16C2 (12)', 'Komunikasi di Tempat Kerja', 'Kejuruan', 2, NULL, '2026-07-03 17:24:12', '2026-07-03 17:24:12');
 
 -- --------------------------------------------------------
 
@@ -1212,7 +1499,10 @@ INSERT INTO `migrations` (`id`, `version`, `class`, `group`, `namespace`, `time`
 (4, '2026-06-01-000004', 'App\\Database\\Migrations\\AddIndexesToSubmissions', 'default', 'App', 1780308613, 3),
 (5, '2026-06-01-000005', 'App\\Database\\Migrations\\MakeNipNullable', 'default', 'App', 1780308613, 3),
 (6, '2026-06-19-000001', 'App\\Database\\Migrations\\CreatePenjadwalanTables', 'default', 'App', 1781810968, 4),
-(7, '2026-06-20-000001', 'App\\Database\\Migrations\\FrontendPublik', 'default', 'App', 1781848343, 5);
+(7, '2026-06-20-000001', 'App\\Database\\Migrations\\FrontendPublik', 'default', 'App', 1781848343, 5),
+(8, '2026-07-02-000001', 'App\\Database\\Migrations\\CreateAbsensiGuru', 'default', 'App', 1782927978, 6),
+(9, '2026-07-02-000002', 'App\\Database\\Migrations\\AddAbsensiPublik', 'default', 'App', 1782928724, 7),
+(10, '2026-07-02-000003', 'App\\Database\\Migrations\\CreateAbsensiHari', 'default', 'App', 1782929975, 8);
 
 -- --------------------------------------------------------
 
@@ -1263,17 +1553,32 @@ INSERT INTO `pengampu` (`id`, `kelas_id`, `mapel_id`, `guru_id`, `jp`, `deleted_
 (25, 118, 10, 34, 2, NULL, '2026-06-22 03:50:30', '2026-06-22 03:50:30'),
 (26, 119, 10, 34, 2, NULL, '2026-06-22 03:50:43', '2026-06-22 03:50:43'),
 (27, 120, 10, 34, 2, NULL, '2026-06-22 03:50:56', '2026-06-22 03:50:56'),
-(28, 1, 15, 27, 4, NULL, '2026-07-01 19:27:08', '2026-07-01 19:27:08'),
-(29, 1, 9, 48, 2, NULL, '2026-07-01 19:27:55', '2026-07-01 19:27:55'),
-(30, 1, 3, 43, 2, NULL, '2026-07-01 19:28:26', '2026-07-01 19:28:26'),
-(31, 1, 13, 12, 4, NULL, '2026-07-01 19:28:49', '2026-07-01 19:28:49'),
-(32, 1, 11, 46, 4, NULL, '2026-07-01 19:29:35', '2026-07-01 19:29:35'),
-(33, 1, 16, 19, 8, NULL, '2026-07-01 19:30:10', '2026-07-01 19:30:10'),
-(34, 1, 4, 26, 4, NULL, '2026-07-01 19:32:02', '2026-07-01 19:32:02'),
-(35, 1, 8, 14, 2, NULL, '2026-07-01 19:32:49', '2026-07-01 19:32:49'),
-(36, 1, 14, 7, 4, NULL, '2026-07-01 19:33:12', '2026-07-01 19:34:46'),
-(37, 1, 2, 4, 3, NULL, '2026-07-01 19:33:47', '2026-07-01 19:33:47'),
-(38, 1, 6, 5, 3, NULL, '2026-07-01 19:34:07', '2026-07-01 19:34:07');
+(28, 1, 15, 27, 4, '2026-07-03 17:14:47', '2026-07-01 19:27:08', '2026-07-03 17:14:47'),
+(29, 1, 9, 48, 2, '2026-07-03 17:14:52', '2026-07-01 19:27:55', '2026-07-03 17:14:52'),
+(30, 1, 3, 43, 2, '2026-07-03 17:14:44', '2026-07-01 19:28:26', '2026-07-03 17:14:44'),
+(31, 1, 13, 12, 4, '2026-07-03 17:14:30', '2026-07-01 19:28:49', '2026-07-03 17:14:30'),
+(32, 1, 11, 46, 4, '2026-07-03 17:05:30', '2026-07-01 19:29:35', '2026-07-03 17:05:30'),
+(33, 1, 16, 19, 8, '2026-07-03 17:14:33', '2026-07-01 19:30:10', '2026-07-03 17:14:33'),
+(34, 1, 4, 26, 4, '2026-07-03 17:05:25', '2026-07-01 19:32:02', '2026-07-03 17:05:25'),
+(35, 1, 8, 14, 2, '2026-07-03 17:14:49', '2026-07-01 19:32:49', '2026-07-03 17:14:49'),
+(36, 1, 14, 7, 4, '2026-07-03 17:14:35', '2026-07-01 19:33:12', '2026-07-03 17:14:35'),
+(37, 1, 2, 4, 3, '2026-07-03 17:14:40', '2026-07-01 19:33:47', '2026-07-03 17:14:40'),
+(38, 1, 6, 5, 3, '2026-07-02 18:17:58', '2026-07-01 19:34:07', '2026-07-02 18:17:58'),
+(39, 43, 13, 12, 4, '2026-07-02 18:18:17', '2026-07-01 21:06:34', '2026-07-02 18:18:17'),
+(40, 56, 14, 7, 4, '2026-07-03 17:14:05', '2026-07-01 22:10:39', '2026-07-03 17:14:05'),
+(41, 56, 17, 8, 8, '2026-07-03 17:14:03', '2026-07-01 22:10:39', '2026-07-03 17:14:03'),
+(42, 56, 9, 28, 2, '2026-07-03 17:14:22', '2026-07-02 18:32:25', '2026-07-03 17:14:22'),
+(43, 56, 6, 6, 3, '2026-07-03 17:14:13', '2026-07-02 18:32:25', '2026-07-03 17:14:13'),
+(44, 56, 3, 15, 2, '2026-07-03 17:14:15', '2026-07-02 18:32:25', '2026-07-03 17:14:15'),
+(45, 56, 1, 31, 3, '2026-07-03 17:14:10', '2026-07-02 18:32:25', '2026-07-03 17:14:10'),
+(46, 56, 13, 35, 4, '2026-07-03 17:14:02', '2026-07-02 18:32:25', '2026-07-03 17:14:02'),
+(47, 56, 8, 27, 2, '2026-07-03 17:14:19', '2026-07-02 18:32:25', '2026-07-03 17:14:19'),
+(48, 56, 4, 5, 4, '2026-07-03 17:13:59', '2026-07-02 18:37:51', '2026-07-03 17:13:59'),
+(49, 56, 15, 9, 4, '2026-07-03 17:14:17', '2026-07-02 18:37:51', '2026-07-03 17:14:17'),
+(50, 56, 11, 32, 4, '2026-07-03 17:14:08', '2026-07-02 18:37:51', '2026-07-03 17:14:08'),
+(51, 1, 5, 26, 3, '2026-07-03 17:14:28', '2026-07-03 17:06:45', '2026-07-03 17:14:28'),
+(52, 1, 7, 5, 2, '2026-07-03 17:14:42', '2026-07-03 17:06:45', '2026-07-03 17:14:42'),
+(53, 1, 12, 46, 3, '2026-07-03 17:14:38', '2026-07-03 17:06:45', '2026-07-03 17:14:38');
 
 -- --------------------------------------------------------
 
@@ -1312,6 +1617,7 @@ CREATE TABLE `settings` (
   `website` varchar(150) DEFAULT NULL,
   `form_open` tinyint(1) NOT NULL DEFAULT 1,
   `jadwal_publik` tinyint(1) DEFAULT 1,
+  `absensi_publik` tinyint(1) DEFAULT 1,
   `form_intro` text DEFAULT NULL,
   `updated_at` datetime DEFAULT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
@@ -1320,8 +1626,8 @@ CREATE TABLE `settings` (
 -- Dumping data untuk tabel `settings`
 --
 
-INSERT INTO `settings` (`id`, `school_name`, `school_level`, `logo`, `headmaster_name`, `headmaster_nip`, `city`, `academic_year`, `address`, `phone`, `email`, `website`, `form_open`, `jadwal_publik`, `form_intro`, `updated_at`) VALUES
-(1, 'SMK BINA NUSA', 'SMK', 'logo_1780456697.jpg', 'Napis Kuturupi, S.T', '-', 'Bekasi', '2026/2027', 'BEKASI', '', '', 'zulfiqri.site', 1, 0, 'Surat pernyataan kesediaan guru untuk melaksanakan tugas mengajar dan tugas tambahan sesuai penugasan sekolah.', '2026-06-19 15:16:28');
+INSERT INTO `settings` (`id`, `school_name`, `school_level`, `logo`, `headmaster_name`, `headmaster_nip`, `city`, `academic_year`, `address`, `phone`, `email`, `website`, `form_open`, `jadwal_publik`, `absensi_publik`, `form_intro`, `updated_at`) VALUES
+(1, 'SMK BINA NUSA', 'SMK', 'logo_1780456697.jpg', 'Napis Kuturupi, S.T', '-', 'Bekasi', '2026/2027', 'BEKASI', '', '', 'https://kangmuslim.com/', 1, 1, 1, 'Surat pernyataan kesediaan guru untuk melaksanakan tugas mengajar dan tugas tambahan sesuai penugasan sekolah.', '2026-07-02 16:14:02');
 
 -- --------------------------------------------------------
 
@@ -1426,6 +1732,29 @@ CREATE TABLE `tahun_ajaran` (
 --
 -- Indexes for dumped tables
 --
+
+--
+-- Indeks untuk tabel `absensi_guru`
+--
+ALTER TABLE `absensi_guru`
+  ADD PRIMARY KEY (`id`),
+  ADD UNIQUE KEY `tanggal_kelas_id_jam_id` (`tanggal`,`kelas_id`,`jam_id`),
+  ADD KEY `absensi_guru_kelas_id_foreign` (`kelas_id`),
+  ADD KEY `absensi_guru_mapel_id_foreign` (`mapel_id`),
+  ADD KEY `absensi_guru_hari_id_foreign` (`hari_id`),
+  ADD KEY `absensi_guru_jam_id_foreign` (`jam_id`),
+  ADD KEY `absensi_guru_jadwal_id_foreign` (`jadwal_id`),
+  ADD KEY `absensi_guru_created_by_foreign` (`created_by`),
+  ADD KEY `guru_id_tanggal` (`guru_id`,`tanggal`),
+  ADD KEY `tanggal` (`tanggal`);
+
+--
+-- Indeks untuk tabel `absensi_hari`
+--
+ALTER TABLE `absensi_hari`
+  ADD PRIMARY KEY (`id`),
+  ADD UNIQUE KEY `tanggal` (`tanggal`),
+  ADD KEY `absensi_hari_created_by_foreign` (`created_by`);
 
 --
 -- Indeks untuk tabel `admins`
@@ -1567,6 +1896,18 @@ ALTER TABLE `tahun_ajaran`
 --
 
 --
+-- AUTO_INCREMENT untuk tabel `absensi_guru`
+--
+ALTER TABLE `absensi_guru`
+  MODIFY `id` int(11) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=6;
+
+--
+-- AUTO_INCREMENT untuk tabel `absensi_hari`
+--
+ALTER TABLE `absensi_hari`
+  MODIFY `id` int(11) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=3;
+
+--
 -- AUTO_INCREMENT untuk tabel `admins`
 --
 ALTER TABLE `admins`
@@ -1576,7 +1917,7 @@ ALTER TABLE `admins`
 -- AUTO_INCREMENT untuk tabel `audit_log`
 --
 ALTER TABLE `audit_log`
-  MODIFY `id` int(11) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=510;
+  MODIFY `id` int(11) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=747;
 
 --
 -- AUTO_INCREMENT untuk tabel `guru`
@@ -1588,7 +1929,7 @@ ALTER TABLE `guru`
 -- AUTO_INCREMENT untuk tabel `guru_mapel`
 --
 ALTER TABLE `guru_mapel`
-  MODIFY `id` int(11) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=39;
+  MODIFY `id` int(11) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=60;
 
 --
 -- AUTO_INCREMENT untuk tabel `hari`
@@ -1600,7 +1941,7 @@ ALTER TABLE `hari`
 -- AUTO_INCREMENT untuk tabel `jadwal`
 --
 ALTER TABLE `jadwal`
-  MODIFY `id` int(11) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=131;
+  MODIFY `id` int(11) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=409;
 
 --
 -- AUTO_INCREMENT untuk tabel `jam_pelajaran`
@@ -1630,19 +1971,19 @@ ALTER TABLE `ketersediaan_guru`
 -- AUTO_INCREMENT untuk tabel `mata_pelajaran`
 --
 ALTER TABLE `mata_pelajaran`
-  MODIFY `id` int(11) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=46;
+  MODIFY `id` int(11) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=58;
 
 --
 -- AUTO_INCREMENT untuk tabel `migrations`
 --
 ALTER TABLE `migrations`
-  MODIFY `id` bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=8;
+  MODIFY `id` bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=11;
 
 --
 -- AUTO_INCREMENT untuk tabel `pengampu`
 --
 ALTER TABLE `pengampu`
-  MODIFY `id` int(11) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=39;
+  MODIFY `id` int(11) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=54;
 
 --
 -- AUTO_INCREMENT untuk tabel `pengumuman`
@@ -1671,6 +2012,24 @@ ALTER TABLE `tahun_ajaran`
 --
 -- Ketidakleluasaan untuk tabel pelimpahan (Dumped Tables)
 --
+
+--
+-- Ketidakleluasaan untuk tabel `absensi_guru`
+--
+ALTER TABLE `absensi_guru`
+  ADD CONSTRAINT `absensi_guru_created_by_foreign` FOREIGN KEY (`created_by`) REFERENCES `admins` (`id`) ON DELETE SET NULL,
+  ADD CONSTRAINT `absensi_guru_guru_id_foreign` FOREIGN KEY (`guru_id`) REFERENCES `guru` (`id`) ON DELETE CASCADE,
+  ADD CONSTRAINT `absensi_guru_hari_id_foreign` FOREIGN KEY (`hari_id`) REFERENCES `hari` (`id`),
+  ADD CONSTRAINT `absensi_guru_jadwal_id_foreign` FOREIGN KEY (`jadwal_id`) REFERENCES `jadwal` (`id`) ON DELETE SET NULL,
+  ADD CONSTRAINT `absensi_guru_jam_id_foreign` FOREIGN KEY (`jam_id`) REFERENCES `jam_pelajaran` (`id`),
+  ADD CONSTRAINT `absensi_guru_kelas_id_foreign` FOREIGN KEY (`kelas_id`) REFERENCES `kelas` (`id`) ON DELETE CASCADE,
+  ADD CONSTRAINT `absensi_guru_mapel_id_foreign` FOREIGN KEY (`mapel_id`) REFERENCES `mata_pelajaran` (`id`) ON DELETE SET NULL;
+
+--
+-- Ketidakleluasaan untuk tabel `absensi_hari`
+--
+ALTER TABLE `absensi_hari`
+  ADD CONSTRAINT `absensi_hari_created_by_foreign` FOREIGN KEY (`created_by`) REFERENCES `admins` (`id`) ON DELETE SET NULL;
 
 --
 -- Ketidakleluasaan untuk tabel `audit_log`
