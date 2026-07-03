@@ -21,11 +21,10 @@ ob_start(); ?>
 <form method="get" class="flex flex-1 items-center gap-2">
     <label class="text-sm font-semibold text-slate-600 shrink-0">Kelas:</label>
     <select name="kelas_id" data-autosubmit class="rounded-lg border border-slate-300 px-3 py-2.5 text-sm focus:border-brand-500 outline-none min-w-[200px]">
-        <?php if (empty($kelasOpts)): ?>
-            <option value="">— belum ada kelas —</option>
-        <?php else: foreach ($kelasOpts as $id => $label): ?>
+        <option value="" <?= $kelasId === 0 ? 'selected' : '' ?>><?= empty($kelasOpts) ? '— belum ada kelas —' : '— pilih kelas —' ?></option>
+        <?php foreach ($kelasOpts as $id => $label): ?>
             <option value="<?= $id ?>" <?= $kelasId === (int) $id ? 'selected' : '' ?>><?= esc($label) ?></option>
-        <?php endforeach; endif; ?>
+        <?php endforeach; ?>
     </select>
 </form>
 <?php $leftHtml = ob_get_clean(); ?>

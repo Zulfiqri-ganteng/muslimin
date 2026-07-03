@@ -41,6 +41,7 @@
         ]],
         ['title' => 'PENJADWALAN', 'items' => [
             ['admin/jadwal', 'Jadwal KBM', 'M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z'],
+            ['admin/jadwal-guru', 'Jadwal Guru', 'M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z'],
             ['admin/absensi', 'Absensi Guru', 'M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 5l-2 2-1-1'],
         ]],
         ['title' => 'LAPORAN', 'items' => [
@@ -66,7 +67,9 @@
     // helper render satu link menu
     $renderLink = static function (array $it) use ($cur) {
         [$url, $label, $icon] = $it;
-        $active = str_starts_with($cur, $url);
+        // cocokkan persis atau sebagai prefiks segmen (agar 'admin/jadwal'
+        // tidak ikut menyala saat membuka 'admin/jadwal-guru')
+        $active = $cur === $url || str_starts_with($cur, $url . '/');
         $cls = $active ? 'bg-white/15 text-white' : 'text-brand-100 hover:bg-white/10';
         echo '<a href="' . site_url($url) . '" title="' . esc($label) . '" '
             . ':class="collapsed && !sidebar ? \'lg:justify-center\' : \'\'" '

@@ -39,10 +39,10 @@ class Pengampu extends BaseMaster
     {
         $kelasOpts = (new KelasModel())->options();
 
-        // kelas terpilih (default kelas pertama bila ada)
+        // kelas terpilih — default KOSONG; user memilih sendiri dari dropdown
         $kelasId = (int) $this->request->getGet('kelas_id');
-        if (($kelasId === 0 || ! isset($kelasOpts[$kelasId])) && $kelasOpts !== []) {
-            $kelasId = (int) array_key_first($kelasOpts);
+        if ($kelasId !== 0 && ! isset($kelasOpts[$kelasId])) {
+            $kelasId = 0;
         }
 
         // Seluruh data pendukung dicache; versi cache modul pengampu ikut

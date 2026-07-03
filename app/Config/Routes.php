@@ -134,6 +134,9 @@ $routes->group('admin', static function ($routes) {
         $routes->post('jadwal/import-preview', 'Admin\Jadwal::importPreview');
         $routes->post('jadwal/import-commit', 'Admin\Jadwal::importCommit');
 
+        // Jadwal per guru (untuk dibagikan ke tiap guru; cetak via Admin\Cetak)
+        $routes->get('jadwal-guru', 'Admin\JadwalGuru::index');
+
         // ===== ABSENSI GURU (manual, per sesi) =====
         $routes->get('absensi', 'Admin\Absensi::index');
         $routes->post('absensi/save', 'Admin\Absensi::save');

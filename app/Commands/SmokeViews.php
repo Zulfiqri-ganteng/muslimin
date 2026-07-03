@@ -111,6 +111,19 @@ class SmokeViews extends BaseCommand
                     ['id' => 2, 'shift' => 'pagi', 'jam_ke' => 2, 'waktu_mulai' => '09:00:00', 'waktu_selesai' => '09:15:00', 'durasi' => 15, 'is_istirahat' => 1],
                 ],
             ],
+            'admin/jadwal/guru' => [
+                'title'    => 'Jadwal Guru',
+                'guruOpts' => [1 => '27 - Muslimin, S.Kom'],
+                'guruId'   => 1,
+                'guru'     => $guruRow,
+                'hari'     => [['id' => 1, 'nama' => 'Senin', 'urutan' => 1, 'aktif' => 1]],
+                'jam'      => [
+                    ['id' => 1, 'shift' => 'pagi', 'jam_ke' => 1, 'waktu_mulai' => '07:00:00', 'waktu_selesai' => '07:45:00', 'durasi' => 45, 'is_istirahat' => 0],
+                    ['id' => 2, 'shift' => 'pagi', 'jam_ke' => 2, 'waktu_mulai' => '09:00:00', 'waktu_selesai' => '09:15:00', 'durasi' => 15, 'is_istirahat' => 1],
+                    ['id' => 3, 'shift' => 'siang', 'jam_ke' => 1, 'waktu_mulai' => '13:00:00', 'waktu_selesai' => '13:45:00', 'durasi' => 45, 'is_istirahat' => 0],
+                ],
+                'grid'     => ['1-1' => ['hari_id' => 1, 'jam_id' => 1, 'shift' => 'pagi', 'kode_mapel' => 'PD', 'nama_mapel' => 'Pemrograman Dasar', 'nama_kelas' => 'X TKJT 1']],
+            ],
             'admin/master/import_preview' => [
                 'title'    => 'Pratinjau Impor', 'subtitle' => 'Master Guru',
                 'cols'     => [

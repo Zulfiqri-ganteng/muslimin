@@ -63,6 +63,7 @@
             defaults: {},
             form: {},
             bulkSelected: 0,
+            allChecked: false, // semua baris tercentang → tombol "Hapus Semua" muncul
 
             init: function () {
                 this.base     = this.$el.getAttribute('data-base') || '';
@@ -101,7 +102,10 @@
 
             /* ---- pilih baris & hapus massal ---- */
             refresh: function () {
-                this.bulkSelected = this.$el.querySelectorAll('.row-check:checked').length;
+                var all     = this.$el.querySelectorAll('.row-check').length;
+                var checked = this.$el.querySelectorAll('.row-check:checked').length;
+                this.bulkSelected = checked;
+                this.allChecked   = all > 0 && checked === all;
             },
             toggleAll: function (e) {
                 this.$el.querySelectorAll('.row-check').forEach(function (c) { c.checked = e.target.checked; });
