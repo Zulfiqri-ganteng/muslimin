@@ -1,4 +1,5 @@
 <?php
+
 /**
  * Kepala surat (KOP) resmi sekolah untuk semua PDF — dipakai lewat
  * helper kop_pdf(). Style inline agar aman di Dompdf dan tidak
@@ -29,9 +30,7 @@ $tahun  = trim((string) ($setting['academic_year'] ?? ''));
                 <?php if ($kontak !== ''): ?>
                     <div style="font-size:9.5px; color:#475569;"><?= esc($kontak) ?></div>
                 <?php endif; ?>
-                <?php if ($tahun !== ''): ?>
-                    <div style="font-size:9.5px; font-weight:bold; color:#1a3a6b; margin-top:1px;">Tahun Ajaran <?= esc($tahun) ?></div>
-                <?php endif; ?>
+
             </td>
             <td style="width:110px; border:0; padding:0; background:none;"></td>
         </tr>
