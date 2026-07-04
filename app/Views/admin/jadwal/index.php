@@ -22,7 +22,9 @@
                 <select name="kelas_id" onchange="this.form.submit()" class="rounded-lg border border-slate-300 px-3 py-2.5 text-sm focus:border-brand-500 outline-none flex-1 min-w-[180px] max-w-xs">
                     <?php if (empty($kelasOpts)): ?>
                         <option value="">— belum ada kelas —</option>
-                    <?php else: foreach ($kelasOpts as $id => $label): ?>
+                    <?php else: ?>
+                        <option value="" <?= $kelasId ? '' : 'selected' ?>>— Pilih Kelas —</option>
+                        <?php foreach ($kelasOpts as $id => $label): ?>
                         <option value="<?= $id ?>" <?= $kelasId === (int) $id ? 'selected' : '' ?>><?= esc($label) ?></option>
                     <?php endforeach; endif; ?>
                 </select>

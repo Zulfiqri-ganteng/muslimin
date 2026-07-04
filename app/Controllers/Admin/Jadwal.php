@@ -41,9 +41,6 @@ class Jadwal extends BaseController
         $kelasOpts  = $kelasModel->options();
 
         $kelasId = (int) $this->request->getGet('kelas_id');
-        if ($kelasId === 0 && ! empty($kelasOpts)) {
-            $kelasId = (int) array_key_first($kelasOpts);
-        }
 
         $kelas = $kelasId ? $kelasModel->find($kelasId) : null;
         $shift = $kelas['shift'] ?? 'pagi';
