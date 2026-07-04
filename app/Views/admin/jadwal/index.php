@@ -155,7 +155,7 @@
                             <?php else: ?>
                                 <tr>
                                     <td class="px-3 py-2 border-b border-slate-100 whitespace-nowrap align-top">
-                                        <span class="font-bold text-brand-700">Jam <?= esc($j['jam_ke']) ?></span><br>
+                                        <span class="font-bold text-brand-700">Jam ke <?= esc($j['jam_ke']) ?></span><br>
                                         <span class="text-slate-400 text-xs"><?= esc(substr($j['waktu_mulai'], 0, 5)) ?>–<?= esc(substr($j['waktu_selesai'], 0, 5)) ?></span>
                                     </td>
                                     <?php foreach ($hari as $h): $k = $h['id'] . '-' . $j['id']; ?>

@@ -19,6 +19,13 @@ $label = $label ?? '';
 <head>
     <meta charset="UTF-8">
     <style>
+        /* Margin halaman lebih rapat dari default Dompdf (0.75in) agar seluruh
+           jam (hingga ~10 JP) muat dalam satu halaman — kolom kelas vertikal
+           tidak pecah/terlepas ke halaman berikutnya. */
+        @page {
+            margin: 1cm;
+        }
+
         * {
             font-family: "DejaVu Sans", sans-serif;
         }
@@ -58,7 +65,7 @@ $label = $label ?? '';
         th,
         td {
             border: 0.7px solid #94a3b8;
-            padding: 4px 5px;
+            padding: 2px 4px;
             text-align: center;
             vertical-align: middle;
         }
@@ -166,7 +173,7 @@ $label = $label ?? '';
                     <?php else: ?>
                         <tr>
                             <td class="jam">
-                                Jam <?= esc($j['jam_ke']) ?><br>
+                                Jam ke <?= esc($j['jam_ke']) ?><br>
                                 <span class="sub"><?= esc(substr($j['waktu_mulai'], 0, 5)) ?>&ndash;<?= esc(substr($j['waktu_selesai'], 0, 5)) ?></span>
                             </td>
                             <?php foreach ($hari as $h): $c = $grid[$h['id'] . '-' . $j['id']] ?? null; ?>

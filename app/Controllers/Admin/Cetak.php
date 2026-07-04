@@ -151,7 +151,7 @@ class Cetak extends BaseController
                 $sheet->getStyle("{$jamColL}{$r}")->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER);
                 $r++;
             }
-            $jamLabel = 'Jam ' . $j['jam_ke']
+            $jamLabel = 'Jam ke ' . $j['jam_ke']
                 . ' (' . substr($j['waktu_mulai'], 0, 5) . '-' . substr($j['waktu_selesai'], 0, 5) . ')';
             $sheet->setCellValue($jamColL . $r, $jamLabel);
             $c = $dayStart;

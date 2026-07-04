@@ -378,7 +378,7 @@ class Jadwal extends BaseController
                 $r++;
                 continue;
             }
-            $sheet->setCellValue('B' . $r, 'Jam ' . $j['jam_ke'] . ' (' . substr($j['waktu_mulai'], 0, 5) . '-' . substr($j['waktu_selesai'], 0, 5) . ')');
+            $sheet->setCellValue('B' . $r, 'Jam ke ' . $j['jam_ke'] . ' (' . substr($j['waktu_mulai'], 0, 5) . '-' . substr($j['waktu_selesai'], 0, 5) . ')');
             $r++;
         }
 
