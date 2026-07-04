@@ -90,7 +90,7 @@
     <div class="h-16 flex items-center gap-2.5 px-5 border-b border-white/10 shrink-0"
          :class="collapsed && !sidebar ? 'lg:px-0 lg:justify-center' : ''">
         <?php if ($schoolLogo): ?>
-            <img src="<?= esc($schoolLogo) ?>" alt="Logo" class="h-9 w-9 rounded-lg object-cover bg-white shrink-0">
+            <img src="<?= esc($schoolLogo) ?>" alt="Logo" class="h-9 w-9 rounded-lg object-contain shrink-0">
         <?php else: ?>
             <div class="flex h-9 w-9 items-center justify-center rounded-lg bg-gold-400 text-brand-900 font-extrabold shrink-0"><?= strtoupper(substr($schoolName, 0, 1)) ?></div>
         <?php endif; ?>

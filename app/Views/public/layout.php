@@ -34,7 +34,7 @@ if ((int) ($setting['absensi_publik'] ?? 1) === 1) {
     <div class="max-w-6xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between">
         <a href="<?= site_url('/') ?>" class="flex items-center gap-2.5 min-w-0">
             <?php if ($logo): ?>
-                <img src="<?= esc($logo) ?>" alt="Logo" class="h-9 w-9 rounded-lg object-cover bg-slate-100 shrink-0">
+                <img src="<?= esc($logo) ?>" alt="Logo" class="h-9 w-9 rounded-lg object-contain shrink-0">
             <?php else: ?>
                 <span class="flex h-9 w-9 items-center justify-center rounded-lg bg-brand-700 text-white font-extrabold shrink-0"><?= strtoupper(substr($schoolName, 0, 1)) ?></span>
             <?php endif; ?>

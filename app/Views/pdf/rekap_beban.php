@@ -90,7 +90,6 @@
     <?= kop_pdf() ?>
     <div class="head">
         <h1>REKAP BEBAN MENGAJAR</h1>
-        <p>Tahun Ajaran <?= esc($setting['academic_year'] ?? '') ?></p>
     </div>
 
     <?php if (empty($grouped)): ?>

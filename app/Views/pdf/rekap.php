@@ -115,7 +115,7 @@ $lokasi = ($kota && stripos($alamat, $kota) === false) ? ($alamat ? $alamat . ',
 
     <div class="title">
         <h3>Rekapitulasi Kesediaan Guru Mengajar</h3>
-        <p>Tahun Ajaran <?= esc($setting['academic_year']) ?><?= $status ? ' &middot; Status: ' . esc($status) : '' ?> &middot; Total: <?= count($rows) ?> guru</p>
+        <p><?= $status ? 'Status: ' . esc($status) . ' &middot; ' : '' ?>Total: <?= count($rows) ?> guru</p>
     </div>
 
     <table class="grid">

@@ -38,13 +38,14 @@ class Cetak extends BaseController
         $jam  = (new JamPelajaranModel())->where('shift', $kelas['shift'])->orderBy('waktu_mulai', 'ASC')->findAll();
         $grid = (new JadwalModel())->gridForKelas($id);
 
-        $title    = 'JADWAL PELAJARAN — ' . $kelas['nama_kelas'];
+        $title    = 'JADWAL PELAJARAN';
+        $label    = $kelas['nama_kelas']; // ditaruh sebagai kolom vertikal di tabel, bukan di judul
         $filename = 'Jadwal-' . $this->slug($kelas['nama_kelas']);
 
         if ($format === 'excel') {
-            return $this->gridExcel($title, $hari, $jam, $grid, 'kelas', $filename);
+            return $this->gridExcel($title, $hari, $jam, $grid, 'kelas', $filename, $label);
         }
-        return $this->gridPdf($title, $hari, $jam, $grid, 'kelas', $filename);
+        return $this->gridPdf($title, $hari, $jam, $grid, 'kelas', $filename, $label);
     }
 
     // ===================== JADWAL PER GURU =====================
@@ -84,10 +85,11 @@ class Cetak extends BaseController
     // ---------------------------------------------------------------
     // RENDER GRID (PDF)
     // ---------------------------------------------------------------
-    private function gridPdf(string $title, array $hari, array $jam, array $grid, string $mode, string $filename): void
+    private function gridPdf(string $title, array $hari, array $jam, array $grid, string $mode, string $filename, string $label = ''): void
     {
         $html = view('pdf/jadwal_grid', [
             'title'   => $title,
+            'label'   => $label,
             'setting' => $this->setting(),
             'hari'    => $hari,
             'jam'     => $jam,
@@ -98,56 +100,61 @@ class Cetak extends BaseController
     }
 
     // RENDER GRID (EXCEL, nilai jadi)
-    private function gridExcel(string $title, array $hari, array $jam, array $grid, string $mode, string $filename)
+    private function gridExcel(string $title, array $hari, array $jam, array $grid, string $mode, string $filename, string $label = '')
     {
         $ss    = new Spreadsheet();
         $sheet = $ss->getActiveSheet();
         $sheet->setTitle('Jadwal');
 
-        $colCount = count($hari) + 1;
-        $lastCol  = Coordinate::stringFromColumnIndex($colCount);
+        // Mode kelas: nama kelas jadi kolom vertikal paling kiri (tanpa judul kelas).
+        $hasKelasCol = ($mode === 'kelas' && $label !== '');
+        $jamCol      = $hasKelasCol ? 2 : 1;                 // kolom "Jam" (B bila ada kolom kelas, else A)
+        $dayStart    = $jamCol + 1;                          // kolom hari pertama
+        $jamColL     = Coordinate::stringFromColumnIndex($jamCol);
+        $colCount    = count($hari) + ($hasKelasCol ? 2 : 1);
+        $lastCol     = Coordinate::stringFromColumnIndex($colCount);
 
         $sheet->mergeCells("A1:{$lastCol}1")->setCellValue('A1', $title);
         $sheet->mergeCells("A2:{$lastCol}2")->setCellValue('A2', 'Tahun Pelajaran ' . $this->setting()['academic_year']);
         $sheet->getStyle('A1')->getFont()->setBold(true)->setSize(13);
         $sheet->getStyle('A1:A2')->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER);
 
-        // header
+        // header (baris 4)
         $r = 4;
-        $sheet->setCellValue('A' . $r, 'Jam');
-        $c = 2;
+        $sheet->setCellValue($jamColL . $r, 'Jam');
+        $c = $dayStart;
         foreach ($hari as $h) {
             $sheet->setCellValue(Coordinate::stringFromColumnIndex($c++) . $r, $h['nama']);
         }
-        $sheet->getStyle("A{$r}:{$lastCol}{$r}")->getFont()->setBold(true)->getColor()->setRGB('FFFFFF');
-        $sheet->getStyle("A{$r}:{$lastCol}{$r}")->getFill()->setFillType(Fill::FILL_SOLID)->getStartColor()->setRGB('1A3A6B');
-        $sheet->getStyle("A{$r}:{$lastCol}{$r}")->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER);
+        $sheet->getStyle("{$jamColL}{$r}:{$lastCol}{$r}")->getFont()->setBold(true)->getColor()->setRGB('FFFFFF');
+        $sheet->getStyle("{$jamColL}{$r}:{$lastCol}{$r}")->getFill()->setFillType(Fill::FILL_SOLID)->getStartColor()->setRGB('1A3A6B');
+        $sheet->getStyle("{$jamColL}{$r}:{$lastCol}{$r}")->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER);
 
         // body
         $r         = 5;
         $prevShift = null;
         foreach ($jam as $j) {
             if (! empty($j['is_istirahat'])) {
-                $sheet->mergeCells("A{$r}:{$lastCol}{$r}")
-                    ->setCellValue('A' . $r, 'ISTIRAHAT (' . substr($j['waktu_mulai'], 0, 5) . '-' . substr($j['waktu_selesai'], 0, 5) . ')');
-                $sheet->getStyle("A{$r}")->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER);
-                $sheet->getStyle("A{$r}:{$lastCol}{$r}")->getFill()->setFillType(Fill::FILL_SOLID)->getStartColor()->setRGB('FFF3CD');
+                $sheet->mergeCells("{$jamColL}{$r}:{$lastCol}{$r}")
+                    ->setCellValue($jamColL . $r, 'ISTIRAHAT (' . substr($j['waktu_mulai'], 0, 5) . '-' . substr($j['waktu_selesai'], 0, 5) . ')');
+                $sheet->getStyle("{$jamColL}{$r}")->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER);
+                $sheet->getStyle("{$jamColL}{$r}:{$lastCol}{$r}")->getFill()->setFillType(Fill::FILL_SOLID)->getStartColor()->setRGB('FFF3CD');
                 $r++;
                 continue;
             }
             // Pemisah shift (hanya mode guru yang lintas shift), sama seperti PDF.
             if ($mode === 'guru' && $j['shift'] !== $prevShift) {
                 $prevShift = $j['shift'];
-                $sheet->mergeCells("A{$r}:{$lastCol}{$r}")->setCellValue('A' . $r, 'SHIFT ' . strtoupper($j['shift']));
-                $sheet->getStyle("A{$r}:{$lastCol}{$r}")->getFont()->setBold(true)->getColor()->setRGB('FFFFFF');
-                $sheet->getStyle("A{$r}:{$lastCol}{$r}")->getFill()->setFillType(Fill::FILL_SOLID)->getStartColor()->setRGB('1A3A6B');
-                $sheet->getStyle("A{$r}")->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER);
+                $sheet->mergeCells("{$jamColL}{$r}:{$lastCol}{$r}")->setCellValue($jamColL . $r, 'SHIFT ' . strtoupper($j['shift']));
+                $sheet->getStyle("{$jamColL}{$r}:{$lastCol}{$r}")->getFont()->setBold(true)->getColor()->setRGB('FFFFFF');
+                $sheet->getStyle("{$jamColL}{$r}:{$lastCol}{$r}")->getFill()->setFillType(Fill::FILL_SOLID)->getStartColor()->setRGB('1A3A6B');
+                $sheet->getStyle("{$jamColL}{$r}")->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER);
                 $r++;
             }
-            $label = 'Jam ' . $j['jam_ke']
+            $jamLabel = 'Jam ' . $j['jam_ke']
                 . ' (' . substr($j['waktu_mulai'], 0, 5) . '-' . substr($j['waktu_selesai'], 0, 5) . ')';
-            $sheet->setCellValue('A' . $r, $label);
-            $c = 2;
+            $sheet->setCellValue($jamColL . $r, $jamLabel);
+            $c = $dayStart;
             foreach ($hari as $h) {
                 $cell = $grid[$h['id'] . '-' . $j['id']] ?? null;
                 $val  = '';
@@ -162,15 +169,27 @@ class Cetak extends BaseController
             }
             $r++;
         }
+        $lastRow = $r - 1;
 
-        $sheet->getStyle("A4:{$lastCol}" . ($r - 1))->getBorders()->getAllBorders()->setBorderStyle(Border::BORDER_THIN);
-        $sheet->getStyle("A4:{$lastCol}" . ($r - 1))->getAlignment()->setVertical(Alignment::VERTICAL_CENTER)->setWrapText(true);
-        // Sel hari (kolom B..akhir) rata tengah seperti PDF; kolom "Jam" tetap rata kiri.
-        if ($colCount >= 2) {
-            $sheet->getStyle('B5:' . $lastCol . ($r - 1))->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER);
+        // Kolom kelas vertikal (A4:A{lastRow} digabung, teks diputar 90°, tanpa judul).
+        if ($hasKelasCol) {
+            $sheet->mergeCells("A4:A{$lastRow}")->setCellValue('A4', $label);
+            $sheet->getStyle("A4:A{$lastRow}")->getFont()->setBold(true)->setSize(13)->getColor()->setRGB('1A3A6B');
+            $sheet->getStyle("A4:A{$lastRow}")->getFill()->setFillType(Fill::FILL_SOLID)->getStartColor()->setRGB('EEF2FF');
+            $sheet->getStyle("A4:A{$lastRow}")->getAlignment()
+                ->setTextRotation(90)
+                ->setHorizontal(Alignment::HORIZONTAL_CENTER)
+                ->setVertical(Alignment::VERTICAL_CENTER);
+            $sheet->getColumnDimension('A')->setWidth(5);
         }
-        $sheet->getColumnDimension('A')->setWidth(24);
-        for ($i = 2; $i <= $colCount; $i++) {
+
+        $sheet->getStyle("A4:{$lastCol}{$lastRow}")->getBorders()->getAllBorders()->setBorderStyle(Border::BORDER_THIN);
+        $sheet->getStyle("{$jamColL}4:{$lastCol}{$lastRow}")->getAlignment()->setVertical(Alignment::VERTICAL_CENTER)->setWrapText(true);
+        // Sel hari rata tengah seperti PDF; kolom "Jam" tetap rata kiri.
+        $dayStartL = Coordinate::stringFromColumnIndex($dayStart);
+        $sheet->getStyle("{$dayStartL}5:{$lastCol}{$lastRow}")->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER);
+        $sheet->getColumnDimension($jamColL)->setWidth(24);
+        for ($i = $dayStart; $i <= $colCount; $i++) {
             $sheet->getColumnDimension(Coordinate::stringFromColumnIndex($i))->setWidth(22);
         }
 

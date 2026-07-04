@@ -79,7 +79,6 @@
     <?= kop_pdf() ?>
     <div class="head">
         <h1>REKAP ABSENSI GURU</h1>
-        <p>Tahun Ajaran <?= esc($setting['academic_year'] ?? '') ?></p>
         <p>Periode <?= esc($dari) ?> s/d <?= esc($sampai) ?></p>
     </div>
 

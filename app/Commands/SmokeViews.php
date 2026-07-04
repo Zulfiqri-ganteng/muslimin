@@ -125,7 +125,8 @@ class SmokeViews extends BaseCommand
                 'grid'     => ['1-1' => ['hari_id' => 1, 'jam_id' => 1, 'shift' => 'pagi', 'kode_mapel' => 'PD', 'nama_mapel' => 'Pemrograman Dasar', 'nama_kelas' => 'X TKJT 1']],
             ],
             'pdf/jadwal_grid' => [
-                'title'   => 'JADWAL PELAJARAN — X TKJT 1',
+                'title'   => 'JADWAL PELAJARAN',
+                'label'   => 'X TKJT 1',
                 'setting' => ['school_name' => 'SMK Uji', 'academic_year' => '2026/2027'],
                 'hari'    => [['id' => 1, 'nama' => 'Senin', 'urutan' => 1, 'aktif' => 1]],
                 'jam'     => [

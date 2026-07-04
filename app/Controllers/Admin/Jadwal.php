@@ -344,55 +344,68 @@ class Jadwal extends BaseController
         $sheet = $ss->getActiveSheet();
         $sheet->setTitle('Jadwal');
 
-        $colCount = count($hari) + 1;
-        $lastCol  = Coordinate::stringFromColumnIndex(max(2, $colCount));
+        // Layout sama seperti hasil cetak/export: kolom A = nama kelas (vertikal),
+        // kolom B = "Jam", kolom C.. = hari. Importer membaca kelas dari kolom A ini.
+        $jamCol   = 2;                          // "Jam" di kolom B
+        $dayStart = 3;                          // hari mulai kolom C
+        $colCount = count($hari) + 2;
+        $lastCol  = Coordinate::stringFromColumnIndex($colCount);
 
-        // Judul (dipakai importer untuk mengenali kelas — JANGAN ubah nama kelas di sini)
-        $sheet->mergeCells("A1:{$lastCol}1")->setCellValue('A1', 'JADWAL PELAJARAN — ' . $namaKelas);
+        $sheet->mergeCells("A1:{$lastCol}1")->setCellValue('A1', 'JADWAL PELAJARAN');
         $sheet->mergeCells("A2:{$lastCol}2")->setCellValue('A2', strtoupper($setting['school_name']) . ' — T.P. ' . $setting['academic_year']);
         $sheet->getStyle('A1')->getFont()->setBold(true)->setSize(13);
         $sheet->getStyle('A1:A2')->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER);
 
-        // Header (baris 4)
+        // Header (baris 4): B = Jam, C.. = hari
         $r = 4;
-        $sheet->setCellValue('A' . $r, 'Jam');
-        $c = 2;
+        $sheet->setCellValue('B' . $r, 'Jam');
+        $c = $dayStart;
         foreach ($hari as $h) {
             $sheet->setCellValue(Coordinate::stringFromColumnIndex($c++) . $r, $h['nama']);
         }
-        $sheet->getStyle("A{$r}:{$lastCol}{$r}")->getFont()->setBold(true)->getColor()->setRGB('FFFFFF');
-        $sheet->getStyle("A{$r}:{$lastCol}{$r}")->getFill()->setFillType(Fill::FILL_SOLID)->getStartColor()->setRGB('1A3A6B');
-        $sheet->getStyle("A{$r}:{$lastCol}{$r}")->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER);
+        $sheet->getStyle("B{$r}:{$lastCol}{$r}")->getFont()->setBold(true)->getColor()->setRGB('FFFFFF');
+        $sheet->getStyle("B{$r}:{$lastCol}{$r}")->getFill()->setFillType(Fill::FILL_SOLID)->getStartColor()->setRGB('1A3A6B');
+        $sheet->getStyle("B{$r}:{$lastCol}{$r}")->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER);
 
         // Body (baris jam + baris istirahat sebagai pemisah) — sel dibiarkan KOSONG untuk diisi
         $r = 5;
         foreach ($jam as $j) {
             if (! empty($j['is_istirahat'])) {
-                $sheet->mergeCells("A{$r}:{$lastCol}{$r}")
-                    ->setCellValue('A' . $r, 'ISTIRAHAT (' . substr($j['waktu_mulai'], 0, 5) . '-' . substr($j['waktu_selesai'], 0, 5) . ')');
-                $sheet->getStyle("A{$r}")->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER);
-                $sheet->getStyle("A{$r}:{$lastCol}{$r}")->getFill()->setFillType(Fill::FILL_SOLID)->getStartColor()->setRGB('FFF3CD');
+                $sheet->mergeCells("B{$r}:{$lastCol}{$r}")
+                    ->setCellValue('B' . $r, 'ISTIRAHAT (' . substr($j['waktu_mulai'], 0, 5) . '-' . substr($j['waktu_selesai'], 0, 5) . ')');
+                $sheet->getStyle("B{$r}")->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER);
+                $sheet->getStyle("B{$r}:{$lastCol}{$r}")->getFill()->setFillType(Fill::FILL_SOLID)->getStartColor()->setRGB('FFF3CD');
                 $r++;
                 continue;
             }
-            $sheet->setCellValue('A' . $r, 'Jam ' . $j['jam_ke'] . ' (' . substr($j['waktu_mulai'], 0, 5) . '-' . substr($j['waktu_selesai'], 0, 5) . ')');
+            $sheet->setCellValue('B' . $r, 'Jam ' . $j['jam_ke'] . ' (' . substr($j['waktu_mulai'], 0, 5) . '-' . substr($j['waktu_selesai'], 0, 5) . ')');
             $r++;
         }
 
         $lastRow = $r - 1;
+
+        // Kolom kelas vertikal (A4:A{lastRow}) — importer membaca nama kelas dari sini.
+        $sheet->mergeCells("A4:A{$lastRow}")->setCellValue('A4', $namaKelas);
+        $sheet->getStyle("A4:A{$lastRow}")->getFont()->setBold(true)->setSize(13)->getColor()->setRGB('1A3A6B');
+        $sheet->getStyle("A4:A{$lastRow}")->getFill()->setFillType(Fill::FILL_SOLID)->getStartColor()->setRGB('EEF2FF');
+        $sheet->getStyle("A4:A{$lastRow}")->getAlignment()
+            ->setTextRotation(90)
+            ->setHorizontal(Alignment::HORIZONTAL_CENTER)
+            ->setVertical(Alignment::VERTICAL_CENTER);
+        $sheet->getColumnDimension('A')->setWidth(5);
+
         $sheet->getStyle("A4:{$lastCol}{$lastRow}")->getBorders()->getAllBorders()->setBorderStyle(Border::BORDER_THIN);
-        $sheet->getStyle("A4:{$lastCol}{$lastRow}")->getAlignment()->setVertical(Alignment::VERTICAL_CENTER)->setWrapText(true);
-        if ($colCount >= 2) {
-            $sheet->getStyle('B5:' . $lastCol . $lastRow)->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER);
-        }
-        $sheet->getColumnDimension('A')->setWidth(24);
-        for ($i = 2; $i <= $colCount; $i++) {
+        $sheet->getStyle("B4:{$lastCol}{$lastRow}")->getAlignment()->setVertical(Alignment::VERTICAL_CENTER)->setWrapText(true);
+        $dayStartL = Coordinate::stringFromColumnIndex($dayStart);
+        $sheet->getStyle("{$dayStartL}5:{$lastCol}{$lastRow}")->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER);
+        $sheet->getColumnDimension('B')->setWidth(24);
+        for ($i = $dayStart; $i <= $colCount; $i++) {
             $sheet->getColumnDimension(Coordinate::stringFromColumnIndex($i))->setWidth(22);
         }
 
         // Petunjuk pengisian (di bawah tabel; diabaikan saat impor)
         $noteRow = $lastRow + 2;
-        $sheet->setCellValue('A' . $noteRow, 'CARA ISI: tulis MAPEL di tiap sel (guru otomatis dari Penugasan). Untuk tentukan guru langsung, tulis: Mapel / Guru. Kosongkan sel jika tidak ada pelajaran. Jangan ubah judul & kolom Jam.');
+        $sheet->setCellValue('A' . $noteRow, 'CARA ISI: tulis MAPEL di tiap sel (guru otomatis dari Penugasan). Untuk tentukan guru langsung, tulis: Mapel / Guru. Kosongkan sel jika tidak ada pelajaran. Jangan ubah judul, nama kelas (kolom kiri), & kolom Jam.');
         $sheet->getStyle('A' . $noteRow)->getFont()->setItalic(true)->getColor()->setRGB('64748B');
 
         $this->streamXlsx($ss, 'Template-Jadwal-' . preg_replace('/[^a-z0-9]+/i', '-', $namaKelas));
@@ -457,36 +470,53 @@ class Jadwal extends BaseController
      */
     private function parseGrid(array $data): ?array
     {
-        // Cari baris header: kolom A === "Jam".
+        // Cari baris header + kolom "Jam" (bisa di kolom mana saja — layout baru
+        // menaruh kolom kelas vertikal di kiri sehingga "Jam" ada di kolom B).
         $headerIdx = null;
+        $jamCol    = null;
         foreach ($data as $i => $row) {
-            if (strtolower(trim((string) ($row[0] ?? ''))) === 'jam') {
-                $headerIdx = $i;
-                break;
+            foreach ($row as $c => $val) {
+                if (strtolower(trim((string) $val)) === 'jam') {
+                    $headerIdx = $i;
+                    $jamCol    = (int) $c;
+                    break 2;
+                }
             }
         }
         if ($headerIdx === null) {
             return null;
         }
 
-        // Nama kelas dari judul ("JADWAL KBM — X TKJ 1") di baris sebelum header.
+        // Nama kelas — utamakan kolom kelas vertikal (kolom sebelum "Jam"),
+        // lalu fallback ke judul ("JADWAL … — X TKJ 1") pada layout lama.
         $kelasName = '';
-        for ($i = 0; $i < $headerIdx; $i++) {
-            $t = trim((string) ($data[$i][0] ?? ''));
-            if ($t !== '' && stripos($t, 'JADWAL') !== false) {
-                if (($p = mb_strpos($t, '—')) !== false) {
-                    $kelasName = trim(mb_substr($t, $p + 1));
-                } elseif (($p = strrpos($t, '-')) !== false) {
-                    $kelasName = trim(substr($t, $p + 1));
+        if ($jamCol > 0) {
+            for ($i = $headerIdx, $n = count($data); $i < $n; $i++) {
+                $t = trim((string) ($data[$i][$jamCol - 1] ?? ''));
+                if ($t !== '') {
+                    $kelasName = $t;
+                    break;
                 }
-                break;
+            }
+        }
+        if ($kelasName === '') {
+            for ($i = 0; $i < $headerIdx; $i++) {
+                $t = trim((string) ($data[$i][0] ?? ''));
+                if ($t !== '' && stripos($t, 'JADWAL') !== false) {
+                    if (($p = mb_strpos($t, '—')) !== false) {
+                        $kelasName = trim(mb_substr($t, $p + 1));
+                    } elseif (($p = strrpos($t, '-')) !== false) {
+                        $kelasName = trim(substr($t, $p + 1));
+                    }
+                    break;
+                }
             }
         }
 
-        // Kolom hari dari baris header.
+        // Kolom hari dari baris header (setelah kolom "Jam").
         $header   = $data[$headerIdx];
         $hariCols = []; // colIndex => nama hari
-        for ($c = 1, $n = count($header); $c < $n; $c++) {
+        for ($c = $jamCol + 1, $n = count($header); $c < $n; $c++) {
             $h = trim((string) ($header[$c] ?? ''));
             if ($h !== '') {
                 $hariCols[$c] = $h;
@@ -500,7 +530,7 @@ class Jadwal extends BaseController
         $out = [];
         for ($i = $headerIdx + 1, $n = count($data); $i < $n; $i++) {
             $row   = $data[$i];
-            $label = trim((string) ($row[0] ?? ''));
+            $label = trim((string) ($row[$jamCol] ?? ''));
             if ($label === '' || stripos($label, 'istirahat') !== false) {
                 continue;
             }
@@ -515,15 +545,61 @@ class Jadwal extends BaseController
                 }
                 // Sel bisa "Mapel", "Mapel / Guru", atau dua baris "Mapel\nGuru".
                 $parts = preg_split('/\s*[\/\r\n]+\s*/', $val, 2);
-                $mapel = trim((string) ($parts[0] ?? ''));
-                $guru  = trim((string) ($parts[1] ?? ''));
+                $mapel = $this->tidy((string) ($parts[0] ?? ''));
+                $guru  = $this->tidy((string) ($parts[1] ?? ''));
                 if ($mapel === '') {
                     continue;
                 }
-                $out[] = ['kelas' => $kelasName, 'hari' => $hariName, 'jam' => $jamKe, 'mapel' => $mapel, 'guru' => $guru];
+                $out[] = ['kelas' => $this->tidy($kelasName), 'hari' => $this->tidy($hariName), 'jam' => $jamKe, 'mapel' => $mapel, 'guru' => $guru];
             }
         }
         return $out;
+    }
+
+    /** Rapikan teks sel: buang spasi ganda / newline / spasi tepi jadi satu spasi. */
+    private function tidy(string $s): string
+    {
+        return trim((string) preg_replace('/\s+/u', ' ', $s));
+    }
+
+    /** Kunci ternormalisasi: HURUF BESAR + spasi tunggal (toleran beda spasi/newline). */
+    private function nk(string $s): string
+    {
+        return strtoupper($this->tidy($s));
+    }
+
+    /** Kunci fuzzy: hanya huruf/angka (abaikan spasi, koma, titik, gelar dsb.). */
+    private function fk(string $s): string
+    {
+        return strtoupper((string) preg_replace('/[^\p{L}\p{N}]+/u', '', $s));
+    }
+
+    /** Daftarkan nilai ke peta dengan kunci normal + fuzzy (normal menang bila bentrok). */
+    private function addKeys(array &$map, string $name, $value): void
+    {
+        $name = trim($name);
+        if ($name === '') {
+            return;
+        }
+        $map[$this->nk($name)] = $value;
+        $fk = $this->fk($name);
+        if ($fk !== '' && ! isset($map[$fk])) {
+            $map[$fk] = $value; // jangan menimpa kunci fuzzy yang sudah ada
+        }
+    }
+
+    /** Cari nilai di peta: cocok persis (ternormalisasi) dulu, lalu fuzzy. Null bila tak ada. */
+    private function lookup(array $map, string $val)
+    {
+        $nk = $this->nk($val);
+        if ($nk !== '' && isset($map[$nk])) {
+            return $map[$nk];
+        }
+        $fk = $this->fk($val);
+        if ($fk !== '' && isset($map[$fk])) {
+            return $map[$fk];
+        }
+        return null;
     }
 
     /** Parser format baris lama (Kelas,Hari,Jam ke,Mapel,Guru) sebagai fallback. */
@@ -559,11 +635,33 @@ class Jadwal extends BaseController
             ->where('p.deleted_at', null)
             ->get()->getResultArray();
         foreach ($rows as $r) {
-            $kk = strtoupper((string) $r['nama_kelas']);
-            $map[$kk . '|' . strtoupper((string) $r['kode_mapel'])] = $r['guru_nama'];
-            $map[$kk . '|' . strtoupper((string) $r['nama_mapel'])] = $r['guru_nama'];
+            foreach ([$this->nk((string) $r['nama_kelas']), $this->fk((string) $r['nama_kelas'])] as $kk) {
+                if ($kk === '') {
+                    continue;
+                }
+                foreach ([$r['kode_mapel'], $r['nama_mapel']] as $mp) {
+                    foreach ([$this->nk((string) $mp), $this->fk((string) $mp)] as $mm) {
+                        if ($mm !== '' && ! isset($map[$kk . '|' . $mm])) {
+                            $map[$kk . '|' . $mm] = $r['guru_nama'];
+                        }
+                    }
+                }
+            }
         }
         return $map;
+    }
+
+    /** Cari guru dari peta Penugasan untuk (kelas, mapel) dengan toleransi spasi/tanda baca. */
+    private function guruForCell(array $map, string $kelas, string $mapel): string
+    {
+        foreach ([$this->nk($kelas), $this->fk($kelas)] as $kk) {
+            foreach ([$this->nk($mapel), $this->fk($mapel)] as $mm) {
+                if ($kk !== '' && $mm !== '' && isset($map[$kk . '|' . $mm])) {
+                    return (string) $map[$kk . '|' . $mm];
+                }
+            }
+        }
+        return '';
     }
 
     /** Pratinjau impor (dapat diedit sebelum disimpan). */
@@ -589,7 +687,7 @@ class Jadwal extends BaseController
                 $r['kelas'] = $fallbackKelas;
             }
             if (($r['guru'] ?? '') === '') {
-                $r['guru'] = $guruMap[strtoupper((string) ($r['kelas'] ?? '')) . '|' . strtoupper((string) ($r['mapel'] ?? ''))] ?? '';
+                $r['guru'] = $this->guruForCell($guruMap, (string) ($r['kelas'] ?? ''), (string) ($r['mapel'] ?? ''));
             }
         }
         unset($r);
@@ -627,14 +725,15 @@ class Jadwal extends BaseController
             return redirect()->to(site_url('admin/jadwal'))->with('error', 'Tidak ada data untuk disimpan.');
         }
 
-        // --- peta lookup ---
+        // --- peta lookup (kunci ganda: ternormalisasi + fuzzy tanpa tanda baca,
+        //     supaya beda spasi/koma/titik tetap cocok) ---
         $kelasMap = []; // NAMA => ['id','shift']
         foreach ((new KelasModel())->select('id, nama_kelas, shift')->findAll() as $k) {
-            $kelasMap[strtoupper($k['nama_kelas'])] = ['id' => (int) $k['id'], 'shift' => $k['shift']];
+            $this->addKeys($kelasMap, $k['nama_kelas'], ['id' => (int) $k['id'], 'shift' => $k['shift']]);
         }
         $hariMap = []; // NAMA => id
         foreach ((new HariModel())->findAll() as $h) {
-            $hariMap[strtoupper($h['nama'])] = (int) $h['id'];
+            $this->addKeys($hariMap, $h['nama'], (int) $h['id']);
         }
         $jamMap = []; // "shift-jamKe" => id (tanpa istirahat)
         foreach ((new JamPelajaranModel())->where('is_istirahat', 0)->findAll() as $j) {
@@ -642,21 +741,21 @@ class Jadwal extends BaseController
         }
         $mapelMap = []; // KODE/NAMA => id
         foreach ((new MataPelajaranModel())->select('id, kode_mapel, nama_mapel')->findAll() as $m) {
-            $mapelMap[strtoupper($m['kode_mapel'])] = (int) $m['id'];
-            $mapelMap[strtoupper($m['nama_mapel'])] = (int) $m['id'];
+            $this->addKeys($mapelMap, $m['kode_mapel'], (int) $m['id']);
+            $this->addKeys($mapelMap, $m['nama_mapel'], (int) $m['id']);
         }
         $guruMap = []; // KODE/NAMA => id
         foreach ((new GuruModel())->select('id, kode_guru, nama')->findAll() as $g) {
-            $guruMap[strtoupper($g['kode_guru'])] = (int) $g['id'];
-            $guruMap[strtoupper($g['nama'])]      = (int) $g['id'];
+            $this->addKeys($guruMap, $g['kode_guru'], (int) $g['id']);
+            $this->addKeys($guruMap, $g['nama'], (int) $g['id']);
         }
 
         // --- hitung JP per (kelas,mapel,guru) di file → untuk jp pengampu baru ---
         $jpFile = [];
         foreach ($rows as $row) {
-            $kk = strtoupper(trim((string) ($row['kelas'] ?? '')));
-            $mm = strtoupper(trim((string) ($row['mapel'] ?? '')));
-            $gg = strtoupper(trim((string) ($row['guru'] ?? '')));
+            $kk = $this->nk((string) ($row['kelas'] ?? ''));
+            $mm = $this->nk((string) ($row['mapel'] ?? ''));
+            $gg = $this->nk((string) ($row['guru'] ?? ''));
             if ($kk === '' || $mm === '' || $gg === '') {
                 continue;
             }
@@ -672,32 +771,31 @@ class Jadwal extends BaseController
 
         foreach ($rows as $i => $row) {
             $ln       = $i + 1;
-            $kelasKey = strtoupper(trim((string) ($row['kelas'] ?? '')));
-            $hariKey  = strtoupper(trim((string) ($row['hari'] ?? '')));
+            $kelasKey = $this->nk((string) ($row['kelas'] ?? ''));
+            $mapelKey = $this->nk((string) ($row['mapel'] ?? ''));
+            $guruKey  = $this->nk((string) ($row['guru'] ?? ''));
             $jamKe    = (int) ($row['jam'] ?? 0);
-            $mapelKey = strtoupper(trim((string) ($row['mapel'] ?? '')));
-            $guruKey  = strtoupper(trim((string) ($row['guru'] ?? '')));
 
-            if ($kelasKey === '' || $hariKey === '' || $jamKe <= 0 || $mapelKey === '' || $guruKey === '') {
+            if ($kelasKey === '' || $this->nk((string) ($row['hari'] ?? '')) === '' || $jamKe <= 0 || $mapelKey === '' || $guruKey === '') {
                 $skip++;
                 continue;
             }
-            if (! isset($kelasMap[$kelasKey])) { $errors[] = "Baris {$ln}: kelas \"{$row['kelas']}\" tidak dikenal."; $skip++; continue; }
-            if (! isset($hariMap[$hariKey]))   { $errors[] = "Baris {$ln}: hari \"{$row['hari']}\" tidak dikenal.";   $skip++; continue; }
-            if (! isset($mapelMap[$mapelKey])) { $errors[] = "Baris {$ln}: mapel \"{$row['mapel']}\" tidak dikenal."; $skip++; continue; }
-            if (! isset($guruMap[$guruKey]))   { $errors[] = "Baris {$ln}: guru \"{$row['guru']}\" tidak dikenal.";   $skip++; continue; }
+            $kelas  = $this->lookup($kelasMap, (string) ($row['kelas'] ?? ''));
+            $hariId = $this->lookup($hariMap, (string) ($row['hari'] ?? ''));
+            $mapelId = $this->lookup($mapelMap, (string) ($row['mapel'] ?? ''));
+            $guruId  = $this->lookup($guruMap, (string) ($row['guru'] ?? ''));
+            if ($kelas === null)  { $errors[] = "Baris {$ln}: kelas \"{$row['kelas']}\" tidak dikenal."; $skip++; continue; }
+            if ($hariId === null) { $errors[] = "Baris {$ln}: hari \"{$row['hari']}\" tidak dikenal.";   $skip++; continue; }
+            if ($mapelId === null){ $errors[] = "Baris {$ln}: mapel \"{$row['mapel']}\" tidak dikenal."; $skip++; continue; }
+            if ($guruId === null) { $errors[] = "Baris {$ln}: guru \"{$row['guru']}\" tidak dikenal.";   $skip++; continue; }
 
-            $kelas   = $kelasMap[$kelasKey];
             $kelasId = $kelas['id'];
-            $hariId  = $hariMap[$hariKey];
             $jamId   = $jamMap[$kelas['shift'] . '-' . $jamKe] ?? null;
             if ($jamId === null) {
                 $errors[] = "Baris {$ln}: jam ke-{$jamKe} tidak ada untuk shift {$kelas['shift']} (kelas {$row['kelas']}).";
                 $skip++;
                 continue;
             }
-            $mapelId = $mapelMap[$mapelKey];
-            $guruId  = $guruMap[$guruKey];
 
             // pengampu (kelas+mapel+guru): pakai yang ada / buat otomatis / pulihkan yg terhapus
             $pengampuId = $this->resolvePengampu($pengampuModel, $kelasId, $mapelId, $guruId, (int) ($jpFile["{$kelasKey}|{$mapelKey}|{$guruKey}"] ?? 1));

@@ -19,8 +19,8 @@ $tahun  = trim((string) ($setting['academic_year'] ?? ''));
 <div style="border-bottom: 3px double #1a3a6b; padding-bottom: 6px; margin-bottom: 12px;">
     <table style="width:100%; border-collapse:collapse;">
         <tr>
-            <td style="width:110px; text-align:center; vertical-align:middle; border:0; padding:0; background:none;">
-                <?php if ($logo): ?><img src="<?= $logo ?>" style="max-width:96px; max-height:96px;"><?php endif; ?>
+            <td style="width:110px; text-align:center; vertical-align:top; border:0; padding:0; background:none;">
+                <?php if ($logo): ?><img src="<?= $logo ?>" style="max-width:96px; max-height:96px; margin-top:-4px;"><?php endif; ?>
             </td>
             <td style="text-align:center; vertical-align:middle; border:0; padding:0; background:none;">
                 <div style="font-size:21px; font-weight:bold; color:#1a3a6b; letter-spacing:.5px;"><?= esc(strtoupper($namaLengkap)) ?></div>
