@@ -106,18 +106,22 @@ class Cetak extends BaseController
         $sheet = $ss->getActiveSheet();
         $sheet->setTitle('Jadwal');
 
-        // Mode kelas: nama kelas jadi kolom vertikal paling kiri (tanpa judul kelas).
-        $hasKelasCol = ($mode === 'kelas' && $label !== '');
-        $jamCol      = $hasKelasCol ? 2 : 1;                 // kolom "Jam" (B bila ada kolom kelas, else A)
-        $dayStart    = $jamCol + 1;                          // kolom hari pertama
-        $jamColL     = Coordinate::stringFromColumnIndex($jamCol);
-        $colCount    = count($hari) + ($hasKelasCol ? 2 : 1);
-        $lastCol     = Coordinate::stringFromColumnIndex($colCount);
+        $jamCol   = 1;                                      // kolom "Jam" di A
+        $dayStart = 2;                                       // kolom hari pertama (B)
+        $jamColL  = 'A';
+        $colCount = count($hari) + 1;
+        $lastCol  = Coordinate::stringFromColumnIndex($colCount);
 
         $sheet->mergeCells("A1:{$lastCol}1")->setCellValue('A1', $title);
         $sheet->mergeCells("A2:{$lastCol}2")->setCellValue('A2', 'Tahun Pelajaran ' . $this->setting()['academic_year']);
         $sheet->getStyle('A1')->getFont()->setBold(true)->setSize(13);
         $sheet->getStyle('A1:A2')->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER);
+
+        // Nama kelas di pojok kiri atas (baris 3, rata kiri) — importer membacanya dari sini.
+        if ($mode === 'kelas' && $label !== '') {
+            $sheet->setCellValue('A3', 'KELAS: ' . $label);
+            $sheet->getStyle('A3')->getFont()->setBold(true)->setSize(11)->getColor()->setRGB('1A3A6B');
+        }
 
         // header (baris 4)
         $r = 4;
@@ -170,18 +174,6 @@ class Cetak extends BaseController
             $r++;
         }
         $lastRow = $r - 1;
-
-        // Kolom kelas vertikal (A4:A{lastRow} digabung, teks diputar 90°, tanpa judul).
-        if ($hasKelasCol) {
-            $sheet->mergeCells("A4:A{$lastRow}")->setCellValue('A4', $label);
-            $sheet->getStyle("A4:A{$lastRow}")->getFont()->setBold(true)->setSize(13)->getColor()->setRGB('1A3A6B');
-            $sheet->getStyle("A4:A{$lastRow}")->getFill()->setFillType(Fill::FILL_SOLID)->getStartColor()->setRGB('EEF2FF');
-            $sheet->getStyle("A4:A{$lastRow}")->getAlignment()
-                ->setTextRotation(90)
-                ->setHorizontal(Alignment::HORIZONTAL_CENTER)
-                ->setVertical(Alignment::VERTICAL_CENTER);
-            $sheet->getColumnDimension('A')->setWidth(5);
-        }
 
         $sheet->getStyle("A4:{$lastCol}{$lastRow}")->getBorders()->getAllBorders()->setBorderStyle(Border::BORDER_THIN);
         $sheet->getStyle("{$jamColL}4:{$lastCol}{$lastRow}")->getAlignment()->setVertical(Alignment::VERTICAL_CENTER)->setWrapText(true);

@@ -344,11 +344,10 @@ class Jadwal extends BaseController
         $sheet = $ss->getActiveSheet();
         $sheet->setTitle('Jadwal');
 
-        // Layout sama seperti hasil cetak/export: kolom A = nama kelas (vertikal),
-        // kolom B = "Jam", kolom C.. = hari. Importer membaca kelas dari kolom A ini.
-        $jamCol   = 2;                          // "Jam" di kolom B
-        $dayStart = 3;                          // hari mulai kolom C
-        $colCount = count($hari) + 2;
+        // Layout sama seperti hasil cetak: kolom A = "Jam", kolom B.. = hari.
+        // Nama kelas ditaruh di pojok kiri atas (baris 3) — importer membacanya dari sini.
+        $dayStart = 2;                          // hari mulai kolom B
+        $colCount = count($hari) + 1;
         $lastCol  = Coordinate::stringFromColumnIndex($colCount);
 
         $sheet->mergeCells("A1:{$lastCol}1")->setCellValue('A1', 'JADWAL PELAJARAN');
@@ -356,56 +355,50 @@ class Jadwal extends BaseController
         $sheet->getStyle('A1')->getFont()->setBold(true)->setSize(13);
         $sheet->getStyle('A1:A2')->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER);
 
-        // Header (baris 4): B = Jam, C.. = hari
+        // Nama kelas pojok kiri atas (JANGAN ubah — dipakai importer untuk mengenali kelas)
+        $sheet->setCellValue('A3', 'KELAS: ' . $namaKelas);
+        $sheet->getStyle('A3')->getFont()->setBold(true)->setSize(11)->getColor()->setRGB('1A3A6B');
+
+        // Header (baris 4): A = Jam, B.. = hari
         $r = 4;
-        $sheet->setCellValue('B' . $r, 'Jam');
+        $sheet->setCellValue('A' . $r, 'Jam');
         $c = $dayStart;
         foreach ($hari as $h) {
             $sheet->setCellValue(Coordinate::stringFromColumnIndex($c++) . $r, $h['nama']);
         }
-        $sheet->getStyle("B{$r}:{$lastCol}{$r}")->getFont()->setBold(true)->getColor()->setRGB('FFFFFF');
-        $sheet->getStyle("B{$r}:{$lastCol}{$r}")->getFill()->setFillType(Fill::FILL_SOLID)->getStartColor()->setRGB('1A3A6B');
-        $sheet->getStyle("B{$r}:{$lastCol}{$r}")->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER);
+        $sheet->getStyle("A{$r}:{$lastCol}{$r}")->getFont()->setBold(true)->getColor()->setRGB('FFFFFF');
+        $sheet->getStyle("A{$r}:{$lastCol}{$r}")->getFill()->setFillType(Fill::FILL_SOLID)->getStartColor()->setRGB('1A3A6B');
+        $sheet->getStyle("A{$r}:{$lastCol}{$r}")->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER);
 
         // Body (baris jam + baris istirahat sebagai pemisah) — sel dibiarkan KOSONG untuk diisi
         $r = 5;
         foreach ($jam as $j) {
             if (! empty($j['is_istirahat'])) {
-                $sheet->mergeCells("B{$r}:{$lastCol}{$r}")
-                    ->setCellValue('B' . $r, 'ISTIRAHAT (' . substr($j['waktu_mulai'], 0, 5) . '-' . substr($j['waktu_selesai'], 0, 5) . ')');
-                $sheet->getStyle("B{$r}")->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER);
-                $sheet->getStyle("B{$r}:{$lastCol}{$r}")->getFill()->setFillType(Fill::FILL_SOLID)->getStartColor()->setRGB('FFF3CD');
+                $sheet->mergeCells("A{$r}:{$lastCol}{$r}")
+                    ->setCellValue('A' . $r, 'ISTIRAHAT (' . substr($j['waktu_mulai'], 0, 5) . '-' . substr($j['waktu_selesai'], 0, 5) . ')');
+                $sheet->getStyle("A{$r}")->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER);
+                $sheet->getStyle("A{$r}:{$lastCol}{$r}")->getFill()->setFillType(Fill::FILL_SOLID)->getStartColor()->setRGB('FFF3CD');
                 $r++;
                 continue;
             }
-            $sheet->setCellValue('B' . $r, 'Jam ke ' . $j['jam_ke'] . ' (' . substr($j['waktu_mulai'], 0, 5) . '-' . substr($j['waktu_selesai'], 0, 5) . ')');
+            $sheet->setCellValue('A' . $r, 'Jam ke ' . $j['jam_ke'] . ' (' . substr($j['waktu_mulai'], 0, 5) . '-' . substr($j['waktu_selesai'], 0, 5) . ')');
             $r++;
         }
 
         $lastRow = $r - 1;
 
-        // Kolom kelas vertikal (A4:A{lastRow}) — importer membaca nama kelas dari sini.
-        $sheet->mergeCells("A4:A{$lastRow}")->setCellValue('A4', $namaKelas);
-        $sheet->getStyle("A4:A{$lastRow}")->getFont()->setBold(true)->setSize(13)->getColor()->setRGB('1A3A6B');
-        $sheet->getStyle("A4:A{$lastRow}")->getFill()->setFillType(Fill::FILL_SOLID)->getStartColor()->setRGB('EEF2FF');
-        $sheet->getStyle("A4:A{$lastRow}")->getAlignment()
-            ->setTextRotation(90)
-            ->setHorizontal(Alignment::HORIZONTAL_CENTER)
-            ->setVertical(Alignment::VERTICAL_CENTER);
-        $sheet->getColumnDimension('A')->setWidth(5);
-
         $sheet->getStyle("A4:{$lastCol}{$lastRow}")->getBorders()->getAllBorders()->setBorderStyle(Border::BORDER_THIN);
-        $sheet->getStyle("B4:{$lastCol}{$lastRow}")->getAlignment()->setVertical(Alignment::VERTICAL_CENTER)->setWrapText(true);
+        $sheet->getStyle("A4:{$lastCol}{$lastRow}")->getAlignment()->setVertical(Alignment::VERTICAL_CENTER)->setWrapText(true);
         $dayStartL = Coordinate::stringFromColumnIndex($dayStart);
         $sheet->getStyle("{$dayStartL}5:{$lastCol}{$lastRow}")->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER);
-        $sheet->getColumnDimension('B')->setWidth(24);
+        $sheet->getColumnDimension('A')->setWidth(24);
         for ($i = $dayStart; $i <= $colCount; $i++) {
             $sheet->getColumnDimension(Coordinate::stringFromColumnIndex($i))->setWidth(22);
         }
 
         // Petunjuk pengisian (di bawah tabel; diabaikan saat impor)
         $noteRow = $lastRow + 2;
-        $sheet->setCellValue('A' . $noteRow, 'CARA ISI: tulis MAPEL di tiap sel (guru otomatis dari Penugasan). Untuk tentukan guru langsung, tulis: Mapel / Guru. Kosongkan sel jika tidak ada pelajaran. Jangan ubah judul, nama kelas (kolom kiri), & kolom Jam.');
+        $sheet->setCellValue('A' . $noteRow, 'CARA ISI: tulis MAPEL di tiap sel (guru otomatis dari Penugasan). Untuk tentukan guru langsung, tulis: Mapel / Guru. Kosongkan sel jika tidak ada pelajaran. Jangan ubah judul, baris "KELAS:", & kolom Jam.');
         $sheet->getStyle('A' . $noteRow)->getFont()->setItalic(true)->getColor()->setRGB('64748B');
 
         $this->streamXlsx($ss, 'Template-Jadwal-' . preg_replace('/[^a-z0-9]+/i', '-', $namaKelas));
@@ -487,10 +480,20 @@ class Jadwal extends BaseController
             return null;
         }
 
-        // Nama kelas — utamakan kolom kelas vertikal (kolom sebelum "Jam"),
-        // lalu fallback ke judul ("JADWAL … — X TKJ 1") pada layout lama.
+        // Nama kelas — beberapa sumber, dicoba berurutan:
+        //  (1) sel "KELAS: X AKL" di pojok kiri atas (layout cetak baru),
+        //  (2) kolom kelas vertikal sebelum "Jam" (layout lama sempat),
+        //  (3) judul "JADWAL … — X TKJ 1" (layout paling lama).
         $kelasName = '';
-        if ($jamCol > 0) {
+        for ($i = 0; $i <= $headerIdx && $kelasName === ''; $i++) {
+            foreach (($data[$i] ?? []) as $v) {
+                if (preg_match('/^\s*KELAS\s*[:\-]\s*(.+)$/iu', (string) $v, $m)) {
+                    $kelasName = trim($m[1]);
+                    break;
+                }
+            }
+        }
+        if ($kelasName === '' && $jamCol > 0) {
             for ($i = $headerIdx, $n = count($data); $i < $n; $i++) {
                 $t = trim((string) ($data[$i][$jamCol - 1] ?? ''));
                 if ($t !== '') {
