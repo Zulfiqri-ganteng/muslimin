@@ -58,7 +58,7 @@
                 <?php foreach ($g['sesi'] as $s): ?>
                     <div class="p-4 flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4">
                         <div class="sm:w-56 shrink-0">
-                            <p class="text-sm font-bold text-slate-700">Jam <?= esc($s['jam_ke']) ?>
+                            <p class="text-sm font-bold text-slate-700">Jam ke <?= esc($s['jam_ke']) ?>
                                 <span class="text-slate-400 font-normal text-xs">(<?= esc(substr($s['waktu_mulai'], 0, 5)) ?>–<?= esc(substr($s['waktu_selesai'], 0, 5)) ?>)</span>
                             </p>
                             <p class="text-sm text-slate-600"><?= esc($s['nama_kelas']) ?> &middot; <span class="font-semibold"><?= esc($s['nama_mapel']) ?></span></p>

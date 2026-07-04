@@ -175,7 +175,7 @@ class Publik extends BaseController
         $grid = (new JadwalModel())->gridForKelas((int) $id);
 
         $this->streamPdf(view('pdf/jadwal_grid', [
-            'title' => 'JADWAL PELAJARAN — ' . $kelas['nama_kelas'], 'setting' => $setting,
+            'title' => 'JADWAL PELAJARAN', 'label' => $kelas['nama_kelas'], 'setting' => $setting,
             'hari' => $hari, 'jam' => $jam, 'grid' => $grid, 'mode' => 'kelas',
         ]), 'Jadwal-' . $this->slug($kelas['nama_kelas']));
     }
@@ -195,7 +195,7 @@ class Publik extends BaseController
         $grid = (new JadwalModel())->gridForGuru((int) $id);
 
         $this->streamPdf(view('pdf/jadwal_grid', [
-            'title' => 'JADWAL MENGAJAR — ' . $guru['nama'], 'setting' => $setting,
+            'title' => 'JADWAL MENGAJAR — ' . $guru['kode_guru'] . ' · ' . $guru['nama'], 'setting' => $setting,
             'hari' => $hari, 'jam' => $jam, 'grid' => $grid, 'mode' => 'guru',
         ]), 'Jadwal-Guru-' . $this->slug($guru['nama']));
     }
