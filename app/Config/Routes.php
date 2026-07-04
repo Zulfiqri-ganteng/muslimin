@@ -180,3 +180,99 @@ $routes->group('admin', static function ($routes) {
         $routes->post('profile/password', 'Admin\Profile::password');
     });
 });
+
+// ============================================================
+// ===================== API v1 (MOBILE) ======================
+// ============================================================
+// Dikonsumsi aplikasi Flutter (fluter-muslimin). Respons JSON beramplop
+// standar. CORS aktif untuk seluruh /api; endpoint admin dilindungi filter
+// 'apiauth' (Bearer token). Tidak mengubah rute web yang sudah live.
+$routes->group('api/v1', ['namespace' => 'App\Controllers\Api', 'filter' => 'cors'], static function ($routes) {
+
+    // ---------- Auth ----------
+    $routes->post('auth/login', 'Auth::login');
+    $routes->options('(:any)', static fn () => service('response')->setStatusCode(204)); // preflight
+
+    // ---------- PUBLIK (tanpa token) ----------
+    $routes->get('home', 'Publik::home');
+    $routes->get('absensi', 'Publik::absensi');
+    $routes->get('jadwal/kelas-options', 'Publik::kelasOptions');
+    $routes->get('jadwal/guru-options', 'Publik::guruOptions');
+    $routes->get('jadwal/kelas/(:num)', 'Publik::jadwalKelas/$1');
+    $routes->get('jadwal/guru/(:num)', 'Publik::jadwalGuru/$1');
+
+    // Form kesediaan guru
+    $routes->get('form/meta', 'Form::meta');
+    $routes->post('form/submit', 'Form::submit');
+    $routes->get('form/revisi/(:segment)', 'Form::revisi/$1');
+    $routes->post('form/revisi/(:segment)', 'Form::updateRevisi/$1');
+
+    // ---------- ADMIN (butuh token) ----------
+    $routes->group('', ['filter' => 'apiauth'], static function ($routes) {
+        $routes->get('auth/me', 'Auth::me');
+        $routes->post('auth/logout', 'Auth::logout');
+
+        // Dashboard
+        $routes->get('admin/dashboard', 'Dashboard::index');
+
+        // Submissions (kesediaan guru)
+        $routes->get('admin/submissions', 'Submissions::index');
+        $routes->get('admin/submissions/(:num)', 'Submissions::view/$1');
+        $routes->post('admin/submissions/(:num)/status', 'Submissions::updateStatus/$1');
+        $routes->delete('admin/submissions/(:num)', 'Submissions::delete/$1');
+
+        // ---------- MASTER DATA ----------
+        // Dropdown pendukung form (guru/mapel/kelas/jurusan)
+        $routes->get('admin/master/options', 'Admin\Options::index');
+
+        // 5 master data ber-pola CRUD identik (guru, mapel, kelas, jurusan, hari)
+        foreach (['guru' => 'Guru', 'mapel' => 'Mapel', 'kelas' => 'Kelas', 'jurusan' => 'Jurusan', 'hari' => 'Hari'] as $seg => $ctrl) {
+            $routes->get("admin/master/{$seg}", "Admin\\{$ctrl}::index");
+            $routes->post("admin/master/{$seg}", "Admin\\{$ctrl}::store");
+            $routes->post("admin/master/{$seg}/bulk-delete", "Admin\\{$ctrl}::bulkDestroy");
+            $routes->post("admin/master/{$seg}/(:num)", "Admin\\{$ctrl}::update/\$1");
+            $routes->delete("admin/master/{$seg}/(:num)", "Admin\\{$ctrl}::destroy/\$1");
+        }
+        // Mapel — kompetensi (guru pengampu) & daftar kelompok
+        $routes->get('admin/master/mapel/kelompok-list', 'Admin\Mapel::kelompokList');
+        $routes->get('admin/master/mapel/(:num)/kompetensi', 'Admin\Mapel::kompetensiGet/$1');
+        $routes->post('admin/master/mapel/(:num)/kompetensi', 'Admin\Mapel::kompetensiSet/$1');
+
+        // Jam Pelajaran (daftar per shift)
+        $routes->get('admin/master/jam', 'Admin\JamPelajaran::index');
+        $routes->post('admin/master/jam', 'Admin\JamPelajaran::store');
+        $routes->post('admin/master/jam/bulk-delete', 'Admin\JamPelajaran::bulkDestroy');
+        $routes->post('admin/master/jam/(:num)', 'Admin\JamPelajaran::update/$1');
+        $routes->delete('admin/master/jam/(:num)', 'Admin\JamPelajaran::destroy/$1');
+
+        // Pengampu / Penugasan (daftar per kelas)
+        $routes->get('admin/master/pengampu', 'Admin\Pengampu::index');
+        $routes->post('admin/master/pengampu', 'Admin\Pengampu::store');
+        $routes->post('admin/master/pengampu/(:num)', 'Admin\Pengampu::update/$1');
+        $routes->delete('admin/master/pengampu/(:num)', 'Admin\Pengampu::destroy/$1');
+
+        // Ketersediaan Guru
+        $routes->get('admin/master/ketersediaan', 'Admin\Ketersediaan::index');
+        $routes->post('admin/master/ketersediaan', 'Admin\Ketersediaan::save');
+
+        // ---------- PENGUMUMAN ----------
+        $routes->get('admin/pengumuman', 'Admin\Pengumuman::index');
+        $routes->post('admin/pengumuman', 'Admin\Pengumuman::store');
+        $routes->post('admin/pengumuman/(:num)', 'Admin\Pengumuman::update/$1');
+        $routes->delete('admin/pengumuman/(:num)', 'Admin\Pengumuman::destroy/$1');
+
+        // ---------- ABSENSI ----------
+        $routes->get('admin/absensi', 'Admin\Absensi::index');
+        $routes->post('admin/absensi/save', 'Admin\Absensi::save');
+        $routes->post('admin/absensi/unrecord', 'Admin\Absensi::unrecord');
+        $routes->get('admin/absensi/rekap', 'Admin\Absensi::rekap');
+        $routes->get('admin/absensi/rekap/(:num)', 'Admin\Absensi::rekapGuru/$1');
+
+        // ---------- PROFIL & PENGATURAN ----------
+        $routes->get('admin/profile', 'Admin\Profile::show');
+        $routes->post('admin/profile', 'Admin\Profile::update');
+        $routes->post('admin/profile/password', 'Admin\Profile::password');
+        $routes->get('admin/settings', 'Admin\Settings::show');
+        $routes->post('admin/settings', 'Admin\Settings::save');
+    });
+});

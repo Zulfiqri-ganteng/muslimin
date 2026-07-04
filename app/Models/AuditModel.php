@@ -53,7 +53,8 @@ class AuditModel extends Model
     {
         try {
             $this->insert([
-                'admin_id'   => session('admin')['id'] ?? null,
+                // Web memakai session; API mobile (stateless) memakai ApiAuth.
+                'admin_id'   => session('admin')['id'] ?? \App\Libraries\ApiAuth::id(),
                 'aksi'       => $aksi,
                 'tabel'      => $tabel,
                 'record_id'  => $recordId,
