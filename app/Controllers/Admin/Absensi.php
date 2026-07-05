@@ -45,7 +45,8 @@ class Absensi extends BaseController
         $sessions = $hariAktif
             ? (new JadwalModel())->sessionsForHari((int) $hari['id'])
             : [];
-        $absen = (new AbsensiGuruModel())->forDate($tanggal);
+        $absen    = (new AbsensiGuruModel())->forDate($tanggal);
+        $recorded = (new AbsensiHariModel())->isRecorded($tanggal);
 
         $grup    = [];
         $ringkas = ['hadir' => 0, 'telat' => 0, 'izin' => 0, 'sakit' => 0, 'alpa' => 0];
@@ -54,7 +55,10 @@ class Absensi extends BaseController
             $s['status']     = $ex['status'] ?? 'hadir';
             $s['jam_masuk']  = $ex && $ex['jam_masuk'] ? substr($ex['jam_masuk'], 0, 5) : '';
             $s['keterangan'] = $ex['keterangan'] ?? '';
-            $ringkas[$s['status']] = ($ringkas[$s['status']] ?? 0) + 1;
+            // Hanya hitung ke ringkasan bila hari ini SUDAH tercatat (di-save).
+            if ($recorded) {
+                $ringkas[$s['status']] = ($ringkas[$s['status']] ?? 0) + 1;
+            }
 
             $gid = (int) $s['guru_id'];
             if (! isset($grup[$gid])) {
@@ -72,7 +76,7 @@ class Absensi extends BaseController
             'ringkas'   => $ringkas,
             'total'     => count($sessions),
             'sekolah'   => (new SettingModel())->get()['school_name'] ?? '',
-            'recorded'  => (new AbsensiHariModel())->isRecorded($tanggal),
+            'recorded'  => $recorded,
         ]);
     }
 

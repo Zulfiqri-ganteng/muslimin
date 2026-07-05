@@ -39,13 +39,17 @@ class Absensi extends BaseApiController
 
         $sessions = $hariAktif ? (new JadwalModel())->sessionsForHari((int) $hari['id']) : [];
         $absen    = (new AbsensiGuruModel())->forDate($tanggal);
+        $recorded = (new AbsensiHariModel())->isRecorded($tanggal);
 
         $grup    = [];
         $ringkas = ['hadir' => 0, 'telat' => 0, 'izin' => 0, 'sakit' => 0, 'alpa' => 0];
         foreach ($sessions as $s) {
             $ex     = $absen[$s['kelas_id'] . '-' . $s['jam_id']] ?? null;
             $status = $ex['status'] ?? 'hadir';
-            $ringkas[$status] = ($ringkas[$status] ?? 0) + 1;
+            // Hanya hitung ke ringkasan bila hari ini SUDAH tercatat (di-save).
+            if ($recorded) {
+                $ringkas[$status] = ($ringkas[$status] ?? 0) + 1;
+            }
 
             $gid = (int) $s['guru_id'];
             if (! isset($grup[$gid])) {
@@ -76,7 +80,7 @@ class Absensi extends BaseApiController
             'tanggal'    => $tanggal,
             'hari_nama'  => $namaHari,
             'hari_aktif' => $hariAktif,
-            'recorded'   => (new AbsensiHariModel())->isRecorded($tanggal),
+            'recorded'   => $recorded,
             'total'      => count($sessions),
             'ringkas'    => $ringkas,
             'guru'       => array_values($grup),
