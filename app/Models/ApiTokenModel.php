@@ -29,6 +29,9 @@ class ApiTokenModel extends Model
     /** Berapa lama token berlaku (hari). Null = tidak kadaluarsa. */
     public const TTL_DAYS = 60;
 
+    /** Batas idle: token mati bila tak dipakai selama sekian menit. 0 = nonaktif. */
+    public const IDLE_MINUTES = 60; // 1 jam tanpa aktivitas → wajib login ulang
+
     /**
      * Terbitkan token baru untuk seorang admin.
      *
@@ -63,6 +66,12 @@ class ApiTokenModel extends Model
         }
         if (! empty($row['expires_at']) && strtotime($row['expires_at']) < time()) {
             $this->delete($row['id']); // bersihkan token kadaluarsa
+            return null;
+        }
+        // Idle timeout: token tak dipakai lebih dari IDLE_MINUTES → mati.
+        if (self::IDLE_MINUTES > 0 && ! empty($row['last_used_at'])
+            && strtotime($row['last_used_at']) < (time() - self::IDLE_MINUTES * 60)) {
+            $this->delete($row['id']);
             return null;
         }
         return $row;

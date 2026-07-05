@@ -124,12 +124,18 @@ abstract class BaseApiController extends Controller
         return $file ? base_url('uploads/' . $file) : null;
     }
 
-    /** Ambil body JSON sebagai array asosiatif (fallback ke form-encoded). */
+    /** Ambil body JSON sebagai array asosiatif (fallback ke form-encoded/multipart). */
     protected function body(): array
     {
-        $json = $this->request->getJSON(true);
-        if (is_array($json) && $json !== []) {
-            return $json;
+        // Hanya parse JSON bila Content-Type memang JSON. Request multipart/form-data
+        // (mis. unggah foto profil) tidak boleh diteruskan ke getJSON() karena di CI4
+        // baru method itu melempar HTTPException "Failed to parse JSON string".
+        $contentType = $this->request->getHeaderLine('Content-Type');
+        if (stripos($contentType, 'application/json') !== false) {
+            $json = $this->request->getJSON(true);
+            if (is_array($json) && $json !== []) {
+                return $json;
+            }
         }
         return (array) $this->request->getPost();
     }

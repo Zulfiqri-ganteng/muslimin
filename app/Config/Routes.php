@@ -191,6 +191,7 @@ $routes->group('api/v1', ['namespace' => 'App\Controllers\Api', 'filter' => 'cor
 
     // ---------- Auth ----------
     $routes->post('auth/login', 'Auth::login');
+    $routes->post('auth/biometric/login', 'Auth::biometricLogin'); // login sidik jari (tanpa token)
     $routes->options('(:any)', static fn () => service('response')->setStatusCode(204)); // preflight
 
     // ---------- PUBLIK (tanpa token) ----------
@@ -211,6 +212,11 @@ $routes->group('api/v1', ['namespace' => 'App\Controllers\Api', 'filter' => 'cor
     $routes->group('', ['filter' => 'apiauth'], static function ($routes) {
         $routes->get('auth/me', 'Auth::me');
         $routes->post('auth/logout', 'Auth::logout');
+
+        // Kelola login sidik jari (butuh sesi aktif)
+        $routes->post('auth/biometric/register', 'Auth::biometricRegister');
+        $routes->post('auth/biometric/disable', 'Auth::biometricDisable');
+        $routes->get('auth/biometric/status', 'Auth::biometricStatus');
 
         // Dashboard
         $routes->get('admin/dashboard', 'Dashboard::index');
