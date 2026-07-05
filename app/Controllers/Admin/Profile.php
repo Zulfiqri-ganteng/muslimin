@@ -48,14 +48,17 @@ class Profile extends BaseController
         // Upload foto (opsional)
         $photo = $this->request->getFile('photo');
         if ($photo && $photo->isValid() && ! $photo->hasMoved()) {
-            if (! in_array($photo->getClientMimeType(), ['image/png', 'image/jpeg', 'image/jpg', 'image/webp'], true)) {
+            // Deteksi tipe dari ISI berkas, bukan label klien yang bisa keliru.
+            $allowed = ['image/png' => 'png', 'image/jpeg' => 'jpg', 'image/webp' => 'webp'];
+            $mime    = $photo->getMimeType();
+            if (! isset($allowed[$mime])) {
                 return redirect()->back()->with('error', 'Foto harus berupa gambar (PNG/JPG/WEBP).');
             }
             $path = FCPATH . 'uploads';
             if (! is_dir($path)) {
                 mkdir($path, 0775, true);
             }
-            $newName = 'admin_' . $id . '_' . time() . '.' . $photo->getExtension();
+            $newName = 'admin_' . $id . '_' . time() . '.' . $allowed[$mime];
             $photo->move($path, $newName);
             if (! empty($current['photo']) && is_file($path . DIRECTORY_SEPARATOR . $current['photo'])) {
                 @unlink($path . DIRECTORY_SEPARATOR . $current['photo']);
@@ -63,7 +66,10 @@ class Profile extends BaseController
             $data['photo'] = $newName;
         }
 
-        $this->model->update($id, $data);
+        // Validasi sudah dilakukan di atas dengan $id yang benar. Lewati validasi
+        // bawaan model (placeholder {id} tak terisi saat update → is_unique keliru
+        // menolak sehingga update gagal diam-diam).
+        $this->model->skipValidation(true)->update($id, $data);
 
         // Segarkan session
         $fresh = $this->model->find($id);

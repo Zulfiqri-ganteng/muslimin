@@ -46,14 +46,17 @@ class Settings extends BaseController
         // Upload logo (opsional)
         $logo = $this->request->getFile('logo');
         if ($logo && $logo->isValid() && ! $logo->hasMoved()) {
-            if (! in_array($logo->getClientMimeType(), ['image/png', 'image/jpeg', 'image/jpg', 'image/webp'], true)) {
+            // Deteksi tipe dari ISI berkas, bukan label klien yang bisa keliru.
+            $allowed = ['image/png' => 'png', 'image/jpeg' => 'jpg', 'image/webp' => 'webp'];
+            $mime    = $logo->getMimeType();
+            if (! isset($allowed[$mime])) {
                 return redirect()->back()->with('error', 'Logo harus berupa gambar (PNG/JPG/WEBP).');
             }
             $path    = FCPATH . 'uploads';
             if (! is_dir($path)) {
                 mkdir($path, 0775, true);
             }
-            $newName = 'logo_' . time() . '.' . $logo->getExtension();
+            $newName = 'logo_' . time() . '.' . $allowed[$mime];
             $logo->move($path, $newName);
 
             // hapus logo lama

@@ -53,14 +53,18 @@ class Profile extends BaseApiController
         // Foto opsional (multipart/form-data, field 'photo')
         $photo = $this->request->getFile('photo');
         if ($photo && $photo->isValid() && ! $photo->hasMoved()) {
-            if (! in_array($photo->getClientMimeType(), ['image/png', 'image/jpeg', 'image/jpg', 'image/webp'], true)) {
+            // Deteksi tipe dari ISI berkas (getMimeType), bukan label klien
+            // (getClientMimeType) yang bisa 'application/octet-stream' dari Flutter.
+            $allowed = ['image/png' => 'png', 'image/jpeg' => 'jpg', 'image/webp' => 'webp'];
+            $mime    = $photo->getMimeType();
+            if (! isset($allowed[$mime])) {
                 return $this->failure('Foto harus berupa gambar (PNG/JPG/WEBP).', 422);
             }
             $path = FCPATH . 'uploads';
             if (! is_dir($path)) {
                 mkdir($path, 0775, true);
             }
-            $newName = 'admin_' . $id . '_' . time() . '.' . $photo->getExtension();
+            $newName = 'admin_' . $id . '_' . time() . '.' . $allowed[$mime];
             $photo->move($path, $newName);
             if (! empty($current['photo']) && is_file($path . DIRECTORY_SEPARATOR . $current['photo'])) {
                 @unlink($path . DIRECTORY_SEPARATOR . $current['photo']);
@@ -68,7 +72,10 @@ class Profile extends BaseApiController
             $data['photo'] = $newName;
         }
 
-        $this->model->update($id, $data);
+        // Validasi sudah dilakukan di atas dengan $id yang benar. Lewati validasi
+        // bawaan model (aturannya memakai placeholder {id} yang tak terisi saat
+        // update → is_unique keliru menolak & update gagal diam-diam).
+        $this->model->skipValidation(true)->update($id, $data);
 
         return $this->ok(['admin' => $this->publicAdmin($this->model->find($id))], 'Profil berhasil diperbarui.');
     }

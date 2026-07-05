@@ -51,14 +51,17 @@ class Settings extends BaseApiController
         // Logo opsional (multipart/form-data, field 'logo')
         $logo = $this->request->getFile('logo');
         if ($logo && $logo->isValid() && ! $logo->hasMoved()) {
-            if (! in_array($logo->getClientMimeType(), ['image/png', 'image/jpeg', 'image/jpg', 'image/webp'], true)) {
+            // Deteksi tipe dari ISI berkas (getMimeType), bukan label klien.
+            $allowed = ['image/png' => 'png', 'image/jpeg' => 'jpg', 'image/webp' => 'webp'];
+            $mime    = $logo->getMimeType();
+            if (! isset($allowed[$mime])) {
                 return $this->failure('Logo harus berupa gambar (PNG/JPG/WEBP).', 422);
             }
             $path = FCPATH . 'uploads';
             if (! is_dir($path)) {
                 mkdir($path, 0775, true);
             }
-            $newName = 'logo_' . time() . '.' . $logo->getExtension();
+            $newName = 'logo_' . time() . '.' . $allowed[$mime];
             $logo->move($path, $newName);
             if (! empty($current['logo']) && is_file($path . DIRECTORY_SEPARATOR . $current['logo'])) {
                 @unlink($path . DIRECTORY_SEPARATOR . $current['logo']);
