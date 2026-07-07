@@ -18,6 +18,7 @@
     <div class="bg-white rounded-2xl border border-slate-200 shadow-sm p-10 text-center text-slate-400">Belum ada guru dipilih.</div>
 <?php elseif (empty($jam) || empty($hari)): ?>
     <div class="bg-white rounded-2xl border border-slate-200 shadow-sm p-10 text-center text-slate-400">Jadwal belum tersedia.</div>
+<?php else: ?>
 <?php
     // Pisahkan jam per shift → tiap shift jadi kartu/tabel sendiri (ada jarak).
     $byShift = [];
