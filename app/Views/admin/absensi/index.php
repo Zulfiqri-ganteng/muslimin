@@ -267,7 +267,8 @@
             msg += 'Guru tidak hadir / telat:\n\n';
             let n = 1;
             order.forEach(function (guru) {
-                msg += n + '. *' + guru + '*\n';
+                // "@" di depan nama → memicu mention WhatsApp saat dikirim ke grup.
+                msg += n + '. *@' + guru + '*\n';
                 grup[guru].forEach(function (it) {
                     let line = '   • ' + (stLabel[it.st] || it.st);
                     if (it.st === 'telat' && it.jm) line += ' (masuk ' + it.jm + ')';
@@ -283,7 +284,7 @@
         const hadir = semuaGuru.filter(function (g) { return !grup[g]; });
         if (hadir.length > 0) {
             msg += (order.length === 0 ? 'Semua guru *HADIR* ✅\n' : 'Guru hadir ✅\n');
-            hadir.forEach(function (g, i) { msg += (i + 1) + '. ' + g + '\n'; });
+            hadir.forEach(function (g, i) { msg += (i + 1) + '. @' + g + '\n'; });
             msg += '\n';
         }
         return msg + 'Terima kasih.';
