@@ -152,11 +152,9 @@ class Publik extends BaseApiController
         $absen    = (new AbsensiGuruModel())->forDate($tanggal);
 
         $grup    = [];
-        $ringkas = ['hadir' => 0, 'telat' => 0, 'izin' => 0, 'sakit' => 0, 'alpa' => 0];
         foreach ($sessions as $s) {
             $ex     = $absen[$s['kelas_id'] . '-' . $s['jam_id']] ?? null;
             $status = $ex['status'] ?? 'hadir';
-            $ringkas[$status] = ($ringkas[$status] ?? 0) + 1;
 
             $gid = (int) $s['guru_id'];
             if (! isset($grup[$gid])) {
@@ -174,12 +172,26 @@ class Publik extends BaseApiController
             ];
         }
 
+        // Ringkasan dihitung PER GURU (status harian = status terburuk di
+        // antara sesi-sesinya), bukan per sesi — sesuai kebutuhan laporan.
+        $ringkas = ['hadir' => 0, 'telat' => 0, 'izin' => 0, 'sakit' => 0, 'alpa' => 0];
+        foreach ($grup as &$g) {
+            $harian = 'hadir';
+            foreach ($g['sesi'] as $s) {
+                $harian = AbsensiGuruModel::worst($harian, $s['status']);
+            }
+            $g['status_harian'] = $harian;
+            $ringkas[$harian]   = ($ringkas[$harian] ?? 0) + 1;
+        }
+        unset($g);
+
         return $this->ok([
             'tanggal'    => $tanggal,
             'hari_nama'  => $hariNama,
             'hari_aktif' => $hariAktif,
             'recorded'   => $recorded,
             'total'      => count($sessions),
+            'total_guru' => count($grup),
             'ringkas'    => $ringkas,
             'guru'       => array_values($grup),
         ]);

@@ -48,17 +48,12 @@ class Absensi extends BaseController
         $absen    = (new AbsensiGuruModel())->forDate($tanggal);
         $recorded = (new AbsensiHariModel())->isRecorded($tanggal);
 
-        $grup    = [];
-        $ringkas = ['hadir' => 0, 'telat' => 0, 'izin' => 0, 'sakit' => 0, 'alpa' => 0];
+        $grup = [];
         foreach ($sessions as $s) {
             $ex              = $absen[$s['kelas_id'] . '-' . $s['jam_id']] ?? null;
             $s['status']     = $ex['status'] ?? 'hadir';
             $s['jam_masuk']  = $ex && $ex['jam_masuk'] ? substr($ex['jam_masuk'], 0, 5) : '';
             $s['keterangan'] = $ex['keterangan'] ?? '';
-            // Hanya hitung ke ringkasan bila hari ini SUDAH tercatat (di-save).
-            if ($recorded) {
-                $ringkas[$s['status']] = ($ringkas[$s['status']] ?? 0) + 1;
-            }
 
             $gid = (int) $s['guru_id'];
             if (! isset($grup[$gid])) {
@@ -66,6 +61,21 @@ class Absensi extends BaseController
             }
             $grup[$gid]['sesi'][] = $s;
         }
+
+        // Ringkasan PER GURU (status harian = terburuk dari sesi-sesinya);
+        // hanya dihitung bila hari ini SUDAH tercatat (di-save).
+        $ringkas = ['hadir' => 0, 'telat' => 0, 'izin' => 0, 'sakit' => 0, 'alpa' => 0];
+        foreach ($grup as &$g) {
+            $harian = 'hadir';
+            foreach ($g['sesi'] as $s) {
+                $harian = AbsensiGuruModel::worst($harian, $s['status']);
+            }
+            $g['status_harian'] = $harian;
+            if ($recorded) {
+                $ringkas[$harian] = ($ringkas[$harian] ?? 0) + 1;
+            }
+        }
+        unset($g);
 
         return view('admin/absensi/index', [
             'title'     => 'Absensi Guru',
@@ -151,10 +161,15 @@ class Absensi extends BaseController
         $detail = (new AbsensiGuruModel())->detailForGuru((int) $id, $dari, $sampai);
         $total  = $this->projectTotals($dari, $sampai)[(int) $id] ?? 0;
 
-        $cnt = ['telat' => 0, 'izin' => 0, 'sakit' => 0, 'alpa' => 0];
+        // Ringkas per HARI: status harian = terburuk di antara sesi tanggal itu.
+        $perTgl = [];
         foreach ($detail as $d) {
-            if (isset($cnt[$d['status']])) {
-                $cnt[$d['status']]++;
+            $perTgl[$d['tanggal']] = AbsensiGuruModel::worst($perTgl[$d['tanggal']] ?? 'hadir', $d['status']);
+        }
+        $cnt = ['telat' => 0, 'izin' => 0, 'sakit' => 0, 'alpa' => 0];
+        foreach ($perTgl as $st) {
+            if (isset($cnt[$st])) {
+                $cnt[$st]++;
             }
         }
         $ringkas = [
@@ -170,9 +185,9 @@ class Absensi extends BaseController
     }
 
     /**
-     * Total sesi terjadwal per guru pada rentang, key gid => total.
+     * Total HARI terjadwal per guru pada rentang, key gid => total.
      * HANYA menghitung tanggal yang sudah diabsen (ada di registry absensi_hari):
-     * untuk tiap tanggal tercatat → tambahkan jumlah sesi guru pada hari itu.
+     * satu tanggal di mana guru punya jadwal = 1 hari (bukan jumlah sesinya).
      * Hari libur / belum dipakai otomatis tak terhitung.
      */
     private function projectTotals(string $dari, string $sampai): array
@@ -197,7 +212,7 @@ class Absensi extends BaseController
             if ($hid) {
                 foreach ($counts as $gid => $byHari) {
                     if (isset($byHari[$hid])) {
-                        $totalPerGuru[$gid] = ($totalPerGuru[$gid] ?? 0) + $byHari[$hid];
+                        $totalPerGuru[$gid] = ($totalPerGuru[$gid] ?? 0) + 1;
                     }
                 }
             }
@@ -206,7 +221,8 @@ class Absensi extends BaseController
     }
 
     /**
-     * Rekap per guru pada rentang tanggal. Hadir = total − (telat+izin+sakit+alpa).
+     * Rekap HARI per guru pada rentang tanggal. Status harian = terburuk di
+     * antara sesi guru pada tanggal itu; hadir = total hari − hari bermasalah.
      *
      * @return list<array{id:int,kode:string,nama:string,total:int,hadir:int,telat:int,izin:int,sakit:int,alpa:int}>
      */
@@ -214,10 +230,12 @@ class Absensi extends BaseController
     {
         $totalPerGuru = $this->projectTotals($dari, $sampai);
 
-        // Pengecualian per guru.
+        // Status harian per guru per tanggal → jumlah HARI per status.
         $exc = [];
-        foreach ((new AbsensiGuruModel())->rekapRange($dari, $sampai) as $e) {
-            $exc[(int) $e['guru_id']][$e['status']] = (int) $e['jml'];
+        foreach ((new AbsensiGuruModel())->dayStatusPerGuru($dari, $sampai) as $gid => $perTgl) {
+            foreach ($perTgl as $st) {
+                $exc[$gid][$st] = ($exc[$gid][$st] ?? 0) + 1;
+            }
         }
 
         // Nama guru.
@@ -265,7 +283,7 @@ class Absensi extends BaseController
         $sheet->getStyle('A1')->getFont()->setBold(true)->setSize(14);
         $sheet->getStyle('A1:A3')->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER);
 
-        $head = ['No', 'Kode', 'Nama Guru', 'Total Sesi', 'Hadir', 'Telat', 'Izin', 'Sakit', 'Alpa'];
+        $head = ['No', 'Kode', 'Nama Guru', 'Total Hari', 'Hadir', 'Telat', 'Izin', 'Sakit', 'Alpa'];
         $sheet->fromArray($head, null, 'A5', true);
         $sheet->getStyle('A5:I5')->getFont()->setBold(true)->getColor()->setRGB('FFFFFF');
         $sheet->getStyle('A5:I5')->getFill()->setFillType(Fill::FILL_SOLID)->getStartColor()->setRGB('1A3A6B');

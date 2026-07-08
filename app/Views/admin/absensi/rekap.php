@@ -65,7 +65,7 @@
                     <tr>
                         <th class="px-4 py-2.5 font-semibold w-10 text-center">#</th>
                         <th class="px-4 py-2.5 font-semibold">Guru</th>
-                        <th class="px-4 py-2.5 font-semibold w-24 text-center">Total Sesi</th>
+                        <th class="px-4 py-2.5 font-semibold w-24 text-center">Total Hari</th>
                         <?php foreach ($cols as [$lbl, $tc]): ?>
                             <th class="px-4 py-2.5 font-semibold w-20 text-center <?= $tc ?>"><?= $lbl ?></th>
                         <?php endforeach; ?>

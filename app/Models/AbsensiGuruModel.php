@@ -28,6 +28,34 @@ class AbsensiGuruModel extends Model
     /** Status yang valid. 'hadir' = default (tak disimpan sebagai baris). */
     public const STATUSES = ['hadir', 'telat', 'izin', 'sakit', 'alpa'];
 
+    /** Prioritas status untuk menurunkan STATUS HARIAN guru (terburuk menang). */
+    public const PRIORITY = ['hadir' => 0, 'telat' => 1, 'izin' => 2, 'sakit' => 3, 'alpa' => 4];
+
+    /** Status "terburuk" dari dua status (untuk status harian per guru). */
+    public static function worst(string $a, string $b): string
+    {
+        return (self::PRIORITY[$b] ?? 0) > (self::PRIORITY[$a] ?? 0) ? $b : $a;
+    }
+
+    /**
+     * Status harian per guru pada rentang: [guru_id][tanggal] => status terburuk
+     * hari itu. Hanya pengecualian (tanpa baris = hadir, dihitung pemanggil).
+     */
+    public function dayStatusPerGuru(string $dari, string $sampai): array
+    {
+        $map = [];
+        $rows = $this->select('tanggal, guru_id, status')
+            ->where('tanggal >=', $dari)
+            ->where('tanggal <=', $sampai)
+            ->findAll();
+        foreach ($rows as $r) {
+            $gid = (int) $r['guru_id'];
+            $tgl = $r['tanggal'];
+            $map[$gid][$tgl] = self::worst($map[$gid][$tgl] ?? 'hadir', $r['status']);
+        }
+        return $map;
+    }
+
     /** Pengecualian pada satu tanggal, key "kelas_id-jam_id" => baris. */
     public function forDate(string $tanggal): array
     {

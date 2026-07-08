@@ -272,6 +272,7 @@ $routes->group('api/v1', ['namespace' => 'App\Controllers\Api', 'filter' => 'cor
         $routes->post('admin/absensi/save', 'Admin\Absensi::save');
         $routes->post('admin/absensi/unrecord', 'Admin\Absensi::unrecord');
         $routes->get('admin/absensi/rekap', 'Admin\Absensi::rekap');
+        $routes->get('admin/absensi/rekap/export/(:segment)', 'Admin\Absensi::rekapExport/$1');
         $routes->get('admin/absensi/rekap/(:num)', 'Admin\Absensi::rekapGuru/$1');
 
         // ---------- PROFIL & PENGATURAN ----------

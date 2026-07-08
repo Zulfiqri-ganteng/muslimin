@@ -217,7 +217,7 @@
 
     <!-- Bar simpan (sticky bawah) -->
     <div class="sticky bottom-0 mt-5 -mx-4 sm:-mx-6 px-4 sm:px-6 py-3 bg-white/90 backdrop-blur border-t border-slate-200 flex items-center justify-between gap-3">
-        <p class="text-xs text-slate-400 hidden sm:block">Tanggal <b><?= esc($tanggal) ?></b> &middot; <?= esc($namaHari) ?> &middot; <?= (int) $total ?> sesi</p>
+        <p class="text-xs text-slate-400 hidden sm:block">Tanggal <b><?= esc($tanggal) ?></b> &middot; <?= esc($namaHari) ?> &middot; <?= count($grup) ?> guru &middot; <?= (int) $total ?> sesi</p>
         <button type="submit" class="ml-auto inline-flex items-center gap-2 rounded-xl bg-brand-700 hover:bg-brand-800 text-white font-bold px-6 py-2.5 text-sm transition">
             <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/></svg>
             Simpan Absensi

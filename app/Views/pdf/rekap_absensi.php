@@ -93,7 +93,7 @@
                     <th style="width:4%" class="c">No</th>
                     <th style="width:10%">Kode</th>
                     <th>Nama Guru</th>
-                    <th style="width:9%" class="c">Total Sesi</th>
+                    <th style="width:9%" class="c">Total Hari</th>
                     <th style="width:8%" class="c">Hadir</th>
                     <th style="width:8%" class="c">Telat</th>
                     <th style="width:8%" class="c">Izin</th>
