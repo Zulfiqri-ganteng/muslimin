@@ -18,6 +18,7 @@ class Dashboard extends BaseController
             'stats'   => $model->getStats(),                  // statistik kesediaan
             'setting' => (new SettingModel())->get(),
             'recent'  => $model->orderBy('created_at', 'DESC')->findAll(5),
+            'absensi' => Absensi::ringkasHarian(date('Y-m-d')), // highlight hari ini
         ]);
     }
 }

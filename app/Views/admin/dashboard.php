@@ -8,6 +8,55 @@
         <p class="mt-1"><b>Alur:</b> Master Data (Guru → Mapel → Jurusan → Kelas) ▸ Penugasan (JP) ▸ Hari & Jam ▸ Ketersediaan ▸ Jadwal KBM (manual / generate otomatis) ▸ Laporan.</p>',
 ]) ?>
 
+<!-- ================= HIGHLIGHT: ABSENSI GURU HARI INI ================= -->
+<?php
+$tglLabel = date('d/m/Y', strtotime($absensi['tanggal']));
+$absChips = [
+    ['Hadir', $absensi['ringkas']['hadir'], 'bg-emerald-500'],
+    ['Telat', $absensi['ringkas']['telat'], 'bg-amber-400'],
+    ['Izin',  $absensi['ringkas']['izin'],  'bg-sky-400'],
+    ['Sakit', $absensi['ringkas']['sakit'], 'bg-violet-400'],
+    ['Alpa',  $absensi['ringkas']['alpa'],  'bg-red-500'],
+];
+?>
+<div class="rounded-2xl bg-brand-700 p-5 sm:p-6 mb-6 text-white">
+    <div class="flex flex-col sm:flex-row sm:items-center gap-4">
+        <div class="min-w-0 flex-1">
+            <div class="flex items-center gap-2">
+                <span class="flex h-9 w-9 items-center justify-center rounded-full bg-white/15">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"/></svg>
+                </span>
+                <div>
+                    <p class="font-extrabold text-[15px] leading-tight">Absensi Guru Hari Ini</p>
+                    <p class="text-xs text-white/70"><?= esc($absensi['hari_nama']) ?>, <?= $tglLabel ?> &middot; <?= (int) $absensi['total_guru'] ?> guru mengajar</p>
+                </div>
+            </div>
+
+            <?php if (! $absensi['hari_aktif']): ?>
+                <p class="mt-3 text-sm text-white/80">Hari ini bukan hari KBM aktif — tidak ada sesi untuk diabsen.</p>
+            <?php elseif (! $absensi['recorded']): ?>
+                <p class="mt-3 text-sm text-white/80">Kehadiran guru <b class="text-white">belum dicatat</b>. Catat sekarang agar rekap bulan ini akurat.</p>
+            <?php else: ?>
+                <div class="mt-3 flex flex-wrap gap-2">
+                    <?php foreach ($absChips as [$label, $val, $dot]): ?>
+                        <span class="inline-flex items-center gap-1.5 rounded-full bg-white/12 px-3 py-1 text-xs font-semibold">
+                            <span class="h-2 w-2 rounded-full <?= $dot ?>"></span><?= $label ?> <?= (int) $val ?>
+                        </span>
+                    <?php endforeach; ?>
+                </div>
+            <?php endif; ?>
+        </div>
+
+        <?php if ($absensi['hari_aktif']): ?>
+            <a href="<?= site_url('admin/absensi') ?>?tanggal=<?= $absensi['tanggal'] ?>"
+               class="shrink-0 inline-flex items-center justify-center gap-2 rounded-xl bg-white px-4 py-2.5 text-sm font-bold text-brand-700 hover:bg-brand-50 transition">
+                <?= $absensi['recorded'] ? 'Lihat / Ubah Absensi' : 'Catat Absensi Sekarang' ?>
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M13 7l5 5-5 5M6 12h12"/></svg>
+            </a>
+        <?php endif; ?>
+    </div>
+</div>
+
 <?php
 $kurCards = [
     ['Total Guru', $kur['guru'], 'bg-brand-600', 'M17 20h5v-2a4 4 0 00-3-3.87M9 20H4v-2a4 4 0 013-3.87m6-1.13a4 4 0 10-4 0m6 0a4 4 0 10-2 0M7 8a4 4 0 108 0 4 4 0 00-8 0z'],

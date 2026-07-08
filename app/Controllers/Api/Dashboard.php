@@ -2,7 +2,9 @@
 
 namespace App\Controllers\Api;
 
+use App\Controllers\Admin\Absensi;
 use App\Controllers\Admin\Kurikulum;
+use App\Models\SettingModel;
 use App\Models\SubmissionModel;
 
 /**
@@ -37,7 +39,21 @@ class Dashboard extends BaseApiController
             'jml_tugas' => (int) $b['jml_tugas'],
         ], $kur['chart'] ?? []);
 
+        $setting = (new SettingModel())->get();
+        $admin   = $this->admin() ?? [];
+
         return $this->ok([
+            'school' => [
+                'name'          => $setting['school_name'] ?? '',
+                'academic_year' => $setting['academic_year'] ?? null,
+                'logo'          => $this->uploadUrl($setting['logo'] ?? null),
+            ],
+            'admin' => [
+                'full_name' => $admin['full_name'] ?? '',
+                'photo'     => $this->uploadUrl($admin['photo'] ?? null),
+            ],
+            // Highlight utama dashboard: absensi guru hari ini.
+            'absensi' => Absensi::ringkasHarian(date('Y-m-d')),
             'kesediaan' => [
                 'total'     => (int) $stats['total'],
                 'today'     => (int) $stats['today'],

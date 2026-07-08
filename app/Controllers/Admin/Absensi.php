@@ -32,6 +32,47 @@ class Absensi extends BaseController
         5 => 'Jumat', 6 => 'Sabtu', 7 => 'Minggu',
     ];
 
+    /**
+     * Ringkasan absensi guru satu tanggal — dipakai highlight dashboard web
+     * & API (pola sama dengan Kurikulum::dashboardData()). Status harian per
+     * guru = terburuk dari sesi-sesinya; tanpa baris pengecualian = hadir.
+     */
+    public static function ringkasHarian(string $tanggal): array
+    {
+        $ts        = strtotime($tanggal);
+        $hari      = (new HariModel())->byWeekday((int) date('N', $ts));
+        $namaHari  = $hari['nama'] ?? (self::HARI_NAMA[(int) date('N', $ts)] ?? '');
+        $hariAktif = $hari && (int) $hari['aktif'] === 1;
+
+        $sessions = $hariAktif ? (new JadwalModel())->sessionsForHari((int) $hari['id']) : [];
+        $absen    = (new AbsensiGuruModel())->forDate($tanggal);
+        $recorded = (new AbsensiHariModel())->isRecorded($tanggal);
+
+        $harian = [];
+        foreach ($sessions as $s) {
+            $gid          = (int) $s['guru_id'];
+            $st           = $absen[$s['kelas_id'] . '-' . $s['jam_id']]['status'] ?? 'hadir';
+            $harian[$gid] = AbsensiGuruModel::worst($harian[$gid] ?? 'hadir', $st);
+        }
+
+        $ringkas = ['hadir' => 0, 'telat' => 0, 'izin' => 0, 'sakit' => 0, 'alpa' => 0];
+        if ($recorded) {
+            foreach ($harian as $st) {
+                $ringkas[$st] = ($ringkas[$st] ?? 0) + 1;
+            }
+        }
+
+        return [
+            'tanggal'    => $tanggal,
+            'hari_nama'  => $namaHari,
+            'hari_aktif' => $hariAktif,
+            'recorded'   => $recorded,
+            'total_sesi' => count($sessions),
+            'total_guru' => count($harian),
+            'ringkas'    => $ringkas,
+        ];
+    }
+
     // ===================== INPUT HARIAN =====================
     public function index()
     {
