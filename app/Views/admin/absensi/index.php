@@ -245,13 +245,14 @@
     // Bangun pesan WhatsApp dari status yang sedang tampil (baca DOM live).
     function buildAbsensiPesan() {
         const stLabel = { telat: 'Telat', izin: 'Izin', sakit: 'Sakit', alpa: 'Tidak Hadir' };
-        const grup = {}, order = [];
+        const grup = {}, order = [], semuaGuru = [], seen = {};
         document.querySelectorAll('.absen-row').forEach(function (r) {
             const sel = r.querySelector('[data-role=status]');
             if (!sel) return;
+            const guru = r.dataset.guru || '-';
+            if (!seen[guru]) { seen[guru] = true; semuaGuru.push(guru); }
             const st = sel.value;
             if (st === 'hadir') return;
-            const guru = r.dataset.guru || '-';
             if (!grup[guru]) { grup[guru] = []; order.push(guru); }
             grup[guru].push({
                 info: r.dataset.info || '',
@@ -262,23 +263,29 @@
         });
 
         let msg = '*ABSENSI GURU*\n' + ABSEN_HEADER.hari + ', ' + ABSEN_HEADER.tanggal + '\n' + ABSEN_HEADER.sekolah + '\n\n';
-        if (order.length === 0) {
-            return msg + 'Semua guru *HADIR*. ✅\n\nTerima kasih.';
-        }
-        msg += 'Guru tidak hadir / telat:\n\n';
-        let n = 1;
-        order.forEach(function (guru) {
-            msg += n + '. *' + guru + '*\n';
-            grup[guru].forEach(function (it) {
-                let line = '   • ' + (stLabel[it.st] || it.st);
-                if (it.st === 'telat' && it.jm) line += ' (masuk ' + it.jm + ')';
-                if (it.info) line += ' — ' + it.info;
-                msg += line + '\n';
-                if (it.ket) msg += '     _' + it.ket + '_\n';
+        if (order.length > 0) {
+            msg += 'Guru tidak hadir / telat:\n\n';
+            let n = 1;
+            order.forEach(function (guru) {
+                msg += n + '. *' + guru + '*\n';
+                grup[guru].forEach(function (it) {
+                    let line = '   • ' + (stLabel[it.st] || it.st);
+                    if (it.st === 'telat' && it.jm) line += ' (masuk ' + it.jm + ')';
+                    if (it.info) line += ' — ' + it.info;
+                    msg += line + '\n';
+                    if (it.ket) msg += '     _' + it.ket + '_\n';
+                });
+                msg += '\n';
+                n++;
             });
+        }
+        // Daftar hadir SELALU menyebut nama — walau semua guru hadir.
+        const hadir = semuaGuru.filter(function (g) { return !grup[g]; });
+        if (hadir.length > 0) {
+            msg += (order.length === 0 ? 'Semua guru *HADIR* ✅\n' : 'Guru hadir ✅\n');
+            hadir.forEach(function (g, i) { msg += (i + 1) + '. ' + g + '\n'; });
             msg += '\n';
-            n++;
-        });
+        }
         return msg + 'Terima kasih.';
     }
 </script>
