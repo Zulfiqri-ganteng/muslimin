@@ -140,6 +140,7 @@ $routes->group('admin', static function ($routes) {
         // ===== ABSENSI GURU (manual, per sesi) =====
         $routes->get('absensi', 'Admin\Absensi::index');
         $routes->post('absensi/save', 'Admin\Absensi::save');
+        $routes->post('absensi/save-kerja', 'Admin\Absensi::saveKerja');
         $routes->post('absensi/unrecord', 'Admin\Absensi::unrecord');
         $routes->get('absensi/rekap', 'Admin\Absensi::rekap');
         $routes->get('absensi/rekap/guru/(:num)', 'Admin\Absensi::rekapGuru/$1');
@@ -270,6 +271,7 @@ $routes->group('api/v1', ['namespace' => 'App\Controllers\Api', 'filter' => 'cor
         // ---------- ABSENSI ----------
         $routes->get('admin/absensi', 'Admin\Absensi::index');
         $routes->post('admin/absensi/save', 'Admin\Absensi::save');
+        $routes->post('admin/absensi/save-kerja', 'Admin\Absensi::saveKerja');
         $routes->post('admin/absensi/unrecord', 'Admin\Absensi::unrecord');
         $routes->get('admin/absensi/rekap', 'Admin\Absensi::rekap');
         $routes->get('admin/absensi/rekap/export/(:segment)', 'Admin\Absensi::rekapExport/$1');

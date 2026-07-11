@@ -2,8 +2,9 @@
 <?= $this->section('content') ?>
 
 <?php
-    $statusOpts = ['telat' => 'Telat', 'izin' => 'Izin', 'sakit' => 'Sakit', 'alpa' => 'Alpa'];
+    $statusOpts = ['hadir' => 'Hadir', 'telat' => 'Telat', 'izin' => 'Izin', 'sakit' => 'Sakit', 'alpa' => 'Alpa'];
     $badge = [
+        'hadir' => 'bg-emerald-50 text-emerald-700 border-emerald-200',
         'telat' => 'bg-amber-50 text-amber-700 border-amber-200',
         'izin'  => 'bg-sky-50 text-sky-700 border-sky-200',
         'sakit' => 'bg-violet-50 text-violet-700 border-violet-200',
@@ -69,7 +70,7 @@
                         <tr class="hover:bg-slate-50/60">
                             <td class="px-4 py-2.5 whitespace-nowrap"><span class="font-semibold text-slate-700"><?= (int) date('j', $ts) ?> <?= $bulan[(int) date('n', $ts)] ?> <?= date('Y', $ts) ?></span><br><span class="text-xs text-slate-400"><?= $namaHari[(int) date('w', $ts)] ?></span></td>
                             <td class="px-4 py-2.5 whitespace-nowrap"><?php if ($d['jam_ke'] !== null): ?>Jam <?= esc($d['jam_ke']) ?> <span class="text-xs text-slate-400">(<?= esc(substr((string) $d['waktu_mulai'], 0, 5)) ?>–<?= esc(substr((string) $d['waktu_selesai'], 0, 5)) ?>)</span><?php else: ?><span class="text-slate-300">—</span><?php endif; ?></td>
-                            <td class="px-4 py-2.5"><?= esc($d['nama_kelas'] ?? '—') ?> <span class="text-slate-400">·</span> <span class="font-medium"><?= esc($d['nama_mapel'] ?? '—') ?></span></td>
+                            <td class="px-4 py-2.5"><?php if (! empty($d['kehadiran_kerja'])): ?><span class="inline-flex items-center rounded-lg border border-slate-200 bg-slate-50 px-2 py-0.5 text-xs font-semibold text-slate-500">Kehadiran kerja</span><?php else: ?><?= esc($d['nama_kelas'] ?? '—') ?> <span class="text-slate-400">·</span> <span class="font-medium"><?= esc($d['nama_mapel'] ?? '—') ?></span><?php endif; ?></td>
                             <td class="px-4 py-2.5"><span class="inline-flex items-center rounded-lg border px-2.5 py-1 text-xs font-bold <?= $badge[$d['status']] ?? $badge['izin'] ?>"><?= esc($statusOpts[$d['status']] ?? $d['status']) ?></span></td>
                             <td class="px-4 py-2.5"><?= $d['jam_masuk'] ? esc(substr($d['jam_masuk'], 0, 5)) : '<span class="text-slate-300">—</span>' ?></td>
                             <td class="px-4 py-2.5 text-slate-500"><?= $d['keterangan'] ? esc($d['keterangan']) : '<span class="text-slate-300">—</span>' ?></td>

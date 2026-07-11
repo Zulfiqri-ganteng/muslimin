@@ -80,13 +80,100 @@
     <?php endif; ?>
 </div>
 
+<!-- ===================== KEHADIRAN KERJA (di luar jadwal) ===================== -->
+<?php
+    $kerjaJson = array_map(static fn ($k) => [
+        'guru_id'    => (int) $k['guru_id'],
+        'nama'       => $k['nama'],
+        'status'     => $k['status'],
+        'jam_masuk'  => $k['jam_masuk'] ?? '',
+        'keterangan' => $k['keterangan'] ?? '',
+    ], $kerja);
+    $guruJson = array_map(static fn ($g) => [
+        'id'   => (int) $g['id'],
+        'nama' => $g['nama'],
+        'kode' => $g['kode_guru'] ?? '',
+    ], $guruOptions);
+?>
+<div x-data='absensiKerja(<?= htmlspecialchars(json_encode($kerjaJson), ENT_QUOTES) ?>, <?= htmlspecialchars(json_encode($guruJson), ENT_QUOTES) ?>)'
+     class="bg-white rounded-2xl border border-slate-200 shadow-sm p-4 sm:p-5 mb-5">
+    <div class="flex items-start justify-between gap-3 mb-1">
+        <div>
+            <h3 class="font-bold text-slate-800">Kehadiran Kerja <span class="text-slate-400 font-normal text-sm">(di luar jadwal mengajar)</span></h3>
+            <p class="text-xs text-slate-500 mt-0.5">Untuk guru/staf yang <b>masuk kerja</b> tanpa jadwal KBM (mis. wakil kepala di hari Sabtu/Minggu). Tetap dihitung di rekap.</p>
+        </div>
+    </div>
+
+    <!-- Tambah guru -->
+    <div class="flex flex-wrap items-end gap-2 mt-3">
+        <div class="flex-1 min-w-[200px]">
+            <label class="block text-xs font-semibold text-slate-500 mb-1">Tambah guru yang masuk</label>
+            <select x-model.number="pick" class="w-full rounded-xl border border-slate-300 px-3 py-2.5 text-sm focus:border-brand-500 outline-none">
+                <option value="0">— pilih guru —</option>
+                <template x-for="g in availableGuru()" :key="g.id">
+                    <option :value="g.id" x-text="g.kode ? (g.nama + ' · ' + g.kode) : g.nama"></option>
+                </template>
+            </select>
+        </div>
+        <button type="button" @click="add()"
+                class="inline-flex items-center gap-1.5 rounded-xl bg-brand-700 hover:bg-brand-800 text-white font-bold px-4 py-2.5 text-sm">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4"/></svg>
+            Tambah
+        </button>
+    </div>
+
+    <!-- Daftar + form simpan -->
+    <form method="post" action="<?= site_url('admin/absensi/save-kerja') ?>" class="mt-4">
+        <?= csrf_field() ?>
+        <input type="hidden" name="tanggal" value="<?= esc($tanggal) ?>">
+
+        <template x-if="rows.length === 0">
+            <p class="text-sm text-slate-400 py-3 text-center">Belum ada guru yang ditandai masuk kerja pada tanggal ini.</p>
+        </template>
+
+        <div class="space-y-2" x-show="rows.length > 0" x-cloak>
+            <template x-for="(r, i) in rows" :key="r.guru_id">
+                <div class="flex flex-col md:flex-row md:items-center gap-2 p-3 rounded-xl border border-slate-200 bg-slate-50/60">
+                    <input type="hidden" :name="`kerja[${i}][guru_id]`" :value="r.guru_id">
+                    <div class="md:w-52 shrink-0 font-semibold text-sm text-slate-700" x-text="r.nama"></div>
+
+                    <select :name="`kerja[${i}][status]`" x-model="r.status"
+                            class="rounded-lg border border-slate-300 px-3 py-2 text-sm font-semibold focus:border-brand-500 outline-none">
+                        <?php foreach ($statusOpts as $k => $lbl): ?>
+                            <option value="<?= $k ?>"><?= esc($lbl) ?></option>
+                        <?php endforeach; ?>
+                    </select>
+
+                    <input type="time" :name="`kerja[${i}][jam_masuk]`" x-model="r.jam_masuk" x-show="r.status !== 'hadir'" x-cloak
+                           class="w-32 rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-brand-500 outline-none" title="Jam masuk (opsional)">
+                    <input type="text" :name="`kerja[${i}][keterangan]`" x-model="r.keterangan" maxlength="255"
+                           placeholder="Keterangan (opsional)…"
+                           class="flex-1 rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-brand-500 outline-none">
+
+                    <button type="button" @click="remove(i)" class="shrink-0 text-red-500 hover:text-red-600 p-2" title="Hapus">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg>
+                    </button>
+                </div>
+            </template>
+        </div>
+
+        <div class="mt-4 flex justify-end">
+            <button type="submit"
+                    class="inline-flex items-center gap-2 rounded-xl bg-brand-700 hover:bg-brand-800 text-white font-bold px-6 py-2.5 text-sm transition">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/></svg>
+                Simpan Kehadiran Kerja
+            </button>
+        </div>
+    </form>
+</div>
+
 <?php if (! $hariAktif): ?>
     <div class="bg-white rounded-2xl border border-slate-200 shadow-sm p-10 text-center text-slate-400">
-        Tanggal ini bukan hari sekolah aktif. Pilih tanggal lain.
+        Tanggal ini bukan hari sekolah aktif — <b>tidak ada absensi mengajar</b>. Gunakan panel <b>Kehadiran Kerja</b> di atas bila ada yang masuk.
     </div>
 <?php elseif ($total === 0): ?>
     <div class="bg-white rounded-2xl border border-slate-200 shadow-sm p-10 text-center text-slate-400">
-        Belum ada jadwal KBM pada hari <?= esc($namaHari) ?>. Susun jadwal dulu di menu <b>Jadwal KBM</b>.
+        Belum ada jadwal KBM pada hari <?= esc($namaHari) ?>. Susun jadwal dulu di menu <b>Jadwal KBM</b> — atau gunakan panel <b>Kehadiran Kerja</b> di atas.
     </div>
 <?php else: ?>
 
@@ -288,6 +375,39 @@
             msg += '\n';
         }
         return msg + 'Terima kasih.';
+    }
+
+    // Panel Kehadiran Kerja (di luar jadwal): kelola daftar guru + status lokal.
+    function absensiKerja(initial, guru) {
+        return {
+            rows: (initial || []).map(function (r) {
+                return {
+                    guru_id: Number(r.guru_id),
+                    nama: r.nama,
+                    status: r.status || 'hadir',
+                    jam_masuk: r.jam_masuk || '',
+                    keterangan: r.keterangan || ''
+                };
+            }),
+            guru: guru || [],
+            pick: 0,
+            // Guru yang belum ada di daftar (cegah duplikat).
+            availableGuru: function () {
+                var used = {};
+                this.rows.forEach(function (r) { used[r.guru_id] = true; });
+                return this.guru.filter(function (g) { return !used[g.id]; });
+            },
+            add: function () {
+                var id = Number(this.pick);
+                if (!id) return;
+                if (this.rows.some(function (r) { return r.guru_id === id; })) { this.pick = 0; return; }
+                var g = this.guru.find(function (x) { return x.id === id; });
+                if (!g) return;
+                this.rows.push({ guru_id: id, nama: g.nama, status: 'hadir', jam_masuk: '', keterangan: '' });
+                this.pick = 0;
+            },
+            remove: function (i) { this.rows.splice(i, 1); }
+        };
     }
 </script>
 <?= $this->endSection() ?>
