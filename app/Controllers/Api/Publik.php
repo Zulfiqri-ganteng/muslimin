@@ -185,15 +185,19 @@ class Publik extends BaseApiController
         }
         unset($g);
 
+        // Kehadiran kerja (di luar jadwal) — hanya bila hari sudah tercatat.
+        $kerja = $recorded ? (new \App\Models\AbsensiKerjaModel())->forDate($tanggal) : [];
+
         return $this->ok([
-            'tanggal'    => $tanggal,
-            'hari_nama'  => $hariNama,
-            'hari_aktif' => $hariAktif,
-            'recorded'   => $recorded,
-            'total'      => count($sessions),
-            'total_guru' => count($grup),
-            'ringkas'    => $ringkas,
-            'guru'       => array_values($grup),
+            'tanggal'         => $tanggal,
+            'hari_nama'       => $hariNama,
+            'hari_aktif'      => $hariAktif,
+            'recorded'        => $recorded,
+            'total'           => count($sessions),
+            'total_guru'      => count($grup),
+            'ringkas'         => $ringkas,
+            'guru'            => array_values($grup),
+            'kehadiran_kerja' => $kerja,
         ]);
     }
 

@@ -151,11 +151,14 @@ class Publik extends BaseController
             $grup[$gid]['sesi'][] = $s;
         }
 
+        // Kehadiran kerja (di luar jadwal) — hanya tampil bila hari sudah tercatat.
+        $kerja = $recorded ? (new \App\Models\AbsensiKerjaModel())->forDate($tanggal) : [];
+
         return view('public/absensi', [
             'title'     => 'Absensi Guru', 'setting' => $setting,
             'tanggal'   => $tanggal, 'hariNama' => $hariNama, 'hariAktif' => $hariAktif,
             'grup'      => array_values($grup), 'ringkas' => $ringkas, 'total' => count($sessions),
-            'recorded'  => $recorded,
+            'recorded'  => $recorded, 'kerja' => $kerja,
         ]);
     }
 
