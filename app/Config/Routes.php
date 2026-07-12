@@ -195,6 +195,12 @@ $routes->group('api/v1', ['namespace' => 'App\Controllers\Api', 'filter' => 'cor
     $routes->post('auth/biometric/login', 'Auth::biometricLogin'); // login sidik jari (tanpa token)
     $routes->options('(:any)', static fn () => service('response')->setStatusCode(204)); // preflight
 
+    // ---------- APP / OTA (PUBLIK) ----------
+    // Bootstrap dipanggil app saat start (info versi + update otomatis).
+    $routes->get('app/bootstrap', 'AppController::bootstrap');
+    // Daftarkan APK rilis (dipakai skrip release.ps1; auth via header X-Apk-Token).
+    $routes->post('app/apk/register', 'AppController::register');
+
     // ---------- PUBLIK (tanpa token) ----------
     $routes->get('home', 'Publik::home');
     $routes->get('absensi', 'Publik::absensi');
