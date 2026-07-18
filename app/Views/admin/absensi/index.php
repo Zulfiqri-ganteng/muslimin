@@ -2,10 +2,12 @@
 <?= $this->section('content') ?>
 
 <?= view('admin/partials/help', [
-    'helpKey'   => 'absensi_v2',
+    'helpKey'   => 'absensi_v3',
     'helpTitle' => 'Cara mengisi absensi guru',
     'helpBody'  => '<p>Pilih <b>tanggal</b>, sistem menampilkan semua sesi mengajar hari itu dari jadwal KBM. Semua <b>default Hadir</b> — Anda cukup menandai guru yang <b>Telat / Izin / Sakit / Alpa (Tidak Hadir)</b>. Saat status bukan Hadir, muncul kolom <b>Jam Masuk</b> (isi bebas sesuai aturan Anda) dan <b>Keterangan</b>. Gunakan <b>Set semua</b> di tiap guru untuk menandai seluruh sesinya sekaligus.</p>'
         . '<p class="mt-2"><b>Penting:</b> klik <b>Simpan Absensi</b> agar hari ini <b>tercatat</b> dan ikut dihitung di Rekap — hari yang tidak Anda simpan (libur/belum dikelola) tidak dihitung. Jika salah menyimpan hari libur, gunakan <b>Batalkan pencatatan</b> untuk mereset hari itu.</p>'
+        . '<p class="mt-2"><b>Kehadiran Kerja (di luar jadwal)</b> — panel di bagian atas, untuk guru/staf yang <b>masuk kerja tanpa jadwal mengajar</b> (mis. wakil kepala di hari Sabtu/Minggu). Panel ini <b>selalu tersedia</b>, termasuk pada hari yang tidak ada KBM sama sekali, dan ikut dihitung di Rekap. Simpan lewat tombolnya sendiri: <b>Simpan Kehadiran Kerja</b>.</p>'
+        . '<p class="mt-2"><b>BARU — pengisian otomatis jabatan struktural.</b> Guru yang di <b>Master Guru ▸ Atur Jabatan</b> diberi jabatan bertanda <b>struktural</b> (Kepala Sekolah, para Wakil Kepala, Ketua Program) akan <b>otomatis muncul</b> di panel Kehadiran Kerja dengan tanda <span class="rounded bg-amber-50 text-amber-700 border border-amber-200 px-1">disarankan</span>. Ini baru <b>isian awal, belum tersimpan</b> — periksa dulu, hapus yang tidak masuk, lalu tekan Simpan. Setelah tanggal itu tersimpan, daftar Anda yang berlaku: guru yang sudah Anda hapus <b>tidak akan muncul lagi</b>. Ingin mengubah siapa saja yang disarankan? Atur jabatannya di <b>Master Data ▸ Jabatan</b> (centang "Jabatan struktural").</p>'
         . '<p class="mt-2">Tombol <b>Bagikan ke WhatsApp</b> menyiapkan daftar guru yang tidak hadir/telat hari itu (teks bisa Anda revisi dulu). Data absensi juga tampil di halaman publik bila diaktifkan di Pengaturan.</p>',
 ]) ?>
 

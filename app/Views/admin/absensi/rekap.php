@@ -2,9 +2,11 @@
 <?= $this->section('content') ?>
 
 <?= view('admin/partials/help', [
-    'helpKey'   => 'rekap_absensi_v2',
+    'helpKey'   => 'rekap_absensi_v3',
     'helpTitle' => 'Rekap Absensi Guru',
-    'helpBody'  => '<p>Ringkasan kehadiran tiap guru pada rentang tanggal yang dipilih. Rekap <b>hanya menghitung hari yang sudah diabsen</b> (hari yang Anda buka lalu klik Simpan Absensi) — hari libur atau yang belum dikelola tidak dihitung. <b>Total Sesi</b> = jumlah sesi guru pada hari-hari tercatat itu; <b>Hadir</b> = Total − (Telat + Izin + Sakit + Alpa). Ubah <b>Dari</b>/<b>Sampai</b> lalu klik Tampilkan. Gunakan tombol <b>Export</b> untuk PDF atau Excel sebagai lampiran perhitungan gaji.</p>',
+    'helpBody'  => '<p>Ringkasan kehadiran tiap guru pada rentang tanggal yang dipilih. Rekap <b>hanya menghitung hari yang sudah diabsen</b> (hari yang Anda buka lalu klik Simpan) — hari libur atau yang belum dikelola tidak dihitung. <b>Total Hari</b> dihitung per hari (bukan per sesi) dan <b>menggabungkan dua sumber</b>: hari mengajar terjadwal + hari masuk kerja di luar jadwal. <b>Hadir</b> = Total − (Telat + Izin + Sakit + Alpa). Ubah <b>Dari</b>/<b>Sampai</b> lalu klik Tampilkan.</p>
+        <p class="mt-2"><b>BARU — kolom &amp; filter Jabatan.</b> Kolom <b>Jabatan</b> menampilkan jabatan utama guru (warna kuning = jabatan struktural); arahkan kursor untuk melihat seluruh jabatannya bila lebih dari satu. Pakai filter <b>Jabatan</b> untuk melihat kelompok tertentu saja, mis. hanya para <b>Wakil Kepala Sekolah</b>. Jabatan diatur di <b>Master Data ▸ Jabatan</b> lalu dipasang ke guru lewat <b>Master Guru ▸ Atur Jabatan</b>.</p>
+        <p class="mt-2">Tombol <b>Export</b> (PDF / Excel) <b>mengikuti filter yang sedang aktif</b> — bila Anda memfilter satu jabatan, berkas yang terunduh berisi kelompok itu saja dan judulnya mencantumkan nama jabatannya. Kolom Jabatan ikut tercetak, cocok sebagai lampiran perhitungan gaji atau SK tugas tambahan. Klik nama guru untuk melihat rincian tanggalnya.</p>',
 ]) ?>
 
 <?php

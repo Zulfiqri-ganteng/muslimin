@@ -2,10 +2,15 @@
 <?= $this->section('content') ?>
 
 <?= view('admin/partials/help', [
-    'helpKey'   => 'dashboard',
+    'helpKey'   => 'dashboard_v2',
     'helpTitle' => 'Selamat datang di Sistem Akademik Sekolah',
-    'helpBody'  => '<p>Satu pusat kendali: <b>Penjadwalan KBM</b> (kurikulum) dan <b>Kesediaan Guru Mengajar</b>.</p>
-        <p class="mt-1"><b>Alur:</b> Master Data (Guru → Mapel → Jurusan → Kelas) ▸ Penugasan (JP) ▸ Hari & Jam ▸ Ketersediaan ▸ Jadwal KBM (manual / generate otomatis) ▸ Laporan.</p>',
+    'helpBody'  => '<p>Satu pusat kendali: <b>Penjadwalan KBM</b> (kurikulum), <b>Kesediaan Guru Mengajar</b>, <b>Absensi</b>, dan <b>Data Siswa</b>.</p>
+        <p class="mt-1"><b>Alur penjadwalan:</b> Master Data (Guru → Mapel → Jurusan → Kelas) ▸ Penugasan (JP) ▸ Hari &amp; Jam ▸ Ketersediaan ▸ Jadwal KBM (manual / generate otomatis) ▸ Laporan.</p>
+        <p class="mt-1"><b>BARU di menu Master Data:</b></p>
+        <p class="mt-1">• <b>Jabatan</b> — daftar jabatan sekolah yang Anda buat sendiri (Kepala Sekolah, para Wakil Kepala, Ketua Program, Pembina, dll). Bisa disusun berjenjang lewat <b>Induk Jabatan</b>, dan ditandai <b>struktural</b> bila penyandangnya wajib hadir walau tak ada jadwal mengajar.<br>
+        • <b>Siswa</b> — data siswa lengkap beserta <b>Import/Export Excel</b> untuk memasukkan satu kelas sekaligus.</p>
+        <p class="mt-1"><b>Alur jabatan &amp; absensi (baru):</b> Master Data ▸ <b>Jabatan</b> (buat jabatan, centang "struktural" bila perlu) ▸ Master <b>Guru</b> ▸ tombol <b>Atur Jabatan</b> (pasang ke tiap guru) ▸ <b>Absensi Guru</b> (guru struktural otomatis muncul di panel Kehadiran Kerja, termasuk Sabtu/Minggu) ▸ <b>Rekap Absensi</b> (ada kolom &amp; filter Jabatan, ikut terbawa ke Export PDF/Excel).</p>
+        <p class="mt-1"><b>Alur data siswa (baru):</b> Master Data ▸ <b>Kelas</b> (pastikan kelas sudah ada) ▸ <b>Siswa</b> ▸ unduh <b>Template</b>, isi di Excel, <b>Import</b>, periksa di pratinjau, Simpan. Jumlah siswa otomatis tampil sebagai <b>grafik angka</b> di halaman depan publik — hanya jumlahnya, identitas siswa tidak pernah ditampilkan ke publik.</p>',
 ]) ?>
 
 <!-- ================= HIGHLIGHT: ABSENSI GURU HARI INI ================= -->

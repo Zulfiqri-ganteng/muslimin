@@ -136,10 +136,36 @@ Dipakai 2 tabel:
       6 halaman smoke-test bersih. Data uji dibersihkan (absensi_hari 2 baris
       milik user 2–3 Juli sengaja DIBIARKAN).
 
-- [ ] **L6 — Frontend publik (web)**
-      `Publik::home` tambah statistik siswa (grafik batang SVG inline, tanpa lib
-      eksternal — Node tidak terpasang). Halaman `/statistik` opsional.
-      Rebuild Tailwind: `./tailwindcss.exe -i resources/css/app.css -o public/assets/css/app.css --minify`
+- [x] **L6 — Frontend publik (web)** ✅ SELESAI 2026-07-19
+      Beranda publik: kartu **Siswa Aktif** (kini 4 kartu) + bagian
+      **Statistik Siswa** — angka total besar, komposisi L/P, batang per
+      tingkat & per jurusan. Hanya AGREGAT; identitas siswa tak pernah dikirim
+      ke publik. Seluruh bagian disembunyikan bila belum ada siswa.
+      Bentuk mengikuti kaidah dataviz: batang **satu warna** (data ini
+      membandingkan besaran, bukan identitas — bukan warna-per-batang), total
+      sebagai angka hero (bukan grafik 1 batang), nilai selalu tertulis
+      (tak ada info yang hanya terbaca lewat warna).
+      Warna L/P `#1e6fd6` (brand-500) + `#b45309` **lolos 6 pemeriksaan
+      validator** (pita terang, chroma, pemisahan buta warna, ambang normal,
+      kontras). Pasangan brand-700+brand-400 sempat GAGAL → jangan dipakai.
+      Cache beranda dinaikkan ke `publik_stats_v2` (+ kunci di `cache_helper`).
+
+      ⚠️ **Dua bug tertangkap karena MELIHAT hasil render (bukan hanya HTML):**
+      (1) batang tak berwarna — kelas Tailwind baru belum di-rebuild;
+      (2) kartu statistik dibuat 2 kolom di layar terkecil → melebar di HP,
+      dikembalikan ke `grid-cols-1 sm:grid-cols-2 lg:grid-cols-4`.
+      Catatan: headless Chrome TIDAK mereflow ke lebar 390px (bagian yang
+      diisolasi pun terpotong) — verifikasi HP wajib di perangkat/DevTools asli.
+
+- [x] **Panduan dalam aplikasi diperbarui** ✅ SELESAI 2026-07-19
+      Permintaan user: tiap menu wajib menjelaskan alur baru. Diperbarui +
+      **kunci help dinaikkan** (agar panduan muncul lagi walau dulu ditutup):
+      `dashboard→dashboard_v2` (alur jabatan & alur data siswa dari nol),
+      `guru→guru_v2` (multi-jabatan + arti struktural), `kelas→kelas_v2`
+      (kaitan ke siswa), `absensi_v2→absensi_v3` (pengisian otomatis struktural
+      + arti "disarankan"), `rekap_absensi_v2→rekap_absensi_v3` (kolom+filter
+      jabatan, export ikut filter). Menu Jabatan & Siswa sudah punya panduan
+      sejak dibuat.
 
 - [ ] **L7 — API v1**
       `Api\Admin\Jabatan` + `Api\Admin\Siswa` (extends `BaseCrud`),

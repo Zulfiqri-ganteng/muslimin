@@ -12,6 +12,7 @@ use App\Models\KelasModel;
 use App\Models\MataPelajaranModel;
 use App\Models\PengumumanModel;
 use App\Models\SettingModel;
+use App\Models\SiswaModel;
 use Dompdf\Dompdf;
 use Dompdf\Options;
 
@@ -33,20 +34,26 @@ class Publik extends BaseController
     {
         $setting = $this->settings->get();
 
-        $stats = cache('publik_stats');
+        // "v2" = penanda bentuk cache; dinaikkan saat kunci 'siswa' ditambahkan
+        // agar setelah deploy tidak ada cache bentuk lama yang terbaca.
+        $stats = cache('publik_stats_v2');
         if (! $stats) {
             $stats = [
                 'guru'  => (new GuruModel())->countAllResults(),
                 'kelas' => (new KelasModel())->countAllResults(),
                 'mapel' => (new MataPelajaranModel())->countAllResults(),
+                'siswa' => (new SiswaModel())->where('status', 'aktif')->countAllResults(),
             ];
-            cache()->save('publik_stats', $stats, 1800);
+            cache()->save('publik_stats_v2', $stats, 1800);
         }
 
         return view('public/home', [
             'title'      => 'Beranda',
             'setting'    => $setting,
             'stats'      => $stats,
+            // Agregat jumlah siswa untuk grafik. Hanya angka — TIDAK pernah
+            // memuat identitas siswa (data pribadi anak jangan tampil publik).
+            'siswaStat'  => (new SiswaModel())->statistik(),
             'kelasOpts'  => $this->jadwalPublik($setting) ? (new KelasModel())->options() : [],
             'pengumuman' => (new PengumumanModel())->aktif(5),
             'now'        => $this->nowContext(),

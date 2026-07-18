@@ -73,8 +73,8 @@ if (! function_exists('master_data_changed')) {
             'jurusan'  => ['opt_jurusan'],
             'pengampu' => ['rekap_beban', 'dash_kurikulum'],
             'jabatan'  => ['opt_jabatan', 'jabatan_struktural_ids'],
-            // publik_stats memuat jumlah siswa yang tampil di beranda publik.
-            'siswa'    => ['stat_siswa', 'siswa_per_kelas', 'publik_stats'],
+            // publik_stats_v2 memuat jumlah siswa yang tampil di beranda publik.
+            'siswa'    => ['stat_siswa', 'siswa_per_kelas', 'publik_stats_v2'],
         ];
 
         $bump = [];

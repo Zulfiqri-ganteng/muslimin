@@ -60,9 +60,10 @@
 <?php endif; ?>
 
 <!-- STATISTIK -->
-<section class="grid grid-cols-1 sm:grid-cols-3 gap-4 mt-6">
+<section class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mt-6">
     <?php
     $cards = [
+        ['Siswa Aktif', $stats['siswa'] ?? 0, 'M12 14l9-5-9-5-9 5 9 5zm0 0l6.16-3.422a12.083 12.083 0 01.665 6.479A11.952 11.952 0 0012 20.055a11.952 11.952 0 00-6.824-2.998 12.078 12.078 0 01.665-6.479L12 14z'],
         ['Guru', $stats['guru'], 'M17 20h5v-2a4 4 0 00-3-3.87M9 20H4v-2a4 4 0 013-3.87m6-1.13a4 4 0 10-4 0m6 0a4 4 0 10-2 0M7 8a4 4 0 108 0 4 4 0 00-8 0z'],
         ['Kelas', $stats['kelas'], 'M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0H5'],
         ['Mata Pelajaran', $stats['mapel'], 'M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253'],
@@ -81,6 +82,107 @@
         </div>
     <?php endforeach; ?>
 </section>
+
+<!-- ===================== GRAFIK JUMLAH SISWA =====================
+     Sengaja hanya menampilkan ANGKA AGREGAT. Identitas siswa (nama, alamat,
+     tanggal lahir) tidak pernah dikirim ke halaman publik.
+     Bentuk: batang satu warna (data ini membandingkan besaran, bukan
+     identitas) + angka hero untuk totalnya. Nilai selalu tertulis, jadi
+     tidak ada informasi yang hanya bisa dibaca lewat warna. -->
+<?php
+    $siswaStat = $siswaStat ?? [];
+    $sTotal    = (int) ($siswaStat['total'] ?? 0);
+    $sTahun    = (int) ($siswaStat['tahun'] ?? date('Y'));
+
+    /** Satu baris batang: label, panjang proporsional, nilai tertulis di ujung. */
+    $barSiswa = static function (string $label, int $nilai, int $maks): string {
+        $persen = $maks > 0 ? max(2, round($nilai / $maks * 100)) : 0;
+        ob_start(); ?>
+        <div class="flex items-center gap-3">
+            <span class="w-24 shrink-0 text-xs font-medium text-slate-600 truncate" title="<?= esc($label, 'attr') ?>"><?= esc($label) ?></span>
+            <span class="flex-1 h-2.5 rounded-full bg-slate-100 overflow-hidden">
+                <span class="block h-full rounded-full bg-brand-500" style="width: <?= $persen ?>%"></span>
+            </span>
+            <span class="w-10 shrink-0 text-right text-xs font-bold text-slate-700 tabular-nums"><?= $nilai ?></span>
+        </div>
+        <?php return (string) ob_get_clean();
+    };
+?>
+<?php if ($sTotal > 0): ?>
+    <section class="bg-white rounded-2xl border border-slate-200 shadow-sm p-5 sm:p-6 mt-6">
+        <div class="flex items-baseline justify-between gap-3 mb-5">
+            <h2 class="font-bold text-slate-800">Statistik Siswa</h2>
+            <p class="text-xs text-slate-400">Siswa aktif &middot; Tahun <?= $sTahun ?></p>
+        </div>
+
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 lg:gap-8">
+            <!-- Angka utama + komposisi L/P -->
+            <div>
+                <p class="text-4xl sm:text-5xl font-extrabold text-slate-800 leading-none"><?= number_format($sTotal, 0, ',', '.') ?></p>
+                <p class="text-sm text-slate-500 mt-1.5">Total siswa aktif</p>
+
+                <?php
+                    $lk = (int) ($siswaStat['jenis_kelamin']['L'] ?? 0);
+                    $pr = (int) ($siswaStat['jenis_kelamin']['P'] ?? 0);
+                    $jk = $lk + $pr;
+                ?>
+                <?php if ($jk > 0): ?>
+                    <!-- Bagian dari keseluruhan: 2 segmen, dipisah jarak 2px (bukan garis tepi) -->
+                    <div class="mt-5">
+                        <div class="flex h-2.5 gap-0.5">
+                            <span class="rounded-full bg-brand-500" style="width: <?= round($lk / $jk * 100, 1) ?>%"></span>
+                            <span class="rounded-full bg-amber-700" style="width: <?= round($pr / $jk * 100, 1) ?>%"></span>
+                        </div>
+                        <div class="flex flex-wrap gap-x-5 gap-y-1 mt-2.5 text-xs">
+                            <span class="inline-flex items-center gap-1.5 text-slate-600">
+                                <span class="h-2 w-2 rounded-full bg-brand-500"></span>
+                                Laki-laki <b class="text-slate-800 tabular-nums"><?= $lk ?></b>
+                            </span>
+                            <span class="inline-flex items-center gap-1.5 text-slate-600">
+                                <span class="h-2 w-2 rounded-full bg-amber-700"></span>
+                                Perempuan <b class="text-slate-800 tabular-nums"><?= $pr ?></b>
+                            </span>
+                        </div>
+                    </div>
+                <?php endif; ?>
+            </div>
+
+            <!-- Per tingkat -->
+            <?php $perTingkat = $siswaStat['per_tingkat'] ?? []; ?>
+            <?php if (! empty($perTingkat)): ?>
+                <div>
+                    <p class="text-xs font-semibold text-slate-400 uppercase tracking-wide mb-3">Per Tingkat</p>
+                    <div class="space-y-2.5">
+                        <?php
+                            $maksT = max($perTingkat);
+                        foreach (['X', 'XI', 'XII'] as $t) {
+                            if (isset($perTingkat[$t])) {
+                                echo $barSiswa('Kelas ' . $t, (int) $perTingkat[$t], (int) $maksT);
+                            }
+                        }
+                        ?>
+                    </div>
+                </div>
+            <?php endif; ?>
+
+            <!-- Per jurusan -->
+            <?php $perJurusan = $siswaStat['per_jurusan'] ?? []; ?>
+            <?php if (! empty($perJurusan)): ?>
+                <div>
+                    <p class="text-xs font-semibold text-slate-400 uppercase tracking-wide mb-3">Per Jurusan</p>
+                    <div class="space-y-2.5">
+                        <?php
+                            $maksJ = max(array_column($perJurusan, 'jumlah'));
+                        foreach (array_slice($perJurusan, 0, 6) as $j) {
+                            echo $barSiswa($j['kode'] ?: $j['nama'], (int) $j['jumlah'], (int) $maksJ);
+                        }
+                        ?>
+                    </div>
+                </div>
+            <?php endif; ?>
+        </div>
+    </section>
+<?php endif; ?>
 
 <!-- AKSI CEPAT + INFO -->
 <section class="grid grid-cols-1 lg:grid-cols-3 gap-5 mt-6">

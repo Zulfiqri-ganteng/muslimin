@@ -17,13 +17,14 @@
 <?= $this->section('content') ?>
 
 <?= view('admin/partials/help', [
-    'helpKey'   => 'kelas',
+    'helpKey'   => 'kelas_v2',
     'helpTitle' => 'Master Kelas / Rombel',
     'helpBody'  => '<p>Daftar rombongan belajar (mis. X TKJT 1). Tetapkan <b>tingkat</b> (X/XI/XII), <b>jurusan</b>, <b>wali kelas</b>, dan <b>shift</b>.</p>
         <p class="mt-1">• <b>Import (memasukkan data)</b> — unggah Excel, baris akan <b>ditambahkan otomatis</b> (nama kelas yang sama diperbarui).<br>
         • <b>Export (mengeluarkan data)</b> — mengunduh seluruh kelas yang ada menjadi file Excel.<br>
         • <b>Hapus Terpilih / Hapus Semua</b> — centang baris atau hapus seluruh data sekaligus.</p>
-        <p class="mt-1"><b>Shift</b> (Pagi/Siang) menentukan set jam pelajaran yang dipakai kelas tersebut saat penjadwalan.</p>',
+        <p class="mt-1"><b>Shift</b> (Pagi/Siang) menentukan set jam pelajaran yang dipakai kelas tersebut saat penjadwalan.</p>
+        <p class="mt-1"><b>Terkait data siswa:</b> siswa didaftarkan di menu <b>Master Data ▸ Siswa</b> dan <b>ditautkan ke kelas di sini</b>. Tingkat dan jurusan siswa <b>mengikuti kelasnya</b> — jadi bila kelas dipindah jurusan, data siswanya ikut menyesuaikan sendiri tanpa perlu diedit ulang. Menghapus kelas <b>tidak menghapus siswanya</b>; siswa hanya menjadi "belum ada kelas" dan bisa ditetapkan ulang.</p>',
 ]) ?>
 
 <div x-data="masterList"

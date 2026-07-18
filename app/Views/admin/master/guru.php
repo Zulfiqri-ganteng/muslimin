@@ -17,14 +17,16 @@
 <?= $this->section('content') ?>
 
 <?= view('admin/partials/help', [
-    'helpKey'   => 'guru',
+    'helpKey'   => 'guru_v2',
     'helpTitle' => 'Master Guru',
     'helpBody'  => '<p>Daftar semua guru pengajar. Tambah satu per satu, atau gunakan tombol di kanan atas:</p>
         <p class="mt-1">• <b>Import (memasukkan data)</b> — unggah file Excel, datanya akan <b>ditambahkan otomatis</b> ke daftar (kode guru yang sama akan diperbarui). Unduh template dulu agar kolomnya sesuai.<br>
         • <b>Export (mengeluarkan data)</b> — mengunduh seluruh data guru yang ada saat ini menjadi file Excel.<br>
         • <b>Hapus Terpilih / Hapus Semua</b> — centang baris untuk menghapus sebagian, atau hapus seluruh data sekaligus.</p>
         <p class="mt-1"><b>Maks Beban</b> = batas jam mengajar (JP) per minggu untuk guru itu. Kompetensi guru diatur di menu <b>Mata Pelajaran ▸ Atur Guru</b>.</p>
-        <p class="mt-1">Tombol <b>Atur Jabatan</b> menentukan jabatan yang disandang guru (boleh lebih dari satu, mis. <i>Guru MTK</i> sekaligus <i>Wakasek Kurikulum</i>). Jabatan bertanda <b>struktural</b> membuat guru otomatis muncul di panel <b>Kehadiran Kerja</b> pada halaman Absensi, walau hari itu tidak punya jadwal mengajar.</p>',
+        <p class="mt-1"><b>BARU — kolom Jabatan.</b> Tombol <b>Atur Jabatan</b> di tiap baris menentukan jabatan yang disandang guru. Satu guru <b>boleh menyandang beberapa jabatan</b> sekaligus (mis. <i>Guru Mata Pelajaran</i> sekaligus <i>Wakasek Kurikulum</i>) — centang semua yang sesuai, lalu pilih salah satu sebagai <b>utama</b> lewat tombol bulat di kanannya. Jabatan utama (bertanda ★) yang tampil lebih dulu di daftar, rekap, dan file Export.</p>
+        <p class="mt-1">Jabatan bertanda <b>struktural</b> (badge kuning) punya efek nyata: penyandangnya <b>otomatis diisikan</b> ke panel <b>Kehadiran Kerja</b> di halaman <b>Absensi Guru</b> — termasuk Sabtu/Minggu saat tidak ada jadwal KBM sama sekali — sehingga wakil kepala yang masuk kerja tetap bisa diabsen dan terhitung di rekap.</p>
+        <p class="mt-1">Daftar jabatannya sendiri dibuat &amp; diubah di menu <b>Master Data ▸ Jabatan</b>. Menghapus guru otomatis melepas jabatannya (jabatannya sendiri tidak ikut terhapus).</p>',
 ]) ?>
 
 <div x-data="guruPage"
