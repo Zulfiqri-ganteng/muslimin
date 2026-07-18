@@ -71,10 +71,19 @@ Dipakai 2 tabel:
       `SiswaModel` (+ `options()` ber-cache, `statistik()` agregat).
       Seeder jabatan awal (Kepala Sekolah, Wakasek Kurikulum/Kesiswaan, Ketua Program).
 
-- [ ] **L2 — Web: Master Jabatan**
-      `Admin\Master\Jabatan` (extends `BaseMaster`) + view + rute + menu sidebar.
-      CRUD, hierarki (parent), export/template/import, bulk delete,
-      `cleanupRelations` → bersihkan `guru_jabatan`.
+- [x] **L2 — Web: Master Jabatan** ✅ SELESAI 2026-07-18
+      `Admin\Master\Jabatan` + `app/Views/admin/master/jabatan.php` +
+      `public/assets/js/admin/master/jabatan.js` + 9 rute + menu sidebar
+      (Master Data → Jabatan). Kolom tabel: kode, nama (+badge Struktural),
+      kategori, induk, jurusan, jumlah guru. Filter kategori + cari.
+      Import mengenali **kode induk & kode jurusan** (relasi ikut terbawa).
+      `cleanupRelations` melepas pivot `guru_jabatan` + menaikkan jabatan anak
+      (soft delete → FK ON DELETE tidak jalan, jadi ditangani manual).
+      **Teruji e2e via HTTP** (11 skenario: tambah, tolak kode duplikat, ubah,
+      tolak induk=diri sendiri, tolak induk=keturunan/melingkar, hapus + bersih
+      relasi, export, template, import preview, import commit upsert + resolusi
+      relasi, hapus massal). Data uji & jejak audit sudah dibersihkan.
+      Tailwind sudah di-rebuild.
 
 - [ ] **L3 — Web: Master Siswa**
       `Admin\Master\Siswa` (extends `BaseMaster`) + view + rute + menu.

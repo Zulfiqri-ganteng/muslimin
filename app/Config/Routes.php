@@ -54,6 +54,17 @@ $routes->group('admin', static function ($routes) {
             $routes->post('guru/bulk-delete', 'Admin\Master\Guru::bulkDelete');
             $routes->get('guru/import-kesediaan', 'Admin\Master\Guru::importFromSubmissions');
 
+            // Jabatan
+            $routes->get('jabatan', 'Admin\Master\Jabatan::index');
+            $routes->post('jabatan', 'Admin\Master\Jabatan::store');
+            $routes->post('jabatan/(:num)', 'Admin\Master\Jabatan::update/$1');
+            $routes->get('jabatan/delete/(:num)', 'Admin\Master\Jabatan::delete/$1');
+            $routes->get('jabatan/export', 'Admin\Master\Jabatan::export');
+            $routes->get('jabatan/template', 'Admin\Master\Jabatan::template');
+            $routes->post('jabatan/import-preview', 'Admin\Master\Jabatan::importPreview');
+            $routes->post('jabatan/import-commit', 'Admin\Master\Jabatan::importCommit');
+            $routes->post('jabatan/bulk-delete', 'Admin\Master\Jabatan::bulkDelete');
+
             // Mata Pelajaran
             $routes->get('mapel', 'Admin\Master\MataPelajaran::index');
             $routes->post('mapel', 'Admin\Master\MataPelajaran::store');
