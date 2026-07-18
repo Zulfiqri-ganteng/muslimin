@@ -93,6 +93,7 @@
                     <th style="width:4%" class="c">No</th>
                     <th style="width:10%">Kode</th>
                     <th>Nama Guru</th>
+                    <th style="width:20%">Jabatan</th>
                     <th style="width:9%" class="c">Total Hari</th>
                     <th style="width:8%" class="c">Hadir</th>
                     <th style="width:8%" class="c">Telat</th>
@@ -109,6 +110,7 @@
                         <td class="c"><?= $i + 1 ?></td>
                         <td><?= esc($r['kode']) ?></td>
                         <td><?= esc($r['nama']) ?></td>
+                        <td><?= esc($r['jabatan_all'] ?? '') ?></td>
                         <td class="c"><?= (int) $r['total'] ?></td>
                         <td class="c"><?= (int) $r['hadir'] ?></td>
                         <td class="c"><?= (int) $r['telat'] ?></td>
@@ -118,7 +120,7 @@
                     </tr>
                 <?php endforeach; ?>
                 <tr class="total">
-                    <td colspan="3">TOTAL</td>
+                    <td colspan="4">TOTAL</td>
                     <td class="c"><?= $sum['total'] ?></td>
                     <td class="c"><?= $sum['hadir'] ?></td>
                     <td class="c"><?= $sum['telat'] ?></td>

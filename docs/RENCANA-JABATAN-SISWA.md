@@ -118,9 +118,23 @@ Dipakai 2 tabel:
       kunci cache (`"list|v2|q=..."`) + akses defensif `?? []`.
       **Wajib naikkan penanda versi ini setiap struktur nilai cache berubah.**
 
-- [ ] **L5 — Absensi & Rekap disesuaikan**
-      Panel Kehadiran Kerja prefill guru struktural; rekap absensi tambah
-      kolom + filter Jabatan; export Excel/PDF rekap ikut kolom jabatan.
+- [x] **L5 — Absensi & Rekap disesuaikan (WEB)** ✅ SELESAI 2026-07-18
+      **Input absensi:** guru berjabatan struktural otomatis diisikan ke panel
+      Kehadiran Kerja, ditandai chip **disarankan** + banner penjelas. Sengaja
+      TIDAK langsung disimpan (prinsip "belum di-save = belum tercatat"), dan
+      saran **berhenti muncul begitu tanggal itu tercatat** supaya guru yang
+      sengaja dihapus admin tidak muncul lagi.
+      **Rekap:** kolom **Jabatan** (badge; struktural amber, tooltip berisi
+      semua jabatan) + **filter jabatan** yang ikut terbawa ke tautan rincian
+      dan tombol export. Halaman rincian per guru menampilkan jabatannya.
+      **Export:** Excel dapat kolom Jabatan (kolom digeser A–J, rumus SUM
+      ikut ke E–J, kop ke 'J') + label filter jabatan di judul; PDF dapat
+      kolom Jabatan (colspan TOTAL 3→4).
+      **Teruji**: saran muncul di hari Minggu (2 guru), setelah simpan-sebagian
+      saran tidak memunculkan lagi guru yang dibuang, filter jabatan cocok &
+      tidak cocok, Excel (verifikasi isi + rumus SUM E–J) & PDF 200,
+      6 halaman smoke-test bersih. Data uji dibersihkan (absensi_hari 2 baris
+      milik user 2–3 Juli sengaja DIBIARKAN).
 
 - [ ] **L6 — Frontend publik (web)**
       `Publik::home` tambah statistik siswa (grafik batang SVG inline, tanpa lib

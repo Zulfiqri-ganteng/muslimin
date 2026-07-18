@@ -82,13 +82,33 @@
 
 <!-- ===================== KEHADIRAN KERJA (di luar jadwal) ===================== -->
 <?php
+    $jabatanMap = $jabatanMap ?? [];
+    $saranKerja = $saranKerja ?? [];
+
     $kerjaJson = array_map(static fn ($k) => [
         'guru_id'    => (int) $k['guru_id'],
         'nama'       => $k['nama'],
+        'jabatan'    => implode(', ', array_column($jabatanMap[(int) $k['guru_id']] ?? [], 'nama')),
         'status'     => $k['status'],
         'jam_masuk'  => $k['jam_masuk'] ?? '',
         'keterangan' => $k['keterangan'] ?? '',
+        'saran'      => false,
     ], $kerja);
+
+    // Guru berjabatan struktural yang belum tercatat hari ini — dimunculkan
+    // sebagai isian awal supaya admin cukup menekan Simpan. Belum tersimpan
+    // sampai tombol Simpan ditekan.
+    foreach ($saranKerja as $s) {
+        $kerjaJson[] = [
+            'guru_id'    => (int) $s['guru_id'],
+            'nama'       => $s['nama'],
+            'jabatan'    => $s['jabatan'],
+            'status'     => $s['status'],
+            'jam_masuk'  => $s['jam_masuk'],
+            'keterangan' => $s['keterangan'],
+            'saran'      => true,
+        ];
+    }
     $guruJson = array_map(static fn ($g) => [
         'id'   => (int) $g['id'],
         'nama' => $g['nama'],
@@ -101,6 +121,12 @@
         <div>
             <h3 class="font-bold text-slate-800">Kehadiran Kerja <span class="text-slate-400 font-normal text-sm">(di luar jadwal mengajar)</span></h3>
             <p class="text-xs text-slate-500 mt-0.5">Untuk guru/staf yang <b>masuk kerja</b> tanpa jadwal KBM (mis. wakil kepala di hari Sabtu/Minggu). Tetap dihitung di rekap.</p>
+            <?php if (! empty($saranKerja)): ?>
+                <p class="text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded-lg px-2.5 py-1.5 mt-2">
+                    <b><?= count($saranKerja) ?> guru berjabatan struktural</b> sudah diisikan otomatis di bawah dan ditandai <b>disarankan</b>.
+                    Belum tersimpan — periksa dulu, hapus yang tidak masuk, lalu tekan <b>Simpan Kehadiran Kerja</b>.
+                </p>
+            <?php endif; ?>
         </div>
         <?php if (! ($hariAktif && $total > 0)): ?>
             <!-- Bagikan ke WhatsApp (muncul di hari tanpa sesi mengajar; di hari mengajar dipakai tombol WA di bawah). -->
@@ -175,7 +201,15 @@
                 <div class="flex flex-col md:flex-row md:items-center gap-2 p-3 rounded-xl border border-slate-200 bg-slate-50/60"
                      :data-kerja-nama="r.nama" :data-kerja-status="r.status" :data-kerja-jm="r.jam_masuk" :data-kerja-ket="r.keterangan">
                     <input type="hidden" :name="`kerja[${i}][guru_id]`" :value="r.guru_id">
-                    <div class="md:w-52 shrink-0 font-semibold text-sm text-slate-700" x-text="r.nama"></div>
+                    <div class="md:w-52 shrink-0">
+                        <div class="font-semibold text-sm text-slate-700" x-text="r.nama"></div>
+                        <div class="flex flex-wrap items-center gap-1 mt-0.5">
+                            <span x-show="r.jabatan" x-cloak class="text-[11px] text-slate-500" x-text="r.jabatan"></span>
+                            <span x-show="r.saran" x-cloak
+                                  title="Disarankan otomatis karena berjabatan struktural. Belum tersimpan — tekan Simpan di bawah."
+                                  class="rounded-full bg-amber-50 text-amber-700 border border-amber-200 px-1.5 py-0.5 text-[10px] font-semibold">disarankan</span>
+                        </div>
+                    </div>
 
                     <select :name="`kerja[${i}][status]`" x-model="r.status"
                             class="rounded-lg border border-slate-300 px-3 py-2 text-sm font-semibold focus:border-brand-500 outline-none">
@@ -445,9 +479,11 @@
                 return {
                     guru_id: Number(r.guru_id),
                     nama: r.nama,
+                    jabatan: r.jabatan || '',
                     status: r.status || 'hadir',
                     jam_masuk: r.jam_masuk || '',
-                    keterangan: r.keterangan || ''
+                    keterangan: r.keterangan || '',
+                    saran: !!r.saran
                 };
             }),
             guru: guru || [],
@@ -464,7 +500,7 @@
                 if (this.rows.some(function (r) { return r.guru_id === id; })) { this.pick = 0; return; }
                 var g = this.guru.find(function (x) { return x.id === id; });
                 if (!g) return;
-                this.rows.push({ guru_id: id, nama: g.nama, status: 'hadir', jam_masuk: '', keterangan: '' });
+                this.rows.push({ guru_id: id, nama: g.nama, jabatan: g.jabatan || '', status: 'hadir', jam_masuk: '', keterangan: '', saran: false });
                 this.pick = 0;
             },
             remove: function (i) { this.rows.splice(i, 1); }

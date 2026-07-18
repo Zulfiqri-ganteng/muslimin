@@ -7,8 +7,10 @@ use App\Models\AbsensiGuruModel;
 use App\Models\AbsensiHariModel;
 use App\Models\AbsensiKerjaModel;
 use App\Models\AuditModel;
+use App\Models\GuruJabatanModel;
 use App\Models\GuruModel;
 use App\Models\HariModel;
+use App\Models\JabatanModel;
 use App\Models\JadwalModel;
 use App\Models\SettingModel;
 use Dompdf\Dompdf;
@@ -128,6 +130,38 @@ class Absensi extends BaseController
         $kerja       = (new AbsensiKerjaModel())->forDate($tanggal);
         $guruOptions = (new GuruModel())->select('id, kode_guru, nama')->orderBy('nama', 'ASC')->findAll();
 
+        // Guru berjabatan struktural (wakil kepala dsb.) wajib hadir walau hari
+        // itu tak punya jadwal KBM. Mereka DISARANKAN otomatis ke panel
+        // Kehadiran Kerja — hanya sebagai isian awal, TIDAK langsung disimpan,
+        // agar prinsip "belum di-save = belum tercatat" tetap berlaku.
+        // Begitu hari ini sudah tercatat, daftar simpanan admin yang berlaku
+        // (tidak ditimpa saran) supaya guru yang sengaja dihapus tak muncul lagi.
+        $guruJabatan = new GuruJabatanModel();
+        $jabatanMap  = $guruJabatan->mapByGuru();
+        $saran       = [];
+        if (! $recorded) {
+            $sudahAda = array_column($kerja, 'guru_id');
+            foreach ($guruJabatan->guruStrukturalIds() as $gid) {
+                if (in_array($gid, $sudahAda, true) || isset($grup[$gid])) {
+                    continue; // sudah dicatat, atau sudah punya sesi mengajar hari ini
+                }
+                foreach ($guruOptions as $g) {
+                    if ((int) $g['id'] === $gid) {
+                        $saran[] = [
+                            'guru_id'    => $gid,
+                            'nama'       => $g['nama'],
+                            'kode_guru'  => $g['kode_guru'],
+                            'jabatan'    => implode(', ', array_column($jabatanMap[$gid] ?? [], 'nama')),
+                            'status'     => 'hadir',
+                            'jam_masuk'  => '',
+                            'keterangan' => '',
+                        ];
+                        break;
+                    }
+                }
+            }
+        }
+
         return view('admin/absensi/index', [
             'title'       => 'Absensi Guru',
             'tanggal'     => $tanggal,
@@ -140,6 +174,8 @@ class Absensi extends BaseController
             'recorded'    => $recorded,
             'kerja'       => $kerja,
             'guruOptions' => $guruOptions,
+            'saranKerja'  => $saran,
+            'jabatanMap'  => $jabatanMap,
         ]);
     }
 
@@ -200,13 +236,27 @@ class Absensi extends BaseController
         $rows            = $this->rekapData($dari, $sampai);
         $setting         = (new SettingModel())->get();
 
+        // Filter jabatan (mis. hanya wakil kepala) — berlaku juga untuk export
+        // agar berkas unduhan persis seperti yang tampil di layar.
+        $jabatanId = (int) $this->request->getGet('jabatan_id');
+        if ($jabatanId > 0) {
+            $rows = array_values(array_filter(
+                $rows,
+                static fn ($r) => in_array($jabatanId, $r['jabatan_ids'], true)
+            ));
+        }
+
         if ($format === 'pdf') {
             $html = view('pdf/rekap_absensi', ['rows' => $rows, 'dari' => $dari, 'sampai' => $sampai, 'setting' => $setting]);
             $this->streamPdf($html, 'Rekap-Absensi-' . $dari . '_' . $sampai);
             return null;
         }
         if ($format === 'excel') {
-            return $this->rekapExcel($rows, $dari, $sampai, $setting);
+            $labelJabatan = $jabatanId > 0
+                ? ((new JabatanModel())->find($jabatanId)['nama'] ?? '')
+                : '';
+
+            return $this->rekapExcel($rows, $dari, $sampai, $setting, $labelJabatan);
         }
 
         $sum = ['total' => 0, 'hadir' => 0, 'telat' => 0, 'izin' => 0, 'sakit' => 0, 'alpa' => 0];
@@ -220,6 +270,8 @@ class Absensi extends BaseController
             'title'       => 'Rekap Absensi Guru',
             'rows'        => $rows, 'dari' => $dari, 'sampai' => $sampai, 'sum' => $sum,
             'hariTercatat' => count((new AbsensiHariModel())->datesInRange($dari, $sampai)),
+            'jabatanId'   => $jabatanId,
+            'jabatanOpts' => (new JabatanModel())->options(),
         ]);
     }
 
@@ -268,6 +320,7 @@ class Absensi extends BaseController
             'title'   => 'Rincian Absensi — ' . $guru['nama'],
             'guru'    => $guru, 'detail' => $detail, 'ringkas' => $ringkas,
             'dari'    => $dari, 'sampai' => $sampai,
+            'jabatan' => (new GuruJabatanModel())->forGuru((int) $id),
         ]);
     }
 
@@ -343,12 +396,15 @@ class Absensi extends BaseController
         foreach ((new GuruModel())->select('id, kode_guru, nama')->findAll() as $gr) {
             $guruMap[(int) $gr['id']] = $gr;
         }
+        // Jabatan seluruh guru dalam 1 query (dipakai kolom & filter Jabatan).
+        $jabatanMap = (new GuruJabatanModel())->mapByGuru();
 
         $rows = [];
         foreach ($daily as $gid => $perTgl) {
             if (! isset($guruMap[$gid])) {
                 continue;
             }
+            $jbt = $jabatanMap[(int) $gid] ?? [];
             $cnt = ['telat' => 0, 'izin' => 0, 'sakit' => 0, 'alpa' => 0];
             foreach ($perTgl as $st) {
                 if (isset($cnt[$st])) {
@@ -361,6 +417,11 @@ class Absensi extends BaseController
             $rows[] = [
                 'id'    => (int) $gid,
                 'kode'  => $guruMap[$gid]['kode_guru'], 'nama' => $guruMap[$gid]['nama'],
+                // Jabatan utama tampil ringkas; daftar id dipakai untuk memfilter.
+                'jabatan'     => $jbt !== [] ? $jbt[0]['nama'] : '',
+                'jabatan_all' => implode(', ', array_column($jbt, 'nama')),
+                'jabatan_ids' => array_map('intval', array_column($jbt, 'id')),
+                'struktural'  => $jbt !== [] && (bool) $jbt[0]['is_struktural'],
                 'total' => $total, 'hadir' => $hadir,
                 'telat' => $cnt['telat'], 'izin' => $cnt['izin'], 'sakit' => $cnt['sakit'], 'alpa' => $cnt['alpa'],
             ];
@@ -370,24 +431,32 @@ class Absensi extends BaseController
         return $rows;
     }
 
-    /** Excel rekap absensi (nilai jadi + baris total). */
-    private function rekapExcel(array $rows, string $dari, string $sampai, array $setting)
+    /**
+     * Excel rekap absensi (nilai jadi + baris total).
+     * Kolom: A No, B Kode, C Nama, D Jabatan, E Total, F Hadir, G Telat,
+     * H Izin, I Sakit, J Alpa — kolom angka mulai E s/d J.
+     */
+    private function rekapExcel(array $rows, string $dari, string $sampai, array $setting, string $labelJabatan = '')
     {
         $ss    = new Spreadsheet();
         $sheet = $ss->getActiveSheet();
         $sheet->setTitle('Rekap Absensi');
 
-        $sheet->mergeCells('A1:I1')->setCellValue('A1', 'REKAP ABSENSI GURU');
-        $sheet->mergeCells('A2:I2')->setCellValue('A2', 'Tahun Pelajaran ' . ($setting['academic_year'] ?? ''));
-        $sheet->mergeCells('A3:I3')->setCellValue('A3', 'Periode ' . $dari . ' s/d ' . $sampai);
+        $sheet->mergeCells('A1:J1')->setCellValue('A1', 'REKAP ABSENSI GURU');
+        $sheet->mergeCells('A2:J2')->setCellValue('A2', 'Tahun Pelajaran ' . ($setting['academic_year'] ?? ''));
+        $sheet->mergeCells('A3:J3')->setCellValue(
+            'A3',
+            'Periode ' . $dari . ' s/d ' . $sampai
+                . ($labelJabatan !== '' ? ' — Jabatan: ' . $labelJabatan : '')
+        );
         $sheet->getStyle('A1')->getFont()->setBold(true)->setSize(14);
         $sheet->getStyle('A1:A3')->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER);
 
-        $head = ['No', 'Kode', 'Nama Guru', 'Total Hari', 'Hadir', 'Telat', 'Izin', 'Sakit', 'Alpa'];
+        $head = ['No', 'Kode', 'Nama Guru', 'Jabatan', 'Total Hari', 'Hadir', 'Telat', 'Izin', 'Sakit', 'Alpa'];
         $sheet->fromArray($head, null, 'A5', true);
-        $sheet->getStyle('A5:I5')->getFont()->setBold(true)->getColor()->setRGB('FFFFFF');
-        $sheet->getStyle('A5:I5')->getFill()->setFillType(Fill::FILL_SOLID)->getStartColor()->setRGB('1A3A6B');
-        $sheet->getStyle('A5:I5')->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER);
+        $sheet->getStyle('A5:J5')->getFont()->setBold(true)->getColor()->setRGB('FFFFFF');
+        $sheet->getStyle('A5:J5')->getFill()->setFillType(Fill::FILL_SOLID)->getStartColor()->setRGB('1A3A6B');
+        $sheet->getStyle('A5:J5')->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER);
 
         $r  = 6;
         $no = 1;
@@ -396,12 +465,13 @@ class Absensi extends BaseController
             $sheet->setCellValue("A{$r}", $no++);
             $sheet->setCellValueExplicit("B{$r}", (string) $row['kode'], \PhpOffice\PhpSpreadsheet\Cell\DataType::TYPE_STRING);
             $sheet->setCellValue("C{$r}", $row['nama']);
-            $sheet->setCellValue("D{$r}", $row['total']);
-            $sheet->setCellValue("E{$r}", $row['hadir']);
-            $sheet->setCellValue("F{$r}", $row['telat']);
-            $sheet->setCellValue("G{$r}", $row['izin']);
-            $sheet->setCellValue("H{$r}", $row['sakit']);
-            $sheet->setCellValue("I{$r}", $row['alpa']);
+            $sheet->setCellValue("D{$r}", $row['jabatan_all'] ?? '');
+            $sheet->setCellValue("E{$r}", $row['total']);
+            $sheet->setCellValue("F{$r}", $row['hadir']);
+            $sheet->setCellValue("G{$r}", $row['telat']);
+            $sheet->setCellValue("H{$r}", $row['izin']);
+            $sheet->setCellValue("I{$r}", $row['sakit']);
+            $sheet->setCellValue("J{$r}", $row['alpa']);
             $r++;
         }
         $lastRow = $r - 1;
@@ -409,21 +479,21 @@ class Absensi extends BaseController
         // Baris TOTAL dengan SUM hidup.
         $sheet->setCellValue("C{$r}", 'TOTAL');
         if ($lastRow >= $firstRow) {
-            foreach (['D', 'E', 'F', 'G', 'H', 'I'] as $col) {
+            foreach (['E', 'F', 'G', 'H', 'I', 'J'] as $col) {
                 $sheet->setCellValue("{$col}{$r}", "=SUM({$col}{$firstRow}:{$col}{$lastRow})");
             }
         }
-        $sheet->getStyle("A{$r}:I{$r}")->getFont()->setBold(true);
-        $sheet->getStyle("A{$r}:I{$r}")->getFill()->setFillType(Fill::FILL_SOLID)->getStartColor()->setRGB('EEF2FF');
+        $sheet->getStyle("A{$r}:J{$r}")->getFont()->setBold(true);
+        $sheet->getStyle("A{$r}:J{$r}")->getFill()->setFillType(Fill::FILL_SOLID)->getStartColor()->setRGB('EEF2FF');
 
-        $sheet->getStyle("A5:I{$r}")->getBorders()->getAllBorders()->setBorderStyle(Border::BORDER_THIN);
+        $sheet->getStyle("A5:J{$r}")->getBorders()->getAllBorders()->setBorderStyle(Border::BORDER_THIN);
         $sheet->getStyle("A6:A{$r}")->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER);
-        $sheet->getStyle("D6:I{$r}")->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER);
-        foreach (['A' => 5, 'B' => 10, 'C' => 30, 'D' => 11, 'E' => 9, 'F' => 9, 'G' => 9, 'H' => 9, 'I' => 9] as $col => $w) {
+        $sheet->getStyle("E6:J{$r}")->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER);
+        foreach (['A' => 5, 'B' => 10, 'C' => 30, 'D' => 28, 'E' => 11, 'F' => 9, 'G' => 9, 'H' => 9, 'I' => 9, 'J' => 9] as $col => $w) {
             $sheet->getColumnDimension($col)->setWidth($w);
         }
 
-        kop_excel_prepend($sheet, 'I');
+        kop_excel_prepend($sheet, 'J');
 
         $this->streamXlsx($ss, 'Rekap-Absensi-' . $dari . '_' . $sampai);
         return null;

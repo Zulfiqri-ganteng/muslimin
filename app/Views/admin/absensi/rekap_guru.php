@@ -33,6 +33,13 @@
         <div>
             <h2 class="font-bold text-lg text-slate-800"><?= esc($guru['nama']) ?></h2>
             <p class="text-sm text-slate-400"><?= esc($guru['kode_guru']) ?> &middot; Periode <?= esc($dari) ?> s/d <?= esc($sampai) ?></p>
+            <?php if (! empty($jabatan)): ?>
+                <div class="flex flex-wrap gap-1 mt-1.5">
+                    <?php foreach ($jabatan as $j): ?>
+                        <span class="inline-flex rounded-full border px-2 py-0.5 text-[11px] font-semibold <?= $j['is_struktural'] ? 'bg-amber-50 text-amber-700 border-amber-200' : 'bg-slate-100 text-slate-600 border-slate-200' ?>"><?= esc($j['nama']) ?></span>
+                    <?php endforeach; ?>
+                </div>
+            <?php endif; ?>
         </div>
         <div class="flex flex-wrap gap-2">
             <span class="inline-flex items-center rounded-lg border border-slate-200 bg-slate-50 px-2.5 py-1.5 text-xs font-bold text-slate-600">Total sesi: <?= (int) $ringkas['total'] ?></span>
