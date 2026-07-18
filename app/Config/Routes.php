@@ -53,6 +53,7 @@ $routes->group('admin', static function ($routes) {
             $routes->post('guru/import-commit', 'Admin\Master\Guru::importCommit');
             $routes->post('guru/bulk-delete', 'Admin\Master\Guru::bulkDelete');
             $routes->get('guru/import-kesediaan', 'Admin\Master\Guru::importFromSubmissions');
+            $routes->post('guru/jabatan/(:num)', 'Admin\Master\Guru::jabatan/$1');
 
             // Siswa
             $routes->get('siswa', 'Admin\Master\Siswa::index');

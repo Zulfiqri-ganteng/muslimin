@@ -99,9 +99,24 @@ Dipakai 2 tabel:
       Data uji & jejak audit dibersihkan; `php -l` bersih; 6 halaman admin
       di-smoke-test 200 tanpa error; Tailwind di-rebuild.
 
-- [ ] **L4 — Integrasi Jabatan ↔ Guru**
-      Kolom "Jabatan" di master guru + editor multi-jabatan (pola modal
-      kompetensi mapel). `GuruModel` helper `jabatanMap()`.
+- [x] **L4 — Integrasi Jabatan ↔ Guru** ✅ SELESAI 2026-07-18
+      Kolom **Jabatan** di Master Guru (badge; jabatan utama ber-bintang,
+      jabatan struktural berwarna amber) + modal **Atur Jabatan**
+      (centang banyak jabatan + radio penanda utama) via `guru.js`.
+      Rute `POST admin/master/guru/jabatan/(:num)` → `Guru::jabatan()`.
+      Export Master Guru kini punya kolom **Jabatan** (utama lebih dulu).
+      `cleanupRelations` guru melepas `guru_jabatan` (soft delete → CASCADE
+      tidak jalan).
+      **Teruji 7 skenario**: pasang 2 jabatan + utama, badge tampil,
+      utama tak valid → diperbaiki server, kosongkan semua, guru tak ada →
+      ditolak rapi, export berisi jabatan, hapus guru → pivot ikut bersih.
+
+      ⚠️ **PELAJARAN PENTING (cache berbentuk lama):** menambah kunci baru ke
+      nilai `cachedList()` membuat kode baru membaca cache bentuk lama →
+      **HTTP 500 setelah deploy** sampai cache kedaluwarsa (1 jam). Ketahuan
+      saat uji L4. Solusi yang dipakai: sisipkan penanda versi bentuk pada
+      kunci cache (`"list|v2|q=..."`) + akses defensif `?? []`.
+      **Wajib naikkan penanda versi ini setiap struktur nilai cache berubah.**
 
 - [ ] **L5 — Absensi & Rekap disesuaikan**
       Panel Kehadiran Kerja prefill guru struktural; rekap absensi tambah

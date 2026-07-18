@@ -2,7 +2,9 @@
 
 namespace App\Controllers\Admin\Master;
 
+use App\Models\GuruJabatanModel;
 use App\Models\GuruModel;
+use App\Models\JabatanModel;
 use App\Models\SubmissionModel;
 use CodeIgniter\Database\BaseConnection;
 use CodeIgniter\Model;
@@ -17,6 +19,14 @@ class Guru extends BaseMaster
     protected string $titleLabel = 'Master Guru';
 
     protected const STATUS = ['PNS', 'PPPK', 'GTY', 'GTT'];
+
+    protected GuruJabatanModel $guruJabatan;
+
+    public function __construct()
+    {
+        parent::__construct();
+        $this->guruJabatan = new GuruJabatanModel();
+    }
 
     protected function makeModel(): Model
     {
@@ -33,7 +43,10 @@ class Guru extends BaseMaster
         $per  = $this->perPage();
         $page = $this->pageNo();
 
-        $data = $this->cachedList("list|q={$q}|s={$status}|per={$per}|p={$page}", function () use ($q, $status, $per, $page) {
+        // "v2" = penanda BENTUK data cache. Wajib dinaikkan setiap struktur nilai
+        // yang disimpan berubah (di sini: penambahan jabatanMap), supaya setelah
+        // deploy kode baru tidak pernah membaca cache berbentuk lama → 500.
+        $data = $this->cachedList("list|v2|q={$q}|s={$status}|per={$per}|p={$page}", function () use ($q, $status, $per, $page) {
             $builder = $this->model;
             if ($q !== '') {
                 $builder = $builder->groupStart()
@@ -45,12 +58,34 @@ class Guru extends BaseMaster
             }
             $rows = $builder->orderBy('nama', 'ASC')->paginate($per, 'default', $page);
 
-            return ['rows' => $rows, 'total' => $this->model->pager->getTotal()];
+            // Jabatan hanya diambil untuk guru yang tampil di halaman ini
+            // (1 query, tidak N+1).
+            $jabatanMap = $this->guruJabatan->mapByGuru(array_column($rows, 'id'));
+
+            return [
+                'rows'       => $rows,
+                'total'      => $this->model->pager->getTotal(),
+                'jabatanMap' => $jabatanMap,
+            ];
         });
+
+        // Pilihan untuk modal "Atur Jabatan".
+        $jabatanModel = new JabatanModel();
+        $allJabatan   = [];
+        foreach ($jabatanModel->select('id, nama, is_struktural')
+            ->orderBy('level', 'ASC')->orderBy('nama', 'ASC')->findAll() as $j) {
+            $allJabatan[] = [
+                'id'            => (int) $j['id'],
+                'label'         => $j['nama'],
+                'is_struktural' => (bool) $j['is_struktural'],
+            ];
+        }
 
         return view('admin/master/guru', [
             'title'      => $this->titleLabel,
             'rows'       => $data['rows'],
+            'jabatanMap' => $data['jabatanMap'] ?? [],
+            'allJabatan' => $allJabatan,
             'pager'      => $this->storePager($page, $per, $data['total']),
             'q'          => $q,
             'status'     => $status,
@@ -58,6 +93,29 @@ class Guru extends BaseMaster
             'total'      => $data['total'],
             'statusList' => self::STATUS,
         ]);
+    }
+
+    /**
+     * Simpan jabatan yang disandang seorang guru (boleh lebih dari satu,
+     * salah satunya ditandai utama).
+     *
+     * @param int|string $id
+     */
+    public function jabatan($id)
+    {
+        $id = (int) $id;
+        if ($this->model->find($id) === null) {
+            return $this->goIndex(null, 'Guru tidak ditemukan.');
+        }
+
+        $jabatanIds = array_values(array_filter(array_map('intval', (array) $this->request->getPost('jabatan_ids'))));
+        $utamaId    = (int) $this->request->getPost('utama_id') ?: null;
+
+        $this->guruJabatan->syncForGuru($id, $jabatanIds, $utamaId);
+        master_data_changed($this->module);
+        $this->audit->record('update', 'guru_jabatan', $id, 'Atur jabatan: ' . count($jabatanIds) . ' jabatan');
+
+        return $this->goIndex('Jabatan guru diperbarui.');
     }
 
     public function store()
@@ -102,12 +160,14 @@ class Guru extends BaseMaster
 
     /**
      * Anti-orphan: saat guru dihapus, seluruh jejaknya ikut dibersihkan
-     * (kompetensi, ketersediaan, penugasan + jadwal yang memakainya,
+     * (kompetensi, jabatan, ketersediaan, penugasan + jadwal yang memakainya,
      * absensi, dan jabatan wali kelas) dalam satu transaksi.
      */
     protected function cleanupRelations(BaseConnection $db, array $ids): void
     {
         $db->table('guru_mapel')->whereIn('guru_id', $ids)->delete();
+        // Guru memakai soft delete → ON DELETE CASCADE tidak jalan, lepas manual.
+        $db->table('guru_jabatan')->whereIn('guru_id', $ids)->delete();
         $db->table('ketersediaan_guru')->whereIn('guru_id', $ids)->delete();
 
         $pengampuIds = array_map('intval', array_column(
@@ -129,26 +189,31 @@ class Guru extends BaseMaster
 
     public function export()
     {
-        $rows = $this->model->orderBy('nama', 'ASC')->findAll();
+        $rows       = $this->model->orderBy('nama', 'ASC')->findAll();
+        $jabatanMap = $this->guruJabatan->mapByGuru(); // seluruh guru, 1 query
 
         $ss    = new Spreadsheet();
         $sheet = $this->sheetWithHeader(
             $ss,
             'Master Guru',
-            ['No', 'NIP', 'Kode Guru', 'Nama Guru', 'Jenis Kelamin', 'Status', 'Maks Beban (JP)', 'Keterangan'],
-            ['A' => 5, 'B' => 22, 'C' => 12, 'D' => 30, 'E' => 14, 'F' => 10, 'G' => 16, 'H' => 25]
+            ['No', 'NIP', 'Kode Guru', 'Nama Guru', 'Jenis Kelamin', 'Status', 'Jabatan', 'Maks Beban (JP)', 'Keterangan'],
+            ['A' => 5, 'B' => 22, 'C' => 12, 'D' => 30, 'E' => 14, 'F' => 10, 'G' => 34, 'H' => 16, 'I' => 25]
         );
 
         $r = 2;
         foreach ($rows as $i => $d) {
+            // Jabatan utama tampil lebih dulu (mapByGuru sudah mengurutkannya).
+            $jabatan = implode(', ', array_column($jabatanMap[(int) $d['id']] ?? [], 'nama'));
+
             $sheet->fromArray([
                 $i + 1, "'" . $d['nip'], $d['kode_guru'], $d['nama'],
-                $d['jenis_kelamin'], $d['status_guru'], $d['max_beban'], $d['keterangan'],
+                $d['jenis_kelamin'], $d['status_guru'], $jabatan,
+                $d['max_beban'], $d['keterangan'],
             ], null, 'A' . $r, true);
             $r++;
         }
 
-        $this->streamXlsx($ss, 'Master-Guru-' . date('Ymd-His'), 'H');
+        $this->streamXlsx($ss, 'Master-Guru-' . date('Ymd-His'), 'I');
     }
 
     public function template()
