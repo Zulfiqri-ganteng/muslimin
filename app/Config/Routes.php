@@ -227,6 +227,8 @@ $routes->group('api/v1', ['namespace' => 'App\Controllers\Api', 'filter' => 'cor
     // ---------- PUBLIK (tanpa token) ----------
     $routes->get('home', 'Publik::home');
     $routes->get('absensi', 'Publik::absensi');
+    // Statistik siswa (agregat saja — tanpa identitas siswa)
+    $routes->get('statistik/siswa', 'Publik::statistikSiswa');
     $routes->get('jadwal/kelas-options', 'Publik::kelasOptions');
     $routes->get('jadwal/guru-options', 'Publik::guruOptions');
     $routes->get('jadwal/kelas/(:num)', 'Publik::jadwalKelas/$1');
@@ -261,14 +263,32 @@ $routes->group('api/v1', ['namespace' => 'App\Controllers\Api', 'filter' => 'cor
         // Dropdown pendukung form (guru/mapel/kelas/jurusan)
         $routes->get('admin/master/options', 'Admin\Options::index');
 
-        // 5 master data ber-pola CRUD identik (guru, mapel, kelas, jurusan, hari)
-        foreach (['guru' => 'Guru', 'mapel' => 'Mapel', 'kelas' => 'Kelas', 'jurusan' => 'Jurusan', 'hari' => 'Hari'] as $seg => $ctrl) {
+        // 7 master data ber-pola CRUD identik
+        foreach ([
+            'guru'    => 'Guru',
+            'mapel'   => 'Mapel',
+            'kelas'   => 'Kelas',
+            'jurusan' => 'Jurusan',
+            'hari'    => 'Hari',
+            'jabatan' => 'Jabatan',
+            'siswa'   => 'Siswa',
+        ] as $seg => $ctrl) {
             $routes->get("admin/master/{$seg}", "Admin\\{$ctrl}::index");
             $routes->post("admin/master/{$seg}", "Admin\\{$ctrl}::store");
             $routes->post("admin/master/{$seg}/bulk-delete", "Admin\\{$ctrl}::bulkDestroy");
             $routes->post("admin/master/{$seg}/(:num)", "Admin\\{$ctrl}::update/\$1");
             $routes->delete("admin/master/{$seg}/(:num)", "Admin\\{$ctrl}::destroy/\$1");
         }
+        // Jabatan — daftar ringkas untuk dropdown
+        $routes->get('admin/master/jabatan/options', 'Admin\Jabatan::options');
+
+        // Siswa — ringkasan agregat (untuk dashboard admin)
+        $routes->get('admin/master/siswa/statistik', 'Admin\Siswa::statistik');
+
+        // Guru — jabatan yang disandang (boleh lebih dari satu, satu utama)
+        $routes->get('admin/master/guru/(:num)/jabatan', 'Admin\Guru::jabatanGet/$1');
+        $routes->post('admin/master/guru/(:num)/jabatan', 'Admin\Guru::jabatanSet/$1');
+
         // Mapel — kompetensi (guru pengampu) & daftar kelompok
         $routes->get('admin/master/mapel/kelompok-list', 'Admin\Mapel::kelompokList');
         $routes->get('admin/master/mapel/(:num)/kompetensi', 'Admin\Mapel::kompetensiGet/$1');

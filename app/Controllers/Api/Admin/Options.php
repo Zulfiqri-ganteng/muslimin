@@ -4,6 +4,7 @@ namespace App\Controllers\Api\Admin;
 
 use App\Controllers\Api\BaseApiController;
 use App\Models\GuruModel;
+use App\Models\JabatanModel;
 use App\Models\JurusanModel;
 use App\Models\KelasModel;
 use App\Models\MataPelajaranModel;
@@ -20,7 +21,7 @@ class Options extends BaseApiController
     public function index()
     {
         $req  = trim((string) $this->request->getGet('types'));
-        $want = $req !== '' ? array_map('trim', explode(',', $req)) : ['guru', 'mapel', 'kelas', 'jurusan'];
+        $want = $req !== '' ? array_map('trim', explode(',', $req)) : ['guru', 'mapel', 'kelas', 'jurusan', 'jabatan'];
 
         $out = [];
         if (in_array('guru', $want, true)) {
@@ -34,6 +35,16 @@ class Options extends BaseApiController
         }
         if (in_array('jurusan', $want, true)) {
             $out['jurusan'] = $this->pairs((new JurusanModel())->options());
+        }
+        if (in_array('jabatan', $want, true)) {
+            // Jabatan membawa penanda struktural agar klien bisa menandainya
+            // (penyandangnya wajib hadir walau tanpa jadwal mengajar).
+            $out['jabatan'] = array_map(static fn ($r) => [
+                'id'            => (int) $r['id'],
+                'label'         => $r['nama'],
+                'is_struktural' => (bool) $r['is_struktural'],
+            ], (new JabatanModel())->select('id, nama, is_struktural')
+                ->orderBy('level', 'ASC')->orderBy('nama', 'ASC')->findAll());
         }
 
         return $this->ok($out);

@@ -167,9 +167,43 @@ Dipakai 2 tabel:
       jabatan, export ikut filter). Menu Jabatan & Siswa sudah punya panduan
       sejak dibuat.
 
-- [ ] **L7 — API v1**
-      `Api\Admin\Jabatan` + `Api\Admin\Siswa` (extends `BaseCrud`),
-      `Publik::statistikSiswa`, field jabatan di rekap absensi & options.
+- [x] **L7 — API v1** ✅ SELESAI 2026-07-19
+      `Api\Admin\Jabatan` + `Api\Admin\Siswa` (extends `BaseCrud`), endpoint
+      jabatan-per-guru, statistik siswa publik, kolom+filter jabatan di rekap,
+      saran struktural di absensi, jabatan di Options.
+      **Teruji 16 skenario** (lihat daftar endpoint di bawah).
+
+### Kontrak endpoint baru (untuk L8 Flutter)
+
+**Publik (tanpa token)**
+| Method | Endpoint | Keterangan |
+|---|---|---|
+| GET | `/api/v1/statistik/siswa` | agregat: `total`, `per_tingkat`, `per_jurusan`, `jenis_kelamin`, `per_tahun`, `tahun`. **Tanpa identitas siswa.** |
+| GET | `/api/v1/home` | `stats` kini memuat `siswa` (jumlah aktif) |
+
+**Admin (Bearer token)**
+| Method | Endpoint | Keterangan |
+|---|---|---|
+| GET/POST | `/admin/master/jabatan` | daftar (`?q=&kategori=&struktural=1&per=&page=`) / tambah |
+| POST/DELETE | `/admin/master/jabatan/{id}` | ubah / hapus |
+| POST | `/admin/master/jabatan/bulk-delete` | body `{ids:[..]}` |
+| GET | `/admin/master/jabatan/options` | dropdown `{id,label,kode,is_struktural}` |
+| GET/POST | `/admin/master/siswa` | daftar (`?q=&kelas_id=&tingkat=&status=&per=&page=`) / tambah |
+| POST/DELETE | `/admin/master/siswa/{id}` | ubah / hapus |
+| POST | `/admin/master/siswa/bulk-delete` | body `{ids:[..]}` |
+| GET | `/admin/master/siswa/statistik` | agregat yang sama untuk dashboard admin |
+| GET | `/admin/master/guru/{id}/jabatan` | jabatan yang disandang guru |
+| POST | `/admin/master/guru/{id}/jabatan` | body `{jabatan_ids:[..], utama_id:n}` — **sinkron penuh** (mengganti, bukan menambah) |
+| GET | `/admin/master/options?types=jabatan` | jabatan ikut di daftar tipe |
+
+**Perubahan pada respons yang sudah ada (non-breaking, hanya penambahan):**
+- `GET /admin/master/guru` → tiap item dapat `jabatan` (utama, boleh null) & `jabatan_list[]`
+- `GET /admin/absensi` → dapat `saran_kerja[]` (guru struktural yang disarankan;
+  **kosong bila tanggal sudah tercatat**). Klien tetap wajib `save-kerja` — saran belum tersimpan.
+- `GET /admin/absensi/rekap` → tiap item dapat `jabatan`, `jabatan_all`,
+  `jabatan_ids[]`, `struktural`; ada filter `?jabatan_id=` + balikan
+  `jabatan_id` & `jabatan_nama`. `sum` dihitung SETELAH filter.
+- `POST/PATCH` siswa menerima `tanggal_lahir` format `Y-m-d`, `dd/mm/yyyy`, `dd-mm-yyyy`.
 
 - [ ] **L8 — Flutter (`C:\flutter-muslimin`)**
       Layar admin Jabatan & Siswa, grafik siswa di Landing, update `BLUEPRINT.md`.

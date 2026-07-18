@@ -12,6 +12,7 @@ use App\Models\KelasModel;
 use App\Models\MataPelajaranModel;
 use App\Models\PengumumanModel;
 use App\Models\SettingModel;
+use App\Models\SiswaModel;
 
 /**
  * Endpoint publik (tanpa token) — cermin dari App\Controllers\Publik untuk web,
@@ -24,14 +25,17 @@ class Publik extends BaseApiController
     {
         $setting = (new SettingModel())->get();
 
-        $stats = cache('publik_stats');
+        // Kunci cache SAMA dengan web (Publik::home) supaya angka di aplikasi
+        // dan di situs tidak pernah berbeda, dan sekali invalidasi cukup.
+        $stats = cache('publik_stats_v2');
         if (! $stats) {
             $stats = [
                 'guru'  => (new GuruModel())->countAllResults(),
                 'kelas' => (new KelasModel())->countAllResults(),
                 'mapel' => (new MataPelajaranModel())->countAllResults(),
+                'siswa' => (new SiswaModel())->where('status', 'aktif')->countAllResults(),
             ];
-            cache()->save('publik_stats', $stats, 1800);
+            cache()->save('publik_stats_v2', $stats, 1800);
         }
 
         return $this->ok([
@@ -287,5 +291,17 @@ class Publik extends BaseApiController
             }
         }
         return ['hari_id' => $hariId, 'hari_nama' => $today, 'jam_ids' => $jamIds, 'label' => $label];
+    }
+
+    /**
+     * GET /api/v1/statistik/siswa — jumlah siswa untuk grafik di aplikasi.
+     *
+     * Hanya AGREGAT (total, per tingkat, per jurusan, jenis kelamin, per tahun
+     * masuk). Identitas siswa — nama, alamat, tanggal lahir — TIDAK PERNAH
+     * dikirim lewat endpoint publik ini; itu data pribadi anak.
+     */
+    public function statistikSiswa()
+    {
+        return $this->ok((new SiswaModel())->statistik());
     }
 }

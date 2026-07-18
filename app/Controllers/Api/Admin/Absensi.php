@@ -7,8 +7,10 @@ use App\Models\AbsensiGuruModel;
 use App\Models\AbsensiHariModel;
 use App\Models\AbsensiKerjaModel;
 use App\Models\AuditModel;
+use App\Models\GuruJabatanModel;
 use App\Models\GuruModel;
 use App\Models\HariModel;
+use App\Models\JabatanModel;
 use App\Models\JadwalModel;
 use App\Models\SettingModel;
 use Dompdf\Dompdf;
@@ -103,6 +105,37 @@ class Absensi extends BaseApiController
             'kode_guru' => $g['kode_guru'] ?? null,
         ], (new GuruModel())->select('id, kode_guru, nama')->orderBy('nama', 'ASC')->findAll());
 
+        // Guru berjabatan struktural (wakil kepala dsb.) wajib hadir walau hari
+        // itu tanpa jadwal KBM. Dikirim sebagai SARAN untuk mengisi panel
+        // Kehadiran Kerja — belum tersimpan, klien wajib memanggil save-kerja.
+        // Setelah tanggal tercatat, saran dikosongkan agar guru yang sengaja
+        // dihapus admin tidak muncul lagi (perilaku sama persis dengan web).
+        $guruJabatan = new GuruJabatanModel();
+        $jabatanMap  = $guruJabatan->mapByGuru();
+        $saran       = [];
+        if (! $recorded) {
+            $sudahAda = array_column($kerja, 'guru_id');
+            foreach ($guruJabatan->guruStrukturalIds() as $gid) {
+                if (in_array($gid, $sudahAda, true) || isset($grup[$gid])) {
+                    continue; // sudah dicatat, atau sudah punya sesi mengajar
+                }
+                foreach ($guruOptions as $g) {
+                    if ($g['id'] === $gid) {
+                        $saran[] = [
+                            'guru_id'    => $gid,
+                            'nama'       => $g['nama'],
+                            'kode_guru'  => $g['kode_guru'],
+                            'jabatan'    => implode(', ', array_column($jabatanMap[$gid] ?? [], 'nama')),
+                            'status'     => 'hadir',
+                            'jam_masuk'  => '',
+                            'keterangan' => '',
+                        ];
+                        break;
+                    }
+                }
+            }
+        }
+
         return $this->ok([
             'tanggal'         => $tanggal,
             'hari_nama'       => $namaHari,
@@ -114,6 +147,7 @@ class Absensi extends BaseApiController
             'guru'            => array_values($grup),
             'kehadiran_kerja' => $kerja,
             'guru_options'    => $guruOptions,
+            'saran_kerja'     => $saran,
         ]);
     }
 
@@ -168,6 +202,16 @@ class Absensi extends BaseApiController
         [$dari, $sampai] = $this->rentang();
         $rows            = $this->rekapData($dari, $sampai);
 
+        // Filter jabatan (mis. hanya wakil kepala). Jumlah dihitung SETELAH
+        // difilter agar total selalu cocok dengan daftar yang dikirim.
+        $jabatanId = (int) $this->request->getGet('jabatan_id');
+        if ($jabatanId > 0) {
+            $rows = array_values(array_filter(
+                $rows,
+                static fn ($r) => in_array($jabatanId, $r['jabatan_ids'], true)
+            ));
+        }
+
         $sum = ['total' => 0, 'hadir' => 0, 'telat' => 0, 'izin' => 0, 'sakit' => 0, 'alpa' => 0];
         foreach ($rows as $r) {
             foreach ($sum as $k => $_) {
@@ -179,6 +223,8 @@ class Absensi extends BaseApiController
             'dari'          => $dari,
             'sampai'        => $sampai,
             'hari_tercatat' => count((new AbsensiHariModel())->datesInRange($dari, $sampai)),
+            'jabatan_id'    => $jabatanId ?: null,
+            'jabatan_nama'  => $jabatanId > 0 ? ((new JabatanModel())->find($jabatanId)['nama'] ?? null) : null,
             'sum'           => $sum,
             'items'         => $rows,
         ]);
@@ -391,6 +437,8 @@ class Absensi extends BaseApiController
         foreach ((new GuruModel())->select('id, kode_guru, nama')->findAll() as $gr) {
             $guruMap[(int) $gr['id']] = $gr;
         }
+        // Jabatan seluruh guru dalam 1 query (kolom & filter Jabatan).
+        $jabatanMap = (new GuruJabatanModel())->mapByGuru();
 
         $rows = [];
         foreach ($daily as $gid => $perTgl) {
@@ -406,10 +454,17 @@ class Absensi extends BaseApiController
             $total = count($perTgl);
             $hadir = max(0, $total - array_sum($cnt));
 
+            $jbt = $jabatanMap[(int) $gid] ?? [];
+
             $rows[] = [
                 'id'    => (int) $gid,
                 'kode'  => $guruMap[$gid]['kode_guru'],
                 'nama'  => $guruMap[$gid]['nama'],
+                // Jabatan utama untuk kolom ringkas; daftar id untuk memfilter.
+                'jabatan'     => $jbt !== [] ? $jbt[0]['nama'] : null,
+                'jabatan_all' => implode(', ', array_column($jbt, 'nama')),
+                'jabatan_ids' => array_map('intval', array_column($jbt, 'id')),
+                'struktural'  => $jbt !== [] && (bool) $jbt[0]['is_struktural'],
                 'total' => $total, 'hadir' => $hadir,
                 'telat' => $cnt['telat'], 'izin' => $cnt['izin'], 'sakit' => $cnt['sakit'], 'alpa' => $cnt['alpa'],
             ];
