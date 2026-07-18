@@ -54,12 +54,15 @@ if (! function_exists('master_data_changed')) {
         $ripple = [
             'guru'         => ['kelas', 'pengampu', 'ketersediaan'],
             'mapel'        => ['pengampu'],
-            'kelas'        => ['pengampu'],
-            'jurusan'      => ['kelas'],
+            'kelas'        => ['pengampu', 'siswa'],
+            'jurusan'      => ['kelas', 'jabatan'],
             'hari'         => ['ketersediaan'],
             'jam'          => ['ketersediaan'],
             'pengampu'     => [],
             'ketersediaan' => [],
+            // Nama jabatan tampil di daftar guru, jadi daftar guru ikut basi.
+            'jabatan'      => ['guru'],
+            'siswa'        => [],
         ];
 
         // Kunci cache tunggal yang harus dihapus per modul.
@@ -69,6 +72,9 @@ if (! function_exists('master_data_changed')) {
             'kelas'    => ['opt_kelas', 'rekap_beban', 'dash_kurikulum'],
             'jurusan'  => ['opt_jurusan'],
             'pengampu' => ['rekap_beban', 'dash_kurikulum'],
+            'jabatan'  => ['opt_jabatan', 'jabatan_struktural_ids'],
+            // publik_stats memuat jumlah siswa yang tampil di beranda publik.
+            'siswa'    => ['stat_siswa', 'siswa_per_kelas', 'publik_stats'],
         ];
 
         $bump = [];
