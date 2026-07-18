@@ -54,6 +54,17 @@ $routes->group('admin', static function ($routes) {
             $routes->post('guru/bulk-delete', 'Admin\Master\Guru::bulkDelete');
             $routes->get('guru/import-kesediaan', 'Admin\Master\Guru::importFromSubmissions');
 
+            // Siswa
+            $routes->get('siswa', 'Admin\Master\Siswa::index');
+            $routes->post('siswa', 'Admin\Master\Siswa::store');
+            $routes->post('siswa/(:num)', 'Admin\Master\Siswa::update/$1');
+            $routes->get('siswa/delete/(:num)', 'Admin\Master\Siswa::delete/$1');
+            $routes->get('siswa/export', 'Admin\Master\Siswa::export');
+            $routes->get('siswa/template', 'Admin\Master\Siswa::template');
+            $routes->post('siswa/import-preview', 'Admin\Master\Siswa::importPreview');
+            $routes->post('siswa/import-commit', 'Admin\Master\Siswa::importCommit');
+            $routes->post('siswa/bulk-delete', 'Admin\Master\Siswa::bulkDelete');
+
             // Jabatan
             $routes->get('jabatan', 'Admin\Master\Jabatan::index');
             $routes->post('jabatan', 'Admin\Master\Jabatan::store');

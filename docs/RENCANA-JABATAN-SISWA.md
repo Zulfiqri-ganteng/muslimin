@@ -85,9 +85,19 @@ Dipakai 2 tabel:
       relasi, hapus massal). Data uji & jejak audit sudah dibersihkan.
       Tailwind sudah di-rebuild.
 
-- [ ] **L3 — Web: Master Siswa**
-      `Admin\Master\Siswa` (extends `BaseMaster`) + view + rute + menu.
-      Filter kelas/tingkat/jurusan/status + cari, import/export lengkap.
+- [x] **L3 — Web: Master Siswa** ✅ SELESAI 2026-07-18
+      `Admin\Master\Siswa` + view + `siswa.js` + 9 rute + menu sidebar.
+      18 kolom data lengkap; filter kelas/tingkat/status + cari; export
+      **mengikuti filter aktif**; impor mencocokkan **nama kelas** (tak peka
+      huruf besar/spasi ganda) & menerima tanggal `dd/mm/yyyy`, `dd-mm-yyyy`,
+      `Y-m-d`, serial Excel.
+      **Teruji e2e via HTTP (11 skenario)** termasuk yang rawan:
+      dua siswa tanpa NISN → keduanya NULL, tidak bentrok unique;
+      tanggal ngawur & kelas tak dikenal → dikosongkan, baris tetap tersimpan;
+      NIS yang sudah ada → diperbarui bukan diduplikat;
+      impor ulang siswa terhapus → dipulihkan, tetap 1 baris.
+      Data uji & jejak audit dibersihkan; `php -l` bersih; 6 halaman admin
+      di-smoke-test 200 tanpa error; Tailwind di-rebuild.
 
 - [ ] **L4 — Integrasi Jabatan ↔ Guru**
       Kolom "Jabatan" di master guru + editor multi-jabatan (pola modal
