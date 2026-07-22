@@ -205,8 +205,20 @@ Dipakai 2 tabel:
   `jabatan_id` & `jabatan_nama`. `sum` dihitung SETELAH filter.
 - `POST/PATCH` siswa menerima `tanggal_lahir` format `Y-m-d`, `dd/mm/yyyy`, `dd-mm-yyyy`.
 
-- [ ] **L8 — Flutter (`C:\flutter-muslimin`)**
-      Layar admin Jabatan & Siswa, grafik siswa di Landing, update `BLUEPRINT.md`.
+- [x] **L8 — Flutter (`C:\flutter-muslimin`)** ✅ SELESAI 2026-07-22
+      Layar admin **Jabatan** (CRUD via MasterListScreen + `jabatan_form.dart`:
+      kode/nama/kategori/induk/jurusan/level/struktural, induk mengecualikan diri
+      sendiri) & **Siswa** (`siswa_form.dart`: 15 field, date picker tgl lahir,
+      dropdown kelas dari options) didaftarkan di `master_menu_screen.dart`.
+      Guru dapat aksi **Atur Jabatan** (`guru_jabatan_screen.dart`: multi-pilih
+      + penanda utama bintang, sinkron penuh) & subtitle menampilkan jabatan utama.
+      Beranda publik dapat bagian **Statistik Siswa** (`_SiswaStatsSection` di
+      `landing_screen.dart`: angka hero total, komposisi L/P warna `#1e6fd6`+
+      `#b45309`, batang satu warna per tingkat & jurusan; diam bila belum ada
+      siswa/gagal). Service: `admin_service` (jabatanOptions, guruJabatanGet/Set,
+      siswaStatistik) + `public_service` (statistikSiswa). `BLUEPRINT.md`
+      diperbarui (endpoint + peta layar + checklist). `flutter analyze` bersih,
+      `flutter test` lolos. Claude TAK commit (user sendiri).
 
 - [ ] **L9 — Uji e2e + deploy**
       Uji tiap alur, bersihkan data uji, catat langkah deploy.
