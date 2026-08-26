@@ -131,6 +131,7 @@ class Lab extends BaseMaster
         $db->table('aset')->whereIn('lab_id', $ids)->update(['lab_id' => null]);
         $db->table('jurnal_lab')->whereIn('lab_id', $ids)->update(['lab_id' => null]);
         $db->table('jadwal_lab')->whereIn('lab_id', $ids)->delete();
+        (new \App\Models\LabGambarModel())->hapusUntuk('lab', $ids);
     }
 
     // ===================== EXPORT & TEMPLATE =====================

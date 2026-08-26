@@ -183,6 +183,7 @@ class Peminjaman extends BaseController
         $this->model->delete($id);
         $db->transComplete();
 
+        (new \App\Models\LabGambarModel())->hapusUntuk('peminjaman', [$id]);
         master_data_changed('aset');
         $this->audit->record('delete', 'peminjaman', $id, 'Hapus catatan peminjaman');
 

@@ -149,6 +149,7 @@ class Kerusakan extends BaseController
         }
         $db->transComplete();
 
+        (new \App\Models\LabGambarModel())->hapusUntuk('kerusakan', [$id]);
         master_data_changed('aset');
         $this->audit->record('delete', 'kerusakan', $id, 'Hapus laporan kerusakan');
 

@@ -180,6 +180,7 @@ class Perbaikan extends BaseController
         $this->model->delete($id);
         $db->transComplete();
 
+        (new \App\Models\LabGambarModel())->hapusUntuk('perbaikan', [$id]);
         master_data_changed('aset', 'sparepart');
         $this->audit->record('delete', 'perbaikan', $id, 'Hapus catatan perbaikan (stok komponen dipulihkan)');
 

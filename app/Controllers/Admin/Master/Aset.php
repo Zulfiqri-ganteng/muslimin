@@ -193,6 +193,7 @@ class Aset extends BaseMaster
     protected function cleanupRelations(BaseConnection $db, array $ids): void
     {
         $db->table('aset_komputer')->whereIn('aset_id', $ids)->delete();
+        (new \App\Models\LabGambarModel())->hapusUntuk('aset', $ids);
     }
 
     // ===================== DETAIL KOMPUTER (sub-halaman) =====================

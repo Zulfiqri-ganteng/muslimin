@@ -23,6 +23,12 @@ class Sparepart extends BaseMaster
         return new SparepartModel();
     }
 
+    protected function cleanupRelations(\CodeIgniter\Database\BaseConnection $db, array $ids): void
+    {
+        $db->table('sparepart_mutasi')->whereIn('sparepart_id', $ids)->delete();
+        (new \App\Models\LabGambarModel())->hapusUntuk('sparepart', $ids);
+    }
+
     protected function indexUrl(): string
     {
         $qs = array_filter([

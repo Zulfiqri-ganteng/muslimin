@@ -89,6 +89,9 @@ $warnaJenis = [
                             <td class="px-4 py-3 text-center text-slate-600"><?= $r['kapasitas'] !== null ? (int) $r['kapasitas'] : '<span class="text-slate-300">—</span>' ?></td>
                             <td class="px-4 py-3 text-slate-600"><?= $r['teknisi_nama'] !== null ? esc($r['teknisi_nama']) : '<span class="text-slate-300">Belum ditentukan</span>' ?></td>
                             <td class="px-4 py-3 text-right whitespace-nowrap">
+                                <a href="<?= site_url('admin/lab-gambar/lab/' . $r['id']) ?>" title="Foto" class="inline-flex h-8 w-8 items-center justify-center rounded-lg text-slate-500 hover:bg-slate-100 transition align-middle">
+                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
+                                </a>
                                 <?= view('admin/master/partials/row_actions', [
                                     'row'       => $r,
                                     'deleteUrl' => site_url('admin/master/lab/delete/' . $r['id']),

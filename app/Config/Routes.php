@@ -70,6 +70,11 @@ $routes->group('admin', static function ($routes) {
         $routes->get('laporan-lab/pdf', 'Admin\LaporanLab::pdf');
         $routes->get('laporan-lab/excel', 'Admin\LaporanLab::excel');
 
+        // ===== Laboratorium: Galeri Foto (semua entitas) =====
+        $routes->get('lab-gambar/hapus/(:num)', 'Admin\LabGambar::delete/$1');
+        $routes->get('lab-gambar/(:segment)/(:num)', 'Admin\LabGambar::index/$1/$2');
+        $routes->post('lab-gambar/(:segment)/(:num)', 'Admin\LabGambar::upload/$1/$2');
+
         // ===== MASTER DATA (Penjadwalan KBM) =====
         $routes->group('master', static function ($routes) {
             // Guru
@@ -447,6 +452,11 @@ $routes->group('api/v1', ['namespace' => 'App\Controllers\Api', 'filter' => 'cor
         $routes->delete('admin/jurnal-lab/(:num)', 'Admin\JurnalLab::destroy/$1');
 
         $routes->get('admin/laporan-lab', 'Admin\LaporanLab::index');
+
+        // Galeri foto SIMLAB (semua entitas) — unggah multipart, auto-WEBP
+        $routes->delete('admin/lab-gambar/(:num)', 'Admin\LabGambar::destroy/$1');
+        $routes->get('admin/lab-gambar/(:segment)/(:num)', 'Admin\LabGambar::index/$1/$2');
+        $routes->post('admin/lab-gambar/(:segment)/(:num)', 'Admin\LabGambar::upload/$1/$2');
 
         // ---------- PENGUMUMAN ----------
         $routes->get('admin/pengumuman', 'Admin\Pengumuman::index');
