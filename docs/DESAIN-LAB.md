@@ -189,7 +189,13 @@ Semua InnoDB + utf8mb4, mengikuti gaya migrasi yang sudah ada
       **Teruji e2e HTTP (dengan data contoh):** index 200 tanpa error (join per-lab
       jalan, sparepart menipis tampil), PDF %PDF, Excel PK. `php -l` bersih, Tailwind
       rebuild. Data uji dibersihkan.
-- [ ] **(nanti) API + Flutter** — setelah web stabil.
+- [x] **API + Flutter** ✅ SELESAI 2026-08-26
+      **API** (`/api/v1/admin/*`): master lab (Lab/Teknisi/Aset+komputer/Sparepart
+      via BaseCrud, Options dukung 4 tipe) + workflow (Peminjaman/Kerusakan/
+      Perbaikan/JadwalLab/JurnalLab/LaporanLab) + `App\Libraries\LabReport` (dipakai
+      web & API). Teruji e2e via token. **Flutter** (C:\flutter-muslimin): master
+      lab di MasterMenuScreen + tab "Lab" (LabHubScreen) berisi 6 layar workflow.
+      flutter analyze bersih + test lolos.
 
 ---
 

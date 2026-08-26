@@ -374,6 +374,10 @@ $routes->group('api/v1', ['namespace' => 'App\Controllers\Api', 'filter' => 'cor
             'siswa'        => 'Siswa',
             'tahun-ajaran' => 'TahunAjaran',
             'fase'         => 'Fase',
+            'lab'          => 'Lab',
+            'teknisi'      => 'Teknisi',
+            'aset'         => 'Aset',
+            'sparepart'    => 'Sparepart',
         ] as $seg => $ctrl) {
             $routes->get("admin/master/{$seg}", "Admin\\{$ctrl}::index");
             $routes->post("admin/master/{$seg}", "Admin\\{$ctrl}::store");
@@ -381,6 +385,9 @@ $routes->group('api/v1', ['namespace' => 'App\Controllers\Api', 'filter' => 'cor
             $routes->post("admin/master/{$seg}/(:num)", "Admin\\{$ctrl}::update/\$1");
             $routes->delete("admin/master/{$seg}/(:num)", "Admin\\{$ctrl}::destroy/\$1");
         }
+        // Aset — detail komputer 1:1 (di atas rute (:num) generik agar cocok)
+        $routes->get('admin/master/aset/(:num)/komputer', 'Admin\Aset::komputerGet/$1');
+        $routes->post('admin/master/aset/(:num)/komputer', 'Admin\Aset::komputerSet/$1');
         // Tahun Ajaran — aktifkan satu (menonaktifkan yang lain)
         $routes->post('admin/master/tahun-ajaran/(:num)/aktifkan', 'Admin\TahunAjaran::aktifkan/$1');
 
@@ -415,6 +422,31 @@ $routes->group('api/v1', ['namespace' => 'App\Controllers\Api', 'filter' => 'cor
         // Ketersediaan Guru
         $routes->get('admin/master/ketersediaan', 'Admin\Ketersediaan::index');
         $routes->post('admin/master/ketersediaan', 'Admin\Ketersediaan::save');
+
+        // ---------- LABORATORIUM (operasional / jadwal / laporan) ----------
+        $routes->get('admin/peminjaman', 'Admin\Peminjaman::index');
+        $routes->post('admin/peminjaman', 'Admin\Peminjaman::store');
+        $routes->post('admin/peminjaman/(:num)/kembalikan', 'Admin\Peminjaman::kembalikan/$1');
+        $routes->delete('admin/peminjaman/(:num)', 'Admin\Peminjaman::destroy/$1');
+
+        $routes->get('admin/kerusakan', 'Admin\Kerusakan::index');
+        $routes->post('admin/kerusakan', 'Admin\Kerusakan::store');
+        $routes->post('admin/kerusakan/(:num)/status', 'Admin\Kerusakan::status/$1');
+        $routes->delete('admin/kerusakan/(:num)', 'Admin\Kerusakan::destroy/$1');
+
+        $routes->get('admin/perbaikan', 'Admin\Perbaikan::index');
+        $routes->post('admin/perbaikan', 'Admin\Perbaikan::store');
+        $routes->delete('admin/perbaikan/(:num)', 'Admin\Perbaikan::destroy/$1');
+
+        $routes->get('admin/jadwal-lab', 'Admin\JadwalLab::index');
+        $routes->post('admin/jadwal-lab', 'Admin\JadwalLab::store');
+        $routes->delete('admin/jadwal-lab/(:num)', 'Admin\JadwalLab::destroy/$1');
+
+        $routes->get('admin/jurnal-lab', 'Admin\JurnalLab::index');
+        $routes->post('admin/jurnal-lab', 'Admin\JurnalLab::store');
+        $routes->delete('admin/jurnal-lab/(:num)', 'Admin\JurnalLab::destroy/$1');
+
+        $routes->get('admin/laporan-lab', 'Admin\LaporanLab::index');
 
         // ---------- PENGUMUMAN ----------
         $routes->get('admin/pengumuman', 'Admin\Pengumuman::index');
