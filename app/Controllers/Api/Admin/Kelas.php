@@ -57,16 +57,27 @@ class Kelas extends BaseCrud
 
     protected function collect(array $in): array
     {
-        $tingkat = strtoupper(trim((string) ($in['tingkat'] ?? '')));
-        $shift   = strtolower(trim((string) ($in['shift'] ?? '')));
+        $tingkatRaw = strtoupper(trim((string) ($in['tingkat'] ?? '')));
+        $tingkat    = in_array($tingkatRaw, ['X', 'XI', 'XII'], true) ? $tingkatRaw : 'X';
+        $shift      = strtolower(trim((string) ($in['shift'] ?? '')));
 
         return [
             'nama_kelas'    => trim((string) ($in['nama_kelas'] ?? '')),
-            'tingkat'       => in_array($tingkat, ['X', 'XI', 'XII'], true) ? $tingkat : 'X',
+            'tingkat'       => $tingkat,
+            'fase_id'       => (int) ($in['fase_id'] ?? 0) ?: $this->autoFaseId($tingkat),
             'jurusan_id'    => (int) ($in['jurusan_id'] ?? 0) ?: null,
             'wali_kelas_id' => (int) ($in['wali_kelas_id'] ?? 0) ?: null,
             'shift'         => in_array($shift, ['pagi', 'siang'], true) ? $shift : 'pagi',
         ];
+    }
+
+    /** Fase default bila app tak mengirim fase_id: X->E, XI/XII->F (standar SMK). */
+    private function autoFaseId(string $tingkat): ?int
+    {
+        $kode = $tingkat === 'X' ? 'E' : 'F';
+        $row  = db_connect()->table('fase')->select('id')->where('kode', $kode)->get()->getRowArray();
+
+        return $row ? (int) $row['id'] : null;
     }
 
     protected function transform(array $r): array
@@ -76,6 +87,9 @@ class Kelas extends BaseCrud
             'nama_kelas'    => $r['nama_kelas'],
             'tingkat'       => $r['tingkat'],
             'shift'         => $r['shift'],
+            'fase_id'       => isset($r['fase_id']) ? ((int) $r['fase_id'] ?: null) : null,
+            'fase_kode'     => $r['fase_kode'] ?? null,
+            'fase_nama'     => $r['fase_nama'] ?? null,
             'jurusan_id'    => isset($r['jurusan_id']) ? ((int) $r['jurusan_id'] ?: null) : null,
             'jurusan_kode'  => $r['jurusan_kode'] ?? null,
             'jurusan_nama'  => $r['jurusan_nama'] ?? null,

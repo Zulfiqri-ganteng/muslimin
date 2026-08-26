@@ -77,6 +77,53 @@ $routes->group('admin', static function ($routes) {
             $routes->post('jabatan/import-commit', 'Admin\Master\Jabatan::importCommit');
             $routes->post('jabatan/bulk-delete', 'Admin\Master\Jabatan::bulkDelete');
 
+            // ===== Laboratorium & Inventaris (SIMLAB) =====
+            // Teknisi / Penanggung Jawab
+            $routes->get('teknisi', 'Admin\Master\Teknisi::index');
+            $routes->post('teknisi', 'Admin\Master\Teknisi::store');
+            $routes->post('teknisi/(:num)', 'Admin\Master\Teknisi::update/$1');
+            $routes->get('teknisi/delete/(:num)', 'Admin\Master\Teknisi::delete/$1');
+            $routes->get('teknisi/export', 'Admin\Master\Teknisi::export');
+            $routes->get('teknisi/template', 'Admin\Master\Teknisi::template');
+            $routes->post('teknisi/import-preview', 'Admin\Master\Teknisi::importPreview');
+            $routes->post('teknisi/import-commit', 'Admin\Master\Teknisi::importCommit');
+            $routes->post('teknisi/bulk-delete', 'Admin\Master\Teknisi::bulkDelete');
+
+            // Laboratorium
+            $routes->get('lab', 'Admin\Master\Lab::index');
+            $routes->post('lab', 'Admin\Master\Lab::store');
+            $routes->post('lab/(:num)', 'Admin\Master\Lab::update/$1');
+            $routes->get('lab/delete/(:num)', 'Admin\Master\Lab::delete/$1');
+            $routes->get('lab/export', 'Admin\Master\Lab::export');
+            $routes->get('lab/template', 'Admin\Master\Lab::template');
+            $routes->post('lab/import-preview', 'Admin\Master\Lab::importPreview');
+            $routes->post('lab/import-commit', 'Admin\Master\Lab::importCommit');
+            $routes->post('lab/bulk-delete', 'Admin\Master\Lab::bulkDelete');
+
+            // Sparepart
+            $routes->get('sparepart', 'Admin\Master\Sparepart::index');
+            $routes->post('sparepart', 'Admin\Master\Sparepart::store');
+            $routes->post('sparepart/(:num)', 'Admin\Master\Sparepart::update/$1');
+            $routes->get('sparepart/delete/(:num)', 'Admin\Master\Sparepart::delete/$1');
+            $routes->get('sparepart/export', 'Admin\Master\Sparepart::export');
+            $routes->get('sparepart/template', 'Admin\Master\Sparepart::template');
+            $routes->post('sparepart/import-preview', 'Admin\Master\Sparepart::importPreview');
+            $routes->post('sparepart/import-commit', 'Admin\Master\Sparepart::importCommit');
+            $routes->post('sparepart/bulk-delete', 'Admin\Master\Sparepart::bulkDelete');
+
+            // Aset / Inventaris (+ detail komputer 1:1)
+            $routes->get('aset', 'Admin\Master\Aset::index');
+            $routes->post('aset', 'Admin\Master\Aset::store');
+            $routes->get('aset/komputer/(:num)', 'Admin\Master\Aset::komputer/$1');
+            $routes->post('aset/komputer/(:num)', 'Admin\Master\Aset::komputerSave/$1');
+            $routes->post('aset/(:num)', 'Admin\Master\Aset::update/$1');
+            $routes->get('aset/delete/(:num)', 'Admin\Master\Aset::delete/$1');
+            $routes->get('aset/export', 'Admin\Master\Aset::export');
+            $routes->get('aset/template', 'Admin\Master\Aset::template');
+            $routes->post('aset/import-preview', 'Admin\Master\Aset::importPreview');
+            $routes->post('aset/import-commit', 'Admin\Master\Aset::importCommit');
+            $routes->post('aset/bulk-delete', 'Admin\Master\Aset::bulkDelete');
+
             // Mata Pelajaran
             $routes->get('mapel', 'Admin\Master\MataPelajaran::index');
             $routes->post('mapel', 'Admin\Master\MataPelajaran::store');
@@ -133,6 +180,29 @@ $routes->group('admin', static function ($routes) {
             $routes->post('hari/import-preview', 'Admin\Master\Hari::importPreview');
             $routes->post('hari/import-commit', 'Admin\Master\Hari::importCommit');
             $routes->post('hari/bulk-delete', 'Admin\Master\Hari::bulkDelete');
+
+            // Fase (Kurikulum Merdeka)
+            $routes->get('fase', 'Admin\Master\Fase::index');
+            $routes->post('fase', 'Admin\Master\Fase::store');
+            $routes->post('fase/(:num)', 'Admin\Master\Fase::update/$1');
+            $routes->get('fase/delete/(:num)', 'Admin\Master\Fase::delete/$1');
+            $routes->get('fase/export', 'Admin\Master\Fase::export');
+            $routes->get('fase/template', 'Admin\Master\Fase::template');
+            $routes->post('fase/import-preview', 'Admin\Master\Fase::importPreview');
+            $routes->post('fase/import-commit', 'Admin\Master\Fase::importCommit');
+            $routes->post('fase/bulk-delete', 'Admin\Master\Fase::bulkDelete');
+
+            // Tahun Ajaran
+            $routes->get('tahun-ajaran', 'Admin\Master\TahunAjaran::index');
+            $routes->post('tahun-ajaran', 'Admin\Master\TahunAjaran::store');
+            $routes->post('tahun-ajaran/(:num)', 'Admin\Master\TahunAjaran::update/$1');
+            $routes->get('tahun-ajaran/delete/(:num)', 'Admin\Master\TahunAjaran::delete/$1');
+            $routes->get('tahun-ajaran/export', 'Admin\Master\TahunAjaran::export');
+            $routes->get('tahun-ajaran/template', 'Admin\Master\TahunAjaran::template');
+            $routes->post('tahun-ajaran/import-preview', 'Admin\Master\TahunAjaran::importPreview');
+            $routes->post('tahun-ajaran/import-commit', 'Admin\Master\TahunAjaran::importCommit');
+            $routes->post('tahun-ajaran/bulk-delete', 'Admin\Master\TahunAjaran::bulkDelete');
+            $routes->post('tahun-ajaran/(:num)/aktifkan', 'Admin\Master\TahunAjaran::aktifkan/$1');
 
             // Jam Pelajaran
             $routes->get('jam', 'Admin\Master\JamPelajaran::index');
@@ -265,13 +335,15 @@ $routes->group('api/v1', ['namespace' => 'App\Controllers\Api', 'filter' => 'cor
 
         // 7 master data ber-pola CRUD identik
         foreach ([
-            'guru'    => 'Guru',
-            'mapel'   => 'Mapel',
-            'kelas'   => 'Kelas',
-            'jurusan' => 'Jurusan',
-            'hari'    => 'Hari',
-            'jabatan' => 'Jabatan',
-            'siswa'   => 'Siswa',
+            'guru'         => 'Guru',
+            'mapel'        => 'Mapel',
+            'kelas'        => 'Kelas',
+            'jurusan'      => 'Jurusan',
+            'hari'         => 'Hari',
+            'jabatan'      => 'Jabatan',
+            'siswa'        => 'Siswa',
+            'tahun-ajaran' => 'TahunAjaran',
+            'fase'         => 'Fase',
         ] as $seg => $ctrl) {
             $routes->get("admin/master/{$seg}", "Admin\\{$ctrl}::index");
             $routes->post("admin/master/{$seg}", "Admin\\{$ctrl}::store");
@@ -279,6 +351,9 @@ $routes->group('api/v1', ['namespace' => 'App\Controllers\Api', 'filter' => 'cor
             $routes->post("admin/master/{$seg}/(:num)", "Admin\\{$ctrl}::update/\$1");
             $routes->delete("admin/master/{$seg}/(:num)", "Admin\\{$ctrl}::destroy/\$1");
         }
+        // Tahun Ajaran — aktifkan satu (menonaktifkan yang lain)
+        $routes->post('admin/master/tahun-ajaran/(:num)/aktifkan', 'Admin\TahunAjaran::aktifkan/$1');
+
         // Jabatan — daftar ringkas untuk dropdown
         $routes->get('admin/master/jabatan/options', 'Admin\Jabatan::options');
 

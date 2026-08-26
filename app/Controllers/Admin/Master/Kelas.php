@@ -2,6 +2,7 @@
 
 namespace App\Controllers\Admin\Master;
 
+use App\Models\FaseModel;
 use App\Models\GuruModel;
 use App\Models\JurusanModel;
 use App\Models\KelasModel;
@@ -69,6 +70,7 @@ class Kelas extends BaseMaster
             'total'       => $data['total'],
             'jurusanOpts' => (new JurusanModel())->options(),
             'guruOpts'    => (new GuruModel())->options(),
+            'faseOpts'    => (new FaseModel())->options(),
         ]);
     }
 
@@ -101,13 +103,25 @@ class Kelas extends BaseMaster
 
     private function collect(): array
     {
+        $tingkat = in_array($this->request->getPost('tingkat'), ['X', 'XI', 'XII'], true) ? $this->request->getPost('tingkat') : 'X';
+
         return [
             'nama_kelas'    => trim((string) $this->request->getPost('nama_kelas')),
-            'tingkat'       => in_array($this->request->getPost('tingkat'), ['X', 'XI', 'XII'], true) ? $this->request->getPost('tingkat') : 'X',
+            'tingkat'       => $tingkat,
+            'fase_id'       => (int) $this->request->getPost('fase_id') ?: $this->autoFaseId($tingkat),
             'jurusan_id'    => (int) $this->request->getPost('jurusan_id') ?: null,
             'wali_kelas_id' => (int) $this->request->getPost('wali_kelas_id') ?: null,
             'shift'         => in_array($this->request->getPost('shift'), ['pagi', 'siang'], true) ? $this->request->getPost('shift') : 'pagi',
         ];
+    }
+
+    /** Fase default bila admin tak memilih manual: X->E, XI/XII->F (standar SMK). */
+    private function autoFaseId(string $tingkat): ?int
+    {
+        $kode = $tingkat === 'X' ? 'E' : 'F';
+        $row  = db_connect()->table('fase')->select('id')->where('kode', $kode)->get()->getRowArray();
+
+        return $row ? (int) $row['id'] : null;
     }
 
     /**

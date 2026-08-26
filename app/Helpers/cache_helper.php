@@ -63,6 +63,11 @@ if (! function_exists('master_data_changed')) {
             // Nama jabatan tampil di daftar guru, jadi daftar guru ikut basi.
             'jabatan'      => ['guru'],
             'siswa'        => [],
+            // Laboratorium & inventaris (SIMLAB).
+            'teknisi'      => ['lab'],   // nama teknisi tampil di daftar lab
+            'lab'          => ['aset'],  // nama lab tampil di daftar aset
+            'aset'         => [],
+            'sparepart'    => [],
         ];
 
         // Kunci cache tunggal yang harus dihapus per modul.
@@ -75,6 +80,8 @@ if (! function_exists('master_data_changed')) {
             'jabatan'  => ['opt_jabatan', 'jabatan_struktural_ids'],
             // publik_stats_v2 memuat jumlah siswa yang tampil di beranda publik.
             'siswa'    => ['stat_siswa', 'siswa_per_kelas', 'publik_stats_v2'],
+            'teknisi'  => ['opt_teknisi'],
+            'lab'      => ['opt_lab'],
         ];
 
         $bump = [];

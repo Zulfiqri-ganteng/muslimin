@@ -9,7 +9,7 @@ class KelasModel extends Model
     protected $table          = 'kelas';
     protected $primaryKey     = 'id';
     protected $returnType     = 'array';
-    protected $allowedFields  = ['nama_kelas', 'tingkat', 'jurusan_id', 'wali_kelas_id', 'shift'];
+    protected $allowedFields  = ['nama_kelas', 'tingkat', 'fase_id', 'jurusan_id', 'wali_kelas_id', 'shift'];
     protected $useTimestamps  = true;
     protected $createdField   = 'created_at';
     protected $updatedField   = 'updated_at';
@@ -21,6 +21,7 @@ class KelasModel extends Model
         'nama_kelas'    => 'required|max_length[50]|is_unique[kelas.nama_kelas,id,{id}]',
         'tingkat'       => 'required|in_list[X,XI,XII]',
         'shift'         => 'required|in_list[pagi,siang]',
+        'fase_id'       => 'permit_empty|is_natural',
         'jurusan_id'    => 'permit_empty|is_natural',
         'wali_kelas_id' => 'permit_empty|is_natural',
     ];
@@ -28,12 +29,13 @@ class KelasModel extends Model
         'nama_kelas' => ['is_unique' => 'Nama kelas sudah ada.', 'required' => 'Nama kelas wajib diisi.'],
     ];
 
-    /** Builder daftar kelas + nama jurusan & wali (left join). */
+    /** Builder daftar kelas + nama jurusan, wali, & fase (left join). */
     public function withRelations()
     {
-        return $this->select('kelas.*, jurusan.kode AS jurusan_kode, jurusan.nama AS jurusan_nama, guru.nama AS wali_nama')
+        return $this->select('kelas.*, jurusan.kode AS jurusan_kode, jurusan.nama AS jurusan_nama, guru.nama AS wali_nama, fase.kode AS fase_kode, fase.nama AS fase_nama')
             ->join('jurusan', 'jurusan.id = kelas.jurusan_id', 'left')
-            ->join('guru', 'guru.id = kelas.wali_kelas_id', 'left');
+            ->join('guru', 'guru.id = kelas.wali_kelas_id', 'left')
+            ->join('fase', 'fase.id = kelas.fase_id', 'left');
     }
 
     /** Opsi kelas untuk dropdown (id => nama_kelas), di-cache. */

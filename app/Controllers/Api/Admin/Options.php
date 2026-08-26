@@ -3,6 +3,7 @@
 namespace App\Controllers\Api\Admin;
 
 use App\Controllers\Api\BaseApiController;
+use App\Models\FaseModel;
 use App\Models\GuruModel;
 use App\Models\JabatanModel;
 use App\Models\JurusanModel;
@@ -21,7 +22,7 @@ class Options extends BaseApiController
     public function index()
     {
         $req  = trim((string) $this->request->getGet('types'));
-        $want = $req !== '' ? array_map('trim', explode(',', $req)) : ['guru', 'mapel', 'kelas', 'jurusan', 'jabatan'];
+        $want = $req !== '' ? array_map('trim', explode(',', $req)) : ['guru', 'mapel', 'kelas', 'jurusan', 'jabatan', 'fase'];
 
         $out = [];
         if (in_array('guru', $want, true)) {
@@ -35,6 +36,9 @@ class Options extends BaseApiController
         }
         if (in_array('jurusan', $want, true)) {
             $out['jurusan'] = $this->pairs((new JurusanModel())->options());
+        }
+        if (in_array('fase', $want, true)) {
+            $out['fase'] = $this->pairs((new FaseModel())->options());
         }
         if (in_array('jabatan', $want, true)) {
             // Jabatan membawa penanda struktural agar klien bisa menandainya

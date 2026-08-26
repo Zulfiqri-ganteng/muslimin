@@ -11,6 +11,7 @@
  * @var int                            $total       Total seluruh data
  * @var array                          $jurusanOpts Opsi jurusan (id => label)
  * @var array                          $guruOpts    Opsi guru (id => label)
+ * @var array                          $faseOpts    Opsi fase Kurikulum Merdeka (id => label)
  */
 ?>
 <?= $this->extend('layouts/admin') ?>
@@ -30,7 +31,7 @@
 <div x-data="masterList"
      data-base="<?= site_url('admin/master/kelas') ?>"
      data-entity="kelas"
-     data-defaults="<?= esc(json_encode(['nama_kelas' => '', 'tingkat' => 'X', 'shift' => 'pagi', 'jurusan_id' => '', 'wali_kelas_id' => '']), 'attr') ?>">
+     data-defaults="<?= esc(json_encode(['nama_kelas' => '', 'tingkat' => 'X', 'fase_id' => '', 'shift' => 'pagi', 'jurusan_id' => '', 'wali_kelas_id' => '']), 'attr') ?>">
 
     <?= view('admin/master/partials/toolbar', [
         'baseUrl'           => site_url('admin/master/kelas'),
@@ -70,6 +71,7 @@
                         <th class="pl-6 pr-2 py-3 w-10"><input type="checkbox" title="Pilih semua di halaman ini" class="js-check-all rounded border-slate-300 text-brand-600 focus:ring-brand-500"></th>
                         <th class="px-6 py-3 font-semibold">Nama Kelas</th>
                         <th class="px-6 py-3 font-semibold w-20">Tingkat</th>
+                        <th class="px-6 py-3 font-semibold w-20">Fase</th>
                         <th class="px-6 py-3 font-semibold w-24">Jurusan</th>
                         <th class="px-6 py-3 font-semibold">Wali Kelas</th>
                         <th class="px-6 py-3 font-semibold w-24">Shift</th>
@@ -78,12 +80,13 @@
                 </thead>
                 <tbody class="divide-y divide-slate-100">
                     <?php if (empty($rows)): ?>
-                        <tr><td colspan="7" class="px-6 py-10 text-center text-slate-400">Belum ada kelas. Tambah manual atau import Excel.</td></tr>
+                        <tr><td colspan="8" class="px-6 py-10 text-center text-slate-400">Belum ada kelas. Tambah manual atau import Excel.</td></tr>
                     <?php else: foreach ($rows as $r): ?>
                         <tr class="hover:bg-slate-50">
                             <td class="pl-6 pr-2 py-3"><input type="checkbox" class="row-check rounded border-slate-300 text-brand-600 focus:ring-brand-500" value="<?= (int) $r['id'] ?>"></td>
                             <td class="px-6 py-3 font-bold text-brand-700"><?= esc($r['nama_kelas']) ?></td>
                             <td class="px-6 py-3"><span class="inline-flex rounded bg-slate-100 text-slate-600 px-2 py-0.5 text-xs font-bold"><?= esc($r['tingkat']) ?></span></td>
+                            <td class="px-6 py-3 text-slate-500"><?= esc($r['fase_kode'] ?: '—') ?></td>
                             <td class="px-6 py-3 text-slate-500"><?= esc($r['jurusan_kode'] ?: '—') ?></td>
                             <td class="px-6 py-3 text-slate-600"><?= esc($r['wali_nama'] ?: '—') ?></td>
                             <td class="px-6 py-3">
@@ -135,6 +138,13 @@
                         <label class="block text-sm font-medium text-slate-600 mb-1">Shift *</label>
                         <select name="shift" x-model="form.shift" class="w-full rounded-lg border border-slate-300 px-3 py-2.5 text-sm focus:border-brand-500 outline-none">
                             <option value="pagi">Pagi</option><option value="siang">Siang</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-slate-600 mb-1">Fase</label>
+                        <select name="fase_id" x-model="form.fase_id" class="w-full rounded-lg border border-slate-300 px-3 py-2.5 text-sm focus:border-brand-500 outline-none">
+                            <option value="">— Otomatis dari tingkat —</option>
+                            <?php foreach ($faseOpts as $id => $label): ?><option value="<?= $id ?>"><?= esc($label) ?></option><?php endforeach; ?>
                         </select>
                     </div>
                     <div>
