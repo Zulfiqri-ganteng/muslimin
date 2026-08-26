@@ -136,20 +136,59 @@ Semua InnoDB + utf8mb4, mengikuti gaya migrasi yang sudah ada
       detail komputer GET/POST tersimpan; sparepart stok 1≤min 5 → MENIPIS; export
       xlsx valid; hapus aset → cleanupRelations hapus aset_komputer. `php -l`
       bersih, Tailwind rebuild, tak ada error render. Data uji dibersihkan.
-- [ ] **P3 — Peminjaman ↔ Pengembalian**
-      Alur pinjam (status aset → dipinjam) + pengembalian (isi tanggal/kondisi,
-      status aset balik → tersedia). Filter status, rekap terlambat. Help card.
-- [ ] **P4 — Kerusakan → Perbaikan/Maintenance → mutasi Sparepart**
-      Lapor kerusakan (status aset → perbaikan) → tindakan perbaikan/maintenance/
-      penggantian; penggantian komponen mengurangi stok sparepart (mutasi keluar).
-      Help card.
-- [ ] **P5 — Jadwal Lab + Jurnal Lab**
-      Jadwal pemakaian lab (anti bentrok slot) + "praktik guru" (filter guru);
-      jurnal realisasi pemakaian. Help card.
-- [ ] **P6 — Laporan Laboratorium**
-      Rekap: daftar aset per lab & kondisi, riwayat peminjaman, kerusakan/
-      perbaikan, pemakaian sparepart, pemakaian lab. Export PDF + Excel (kop resmi
-      via kop_helper). Help card.
+- [x] **P3 — Peminjaman ↔ Pengembalian** ✅ SELESAI 2026-08-26
+      Controller `Admin\Peminjaman` (BUKAN BaseMaster — workflow): index (filter
+      status/cari + ringkasan sedang/terlambat), store (pinjam → set aset
+      'dipinjam', transaksi), kembalikan (isi tgl/kondisi → aset 'tersedia' +
+      kondisi ikut; 'hilang' → aset 'dihapus'), delete (bebaskan aset bila masih
+      dipinjam). View `admin/peminjaman/index.php` (Alpine INLINE 2 modal: Pinjam
+      & Kembalikan, badge Terlambat dihitung rencana<hari-ini). `AsetModel::
+      optionsTersedia()`. Rute `admin/peminjaman/*` (di grup auth, luar master).
+      Sidebar grup baru **"OPERASIONAL LAB"**. Tiap mutasi `master_data_changed('aset')`.
+      **Teruji e2e HTTP:** pinjam→dipinjam/dipinjam; kembali→dikembalikan+aset
+      tersedia/rusak_ringan; hilang→aset dihapus; hapus saat dipinjam→aset bebas.
+      `php -l` bersih, Tailwind rebuild, tak ada error. Data uji dibersihkan.
+- [x] **P4 — Kerusakan → Perbaikan/Maintenance → mutasi Sparepart** ✅ SELESAI 2026-08-26
+      `Admin\Kerusakan` (lapor → aset 'perbaikan'; status modal diproses/selesai/
+      tak_teratasi → bebaskan aset bila tak ada kerusakan lain terbuka;
+      terbukaCount) & `Admin\Perbaikan` (catat perbaikan/maintenance/penggantian;
+      **komponen opsional**: sparepart+jumlah → validasi stok, mutasi keluar +
+      kurangi stok dalam transaksi; hapus perbaikan → PULIHKAN stok; bila selesai
+      & dikaitkan kerusakan → kerusakan selesai + aset tersedia/baik). Model dapat
+      `AsetModel::options()`, `SparepartModel::options()`, `KerusakanModel::
+      optionsTerbuka()/terbukaCount()`. View index masing-masing (Alpine inline).
+      Rute + sidebar OPERASIONAL LAB (+Kerusakan +Perbaikan). Tiap mutasi
+      `master_data_changed('aset','sparepart')`.
+      **Teruji e2e HTTP:** lapor→aset perbaikan; perbaikan+ganti 3 komponen→stok
+      10→7 + mutasi keluar/3 + kerusakan selesai + aset tersedia/baik; hapus
+      perbaikan→stok pulih 10; stok tak cukup (99)→ditolak, stok tetap; ubah
+      status kerusakan→selesai + aset bebas. `php -l` bersih, Tailwind rebuild,
+      tak ada error. Data uji dibersihkan.
+- [x] **P5 — Jadwal Lab + Jurnal Lab** ✅ SELESAI 2026-08-26
+      `Admin\JadwalLab` (mode lab: pilih lab → kelola slot, anti-bentrok
+      slotTerpakai + guru tak boleh 2 lab 1 slot; mode guru: lihat jadwal praktik
+      guru baca-saja; tabel diurut hari.urutan+jam; opsi hari aktif & jam
+      non-istirahat dibangun in-controller) & `Admin\JurnalLab` (CRUD log realisasi
+      + filter lab/tanggal/cari, kondisi_setelah baik/ada_kendala + kendala).
+      View index masing-masing (Alpine inline; jurnal punya field kendala tampil
+      saat ada_kendala). Rute admin/jadwal-lab/* & admin/jurnal-lab/*. Sidebar
+      grup baru **"PENJADWALAN LAB"** (Jadwal Lab + Jurnal Lab).
+      **Teruji e2e HTTP:** GET 200; tambah slot; slot sama DITOLAK (anti-bentrok);
+      jurnal tersimpan (hadir/kondisi/kendala). `php -l` bersih, Tailwind rebuild,
+      tak ada error. Data uji dibersihkan.
+- [x] **P6 — Laporan Laboratorium** ✅ SELESAI 2026-08-26 (MODUL WEB SIMLAB 100%)
+      `Admin\LaporanLab` (index/pdf/excel) — agregasi via `hitung($dari,$sampai)`
+      dengan RAW db builder + deleted_at DIKUALIFIKASI (aset.deleted_at dll, aman
+      saat JOIN — meniru SiswaModel::statistik). Rekap: aset (total/status/kondisi/
+      per-lab), peminjaman (periode + snapshot sedang/terlambat), kerusakan &
+      perbaikan (periode + total biaya), sparepart (menipis), jurnal (sesi per
+      lab). Filter rentang tanggal (default bulan berjalan). View web (stat tiles +
+      bar kondisi + tabel), **PDF** `pdf/laporan_lab.php` (dompdf portrait + kop_pdf),
+      **Excel** (ringkasan + kop_excel_prepend). Rute admin/laporan-lab/{,/pdf,/excel}.
+      Sidebar masuk grup **LAPORAN** yang sudah ada.
+      **Teruji e2e HTTP (dengan data contoh):** index 200 tanpa error (join per-lab
+      jalan, sparepart menipis tampil), PDF %PDF, Excel PK. `php -l` bersih, Tailwind
+      rebuild. Data uji dibersihkan.
 - [ ] **(nanti) API + Flutter** — setelah web stabil.
 
 ---

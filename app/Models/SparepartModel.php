@@ -35,4 +35,15 @@ class SparepartModel extends Model
     {
         return $this->where('stok <= stok_minimum', null, false)->orderBy('nama', 'ASC')->findAll();
     }
+
+    /** Opsi dropdown [id => "kode — nama (stok N satuan)"] untuk penggantian komponen. */
+    public function options(): array
+    {
+        $out = [];
+        foreach ($this->orderBy('nama', 'ASC')->findAll() as $r) {
+            $out[$r['id']] = $r['kode'] . ' — ' . $r['nama'] . ' (stok ' . (int) $r['stok'] . ' ' . $r['satuan'] . ')';
+        }
+
+        return $out;
+    }
 }

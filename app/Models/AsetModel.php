@@ -44,4 +44,27 @@ class AsetModel extends Model
         return $this->select('aset.*, lab.nama AS lab_nama, lab.kode AS lab_kode')
             ->join('lab', 'lab.id = aset.lab_id', 'left');
     }
+
+    /** Opsi SEMUA aset [id => "nomor — nama"] (untuk lapor kerusakan/perbaikan). */
+    public function options(): array
+    {
+        $out = [];
+        foreach ($this->select('id, nomor_aset, nama')->orderBy('nomor_aset', 'ASC')->findAll() as $r) {
+            $out[$r['id']] = $r['nomor_aset'] . ' — ' . $r['nama'];
+        }
+
+        return $out;
+    }
+
+    /** Opsi aset yang TERSEDIA untuk dipinjam [id => "nomor — nama"]. */
+    public function optionsTersedia(): array
+    {
+        $out = [];
+        foreach ($this->select('id, nomor_aset, nama')->where('status', 'tersedia')
+            ->orderBy('nomor_aset', 'ASC')->findAll() as $r) {
+            $out[$r['id']] = $r['nomor_aset'] . ' — ' . $r['nama'];
+        }
+
+        return $out;
+    }
 }

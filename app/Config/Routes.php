@@ -40,6 +40,36 @@ $routes->group('admin', static function ($routes) {
         $routes->post('submissions/status/(:num)', 'Admin\Submissions::updateStatus/$1');
         $routes->get('submissions/delete/(:num)', 'Admin\Submissions::delete/$1');
 
+        // ===== Laboratorium: Peminjaman & Pengembalian =====
+        $routes->get('peminjaman', 'Admin\Peminjaman::index');
+        $routes->post('peminjaman', 'Admin\Peminjaman::store');
+        $routes->post('peminjaman/kembalikan/(:num)', 'Admin\Peminjaman::kembalikan/$1');
+        $routes->get('peminjaman/delete/(:num)', 'Admin\Peminjaman::delete/$1');
+
+        // ===== Laboratorium: Kerusakan & Perbaikan =====
+        $routes->get('kerusakan', 'Admin\Kerusakan::index');
+        $routes->post('kerusakan', 'Admin\Kerusakan::store');
+        $routes->post('kerusakan/status/(:num)', 'Admin\Kerusakan::status/$1');
+        $routes->get('kerusakan/delete/(:num)', 'Admin\Kerusakan::delete/$1');
+
+        $routes->get('perbaikan', 'Admin\Perbaikan::index');
+        $routes->post('perbaikan', 'Admin\Perbaikan::store');
+        $routes->get('perbaikan/delete/(:num)', 'Admin\Perbaikan::delete/$1');
+
+        // ===== Laboratorium: Jadwal & Jurnal Lab =====
+        $routes->get('jadwal-lab', 'Admin\JadwalLab::index');
+        $routes->post('jadwal-lab', 'Admin\JadwalLab::store');
+        $routes->get('jadwal-lab/delete/(:num)', 'Admin\JadwalLab::delete/$1');
+
+        $routes->get('jurnal-lab', 'Admin\JurnalLab::index');
+        $routes->post('jurnal-lab', 'Admin\JurnalLab::store');
+        $routes->get('jurnal-lab/delete/(:num)', 'Admin\JurnalLab::delete/$1');
+
+        // ===== Laboratorium: Laporan =====
+        $routes->get('laporan-lab', 'Admin\LaporanLab::index');
+        $routes->get('laporan-lab/pdf', 'Admin\LaporanLab::pdf');
+        $routes->get('laporan-lab/excel', 'Admin\LaporanLab::excel');
+
         // ===== MASTER DATA (Penjadwalan KBM) =====
         $routes->group('master', static function ($routes) {
             // Guru
