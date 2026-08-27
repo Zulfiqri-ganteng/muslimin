@@ -227,6 +227,38 @@ $routes->group('admin', static function ($routes) {
             $routes->post('fase/import-commit', 'Admin\Master\Fase::importCommit');
             $routes->post('fase/bulk-delete', 'Admin\Master\Fase::bulkDelete');
 
+            // ===== Sistem UKK: Tempat Uji & Penguji Eksternal =====
+            $routes->get('tempat-uji', 'Admin\Master\TempatUji::index');
+            $routes->post('tempat-uji', 'Admin\Master\TempatUji::store');
+            $routes->post('tempat-uji/(:num)', 'Admin\Master\TempatUji::update/$1');
+            $routes->get('tempat-uji/delete/(:num)', 'Admin\Master\TempatUji::delete/$1');
+            $routes->get('tempat-uji/export', 'Admin\Master\TempatUji::export');
+            $routes->get('tempat-uji/template', 'Admin\Master\TempatUji::template');
+            $routes->post('tempat-uji/import-preview', 'Admin\Master\TempatUji::importPreview');
+            $routes->post('tempat-uji/import-commit', 'Admin\Master\TempatUji::importCommit');
+            $routes->post('tempat-uji/bulk-delete', 'Admin\Master\TempatUji::bulkDelete');
+
+            $routes->get('penguji-eksternal', 'Admin\Master\PengujiEksternal::index');
+            $routes->post('penguji-eksternal', 'Admin\Master\PengujiEksternal::store');
+            $routes->post('penguji-eksternal/(:num)', 'Admin\Master\PengujiEksternal::update/$1');
+            $routes->get('penguji-eksternal/delete/(:num)', 'Admin\Master\PengujiEksternal::delete/$1');
+            $routes->get('penguji-eksternal/export', 'Admin\Master\PengujiEksternal::export');
+            $routes->get('penguji-eksternal/template', 'Admin\Master\PengujiEksternal::template');
+            $routes->post('penguji-eksternal/import-preview', 'Admin\Master\PengujiEksternal::importPreview');
+            $routes->post('penguji-eksternal/import-commit', 'Admin\Master\PengujiEksternal::importCommit');
+            $routes->post('penguji-eksternal/bulk-delete', 'Admin\Master\PengujiEksternal::bulkDelete');
+
+            $routes->get('paket-soal-ukk', 'Admin\Master\PaketSoalUkk::index');
+            $routes->post('paket-soal-ukk', 'Admin\Master\PaketSoalUkk::store');
+            $routes->get('paket-soal-ukk/hapus-berkas/(:num)/(:segment)', 'Admin\Master\PaketSoalUkk::hapusBerkas/$1/$2');
+            $routes->post('paket-soal-ukk/(:num)', 'Admin\Master\PaketSoalUkk::update/$1');
+            $routes->get('paket-soal-ukk/delete/(:num)', 'Admin\Master\PaketSoalUkk::delete/$1');
+            $routes->get('paket-soal-ukk/export', 'Admin\Master\PaketSoalUkk::export');
+            $routes->get('paket-soal-ukk/template', 'Admin\Master\PaketSoalUkk::template');
+            $routes->post('paket-soal-ukk/import-preview', 'Admin\Master\PaketSoalUkk::importPreview');
+            $routes->post('paket-soal-ukk/import-commit', 'Admin\Master\PaketSoalUkk::importCommit');
+            $routes->post('paket-soal-ukk/bulk-delete', 'Admin\Master\PaketSoalUkk::bulkDelete');
+
             // Tahun Ajaran
             $routes->get('tahun-ajaran', 'Admin\Master\TahunAjaran::index');
             $routes->post('tahun-ajaran', 'Admin\Master\TahunAjaran::store');
@@ -251,6 +283,41 @@ $routes->group('admin', static function ($routes) {
             $routes->post('jam/bulk-delete', 'Admin\Master\JamPelajaran::bulkDelete');
         });
 
+        // ===== UKK: Pendaftaran Peserta =====
+        $routes->get('peserta-ukk', 'Admin\PesertaUkk::index');
+        $routes->get('peserta-ukk/daftarkan', 'Admin\PesertaUkk::daftarkanForm');
+        $routes->post('peserta-ukk/daftarkan', 'Admin\PesertaUkk::daftarkanStore');
+        $routes->post('peserta-ukk/status/(:num)', 'Admin\PesertaUkk::status/$1');
+        $routes->get('peserta-ukk/delete/(:num)', 'Admin\PesertaUkk::delete/$1');
+
+        // ===== UKK: Jadwal + Penugasan Penguji =====
+        $routes->get('jadwal-ukk', 'Admin\JadwalUkk::index');
+        $routes->post('jadwal-ukk', 'Admin\JadwalUkk::store');
+        $routes->get('jadwal-ukk/penguji/(:num)', 'Admin\JadwalUkk::penguji/$1');
+        $routes->post('jadwal-ukk/penguji/(:num)', 'Admin\JadwalUkk::pengujiStore/$1');
+        $routes->get('jadwal-ukk/penguji/(:num)/hapus/(:num)', 'Admin\JadwalUkk::pengujiHapus/$1/$2');
+        $routes->post('jadwal-ukk/(:num)', 'Admin\JadwalUkk::update/$1');
+        $routes->get('jadwal-ukk/delete/(:num)', 'Admin\JadwalUkk::delete/$1');
+
+        // ===== UKK: Penilaian =====
+        $routes->get('penilaian-ukk', 'Admin\PenilaianUkk::index');
+        $routes->get('penilaian-ukk/jadwal/(:num)', 'Admin\PenilaianUkk::jadwal/$1');
+        $routes->post('penilaian-ukk/jadwal/(:num)/simpan', 'Admin\PenilaianUkk::simpan/$1');
+
+        // ===== UKK: Berita Acara =====
+        $routes->get('berita-acara-ukk', 'Admin\BeritaAcaraUkk::index');
+        $routes->post('berita-acara-ukk', 'Admin\BeritaAcaraUkk::store');
+        $routes->get('berita-acara-ukk/pdf/(:num)', 'Admin\BeritaAcaraUkk::pdf/$1');
+        $routes->post('berita-acara-ukk/(:num)', 'Admin\BeritaAcaraUkk::update/$1');
+        $routes->get('berita-acara-ukk/delete/(:num)', 'Admin\BeritaAcaraUkk::delete/$1');
+
+        // ===== UKK: Sertifikat =====
+        $routes->get('sertifikat-ukk', 'Admin\SertifikatUkk::index');
+        $routes->post('sertifikat-ukk', 'Admin\SertifikatUkk::store');
+        $routes->get('sertifikat-ukk/pdf/(:num)', 'Admin\SertifikatUkk::pdf/$1');
+        $routes->post('sertifikat-ukk/(:num)', 'Admin\SertifikatUkk::update/$1');
+        $routes->get('sertifikat-ukk/delete/(:num)', 'Admin\SertifikatUkk::delete/$1');
+
         // ===== PENJADWALAN =====
         $routes->get('jadwal', 'Admin\Jadwal::index');
         $routes->post('jadwal/place', 'Admin\Jadwal::place');
@@ -273,6 +340,11 @@ $routes->group('admin', static function ($routes) {
         $routes->get('absensi/rekap', 'Admin\Absensi::rekap');
         $routes->get('absensi/rekap/guru/(:num)', 'Admin\Absensi::rekapGuru/$1');
         $routes->get('absensi/rekap/(:segment)', 'Admin\Absensi::rekap/$1');
+
+        // ===== LAPORAN UKK =====
+        $routes->get('laporan-ukk', 'Admin\LaporanUkk::index');
+        $routes->get('laporan-ukk/pdf', 'Admin\LaporanUkk::pdf');
+        $routes->get('laporan-ukk/excel', 'Admin\LaporanUkk::excel');
 
         // ===== LAPORAN KURIKULUM =====
         $routes->get('kurikulum/dashboard', 'Admin\Kurikulum::dashboard');

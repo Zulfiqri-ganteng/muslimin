@@ -55,7 +55,7 @@ if (! function_exists('master_data_changed')) {
             'guru'         => ['kelas', 'pengampu', 'ketersediaan'],
             'mapel'        => ['pengampu'],
             'kelas'        => ['pengampu', 'siswa'],
-            'jurusan'      => ['kelas', 'jabatan'],
+            'jurusan'      => ['kelas', 'jabatan', 'paket_soal_ukk'],
             'hari'         => ['ketersediaan'],
             'jam'          => ['ketersediaan'],
             'pengampu'     => [],
@@ -65,9 +65,14 @@ if (! function_exists('master_data_changed')) {
             'siswa'        => [],
             // Laboratorium & inventaris (SIMLAB).
             'teknisi'      => ['lab'],   // nama teknisi tampil di daftar lab
-            'lab'          => ['aset'],  // nama lab tampil di daftar aset
+            'lab'          => ['aset', 'tempat_uji'], // nama lab tampil di daftar aset & tempat uji
             'aset'         => [],
             'sparepart'    => [],
+            // Sistem UKK.
+            'tempat_uji'        => [],
+            'penguji_eksternal' => [],
+            'tahun_ajaran'      => ['paket_soal_ukk'],
+            'paket_soal_ukk'    => [],
         ];
 
         // Kunci cache tunggal yang harus dihapus per modul.
@@ -82,6 +87,10 @@ if (! function_exists('master_data_changed')) {
             'siswa'    => ['stat_siswa', 'siswa_per_kelas', 'publik_stats_v2'],
             'teknisi'  => ['opt_teknisi'],
             'lab'      => ['opt_lab'],
+            // Sistem UKK.
+            'tempat_uji'        => ['opt_tempat_uji'],
+            'penguji_eksternal' => ['opt_penguji_eksternal'],
+            'paket_soal_ukk'    => ['opt_paket_soal_ukk'],
         ];
 
         $bump = [];
