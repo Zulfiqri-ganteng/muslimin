@@ -50,9 +50,9 @@ dibaca langsung di dalam aplikasi:
 
 | Tipe | Web | Android |
 |---|---|---|
-| PDF | penuh | penuh |
-| JPG/PNG/WEBP/GIF/BMP | ya | ya |
-| Teks/CSV/MD/kode | ya | ya |
+| PDF | penuh | penuh (penampil di dalam aplikasi) |
+| JPG/PNG/WEBP/GIF/BMP | ya | ya, bisa dicubit-perbesar |
+| Teks/CSV/MD/kode | ya | buka via app HP |
 | Excel (xlsx/xls) | tabel via SheetJS — isi utuh, format/warna hilang | buka via app HP |
 | Word (docx) | HTML via mammoth.js — isi utuh, layout mendekati | buka via app HP |
 | PowerPoint (pptx) | tak ada renderer → unduh / Office Viewer (bila publik) | buka via app HP |
@@ -368,24 +368,63 @@ ip, user_agent, created_at.
 **🎉 SISI WEB SELESAI (D0–D6b).** Lanjut D7 (API) & D8 (Flutter).
 
 
-- [ ] **D7 — API `/api/v1`**
-      `Api\Admin\Dokumen` + `DokumenFolder` + `DokumenShare` (pola `BaseCrud`
-      & `Api\Admin\LabGambar`): jelajah, unggah multipart, ubah, pindah,
-      hapus/pulihkan, buat & cabut tautan berbagi, unduh berkas (stream
-      Range juga, autentikasi Bearer). Endpoint publik `GET /api/v1/d/<token>`
-      untuk tautan berbagi. Uji e2e memakai token (pola yang sudah terbukti
-      di SIMLAB/UKK).
+- [x] **D7 — API `/api/v1`** ✅ SELESAI & TERUJI e2e 2026-09-20
+      `Api\Admin\Dokumen` (satu controller untuk seluruh modul) + 22 rute di
+      grup `api/v1` admin. Penyajian berkas memakai `DokumenStream` yang sama
+      dengan web, jadi Range/ETag/pengamanan tipe identik di HP.
+      **Keputusan bentuk respons:** `GET admin/dokumen` memulangkan SATU
+      amplop berisi seluruh isi layar (folder kini, remah jejak, subfolder,
+      dokumen, penyimpanan) — satu panggilan per layar, hemat kuota di
+      jaringan sekolah. Tiap dokumen membawa `url_berkas`/`url_unduh`/
+      `url_thumb` lengkap + flag `bisa_pratinjau` supaya klien tak merangkai
+      alamat atau menebak sendiri.
+      **Hasil uji dengan token Bearer:** buat folder 201; unggah 3 berkas →
+      2 berhasil & **MP4 ditolak dengan alasan yang terbaca**; jelajah
+      folder benar; unduh 200 dengan `Content-Disposition` attachment;
+      **tanpa token → 401**; Range → 206; detail membawa share+riwayat;
+      buat tautan → **tamu tanpa token bisa membukanya (200)**; pindah,
+      buang ke sampah, isi sampah, pulihkan, penyimpanan — semua 200.
 
-- [ ] **D8 — Flutter (`C:\flutter-muslimin`)**
-      Hub "Dokumen" (tab baru di `admin_shell.dart`, pola `lab_hub_screen`):
-      jelajah folder + breadcrumb, cari, grid/daftar dengan ikon per tipe.
-      Unggah dari HP: berkas apa pun (`file_picker`), foto/galeri
-      (`image_picker`), HEIC→WEBP di perangkat (`flutter_image_compress`
-      SUDAH terpasang). Pratinjau: PDF (`pdfx`), gambar (`photo_view`),
-      teks; Office → `open_filex` (SUDAH terpasang) membuka dengan aplikasi
-      HP. Unduh dengan progres (`dio` SUDAH terpasang) lalu buka. Buat/salin/
-      bagikan tautan (`share_plus`). **Paket baru yang perlu ditambah:**
-      `file_picker`, `pdfx`, `photo_view`, `share_plus`.
+- [x] **D8 — Flutter (`C:\flutter-muslimin`)** ✅ SELESAI 2026-09-20
+      `DokumenService` (berkas sendiri, bukan menggemukkan `admin_service`)
+      + 3 layar di `lib/features/admin/presentation/dokumen/`:
+      `dokumen_screen` (penjelajah), `dokumen_detail_screen` (baca + kelola
+      tautan), `dokumen_sampah_screen`, plus `dokumen_widgets` (ikon/warna
+      per jenis, lencana akses, bar penyimpanan). Tab **Dokumen** ditambah
+      di `admin_shell` + pintasan "Arsip Dokumen" di menu cepat Dashboard.
+      **Kenyamanan yang dikejar:** tombol kembali perangkat **naik satu
+      folder** (bukan keluar layar), tekan-lama untuk pilih-banyak lalu
+      pindah/buang dari bilah atas, tarik-untuk-muat-ulang, pencarian
+      seluruh arsip, dua mode tampilan, unggah dengan kemajuan per berkas
+      dan laporan kegagalan apa adanya, unggah dari berkas/galeri/kamera
+      (foto dikompres ke WEBP di perangkat), unduh berprogres lalu buka
+      dengan aplikasi HP, dan berbagi lewat lembar berbagi Android.
+      **Karena 7 tab terlalu padat**, `NavigationBar` memakai
+      `labelBehavior: onlyShowSelected`.
+      **Bug lama yang ikut diperbaiki:** pintasan "Input Absensi" di
+      Dashboard memanggil indeks tab 3, yang sejak tab Lab disisipkan justru
+      membuka halaman Lab. Nomor tab kini dipusatkan di `admin_tabs.dart`
+      (`AdminTab.absensi` dst) supaya tak terulang.
+      **Catatan paket (penting).** Aturan di project ini: periksa
+      `android/build.gradle` sebuah paket SEBELUM dipakai — kalau ia
+      menerapkan Kotlin Gradle Plugin 1.8/1.9, build APK pasti gagal
+      (Gradle 9 + AGP 9 + Kotlin 2.3.20).
+      ❌ `pdfx` (pin Kotlin 1.9.23) dan `file_picker` (pin 1.8.22) dicoba
+      dan **membuat build APK gagal**.
+      ✅ **`flutter_pdfview`** dipakai untuk penampil PDF — sisi Androidnya
+      **murni Java, nol Kotlin**, jadi kebal masalah ini. Paket ini juga
+      yang dipakai project **flutter-galajuara** yang toolchain-nya identik;
+      rujuk project itu lebih dulu bila ragu paket Android mana yang aman.
+      ✅ `file_selector` (resmi tim Flutter, Kotlin 2.3.0) untuk memilih berkas.
+      `dependency_overrides` untuk `win32` juga dicoba lalu **dibatalkan**:
+      walau target Android, compiler Dart tetap memeriksa paket Windows
+      sehingga `flutter_secure_storage_windows` gagal dikompilasi — itulah
+      sebabnya `share_plus` bertahan di ^12.0.2.
+      **Verifikasi:** `flutter analyze` **No issues found**, `flutter test`
+      lolos, dan **`flutter build apk --debug --flavor selfhost` BERHASIL**
+      (`app-selfhost-debug.apk` terbentuk) — jadi rantai plugin Android
+      benar-benar terbukti bisa dibangun, bukan sekadar lolos analisis.
+
 
 - [ ] **D9 — Uji e2e + uji keamanan + deploy**
       Matriks uji per tipe berkas (docx/xlsx/pptx/pdf/jpg/png/heic/zip/

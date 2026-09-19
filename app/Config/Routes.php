@@ -575,6 +575,30 @@ $routes->group('api/v1', ['namespace' => 'App\Controllers\Api', 'filter' => 'cor
         $routes->get('admin/laporan-lab', 'Admin\LaporanLab::index');
 
         // Galeri foto SIMLAB (semua entitas) — unggah multipart, auto-WEBP
+        // ===== Manajemen Dokumen (SIMDOK) =====
+        // Rute spesifik didahulukan agar tidak tertelan pola (:num).
+        $routes->get('admin/dokumen', 'Admin\Dokumen::index');
+        $routes->get('admin/dokumen/sampah', 'Admin\Dokumen::sampah');
+        $routes->get('admin/dokumen/penyimpanan', 'Admin\Dokumen::penyimpanan');
+        $routes->post('admin/dokumen/unggah', 'Admin\Dokumen::unggah');
+        $routes->post('admin/dokumen/tautan', 'Admin\Dokumen::tautanStore');
+        $routes->post('admin/dokumen/pindah', 'Admin\Dokumen::pindah');
+        $routes->post('admin/dokumen/folder', 'Admin\Dokumen::folderStore');
+        $routes->post('admin/dokumen/folder/(:num)', 'Admin\Dokumen::folderUpdate/$1');
+        $routes->delete('admin/dokumen/folder/(:num)', 'Admin\Dokumen::folderDestroy/$1');
+        $routes->post('admin/dokumen/folder/(:num)/pulihkan', 'Admin\Dokumen::pulihkanFolder/$1');
+        $routes->post('admin/dokumen/folder/(:num)/bagikan', 'Admin\Dokumen::bagikanFolder/$1');
+        $routes->post('admin/dokumen/share/(:num)/cabut', 'Admin\Dokumen::cabutShare/$1');
+        $routes->match(['get', 'head'], 'admin/dokumen/(:num)/berkas', 'Admin\Dokumen::berkas/$1');
+        $routes->match(['get', 'head'], 'admin/dokumen/(:num)/unduh', 'Admin\Dokumen::unduh/$1');
+        $routes->match(['get', 'head'], 'admin/dokumen/(:num)/thumb', 'Admin\Dokumen::thumb/$1');
+        $routes->post('admin/dokumen/(:num)/pulihkan', 'Admin\Dokumen::pulihkan/$1');
+        $routes->post('admin/dokumen/(:num)/bagikan', 'Admin\Dokumen::bagikan/$1');
+        $routes->delete('admin/dokumen/(:num)/permanen', 'Admin\Dokumen::hapusPermanen/$1');
+        $routes->get('admin/dokumen/(:num)', 'Admin\Dokumen::detail/$1');
+        $routes->post('admin/dokumen/(:num)', 'Admin\Dokumen::update/$1');
+        $routes->delete('admin/dokumen/(:num)', 'Admin\Dokumen::destroy/$1');
+
         $routes->delete('admin/lab-gambar/(:num)', 'Admin\LabGambar::destroy/$1');
         $routes->get('admin/lab-gambar/(:segment)/(:num)', 'Admin\LabGambar::index/$1/$2');
         $routes->post('admin/lab-gambar/(:segment)/(:num)', 'Admin\LabGambar::upload/$1/$2');
