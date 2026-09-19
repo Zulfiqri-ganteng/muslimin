@@ -62,7 +62,9 @@ class Dokumen extends BaseController
         $kategori = $this->pilihan($this->request->getGet('kategori'), $this->daftarKategori());
         $urut     = $this->pilihan($this->request->getGet('urut'), ['created_at', 'judul', 'ukuran', 'jml_unduh'], 'created_at');
         $arah     = strtoupper((string) $this->request->getGet('arah')) === 'ASC' ? 'ASC' : 'DESC';
-        $tampilan = $this->pilihan($this->request->getGet('tampilan'), ['grid', 'daftar'], 'grid');
+        // ikon = tampilan padat ala penjelajah berkas Windows (folder & berkas
+        // dalam satu petak), grid = kartu bergambar, daftar = tabel rinci.
+        $tampilan = $this->pilihan($this->request->getGet('tampilan'), ['grid', 'daftar', 'ikon'], 'grid');
         $per      = in_array((int) $this->request->getGet('per'), self::PER_PAGE, true)
             ? (int) $this->request->getGet('per') : 24;
 

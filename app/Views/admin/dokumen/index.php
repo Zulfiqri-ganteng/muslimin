@@ -56,6 +56,20 @@ $warnaKategori = [
     'lainnya'     => 'bg-slate-100 text-slate-600',
 ];
 
+/** Warna ikon besar pada tampilan ikon — satu warna per jenis berkas
+ *  supaya jenis dokumen bisa dikenali sekilas tanpa membaca label. */
+$warnaIkon = [
+    'pdf'         => 'text-red-500',
+    'dokumen'     => 'text-blue-500',
+    'spreadsheet' => 'text-emerald-500',
+    'presentasi'  => 'text-orange-500',
+    'gambar'      => 'text-violet-500',
+    'audio'       => 'text-pink-500',
+    'video'       => 'text-rose-500',
+    'arsip'       => 'text-amber-500',
+    'lainnya'     => 'text-slate-400',
+];
+
 /** Ikon garis per kategori (path SVG). */
 $ikonKategori = [
     'pdf'         => 'M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z M9 13h6m-6 4h4',
@@ -84,10 +98,12 @@ $persen = $kuotaByte > 0 ? min(100, round($pakai / $kuotaByte * 100)) : 0;
 <?= $this->section('content') ?>
 
 <?= view('admin/partials/help', [
-    'helpKey'   => 'dokumen',
+    'helpKey'   => 'dokumen_v2',
     'helpTitle' => 'Manajemen Dokumen',
     'helpBody'  => '<p>Simpan berkas kerja (Word, Excel, PowerPoint, PDF, foto, dan lainnya) dalam <b>folder bertingkat</b> seperti Google Drive, lalu buka kembali kapan saja dari komputer maupun HP.</p>
-        <p class="mt-1">• <b>Unggah</b> bisa banyak berkas sekaligus — seret ke kotak unggah atau klik untuk memilih.<br>
+        <p class="mt-1">• <b>Pindahkan berkas dengan menyeretnya</b> ke folder tujuan — bisa juga ke nama folder di jalur atas untuk memindahkan keluar. Centang beberapa berkas dulu, lalu seret salah satunya, maka semuanya ikut pindah.<br>
+        • Tiga <b>tampilan</b> di kanan penyaring: <b>ikon</b> (padat, seperti penjelajah berkas di komputer), <b>kotak</b> (kartu besar bergambar), dan <b>daftar</b> (tabel rinci).<br>
+        • <b>Unggah</b> bisa banyak berkas sekaligus — seret ke kotak unggah atau klik untuk memilih.<br>
         • <b>Video</b> tidak disimpan di server (memakan ruang); pakai tombol <b>Tambah Tautan</b> untuk menempelkan tautan YouTube atau Google Drive.<br>
         • <b>Privat</b> = hanya bisa dibuka setelah masuk ke panel ini. <b>Lewat tautan</b> & <b>Publik</b> dipakai saat berkas dibagikan ke guru.<br>
         • <b>Pencarian</b> berlaku ke seluruh arsip, bukan hanya folder yang sedang dibuka.<br>
@@ -99,14 +115,48 @@ $persen = $kuotaByte > 0 ? min(100, round($pakai / $kuotaByte * 100)) : 0;
         editOpen:false, editAction:'', editJudul:'', editDeskripsi:'', editVisib:'privat', editUrl:'', editTipe:'berkas',
         folderEditOpen:false, folderAction:'', folderNama:'', folderDeskripsi:'', folderVisib:'privat',
         pindahOpen:false, pilih:[], seret:false,
+        dndIds:[], dndTarget:null, dndTujuan:0,
         get adaPilihan(){ return this.pilih.length > 0 },
+        get sedangSeret(){ return this.dndIds.length > 0 },
         toggle(id){ const i=this.pilih.indexOf(id); i<0 ? this.pilih.push(id) : this.pilih.splice(i,1) },
         pilihSemua(ids){ this.pilih = this.pilih.length === ids.length ? [] : [...ids] },
+
+        /* --- Seret dokumen ke folder ---
+           Kalau dokumen yang diseret termasuk yang sedang dicentang, SEMUA
+           yang tercentang ikut pindah — itu yang diharapkan orang setelah
+           memilih beberapa berkas. Kalau tidak, cuma yang diseret. */
+        mulaiSeret(id, ev){
+            this.dndIds = this.pilih.includes(id) ? [...this.pilih] : [id];
+            ev.dataTransfer.effectAllowed = 'move';
+            ev.dataTransfer.setData('text/plain', this.dndIds.join(','));
+        },
+        selesaiSeret(){ this.dndIds = []; this.dndTarget = null },
+        lewatiFolder(kunci, ev){
+            if (!this.sedangSeret) return;
+            ev.dataTransfer.dropEffect = 'move';
+            this.dndTarget = kunci;
+        },
+        jatuhkan(folderId){
+            if (!this.sedangSeret) return;
+            this.dndTujuan = folderId === null ? 0 : folderId;
+            this.dndTarget = null;
+            this.$nextTick(() => this.$refs.dndForm.submit());
+        },
         bukaEdit(el){ const d=el.dataset; this.editAction=d.action; this.editJudul=d.judul; this.editDeskripsi=d.deskripsi;
                       this.editVisib=d.visib; this.editUrl=d.url; this.editTipe=d.tipe; this.editOpen=true },
         bukaFolderEdit(el){ const d=el.dataset; this.folderAction=d.action; this.folderNama=d.nama;
                             this.folderDeskripsi=d.deskripsi; this.folderVisib=d.visib; this.folderEditOpen=true }
      }">
+
+    <!-- Formulir tersembunyi untuk pemindahan lewat seret-lepas.
+         Memakai rute yang sama dengan tombol "Pindahkan" agar aturan
+         keamanannya satu pintu (tak ada jalur khusus untuk drag-drop). -->
+    <form method="post" action="<?= site_url('admin/dokumen/pindah') ?>" x-ref="dndForm" class="hidden">
+        <?= csrf_field() ?>
+        <input type="hidden" name="folder_id" value="<?= (int) $folderId ?>">
+        <input type="hidden" name="tujuan" :value="dndTujuan">
+        <template x-for="id in dndIds" :key="'dnd' + id"><input type="hidden" name="ids[]" :value="id"></template>
+    </form>
 
     <!-- ============ Bar atas: remah jejak + aksi ============ -->
     <div class="bg-white rounded-2xl border border-slate-200 shadow-sm p-4 mb-4">
@@ -115,6 +165,8 @@ $persen = $kuotaByte > 0 ? min(100, round($pakai / $kuotaByte * 100)) : 0;
             <!-- Remah jejak -->
             <nav class="flex items-center gap-1 text-sm flex-1 min-w-0 flex-wrap">
                 <a href="<?= esc($url(['folder' => null, 'q' => null])) ?>"
+                   @dragover.prevent="lewatiFolder('akar', $event)" @dragleave="dndTarget=null" @drop.prevent="jatuhkan(null)"
+                   :class="dndTarget === 'akar' ? 'ring-2 ring-brand-500 bg-brand-50' : ''"
                    class="inline-flex items-center gap-1 px-2 py-1 rounded-lg hover:bg-slate-100 <?= $folderId === null ? 'font-semibold text-brand-700' : 'text-slate-600' ?>">
                     <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"/></svg>
                     Dokumen
@@ -122,6 +174,8 @@ $persen = $kuotaByte > 0 ? min(100, round($pakai / $kuotaByte * 100)) : 0;
                 <?php foreach ($jejak as $j) { ?>
                     <svg class="w-4 h-4 text-slate-300 shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7"/></svg>
                     <a href="<?= esc($url(['folder' => $j['id'], 'q' => null])) ?>"
+                       @dragover.prevent="lewatiFolder(<?= (int) $j['id'] ?>, $event)" @dragleave="dndTarget=null" @drop.prevent="jatuhkan(<?= (int) $j['id'] ?>)"
+                       :class="dndTarget === <?= (int) $j['id'] ?> ? 'ring-2 ring-brand-500 bg-brand-50' : ''"
                        class="px-2 py-1 rounded-lg hover:bg-slate-100 truncate max-w-[180px] <?= (int) $j['id'] === $folderId ? 'font-semibold text-brand-700' : 'text-slate-600' ?>"><?= esc($j['nama']) ?></a>
                 <?php } ?>
             </nav>
@@ -198,11 +252,15 @@ $persen = $kuotaByte > 0 ? min(100, round($pakai / $kuotaByte * 100)) : 0;
             <button class="px-4 py-2 rounded-xl bg-slate-800 text-white text-sm font-medium hover:bg-slate-900">Terapkan</button>
 
             <div class="flex items-center gap-1 ml-auto">
-                <a href="<?= esc($url(['tampilan' => 'grid'])) ?>" title="Tampilan kotak"
+                <a href="<?= esc($url(['tampilan' => 'ikon'])) ?>" title="Tampilan ikon — padat, seperti penjelajah berkas Windows"
+                   class="p-2 rounded-lg border <?= $tampilan === 'ikon' ? 'bg-brand-50 border-brand-300 text-brand-700' : 'border-slate-300 text-slate-500 hover:bg-slate-50' ?>">
+                    <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24"><path d="M4 4h4v4H4V4zm6 0h4v4h-4V4zm6 0h4v4h-4V4zM4 10h4v4H4v-4zm6 0h4v4h-4v-4zm6 0h4v4h-4v-4zM4 16h4v4H4v-4zm6 0h4v4h-4v-4zm6 0h4v4h-4v-4z"/></svg>
+                </a>
+                <a href="<?= esc($url(['tampilan' => 'grid'])) ?>" title="Tampilan kotak — kartu besar bergambar"
                    class="p-2 rounded-lg border <?= $tampilan === 'grid' ? 'bg-brand-50 border-brand-300 text-brand-700' : 'border-slate-300 text-slate-500 hover:bg-slate-50' ?>">
                     <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z"/></svg>
                 </a>
-                <a href="<?= esc($url(['tampilan' => 'daftar'])) ?>" title="Tampilan daftar"
+                <a href="<?= esc($url(['tampilan' => 'daftar'])) ?>" title="Tampilan daftar — tabel rinci"
                    class="p-2 rounded-lg border <?= $tampilan === 'daftar' ? 'bg-brand-50 border-brand-300 text-brand-700' : 'border-slate-300 text-slate-500 hover:bg-slate-50' ?>">
                     <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M4 6h16M4 12h16M4 18h16"/></svg>
                 </a>
@@ -233,11 +291,23 @@ $persen = $kuotaByte > 0 ? min(100, round($pakai / $kuotaByte * 100)) : 0;
         <button type="button" @click="pilih=[]" class="text-sm text-slate-500 hover:text-slate-700 ml-auto">Batal pilih</button>
     </div>
 
+    <!-- Petunjuk saat menyeret -->
+    <div x-show="sedangSeret" x-cloak
+         class="fixed bottom-5 left-1/2 -translate-x-1/2 z-[60] px-4 py-2 rounded-full bg-slate-900 text-white text-sm shadow-lg pointer-events-none">
+        Lepaskan di atas folder untuk memindahkan <span x-text="dndIds.length"></span> dokumen
+    </div>
+
     <!-- ============ Subfolder ============ -->
-    <?php if ($subfolder !== []) { ?>
+    <?php if ($subfolder !== [] && $tampilan !== 'ikon') { ?>
         <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3 mb-5">
             <?php foreach ($subfolder as $f) { ?>
-                <div class="group relative bg-white rounded-xl border border-slate-200 hover:border-brand-300 hover:shadow-sm transition">
+                <div class="group relative rounded-xl border transition"
+                     @dragover.prevent="lewatiFolder(<?= (int) $f['id'] ?>, $event)"
+                     @dragleave="dndTarget=null"
+                     @drop.prevent="jatuhkan(<?= (int) $f['id'] ?>)"
+                     :class="dndTarget === <?= (int) $f['id'] ?>
+                        ? 'border-brand-500 ring-2 ring-brand-300 bg-brand-50 scale-[1.02]'
+                        : 'bg-white border-slate-200 hover:border-brand-300 hover:shadow-sm'">
                     <a href="<?= esc($url(['folder' => $f['id'], 'q' => null])) ?>" class="block p-3">
                         <div class="flex items-start gap-2">
                             <svg class="w-9 h-9 text-amber-400 shrink-0" fill="currentColor" viewBox="0 0 24 24"><path d="M10 4H4a2 2 0 00-2 2v12a2 2 0 002 2h16a2 2 0 002-2V8a2 2 0 00-2-2h-8l-2-2z"/></svg>
@@ -279,7 +349,7 @@ $persen = $kuotaByte > 0 ? min(100, round($pakai / $kuotaByte * 100)) : 0;
     <?php } ?>
 
     <!-- ============ Daftar dokumen ============ -->
-    <?php if ($rows === []) { ?>
+    <?php if ($rows === [] && ($tampilan !== 'ikon' || $subfolder === [])) { ?>
         <div class="bg-white rounded-2xl border border-dashed border-slate-300 p-10 text-center">
             <svg class="w-12 h-12 mx-auto text-slate-300" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z"/></svg>
             <p class="mt-3 text-slate-500 text-sm">
@@ -290,6 +360,76 @@ $persen = $kuotaByte > 0 ? min(100, round($pakai / $kuotaByte * 100)) : 0;
             <?php } ?>
         </div>
 
+    <?php } elseif ($tampilan === 'ikon') { ?>
+        <!-- Tampilan ikon: folder dan berkas berbaur dalam satu petak padat,
+             seperti penjelajah berkas di komputer. Folder didahulukan. -->
+        <div class="bg-white rounded-2xl border border-slate-200 shadow-sm p-3">
+            <div class="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 xl:grid-cols-8 gap-1">
+
+                <?php foreach ($subfolder as $f) { ?>
+                    <div class="group relative rounded-lg transition"
+                         @dragover.prevent="lewatiFolder(<?= (int) $f['id'] ?>, $event)"
+                         @dragleave="dndTarget=null"
+                         @drop.prevent="jatuhkan(<?= (int) $f['id'] ?>)"
+                         :class="dndTarget === <?= (int) $f['id'] ?> ? 'bg-brand-100 ring-2 ring-brand-400' : 'hover:bg-slate-100'">
+                        <a href="<?= esc($url(['folder' => $f['id'], 'q' => null])) ?>" draggable="false"
+                           class="block p-2 text-center" title="<?= esc($f['nama']) ?>">
+                            <svg class="w-12 h-12 mx-auto text-amber-400" fill="currentColor" viewBox="0 0 24 24"><path d="M10 4H4a2 2 0 00-2 2v12a2 2 0 002 2h16a2 2 0 002-2V8a2 2 0 00-2-2h-8l-2-2z"/></svg>
+                            <p class="mt-1 text-[11px] leading-tight text-slate-700 font-medium break-words line-clamp-2"><?= esc($f['nama']) ?></p>
+                            <p class="text-[10px] text-slate-400"><?= (int) ($isiFolder[(int) $f['id']] ?? 0) ?> berkas</p>
+                        </a>
+                        <form method="post" action="<?= site_url('admin/dokumen/folder/' . $f['id'] . '/hapus') ?>"
+                              class="absolute top-1 right-1 hidden group-hover:block"
+                              onsubmit="return confirm('Buang folder ini beserta SELURUH isinya ke tempat sampah?')">
+                            <?= csrf_field() ?>
+                            <button class="p-1 rounded bg-white/90 border border-slate-200 text-slate-400 hover:text-red-700" title="Buang folder">
+                                <svg class="w-3 h-3" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
+                            </button>
+                        </form>
+                    </div>
+                <?php } ?>
+
+                <?php foreach ($rows as $r) {
+                    $id   = (int) $r['id'];
+                    $kat  = (string) $r['kategori'];
+                    $link = $r['tipe'] === 'tautan';
+                    ?>
+                    <div class="group relative rounded-lg transition cursor-grab active:cursor-grabbing"
+                         draggable="true"
+                         @dragstart="mulaiSeret(<?= $id ?>, $event)" @dragend="selesaiSeret()"
+                         :class="{ 'bg-brand-100 ring-2 ring-brand-400': pilih.includes(<?= $id ?>),
+                                   'hover:bg-slate-100': !pilih.includes(<?= $id ?>),
+                                   'opacity-40': dndIds.includes(<?= $id ?>) }">
+
+                        <label class="absolute top-1 left-1 z-10 cursor-pointer opacity-0 group-hover:opacity-100"
+                               :class="pilih.includes(<?= $id ?>) ? 'opacity-100' : ''">
+                            <input type="checkbox" :checked="pilih.includes(<?= $id ?>)" @change="toggle(<?= $id ?>)"
+                                   class="w-3.5 h-3.5 rounded border-slate-300 text-brand-600 focus:ring-brand-500">
+                        </label>
+
+                        <a href="<?= site_url('admin/dokumen/pratinjau/' . $id) ?>" draggable="false"
+                           class="block p-2 text-center" title="<?= esc($r['judul']) ?>">
+                            <div class="h-12 flex items-center justify-center">
+                                <?php if ($r['thumb']) { ?>
+                                    <img src="<?= site_url('admin/dokumen/thumb/' . $id) ?>" alt="" loading="lazy" draggable="false"
+                                         class="h-12 w-12 object-cover rounded border border-slate-200">
+                                <?php } elseif ($link && $r['penyedia'] === 'youtube' && ($sampul = dokumen_thumb_url_eksternal((string) $r['url_eksternal']))) { ?>
+                                    <img src="<?= esc($sampul) ?>" alt="" loading="lazy" draggable="false"
+                                         class="h-12 w-12 object-cover rounded border border-slate-200">
+                                <?php } else { ?>
+                                    <svg class="w-11 h-11 <?= $warnaIkon[$kat] ?? $warnaIkon['lainnya'] ?>" fill="none" stroke="currentColor" stroke-width="1.4" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="<?= esc($ikonKategori[$kat] ?? $ikonKategori['lainnya']) ?>"/></svg>
+                                <?php } ?>
+                            </div>
+                            <p class="mt-1 text-[11px] leading-tight text-slate-700 break-words line-clamp-2"><?= esc($r['judul']) ?></p>
+                            <p class="text-[10px] text-slate-400">
+                                <?= $link ? esc(strtoupper((string) $r['penyedia'])) : esc(dokumen_ukuran_manusia((int) $r['ukuran'])) ?>
+                            </p>
+                        </a>
+                    </div>
+                <?php } ?>
+            </div>
+        </div>
+
     <?php } elseif ($tampilan === 'grid') { ?>
         <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3">
             <?php foreach ($rows as $r) {
@@ -297,20 +437,23 @@ $persen = $kuotaByte > 0 ? min(100, round($pakai / $kuotaByte * 100)) : 0;
                 $kat  = (string) $r['kategori'];
                 $link = $r['tipe'] === 'tautan';
                 ?>
-                <div class="group relative bg-white rounded-xl border border-slate-200 hover:shadow-md hover:border-brand-300 transition overflow-hidden"
-                     :class="pilih.includes(<?= $id ?>) ? 'ring-2 ring-brand-500 border-brand-400' : ''">
+                <div class="group relative bg-white rounded-xl border border-slate-200 hover:shadow-md hover:border-brand-300 transition overflow-hidden cursor-grab active:cursor-grabbing"
+                     draggable="true"
+                     @dragstart="mulaiSeret(<?= $id ?>, $event)" @dragend="selesaiSeret()"
+                     :class="{ 'ring-2 ring-brand-500 border-brand-400': pilih.includes(<?= $id ?>),
+                               'opacity-40': dndIds.includes(<?= $id ?>) }">
 
                     <label class="absolute top-2 left-2 z-10 cursor-pointer">
                         <input type="checkbox" :checked="pilih.includes(<?= $id ?>)" @change="toggle(<?= $id ?>)"
                                class="w-4 h-4 rounded border-slate-300 text-brand-600 focus:ring-brand-500">
                     </label>
 
-                    <a href="<?= site_url('admin/dokumen/pratinjau/' . $id) ?>"
+                    <a href="<?= site_url('admin/dokumen/pratinjau/' . $id) ?>" draggable="false"
                        class="block aspect-[4/3] bg-slate-50 flex items-center justify-center overflow-hidden">
                         <?php if ($r['thumb']) { ?>
-                            <img src="<?= site_url('admin/dokumen/thumb/' . $id) ?>" alt="" loading="lazy" class="w-full h-full object-cover">
+                            <img src="<?= site_url('admin/dokumen/thumb/' . $id) ?>" alt="" loading="lazy" draggable="false" class="w-full h-full object-cover">
                         <?php } elseif ($link && $r['penyedia'] === 'youtube' && ($sampul = dokumen_thumb_url_eksternal((string) $r['url_eksternal']))) { ?>
-                            <img src="<?= esc($sampul) ?>" alt="" loading="lazy" class="w-full h-full object-cover">
+                            <img src="<?= esc($sampul) ?>" alt="" loading="lazy" draggable="false" class="w-full h-full object-cover">
                         <?php } else { ?>
                             <svg class="w-10 h-10 text-slate-300" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="<?= esc($ikonKategori[$kat] ?? $ikonKategori['lainnya']) ?>"/></svg>
                         <?php } ?>
@@ -382,7 +525,10 @@ $persen = $kuotaByte > 0 ? min(100, round($pakai / $kuotaByte * 100)) : 0;
                             $kat  = (string) $r['kategori'];
                             $link = $r['tipe'] === 'tautan';
                             ?>
-                            <tr class="hover:bg-slate-50" :class="pilih.includes(<?= $id ?>) ? 'bg-brand-50' : ''">
+                            <tr class="hover:bg-slate-50 cursor-grab active:cursor-grabbing"
+                                draggable="true"
+                                @dragstart="mulaiSeret(<?= $id ?>, $event)" @dragend="selesaiSeret()"
+                                :class="{ 'bg-brand-50': pilih.includes(<?= $id ?>), 'opacity-40': dndIds.includes(<?= $id ?>) }">
                                 <td class="px-3 py-2">
                                     <input type="checkbox" :checked="pilih.includes(<?= $id ?>)" @change="toggle(<?= $id ?>)"
                                            class="w-4 h-4 rounded border-slate-300 text-brand-600 focus:ring-brand-500">

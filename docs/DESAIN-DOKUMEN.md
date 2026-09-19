@@ -344,7 +344,28 @@ ip, user_agent, created_at.
       Saklar `dok_izinkan_video` diuji dua arah: mati → MP4 ditolak, nyala →
       MP4 tersimpan sebagai kategori video.
 
-**🎉 SISI WEB SELESAI (D0–D6).** Lanjut D7 (API) & D8 (Flutter).
+- [x] **D6b — Poles kenyamanan (dari keluhan user setelah deploy)** ✅ 2026-09-20
+      Tiga permintaan setelah modul dipakai sungguhan di kangmuslim.com:
+      1. **Pratinjau PDF kesempitan** karena keterangan mengapit di kanan →
+         penampil kini **selebar halaman** (`h-[85vh] min-h-[520px]`), dan
+         Keterangan/Tautan Berbagi/Riwayat turun ke bawah sebagai 3 kolom.
+      2. **Seret-lepas berkas ke folder.** Kartu/baris dokumen di SEMUA mode
+         tampilan bisa diseret; sasaran lepas = kartu folder **dan** nama
+         folder di remah jejak (untuk memindahkan keluar/naik). Kalau berkas
+         yang diseret termasuk yang sedang dicentang, seluruh centangan ikut
+         pindah. Ada penanda sasaran (cincin biru) + petunjuk melayang
+         "lepaskan di atas folder…". Memakai **rute `pindah` yang sama**
+         dengan tombol Pindahkan lewat formulir tersembunyi — tak ada jalur
+         khusus drag-drop, jadi aturan keamanannya tetap satu pintu.
+      3. **Tampilan ikon** (mode ke-3, ala penjelajah berkas Windows): folder
+         & berkas berbaur dalam satu petak padat 3–8 kolom, ikon besar
+         berwarna per jenis berkas, thumbnail untuk gambar, nama 2 baris.
+      `helpKey` dinaikkan ke `dokumen_v2` agar panduan muncul lagi.
+      Teruji: 3 mode render 200 & semuanya punya pemicu seret, nilai
+      `tampilan` ngawur jatuh ke grid, pemindahan jalan dua arah
+      (ke folder & balik ke akar), kelas Tailwind baru terbentuk.
+
+**🎉 SISI WEB SELESAI (D0–D6b).** Lanjut D7 (API) & D8 (Flutter).
 
 
 - [ ] **D7 — API `/api/v1`**

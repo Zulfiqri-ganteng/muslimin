@@ -57,7 +57,9 @@ $pakaiPustaka    = ! $tautan && in_array($kategori, ['spreadsheet', 'dokumen'], 
         </div>
 
     <?php } elseif ($kategori === 'pdf') { ?>
-        <iframe src="<?= esc($urlIsi) ?>#view=FitH" class="w-full h-[78vh] bg-slate-100" title="<?= esc($judul) ?>"></iframe>
+        <!-- Penampil ini mengisi lebar penuh halaman, jadi tingginya ikut
+             dinaikkan supaya satu halaman A4 terbaca tanpa perlu digulir. -->
+        <iframe src="<?= esc($urlIsi) ?>#view=FitH" class="w-full h-[85vh] min-h-[520px] bg-slate-100" title="<?= esc($judul) ?>"></iframe>
 
     <?php } elseif ($kategori === 'gambar' && ! in_array($ext, ['heic', 'heif', 'svg'], true)) { ?>
         <div class="bg-slate-900 flex items-center justify-center min-h-[50vh]">

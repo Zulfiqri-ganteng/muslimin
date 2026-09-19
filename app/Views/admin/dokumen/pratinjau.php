@@ -77,10 +77,13 @@ $sekolah = (new \App\Models\SettingModel())->get()['school_name'] ?? 'Sekolah';
         </div>
     </div>
 
-    <div class="grid grid-cols-1 lg:grid-cols-3 gap-4">
+    <!-- Penampil dibuat SELEBAR halaman: berkas yang dibaca (PDF/Excel/Word)
+         butuh ruang horizontal, sementara keterangan cukup dibaca sekilas —
+         jadi keterangan turun ke bawah, bukan mengapit di samping. -->
+    <div class="space-y-4">
 
         <!-- Penampil -->
-        <div class="lg:col-span-2 bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+        <div class="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
             <?= view('partials/dokumen_penampil', [
                 'urlIsi'          => $urlIsi,
                 'urlUnduh'        => $urlUnduh,
@@ -99,8 +102,8 @@ $sekolah = (new \App\Models\SettingModel())->get()['school_name'] ?? 'Sekolah';
             ]) ?>
         </div>
 
-        <!-- Panel kanan -->
-        <div class="space-y-4">
+        <!-- Panel bawah: keterangan · tautan berbagi · riwayat -->
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-4 items-start">
 
             <!-- Keterangan -->
             <div class="bg-white rounded-2xl border border-slate-200 shadow-sm p-4">
