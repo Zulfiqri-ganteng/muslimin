@@ -11,6 +11,9 @@ $menu = [
 if ((int) ($setting['absensi_publik'] ?? 1) === 1) {
     $menu[] = ['absensi', 'Absensi'];
 }
+if ((int) ($setting['dokumen_publik'] ?? 0) === 1) {
+    $menu[] = ['dokumen-publik', 'Dokumen'];
+}
 ?>
 <!DOCTYPE html>
 <html lang="id">

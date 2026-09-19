@@ -313,11 +313,40 @@ Semua InnoDB + utf8mb4, mengikuti gaya migrasi yang sudah ada
 **🎉 WEB SELESAI (U0–U8) — seluruh 12 permintaan awal (peserta, paket
 soal, kisi-kisi, jobsheet, jadwal, penguji internal, penguji eksternal,
 tempat uji, penilaian, berita acara, sertifikat, rekap) sudah punya
-alur kerja lengkap end-to-end dan teruji.** Belum di-commit — user commit
-sendiri. Langkah berikut (sesuai arahan user "web dulu baru Android"):
-API `/api/v1/admin/*` (pola A1 SIMLAB: `BaseCrud` utk master, controller
-workflow tersendiri utk peserta/jadwal/penilaian/BA/sertifikat) lalu
-Flutter, MENYUSUL saat diminta.
+alur kerja lengkap end-to-end dan teruji. SUDAH di-push & di-migrate ke
+hosting (kangmuslim.com, 2026-08-27) oleh user.**
+
+---
+
+## Fase Android (API + Flutter)
+
+Pola sama seperti SIMLAB A1–A4 (`[[project-lab-inventaris]]`): API dulu
+(cermin controller web, amplop respons standar `BaseApiController`), lalu
+Flutter (master lalu workflow).
+
+**Keputusan cakupan (2026-08-27):** PDF (Berita Acara & Sertifikat) TETAP
+web-only — mengikuti preseden `LaporanLab` API yang HANYA ekspos data
+JSON (bukan endpoint pdf/excel) krn dompdf/print bukan use-case mobile.
+Mobile untuk BA/Sertifikat = kelola data (index/store/update/destroy)
+saja; cetak PDF tetap lewat browser ke situs web.
+
+- [ ] **A1 — API Master** (`Api\Admin\TempatUji/PengujiEksternal/PaketSoalUkk`
+      extends `BaseCrud`, pola persis `Api\Admin\Lab`) + tambah 3 tipe baru
+      ke `Api\Admin\Options` (tempat_uji, penguji_eksternal, paket_soal_ukk)
+      + daftar di foreach master API Routes.php.
+- [ ] **A2 — API Workflow**: `Api\Admin\PesertaUkk` (index+filter, daftarkan
+      massal, status, destroy), `Api\Admin\JadwalUkk` (+ sub-resource
+      penguji: index/store/destroy), `Api\Admin\PenilaianUkk` (matriks per
+      jadwal + simpan), `Api\Admin\BeritaAcaraUkk`, `Api\Admin\SertifikatUkk`
+      (CRUD data, TANPA pdf), `Api\Admin\LaporanUkk` (index saja, JSON).
+      Ekstrak `Admin\LaporanUkk::hitung()` (web) → `App\Libraries\UkkReport::
+      hitung()` (pola `LabReport`) supaya dipakai bersama web+API.
+- [ ] **A3 — Flutter master** (di `C:\flutter-muslimin`): tambah Tempat
+      Uji/Penguji Eksternal/Paket Soal ke `MasterMenuScreen` + form (pola
+      `lab_form.dart`/`teknisi_form.dart`).
+- [ ] **A4 — Flutter workflow**: layar UKK (peserta/jadwal+penguji/
+      penilaian/berita acara/sertifikat/laporan), pola `lab_hub_screen.dart`
+      grid menu + `admin_service` method baru, tab baru di `admin_shell.dart`.
 
 **Konvensi WAJIB diikuti** (dari `[[project-lab-inventaris]]` &
 `[[project-penjadwalan-kbm]]`): controller master warisi `BaseMaster`

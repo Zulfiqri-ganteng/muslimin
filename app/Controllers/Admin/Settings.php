@@ -41,6 +41,14 @@ class Settings extends BaseController
             'form_open'       => $this->request->getPost('form_open') ? 1 : 0,
             'jadwal_publik'   => $this->request->getPost('jadwal_publik') ? 1 : 0,
             'absensi_publik'  => $this->request->getPost('absensi_publik') ? 1 : 0,
+
+            // --- Manajemen Dokumen ---
+            // Batas ukuran dijepit 1–200 MB: nilai di luar itu percuma karena
+            // server tetap punya batas sendiri (upload_max_filesize).
+            'dok_maks_mb'       => min(200, max(1, (int) $this->request->getPost('dok_maks_mb'))),
+            'dok_kuota_mb'      => max(100, (int) $this->request->getPost('dok_kuota_mb')),
+            'dok_izinkan_video' => $this->request->getPost('dok_izinkan_video') ? 1 : 0,
+            'dokumen_publik'    => $this->request->getPost('dokumen_publik') ? 1 : 0,
         ];
 
         // Upload logo (opsional)

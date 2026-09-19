@@ -118,7 +118,44 @@
                     <span class="block text-xs text-slate-400">Jika dimatikan, halaman Absensi Guru di situs publik disembunyikan (pengelolaan di admin tetap jalan).</span>
                 </span>
             </label>
+            <label class="flex items-center gap-3 cursor-pointer rounded-xl border border-slate-200 p-4 hover:bg-slate-50">
+                <input type="checkbox" name="dokumen_publik" value="1" class="h-5 w-5 rounded border-slate-300 text-brand-600 focus:ring-brand-500" <?= ($setting['dokumen_publik'] ?? 0) ? 'checked' : '' ?>>
+                <span>
+                    <span class="block text-sm font-semibold text-slate-700">Tampilkan halaman Dokumen publik</span>
+                    <span class="block text-xs text-slate-400">Menampilkan menu "Dokumen" di situs publik berisi berkas yang ditandai <b>Publik</b>. Berkas privat & yang dibagikan lewat tautan tidak ikut tampil.</span>
+                </span>
+            </label>
         </div>
+    </div>
+
+    <!-- ===== Manajemen Dokumen ===== -->
+    <div class="bg-white rounded-2xl border border-slate-200 shadow-sm p-5 sm:p-6">
+        <h2 class="text-sm font-bold text-slate-700 uppercase tracking-wide mb-4">Manajemen Dokumen</h2>
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div>
+                <label class="lbl">Batas ukuran per berkas (MB)</label>
+                <input type="number" name="dok_maks_mb" min="1" max="200" value="<?= esc((string) ($setting['dok_maks_mb'] ?? 25)) ?>" class="inp">
+                <p class="text-xs text-slate-400 mt-1">
+                    Server juga punya batasnya sendiri. Bila unggahan gagal padahal masih di bawah angka ini,
+                    berarti batas server (<code>upload_max_filesize</code>) lebih kecil — naikkan lewat cPanel.
+                </p>
+            </div>
+            <div>
+                <label class="lbl">Pagu total penyimpanan (MB)</label>
+                <input type="number" name="dok_kuota_mb" min="100" value="<?= esc((string) ($setting['dok_kuota_mb'] ?? 2048)) ?>" class="inp">
+                <p class="text-xs text-slate-400 mt-1">Dipakai untuk bar "penyimpanan terpakai" dan peringatan saat hampir penuh. Sesuaikan dengan kuota disk hosting.</p>
+            </div>
+        </div>
+        <label class="flex items-center gap-3 cursor-pointer rounded-xl border border-slate-200 p-4 hover:bg-slate-50 mt-4">
+            <input type="checkbox" name="dok_izinkan_video" value="1" class="h-5 w-5 rounded border-slate-300 text-brand-600 focus:ring-brand-500" <?= ($setting['dok_izinkan_video'] ?? 0) ? 'checked' : '' ?>>
+            <span>
+                <span class="block text-sm font-semibold text-slate-700">Izinkan unggah berkas video</span>
+                <span class="block text-xs text-slate-400">
+                    Sengaja <b>dimatikan</b>: satu video kegiatan bisa ratusan MB dan cepat menghabiskan disk hosting.
+                    Selama mati, video ditempel sebagai <b>tautan</b> YouTube/Google Drive. Nyalakan hanya bila kuota disk memang lega.
+                </span>
+            </span>
+        </label>
     </div>
 
     <div class="mt-5 flex justify-end">

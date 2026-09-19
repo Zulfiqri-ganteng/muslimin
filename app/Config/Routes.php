@@ -12,6 +12,20 @@ $routes->get('jadwal-kelas/(:num)/pdf', 'Publik::cetakKelas/$1');
 $routes->get('jadwal-guru/(:num)/pdf', 'Publik::cetakGuru/$1');
 $routes->get('absensi', 'Publik::absensi');
 
+// ===== Berbagi dokumen (TANPA login, dijaga token) =====
+// Rute yang lebih spesifik didahulukan agar tidak tertelan pola (:segment).
+$routes->get('d/(:segment)/berkas/(:num)', 'Berbagi::berkas/$1/$2');
+$routes->get('d/(:segment)/unduh/(:num)', 'Berbagi::unduh/$1/$2');
+$routes->get('d/(:segment)/berkas', 'Berbagi::berkas/$1');
+$routes->get('d/(:segment)/unduh', 'Berbagi::unduh/$1');
+$routes->post('d/(:segment)/buka', 'Berbagi::buka/$1');
+$routes->get('d/(:segment)', 'Berbagi::lihat/$1');
+
+// Daftar dokumen publik (digerbangi settings.dokumen_publik)
+$routes->get('dokumen-publik', 'Berbagi::publik');
+$routes->get('dokumen-publik/(:num)/berkas', 'Berbagi::berkasPublik/$1');
+$routes->get('dokumen-publik/(:num)/unduh', 'Berbagi::unduhPublik/$1');
+
 // Form kesediaan guru (sekunder)
 $routes->get('isi', 'Form::index');
 $routes->post('kirim', 'Form::submit');
@@ -39,6 +53,41 @@ $routes->group('admin', static function ($routes) {
         $routes->get('submissions/view/(:num)', 'Admin\Submissions::view/$1');
         $routes->post('submissions/status/(:num)', 'Admin\Submissions::updateStatus/$1');
         $routes->get('submissions/delete/(:num)', 'Admin\Submissions::delete/$1');
+
+        // ===== Manajemen Dokumen =====
+        // Semua aksi yang mengubah data memakai POST (modul baru sengaja
+        // tidak ikut pola hapus-lewat-GET yang jadi utang CSRF di modul lama).
+        $routes->get('dokumen', 'Admin\Dokumen::index');
+        $routes->get('dokumen/sampah', 'Admin\Dokumen::sampah');
+        $routes->get('dokumen/pratinjau/(:num)', 'Admin\Dokumen::pratinjau/$1');
+        $routes->get('dokumen/penyimpanan', 'Admin\Dokumen::penyimpanan');
+        $routes->post('dokumen/penyimpanan/bersihkan', 'Admin\Dokumen::bersihkanYatim');
+        $routes->post('dokumen/sampah/kosongkan', 'Admin\Dokumen::kosongkanSampah');
+        $routes->post('dokumen/unggah', 'Admin\Dokumen::unggah');
+        $routes->post('dokumen/tautan', 'Admin\Dokumen::tautanStore');
+        $routes->post('dokumen/pindah', 'Admin\Dokumen::pindah');
+        $routes->post('dokumen/hapus-massal', 'Admin\Dokumen::hapusMassal');
+        // Rute folder diletakkan SEBELUM pola (:num) generik agar tidak tertelan.
+        $routes->post('dokumen/folder', 'Admin\Dokumen::folderStore');
+        $routes->post('dokumen/folder/(:num)', 'Admin\Dokumen::folderUpdate/$1');
+        $routes->post('dokumen/folder/(:num)/hapus', 'Admin\Dokumen::folderHapus/$1');
+        $routes->post('dokumen/folder/(:num)/pulihkan', 'Admin\Dokumen::pulihkanFolder/$1');
+        $routes->post('dokumen/(:num)', 'Admin\Dokumen::update/$1');
+        $routes->post('dokumen/(:num)/hapus', 'Admin\Dokumen::hapus/$1');
+        $routes->post('dokumen/(:num)/pulihkan', 'Admin\Dokumen::pulihkan/$1');
+        $routes->post('dokumen/(:num)/hapus-permanen', 'Admin\Dokumen::hapusPermanen/$1');
+        $routes->post('dokumen/(:num)/bagikan', 'Admin\Dokumen::bagikan/$1');
+        $routes->post('dokumen/folder/(:num)/bagikan', 'Admin\Dokumen::bagikanFolder/$1');
+        $routes->post('dokumen/share/(:num)/cabut', 'Admin\Dokumen::cabutShare/$1');
+
+        // ===== Manajemen Dokumen: penyaji berkas =====
+        // Berkas dokumen ada di luar webroot, jadi HANYA bisa keluar lewat
+        // rute ini — yang sudah dijaga filter 'auth' grup ini.
+        // HEAD ikut didaftarkan: pengelola unduhan & pemutar video kerap
+        // menanyakan ukuran berkas lebih dulu sebelum menarik isinya.
+        $routes->match(['get', 'head'], 'dokumen/berkas/(:num)', 'Admin\DokumenFile::lihat/$1');
+        $routes->match(['get', 'head'], 'dokumen/unduh/(:num)', 'Admin\DokumenFile::unduh/$1');
+        $routes->match(['get', 'head'], 'dokumen/thumb/(:num)', 'Admin\DokumenFile::thumb/$1');
 
         // ===== Laboratorium: Peminjaman & Pengembalian =====
         $routes->get('peminjaman', 'Admin\Peminjaman::index');
