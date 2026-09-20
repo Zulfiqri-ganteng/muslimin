@@ -549,9 +549,43 @@ Catatan payload penting:
   baris yang bertabrakan, agar layar bisa menampilkannya langsung.
 - Jam dikirim & dikembalikan sebagai `HH:MM`; tanggal `YYYY-MM-DD`.
 
-**Tidak ada padanan API untuk cetakan** (PDF/Excel) — berkas tetap diunduh
-lewat web. Bila nanti dibutuhkan di aplikasi, tinggal tambah endpoint yang
-memanggil `Admin\LaporanUjian` / `UjianBerkas`.
+### Step 10b — Endpoint cetak API ✅ SELESAI 2026-09-20
+
+Diminta user setelah Step 10 di-push: aplikasi Android wajib bisa mencetak
+juga. Ditambahkan `Api\Admin\UjianCetak` dengan 6 rute GET:
+
+| Endpoint | Keluaran |
+|---|---|
+| `admin/ujian/{slug}/cetak` | JSON: daftar berkas yang tersedia |
+| `admin/ujian/{slug}/cetak/rekap-pdf` | berkas PDF |
+| `admin/ujian/{slug}/cetak/rekap-excel` | berkas XLSX |
+| `admin/ujian/{slug}/cetak/jadwal-excel` | berkas XLSX (ber-kop) |
+| `admin/ujian/{slug}/cetak/daftar-hadir/{jadwalId}` | berkas PDF |
+| `admin/ujian/{slug}/cetak/berita-acara/{jadwalId}` | berkas PDF |
+
+Bawaannya `Content-Disposition: inline` (PDF bisa langsung dipratinjau di
+aplikasi); `?unduh=1` memaksa `attachment`. Galat tetap JSON beramplop, jadi
+klien membedakannya lewat `Content-Type`.
+
+**Perakitan berkas dipindah ke `App\Libraries\UjianCetak`** supaya web dan
+mobile memakai satu mesin — kalau tidak, akan ada dua salinan perakitan
+PDF/Excel yang pasti lekas berbeda isinya. Library itu kini memegang:
+definisi kolom Excel jadwal (dipakai template, ekspor, **dan** parser impor
+— satu definisi, mustahil melenceng), `rekapHtml`/`rekapSpreadsheet`,
+`daftarHadirHtml`/`beritaAcaraHtml`, `nomorBeritaAcara`, serta perender
+`pdf()`/`xlsx()`.
+Akibatnya `Admin\LaporanUjian` menyusut dari 329 → 181 baris dan
+`Admin\UjianBerkas` dari 525 → 425 baris; keduanya kini tinggal
+menyelesaikan periode lalu melempar berkas.
+
+**Teruji e2e HTTP (36/36, lulus sekali jalan):** kelima berkas terunduh &
+valid; header `Content-Type`/`Content-Disposition` benar; `?unduh=1`
+berfungsi; isi Excel dari API **identik (md5 sama)** dengan yang diunduh
+lewat web, dan ukuran PDF berita acara sama persis; tanpa token → 401; slug
+ngawur, sesi tak ada, sesi milik periode lain, dan tahun asing → 404 JSON;
+periode kosong tetap menghasilkan berkas. **Regresi penuh Step 2–10
+dijalankan ulang** (semua hijau; mode ketat juga, kecuali 2 kegagalan
+pre-existing pada halaman laporan lama).
 - [ ] **Step 11 — Flutter: Drawer sidebar + Jadwal Ujian**
       Bottom-nav `flutter-muslimin` sudah 6 tab — nambah tab ke-7 bikin sempit.
       Ganti/tambah **Drawer sidebar kiri** meniru

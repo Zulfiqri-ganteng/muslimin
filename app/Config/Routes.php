@@ -624,6 +624,14 @@ $routes->group('api/v1', ['namespace' => 'App\Controllers\Api', 'filter' => 'cor
         $routes->post('admin/ujian/(:segment)/susulan/(:num)/status', 'Admin\UjianSusulan::status/$1/$2');
         $routes->delete('admin/ujian/(:segment)/susulan/(:num)', 'Admin\UjianSusulan::destroy/$1/$2');
 
+        // Unduhan berkas cetak (balasannya BINER, bukan JSON beramplop).
+        $routes->get('admin/ujian/(:segment)/cetak', 'Admin\UjianCetak::index/$1');
+        $routes->get('admin/ujian/(:segment)/cetak/rekap-pdf', 'Admin\UjianCetak::rekapPdf/$1');
+        $routes->get('admin/ujian/(:segment)/cetak/rekap-excel', 'Admin\UjianCetak::rekapExcel/$1');
+        $routes->get('admin/ujian/(:segment)/cetak/jadwal-excel', 'Admin\UjianCetak::jadwalExcel/$1');
+        $routes->get('admin/ujian/(:segment)/cetak/daftar-hadir/(:num)', 'Admin\UjianCetak::daftarHadir/$1/$2');
+        $routes->get('admin/ujian/(:segment)/cetak/berita-acara/(:num)', 'Admin\UjianCetak::beritaAcara/$1/$2');
+
         $routes->get('admin/ujian/(:segment)/rekap', 'Admin\Ujian::rekap/$1');
         $routes->post('admin/ujian/(:segment)/periode', 'Admin\Ujian::simpanPeriode/$1');
         $routes->get('admin/ujian/(:segment)', 'Admin\Ujian::show/$1');

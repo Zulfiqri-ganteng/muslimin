@@ -3,18 +3,15 @@
 namespace App\Controllers\Admin;
 
 use App\Controllers\BaseController;
+use App\Libraries\UjianCetak;
 use App\Models\AuditModel;
 use App\Models\JurusanModel;
 use App\Models\MataPelajaranModel;
 use App\Models\UjianJadwalModel;
 use App\Models\UjianPeriodeModel;
-use PhpOffice\PhpSpreadsheet\Cell\Coordinate;
 use PhpOffice\PhpSpreadsheet\IOFactory;
 use PhpOffice\PhpSpreadsheet\Shared\Date as ExcelDate;
 use PhpOffice\PhpSpreadsheet\Spreadsheet;
-use PhpOffice\PhpSpreadsheet\Style\Alignment;
-use PhpOffice\PhpSpreadsheet\Style\Fill;
-use PhpOffice\PhpSpreadsheet\Writer\Xlsx;
 
 /**
  * Impor & ekspor berkas Excel untuk modul Ujian.
@@ -46,21 +43,7 @@ class UjianBerkas extends BaseController
             return redirect()->to(site_url('admin/ujian/asts1'))->with('error', 'Jenis ujian tidak dikenal.');
         }
 
-        $ss    = new Spreadsheet();
-        $sheet = $this->lembarBerjudul($ss, 'Jadwal Ujian', array_column($this->kolomImpor(), 'label'), [
-            'A' => 16, 'B' => 10, 'C' => 14, 'D' => 10, 'E' => 20, 'F' => 12, 'G' => 12, 'H' => 16, 'I' => 26,
-        ]);
-
-        // Dua baris contoh memakai kode mapel yang benar-benar ada.
-        $contoh = (new MataPelajaranModel())->orderBy('kode_mapel', 'ASC')->findAll(2);
-        $k1     = $contoh[0]['kode_mapel'] ?? '10MTK';
-        $k2     = $contoh[1]['kode_mapel'] ?? '11MTK';
-        $sheet->fromArray([
-            [$k1, 'X', '', 'pagi', date('Y-m-d'), '07:30', '09:00', 'R1', 'contoh — hapus baris ini'],
-            [$k2, 'XII', 'TJKT', 'siang', date('Y-m-d'), '13:00', '14:30', 'R2', 'kosongkan jurusan bila semua jurusan'],
-        ], null, 'A2', true);
-
-        $this->kirimXlsx($ss, 'template-jadwal-ujian-' . $slug);
+        $this->kirimXlsx(UjianCetak::templateJadwal(), 'template-jadwal-ujian-' . $slug);
     }
 
     /** Ekspor jadwal periode yang sedang dilihat (pakai kop sekolah). */
@@ -76,32 +59,9 @@ class UjianBerkas extends BaseController
             return redirect()->to(site_url('admin/ujian/' . $slug))->with('error', 'Periode ujian tidak ditemukan.');
         }
 
-        $ss    = new Spreadsheet();
-        $sheet = $this->lembarBerjudul($ss, 'Jadwal Ujian', array_column($this->kolomImpor(), 'label'), [
-            'A' => 16, 'B' => 10, 'C' => 14, 'D' => 10, 'E' => 20, 'F' => 12, 'G' => 12, 'H' => 16, 'I' => 26,
-        ]);
-
-        $baris = [];
-        foreach ((new UjianJadwalModel())->untukPeriode((int) $periode['id'])->findAll() as $r) {
-            $baris[] = [
-                $r['kode_mapel'] ?? '',
-                $r['tingkat'],
-                $r['jurusan_kode'] ?? '',
-                $r['shift'],
-                $r['tanggal'],
-                $r['jam_mulai'] ? substr((string) $r['jam_mulai'], 0, 5) : '',
-                $r['jam_selesai'] ? substr((string) $r['jam_selesai'], 0, 5) : '',
-                $r['ruang'] ?? '',
-                $r['keterangan'] ?? '',
-            ];
-        }
-        if ($baris !== []) {
-            $sheet->fromArray($baris, null, 'A2', true);
-        }
-
         $nama = 'jadwal-ujian-' . $slug . '-' . str_replace('/', '-', $periode['tahun_ajaran']);
 
-        $this->kirimXlsx($ss, $nama, 'I');
+        $this->kirimXlsx(UjianCetak::jadwalSpreadsheet($periode), $nama, 'I');
     }
 
     /** Baca berkas unggahan lalu tampilkan pratinjau yang bisa disunting. */
@@ -135,22 +95,7 @@ class UjianBerkas extends BaseController
         }
         unset($r);
 
-        $kolom = $this->kolomImpor();
-        foreach ($kolom as &$k) {
-            if ($k['key'] === 'mapel') {
-                $k['options'] = array_values(array_column(
-                    (new MataPelajaranModel())->select('kode_mapel')->orderBy('kode_mapel', 'ASC')->findAll(),
-                    'kode_mapel'
-                ));
-            }
-            if ($k['key'] === 'jurusan') {
-                $k['options'] = array_values(array_column(
-                    (new JurusanModel())->select('kode')->orderBy('kode', 'ASC')->findAll(),
-                    'kode'
-                ));
-            }
-        }
-        unset($k);
+        $kolom = UjianCetak::opsiKolomImpor();
 
         return view('admin/master/import_preview', [
             'title'     => 'Pratinjau Impor Jadwal Ujian',
@@ -244,23 +189,7 @@ class UjianBerkas extends BaseController
         return redirect()->to($kembali)->with('success', $pesan);
     }
 
-    /** Definisi kolom berkas impor — urutannya = urutan kolom di Excel. */
-    private function kolomImpor(): array
-    {
-        return [
-            ['key' => 'mapel',       'label' => 'Kode Mapel',           'type' => 'datalist', 'required' => true, 'width' => 140],
-            ['key' => 'tingkat',     'label' => 'Tingkat',              'type' => 'select', 'options' => UjianJadwalModel::TINGKAT, 'required' => true, 'width' => 90],
-            ['key' => 'jurusan',     'label' => 'Kode Jurusan',         'type' => 'datalist', 'width' => 120],
-            ['key' => 'shift',       'label' => 'Shift',                'type' => 'select', 'options' => UjianJadwalModel::SHIFT, 'width' => 100],
-            ['key' => 'tanggal',     'label' => 'Tanggal (YYYY-MM-DD)', 'type' => 'text', 'required' => true, 'width' => 150],
-            ['key' => 'jam_mulai',   'label' => 'Jam Mulai',            'type' => 'text', 'width' => 100],
-            ['key' => 'jam_selesai', 'label' => 'Jam Selesai',          'type' => 'text', 'width' => 100],
-            ['key' => 'ruang',       'label' => 'Ruang',                'type' => 'text', 'width' => 120],
-            ['key' => 'keterangan',  'label' => 'Keterangan',           'type' => 'text', 'width' => 180],
-        ];
-    }
-
-    /** Baca berkas Excel yang diunggah jadi array assoc sesuai kolomImpor(). */
+    /** Baca berkas Excel yang diunggah jadi array assoc sesuai UjianCetak::kolomJadwal(). */
     private function bacaUnggahan(): ?array
     {
         $file = $this->request->getFile('file');
@@ -284,7 +213,7 @@ class UjianBerkas extends BaseController
             return null;
         }
 
-        $keys = array_column($this->kolomImpor(), 'key');
+        $keys = array_column(UjianCetak::kolomJadwal(), 'key');
         $rows = [];
         foreach ($data as $i => $row) {
             if ($i === 0) {
@@ -465,36 +394,19 @@ class UjianBerkas extends BaseController
         return false;
     }
 
-    /** Buat lembar kerja berjudul dengan baris header berwarna (pola BaseMaster). */
-    private function lembarBerjudul(Spreadsheet $ss, string $judul, array $headers, array $lebar = [])
-    {
-        $sheet = $ss->getActiveSheet();
-        $sheet->setTitle($judul);
-        $sheet->fromArray($headers, null, 'A1', true);
-
-        $last  = Coordinate::stringFromColumnIndex(count($headers));
-        $range = 'A1:' . $last . '1';
-        $sheet->getStyle($range)->getFont()->setBold(true)->getColor()->setRGB('FFFFFF');
-        $sheet->getStyle($range)->getFill()->setFillType(Fill::FILL_SOLID)->getStartColor()->setRGB('1A3A6B');
-        $sheet->getStyle($range)->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER);
-
-        foreach ($lebar as $kolom => $w) {
-            $sheet->getColumnDimension($kolom)->setWidth($w);
-        }
-
-        return $sheet;
-    }
-
     /** Kirim berkas .xlsx sebagai unduhan (isi $kopKolomAkhir untuk memasang kop). */
     private function kirimXlsx(Spreadsheet $ss, string $namaBerkas, ?string $kopKolomAkhir = null): void
     {
         if ($kopKolomAkhir !== null) {
             kop_excel_prepend($ss->getActiveSheet(), $kopKolomAkhir);
         }
+
+        $isi = UjianCetak::xlsx($ss);
         header('Content-Type: application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
-        header('Content-Disposition: attachment; filename="' . $namaBerkas . '.xlsx"');
+        header('Content-Disposition: attachment; filename="' . UjianCetak::namaAman($namaBerkas . '.xlsx') . '"');
+        header('Content-Length: ' . strlen($isi));
         header('Cache-Control: max-age=0');
-        (new Xlsx($ss))->save('php://output');
+        echo $isi;
         exit;
     }
 
