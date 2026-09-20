@@ -3,8 +3,10 @@
 namespace App\Controllers\Admin;
 
 use App\Controllers\BaseController;
+use App\Libraries\UjianReport;
 use App\Models\SettingModel;
 use App\Models\SubmissionModel;
+use App\Models\UjianPeriodeModel;
 
 class Dashboard extends BaseController
 {
@@ -19,6 +21,8 @@ class Dashboard extends BaseController
             'setting' => (new SettingModel())->get(),
             'recent'  => $model->orderBy('created_at', 'DESC')->findAll(5),
             'absensi' => Absensi::ringkasHarian(date('Y-m-d')), // highlight hari ini
+            // Ringkasan 4 gelombang ujian; hanya membaca, tidak membuat periode.
+            'ujian'   => UjianReport::dashboard((new UjianPeriodeModel())->tahunBerjalan()),
         ]);
     }
 }

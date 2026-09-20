@@ -73,6 +73,11 @@ if (! function_exists('master_data_changed')) {
             'penguji_eksternal' => [],
             'tahun_ajaran'      => ['paket_soal_ukk'],
             'paket_soal_ukk'    => [],
+            // Menu Ujian. Nama mapel/kelas/guru ikut tampil di daftar ujian,
+            // dan menghapus sebuah sesi mengubah catatan susulannya.
+            'ujian_periode'     => ['ujian_jadwal', 'ujian_susulan'],
+            'ujian_jadwal'      => ['ujian_susulan'],
+            'ujian_susulan'     => [],
         ];
 
         // Kunci cache tunggal yang harus dihapus per modul.
@@ -91,6 +96,10 @@ if (! function_exists('master_data_changed')) {
             'tempat_uji'        => ['opt_tempat_uji'],
             'penguji_eksternal' => ['opt_penguji_eksternal'],
             'paket_soal_ukk'    => ['opt_paket_soal_ukk'],
+            // Kartu ringkasan Ujian di Dashboard.
+            'ujian_periode'     => ['dash_ujian'],
+            'ujian_jadwal'      => ['dash_ujian'],
+            'ujian_susulan'     => ['dash_ujian'],
         ];
 
         $bump = [];

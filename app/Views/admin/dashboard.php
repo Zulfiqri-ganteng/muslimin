@@ -140,7 +140,47 @@ $kurCards = [
     </a>
 </div>
 
-<!-- ================= KESEDIAAN GURU ================= -->
+<?php
+// ================= UJIAN (ASTS 1 / ASAS / ASTS 2 / ASAT) =================
+$ujWarna = [
+    'draft'    => ['bg-slate-100 text-slate-600', 'Draft'],
+    'berjalan' => ['bg-emerald-100 text-emerald-700', 'Berjalan'],
+    'selesai'  => ['bg-sky-100 text-sky-700', 'Selesai'],
+];
+?>
+<div class="flex items-center gap-2 mb-3 mt-8">
+    <span class="h-5 w-1.5 rounded-full bg-amber-500"></span>
+    <h2 class="font-bold text-slate-800">Ujian &mdash; TP <?= esc($ujian['tahun']) ?></h2>
+</div>
+
+<div class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
+    <?php foreach ($ujian['kartu'] as $u): ?>
+        <?php [$badge, $labelStatus] = $ujWarna[$u['status']] ?? $ujWarna['draft']; ?>
+        <a href="<?= site_url('admin/ujian/' . $u['slug']) ?>"
+           class="bg-white rounded-2xl border border-slate-200 p-5 shadow-sm transition hover:border-brand-300 hover:shadow">
+            <div class="flex items-center justify-between">
+                <p class="font-bold text-slate-800"><?= esc($u['label']) ?></p>
+                <span class="rounded-full px-2 py-0.5 text-[11px] font-semibold <?= $badge ?>"><?= esc($labelStatus) ?></span>
+            </div>
+            <div class="mt-3 flex items-end gap-4">
+                <div>
+                    <p class="text-2xl font-extrabold text-slate-800"><?= (int) $u['jadwal'] ?></p>
+                    <p class="text-[11px] text-slate-400">sesi</p>
+                </div>
+                <div>
+                    <p class="text-2xl font-extrabold <?= $u['takHadir'] > 0 ? 'text-amber-600' : 'text-slate-300' ?>"><?= (int) $u['takHadir'] ?></p>
+                    <p class="text-[11px] text-slate-400">tidak hadir</p>
+                </div>
+            </div>
+            <?php if ($u['belum'] > 0): ?>
+                <p class="mt-2 text-xs font-semibold text-amber-700"><?= (int) $u['belum'] ?> susulan belum dijadwalkan →</p>
+            <?php else: ?>
+                <p class="mt-2 text-xs text-slate-400">Tidak ada susulan tertunda</p>
+            <?php endif; ?>
+        </a>
+    <?php endforeach; ?>
+</div>
+
 <div class="flex items-center gap-2 mb-3 mt-8">
     <span class="h-5 w-1.5 rounded-full bg-gold-500"></span>
     <h2 class="font-bold text-slate-800">Kesediaan Guru Mengajar</h2>

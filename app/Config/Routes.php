@@ -367,6 +367,33 @@ $routes->group('admin', static function ($routes) {
         $routes->post('sertifikat-ukk/(:num)', 'Admin\SertifikatUkk::update/$1');
         $routes->get('sertifikat-ukk/delete/(:num)', 'Admin\SertifikatUkk::delete/$1');
 
+        // ===== MENU UJIAN (ASTS 1 / ASAS / ASTS 2 / ASAT) =====
+        // Satu controller melayani keempat jenis lewat slug; sub-menu "ujian
+        // susulan" jadi tab, bukan rute terpisah. Aksi ubah data lewat POST
+        // (modul baru tidak ikut pola hapus-lewat-GET modul lama).
+        // Rute POST diletakkan SEBELUM pola (:segment)/(:segment) generik.
+        $routes->get('ujian', 'Admin\Ujian::index');
+        $routes->post('ujian/(:segment)/periode', 'Admin\Ujian::simpanPeriode/$1');
+        $routes->post('ujian/(:segment)/jadwal', 'Admin\Ujian::simpanJadwal/$1');
+        $routes->get('ujian/(:segment)/jadwal/template', 'Admin\UjianBerkas::templateJadwal/$1');
+        $routes->get('ujian/(:segment)/jadwal/export', 'Admin\UjianBerkas::exportJadwal/$1');
+        $routes->post('ujian/(:segment)/jadwal/import-preview', 'Admin\UjianBerkas::importPreviewJadwal/$1');
+        $routes->post('ujian/(:segment)/jadwal/import-commit', 'Admin\UjianBerkas::importCommitJadwal/$1');
+        $routes->post('ujian/(:segment)/jadwal/(:num)/hapus', 'Admin\Ujian::hapusJadwal/$1/$2');
+        $routes->post('ujian/(:segment)/ketidakhadiran', 'Admin\Ujian::simpanKetidakhadiran/$1');
+        $routes->post('ujian/(:segment)/susulan/jadwalkan', 'Admin\Ujian::jadwalkanSusulan/$1');
+        $routes->post('ujian/(:segment)/susulan/(:num)/status', 'Admin\Ujian::statusSusulan/$1/$2');
+        $routes->post('ujian/(:segment)/susulan/(:num)/hapus', 'Admin\Ujian::hapusSusulan/$1/$2');
+        $routes->get('ujian/(:segment)/laporan/pdf', 'Admin\LaporanUjian::pdf/$1');
+        $routes->get('ujian/(:segment)/laporan/excel', 'Admin\LaporanUjian::excel/$1');
+        $routes->get('ujian/(:segment)/daftar-hadir/(:num)', 'Admin\LaporanUjian::daftarHadir/$1/$2');
+        $routes->get('ujian/(:segment)/berita-acara/(:num)', 'Admin\LaporanUjian::beritaAcara/$1/$2');
+        $routes->get('ujian/(:segment)/pengawas/(:num)', 'Admin\Ujian::pengawas/$1/$2');
+        $routes->post('ujian/(:segment)/pengawas/(:num)', 'Admin\Ujian::simpanPengawas/$1/$2');
+        $routes->post('ujian/(:segment)/pengawas/(:num)/hapus/(:num)', 'Admin\Ujian::hapusPengawas/$1/$2/$3');
+        $routes->get('ujian/(:segment)', 'Admin\Ujian::jenis/$1');
+        $routes->get('ujian/(:segment)/(:segment)', 'Admin\Ujian::jenis/$1/$2');
+
         // ===== PENJADWALAN =====
         $routes->get('jadwal', 'Admin\Jadwal::index');
         $routes->post('jadwal/place', 'Admin\Jadwal::place');
@@ -573,6 +600,33 @@ $routes->group('api/v1', ['namespace' => 'App\Controllers\Api', 'filter' => 'cor
         $routes->delete('admin/jurnal-lab/(:num)', 'Admin\JurnalLab::destroy/$1');
 
         $routes->get('admin/laporan-lab', 'Admin\LaporanLab::index');
+
+        // ---------- MENU UJIAN (ASTS 1 / ASAS / ASTS 2 / ASAT) ----------
+        // {slug} = asts1|asas|asts2|asat. Semua endpoint menerima ?tp= untuk
+        // membuka tahun pelajaran lama (kosong = tahun berjalan).
+        // Rute ber-segmen literal didaftarkan SEBELUM pola (:num) agar tidak
+        // tertelan, dan sebelum 'ujian/(:segment)' yang paling generik.
+        $routes->get('admin/ujian', 'Admin\Ujian::index');
+
+        $routes->get('admin/ujian/(:segment)/jadwal', 'Admin\UjianJadwal::index/$1');
+        $routes->post('admin/ujian/(:segment)/jadwal', 'Admin\UjianJadwal::store/$1');
+        $routes->get('admin/ujian/(:segment)/jadwal/(:num)/kelas', 'Admin\UjianJadwal::kelas/$1/$2');
+        $routes->get('admin/ujian/(:segment)/jadwal/(:num)/pengawas', 'Admin\UjianJadwal::pengawasIndex/$1/$2');
+        $routes->post('admin/ujian/(:segment)/jadwal/(:num)/pengawas', 'Admin\UjianJadwal::pengawasStore/$1/$2');
+        $routes->delete('admin/ujian/(:segment)/jadwal/(:num)/pengawas/(:num)', 'Admin\UjianJadwal::pengawasDestroy/$1/$2/$3');
+        $routes->delete('admin/ujian/(:segment)/jadwal/(:num)', 'Admin\UjianJadwal::destroy/$1/$2');
+
+        $routes->get('admin/ujian/(:segment)/ketidakhadiran', 'Admin\UjianSusulan::ketidakhadiran/$1');
+        $routes->post('admin/ujian/(:segment)/ketidakhadiran', 'Admin\UjianSusulan::simpanKetidakhadiran/$1');
+
+        $routes->get('admin/ujian/(:segment)/susulan', 'Admin\UjianSusulan::index/$1');
+        $routes->post('admin/ujian/(:segment)/susulan/jadwalkan', 'Admin\UjianSusulan::jadwalkan/$1');
+        $routes->post('admin/ujian/(:segment)/susulan/(:num)/status', 'Admin\UjianSusulan::status/$1/$2');
+        $routes->delete('admin/ujian/(:segment)/susulan/(:num)', 'Admin\UjianSusulan::destroy/$1/$2');
+
+        $routes->get('admin/ujian/(:segment)/rekap', 'Admin\Ujian::rekap/$1');
+        $routes->post('admin/ujian/(:segment)/periode', 'Admin\Ujian::simpanPeriode/$1');
+        $routes->get('admin/ujian/(:segment)', 'Admin\Ujian::show/$1');
 
         // Galeri foto SIMLAB (semua entitas) — unggah multipart, auto-WEBP
         // ===== Manajemen Dokumen (SIMDOK) =====

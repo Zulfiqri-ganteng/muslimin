@@ -13,6 +13,10 @@ use App\Models\LabModel;
 use App\Models\MataPelajaranModel;
 use App\Models\SparepartModel;
 use App\Models\TeknisiModel;
+use App\Models\UjianJadwalModel;
+use App\Models\UjianPengawasModel;
+use App\Models\UjianPeriodeModel;
+use App\Models\UjianSusulanModel;
 
 /**
  * Sumber data dropdown untuk form master (guru, mapel, kelas, jurusan).
@@ -71,7 +75,53 @@ class Options extends BaseApiController
                 ->orderBy('level', 'ASC')->orderBy('nama', 'ASC')->findAll());
         }
 
+        // ---- Menu Ujian: daftar nilai tetap, supaya klien tidak hard-code ----
+        if (in_array('ujian_tingkat', $want, true)) {
+            $out['ujian_tingkat'] = $this->nilai(UjianJadwalModel::TINGKAT);
+        }
+        if (in_array('ujian_shift', $want, true)) {
+            $out['ujian_shift'] = $this->nilai(UjianJadwalModel::SHIFT, [
+                'pagi' => 'Pagi', 'siang' => 'Siang', 'semua' => 'Pagi & Siang',
+            ]);
+        }
+        if (in_array('ujian_alasan', $want, true)) {
+            $out['ujian_alasan'] = $this->nilai(UjianSusulanModel::ALASAN, [
+                'sakit' => 'Sakit', 'izin' => 'Izin', 'alpa' => 'Alpa', 'lainnya' => 'Lainnya',
+            ]);
+        }
+        if (in_array('ujian_status', $want, true)) {
+            $out['ujian_status'] = $this->nilai(UjianSusulanModel::STATUS, UjianSusulanModel::STATUS_LABEL);
+        }
+        if (in_array('ujian_peran_pengawas', $want, true)) {
+            $out['ujian_peran_pengawas'] = $this->nilai(UjianPengawasModel::PERAN, [
+                'pengawas' => 'Pengawas', 'cadangan' => 'Cadangan',
+            ]);
+        }
+        if (in_array('ujian_jenis', $want, true)) {
+            $out['ujian_jenis'] = array_map(static fn ($j) => [
+                'value' => $j,
+                'slug'  => UjianPeriodeModel::keSlug($j),
+                'label' => UjianPeriodeModel::JENIS_LABEL[$j] ?? $j,
+                'nama'  => UjianPeriodeModel::JENIS_PANJANG[$j] ?? $j,
+            ], UjianPeriodeModel::JENIS);
+        }
+
         return $this->ok($out);
+    }
+
+    /**
+     * Daftar nilai tetap (enum) jadi list [{value,label}].
+     *
+     * @param array<int,string>    $values
+     * @param array<string,string> $labels label khusus; selain itu dipakai
+     *                                     nilainya sendiri dengan huruf besar di depan
+     */
+    private function nilai(array $values, array $labels = []): array
+    {
+        return array_map(static fn ($v) => [
+            'value' => $v,
+            'label' => $labels[$v] ?? ucfirst(str_replace('_', ' ', $v)),
+        ], $values);
     }
 
     /** Ubah map id=>label menjadi list [{id,label}] yang stabil untuk klien. */
