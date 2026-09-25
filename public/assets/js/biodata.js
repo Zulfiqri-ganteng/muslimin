@@ -72,6 +72,8 @@ document.addEventListener('alpine:init', function () {
             cari: '',
             pilih: null,
             buka: { nisn: '', d: '', m: '', y: '', pesan: '', proses: false },
+            // Pengingat Kartu Keluarga (pop-up sebelum mulai mengisi)
+            kk: { buka: false, setuju: false, centang: false, aksi: '' },
 
             // Isian
             f: isiKosong(),
@@ -143,6 +145,30 @@ document.addEventListener('alpine:init', function () {
                 this.$nextTick(function () {
                     if (self.$refs.panel) { self.$refs.panel.scrollIntoView({ behavior: 'smooth', block: 'center' }); }
                 });
+            },
+
+            // ================= Pengingat Kartu Keluarga =================
+            /**
+             * Pop-up KK muncul sebelum siswa mulai / membuka isian. Cukup sekali
+             * per kunjungan: setelah dicentang & disetujui, aksi berikutnya langsung jalan.
+             */
+            mintaKK: function (aksi) {
+                if (aksi !== 'mulai' && aksi !== 'bukaIsian') { return; }
+                if (this.kk.setuju) { this[aksi](); return; }
+                this.kk.aksi = aksi;
+                this.kk.centang = false;
+                this.kk.buka = true;
+            },
+
+            setujuKK: function () {
+                if (!this.kk.centang) { return; }
+                this.kk.setuju = true;
+                this.kk.buka = false;
+                this[this.kk.aksi]();
+            },
+
+            tutupKK: function () {
+                this.kk.buka = false;
             },
 
             /** Siswa belum pernah mengisi → siapkan isian (nama & JK dari data sekolah, lalu draf bila ada). */

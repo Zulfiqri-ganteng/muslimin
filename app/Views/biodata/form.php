@@ -228,7 +228,7 @@ $kepala = static fn (int $no, string $judul): string => '<div class="bio-head"><
                             <p class="mt-0.5 text-lg font-extrabold text-brand-800" x-text="pilih.nama"></p>
                             <p class="text-sm font-semibold text-slate-500" x-text="namaKelas()"></p>
                             <p class="mt-3 text-sm text-slate-600">Benar ini kamu? Pastikan tidak salah pilih nama teman.</p>
-                            <button type="button" @click="mulai()" class="btn-nav-primary w-full mt-3">Ya, ini saya — Mulai Isi &rarr;</button>
+                            <button type="button" @click="mintaKK('mulai')" class="btn-nav-primary w-full mt-3">Ya, ini saya — Mulai Isi &rarr;</button>
                         </div>
                     </template>
                     <template x-if="pilih && (pilih.status === 'menunggu' || pilih.status === 'disetujui')">
@@ -259,7 +259,7 @@ $kepala = static fn (int $no, string $judul): string => '<div class="bio-head"><
                                 </div>
                             </div>
                             <p x-show="buka.pesan" x-text="buka.pesan" class="text-sm font-semibold text-red-600"></p>
-                            <button type="button" @click="bukaIsian()" :disabled="buka.proses" class="btn-nav-primary w-full disabled:opacity-60">
+                            <button type="button" @click="mintaKK('bukaIsian')" :disabled="buka.proses" class="btn-nav-primary w-full disabled:opacity-60">
                                 <span x-text="buka.proses ? 'Memeriksa…' : 'Buka Isian Saya'"></span>
                             </button>
                         </div>
@@ -423,6 +423,51 @@ $kepala = static fn (int $no, string $judul): string => '<div class="bio-head"><
             </button>
         </div>
         <p x-cloak x-show="step > 0 && draftInfo" class="mt-3 text-center text-xs text-slate-400" x-text="draftInfo"></p>
+    </div>
+
+    <!-- ============ POP-UP PENGINGAT KARTU KELUARGA ============ -->
+    <div x-cloak x-show="kk.buka" x-transition.opacity
+         class="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-slate-900/60 p-3 sm:p-6"
+         @keydown.escape.window="kk.buka && tutupKK()">
+        <div role="dialog" aria-modal="true" aria-labelledby="kkJudul"
+             class="w-full max-w-lg max-h-[92vh] overflow-y-auto rounded-2xl bg-white shadow-2xl">
+            <div class="flex items-center gap-3 bg-amber-400 px-5 py-4">
+                <svg class="w-8 h-8 shrink-0 text-amber-900" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/></svg>
+                <div>
+                    <p id="kkJudul" class="text-base sm:text-lg font-extrabold text-amber-950 leading-tight">Siapkan Kartu Keluarga (KK) dulu</p>
+                    <p class="text-xs font-semibold text-amber-900">Baca sebelum mulai mengisi</p>
+                </div>
+            </div>
+            <div class="p-5 space-y-4 text-sm text-slate-700 leading-relaxed">
+                <p>Biodata ini dipakai untuk <b>buku induk dan ijazah</b>. Isi <b>sama persis dengan yang tertulis di Kartu Keluarga</b> — huruf, ejaan, dan angkanya:</p>
+                <ul class="space-y-2">
+                    <?php foreach ([
+                        '<b>Nama lengkap</b> — tanpa disingkat',
+                        '<b>Tempat &amp; tanggal lahir</b>',
+                        '<b>Status dalam keluarga</b> &amp; anak ke berapa',
+                        '<b>Nama ayah &amp; nama ibu</b> — ejaan sesuai KK',
+                        '<b>Alamat</b> — jalan, RT/RW, kelurahan/desa, kecamatan, kota/kabupaten',
+                    ] as $butir): ?>
+                        <li class="flex gap-2">
+                            <svg class="w-5 h-5 shrink-0 text-emerald-600" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/></svg>
+                            <span><?= $butir ?></span>
+                        </li>
+                    <?php endforeach; ?>
+                </ul>
+                <p class="rounded-xl bg-slate-50 border border-slate-200 px-3 py-2.5">Siapkan juga <b>NISN</b> (lihat kartu pelajar atau rapor) dan <b>nomor HP orang tua</b>.</p>
+                <p class="rounded-xl bg-red-50 border border-red-200 px-3 py-2.5 text-red-800"><b>Setelah dikirim, isian terkunci</b> dan tidak bisa kamu ubah sendiri. Jadi periksa baik-baik sebelum menekan Kirim.</p>
+
+                <label class="check-card !items-start">
+                    <input type="checkbox" x-model="kk.centang" class="sr-only">
+                    <span class="check-box mt-0.5"></span>
+                    <span class="font-semibold text-slate-800">Saya sudah memegang Kartu Keluarga dan akan mengisi sesuai KK.</span>
+                </label>
+            </div>
+            <div class="flex flex-col-reverse sm:flex-row gap-2 border-t border-slate-100 px-5 py-4">
+                <button type="button" @click="tutupKK()" class="btn-nav-secondary sm:flex-1">Nanti dulu</button>
+                <button type="button" @click="setujuKK()" :disabled="!kk.centang" class="btn-nav-primary sm:flex-1 disabled:opacity-50 disabled:cursor-not-allowed disabled:shadow-none">Mulai Isi &rarr;</button>
+            </div>
+        </div>
     </div>
 </div>
 <?= $this->endSection() ?>

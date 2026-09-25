@@ -22,7 +22,7 @@ dan aplikasi Android.
    ke Master Siswa. Tidak langsung menimpa.
 2. Setelah dikirim **terkunci**; bila salah, admin **mengembalikan** (siswa membuka lagi
    dengan NISN / tanggal lahir) atau **menghapus** isian (siswa isi dari nol).
-3. **Tanpa unggah berkas.** Peringatan "WAJIB sesuai Kartu Keluarga" di atas form.
+3. **Tanpa unggah berkas.** Peringatan "WAJIB sesuai Kartu Keluarga" di atas form, **plus pop-up KK** (2026-09-25, atas permintaan user setelah link tersebar): muncul saat siswa menekan "Ya, ini saya — Mulai Isi" / "Buka Isian Saya"; tombol "Mulai Isi" terkunci sampai siswa mencentang "Saya sudah memegang Kartu Keluarga…". Sekali per kunjungan (`kk.setuju` di `biodata.js`).
 4. **Web dulu (wajib 100%)**, Android menyusul (kolom baru + layar progres/verifikasi).
 5. **Laporan Excel** siap cetak: siswa mana yang biodatanya lengkap / belum, per kelas.
 6. Subdomain dibuat user dengan **Share document root** (satu aplikasi, satu database).
@@ -132,7 +132,12 @@ Kolom lama dipakai ulang: `alamat` = jalan/perumahan siswa, `no_hp` = HP siswa,
       `BiodataVerifikasi` (bandingkan, peringatan, setujuiBanyak, simpanPengaturan) dan
       `BiodataPesan` (tautan, teks WA). Kontrak + contoh respons nyata:
       **`C:\flutter-muslimin\BLUEPRINT-BIODATA.md`**.
-- [ ] **Android A2** Flutter — dikerjakan AI di project flutter-muslimin memakai blueprint itu
+- [x] **Android A2** Flutter (2026-09-25, dikerjakan Claude langsung) — folder
+      `lib/features/admin/presentation/biodata/` (hub, kotak masuk 3 tab + setujui massal,
+      periksa + lompat ke `berikutnya`, belum mengisi + WA, rekap kelas, pengaturan, unduh
+      laporan), sidebar grup "Kesiswaan", form & daftar Siswa ikut kolom biodata. 22 tes baru
+      (fixture = respons nyata), total 109 tes lolos, `flutter analyze` bersih, service diuji
+      integrasi terhadap API lokal. **APK belum di-build** — menunggu izin user.
 
 ### Rute API (`/api/v1`, Bearer)
 

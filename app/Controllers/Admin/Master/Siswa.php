@@ -307,15 +307,63 @@ class Siswa extends BaseMaster
         );
 
         $judul  = array_merge(['No'], array_column($kolom, 0));
+        $akhir  = Coordinate::stringFromColumnIndex(count($judul));
         $widths = ['A' => 5];
         foreach ($kolom as $i => $k) {
             $widths[Coordinate::stringFromColumnIndex($i + 2)] = $k[1];
         }
 
-        $ss    = new Spreadsheet();
-        $sheet = $this->sheetWithHeader($ss, 'Data Siswa', $judul, $widths);
+        // Satu lembar per kelas (urut X → XI → XII, nama kelas alami: TKJ 2 sebelum
+        // TKJ 10) supaya admin cukup klik tab kelasnya. Bila isi ekspor lebih dari
+        // satu kelas, lembar pertama "Semua Kelas" tetap berisi seluruh baris.
+        $perKelas = [];
+        foreach ($rows as $d) {
+            $perKelas[(string) ($d['nama_kelas'] ?? '')][] = $d;
+        }
+        $urutTingkat = ['X' => 0, 'XI' => 1, 'XII' => 2];
+        uksort($perKelas, static function ($a, $b) use ($perKelas, $urutTingkat) {
+            if (($a === '') !== ($b === '')) {
+                return $a === '' ? 1 : -1; // siswa tanpa kelas paling akhir
+            }
 
-        $r = 2;
+            return (($urutTingkat[$perKelas[$a][0]['tingkat'] ?? ''] ?? 9) <=> ($urutTingkat[$perKelas[$b][0]['tingkat'] ?? ''] ?? 9))
+                ?: strnatcasecmp($a, $b);
+        });
+
+        $lembar = [];
+        if (count($perKelas) > 1) {
+            $lembar[] = ['Semua Kelas', array_merge(...array_values($perKelas))];
+        }
+        foreach ($perKelas as $nama => $isi) {
+            $lembar[] = [$nama !== '' ? $nama : 'Tanpa Kelas', $isi];
+        }
+        if ($lembar === []) {
+            $lembar[] = ['Data Siswa', []];
+        }
+
+        $ss      = new Spreadsheet();
+        $dipakai = [];
+        foreach ($lembar as $n => [$nama, $isi]) {
+            if ($n > 0) {
+                $ss->createSheet();
+                $ss->setActiveSheetIndex($n);
+            }
+            $sheet = $this->sheetWithHeader($ss, $this->judulLembar($nama, $dipakai), $judul, $widths);
+            // KOP disisipkan SEBELUM data: menyisipkan 5 baris di atas ribuan baris
+            // (cara lama) menggeser semua sel satu per satu dan sangat lambat.
+            kop_excel_prepend($sheet, $akhir);
+            $this->tulisBarisEkspor($sheet, $kolom, $isi);
+            $sheet->freezePane('A7'); // kop (5 baris) + judul kolom tetap terlihat saat digulir
+        }
+        $ss->setActiveSheetIndex(0);
+
+        $this->streamXlsx($ss, 'Data-Siswa-' . date('Ymd-His'));
+    }
+
+    /** Isi baris data mulai baris 7 (baris 1–5 KOP, baris 6 judul kolom); nomor urut mulai 1 per lembar. */
+    private function tulisBarisEkspor($sheet, array $kolom, array $rows): void
+    {
+        $r = 7;
         foreach ($rows as $i => $d) {
             $sheet->setCellValue('A' . $r, $i + 1);
             foreach ($kolom as $c => [, , $sumber]) {
@@ -333,8 +381,22 @@ class Siswa extends BaseMaster
             }
             $r++;
         }
+    }
 
-        $this->streamXlsx($ss, 'Data-Siswa-' . date('Ymd-His'), Coordinate::stringFromColumnIndex(count($judul)));
+    /**
+     * Nama tab Excel yang sah: maks 31 huruf, tanpa : \ / ? * [ ], dan tidak
+     * boleh kembar (Excel tak membedakan huruf besar/kecil).
+     */
+    private function judulLembar(string $nama, array &$dipakai): string
+    {
+        $dasar = trim(mb_substr(preg_replace('/[:\\\\\/?*\[\]]+/', ' ', $nama) ?? '', 0, 31)) ?: 'Kelas';
+        $judul = $dasar;
+        for ($i = 2; isset($dipakai[mb_strtolower($judul)]); $i++) {
+            $judul = mb_substr($dasar, 0, 31 - strlen(" ($i)")) . " ($i)";
+        }
+        $dipakai[mb_strtolower($judul)] = true;
+
+        return $judul;
     }
 
     public function template()
