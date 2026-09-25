@@ -2,10 +2,13 @@
 
 namespace App\Controllers\Admin\Master;
 
+use App\Libraries\BiodataForm;
 use App\Models\KelasModel;
 use App\Models\SiswaModel;
 use CodeIgniter\Database\BaseConnection;
 use CodeIgniter\Model;
+use PhpOffice\PhpSpreadsheet\Cell\Coordinate;
+use PhpOffice\PhpSpreadsheet\Cell\DataType;
 use PhpOffice\PhpSpreadsheet\Shared\Date as ExcelDate;
 use PhpOffice\PhpSpreadsheet\Spreadsheet;
 
@@ -15,6 +18,11 @@ use PhpOffice\PhpSpreadsheet\Spreadsheet;
  * Tingkat & jurusan TIDAK disimpan di tabel siswa; keduanya diturunkan dari
  * kelas lewat join, sehingga memindahkan kelas ke jurusan lain tidak pernah
  * meninggalkan data siswa yang tidak sinkron.
+ *
+ * Sejak modul Isian Biodata (2026-09-25) tabel siswa juga memuat biodata
+ * buku induk (alamat terstruktur, orang tua, wali, sekolah asal). Kolom itu
+ * biasanya terisi dari isian siswa yang disetujui, tetapi tetap bisa diubah
+ * admin di sini dan lewat impor Excel.
  */
 class Siswa extends BaseMaster
 {
@@ -25,6 +33,29 @@ class Siswa extends BaseMaster
     protected string $titleLabel = 'Master Siswa';
 
     protected const TINGKAT = ['X', 'XI', 'XII'];
+
+    /** Saringan kelengkapan biodata (dari kolom biodata_at). */
+    protected const BIODATA = ['lengkap', 'belum'];
+
+    /**
+     * Kolom biodata buku induk, URUT seperti di form isian siswa. Satu daftar
+     * ini dipakai form edit, ekspor, template, dan impor agar selalu seragam.
+     * (nama_wali & no_hp_wali kolom lama, sudah ada di daftar inti.)
+     */
+    private const KOLOM_BIODATA = [
+        'status_keluarga', 'anak_ke',
+        'rt', 'rw', 'kelurahan', 'kecamatan', 'kota',
+        'sekolah_asal', 'diterima_kelas', 'diterima_tanggal',
+        'nama_ayah', 'pekerjaan_ayah', 'nama_ibu', 'pekerjaan_ibu',
+        'ortu_alamat', 'ortu_rt', 'ortu_rw', 'ortu_kelurahan', 'ortu_kecamatan', 'ortu_kota', 'ortu_telepon',
+        'alamat_wali', 'pekerjaan_wali',
+    ];
+
+    /**
+     * Kolom yang ditulis sebagai TEKS di Excel: nomor panjang / berawalan 0
+     * tidak boleh berubah jadi angka (0812… → 812…, atau notasi ilmiah).
+     */
+    private const KOLOM_TEKS = ['nis', 'nisn', 'no_hp', 'no_hp_wali', 'ortu_telepon', 'rt', 'rw', 'ortu_rt', 'ortu_rw'];
 
     /** Peta nama kelas (huruf besar) => id, dibangun sekali saat impor. */
     private ?array $petaKelas = null;
@@ -42,6 +73,7 @@ class Siswa extends BaseMaster
             'kelas_id' => (string) ((int) $this->request->getGet('kelas_id') ?: ''),
             'tingkat'  => trim((string) $this->request->getGet('tingkat')),
             'status'   => trim((string) $this->request->getGet('status')),
+            'biodata'  => trim((string) $this->request->getGet('biodata')),
             'per'      => (string) ((int) $this->request->getGet('per') ?: ''),
         ], static fn ($v) => $v !== '');
 
@@ -50,35 +82,19 @@ class Siswa extends BaseMaster
 
     public function index()
     {
-        $q       = trim((string) $this->request->getGet('q'));
-        $kelasId = (int) $this->request->getGet('kelas_id');
-        $tingkat = trim((string) $this->request->getGet('tingkat'));
-        $status  = trim((string) $this->request->getGet('status'));
-        if (! in_array($tingkat, self::TINGKAT, true)) {
-            $tingkat = '';
-        }
-        if (! in_array($status, SiswaModel::STATUS, true)) {
-            $status = '';
-        }
+        [$kelasId, $tingkat, $status, $biodata] = $this->saringan();
+        $q    = trim((string) $this->request->getGet('q'));
         $per  = $this->perPage();
         $page = $this->pageNo();
 
-        $kunci = "list|q={$q}|k={$kelasId}|t={$tingkat}|s={$status}|per={$per}|p={$page}";
-        $data  = $this->cachedList($kunci, function () use ($q, $kelasId, $tingkat, $status, $per, $page) {
-            $builder = $this->model->withRelations();
+        // "v2": bentuk baris berubah (kolom biodata) — jangan membaca cache bentuk lama.
+        $kunci = "list|v2|q={$q}|k={$kelasId}|t={$tingkat}|s={$status}|b={$biodata}|per={$per}|p={$page}";
+        $data  = $this->cachedList($kunci, function () use ($q, $kelasId, $tingkat, $status, $biodata, $per, $page) {
+            $builder = $this->terapkanSaringan($this->model->withRelations(), $kelasId, $tingkat, $status, $biodata);
             if ($q !== '') {
                 $builder = $builder->groupStart()
                     ->like('siswa.nama', $q)->orLike('siswa.nis', $q)->orLike('siswa.nisn', $q)
                     ->groupEnd();
-            }
-            if ($kelasId > 0) {
-                $builder = $builder->where('siswa.kelas_id', $kelasId);
-            }
-            if ($tingkat !== '') {
-                $builder = $builder->where('kelas.tingkat', $tingkat);
-            }
-            if ($status !== '') {
-                $builder = $builder->where('siswa.status', $status);
             }
             $rows = $builder->orderBy('siswa.nama', 'ASC')->paginate($per, 'default', $page);
 
@@ -87,14 +103,15 @@ class Siswa extends BaseMaster
 
         return view('admin/master/siswa', [
             'title'       => $this->titleLabel,
-            'rows'        => $data['rows'],
-            'pager'       => $this->storePager($page, $per, $data['total']),
+            'rows'        => $data['rows'] ?? [],
+            'pager'       => $this->storePager($page, $per, (int) ($data['total'] ?? 0)),
             'q'           => $q,
             'kelasId'     => $kelasId,
             'tingkat'     => $tingkat,
             'status'      => $status,
+            'biodata'     => $biodata,
             'per'         => $per,
-            'total'       => $data['total'],
+            'total'       => (int) ($data['total'] ?? 0),
             'kelasOpts'   => (new KelasModel())->options(),
             'tingkatList' => self::TINGKAT,
             'statusList'  => SiswaModel::STATUS,
@@ -129,6 +146,7 @@ class Siswa extends BaseMaster
         return $this->goIndex('Siswa diperbarui.');
     }
 
+    /** Isi form tambah/edit (form lengkap: kolom kosong memang berarti dikosongkan). */
     private function collect(): array
     {
         $req  = $this->request;
@@ -137,7 +155,7 @@ class Siswa extends BaseMaster
         $jk     = strtoupper($post('jenis_kelamin'));
         $status = $post('status');
 
-        return [
+        $data = [
             'nis'  => $post('nis'),
             // NISN unik namun boleh kosong — string kosong WAJIB jadi NULL,
             // kalau tidak beberapa siswa tanpa NISN akan bentrok unique key.
@@ -151,11 +169,24 @@ class Siswa extends BaseMaster
             'no_hp'         => $post('no_hp') ?: null,
             'nama_wali'     => $post('nama_wali') ?: null,
             'no_hp_wali'    => $post('no_hp_wali') ?: null,
-            'kelas_id'      => (int) service('request')->getPost('kelas_id') ?: null,
-            'tahun_masuk'   => (int) service('request')->getPost('tahun_masuk') ?: null,
+            'kelas_id'      => (int) $req->getPost('kelas_id') ?: null,
+            'tahun_masuk'   => (int) $req->getPost('tahun_masuk') ?: null,
             'status'        => in_array($status, SiswaModel::STATUS, true) ? $status : 'aktif',
             'keterangan'    => $post('keterangan') ?: null,
         ];
+        foreach (self::KOLOM_BIODATA as $k) {
+            $data[$k] = $post($k) ?: null;
+        }
+        $data['anak_ke']          = $this->anakKe($post('anak_ke'));
+        $data['diterima_tanggal'] = $this->parseTanggal($post('diterima_tanggal'));
+
+        return $data;
+    }
+
+    /** Anak ke-: bilangan 1–99, selain itu NULL. */
+    private function anakKe(string $nilai): ?int
+    {
+        return ctype_digit($nilai) && (int) $nilai >= 1 && (int) $nilai <= 99 ? (int) $nilai : null;
     }
 
     /**
@@ -198,90 +229,148 @@ class Siswa extends BaseMaster
     {
     }
 
+    // ===================== SARINGAN =====================
+
+    /** @return array{0:int, 1:string, 2:string, 3:string} [kelas_id, tingkat, status, biodata] yang sudah disahkan */
+    private function saringan(): array
+    {
+        $kelasId = (int) $this->request->getGet('kelas_id');
+        $tingkat = trim((string) $this->request->getGet('tingkat'));
+        $status  = trim((string) $this->request->getGet('status'));
+        $biodata = trim((string) $this->request->getGet('biodata'));
+
+        return [
+            $kelasId,
+            in_array($tingkat, self::TINGKAT, true) ? $tingkat : '',
+            in_array($status, SiswaModel::STATUS, true) ? $status : '',
+            in_array($biodata, self::BIODATA, true) ? $biodata : '',
+        ];
+    }
+
+    /** Terapkan saringan yang sama untuk daftar & ekspor. */
+    private function terapkanSaringan($builder, int $kelasId, string $tingkat, string $status, string $biodata)
+    {
+        if ($kelasId > 0) {
+            $builder = $builder->where('siswa.kelas_id', $kelasId);
+        }
+        if ($tingkat !== '') {
+            $builder = $builder->where('kelas.tingkat', $tingkat);
+        }
+        if ($status !== '') {
+            $builder = $builder->where('siswa.status', $status);
+        }
+        if ($biodata === 'lengkap') {
+            $builder = $builder->where('siswa.biodata_at IS NOT NULL');
+        } elseif ($biodata === 'belum') {
+            $builder = $builder->where('siswa.biodata_at', null);
+        }
+
+        return $builder;
+    }
+
     // ===================== EXPORT & TEMPLATE =====================
 
     public function export()
     {
         // Ekspor mengikuti filter yang sedang aktif agar admin bisa mengunduh
         // "kelas X TKJ saja" tanpa harus menyaring ulang di Excel.
-        $builder = $this->model->withRelations();
-        $kelasId = (int) $this->request->getGet('kelas_id');
-        $tingkat = trim((string) $this->request->getGet('tingkat'));
-        $status  = trim((string) $this->request->getGet('status'));
-
-        if ($kelasId > 0) {
-            $builder = $builder->where('siswa.kelas_id', $kelasId);
-        }
-        if (in_array($tingkat, self::TINGKAT, true)) {
-            $builder = $builder->where('kelas.tingkat', $tingkat);
-        }
-        if (in_array($status, SiswaModel::STATUS, true)) {
-            $builder = $builder->where('siswa.status', $status);
-        }
-
-        $rows = $builder->orderBy('kelas.tingkat', 'ASC')->orderBy('kelas.nama_kelas', 'ASC')
+        [$kelasId, $tingkat, $status, $biodata] = $this->saringan();
+        $rows = $this->terapkanSaringan($this->model->withRelations(), $kelasId, $tingkat, $status, $biodata)
+            ->orderBy('kelas.tingkat', 'ASC')->orderBy('kelas.nama_kelas', 'ASC')
             ->orderBy('siswa.nama', 'ASC')->findAll();
 
-        $ss    = new Spreadsheet();
-        $sheet = $this->sheetWithHeader(
-            $ss,
-            'Data Siswa',
-            [
-                'No', 'NIS', 'NISN', 'Nama Siswa', 'JK', 'Tempat Lahir', 'Tanggal Lahir',
-                'Agama', 'Alamat', 'No HP', 'Nama Orang Tua/Wali', 'No HP Wali',
-                'Kelas', 'Tingkat', 'Jurusan', 'Tahun Masuk', 'Status', 'Keterangan',
-            ],
-            [
-                'A' => 5, 'B' => 16, 'C' => 16, 'D' => 30, 'E' => 6, 'F' => 18, 'G' => 14,
-                'H' => 12, 'I' => 34, 'J' => 16, 'K' => 26, 'L' => 16,
-                'M' => 14, 'N' => 9, 'O' => 12, 'P' => 12, 'Q' => 10, 'R' => 22,
-            ]
+        // [judul, lebar, kunci kolom | closure]. Kolom "No" ditambahkan di depan.
+        $kolom = [
+            ['NIS', 16, 'nis'], ['NISN', 16, 'nisn'], ['Nama Siswa', 30, 'nama'], ['JK', 6, 'jenis_kelamin'],
+            ['Tempat Lahir', 18, 'tempat_lahir'], ['Tanggal Lahir', 14, 'tanggal_lahir'], ['Agama', 12, 'agama'],
+        ];
+        $lebar = [
+            'status_keluarga' => 18, 'anak_ke' => 8, 'rt' => 6, 'rw' => 6, 'kelurahan' => 18, 'kecamatan' => 16, 'kota' => 16,
+            'sekolah_asal' => 26, 'diterima_kelas' => 14, 'diterima_tanggal' => 14,
+            'nama_ayah' => 24, 'pekerjaan_ayah' => 18, 'nama_ibu' => 24, 'pekerjaan_ibu' => 18,
+            'ortu_alamat' => 34, 'ortu_rt' => 8, 'ortu_rw' => 8, 'ortu_kelurahan' => 18, 'ortu_kecamatan' => 16,
+            'ortu_kota' => 16, 'ortu_telepon' => 26, 'alamat_wali' => 30, 'pekerjaan_wali' => 18,
+        ];
+        foreach (['status_keluarga', 'anak_ke'] as $k) {
+            $kolom[] = [BiodataForm::LABEL[$k], $lebar[$k], $k];
+        }
+        $kolom[] = ['Alamat', 34, 'alamat'];
+        foreach (['rt', 'rw', 'kelurahan', 'kecamatan', 'kota'] as $k) {
+            $kolom[] = [BiodataForm::LABEL[$k], $lebar[$k], $k];
+        }
+        $kolom[] = ['No HP Siswa', 16, 'no_hp'];
+        foreach (array_slice(self::KOLOM_BIODATA, 7, 14) as $k) { // sekolah_asal … ortu_telepon
+            $kolom[] = [BiodataForm::LABEL[$k], $lebar[$k], $k];
+        }
+        $kolom[] = [BiodataForm::LABEL['nama_wali'], 24, 'nama_wali'];
+        $kolom[] = [BiodataForm::LABEL['alamat_wali'], $lebar['alamat_wali'], 'alamat_wali'];
+        $kolom[] = [BiodataForm::LABEL['no_hp_wali'], 16, 'no_hp_wali'];
+        $kolom[] = [BiodataForm::LABEL['pekerjaan_wali'], $lebar['pekerjaan_wali'], 'pekerjaan_wali'];
+        array_push(
+            $kolom,
+            ['Kelas', 14, 'nama_kelas'],
+            ['Tingkat', 9, 'tingkat'],
+            ['Jurusan', 12, 'jurusan_kode'],
+            ['Tahun Masuk', 12, 'tahun_masuk'],
+            ['Status', 10, 'status'],
+            ['Biodata', 18, static fn (array $d) => ! empty($d['biodata_at']) ? 'Lengkap ' . date('d/m/Y', strtotime($d['biodata_at'])) : 'Belum'],
+            ['Keterangan', 22, 'keterangan'],
         );
+
+        $judul  = array_merge(['No'], array_column($kolom, 0));
+        $widths = ['A' => 5];
+        foreach ($kolom as $i => $k) {
+            $widths[Coordinate::stringFromColumnIndex($i + 2)] = $k[1];
+        }
+
+        $ss    = new Spreadsheet();
+        $sheet = $this->sheetWithHeader($ss, 'Data Siswa', $judul, $widths);
 
         $r = 2;
         foreach ($rows as $i => $d) {
-            $sheet->fromArray([
-                $i + 1,
-                // awalan ' agar NIS/NISN panjang tidak berubah jadi notasi ilmiah
-                "'" . $d['nis'], "'" . $d['nisn'], $d['nama'], $d['jenis_kelamin'],
-                $d['tempat_lahir'], $d['tanggal_lahir'], $d['agama'], $d['alamat'],
-                "'" . $d['no_hp'], $d['nama_wali'], "'" . $d['no_hp_wali'],
-                $d['nama_kelas'], $d['tingkat'], $d['jurusan_kode'],
-                $d['tahun_masuk'], $d['status'], $d['keterangan'],
-            ], null, 'A' . $r, true);
+            $sheet->setCellValue('A' . $r, $i + 1);
+            foreach ($kolom as $c => [, , $sumber]) {
+                $sel   = Coordinate::stringFromColumnIndex($c + 2) . $r;
+                $nilai = is_callable($sumber) ? $sumber($d) : ($d[$sumber] ?? null);
+                if ($nilai === null || $nilai === '') {
+                    continue;
+                }
+                if (is_string($sumber) && in_array($sumber, self::KOLOM_TEKS, true)) {
+                    // Tulis sebagai teks murni — TANPA awalan ' (petik itu ikut tersimpan & tampil).
+                    $sheet->setCellValueExplicit($sel, (string) $nilai, DataType::TYPE_STRING);
+                } else {
+                    $sheet->setCellValue($sel, $nilai);
+                }
+            }
             $r++;
         }
 
-        $this->streamXlsx($ss, 'Data-Siswa-' . date('Ymd-His'), 'R');
+        $this->streamXlsx($ss, 'Data-Siswa-' . date('Ymd-His'), Coordinate::stringFromColumnIndex(count($judul)));
     }
 
     public function template()
     {
-        $ss    = new Spreadsheet();
-        $sheet = $this->sheetWithHeader(
-            $ss,
-            'Template Siswa',
-            [
-                'NIS', 'NISN', 'Nama Siswa', 'JK (L/P)', 'Tempat Lahir', 'Tanggal Lahir (dd/mm/yyyy)',
-                'Agama', 'Alamat', 'No HP', 'Nama Orang Tua/Wali', 'No HP Wali',
-                'Kelas', 'Tahun Masuk', 'Status (aktif/lulus/pindah/keluar)', 'Keterangan',
-            ],
-            [
-                'A' => 16, 'B' => 16, 'C' => 30, 'D' => 10, 'E' => 18, 'F' => 24,
-                'G' => 12, 'H' => 34, 'I' => 16, 'J' => 26, 'K' => 16,
-                'M' => 14, 'L' => 14, 'N' => 28, 'O' => 22,
-            ]
-        );
-        $sheet->fromArray([
-            '2026001', '0091234567', 'Ahmad Fauzi', 'L', 'Bandung', '17/08/2009',
-            'Islam', 'Jl. Merdeka No. 10', '081234567890', 'Bapak Sulaiman', '081298765432',
-            'X TKJ 1', 2026, 'aktif', '',
-        ], null, 'A2', true);
+        $kolom  = $this->kolomImpor();
+        $widths = [];
+        foreach ($kolom as $i => $k) {
+            $widths[Coordinate::stringFromColumnIndex($i + 1)] = max(10, (int) round(($k['width'] ?? 120) / 7));
+        }
 
-        // Kolom NIS/NISN/HP dibuat teks agar angka panjang tidak rusak saat diketik.
-        foreach (['A', 'B', 'I', 'K'] as $kolom) {
-            $sheet->getStyle($kolom . '2:' . $kolom . '500')
-                ->getNumberFormat()->setFormatCode('@');
+        $ss    = new Spreadsheet();
+        $sheet = $this->sheetWithHeader($ss, 'Template Siswa', array_column($kolom, 'template'), $widths);
+
+        // Baris contoh (dari contoh biodata asli) supaya operator paham formatnya.
+        foreach ($kolom as $i => $k) {
+            $sel = Coordinate::stringFromColumnIndex($i + 1) . '2';
+            $sheet->setCellValueExplicit($sel, (string) $k['contoh'], DataType::TYPE_STRING);
+        }
+
+        // Kolom nomor dibuat format teks agar angka panjang tidak rusak saat diketik.
+        foreach ($kolom as $i => $k) {
+            if (in_array($k['key'], self::KOLOM_TEKS, true)) {
+                $huruf = Coordinate::stringFromColumnIndex($i + 1);
+                $sheet->getStyle($huruf . '2:' . $huruf . '2000')->getNumberFormat()->setFormatCode('@');
+            }
         }
 
         $this->streamXlsx($ss, 'Template-Import-Siswa');
@@ -289,25 +378,70 @@ class Siswa extends BaseMaster
 
     // ===================== KONFIG IMPOR =====================
 
+    /**
+     * SATU daftar kolom impor: urutan template = urutan pembacaan impor.
+     * 15 kolom pertama TIDAK BOLEH diubah urutannya — file template lama
+     * yang sudah beredar tetap terbaca benar; kolom biodata ditambahkan DI
+     * BELAKANG (file lama cukup tidak punya kolom itu → data tidak diubah).
+     *
+     * @return list<array<string, mixed>>
+     */
+    private function kolomImpor(): array
+    {
+        $k = static fn (string $key, string $label, string $template, string $contoh, array $x = []) => [
+            'key' => $key, 'label' => $label, 'template' => $template, 'contoh' => $contoh,
+        ] + $x + ['type' => 'text', 'width' => 130];
+
+        $kolom = [
+            $k('nis', 'NIS', 'NIS', '252610280', ['required' => true, 'width' => 120]),
+            $k('nisn', 'NISN', 'NISN', '0094624339', ['width' => 120]),
+            $k('nama', 'Nama Siswa', 'Nama Siswa', 'Akbar Azam Albana', ['required' => true, 'width' => 200]),
+            $k('jenis_kelamin', 'JK', 'JK (L/P)', 'L', ['type' => 'select', 'options' => ['L', 'P'], 'width' => 80]),
+            $k('tempat_lahir', 'Tempat Lahir', 'Tempat Lahir', 'Jakarta', ['width' => 140]),
+            $k('tanggal_lahir', 'Tgl Lahir', 'Tanggal Lahir (dd/mm/yyyy)', '24/09/2009', ['width' => 120]),
+            $k('agama', 'Agama', 'Agama', 'Islam', ['type' => 'datalist', 'options' => SiswaModel::AGAMA, 'width' => 100]),
+            $k('alamat', 'Alamat', 'Alamat', 'VGH Jl. Padjajaran Blok AK 10 No.19', ['width' => 220]),
+            $k('no_hp', 'No HP', 'No HP Siswa', '087863419679', ['width' => 120]),
+            $k('nama_wali', 'Nama Wali', 'Nama Wali', '', ['width' => 180]),
+            $k('no_hp_wali', 'No HP Wali', 'No HP Wali', '', ['width' => 120]),
+            $k('kelas', 'Kelas', 'Kelas', 'XI TKJ 8', ['width' => 110]),
+            $k('tahun_masuk', 'Tahun Masuk', 'Tahun Masuk', '2025', ['type' => 'number', 'width' => 100]),
+            $k('status', 'Status', 'Status (aktif/lulus/pindah/keluar)', 'aktif', ['type' => 'select', 'options' => SiswaModel::STATUS, 'width' => 100]),
+            $k('keterangan', 'Keterangan', 'Keterangan', '', ['width' => 160]),
+        ];
+
+        $contoh = [
+            'status_keluarga' => 'Anak Kandung', 'anak_ke' => '1', 'rt' => '18', 'rw' => '22',
+            'kelurahan' => 'Kebalen', 'kecamatan' => 'Babelan', 'kota' => 'Bekasi',
+            'sekolah_asal' => 'SMP NEGERI 6 BABELAN', 'diterima_kelas' => 'X TKJ 8', 'diterima_tanggal' => '14/07/2025',
+            'nama_ayah' => 'Edy Purwanto', 'pekerjaan_ayah' => 'Karyawan Swasta',
+            'nama_ibu' => 'Fitri Rusmiyanti', 'pekerjaan_ibu' => 'Ibu Rumah Tangga',
+            'ortu_alamat' => 'VGH Jl. Padjajaran Blok AK 10 No.19', 'ortu_rt' => '18', 'ortu_rw' => '22',
+            'ortu_kelurahan' => 'Kebalen', 'ortu_kecamatan' => 'Babelan', 'ortu_kota' => 'Bekasi',
+            'ortu_telepon' => '081319918778 / 085216154014', 'alamat_wali' => '', 'pekerjaan_wali' => '',
+        ];
+        foreach (self::KOLOM_BIODATA as $key) {
+            $x = match ($key) {
+                'status_keluarga' => ['type' => 'datalist', 'options' => SiswaModel::STATUS_KELUARGA],
+                'pekerjaan_ayah', 'pekerjaan_ibu', 'pekerjaan_wali' => ['type' => 'datalist', 'options' => SiswaModel::PEKERJAAN],
+                'anak_ke' => ['type' => 'number', 'width' => 80],
+                'rt', 'rw', 'ortu_rt', 'ortu_rw' => ['width' => 70],
+                'alamat_wali', 'ortu_alamat' => ['width' => 220],
+                default => [],
+            };
+            $template = BiodataForm::LABEL[$key] . ($key === 'diterima_tanggal' ? ' (dd/mm/yyyy)' : '');
+            $kolom[]  = $k($key, BiodataForm::LABEL[$key], $template, $contoh[$key], $x);
+        }
+
+        return $kolom;
+    }
+
     protected function importCols(): array
     {
-        return [
-            ['key' => 'nis',           'label' => 'NIS',           'type' => 'text',   'required' => true, 'width' => 120],
-            ['key' => 'nisn',          'label' => 'NISN',          'type' => 'text',   'width' => 120],
-            ['key' => 'nama',          'label' => 'Nama Siswa',    'type' => 'text',   'required' => true, 'width' => 200],
-            ['key' => 'jenis_kelamin', 'label' => 'JK',            'type' => 'select', 'options' => ['L', 'P'], 'width' => 80],
-            ['key' => 'tempat_lahir',  'label' => 'Tempat Lahir',  'type' => 'text',   'width' => 140],
-            ['key' => 'tanggal_lahir', 'label' => 'Tgl Lahir',     'type' => 'text',   'width' => 120],
-            ['key' => 'agama',         'label' => 'Agama',         'type' => 'text',   'width' => 100],
-            ['key' => 'alamat',        'label' => 'Alamat',        'type' => 'text',   'width' => 220],
-            ['key' => 'no_hp',         'label' => 'No HP',         'type' => 'text',   'width' => 120],
-            ['key' => 'nama_wali',     'label' => 'Nama Wali',     'type' => 'text',   'width' => 180],
-            ['key' => 'no_hp_wali',    'label' => 'No HP Wali',    'type' => 'text',   'width' => 120],
-            ['key' => 'kelas',         'label' => 'Kelas',         'type' => 'text',   'width' => 110],
-            ['key' => 'tahun_masuk',   'label' => 'Tahun Masuk',   'type' => 'number', 'width' => 100],
-            ['key' => 'status',        'label' => 'Status',        'type' => 'select', 'options' => SiswaModel::STATUS, 'width' => 100],
-            ['key' => 'keterangan',    'label' => 'Keterangan',    'type' => 'text',   'width' => 160],
-        ];
+        return array_map(
+            static fn (array $c) => array_diff_key($c, ['template' => 0, 'contoh' => 0]),
+            $this->kolomImpor()
+        );
     }
 
     protected function matchField(): string
@@ -315,10 +449,19 @@ class Siswa extends BaseMaster
         return 'nis';
     }
 
+    /**
+     * Normalisasi satu baris impor.
+     *
+     * SEL KOSONG = TIDAK DIUBAH: hanya kolom yang berisi yang ditulis. Dengan
+     * begitu mengimpor ulang daftar lama (mis. hanya NIS + nama + kelas) tidak
+     * menghapus biodata yang sudah diisi siswa. Untuk siswa BARU, kolom yang
+     * tidak dikirim otomatis kosong (dan status = aktif dari default tabel).
+     */
     protected function normalizeImportRow(array $row, int $line, ?string &$error): ?array
     {
-        $nis  = trim((string) ($row['nis'] ?? ''));
-        $nama = trim((string) ($row['nama'] ?? ''));
+        $teks = static fn (string $k): string => trim((string) ($row[$k] ?? ''));
+        $nis  = $teks('nis');
+        $nama = $teks('nama');
         if ($nis === '' && $nama === '') {
             return null; // baris kosong, lewati diam-diam
         }
@@ -328,36 +471,43 @@ class Siswa extends BaseMaster
             return null;
         }
 
-        $jk     = strtoupper(trim((string) ($row['jenis_kelamin'] ?? '')));
-        $status = strtolower(trim((string) ($row['status'] ?? '')));
+        $payload = ['nis' => $nis, 'nama' => $nama];
+        $isi     = static function (string $k, $v) use (&$payload): void {
+            if ($v !== null && $v !== '') {
+                $payload[$k] = $v;
+            }
+        };
 
-        // Kelas dicocokkan dari NAMA kelas (mis. "X TKJ 1"), bukan id.
-        $kelasId  = null;
-        $namaKelas = trim((string) ($row['kelas'] ?? ''));
-        if ($namaKelas !== '') {
-            $kelasId = $this->cariKelas($namaKelas);
-            if ($kelasId === null) {
-                $this->importNote = 'Sebagian nama kelas tidak dikenali dan dikosongkan.';
+        $jk = strtoupper($teks('jenis_kelamin'));
+        $isi('jenis_kelamin', in_array($jk, ['L', 'P'], true) ? $jk : null);
+        $status = strtolower($teks('status'));
+        $isi('status', in_array($status, SiswaModel::STATUS, true) ? $status : null);
+        $isi('tanggal_lahir', $this->parseTanggal($teks('tanggal_lahir')));
+        $isi('diterima_tanggal', $this->parseTanggal($teks('diterima_tanggal')));
+        $isi('anak_ke', $this->anakKe($teks('anak_ke')));
+        $tahun = (int) $teks('tahun_masuk');
+        $isi('tahun_masuk', $tahun > 0 ? $tahun : null);
+
+        foreach (['nisn', 'tempat_lahir', 'agama', 'alamat', 'no_hp', 'nama_wali', 'no_hp_wali', 'keterangan'] as $k) {
+            $isi($k, $teks($k));
+        }
+        foreach (self::KOLOM_BIODATA as $k) {
+            if (! in_array($k, ['anak_ke', 'diterima_tanggal'], true)) {
+                $isi($k, $teks($k));
             }
         }
 
-        return [
-            'nis'           => $nis,
-            'nisn'          => trim((string) ($row['nisn'] ?? '')) ?: null,
-            'nama'          => $nama,
-            'jenis_kelamin' => in_array($jk, ['L', 'P'], true) ? $jk : null,
-            'tempat_lahir'  => trim((string) ($row['tempat_lahir'] ?? '')) ?: null,
-            'tanggal_lahir' => $this->parseTanggal((string) ($row['tanggal_lahir'] ?? '')),
-            'agama'         => trim((string) ($row['agama'] ?? '')) ?: null,
-            'alamat'        => trim((string) ($row['alamat'] ?? '')) ?: null,
-            'no_hp'         => trim((string) ($row['no_hp'] ?? '')) ?: null,
-            'nama_wali'     => trim((string) ($row['nama_wali'] ?? '')) ?: null,
-            'no_hp_wali'    => trim((string) ($row['no_hp_wali'] ?? '')) ?: null,
-            'kelas_id'      => $kelasId,
-            'tahun_masuk'   => (int) ($row['tahun_masuk'] ?? 0) ?: null,
-            'status'        => in_array($status, SiswaModel::STATUS, true) ? $status : 'aktif',
-            'keterangan'    => trim((string) ($row['keterangan'] ?? '')) ?: null,
-        ];
+        // Kelas dicocokkan dari NAMA kelas (mis. "X TKJ 1"), bukan id.
+        $namaKelas = $teks('kelas');
+        if ($namaKelas !== '') {
+            $kelasId = $this->cariKelas($namaKelas);
+            if ($kelasId === null) {
+                $this->importNote = 'Sebagian nama kelas tidak dikenali — kelas siswa tersebut tidak diubah.';
+            }
+            $isi('kelas_id', $kelasId);
+        }
+
+        return $payload;
     }
 
     /** Cari id kelas dari namanya (tak peka huruf besar/kecil & spasi ganda). */

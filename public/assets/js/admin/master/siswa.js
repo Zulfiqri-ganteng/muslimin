@@ -12,7 +12,7 @@ document.addEventListener('alpine:init', function () {
                     return v === null || v === undefined ? '' : String(v);
                 };
 
-                return {
+                var data = {
                     id: r.id,
                     nis: teks(r.nis),
                     nisn: teks(r.nisn),
@@ -30,7 +30,17 @@ document.addEventListener('alpine:init', function () {
                     tahun_masuk: teks(r.tahun_masuk),
                     status: teks(r.status) || 'aktif',
                     keterangan: teks(r.keterangan),
+                    diterima_tanggal: teks(r.diterima_tanggal).substring(0, 10),
                 };
+                // Kolom biodata buku induk (teks polos) — urutan sama dengan form.
+                [
+                    'status_keluarga', 'anak_ke', 'rt', 'rw', 'kelurahan', 'kecamatan', 'kota',
+                    'sekolah_asal', 'diterima_kelas', 'nama_ayah', 'pekerjaan_ayah', 'nama_ibu', 'pekerjaan_ibu',
+                    'ortu_alamat', 'ortu_rt', 'ortu_rw', 'ortu_kelurahan', 'ortu_kecamatan', 'ortu_kota',
+                    'ortu_telepon', 'alamat_wali', 'pekerjaan_wali',
+                ].forEach(function (k) { data[k] = teks(r[k]); });
+
+                return data;
             },
         });
     });

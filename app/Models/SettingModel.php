@@ -17,6 +17,7 @@ class SettingModel extends Model
         'form_open', 'form_intro', 'jadwal_publik', 'absensi_publik',
         'dok_maks_mb', 'dok_izinkan_video', 'dok_kuota_mb', 'dokumen_publik',
         'wa_template_absensi', 'absensi_potongan_jp', 'absensi_transport',
+        'biodata_open', 'biodata_tutup',
     ];
 
     protected $useTimestamps = true;

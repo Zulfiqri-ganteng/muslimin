@@ -144,3 +144,9 @@ _modules/*
 
 /results/
 /phpunit.xml
+
+# Dump database & laporan berisi DATA PRIBADI (siswa, guru, admin) — JANGAN pernah di-commit.
+# Repo ini PUBLIK. (Ditambahkan 2026-09-25 setelah dbasli.sql sempat ter-push.)
+/database/*.sql
+/database/*.xlsx
+*.sql.gz

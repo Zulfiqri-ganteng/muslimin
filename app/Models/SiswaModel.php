@@ -13,6 +13,14 @@ class SiswaModel extends Model
         'nis', 'nisn', 'nama', 'jenis_kelamin', 'tempat_lahir', 'tanggal_lahir',
         'agama', 'alamat', 'no_hp', 'nama_wali', 'no_hp_wali',
         'kelas_id', 'tahun_masuk', 'status', 'keterangan',
+        // Biodata buku induk (migrasi 2026-09-25-000002)
+        'status_keluarga', 'anak_ke',
+        'rt', 'rw', 'kelurahan', 'kecamatan', 'kota',
+        'sekolah_asal', 'diterima_kelas', 'diterima_tanggal',
+        'nama_ayah', 'nama_ibu', 'pekerjaan_ayah', 'pekerjaan_ibu',
+        'ortu_alamat', 'ortu_rt', 'ortu_rw', 'ortu_kelurahan', 'ortu_kecamatan', 'ortu_kota', 'ortu_telepon',
+        'alamat_wali', 'pekerjaan_wali',
+        'biodata_at',
     ];
     protected $useTimestamps  = true;
     protected $createdField   = 'created_at';
@@ -22,16 +30,33 @@ class SiswaModel extends Model
 
     public const STATUS = ['aktif', 'lulus', 'pindah', 'keluar'];
 
+    /** Pilihan baku — dipakai form isian publik & Master Siswa. */
+    public const AGAMA = ['Islam', 'Kristen', 'Katolik', 'Hindu', 'Buddha', 'Konghucu'];
+
+    public const STATUS_KELUARGA = ['Anak Kandung', 'Anak Tiri', 'Anak Angkat'];
+
+    /**
+     * Saran pekerjaan orang tua/wali. BUKAN daftar tertutup — isian bebas
+     * tetap diterima (pilihan "Lainnya" di form), jadi cukup untuk dropdown.
+     */
+    public const PEKERJAAN = [
+        'Tidak Bekerja', 'Ibu Rumah Tangga', 'Karyawan Swasta', 'Buruh',
+        'Wiraswasta', 'Pedagang', 'Petani', 'Nelayan', 'PNS', 'TNI/Polri',
+        'Guru/Dosen', 'Sopir/Ojek', 'Pensiunan', 'Sudah Meninggal',
+    ];
+
     protected $validationRules = [
-        'id'            => 'permit_empty|is_natural',
-        'nis'           => 'required|max_length[30]|is_unique[siswa.nis,id,{id}]',
-        'nisn'          => 'permit_empty|max_length[30]|is_unique[siswa.nisn,id,{id}]',
-        'nama'          => 'required|max_length[150]',
-        'jenis_kelamin' => 'permit_empty|in_list[L,P]',
-        'tanggal_lahir' => 'permit_empty|valid_date[Y-m-d]',
-        'kelas_id'      => 'permit_empty|is_natural',
-        'tahun_masuk'   => 'permit_empty|is_natural',
-        'status'        => 'permit_empty|in_list[aktif,lulus,pindah,keluar]',
+        'id'               => 'permit_empty|is_natural',
+        'nis'              => 'required|max_length[30]|is_unique[siswa.nis,id,{id}]',
+        'nisn'             => 'permit_empty|max_length[30]|is_unique[siswa.nisn,id,{id}]',
+        'nama'             => 'required|max_length[150]',
+        'jenis_kelamin'    => 'permit_empty|in_list[L,P]',
+        'tanggal_lahir'    => 'permit_empty|valid_date[Y-m-d]',
+        'kelas_id'         => 'permit_empty|is_natural',
+        'tahun_masuk'      => 'permit_empty|is_natural',
+        'status'           => 'permit_empty|in_list[aktif,lulus,pindah,keluar]',
+        'anak_ke'          => 'permit_empty|is_natural_no_zero|less_than[100]',
+        'diterima_tanggal' => 'permit_empty|valid_date[Y-m-d]',
     ];
     protected $validationMessages = [
         'nis'  => ['is_unique' => 'NIS sudah terdaftar.', 'required' => 'NIS wajib diisi.'],

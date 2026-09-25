@@ -36,6 +36,17 @@ $routes->get('tutup', 'Form::closed');
 $routes->get('revisi/(:segment)', 'Form::edit/$1');
 $routes->post('revisi/(:segment)', 'Form::updateSubmission/$1');
 
+// ===== Isian biodata siswa (TANPA login) =====
+// Pintu utama: subdomain (config Biodata::$host) — beranda subdomain langsung
+// form. Rute hostname MENIMPA rute '/' di atas hanya untuk host tersebut.
+// Pintu cadangan: /biodata di domain utama.
+$routes->get('/', 'Biodata::index', ['hostname' => config('Biodata')->host]);
+$routes->get('biodata', 'Biodata::index');
+$routes->get('biodata/siswa', 'Biodata::siswa');
+$routes->post('biodata/buka', 'Biodata::buka');
+$routes->post('biodata/kirim', 'Biodata::kirim');
+$routes->get('biodata/selesai', 'Biodata::selesai');
+
 // ===================== ADMIN =====================
 $routes->group('admin', static function ($routes) {
     // Autentikasi (tanpa filter)
@@ -53,6 +64,17 @@ $routes->group('admin', static function ($routes) {
         $routes->get('submissions/view/(:num)', 'Admin\Submissions::view/$1');
         $routes->post('submissions/status/(:num)', 'Admin\Submissions::updateStatus/$1');
         $routes->get('submissions/delete/(:num)', 'Admin\Submissions::delete/$1');
+
+        // ===== Isian Biodata Siswa (kotak masuk form publik) =====
+        // Semua aksi pengubah data memakai POST. Rute statis sebelum (:num).
+        $routes->get('biodata', 'Admin\Biodata::index');
+        $routes->get('biodata/laporan', 'Admin\Biodata::laporan');
+        $routes->post('biodata/pengaturan', 'Admin\Biodata::pengaturan');
+        $routes->post('biodata/setujui-massal', 'Admin\Biodata::setujuiMassal');
+        $routes->get('biodata/(:num)', 'Admin\Biodata::detail/$1');
+        $routes->post('biodata/(:num)/setujui', 'Admin\Biodata::setujui/$1');
+        $routes->post('biodata/(:num)/kembalikan', 'Admin\Biodata::kembalikan/$1');
+        $routes->post('biodata/(:num)/hapus', 'Admin\Biodata::hapus/$1');
 
         // ===== Manajemen Dokumen =====
         // Semua aksi yang mengubah data memakai POST (modul baru sengaja
@@ -85,9 +107,9 @@ $routes->group('admin', static function ($routes) {
         // rute ini — yang sudah dijaga filter 'auth' grup ini.
         // HEAD ikut didaftarkan: pengelola unduhan & pemutar video kerap
         // menanyakan ukuran berkas lebih dulu sebelum menarik isinya.
-        $routes->match(['get', 'head'], 'dokumen/berkas/(:num)', 'Admin\DokumenFile::lihat/$1');
-        $routes->match(['get', 'head'], 'dokumen/unduh/(:num)', 'Admin\DokumenFile::unduh/$1');
-        $routes->match(['get', 'head'], 'dokumen/thumb/(:num)', 'Admin\DokumenFile::thumb/$1');
+        $routes->match(['GET', 'HEAD'], 'dokumen/berkas/(:num)', 'Admin\DokumenFile::lihat/$1');
+        $routes->match(['GET', 'HEAD'], 'dokumen/unduh/(:num)', 'Admin\DokumenFile::unduh/$1');
+        $routes->match(['GET', 'HEAD'], 'dokumen/thumb/(:num)', 'Admin\DokumenFile::thumb/$1');
 
         // ===== Laboratorium: Peminjaman & Pengembalian =====
         $routes->get('peminjaman', 'Admin\Peminjaman::index');
@@ -657,9 +679,9 @@ $routes->group('api/v1', ['namespace' => 'App\Controllers\Api', 'filter' => 'cor
         $routes->post('admin/dokumen/folder/(:num)/pulihkan', 'Admin\Dokumen::pulihkanFolder/$1');
         $routes->post('admin/dokumen/folder/(:num)/bagikan', 'Admin\Dokumen::bagikanFolder/$1');
         $routes->post('admin/dokumen/share/(:num)/cabut', 'Admin\Dokumen::cabutShare/$1');
-        $routes->match(['get', 'head'], 'admin/dokumen/(:num)/berkas', 'Admin\Dokumen::berkas/$1');
-        $routes->match(['get', 'head'], 'admin/dokumen/(:num)/unduh', 'Admin\Dokumen::unduh/$1');
-        $routes->match(['get', 'head'], 'admin/dokumen/(:num)/thumb', 'Admin\Dokumen::thumb/$1');
+        $routes->match(['GET', 'HEAD'], 'admin/dokumen/(:num)/berkas', 'Admin\Dokumen::berkas/$1');
+        $routes->match(['GET', 'HEAD'], 'admin/dokumen/(:num)/unduh', 'Admin\Dokumen::unduh/$1');
+        $routes->match(['GET', 'HEAD'], 'admin/dokumen/(:num)/thumb', 'Admin\Dokumen::thumb/$1');
         $routes->post('admin/dokumen/(:num)/pulihkan', 'Admin\Dokumen::pulihkan/$1');
         $routes->post('admin/dokumen/(:num)/bagikan', 'Admin\Dokumen::bagikan/$1');
         $routes->delete('admin/dokumen/(:num)/permanen', 'Admin\Dokumen::hapusPermanen/$1');

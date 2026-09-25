@@ -37,6 +37,17 @@
   .btn-nav-primary { @apply inline-flex items-center justify-center gap-1.5 whitespace-nowrap rounded-xl bg-brand-600 px-6 sm:px-7 py-3 text-sm font-bold text-white shadow-lg shadow-brand-600/20 hover:bg-brand-700 transition active:scale-95; }
   .btn-nav-gold { @apply inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-xl bg-gold-500 px-5 sm:px-7 py-3 text-sm font-bold text-brand-900 shadow-lg shadow-gold-500/20 hover:bg-gold-400 transition active:scale-95; }
 
+  /* ---- Form isian biodata siswa (publik, dipakai di HP) ----
+     inp-lg: huruf 16px agar iPhone tidak memperbesar layar saat input disentuh. */
+  .inp-lg   { @apply text-base py-3; }
+  .inp-err  { @apply border-red-400 bg-red-50/40 focus:border-red-500 focus:ring-red-500/20; }
+  .err-msg  { @apply mt-1 text-xs font-semibold text-red-600; }
+  .hint     { @apply mt-1 text-xs text-slate-500 leading-relaxed; }
+  .bio-card { @apply bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden; }
+  .bio-head { @apply bg-brand-700 px-5 sm:px-6 py-4 flex items-center gap-3; }
+  .bio-num  { @apply flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-white/15 text-white text-sm font-bold; }
+  .bio-sub  { @apply text-xs font-bold text-brand-700 uppercase tracking-wide; }
+
   /* ---- Animasi ---- */
   .step-anim { animation: stepIn .38s cubic-bezier(.16,.84,.44,1) both; }
   .pop-anim  { animation: popIn .32s cubic-bezier(.16,.84,.44,1) both; }
