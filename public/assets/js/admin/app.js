@@ -36,6 +36,21 @@
         }
     });
 
+    // <a data-export-filter="idForm"> — Export memakai pilihan filter yang TAMPIL di
+    // layar saat diklik (bukan filter saat halaman dimuat), jadi pilih "X TKJ 2"
+    // lalu langsung klik Export tetap mengunduh X TKJ 2 saja.
+    document.addEventListener('click', function (e) {
+        var a = e.target.closest('a[data-export-filter]');
+        var form = a && document.getElementById(a.getAttribute('data-export-filter'));
+        if (!form) { return; }
+        var url = new URL(a.getAttribute('href'), window.location.href);
+        form.querySelectorAll('select[data-filter]').forEach(function (s) {
+            if (s.value) { url.searchParams.set(s.name, s.value); } else { url.searchParams.delete(s.name); }
+        });
+        e.preventDefault();
+        window.location.href = url.toString();
+    });
+
     /** Baca atribut data-* berisi JSON dengan aman. */
     function readJson(root, name, fallback) {
         var raw = root.getAttribute('data-' + name);

@@ -73,6 +73,7 @@ class Biodata extends BaseController
 
         $kelasOpts = (new KelasModel())->options();
         $kelasNama = $kelasOpts[$kelasId] ?? '';
+        $ringkas   = $this->isian->ringkasan();
 
         return view('admin/biodata/index', [
             'title'        => 'Isian Biodata Siswa',
@@ -84,7 +85,9 @@ class Biodata extends BaseController
             'total'        => $total,
             'pager'        => $pager,
             'mulai'        => ($page - 1) * self::PER,
-            'ringkas'      => $this->isian->ringkasan(),
+            'ringkas'      => $ringkas,
+            // Isian menunggu terlama → tombol "Periksa Sekarang" di pengingat tugas.
+            'pertamaId'    => $ringkas['menunggu'] > 0 ? (int) ($this->isian->menungguBerikutnya(0)['id'] ?? 0) : 0,
             'perKelas'     => $tab === 'kelas' ? $this->isian->perKelas() : [],
             'kelasOpts'    => $kelasOpts,
             'setting'      => $setting,
@@ -125,6 +128,7 @@ class Biodata extends BaseController
             return redirect()->to(site_url('admin/biodata'))->with('error', 'Isian tidak ditemukan.');
         }
 
+        $kelasId   = (int) $this->request->getGet('kelas_id');
         $siswa     = (new SiswaModel())->withDeleted()->withRelations()->where('siswa.id', $row['siswa_id'])->first();
         $banding   = BiodataVerifikasi::bandingkan($row, $siswa);
         $admin     = null;
@@ -142,7 +146,10 @@ class Biodata extends BaseController
             'hitung'     => $banding['hitung'],
             'peringatan' => BiodataVerifikasi::peringatan($row, $siswa),
             'admin'      => $admin,
-            'kelasId'    => (int) $this->request->getGet('kelas_id'),
+            'kelasId'    => $kelasId,
+            // Antrean: jumlah menunggu + isian berikutnya (tombol "Lewati").
+            'sisaMenunggu' => (int) $this->isian->ringkasan()['menunggu'],
+            'berikutnyaId' => (int) ($this->isian->menungguBerikutnya((int) $row['id'], $kelasId)['id'] ?? 0),
         ]);
     }
 

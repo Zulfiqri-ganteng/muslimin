@@ -21,6 +21,8 @@
  * @var string      $exportTitle       Tooltip tombol Export
  * @var string|null $bulkUrl           URL bulk-delete; null = tanpa Hapus Terpilih/Semua
  * @var array       $bulkHidden        Input hidden tambahan pada form bulk, mis. ['shift' => 'pagi']
+ * @var bool        $filterLangsung    true = memilih filter langsung menyaring (tanpa klik Cari) DAN
+ *                                     tombol Export selalu memakai pilihan filter yang tampil di layar
  */
 $searchPlaceholder = $searchPlaceholder ?? null;
 $q           = $q ?? '';
@@ -35,6 +37,7 @@ $bulkUrl     = $bulkUrl ?? null;
 $bulkHidden  = $bulkHidden ?? [];
 $bulkLabel   = $bulkLabel ?? 'data';   // nama entitas pada teks konfirmasi hapus
 $bulkWarn    = $bulkWarn ?? '';        // kalimat peringatan tambahan (opsional)
+$filterLangsung = (bool) ($filterLangsung ?? false);
 
 $adaFilterAktif = $q !== '';
 foreach ($filters as $f) {
@@ -63,7 +66,7 @@ ob_start(); ?>
     <?php endif; ?>
 
     <?php if ($exportUrl): ?>
-        <a href="<?= $exportUrl ?>" title="<?= esc($exportTitle, 'attr') ?>" class="inline-flex items-center gap-1.5 rounded-lg border border-slate-300 bg-white text-slate-600 hover:bg-slate-50 text-sm font-semibold px-3.5 py-2.5 transition">
+        <a href="<?= $exportUrl ?>"<?= $filterLangsung && $searchPlaceholder !== null ? ' data-export-filter="toolbarFilter"' : '' ?> title="<?= esc($exportTitle, 'attr') ?>" class="inline-flex items-center gap-1.5 rounded-lg border border-slate-300 bg-white text-slate-600 hover:bg-slate-50 text-sm font-semibold px-3.5 py-2.5 transition">
             <svg class="w-4 h-4 text-emerald-600" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 10v6m0 0l-3-3m3 3l3-3M4 6a2 2 0 012-2h5l2 2h5a2 2 0 012 2v9a2 2 0 01-2 2H6a2 2 0 01-2-2V6z"/></svg>
             Export
         </a>
@@ -86,14 +89,14 @@ ob_start(); ?>
 <div class="bg-white rounded-2xl border border-slate-200 shadow-sm p-4 mb-5">
     <?php if ($searchPlaceholder !== null): ?>
         <!-- Baris 1: pencarian & filter (lebar penuh) -->
-        <form method="get" class="flex flex-col sm:flex-row sm:flex-wrap sm:items-center gap-2">
+        <form method="get" id="toolbarFilter" class="flex flex-col sm:flex-row sm:flex-wrap sm:items-center gap-2">
             <div class="relative flex-1 min-w-[200px]">
                 <svg class="w-5 h-5 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
                 <input type="text" name="q" value="<?= esc($q) ?>" placeholder="<?= esc($searchPlaceholder) ?>"
                        class="w-full rounded-lg border border-slate-300 pl-10 pr-3 py-2.5 text-sm focus:border-brand-500 focus:ring-2 focus:ring-brand-500/20 outline-none">
             </div>
             <?php foreach ($filters as $f): ?>
-                <select name="<?= esc($f['name'], 'attr') ?>" class="rounded-lg border border-slate-300 px-3 py-2.5 text-sm focus:border-brand-500 outline-none shrink-0">
+                <select name="<?= esc($f['name'], 'attr') ?>" data-filter<?= $filterLangsung ? ' data-autosubmit' : '' ?> class="rounded-lg border border-slate-300 px-3 py-2.5 text-sm focus:border-brand-500 outline-none shrink-0">
                     <option value=""><?= esc($f['all']) ?></option>
                     <?php foreach ($f['options'] as $val => $label): ?>
                         <option value="<?= esc($val, 'attr') ?>" <?= (string) ($f['value'] ?? '') === (string) $val ? 'selected' : '' ?>><?= esc($label) ?></option>

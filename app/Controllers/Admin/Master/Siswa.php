@@ -357,7 +357,11 @@ class Siswa extends BaseMaster
         }
         $ss->setActiveSheetIndex(0);
 
-        $this->streamXlsx($ss, 'Data-Siswa-' . date('Ymd-His'));
+        // Nama berkas menyebut kelasnya bila hanya satu kelas: Data-Siswa-X-TKJ-2-….
+        $bagian = count($perKelas) === 1 && array_key_first($perKelas) !== ''
+            ? trim((string) preg_replace('/[^A-Za-z0-9]+/', '-', (string) array_key_first($perKelas)), '-') . '-'
+            : '';
+        $this->streamXlsx($ss, 'Data-Siswa-' . $bagian . date('Ymd-His'));
     }
 
     /** Isi baris data mulai baris 7 (baris 1–5 KOP, baris 6 judul kolom); nomor urut mulai 1 per lembar. */

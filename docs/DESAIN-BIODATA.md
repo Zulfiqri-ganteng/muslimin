@@ -180,3 +180,19 @@ Kolom lama dipakai ulang: `alamat` = jalan/perumahan siswa, `no_hp` = HP siswa,
 
 **Rollback** (hanya sebelum siswa mulai mengisi!): `phpm spark migrate:rollback`
 menghapus kolom biodata & tabel isian — **data isian ikut hilang**.
+
+## Pembaruan 2026-09-25 malam (setelah link disebar)
+
+- **Pop-up KK** di form siswa sebelum mulai mengisi (lihat butir 3 keputusan).
+- **Tampilan admin `admin/biodata` dirombak** (fungsi & rute TIDAK berubah): pengingat tugas
+  + tombol *Periksa Sekarang* (isian menunggu terlama), kartu angka yang bisa diklik ke tab,
+  kotak Form (saklar buka/tutup = satu klik + konfirmasi; batas waktu disimpan terpisah),
+  kotak Laporan, daftar berbentuk baris grid (kartu di HP, tanpa geser samping), waktu relatif
+  ("2 jam lalu"), warna progres per kelas (merah < 34%, kuning 34–66%, hijau ≥ 67%),
+  keadaan kosong yang ramah. helpKey `biodata_v2`.
+- **Halaman Periksa**: ringkasan kolom baru/berubah, saklar *Tampilkan yang berubah saja*,
+  nilai lama yang diganti dicoret, tombol *Lewati* (isian menunggu berikutnya), konfirmasi
+  Setujui. Controller menambah `pertamaId`, `sisaMenunggu`, `berikutnyaId`.
+- **Master Siswa → Export**: tab per kelas (+ "Semua Kelas" bila > 1 kelas); filter langsung
+  menyaring tanpa klik Cari dan Export selalu mengikuti pilihan filter di layar
+  (`filterLangsung` di toolbar master + `data-export-filter` di `admin/app.js`).

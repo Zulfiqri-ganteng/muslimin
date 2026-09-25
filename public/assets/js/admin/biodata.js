@@ -10,6 +10,15 @@ document.addEventListener('alpine:init', function () {
             tersalin: '',
             jumlah: 0,
 
+            /** Di HP bar tab bisa digeser: pastikan tab yang aktif terlihat di tengah. */
+            init: function () {
+                var nav = this.$refs.tabNav;
+                var aktif = nav && nav.querySelector('[aria-current="page"]');
+                if (aktif && nav.scrollWidth > nav.clientWidth) {
+                    nav.scrollLeft = aktif.offsetLeft - (nav.clientWidth - aktif.clientWidth) / 2;
+                }
+            },
+
             salin: function (teks, kunci) {
                 var self = this;
                 var tandai = function () {

@@ -72,7 +72,8 @@ $blokAlamat = static function (string $p) use ($kolom, $label): void {
         <p class="mt-1">• <b>Import</b> — unduh template, isi di Excel, unggah, periksa di pratinjau, simpan. NIS yang sudah ada akan <b>diperbarui</b>, bukan diduplikat. <b>Sel yang dikosongkan tidak mengubah data lama</b>, jadi aman mengimpor ulang daftar yang hanya berisi NIS, nama, dan kelas.<br>
         • Kolom <b>Kelas</b> pada file impor diisi <b>nama kelas</b> persis seperti di Master Kelas (mis. <i>X TKJ 1</i>).<br>
         • <b>Penting:</b> NIS bisa berganti ke NIS asli setelah biodata disetujui. Untuk impor ulang, pakai file hasil <b>Export terbaru</b>, bukan file lama — NIS lama akan dianggap siswa baru.<br>
-        • <b>Export</b> — mengikuti filter yang sedang aktif (bisa satu kelas saja), berisi seluruh kolom biodata. Bila isinya lebih dari satu kelas, file Excel berisi tab <b>Semua Kelas</b> + <b>satu tab per kelas</b> (klik nama kelas di bawah layar Excel).</p>
+        • <b>Filter</b> — memilih kelas/tingkat/status/biodata langsung menyaring tabel (tanpa klik Cari).<br>
+        • <b>Export</b> — mengunduh sesuai pilihan filter (pilih satu kelas = hanya kelas itu), berisi seluruh kolom biodata. Bila isinya lebih dari satu kelas, file Excel berisi tab <b>Semua Kelas</b> + <b>satu tab per kelas</b> (klik nama kelas di bawah layar Excel).</p>
         <p class="mt-1">• Status <b>Aktif</b> yang dihitung pada grafik jumlah siswa di halaman publik. Siswa lulus/pindah/keluar tetap tersimpan sebagai arsip.</p>',
 ]) ?>
 
@@ -105,7 +106,8 @@ $blokAlamat = static function (string $p) use ($kolom, $label): void {
             ['name' => 'biodata',  'value' => $biodata,                  'all' => 'Semua biodata', 'options' => $opsiBiodata],
         ],
         'exportUrl'   => site_url('admin/master/siswa/export') . ($qsExport !== [] ? '?' . http_build_query($qsExport) : ''),
-        'exportTitle' => 'Keluarkan data siswa (mengikuti filter aktif) ke file Excel',
+        'exportTitle' => 'Unduh data siswa sesuai filter yang dipilih (mis. satu kelas saja) ke file Excel',
+        'filterLangsung' => true,
         'bulkUrl'     => site_url('admin/master/siswa/bulk-delete'),
         'bulkLabel'   => 'siswa',
     ]) ?>
