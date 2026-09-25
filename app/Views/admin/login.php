@@ -45,6 +45,7 @@
             </form>
         </div>
         <p class="text-center text-brand-200 text-xs mt-6">&copy; <?= date('Y') ?> &middot; Sistem Kesediaan Guru Mengajar</p>
+        <?= view('partials/kredit', ['kreditKelas' => 'mt-1 text-center text-brand-200 text-xs']) ?>
     </div>
 </body>
 </html>

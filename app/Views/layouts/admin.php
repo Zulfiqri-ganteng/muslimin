@@ -231,6 +231,10 @@
 
         <?= $this->renderSection('content') ?>
     </main>
+
+    <footer class="px-4 sm:px-6 pb-5 text-center text-xs text-slate-400">
+        <?= view('partials/kredit', ['kreditKelas' => '']) ?>
+    </footer>
 </div>
 
 <?php // Skrip halaman dimuat lebih dulu (defer = urut dokumen), lalu util global, terakhir Alpine. ?>

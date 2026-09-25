@@ -15,6 +15,7 @@
 
     <footer class="py-6 text-center text-xs text-slate-400">
         &copy; <?= date('Y') ?> <?= esc($setting['school_name'] ?? '') ?> &middot; Sistem Kesediaan Guru Mengajar
+        <?= view('partials/kredit') ?>
     </footer>
 
     <?= $this->renderSection('scripts') ?>
