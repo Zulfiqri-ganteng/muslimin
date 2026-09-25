@@ -22,11 +22,14 @@ class AbsensiKerjaModel extends Model
     protected $createdField  = 'created_at';
     protected $updatedField  = 'updated_at';
     protected $allowedFields = [
-        'tanggal', 'guru_id', 'status', 'jam_masuk', 'keterangan', 'created_by',
+        'tanggal', 'guru_id', 'status', 'shift', 'jam_masuk', 'keterangan', 'created_by',
     ];
 
     /** Status valid — sama dengan absensi mengajar. */
     public const STATUSES = ['hadir', 'telat', 'izin', 'sakit', 'alpa'];
+
+    /** Cakupan shift: penuh (pagi+siang), pagi saja, atau siang saja. */
+    public const SHIFTS = ['penuh', 'pagi', 'siang'];
 
     /**
      * Catatan kehadiran kerja pada satu tanggal (join nama guru), urut nama.
@@ -35,7 +38,7 @@ class AbsensiKerjaModel extends Model
      */
     public function forDate(string $tanggal): array
     {
-        $rows = $this->select('absensi_kerja.id, absensi_kerja.guru_id, absensi_kerja.status,
+        $rows = $this->select('absensi_kerja.id, absensi_kerja.guru_id, absensi_kerja.status, absensi_kerja.shift,
                 absensi_kerja.jam_masuk, absensi_kerja.keterangan,
                 guru.nama, guru.kode_guru')
             ->join('guru', 'guru.id = absensi_kerja.guru_id', 'left')
@@ -49,6 +52,7 @@ class AbsensiKerjaModel extends Model
             'nama'       => $r['nama'] ?? '(guru terhapus)',
             'kode_guru'  => $r['kode_guru'] ?? null,
             'status'     => $r['status'],
+            'shift'      => $r['shift'] ?? 'penuh',
             'jam_masuk'  => $r['jam_masuk'] ? substr($r['jam_masuk'], 0, 5) : null,
             'keterangan' => $r['keterangan'] ?? null,
         ], $rows);
@@ -59,7 +63,7 @@ class AbsensiKerjaModel extends Model
      * upsert per guru, lalu hapus baris guru yang tak lagi ada di daftar.
      * Beda dari absensi mengajar: baris 'hadir' TETAP disimpan.
      *
-     * @param array $items tiap elemen: guru_id, status, jam_masuk, keterangan
+     * @param array $items tiap elemen: guru_id, status, shift (penuh/pagi/siang), jam_masuk, keterangan
      */
     public function syncDate(string $tanggal, array $items, ?int $adminId = null): void
     {
@@ -79,12 +83,17 @@ class AbsensiKerjaModel extends Model
             if (! in_array($status, self::STATUSES, true)) {
                 $status = 'hadir';
             }
+            $shift = $it['shift'] ?? 'penuh';
+            if (! in_array($shift, self::SHIFTS, true)) {
+                $shift = 'penuh';
+            }
             $jamMasuk = trim((string) ($it['jam_masuk'] ?? ''));
             $ket      = trim((string) ($it['keterangan'] ?? ''));
             $data = [
                 'tanggal'    => $tanggal,
                 'guru_id'    => $guruId,
                 'status'     => $status,
+                'shift'      => $shift,
                 'jam_masuk'  => $jamMasuk !== '' ? $jamMasuk : null,
                 'keterangan' => $ket !== '' ? mb_substr($ket, 0, 255) : null,
                 'created_by' => $adminId,
@@ -130,10 +139,10 @@ class AbsensiKerjaModel extends Model
      *
      * @return list<array{tanggal:string,status:string,jam_masuk:?string,keterangan:?string}>
      */
-    public function detailForGuru(int $guruId, string $dari, string $sampai): array
+    public function detailForGuru(int|array $guruId, string $dari, string $sampai): array
     {
         return $this->select('tanggal, status, jam_masuk, keterangan')
-            ->where('guru_id', $guruId)
+            ->whereIn('guru_id', (array) $guruId)
             ->where('tanggal >=', $dari)
             ->where('tanggal <=', $sampai)
             ->orderBy('tanggal', 'ASC')

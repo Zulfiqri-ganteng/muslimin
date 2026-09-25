@@ -46,7 +46,7 @@ foreach ($kategoriList as $k) {
      data-defaults="<?= esc(json_encode([
          'id' => '', 'kode' => '', 'nama' => '', 'kategori' => 'lainnya',
          'parent_id' => '', 'jurusan_id' => '', 'level' => 5,
-         'is_struktural' => false, 'keterangan' => '',
+         'is_struktural' => false, 'hadir_harian' => false, 'keterangan' => '',
      ]), 'attr') ?>">
 
     <?= view('admin/master/partials/toolbar', [
@@ -104,6 +104,10 @@ foreach ($kategoriList as $k) {
                                         <svg class="w-3 h-3" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z"/></svg>
                                         Struktural
                                     </span>
+                                <?php endif; ?>
+                                <?php if (! empty($r['hadir_harian'])): ?>
+                                    <span class="inline-flex items-center gap-1 mt-1 rounded-full bg-brand-50 text-brand-700 border border-brand-200 px-2 py-0.5 text-[11px] font-semibold"
+                                          title="Penyandangnya otomatis diisikan ke panel Kehadiran Kerja setiap hari">Hadir harian</span>
                                 <?php endif; ?>
                             </td>
                             <td class="px-4 py-3">
@@ -198,6 +202,17 @@ foreach ($kategoriList as $k) {
                             <span class="text-sm">
                                 <span class="font-medium text-slate-700">Jabatan struktural</span>
                                 <span class="block text-xs text-slate-500">Wajib hadir walau tidak punya jadwal mengajar. Penyandangnya otomatis muncul di panel <b>Kehadiran Kerja</b> pada halaman Absensi, termasuk Sabtu/Minggu.</span>
+                            </span>
+                        </label>
+                    </div>
+                    <div class="sm:col-span-2">
+                        <label class="flex items-start gap-2.5 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2.5 cursor-pointer">
+                            <input type="hidden" name="hadir_harian" value="0">
+                            <input type="checkbox" name="hadir_harian" value="1" x-model="form.hadir_harian"
+                                   class="mt-0.5 rounded border-slate-300 text-brand-600 focus:ring-brand-500">
+                            <span class="text-sm">
+                                <span class="font-medium text-slate-700">Wajib hadir harian (non-struktural)</span>
+                                <span class="block text-xs text-slate-500">Untuk staf seperti <b>Tata Usaha</b>: penyandangnya otomatis diisikan ke panel <b>Kehadiran Kerja</b> tiap hari dan tampil di bagian "Staf TU &amp; lainnya" pada pesan WhatsApp.</span>
                             </span>
                         </label>
                     </div>

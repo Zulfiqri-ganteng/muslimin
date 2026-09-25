@@ -68,7 +68,9 @@ class Jabatan extends BaseCrud
             'level'         => max(1, (int) ($in['level'] ?? 5) ?: 5),
             'is_struktural' => ! empty($in['is_struktural']) ? 1 : 0,
             'keterangan'    => trim((string) ($in['keterangan'] ?? '')) ?: null,
-        ];
+        ]
+        // Aplikasi versi lama tidak mengirim hadir_harian → jangan ditimpa.
+        + (array_key_exists('hadir_harian', $in) ? ['hadir_harian' => ! empty($in['hadir_harian']) ? 1 : 0] : []);
     }
 
     protected function transform(array $r): array
@@ -84,6 +86,7 @@ class Jabatan extends BaseCrud
             'jurusan_kode'  => $r['jurusan_kode'] ?? null,
             'level'         => (int) ($r['level'] ?? 5),
             'is_struktural' => (bool) ($r['is_struktural'] ?? false),
+            'hadir_harian'  => (bool) ($r['hadir_harian'] ?? false),
             'keterangan'    => $r['keterangan'] ?? null,
         ];
     }

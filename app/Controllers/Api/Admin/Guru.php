@@ -51,7 +51,7 @@ class Guru extends BaseCrud
         $jk     = strtoupper(trim((string) ($in['jenis_kelamin'] ?? '')));
         $status = strtoupper(trim((string) ($in['status_guru'] ?? '')));
 
-        return [
+        $out = [
             'nip'           => trim((string) ($in['nip'] ?? '')) ?: null,
             'kode_guru'     => trim((string) ($in['kode_guru'] ?? '')),
             'nama'          => trim((string) ($in['nama'] ?? '')),
@@ -60,6 +60,21 @@ class Guru extends BaseCrud
             'max_beban'     => (int) ($in['max_beban'] ?? 24) ?: 24,
             'keterangan'    => trim((string) ($in['keterangan'] ?? '')) ?: null,
         ];
+        // Hanya ditulis bila klien mengirim key-nya: aplikasi versi lama (tanpa
+        // isian No. WA) tidak menghapus nomor yang sudah tersimpan.
+        if (array_key_exists('no_wa', $in)) {
+            $out['no_wa'] = GuruModel::normalNoWa($in['no_wa']);
+        }
+        if (array_key_exists('ikut_absensi', $in)) {
+            $out['ikut_absensi'] = ! empty($in['ikut_absensi']) ? 1 : 0;
+        }
+        if (array_key_exists('induk_id', $in)) {
+            // Data utama guru ganda; bila yang dipilih juga data ganda → pakai induknya.
+            $induk = (int) $in['induk_id'] > 0 ? $this->model->select('id, induk_id')->find((int) $in['induk_id']) : null;
+            $out['induk_id'] = $induk ? (((int) ($induk['induk_id'] ?? 0)) ?: (int) $induk['id']) : null;
+        }
+
+        return $out;
     }
 
     protected function transform(array $r): array
@@ -71,6 +86,9 @@ class Guru extends BaseCrud
             'nip'           => $r['nip'] ?? null,
             'kode_guru'     => $r['kode_guru'],
             'nama'          => $r['nama'],
+            'no_wa'         => $r['no_wa'] ?? null,
+            'ikut_absensi'  => (int) ($r['ikut_absensi'] ?? 1) === 1,
+            'induk_id'      => ((int) ($r['induk_id'] ?? 0)) ?: null,
             'jenis_kelamin' => $r['jenis_kelamin'] ?? null,
             'status_guru'   => $r['status_guru'] ?? null,
             'max_beban'     => (int) ($r['max_beban'] ?? 0),

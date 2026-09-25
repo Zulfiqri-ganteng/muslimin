@@ -7,6 +7,7 @@
  * @var array  $rows    Baris rekap per guru
  * @var string $dari    Tanggal awal periode
  * @var string $sampai  Tanggal akhir periode
+ * @var string $labelJabatan Nama jabatan bila rekap difilter ('' = semua)
  */
 ?>
 <!DOCTYPE html>
@@ -79,7 +80,7 @@
     <?= kop_pdf() ?>
     <div class="head">
         <h1>REKAP ABSENSI GURU</h1>
-        <p>Periode <?= esc($dari) ?> s/d <?= esc($sampai) ?></p>
+        <p>Periode <?= esc($dari) ?> s/d <?= esc($sampai) ?><?= ($labelJabatan ?? '') !== '' ? ' — Jabatan: ' . esc($labelJabatan) : '' ?></p>
     </div>
 
     <?php if (empty($rows)): ?>

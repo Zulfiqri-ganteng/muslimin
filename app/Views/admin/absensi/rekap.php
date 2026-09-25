@@ -66,6 +66,48 @@
     </div>
 </div>
 
+<!-- Laporan bulanan format sekolah (matriks P/S + rekap hadir + rekap tidak hadir & potongan) -->
+<div class="bg-white rounded-2xl border border-slate-200 shadow-sm p-4 sm:p-5 mb-5">
+    <div class="flex flex-col lg:flex-row lg:items-end lg:justify-between gap-4">
+        <div>
+            <h3 class="font-bold text-slate-800">Laporan Bulanan <span class="text-slate-400 font-normal text-sm">(format sekolah)</span></h3>
+            <p class="text-xs text-slate-500 mt-0.5 max-w-xl">Tiga lembar seperti lembar manual sekolah: <b>ABSEN</b> (tanggal × Pagi/Siang, kode H/HT/I/S/TH), <b>REKAP HADIR</b>, dan <b>REKAP TIDAK HADIR</b> berikut total JP &amp; potongan.</p>
+            <form method="get" class="flex flex-wrap items-end gap-2 mt-3" data-noload>
+                <div>
+                    <label class="block text-xs font-semibold text-slate-500 mb-1">Bulan</label>
+                    <input type="month" name="bulan" value="<?= esc($bulanLaporan ?? date('Y-m')) ?>" required
+                           class="rounded-xl border border-slate-300 px-4 py-2 text-sm focus:border-brand-500 outline-none">
+                </div>
+                <button type="submit" formaction="<?= site_url('admin/absensi/laporan/excel') ?>"
+                        class="inline-flex items-center gap-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-semibold px-4 py-2.5 transition">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
+                    Excel
+                </button>
+                <button type="submit" formaction="<?= site_url('admin/absensi/laporan/pdf') ?>" formtarget="_blank"
+                        class="inline-flex items-center gap-1.5 rounded-lg bg-red-600 hover:bg-red-700 text-white text-sm font-semibold px-4 py-2.5 transition">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M19 7h-3V4a2 2 0 00-2-2H10a2 2 0 00-2 2v3H5a2 2 0 00-2 2v6a2 2 0 002 2h1v3a1 1 0 001 1h10a1 1 0 001-1v-3h1a2 2 0 002-2V9a2 2 0 00-2-2z"/></svg>
+                    PDF
+                </button>
+            </form>
+        </div>
+        <form method="post" action="<?= site_url('admin/absensi/tarif') ?>" class="flex flex-wrap items-end gap-2 rounded-xl border border-slate-200 bg-slate-50 p-3">
+            <?= csrf_field() ?>
+            <div>
+                <label class="block text-xs font-semibold text-slate-500 mb-1">Potongan per JP (Rp)</label>
+                <input type="number" name="absensi_potongan_jp" min="0" step="500" value="<?= (int) ($tarifJp ?? 5000) ?>"
+                       class="w-32 rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-brand-500 outline-none bg-white">
+            </div>
+            <div>
+                <label class="block text-xs font-semibold text-slate-500 mb-1">Transport per hari (Rp)</label>
+                <input type="number" name="absensi_transport" min="0" step="500" value="<?= (int) ($tarifTrans ?? 0) ?>"
+                       class="w-32 rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-brand-500 outline-none bg-white">
+            </div>
+            <button class="rounded-lg bg-brand-700 hover:bg-brand-800 text-white text-sm font-semibold px-4 py-2 transition">Simpan Tarif</button>
+            <p class="w-full text-[11px] text-slate-400">Potongan berlaku untuk telat, izin, sakit &amp; tidak hadir (per JP). Transport 0 = kolom uang transport tidak ditampilkan.</p>
+        </form>
+    </div>
+</div>
+
 <?php if (empty($rows)): ?>
     <div class="bg-white rounded-2xl border border-slate-200 shadow-sm p-10 text-center">
         <svg class="w-10 h-10 mx-auto text-slate-300 mb-3" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>

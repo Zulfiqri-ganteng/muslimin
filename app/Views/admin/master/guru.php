@@ -34,7 +34,7 @@
      data-entity="guru"
      data-all-jabatan="<?= esc(json_encode($allJabatan), 'attr') ?>"
      data-jabatan-map="<?= esc(json_encode($jabatanMap), 'attr') ?>"
-     data-defaults="<?= esc(json_encode(['kode_guru' => '', 'nip' => '', 'nama' => '', 'jenis_kelamin' => '', 'status_guru' => '', 'max_beban' => 24, 'keterangan' => '']), 'attr') ?>">
+     data-defaults="<?= esc(json_encode(['kode_guru' => '', 'nip' => '', 'nama' => '', 'no_wa' => '', 'ikut_absensi' => true, 'induk_id' => '', 'jenis_kelamin' => '', 'status_guru' => '', 'max_beban' => 24, 'keterangan' => '']), 'attr') ?>">
 
     <?= view('admin/master/partials/toolbar', [
         'baseUrl'           => site_url('admin/master/guru'),
@@ -81,7 +81,16 @@
                         <tr class="hover:bg-slate-50">
                             <td class="pl-6 pr-2 py-3"><input type="checkbox" class="row-check rounded border-slate-300 text-brand-600 focus:ring-brand-500" value="<?= (int) $r['id'] ?>"></td>
                             <td class="px-6 py-3 font-bold text-brand-700"><?= esc($r['kode_guru']) ?></td>
-                            <td class="px-6 py-3 font-medium"><?= esc($r['nama']) ?></td>
+                            <td class="px-6 py-3 font-medium">
+                                <?= esc($r['nama']) ?>
+                                <div class="text-[11px] font-normal <?= ! empty($r['no_wa']) ? 'text-emerald-600' : 'text-slate-400' ?>"><?= ! empty($r['no_wa']) ? 'WA ' . esc($r['no_wa']) : 'Belum ada No. WA' ?></div>
+                                <?php if (! empty($r['induk_id'])): ?>
+                                    <div class="text-[11px] font-semibold text-amber-700">Data ganda dari <?= esc($guruOpsi[$r['induk_id']] ?? ('#' . $r['induk_id'])) ?></div>
+                                <?php endif; ?>
+                                <?php if (isset($r['ikut_absensi']) && (int) $r['ikut_absensi'] === 0): ?>
+                                    <div class="text-[11px] font-semibold text-slate-500">Tidak ikut absensi</div>
+                                <?php endif; ?>
+                            </td>
                             <td class="px-6 py-3 text-slate-500"><?= esc($r['nip'] ?: '—') ?></td>
                             <td class="px-6 py-3"><?= esc($r['jenis_kelamin'] ?: '—') ?></td>
                             <td class="px-6 py-3"><?= $r['status_guru'] ? '<span class="inline-flex rounded-full bg-slate-100 text-slate-600 px-2 py-0.5 text-xs font-semibold">' . esc($r['status_guru']) . '</span>' : '—' ?></td>
@@ -175,6 +184,33 @@
                         <label class="block text-sm font-medium text-slate-600 mb-1">Keterangan</label>
                         <input type="text" name="keterangan" x-model="form.keterangan" maxlength="255"
                                class="w-full rounded-lg border border-slate-300 px-3 py-2.5 text-sm focus:border-brand-500 outline-none">
+                    </div>
+                    <div class="col-span-2">
+                        <label class="block text-sm font-medium text-slate-600 mb-1">No. WhatsApp</label>
+                        <input type="tel" name="no_wa" x-model="form.no_wa" maxlength="20" placeholder="cth: 081234567890"
+                               class="w-full rounded-lg border border-slate-300 px-3 py-2.5 text-sm focus:border-brand-500 outline-none">
+                        <p class="text-xs text-slate-400 mt-1">Dipakai untuk tag otomatis (@nomor) saat laporan absensi dikirim ke grup WhatsApp.</p>
+                    </div>
+                    <div class="col-span-2 rounded-lg border border-slate-200 bg-slate-50 p-3 space-y-3">
+                        <label class="flex items-start gap-2.5 cursor-pointer">
+                            <input type="hidden" name="ikut_absensi" value="0">
+                            <input type="checkbox" name="ikut_absensi" value="1" x-model="form.ikut_absensi"
+                                   class="mt-0.5 rounded border-slate-300 text-brand-600 focus:ring-brand-500">
+                            <span class="text-sm">
+                                <span class="font-medium text-slate-700">Ikut absensi &amp; laporan</span>
+                                <span class="block text-xs text-slate-500">Matikan untuk ketua yayasan / kepala sekolah yang tidak diabsen. Tidak muncul di absensi, pesan WA, maupun rekap.</span>
+                            </span>
+                        </label>
+                        <div>
+                            <label class="block text-sm font-medium text-slate-600 mb-1">Data ganda dari</label>
+                            <select name="induk_id" x-model="form.induk_id" class="w-full rounded-lg border border-slate-300 px-3 py-2.5 text-sm focus:border-brand-500 outline-none bg-white">
+                                <option value="">— bukan data ganda —</option>
+                                <?php foreach ($guruOpsi as $gid => $label): ?>
+                                    <option value="<?= (int) $gid ?>" x-show="String(form.id) !== '<?= (int) $gid ?>'"><?= esc($label) ?></option>
+                                <?php endforeach; ?>
+                            </select>
+                            <p class="text-xs text-slate-400 mt-1">Isi bila guru yang sama dibuat dua kali (mis. untuk kelas gabungan). Absensi, pesan WA &amp; rekap dihitung sebagai satu orang.</p>
+                        </div>
                     </div>
                 </div>
                 <p class="text-xs text-slate-400 mt-3">Mata pelajaran yang diampu (kompetensi) diatur pada menu Mata Pelajaran / Pengampu.</p>

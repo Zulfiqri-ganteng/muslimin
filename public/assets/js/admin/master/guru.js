@@ -15,6 +15,19 @@ document.addEventListener('alpine:init', function () {
             jabatanUrl: '',
             jabatanGuru: '',
 
+            // Baris DB → form: ikut_absensi "0"/"1" → boolean, induk_id → string.
+            mapEdit: function (r) {
+                var f = {};
+                var d = this.defaults;
+                Object.keys(d).forEach(function (k) {
+                    f[k] = (r[k] === null || r[k] === undefined) ? d[k] : r[k];
+                });
+                f.ikut_absensi = String(r.ikut_absensi === undefined || r.ikut_absensi === null ? '1' : r.ikut_absensi) !== '0';
+                f.induk_id = r.induk_id ? String(r.induk_id) : '';
+                f.id = r.id;
+                return f;
+            },
+
             onInit: function () {
                 this.allJabatan = window.readJson(this.$el, 'all-jabatan', []);
                 this.jabatanMap = window.readJson(this.$el, 'jabatan-map', {});

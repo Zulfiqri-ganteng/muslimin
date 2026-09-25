@@ -18,6 +18,7 @@ document.addEventListener('alpine:init', function () {
                     jurusan_id: r.jurusan_id === null || r.jurusan_id === undefined ? '' : String(r.jurusan_id),
                     level: r.level,
                     is_struktural: Number(r.is_struktural) === 1,
+                    hadir_harian: Number(r.hadir_harian) === 1,
                     keterangan: r.keterangan || '',
                 };
             },

@@ -9,7 +9,7 @@ class JabatanModel extends Model
     protected $table          = 'jabatan';
     protected $primaryKey     = 'id';
     protected $returnType     = 'array';
-    protected $allowedFields  = ['kode', 'nama', 'kategori', 'parent_id', 'jurusan_id', 'level', 'is_struktural', 'keterangan'];
+    protected $allowedFields  = ['kode', 'nama', 'kategori', 'parent_id', 'jurusan_id', 'level', 'is_struktural', 'hadir_harian', 'keterangan'];
     protected $useTimestamps  = true;
     protected $createdField   = 'created_at';
     protected $updatedField   = 'updated_at';
@@ -27,6 +27,7 @@ class JabatanModel extends Model
         'jurusan_id'    => 'permit_empty|is_natural',
         'level'         => 'permit_empty|is_natural',
         'is_struktural' => 'permit_empty|in_list[0,1]',
+        'hadir_harian'  => 'permit_empty|in_list[0,1]',
     ];
     protected $validationMessages = [
         'kode' => ['is_unique' => 'Kode jabatan sudah dipakai.', 'required' => 'Kode jabatan wajib diisi.'],

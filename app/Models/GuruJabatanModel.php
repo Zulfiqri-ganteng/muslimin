@@ -94,6 +94,24 @@ class GuruJabatanModel extends Model
     }
 
     /**
+     * ID guru yang wajib hadir harian walau tanpa jadwal KBM: penyandang jabatan
+     * struktural ATAU jabatan bertanda hadir_harian (mis. Staf Tata Usaha).
+     * Dipakai panel Kehadiran Kerja untuk isian otomatis.
+     */
+    public function guruHadirHarianIds(): array
+    {
+        return array_map('intval', array_column(
+            $this->select('guru_jabatan.guru_id')
+                ->join('jabatan', 'jabatan.id = guru_jabatan.jabatan_id')
+                ->groupStart()->where('jabatan.is_struktural', 1)->orWhere('jabatan.hadir_harian', 1)->groupEnd()
+                ->where('jabatan.deleted_at', null)
+                ->groupBy('guru_jabatan.guru_id')
+                ->findAll(),
+            'guru_id'
+        ));
+    }
+
+    /**
      * ID guru penyandang jabatan struktural — dipakai panel Kehadiran Kerja
      * untuk memunculkan wakil kepala dsb. walau hari itu tanpa jadwal KBM.
      */

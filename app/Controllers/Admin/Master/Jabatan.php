@@ -38,7 +38,7 @@ class Jabatan extends BaseMaster
         $per  = $this->perPage();
         $page = $this->pageNo();
 
-        $data = $this->cachedList("list|q={$q}|k={$kategori}|per={$per}|p={$page}", function () use ($q, $kategori, $per, $page) {
+        $data = $this->cachedList("list|v2|q={$q}|k={$kategori}|per={$per}|p={$page}", function () use ($q, $kategori, $per, $page) {
             $builder = $this->model->withRelations();
             if ($q !== '') {
                 $builder = $builder->groupStart()
@@ -138,6 +138,7 @@ class Jabatan extends BaseMaster
             'jurusan_id'    => (int) $this->request->getPost('jurusan_id') ?: null,
             'level'         => max(1, (int) ($this->request->getPost('level') ?: 5)),
             'is_struktural' => $this->request->getPost('is_struktural') ? 1 : 0,
+            'hadir_harian'  => $this->request->getPost('hadir_harian') ? 1 : 0,
             'keterangan'    => trim((string) $this->request->getPost('keterangan')) ?: null,
         ];
     }

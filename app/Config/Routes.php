@@ -413,6 +413,12 @@ $routes->group('admin', static function ($routes) {
         $routes->post('absensi/save', 'Admin\Absensi::save');
         $routes->post('absensi/save-kerja', 'Admin\Absensi::saveKerja');
         $routes->post('absensi/unrecord', 'Admin\Absensi::unrecord');
+        $routes->post('absensi/template-wa', 'Admin\Absensi::templateWa');
+        $routes->get('absensi/pesan-wa', 'Admin\Absensi::pesanWa');
+        $routes->get('absensi/piket', 'Admin\AbsensiPiket::index');
+        $routes->post('absensi/piket', 'Admin\AbsensiPiket::save');
+        $routes->get('absensi/laporan/(:segment)', 'Admin\Absensi::laporan/$1');
+        $routes->post('absensi/tarif', 'Admin\Absensi::tarif');
         $routes->get('absensi/rekap', 'Admin\Absensi::rekap');
         $routes->get('absensi/rekap/guru/(:num)', 'Admin\Absensi::rekapGuru/$1');
         $routes->get('absensi/rekap/(:segment)', 'Admin\Absensi::rekap/$1');
@@ -676,6 +682,14 @@ $routes->group('api/v1', ['namespace' => 'App\Controllers\Api', 'filter' => 'cor
         $routes->post('admin/absensi/save', 'Admin\Absensi::save');
         $routes->post('admin/absensi/save-kerja', 'Admin\Absensi::saveKerja');
         $routes->post('admin/absensi/unrecord', 'Admin\Absensi::unrecord');
+        $routes->get('admin/absensi/template-wa', 'Admin\Absensi::templateWa');
+        $routes->post('admin/absensi/template-wa', 'Admin\Absensi::templateWaSave');
+        $routes->get('admin/absensi/pesan-wa', 'Admin\Absensi::pesanWa');
+        $routes->get('admin/absensi/piket', 'Admin\AbsensiPiket::index');
+        $routes->post('admin/absensi/piket', 'Admin\AbsensiPiket::save');
+        $routes->get('admin/absensi/laporan/(:segment)', 'Admin\Absensi::laporan/$1');
+        $routes->get('admin/absensi/tarif', 'Admin\Absensi::tarif');
+        $routes->post('admin/absensi/tarif', 'Admin\Absensi::tarifSave');
         $routes->get('admin/absensi/rekap', 'Admin\Absensi::rekap');
         $routes->get('admin/absensi/rekap/export/(:segment)', 'Admin\Absensi::rekapExport/$1');
         $routes->get('admin/absensi/rekap/(:num)', 'Admin\Absensi::rekapGuru/$1');

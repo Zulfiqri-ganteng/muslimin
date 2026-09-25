@@ -58,6 +58,7 @@ class JadwalModel extends Model
     /**
      * Semua sesi mengajar pada satu hari (lintas kelas), untuk absensi harian.
      * Diurutkan per nama guru lalu jam, agar mudah dikelompokkan per guru.
+     * `jam_shift` = shift jam pelajaran (pagi/siang), acuan laporan per shift.
      */
     public function sessionsForHari(int $hariId): array
     {
@@ -66,7 +67,8 @@ class JadwalModel extends Model
                 guru.nama AS guru_nama, guru.kode_guru,
                 kelas.nama_kelas, kelas.shift,
                 mata_pelajaran.nama_mapel, mata_pelajaran.kode_mapel,
-                jam_pelajaran.jam_ke, jam_pelajaran.waktu_mulai, jam_pelajaran.waktu_selesai')
+                jam_pelajaran.jam_ke, jam_pelajaran.shift AS jam_shift,
+                jam_pelajaran.waktu_mulai, jam_pelajaran.waktu_selesai')
             ->join('pengampu', 'pengampu.id = jadwal.pengampu_id')
             ->join('mata_pelajaran', 'mata_pelajaran.id = pengampu.mapel_id')
             ->join('guru', 'guru.id = jadwal.guru_id')

@@ -3,22 +3,22 @@
 namespace App\Controllers\Admin;
 
 use App\Controllers\BaseController;
+use App\Libraries\AbsensiHarian;
+use App\Libraries\AbsensiLaporan;
+use App\Libraries\AbsensiRekap;
+use App\Libraries\AbsensiWa;
+use App\Models\AbsensiBelumModel;
 use App\Models\AbsensiGuruModel;
 use App\Models\AbsensiHariModel;
 use App\Models\AbsensiKerjaModel;
 use App\Models\AuditModel;
 use App\Models\GuruJabatanModel;
 use App\Models\GuruModel;
-use App\Models\HariModel;
 use App\Models\JabatanModel;
-use App\Models\JadwalModel;
 use App\Models\SettingModel;
 use Dompdf\Dompdf;
 use Dompdf\Options;
 use PhpOffice\PhpSpreadsheet\Spreadsheet;
-use PhpOffice\PhpSpreadsheet\Style\Alignment;
-use PhpOffice\PhpSpreadsheet\Style\Border;
-use PhpOffice\PhpSpreadsheet\Style\Fill;
 use PhpOffice\PhpSpreadsheet\Writer\Xlsx;
 
 /**
@@ -29,42 +29,28 @@ use PhpOffice\PhpSpreadsheet\Writer\Xlsx;
  */
 class Absensi extends BaseController
 {
-    /** date('N') 1..7 → nama hari (fallback tampilan). */
-    private const HARI_NAMA = [
-        1 => 'Senin', 2 => 'Selasa', 3 => 'Rabu', 4 => 'Kamis',
-        5 => 'Jumat', 6 => 'Sabtu', 7 => 'Minggu',
-    ];
-
     /**
      * Ringkasan absensi guru satu tanggal — dipakai highlight dashboard web
-     * & API (pola sama dengan Kurikulum::dashboardData()). Status harian per
-     * guru = terburuk dari sesi-sesinya; tanpa baris pengecualian = hadir.
+     * & API. Status harian per ORANG = terburuk dari sesi + kehadiran kerja;
+     * guru ganda digabung & yang tidak ikut absensi dibuang (lihat muat()).
      */
     public static function ringkasHarian(string $tanggal): array
     {
-        $ts        = strtotime($tanggal);
-        $hari      = (new HariModel())->byWeekday((int) date('N', $ts));
-        $namaHari  = $hari['nama'] ?? (self::HARI_NAMA[(int) date('N', $ts)] ?? '');
-        $hariAktif = $hari && (int) $hari['aktif'] === 1;
-
-        $sessions = $hariAktif ? (new JadwalModel())->sessionsForHari((int) $hari['id']) : [];
-        $absen    = (new AbsensiGuruModel())->forDate($tanggal);
-        $recorded = (new AbsensiHariModel())->isRecorded($tanggal);
-
+        $d      = AbsensiHarian::muat($tanggal);
         $harian = [];
-        foreach ($sessions as $s) {
-            $gid          = (int) $s['guru_id'];
-            $st           = $absen[$s['kelas_id'] . '-' . $s['jam_id']]['status'] ?? 'hadir';
-            $harian[$gid] = AbsensiGuruModel::worst($harian[$gid] ?? 'hadir', $st);
+        foreach ($d['grup'] as $g) {
+            foreach ($g['sesi'] as $s) {
+                $harian[$g['guru_id']] = AbsensiGuruModel::worst($harian[$g['guru_id']] ?? 'hadir', $s['status']);
+            }
         }
         // Kehadiran kerja (di luar jadwal) ikut jadi status harian guru.
-        foreach ((new AbsensiKerjaModel())->forDate($tanggal) as $k) {
+        foreach ($d['kerja'] as $k) {
             $gid          = (int) $k['guru_id'];
             $harian[$gid] = AbsensiGuruModel::worst($harian[$gid] ?? 'hadir', $k['status']);
         }
 
         $ringkas = ['hadir' => 0, 'telat' => 0, 'izin' => 0, 'sakit' => 0, 'alpa' => 0];
-        if ($recorded) {
+        if ($d['recorded']) {
             foreach ($harian as $st) {
                 $ringkas[$st] = ($ringkas[$st] ?? 0) + 1;
             }
@@ -72,10 +58,10 @@ class Absensi extends BaseController
 
         return [
             'tanggal'    => $tanggal,
-            'hari_nama'  => $namaHari,
-            'hari_aktif' => $hariAktif,
-            'recorded'   => $recorded,
-            'total_sesi' => count($sessions),
+            'hari_nama'  => $d['namaHari'],
+            'hari_aktif' => $d['hariAktif'],
+            'recorded'   => $d['recorded'],
+            'total_sesi' => $d['total'],
             'total_guru' => count($harian),
             'ringkas'    => $ringkas,
         ];
@@ -85,114 +71,67 @@ class Absensi extends BaseController
     public function index()
     {
         $tanggal = $this->normalTanggal($this->request->getGet('tanggal'));
-        $ts      = strtotime($tanggal);
-
-        $hari      = (new HariModel())->byWeekday((int) date('N', $ts));
-        $namaHari  = $hari['nama'] ?? (self::HARI_NAMA[(int) date('N', $ts)] ?? '');
-        $hariAktif = $hari && (int) $hari['aktif'] === 1;
-
-        $sessions = $hariAktif
-            ? (new JadwalModel())->sessionsForHari((int) $hari['id'])
-            : [];
-        $absen    = (new AbsensiGuruModel())->forDate($tanggal);
-        $recorded = (new AbsensiHariModel())->isRecorded($tanggal);
-
-        $grup = [];
-        foreach ($sessions as $s) {
-            $ex              = $absen[$s['kelas_id'] . '-' . $s['jam_id']] ?? null;
-            $s['status']     = $ex['status'] ?? 'hadir';
-            $s['jam_masuk']  = $ex && $ex['jam_masuk'] ? substr($ex['jam_masuk'], 0, 5) : '';
-            $s['keterangan'] = $ex['keterangan'] ?? '';
-
-            $gid = (int) $s['guru_id'];
-            if (! isset($grup[$gid])) {
-                $grup[$gid] = ['guru_id' => $gid, 'nama' => $s['guru_nama'], 'kode' => $s['kode_guru'], 'sesi' => []];
-            }
-            $grup[$gid]['sesi'][] = $s;
-        }
-
-        // Ringkasan PER GURU (status harian = terburuk dari sesi-sesinya);
-        // hanya dihitung bila hari ini SUDAH tercatat (di-save).
-        $ringkas = ['hadir' => 0, 'telat' => 0, 'izin' => 0, 'sakit' => 0, 'alpa' => 0];
-        foreach ($grup as &$g) {
-            $harian = 'hadir';
-            foreach ($g['sesi'] as $s) {
-                $harian = AbsensiGuruModel::worst($harian, $s['status']);
-            }
-            $g['status_harian'] = $harian;
-            if ($recorded) {
-                $ringkas[$harian] = ($ringkas[$harian] ?? 0) + 1;
-            }
-        }
-        unset($g);
-
-        // Kehadiran kerja (di luar jadwal) + daftar guru untuk dropdown "tambah".
-        $kerja       = (new AbsensiKerjaModel())->forDate($tanggal);
-        $guruOptions = (new GuruModel())->select('id, kode_guru, nama')->orderBy('nama', 'ASC')->findAll();
-
-        // Guru berjabatan struktural (wakil kepala dsb.) wajib hadir walau hari
-        // itu tak punya jadwal KBM. Mereka DISARANKAN otomatis ke panel
-        // Kehadiran Kerja — hanya sebagai isian awal, TIDAK langsung disimpan,
-        // agar prinsip "belum di-save = belum tercatat" tetap berlaku.
-        // Begitu hari ini sudah tercatat, daftar simpanan admin yang berlaku
-        // (tidak ditimpa saran) supaya guru yang sengaja dihapus tak muncul lagi.
-        $guruJabatan = new GuruJabatanModel();
-        $jabatanMap  = $guruJabatan->mapByGuru();
-        $saran       = [];
-        if (! $recorded) {
-            $sudahAda = array_column($kerja, 'guru_id');
-            foreach ($guruJabatan->guruStrukturalIds() as $gid) {
-                if (in_array($gid, $sudahAda, true) || isset($grup[$gid])) {
-                    continue; // sudah dicatat, atau sudah punya sesi mengajar hari ini
-                }
-                foreach ($guruOptions as $g) {
-                    if ((int) $g['id'] === $gid) {
-                        $saran[] = [
-                            'guru_id'    => $gid,
-                            'nama'       => $g['nama'],
-                            'kode_guru'  => $g['kode_guru'],
-                            'jabatan'    => implode(', ', array_column($jabatanMap[$gid] ?? [], 'nama')),
-                            'status'     => 'hadir',
-                            'jam_masuk'  => '',
-                            'keterangan' => '',
-                        ];
-                        break;
-                    }
-                }
-            }
-        }
+        $d       = AbsensiHarian::muat($tanggal);
+        $setting = (new SettingModel())->get();
 
         return view('admin/absensi/index', [
             'title'       => 'Absensi Guru',
             'tanggal'     => $tanggal,
-            'namaHari'    => $namaHari,
-            'hariAktif'   => $hariAktif,
-            'grup'        => array_values($grup),
-            'ringkas'     => $ringkas,
-            'total'       => count($sessions),
-            'sekolah'     => (new SettingModel())->get()['school_name'] ?? '',
-            'recorded'    => $recorded,
-            'kerja'       => $kerja,
-            'guruOptions' => $guruOptions,
-            'saranKerja'  => $saran,
-            'jabatanMap'  => $jabatanMap,
+            // Shift laporan (pagi/siang) — default menurut jam sekarang.
+            'shift'       => AbsensiWa::normalShift($this->request->getGet('shift')),
+            'belum'       => $d['belum'],
+            'piket'       => $d['piket'],
+            'waTemplate'  => AbsensiWa::template($setting),
+            'waCustom'    => trim((string) ($setting['wa_template_absensi'] ?? '')) !== '',
+            'namaHari'    => $d['namaHari'],
+            'hariAktif'   => $d['hariAktif'],
+            'grup'        => $d['grup'],
+            'total'       => $d['total'],
+            'sekolah'     => $setting['school_name'] ?? '',
+            'recorded'    => $d['recorded'],
+            'kerja'       => $d['kerja'],
+            'guruOptions' => $d['guruOptions'],
+            'saranKerja'  => $d['saran'],
+            'jabatanMap'  => $d['jabatanMap'],
         ]);
     }
 
+    /**
+     * Simpan absensi satu tanggal: sesi mengajar + kehadiran kerja + daftar
+     * belum hadir (shift terpilih) sekaligus. Dipanggil lewat form biasa
+     * (redirect) atau AJAX tombol "Kirim WA" (JSON berisi teks pesan).
+     */
     public function save()
     {
         $tanggal = $this->normalTanggal($this->request->getPost('tanggal'));
-        $rows    = $this->request->getPost('rows');
-        $rows    = is_array($rows) ? $rows : [];
+        $shift   = AbsensiWa::normalShift($this->request->getPost('shift'));
         $adminId = session('admin')['id'] ?? null;
 
-        (new AbsensiGuruModel())->syncDate($tanggal, $rows, $adminId);
-        // Tandai hari ini sudah diabsen agar masuk hitungan rekap.
-        (new AbsensiHariModel())->mark($tanggal, $adminId);
-        (new AuditModel())->record('update', 'absensi_guru', null, 'Simpan absensi ' . $tanggal);
+        // Halaman mengirim sesi & kerja sebagai JSON (1 isian) agar tidak terpotong
+        // batas max_input_vars PHP; bentuk array lama tetap diterima.
+        $rows  = $this->jsonPost('rows_json') ?? $this->request->getPost('rows');
+        $kerja = $this->jsonPost('kerja_json') ?? $this->request->getPost('kerja');
+        $belum = $this->request->getPost('belum');
+        AbsensiHarian::simpan($tanggal, [
+            'rows'  => is_array($rows) ? $rows : [],
+            // Penanda *_sync membedakan "daftar kosong" dari "bagian tidak dikirim".
+            'kerja' => $this->request->getPost('kerja_sync') ? (is_array($kerja) ? $kerja : []) : null,
+            'shift' => $shift,
+            'belum' => $this->request->getPost('belum_sync') ? (is_array($belum) ? $belum : []) : null,
+        ], $adminId);
+        (new AuditModel())->record('update', 'absensi_guru', null, 'Simpan absensi ' . $tanggal . ' (' . $shift . ')');
 
-        return redirect()->to(site_url('admin/absensi') . '?tanggal=' . $tanggal)
-            ->with('success', 'Absensi tanggal ' . $tanggal . ' berhasil disimpan.');
+        $pesan = 'Absensi tanggal ' . $tanggal . ' berhasil disimpan.';
+        if ($this->request->isAJAX()) {
+            return $this->response->setJSON([
+                'ok'       => true,
+                'message'  => $pesan,
+                'pesan_wa' => AbsensiWa::pesan($tanggal, $shift),
+            ]);
+        }
+
+        return redirect()->to(site_url('admin/absensi') . '?tanggal=' . $tanggal . '&shift=' . $shift)
+            ->with('success', $pesan);
     }
 
     /**
@@ -220,58 +159,76 @@ class Absensi extends BaseController
     {
         $tanggal = $this->normalTanggal($this->request->getPost('tanggal'));
 
-        (new AbsensiGuruModel())->where('tanggal', $tanggal)->delete();
-        (new AbsensiKerjaModel())->where('tanggal', $tanggal)->delete();
-        (new AbsensiHariModel())->unmark($tanggal);
+        AbsensiHarian::batalkan($tanggal);
         (new AuditModel())->record('delete', 'absensi_hari', null, 'Batal catat absensi ' . $tanggal);
 
-        return redirect()->to(site_url('admin/absensi') . '?tanggal=' . $tanggal)
+        return redirect()->to(site_url('admin/absensi') . '?tanggal=' . $tanggal . '&shift=' . AbsensiWa::normalShift($this->request->getPost('shift')))
             ->with('success', 'Pencatatan absensi tanggal ' . $tanggal . ' dibatalkan. Hari ini kembali "belum diabsen".');
+    }
+
+    /**
+     * Simpan template pesan WhatsApp (AJAX). Kosong / "reset" = kembali ke
+     * template bawaan.
+     */
+    public function templateWa()
+    {
+        $tpl = trim(str_replace("\r\n", "\n", (string) $this->request->getPost('template')));
+        if ($this->request->getPost('reset') || $tpl === '') {
+            $tpl = null;
+        } elseif (mb_strlen($tpl) > 5000) {
+            return $this->response->setJSON(['ok' => false, 'message' => 'Template terlalu panjang (maks 5000 karakter).']);
+        }
+        (new SettingModel())->store(['wa_template_absensi' => $tpl]);
+        (new AuditModel())->record('update', 'settings', 1, 'Ubah template WA absensi');
+
+        return $this->response->setJSON([
+            'ok'       => true,
+            'message'  => $tpl === null ? 'Template dikembalikan ke bawaan.' : 'Template pesan disimpan.',
+            'template' => $tpl ?? AbsensiWa::DEFAULT_TEMPLATE,
+            'custom'   => $tpl !== null,
+        ]);
+    }
+
+    /** Pratinjau teks pesan WA dari data TERSIMPAN (AJAX). */
+    public function pesanWa()
+    {
+        $tanggal = $this->normalTanggal($this->request->getGet('tanggal'));
+        $shift   = AbsensiWa::normalShift($this->request->getGet('shift'));
+
+        return $this->response->setJSON(['ok' => true, 'pesan_wa' => AbsensiWa::pesan($tanggal, $shift)]);
     }
 
     // ===================== REKAP =====================
     public function rekap($format = 'html')
     {
         [$dari, $sampai] = $this->rentang();
-        $rows            = $this->rekapData($dari, $sampai);
-        $setting         = (new SettingModel())->get();
-
         // Filter jabatan (mis. hanya wakil kepala) — berlaku juga untuk export
         // agar berkas unduhan persis seperti yang tampil di layar.
         $jabatanId = (int) $this->request->getGet('jabatan_id');
-        if ($jabatanId > 0) {
-            $rows = array_values(array_filter(
-                $rows,
-                static fn ($r) => in_array($jabatanId, $r['jabatan_ids'], true)
-            ));
-        }
+        $rows      = AbsensiRekap::rekapData($dari, $sampai, $jabatanId);
+        $setting   = (new SettingModel())->get();
 
         if ($format === 'pdf') {
-            $html = view('pdf/rekap_absensi', ['rows' => $rows, 'dari' => $dari, 'sampai' => $sampai, 'setting' => $setting]);
-            $this->streamPdf($html, 'Rekap-Absensi-' . $dari . '_' . $sampai);
+            $html = AbsensiRekap::pdfHtml($rows, $dari, $sampai, $setting, AbsensiRekap::labelJabatan($jabatanId));
+            $this->streamPdf($html, AbsensiRekap::namaBerkas($dari, $sampai));
             return null;
         }
         if ($format === 'excel') {
-            $labelJabatan = $jabatanId > 0
-                ? ((new JabatanModel())->find($jabatanId)['nama'] ?? '')
-                : '';
-
-            return $this->rekapExcel($rows, $dari, $sampai, $setting, $labelJabatan);
-        }
-
-        $sum = ['total' => 0, 'hadir' => 0, 'telat' => 0, 'izin' => 0, 'sakit' => 0, 'alpa' => 0];
-        foreach ($rows as $r) {
-            foreach ($sum as $k => $_) {
-                $sum[$k] += $r[$k];
-            }
+            $ss = AbsensiRekap::excel($rows, $dari, $sampai, $setting, AbsensiRekap::labelJabatan($jabatanId));
+            $this->streamXlsx($ss, AbsensiRekap::namaBerkas($dari, $sampai));
+            return null;
         }
 
         return view('admin/absensi/rekap', [
             'title'       => 'Rekap Absensi Guru',
-            'rows'        => $rows, 'dari' => $dari, 'sampai' => $sampai, 'sum' => $sum,
+            'rows'        => $rows, 'dari' => $dari, 'sampai' => $sampai, 'sum' => AbsensiRekap::sum($rows),
             'hariTercatat' => count((new AbsensiHariModel())->datesInRange($dari, $sampai)),
             'jabatanId'   => $jabatanId,
             'jabatanOpts' => (new JabatanModel())->options(),
+            // Laporan bulanan format sekolah: bulan default = bulan tanggal "dari".
+            'bulanLaporan' => substr($dari, 0, 7),
+            'tarifJp'      => (int) ($setting['absensi_potongan_jp'] ?? 5000),
+            'tarifTrans'   => (int) ($setting['absensi_transport'] ?? 0),
         ]);
     }
 
@@ -285,8 +242,8 @@ class Absensi extends BaseController
         }
 
         // Rincian: sesi mengajar (pengecualian) + kehadiran kerja (di luar jadwal).
-        $detail = (new AbsensiGuruModel())->detailForGuru((int) $id, $dari, $sampai);
-        foreach ((new AbsensiKerjaModel())->detailForGuru((int) $id, $dari, $sampai) as $k) {
+        $detail = (new AbsensiGuruModel())->detailForGuru(GuruModel::idsOrang((int) $id), $dari, $sampai);
+        foreach ((new AbsensiKerjaModel())->detailForGuru(GuruModel::idsOrang((int) $id), $dari, $sampai) as $k) {
             $detail[] = [
                 'tanggal'         => $k['tanggal'],
                 'status'          => $k['status'],
@@ -300,10 +257,17 @@ class Absensi extends BaseController
                 'kehadiran_kerja' => true,
             ];
         }
+        // Belum hadir yang tidak diselesaikan (dihitung tidak hadir).
+        foreach ((new AbsensiBelumModel())->detailForGuru(GuruModel::idsOrang((int) $id), $dari, $sampai) as $b) {
+            $detail[] = $b + [
+                'nama_kelas' => null, 'nama_mapel' => null, 'jam_ke' => null,
+                'waktu_mulai' => null, 'waktu_selesai' => null, 'kehadiran_kerja' => false,
+            ];
+        }
         usort($detail, static fn ($a, $b) => strcmp($a['tanggal'], $b['tanggal']));
 
         // Ringkas per HARI dari status harian gabungan (mengajar + kerja).
-        $perTgl = $this->dailyStatus($dari, $sampai)[(int) $id] ?? [];
+        $perTgl = AbsensiRekap::dailyStatus($dari, $sampai)[(int) $id] ?? [];
         $total  = count($perTgl);
         $cnt    = ['telat' => 0, 'izin' => 0, 'sakit' => 0, 'alpa' => 0];
         foreach ($perTgl as $st) {
@@ -324,179 +288,32 @@ class Absensi extends BaseController
         ]);
     }
 
-    /**
-     * Status harian GABUNGAN per guru pada rentang: [gid][tanggal] => status
-     * terburuk hari itu dari DUA sumber — (1) sesi mengajar terjadwal (default
-     * hadir kecuali ada pengecualian di absensi_guru) dan (2) kehadiran kerja
-     * di luar jadwal (absensi_kerja). Hanya tanggal yang tercatat (registry
-     * absensi_hari) yang dihitung. Satu tanggal = satu hari (bukan per sesi).
-     *
-     * Ini fondasi rekap: total hari per guru = jumlah tanggal di petanya, dan
-     * hadir = total − hari (telat+izin+sakit+alpa).
-     */
-    private function dailyStatus(string $dari, string $sampai): array
+    // ===================== LAPORAN BULANAN (format sekolah) =====================
+    /** GET admin/absensi/laporan/{excel|pdf}?bulan=YYYY-MM */
+    public function laporan($format = 'pdf')
     {
-        $dates = (new AbsensiHariModel())->datesInRange($dari, $sampai);
-        if (empty($dates)) {
-            return [];
+        [$dari, $sampai, $bulan] = AbsensiLaporan::rentangBulan($this->request->getGet('bulan'));
+        $m       = AbsensiLaporan::matriks($dari, $sampai);
+        $setting = (new SettingModel())->get();
+
+        if ($format === 'excel') {
+            $this->streamXlsx(AbsensiLaporan::excel($m, $bulan, $setting), AbsensiLaporan::namaBerkas($bulan));
+            return null;
         }
-        $dateSet = array_flip($dates);
-
-        $counts    = (new JadwalModel())->countPerGuruHari();
-        $teachExc  = (new AbsensiGuruModel())->dayStatusPerGuru($dari, $sampai);
-        $workStat  = (new AbsensiKerjaModel())->dayStatusPerGuru($dari, $sampai);
-        $hariModel = new HariModel();
-
-        $weekdayHari = [];
-        $daily       = [];
-
-        // Sumber 1: hari mengajar terjadwal (default hadir; pengecualian menimpa).
-        foreach ($dates as $tgl) {
-            $n = (int) date('N', strtotime($tgl));
-            if (! array_key_exists($n, $weekdayHari)) {
-                $h               = $hariModel->byWeekday($n);
-                $weekdayHari[$n] = ($h && (int) $h['aktif'] === 1) ? (int) $h['id'] : 0;
-            }
-            $hid = $weekdayHari[$n];
-            if ($hid) {
-                foreach ($counts as $gid => $byHari) {
-                    if (isset($byHari[$hid])) {
-                        $st                 = $teachExc[$gid][$tgl] ?? 'hadir';
-                        $daily[$gid][$tgl]  = AbsensiGuruModel::worst($daily[$gid][$tgl] ?? 'hadir', $st);
-                    }
-                }
-            }
-        }
-
-        // Sumber 2: kehadiran kerja di luar jadwal (tanggal harus tercatat).
-        foreach ($workStat as $gid => $perTgl) {
-            foreach ($perTgl as $tgl => $st) {
-                if (! isset($dateSet[$tgl])) {
-                    continue;
-                }
-                $daily[$gid][$tgl] = AbsensiGuruModel::worst($daily[$gid][$tgl] ?? 'hadir', $st);
-            }
-        }
-
-        return $daily;
-    }
-
-    /**
-     * Rekap HARI per guru pada rentang tanggal. Hadir = total hari − hari
-     * bermasalah. Menggabungkan hari mengajar + hari masuk kerja.
-     *
-     * @return list<array{id:int,kode:string,nama:string,total:int,hadir:int,telat:int,izin:int,sakit:int,alpa:int}>
-     */
-    private function rekapData(string $dari, string $sampai): array
-    {
-        $daily = $this->dailyStatus($dari, $sampai);
-
-        // Nama guru.
-        $guruMap = [];
-        foreach ((new GuruModel())->select('id, kode_guru, nama')->findAll() as $gr) {
-            $guruMap[(int) $gr['id']] = $gr;
-        }
-        // Jabatan seluruh guru dalam 1 query (dipakai kolom & filter Jabatan).
-        $jabatanMap = (new GuruJabatanModel())->mapByGuru();
-
-        $rows = [];
-        foreach ($daily as $gid => $perTgl) {
-            if (! isset($guruMap[$gid])) {
-                continue;
-            }
-            $jbt = $jabatanMap[(int) $gid] ?? [];
-            $cnt = ['telat' => 0, 'izin' => 0, 'sakit' => 0, 'alpa' => 0];
-            foreach ($perTgl as $st) {
-                if (isset($cnt[$st])) {
-                    $cnt[$st]++;
-                }
-            }
-            $total = count($perTgl);
-            $hadir = max(0, $total - array_sum($cnt));
-
-            $rows[] = [
-                'id'    => (int) $gid,
-                'kode'  => $guruMap[$gid]['kode_guru'], 'nama' => $guruMap[$gid]['nama'],
-                // Jabatan utama tampil ringkas; daftar id dipakai untuk memfilter.
-                'jabatan'     => $jbt !== [] ? $jbt[0]['nama'] : '',
-                'jabatan_all' => implode(', ', array_column($jbt, 'nama')),
-                'jabatan_ids' => array_map('intval', array_column($jbt, 'id')),
-                'struktural'  => $jbt !== [] && (bool) $jbt[0]['is_struktural'],
-                'total' => $total, 'hadir' => $hadir,
-                'telat' => $cnt['telat'], 'izin' => $cnt['izin'], 'sakit' => $cnt['sakit'], 'alpa' => $cnt['alpa'],
-            ];
-        }
-        usort($rows, static fn ($a, $b) => strcasecmp($a['nama'], $b['nama']));
-
-        return $rows;
-    }
-
-    /**
-     * Excel rekap absensi (nilai jadi + baris total).
-     * Kolom: A No, B Kode, C Nama, D Jabatan, E Total, F Hadir, G Telat,
-     * H Izin, I Sakit, J Alpa — kolom angka mulai E s/d J.
-     */
-    private function rekapExcel(array $rows, string $dari, string $sampai, array $setting, string $labelJabatan = '')
-    {
-        $ss    = new Spreadsheet();
-        $sheet = $ss->getActiveSheet();
-        $sheet->setTitle('Rekap Absensi');
-
-        $sheet->mergeCells('A1:J1')->setCellValue('A1', 'REKAP ABSENSI GURU');
-        $sheet->mergeCells('A2:J2')->setCellValue('A2', 'Tahun Pelajaran ' . ($setting['academic_year'] ?? ''));
-        $sheet->mergeCells('A3:J3')->setCellValue(
-            'A3',
-            'Periode ' . $dari . ' s/d ' . $sampai
-                . ($labelJabatan !== '' ? ' — Jabatan: ' . $labelJabatan : '')
-        );
-        $sheet->getStyle('A1')->getFont()->setBold(true)->setSize(14);
-        $sheet->getStyle('A1:A3')->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER);
-
-        $head = ['No', 'Kode', 'Nama Guru', 'Jabatan', 'Total Hari', 'Hadir', 'Telat', 'Izin', 'Sakit', 'Alpa'];
-        $sheet->fromArray($head, null, 'A5', true);
-        $sheet->getStyle('A5:J5')->getFont()->setBold(true)->getColor()->setRGB('FFFFFF');
-        $sheet->getStyle('A5:J5')->getFill()->setFillType(Fill::FILL_SOLID)->getStartColor()->setRGB('1A3A6B');
-        $sheet->getStyle('A5:J5')->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER);
-
-        $r  = 6;
-        $no = 1;
-        $firstRow = $r;
-        foreach ($rows as $row) {
-            $sheet->setCellValue("A{$r}", $no++);
-            $sheet->setCellValueExplicit("B{$r}", (string) $row['kode'], \PhpOffice\PhpSpreadsheet\Cell\DataType::TYPE_STRING);
-            $sheet->setCellValue("C{$r}", $row['nama']);
-            $sheet->setCellValue("D{$r}", $row['jabatan_all'] ?? '');
-            $sheet->setCellValue("E{$r}", $row['total']);
-            $sheet->setCellValue("F{$r}", $row['hadir']);
-            $sheet->setCellValue("G{$r}", $row['telat']);
-            $sheet->setCellValue("H{$r}", $row['izin']);
-            $sheet->setCellValue("I{$r}", $row['sakit']);
-            $sheet->setCellValue("J{$r}", $row['alpa']);
-            $r++;
-        }
-        $lastRow = $r - 1;
-
-        // Baris TOTAL dengan SUM hidup.
-        $sheet->setCellValue("C{$r}", 'TOTAL');
-        if ($lastRow >= $firstRow) {
-            foreach (['E', 'F', 'G', 'H', 'I', 'J'] as $col) {
-                $sheet->setCellValue("{$col}{$r}", "=SUM({$col}{$firstRow}:{$col}{$lastRow})");
-            }
-        }
-        $sheet->getStyle("A{$r}:J{$r}")->getFont()->setBold(true);
-        $sheet->getStyle("A{$r}:J{$r}")->getFill()->setFillType(Fill::FILL_SOLID)->getStartColor()->setRGB('EEF2FF');
-
-        $sheet->getStyle("A5:J{$r}")->getBorders()->getAllBorders()->setBorderStyle(Border::BORDER_THIN);
-        $sheet->getStyle("A6:A{$r}")->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER);
-        $sheet->getStyle("E6:J{$r}")->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER);
-        foreach (['A' => 5, 'B' => 10, 'C' => 30, 'D' => 28, 'E' => 11, 'F' => 9, 'G' => 9, 'H' => 9, 'I' => 9, 'J' => 9] as $col => $w) {
-            $sheet->getColumnDimension($col)->setWidth($w);
-        }
-
-        kop_excel_prepend($sheet, 'J');
-
-        $this->streamXlsx($ss, 'Rekap-Absensi-' . $dari . '_' . $sampai);
+        $this->streamPdf(AbsensiLaporan::pdfHtml($m, $bulan, $setting), AbsensiLaporan::namaBerkas($bulan), AbsensiLaporan::KERTAS_F4);
         return null;
+    }
+
+    /** POST admin/absensi/tarif — potongan per JP & uang transport per hari. */
+    public function tarif()
+    {
+        (new SettingModel())->store([
+            'absensi_potongan_jp' => max(0, (int) $this->request->getPost('absensi_potongan_jp')),
+            'absensi_transport'   => max(0, (int) $this->request->getPost('absensi_transport')),
+        ]);
+        (new AuditModel())->record('update', 'settings', 1, 'Ubah tarif potongan/transport absensi');
+
+        return redirect()->back()->with('success', 'Tarif potongan & transport disimpan.');
     }
 
     // ===================== HELPER =====================
@@ -511,6 +328,18 @@ class Absensi extends BaseController
         return [$dari, $sampai];
     }
 
+    /** Isian POST berisi JSON array → array; null bila kosong/tidak valid. */
+    private function jsonPost(string $name): ?array
+    {
+        $raw = (string) $this->request->getPost($name);
+        if ($raw === '') {
+            return null;
+        }
+        $val = json_decode($raw, true);
+
+        return is_array($val) ? $val : null;
+    }
+
     /** Validasi/normalisasi tanggal → Y-m-d; fallback hari ini. */
     private function normalTanggal(?string $raw): string
     {
@@ -519,14 +348,14 @@ class Absensi extends BaseController
         return $ts ? date('Y-m-d', $ts) : date('Y-m-d');
     }
 
-    private function streamPdf(string $html, string $filename): void
+    private function streamPdf(string $html, string $filename, string|array $kertas = 'A4'): void
     {
         $options = new Options();
         $options->set('isRemoteEnabled', true);
         $options->set('defaultFont', 'DejaVu Sans');
         $dompdf = new Dompdf($options);
         $dompdf->loadHtml($html);
-        $dompdf->setPaper('A4', 'landscape');
+        $dompdf->setPaper($kertas, 'landscape');
         $dompdf->render();
         $dompdf->stream($filename . '.pdf', ['Attachment' => false]);
         exit;

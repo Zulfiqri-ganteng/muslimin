@@ -43,10 +43,10 @@ class Guru extends BaseMaster
         $per  = $this->perPage();
         $page = $this->pageNo();
 
-        // "v2" = penanda BENTUK data cache. Wajib dinaikkan setiap struktur nilai
+        // "v3" = penanda BENTUK data cache (v4: no_wa, ikut_absensi, induk_id). Wajib dinaikkan setiap struktur nilai
         // yang disimpan berubah (di sini: penambahan jabatanMap), supaya setelah
         // deploy kode baru tidak pernah membaca cache berbentuk lama → 500.
-        $data = $this->cachedList("list|v2|q={$q}|s={$status}|per={$per}|p={$page}", function () use ($q, $status, $per, $page) {
+        $data = $this->cachedList("list|v4|q={$q}|s={$status}|per={$per}|p={$page}", function () use ($q, $status, $per, $page) {
             $builder = $this->model;
             if ($q !== '') {
                 $builder = $builder->groupStart()
@@ -92,6 +92,7 @@ class Guru extends BaseMaster
             'per'        => $per,
             'total'      => $data['total'],
             'statusList' => self::STATUS,
+            'guruOpsi'   => $this->model->options(),
         ]);
     }
 
@@ -136,6 +137,9 @@ class Guru extends BaseMaster
         $id         = (int) $id;
         $data       = $this->collect();
         $data['id'] = $id; // isi placeholder {id} pada rule is_unique saat edit
+        if ($data['induk_id'] === $id) {
+            $data['induk_id'] = null; // tidak boleh menjadi data ganda dari dirinya sendiri
+        }
         if (! $this->model->update($id, $data)) {
             return redirect()->back()->withInput()->with('errors', $this->model->errors());
         }
@@ -151,11 +155,31 @@ class Guru extends BaseMaster
             'nip'           => trim((string) $this->request->getPost('nip')) ?: null,
             'kode_guru'     => trim((string) $this->request->getPost('kode_guru')),
             'nama'          => trim((string) $this->request->getPost('nama')),
+            'no_wa'         => GuruModel::normalNoWa($this->request->getPost('no_wa')),
+            'ikut_absensi'  => $this->request->getPost('ikut_absensi') ? 1 : 0,
+            'induk_id'      => $this->indukValid((int) $this->request->getPost('induk_id')),
             'jenis_kelamin' => in_array($this->request->getPost('jenis_kelamin'), ['L', 'P'], true) ? $this->request->getPost('jenis_kelamin') : null,
             'status_guru'   => in_array($this->request->getPost('status_guru'), self::STATUS, true) ? $this->request->getPost('status_guru') : null,
             'max_beban'     => (int) ($this->request->getPost('max_beban') ?: 24),
             'keterangan'    => trim((string) $this->request->getPost('keterangan')) ?: null,
         ];
+    }
+
+    /**
+     * Data utama untuk guru ganda. Bila yang dipilih ternyata juga data ganda,
+     * pakai induknya (tautan hanya satu tingkat). 0 / tidak ada → null.
+     */
+    private function indukValid(int $indukId): ?int
+    {
+        if ($indukId <= 0) {
+            return null;
+        }
+        $induk = $this->model->select('id, induk_id')->find($indukId);
+        if (! $induk) {
+            return null;
+        }
+
+        return ((int) ($induk['induk_id'] ?? 0)) ?: (int) $induk['id'];
     }
 
     /**
@@ -196,8 +220,8 @@ class Guru extends BaseMaster
         $sheet = $this->sheetWithHeader(
             $ss,
             'Master Guru',
-            ['No', 'NIP', 'Kode Guru', 'Nama Guru', 'Jenis Kelamin', 'Status', 'Jabatan', 'Maks Beban (JP)', 'Keterangan'],
-            ['A' => 5, 'B' => 22, 'C' => 12, 'D' => 30, 'E' => 14, 'F' => 10, 'G' => 34, 'H' => 16, 'I' => 25]
+            ['No', 'NIP', 'Kode Guru', 'Nama Guru', 'Jenis Kelamin', 'Status', 'Jabatan', 'Maks Beban (JP)', 'Keterangan', 'No. WhatsApp'],
+            ['A' => 5, 'B' => 22, 'C' => 12, 'D' => 30, 'E' => 14, 'F' => 10, 'G' => 34, 'H' => 16, 'I' => 25, 'J' => 18]
         );
 
         $r = 2;
@@ -209,11 +233,13 @@ class Guru extends BaseMaster
                 $i + 1, "'" . $d['nip'], $d['kode_guru'], $d['nama'],
                 $d['jenis_kelamin'], $d['status_guru'], $jabatan,
                 $d['max_beban'], $d['keterangan'],
+                // Diawali ' agar Excel tidak mengubah nomor jadi angka ilmiah.
+                ($d['no_wa'] ?? '') !== '' ? "'" . $d['no_wa'] : '',
             ], null, 'A' . $r, true);
             $r++;
         }
 
-        $this->streamXlsx($ss, 'Master-Guru-' . date('Ymd-His'), 'I');
+        $this->streamXlsx($ss, 'Master-Guru-' . date('Ymd-His'), 'J');
     }
 
     public function template()
@@ -222,10 +248,10 @@ class Guru extends BaseMaster
         $sheet = $this->sheetWithHeader(
             $ss,
             'Template Guru',
-            ['NIP', 'Kode Guru', 'Nama Guru', 'Jenis Kelamin (L/P)', 'Status (PNS/PPPK/GTY/GTT)', 'Maks Beban (JP)', 'Keterangan'],
-            ['A' => 22, 'B' => 12, 'C' => 30, 'D' => 20, 'E' => 26, 'F' => 16, 'G' => 25]
+            ['NIP', 'Kode Guru', 'Nama Guru', 'Jenis Kelamin (L/P)', 'Status (PNS/PPPK/GTY/GTT)', 'Maks Beban (JP)', 'Keterangan', 'No. WhatsApp'],
+            ['A' => 22, 'B' => 12, 'C' => 30, 'D' => 20, 'E' => 26, 'F' => 16, 'G' => 25, 'H' => 18]
         );
-        $sheet->fromArray(['1987...', '27', 'Muslimin, S.Kom', 'L', 'GTY', 24, 'Produktif TKJ'], null, 'A2', true);
+        $sheet->fromArray(['1987...', '27', 'Muslimin, S.Kom', 'L', 'GTY', 24, 'Produktif TKJ', "'081234567890"], null, 'A2', true);
 
         $this->streamXlsx($ss, 'Template-Import-Guru');
     }
@@ -242,6 +268,8 @@ class Guru extends BaseMaster
             ['key' => 'status_guru',   'label' => 'Status',     'type' => 'select', 'options' => self::STATUS, 'width' => 110],
             ['key' => 'max_beban',     'label' => 'Maks JP',    'type' => 'number', 'width' => 90],
             ['key' => 'keterangan',    'label' => 'Keterangan', 'type' => 'text',   'width' => 180],
+            // Kolom terakhir → template impor lama (tanpa kolom ini) tetap terbaca.
+            ['key' => 'no_wa',         'label' => 'No. WA',     'type' => 'text',   'width' => 140],
         ];
     }
 
@@ -266,7 +294,7 @@ class Guru extends BaseMaster
         $jk     = strtoupper(trim((string) ($row['jenis_kelamin'] ?? '')));
         $status = strtoupper(trim((string) ($row['status_guru'] ?? '')));
 
-        return [
+        $out = [
             'nip'           => trim((string) ($row['nip'] ?? '')) ?: null,
             'kode_guru'     => $kode,
             'nama'          => $nama,
@@ -275,6 +303,19 @@ class Guru extends BaseMaster
             'max_beban'     => (int) ($row['max_beban'] ?? 24) ?: 24,
             'keterangan'    => trim((string) ($row['keterangan'] ?? '')) ?: null,
         ];
+        // No. WA hanya ditulis bila diisi — impor ulang tanpa kolom ini tidak
+        // menghapus nomor yang sudah tersimpan.
+        $wa = GuruModel::normalNoWa($row['no_wa'] ?? null);
+        if ($wa !== null) {
+            if (! preg_match('/^62\d{7,13}$/', $wa)) {
+                $error = 'Baris ' . $line . ': nomor WhatsApp tidak valid.';
+
+                return null;
+            }
+            $out['no_wa'] = $wa;
+        }
+
+        return $out;
     }
 
     // ===================== IMPOR DARI DATA KESEDIAAN LAMA =====================

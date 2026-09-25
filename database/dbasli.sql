@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Host: localhost:3306
--- Waktu pembuatan: 20 Sep 2026 pada 06.30
+-- Waktu pembuatan: 24 Sep 2026 pada 22.17
 -- Versi server: 10.11.19-MariaDB-cll-lve
 -- Versi PHP: 8.4.25
 
@@ -74,7 +74,8 @@ INSERT INTO `absensi_hari` (`id`, `tanggal`, `created_by`, `created_at`, `update
 (13, '2026-07-31', 1, '2026-08-02 18:21:49', '2026-08-02 18:21:49'),
 (14, '2026-08-03', 1, '2026-08-03 09:35:23', '2026-08-03 09:35:23'),
 (15, '2026-08-10', 1, '2026-08-10 06:18:34', '2026-08-10 06:18:34'),
-(16, '2026-08-12', 1, '2026-08-12 20:18:47', '2026-08-12 20:18:47');
+(16, '2026-08-12', 1, '2026-08-12 20:18:47', '2026-08-12 20:18:47'),
+(18, '2026-09-21', 1, '2026-09-24 22:08:24', '2026-09-24 22:08:24');
 
 -- --------------------------------------------------------
 
@@ -101,7 +102,67 @@ CREATE TABLE `absensi_kerja` (
 INSERT INTO `absensi_kerja` (`id`, `tanggal`, `guru_id`, `status`, `jam_masuk`, `keterangan`, `created_by`, `created_at`, `updated_at`) VALUES
 (1, '2026-08-12', 2, 'hadir', NULL, NULL, 1, '2026-08-12 20:18:47', '2026-08-12 20:18:47'),
 (2, '2026-08-12', 3, 'hadir', NULL, NULL, 1, '2026-08-12 20:18:47', '2026-08-12 20:18:47'),
-(3, '2026-08-12', 11, 'hadir', NULL, NULL, 1, '2026-08-12 20:18:47', '2026-08-12 20:18:47');
+(3, '2026-08-12', 11, 'hadir', NULL, NULL, 1, '2026-08-12 20:18:47', '2026-08-12 20:18:47'),
+(4, '2026-09-21', 69, 'hadir', NULL, NULL, 1, '2026-09-24 22:08:24', '2026-09-24 22:08:24'),
+(5, '2026-09-21', 64, 'hadir', NULL, NULL, 1, '2026-09-24 22:08:24', '2026-09-24 22:08:24'),
+(6, '2026-09-21', 61, 'hadir', NULL, NULL, 1, '2026-09-24 22:08:24', '2026-09-24 22:08:24'),
+(7, '2026-09-21', 66, 'hadir', NULL, NULL, 1, '2026-09-24 22:08:24', '2026-09-24 22:08:24'),
+(8, '2026-09-21', 65, 'hadir', NULL, NULL, 1, '2026-09-24 22:08:24', '2026-09-24 22:08:24'),
+(9, '2026-09-21', 62, 'hadir', NULL, NULL, 1, '2026-09-24 22:08:24', '2026-09-24 22:08:24'),
+(10, '2026-09-21', 68, 'hadir', NULL, NULL, 1, '2026-09-24 22:08:24', '2026-09-24 22:08:24'),
+(11, '2026-09-21', 67, 'hadir', NULL, NULL, 1, '2026-09-24 22:08:24', '2026-09-24 22:08:24'),
+(12, '2026-09-21', 63, 'hadir', NULL, NULL, 1, '2026-09-24 22:08:24', '2026-09-24 22:08:24'),
+(13, '2026-09-21', 4, 'hadir', NULL, NULL, 1, '2026-09-24 22:08:24', '2026-09-24 22:08:24'),
+(14, '2026-09-21', 41, 'hadir', NULL, NULL, 1, '2026-09-24 22:08:24', '2026-09-24 22:08:24'),
+(15, '2026-09-21', 60, 'hadir', NULL, NULL, 1, '2026-09-24 22:08:24', '2026-09-24 22:08:24'),
+(16, '2026-09-21', 42, 'hadir', NULL, NULL, 1, '2026-09-24 22:08:24', '2026-09-24 22:08:24'),
+(17, '2026-09-21', 51, 'hadir', NULL, NULL, 1, '2026-09-24 22:08:24', '2026-09-24 22:08:24'),
+(18, '2026-09-21', 26, 'hadir', NULL, NULL, 1, '2026-09-24 22:08:24', '2026-09-24 22:08:24'),
+(19, '2026-09-21', 9, 'hadir', NULL, NULL, 1, '2026-09-24 22:08:24', '2026-09-24 22:08:24'),
+(20, '2026-09-21', 72, 'hadir', NULL, NULL, 1, '2026-09-24 22:08:24', '2026-09-24 22:08:24'),
+(21, '2026-09-21', 40, 'hadir', NULL, NULL, 1, '2026-09-24 22:08:24', '2026-09-24 22:08:24'),
+(22, '2026-09-21', 19, 'hadir', NULL, NULL, 1, '2026-09-24 22:08:24', '2026-09-24 22:08:24'),
+(23, '2026-09-21', 45, 'hadir', NULL, NULL, 1, '2026-09-24 22:08:24', '2026-09-24 22:08:24'),
+(24, '2026-09-21', 7, 'hadir', NULL, NULL, 1, '2026-09-24 22:08:24', '2026-09-24 22:08:24'),
+(25, '2026-09-21', 11, 'hadir', NULL, NULL, 1, '2026-09-24 22:08:24', '2026-09-24 22:08:24'),
+(26, '2026-09-21', 28, 'hadir', NULL, NULL, 1, '2026-09-24 22:08:24', '2026-09-24 22:08:24'),
+(27, '2026-09-21', 22, 'hadir', NULL, NULL, 1, '2026-09-24 22:08:24', '2026-09-24 22:08:24'),
+(28, '2026-09-21', 49, 'hadir', NULL, NULL, 1, '2026-09-24 22:08:24', '2026-09-24 22:08:24'),
+(29, '2026-09-21', 43, 'hadir', NULL, NULL, 1, '2026-09-24 22:08:24', '2026-09-24 22:08:24'),
+(30, '2026-09-21', 36, 'hadir', NULL, NULL, 1, '2026-09-24 22:08:24', '2026-09-24 22:08:24'),
+(31, '2026-09-21', 70, 'hadir', NULL, NULL, 1, '2026-09-24 22:08:24', '2026-09-24 22:08:24'),
+(32, '2026-09-21', 23, 'hadir', NULL, NULL, 1, '2026-09-24 22:08:24', '2026-09-24 22:08:24'),
+(33, '2026-09-21', 50, 'hadir', NULL, NULL, 1, '2026-09-24 22:08:24', '2026-09-24 22:08:24'),
+(34, '2026-09-21', 14, 'hadir', NULL, NULL, 1, '2026-09-24 22:08:24', '2026-09-24 22:08:24'),
+(35, '2026-09-21', 33, 'hadir', NULL, NULL, 1, '2026-09-24 22:08:24', '2026-09-24 22:08:24'),
+(36, '2026-09-21', 8, 'hadir', NULL, NULL, 1, '2026-09-24 22:08:24', '2026-09-24 22:08:24'),
+(37, '2026-09-21', 3, 'hadir', NULL, NULL, 1, '2026-09-24 22:08:24', '2026-09-24 22:08:24'),
+(38, '2026-09-21', 54, 'hadir', NULL, NULL, 1, '2026-09-24 22:08:24', '2026-09-24 22:08:24'),
+(39, '2026-09-21', 21, 'hadir', NULL, NULL, 1, '2026-09-24 22:08:24', '2026-09-24 22:08:24'),
+(40, '2026-09-21', 15, 'hadir', NULL, NULL, 1, '2026-09-24 22:08:24', '2026-09-24 22:08:24'),
+(41, '2026-09-21', 29, 'hadir', NULL, NULL, 1, '2026-09-24 22:08:24', '2026-09-24 22:08:24'),
+(42, '2026-09-21', 1, 'hadir', NULL, NULL, 1, '2026-09-24 22:08:24', '2026-09-24 22:08:24'),
+(43, '2026-09-21', 39, 'hadir', NULL, NULL, 1, '2026-09-24 22:08:24', '2026-09-24 22:08:24'),
+(44, '2026-09-21', 2, 'hadir', NULL, NULL, 1, '2026-09-24 22:08:24', '2026-09-24 22:08:24'),
+(45, '2026-09-21', 32, 'hadir', NULL, NULL, 1, '2026-09-24 22:08:24', '2026-09-24 22:08:24'),
+(46, '2026-09-21', 31, 'hadir', NULL, NULL, 1, '2026-09-24 22:08:24', '2026-09-24 22:08:24'),
+(47, '2026-09-21', 71, 'hadir', NULL, NULL, 1, '2026-09-24 22:08:24', '2026-09-24 22:08:24'),
+(48, '2026-09-21', 16, 'hadir', NULL, NULL, 1, '2026-09-24 22:08:24', '2026-09-24 22:08:24'),
+(49, '2026-09-21', 48, 'hadir', NULL, NULL, 1, '2026-09-24 22:08:24', '2026-09-24 22:08:24'),
+(50, '2026-09-21', 24, 'hadir', NULL, NULL, 1, '2026-09-24 22:08:24', '2026-09-24 22:08:24'),
+(51, '2026-09-21', 5, 'hadir', NULL, NULL, 1, '2026-09-24 22:08:24', '2026-09-24 22:08:24'),
+(52, '2026-09-21', 46, 'hadir', NULL, NULL, 1, '2026-09-24 22:08:24', '2026-09-24 22:08:24'),
+(53, '2026-09-21', 25, 'hadir', NULL, NULL, 1, '2026-09-24 22:08:24', '2026-09-24 22:08:24'),
+(54, '2026-09-21', 27, 'hadir', NULL, NULL, 1, '2026-09-24 22:08:24', '2026-09-24 22:08:24'),
+(55, '2026-09-21', 18, 'hadir', NULL, NULL, 1, '2026-09-24 22:08:24', '2026-09-24 22:08:24'),
+(56, '2026-09-21', 38, 'hadir', NULL, NULL, 1, '2026-09-24 22:08:24', '2026-09-24 22:08:24'),
+(57, '2026-09-21', 56, 'hadir', NULL, NULL, 1, '2026-09-24 22:08:24', '2026-09-24 22:08:24'),
+(58, '2026-09-21', 58, 'hadir', NULL, NULL, 1, '2026-09-24 22:08:24', '2026-09-24 22:08:24'),
+(59, '2026-09-21', 34, 'hadir', NULL, NULL, 1, '2026-09-24 22:08:24', '2026-09-24 22:08:24'),
+(60, '2026-09-21', 73, 'hadir', NULL, NULL, 1, '2026-09-24 22:08:24', '2026-09-24 22:08:24'),
+(61, '2026-09-21', 52, 'hadir', NULL, NULL, 1, '2026-09-24 22:08:24', '2026-09-24 22:08:24'),
+(62, '2026-09-21', 35, 'hadir', NULL, NULL, 1, '2026-09-24 22:08:24', '2026-09-24 22:08:24'),
+(63, '2026-09-21', 37, 'hadir', NULL, NULL, 1, '2026-09-24 22:08:24', '2026-09-24 22:08:24');
 
 -- --------------------------------------------------------
 
@@ -188,9 +249,9 @@ INSERT INTO `api_tokens` (`id`, `admin_id`, `token_hash`, `device_name`, `last_u
 (68, 1, 'd29cbb7896200c91583579401634b8e3e3cc548cb71258518a683d0914e66963', 'Android', '2026-08-30 22:29:58', '2026-10-29 22:29:57', '2026-08-30 22:29:57'),
 (69, 1, 'd0369747c2b49e381947d3f4fd4e719b9f972ae8bcad9727a31e1c8201784c2b', 'Android', '2026-09-03 22:27:08', '2026-11-02 22:26:59', '2026-09-03 22:26:59'),
 (70, 1, '64699beb9794384d91b10bc18d3abdf2024e7cd28dd89b4ad53338b97b80d348', 'Android', '2026-09-20 00:33:14', '2026-11-19 00:33:13', '2026-09-20 00:33:13'),
-(73, 1, '07ec45ab134a19e477275a02ff166c964217ddafcb6ea503ae54d0f8a8c4b400', 'Android', '2026-09-20 05:16:52', '2026-11-19 05:04:28', '2026-09-20 05:04:28'),
 (74, 1, '81a723613f3f72c71828564f26a8adf097d677a8527fcfc15abb43da79b70171', 'Android', '2026-09-20 05:05:53', '2026-11-19 05:05:34', '2026-09-20 05:05:34'),
-(75, 1, '4e60611e9c949031d0040fab8c9bcf6a6bfed9929e98e6c257f591f6fc36efd2', 'Android', '2026-09-20 05:43:06', '2026-11-19 05:11:50', '2026-09-20 05:11:50');
+(84, 1, '037e713fe113bb938f3338f8e62fda87a0562138e5b40f15b98874216ef57519', 'Android', '2026-09-24 22:08:24', '2026-11-23 21:56:08', '2026-09-24 21:56:08'),
+(85, 1, '76638279bb58799ae7dcfad1c30feb323f256e500be1828c594466c56e31c793', 'Android', '2026-09-24 22:06:24', '2026-11-23 22:05:57', '2026-09-24 22:05:57');
 
 -- --------------------------------------------------------
 
@@ -4064,7 +4125,44 @@ INSERT INTO `audit_log` (`id`, `admin_id`, `aksi`, `tabel`, `record_id`, `deskri
 (3786, 1, 'delete', 'dokumen_folder', 1, 'Buang folder MODUL AJAR (1 folder, 1 dokumen)', '103.238.232.238', '2026-09-20 05:32:33'),
 (3787, 1, 'delete', 'dokumen', NULL, 'Buang 2 dokumen ke sampah', '103.238.232.238', '2026-09-20 05:32:40'),
 (3788, 1, 'delete', 'dokumen', NULL, 'Kosongkan tempat sampah (2 dokumen)', '103.238.232.238', '2026-09-20 05:32:48'),
-(3789, 1, 'create', 'dokumen', 4, 'Tambah tautan https://youtu.be/8L9PU1ROM38?list=RD8L9PU1ROM38', '114.10.68.171', '2026-09-20 05:36:48');
+(3789, 1, 'create', 'dokumen', 4, 'Tambah tautan https://youtu.be/8L9PU1ROM38?list=RD8L9PU1ROM38', '114.10.68.171', '2026-09-20 05:36:48'),
+(3790, 1, 'create', 'dokumen_folder', 2, 'Buat folder ASTS 1', '163.52.149.73', '2026-09-20 11:11:39'),
+(3791, 1, 'create', 'dokumen_folder', 3, 'Buat folder KISI KISI', '163.52.149.73', '2026-09-20 11:16:48'),
+(3792, 1, 'create', 'dokumen_folder', 4, 'Buat folder KELAS 10', '163.52.149.73', '2026-09-20 11:17:21'),
+(3793, 1, 'create', 'dokumen', 5, 'Unggah 10.rar', '163.52.149.73', '2026-09-20 11:18:25'),
+(3794, 1, 'delete', 'dokumen', 5, 'Buang ke sampah: 10', '163.52.149.73', '2026-09-20 11:19:34'),
+(3795, 1, 'delete', 'dokumen_folder', 2, 'Buang folder ASTS 1 (3 folder, 1 dokumen)', '163.52.149.73', '2026-09-20 11:19:55'),
+(3796, 1, 'create', 'dokumen_folder', 5, 'Buat folder VIDEO YOUTUBE', '163.52.149.73', '2026-09-20 11:22:07'),
+(3797, 1, 'update', 'dokumen', NULL, 'Pindahkan 1 dokumen', '163.52.149.73', '2026-09-20 11:22:52'),
+(3798, 1, 'create', 'dokumen_folder', 6, 'Buat folder ASTS 1', '163.52.149.73', '2026-09-20 11:23:36'),
+(3799, 1, 'create', 'dokumen', 6, 'Unggah FORMAT KISI KISI SOAL ASTS GANJIL 2026-2027 _maria_b.indo X.doc', '163.52.149.73', '2026-09-20 11:24:16'),
+(3800, 1, 'update', 'dokumen', NULL, 'Pindahkan 1 dokumen', '163.52.149.73', '2026-09-20 11:24:25'),
+(3801, 1, 'delete', 'dokumen', 6, 'Buang ke sampah: FORMAT KISI KISI SOAL ASTS GANJIL 2026-2027 _maria_b.indo X', '163.52.149.73', '2026-09-20 11:24:56'),
+(3802, 1, 'create', 'dokumen', 7, 'Unggah FORMAT KISI KISI SOAL ASTS GANJIL 2026-2027 _maria_b.indo X.pdf', '163.52.149.73', '2026-09-20 11:31:31'),
+(3803, 1, 'delete', 'jadwal', 3393, 'Hapus sel jadwal', '163.52.149.73', '2026-09-23 04:58:23'),
+(3804, 1, 'delete', 'jadwal', 3394, 'Hapus sel jadwal', '163.52.149.73', '2026-09-23 04:58:24'),
+(3805, 1, 'delete', 'jadwal', 3395, 'Hapus sel jadwal', '163.52.149.73', '2026-09-23 04:58:26'),
+(3806, 1, 'delete', 'jadwal', 3396, 'Hapus sel jadwal', '163.52.149.73', '2026-09-23 04:58:27'),
+(3807, 1, 'delete', 'jadwal', 2859, 'Hapus sel jadwal', '163.52.149.73', '2026-09-23 05:00:22'),
+(3808, 1, 'delete', 'jadwal', 2860, 'Hapus sel jadwal', '163.52.149.73', '2026-09-23 05:00:23'),
+(3809, 1, 'delete', 'jadwal', 2861, 'Hapus sel jadwal', '163.52.149.73', '2026-09-23 05:00:24'),
+(3810, 1, 'delete', 'jadwal', 2862, 'Hapus sel jadwal', '163.52.149.73', '2026-09-23 05:00:25'),
+(3811, 1, 'update', 'pengampu', 526, 'Ubah penugasan', '163.52.149.73', '2026-09-23 05:00:51'),
+(3812, 1, 'update', 'pengampu', 671, 'Ubah penugasan', '163.52.149.73', '2026-09-23 05:01:12'),
+(3813, 1, 'create', 'jadwal', 4588, 'Tempatkan 10IPAS kelas#56', '163.52.149.73', '2026-09-23 05:01:47'),
+(3814, 1, 'create', 'jadwal', 4589, 'Tempatkan 10IPAS kelas#56', '163.52.149.73', '2026-09-23 05:01:49'),
+(3815, 1, 'create', 'jadwal', 4590, 'Tempatkan 10IPAS kelas#56', '163.52.149.73', '2026-09-23 05:01:51'),
+(3816, 1, 'create', 'jadwal', 4591, 'Tempatkan 10IPAS kelas#56', '163.52.149.73', '2026-09-23 05:01:52'),
+(3817, 1, 'create', 'jadwal', 4592, 'Tempatkan 10IPAS kelas#49', '163.52.149.73', '2026-09-23 05:02:07'),
+(3818, 1, 'create', 'jadwal', 4593, 'Tempatkan 10IPAS kelas#49', '163.52.149.73', '2026-09-23 05:02:09'),
+(3819, 1, 'create', 'jadwal', 4594, 'Tempatkan 10IPAS kelas#49', '163.52.149.73', '2026-09-23 05:02:10'),
+(3820, 1, 'create', 'jadwal', 4595, 'Tempatkan 10IPAS kelas#49', '163.52.149.73', '2026-09-23 05:02:12'),
+(3821, 1, 'update', 'absensi_guru', NULL, 'Simpan absensi 2026-09-24 (via mobile)', '103.238.232.238', '2026-09-24 21:54:01'),
+(3822, 1, 'delete', 'absensi_hari', NULL, 'Batal catat absensi 2026-09-24 (via mobile)', '114.10.27.138', '2026-09-24 21:58:33'),
+(3823, 1, 'update', 'guru_jabatan', 50, 'Atur jabatan: 1 jabatan', '114.10.27.138', '2026-09-24 22:03:31'),
+(3824, 1, 'create', 'jabatan', 9, 'Tambah jabatan GURU PIKET', '114.10.27.138', '2026-09-24 22:04:23'),
+(3825, 1, 'update', 'guru_jabatan', 50, 'Atur jabatan: 2 jabatan', '114.10.27.138', '2026-09-24 22:04:49'),
+(3826, 1, 'update', 'absensi_kerja', NULL, 'Simpan kehadiran kerja 2026-09-21 (via mobile)', '114.10.27.138', '2026-09-24 22:08:24');
 
 -- --------------------------------------------------------
 
@@ -4100,6 +4198,13 @@ CREATE TABLE `biometric_credentials` (
   `created_at` datetime DEFAULT NULL,
   `updated_at` datetime DEFAULT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+--
+-- Dumping data untuk tabel `biometric_credentials`
+--
+
+INSERT INTO `biometric_credentials` (`id`, `admin_id`, `device_id`, `secret_hash`, `device_name`, `last_used_at`, `created_at`, `updated_at`) VALUES
+(1, 1, 'E_d3QqVQD92LvcGWBh8KhQ', '0315960beacd8fadb8081f9b2e28af59664c575b3216f4dc57d353a5d1913dec', 'HP Admin', '2026-09-24 21:51:29', '2026-09-21 01:06:55', '2026-09-21 01:06:55');
 
 -- --------------------------------------------------------
 
@@ -4138,7 +4243,10 @@ CREATE TABLE `dokumen` (
 --
 
 INSERT INTO `dokumen` (`id`, `folder_id`, `judul`, `deskripsi`, `tipe`, `nama_asli`, `nama_file`, `path_rel`, `ekstensi`, `mime`, `ukuran`, `hash_sha256`, `thumb`, `url_eksternal`, `penyedia`, `kategori`, `visibilitas`, `jml_lihat`, `jml_unduh`, `created_by`, `deleted_at`, `created_at`, `updated_at`) VALUES
-(4, NULL, 'PERTENGKARAN', 'YUNITA ABABIL', 'tautan', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 'https://youtu.be/8L9PU1ROM38?list=RD8L9PU1ROM38', 'youtube', 'video', 'publik', 0, 0, 1, NULL, '2026-09-20 05:36:48', '2026-09-20 05:36:48');
+(4, 5, 'PERTENGKARAN', 'YUNITA ABABIL', 'tautan', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 'https://youtu.be/8L9PU1ROM38?list=RD8L9PU1ROM38', 'youtube', 'video', 'publik', 0, 0, 1, NULL, '2026-09-20 05:36:48', '2026-09-20 11:22:52'),
+(5, 4, '10', NULL, 'berkas', '10.rar', '20260920_5c6c6ff3147b1c71.rar', '2026/09/20260920_5c6c6ff3147b1c71.rar', 'rar', 'application/vnd.rar', 2620385, '0c8d04fcbbaec839c00984c1cfb655512e8dcaf88d47f46a240ab96df020657b', NULL, NULL, NULL, 'arsip', 'privat', 0, 0, 1, '2026-09-20 11:19:34', '2026-09-20 11:18:25', '2026-09-20 11:19:34'),
+(6, 6, 'FORMAT KISI KISI SOAL ASTS GANJIL 2026-2027 _maria_b.indo X', NULL, 'berkas', 'FORMAT KISI KISI SOAL ASTS GANJIL 2026-2027 _maria_b.indo X.doc', '20260920_b9f68f4fabb0a726.doc', '2026/09/20260920_b9f68f4fabb0a726.doc', 'doc', 'application/msword', 484352, '2c33e113ac5272d0fef892f25a31e27700607f3ea5c9c5a8cf947233a86de94f', NULL, NULL, NULL, 'dokumen', 'privat', 1, 0, 1, '2026-09-20 11:24:56', '2026-09-20 11:24:16', '2026-09-20 11:24:56'),
+(7, 6, 'FORMAT KISI KISI SOAL ASTS GANJIL 2026-2027 _maria_b.indo X', NULL, 'berkas', 'FORMAT KISI KISI SOAL ASTS GANJIL 2026-2027 _maria_b.indo X.pdf', '20260920_74feda20c989bcc2.pdf', '2026/09/20260920_74feda20c989bcc2.pdf', 'pdf', 'application/pdf', 275401, 'e15877a08994dd35640899cbc44d79ccd66cb2f31b047e61c0b2d7b61d62b637', NULL, NULL, NULL, 'pdf', 'privat', 3, 2, 1, NULL, '2026-09-20 11:31:31', '2026-09-20 11:31:31');
 
 -- --------------------------------------------------------
 
@@ -4177,7 +4285,13 @@ INSERT INTO `dokumen_akses_log` (`id`, `dokumen_id`, `share_id`, `aksi`, `admin_
 (13, NULL, NULL, 'pratinjau', 1, '114.10.68.171', 'Dart/3.12 (dart:io)', '2026-09-20 05:16:24'),
 (14, NULL, NULL, 'unduh', 1, '114.10.68.171', 'Dart/3.12 (dart:io)', '2026-09-20 05:16:32'),
 (15, NULL, NULL, 'pratinjau', 1, '112.215.238.171', 'Dart/3.12 (dart:io)', '2026-09-20 05:16:34'),
-(16, NULL, NULL, 'unduh', 1, '112.215.238.171', 'Dart/3.12 (dart:io)', '2026-09-20 05:16:39');
+(16, NULL, NULL, 'unduh', 1, '112.215.238.171', 'Dart/3.12 (dart:io)', '2026-09-20 05:16:39'),
+(17, 6, NULL, 'pratinjau', 1, '163.52.149.73', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/153.0.0.0 Safari/537.36', '2026-09-20 11:24:35'),
+(18, 7, NULL, 'pratinjau', 1, '163.52.149.73', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/153.0.0.0 Safari/537.36', '2026-09-20 11:31:37'),
+(19, 7, NULL, 'pratinjau', 1, '163.52.149.73', 'Dart/3.12 (dart:io)', '2026-09-20 12:14:57'),
+(20, 7, NULL, 'unduh', 1, '163.52.149.73', 'Dart/3.12 (dart:io)', '2026-09-20 12:15:04'),
+(21, 7, NULL, 'pratinjau', 1, '114.10.119.177', 'Dart/3.12 (dart:io)', '2026-09-21 17:55:38'),
+(22, 7, NULL, 'unduh', 1, '114.10.119.177', 'Dart/3.12 (dart:io)', '2026-09-21 17:55:43');
 
 -- --------------------------------------------------------
 
@@ -4197,6 +4311,17 @@ CREATE TABLE `dokumen_folder` (
   `created_at` datetime DEFAULT NULL,
   `updated_at` datetime DEFAULT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+--
+-- Dumping data untuk tabel `dokumen_folder`
+--
+
+INSERT INTO `dokumen_folder` (`id`, `nama`, `parent_id`, `deskripsi`, `visibilitas`, `warna`, `created_by`, `deleted_at`, `created_at`, `updated_at`) VALUES
+(2, 'ASTS 1', NULL, 'Asesmen Sumatif Tengah Semester 1', 'link', NULL, 1, '2026-09-20 11:19:55', '2026-09-20 11:11:39', '2026-09-20 11:11:39'),
+(3, 'KISI KISI', 2, 'ASTS 1', 'privat', NULL, 1, '2026-09-20 11:19:55', '2026-09-20 11:16:48', '2026-09-20 11:16:48'),
+(4, 'KELAS 10', 3, 'KISI KISI', 'link', NULL, 1, '2026-09-20 11:19:55', '2026-09-20 11:17:21', '2026-09-20 11:17:21'),
+(5, 'VIDEO YOUTUBE', NULL, NULL, 'privat', NULL, 1, NULL, '2026-09-20 11:22:07', '2026-09-20 11:22:07'),
+(6, 'ASTS 1', NULL, 'BERKAS ADM. ASTS 1', 'link', NULL, 1, NULL, '2026-09-20 11:23:36', '2026-09-20 11:23:36');
 
 -- --------------------------------------------------------
 
@@ -4452,7 +4577,9 @@ INSERT INTO `guru_jabatan` (`id`, `guru_id`, `jabatan_id`, `is_utama`, `tmt`, `t
 (79, 46, 7, 1, NULL, NULL, NULL, '2026-08-05 21:44:04'),
 (80, 46, 8, 0, NULL, NULL, NULL, '2026-08-05 21:44:04'),
 (81, 25, 7, 1, NULL, NULL, NULL, '2026-08-05 21:44:20'),
-(82, 25, 8, 0, NULL, NULL, NULL, '2026-08-05 21:44:20');
+(82, 25, 8, 0, NULL, NULL, NULL, '2026-08-05 21:44:20'),
+(84, 50, 8, 0, NULL, NULL, NULL, '2026-09-24 22:04:49'),
+(85, 50, 9, 1, NULL, NULL, NULL, '2026-09-24 22:04:49');
 
 -- --------------------------------------------------------
 
@@ -4533,7 +4660,8 @@ INSERT INTO `jabatan` (`id`, `kode`, `nama`, `kategori`, `parent_id`, `jurusan_i
 (5, 'WK-HUM', 'Wakil Kepala Sekolah Bidang Hubungan Masyarakat', 'struktural', 1, NULL, 2, 1, NULL, NULL, '2026-07-18 23:22:40', '2026-07-18 23:22:40'),
 (6, 'KAPROG', 'Ketua Program Keahlian', 'struktural', 1, NULL, 3, 1, NULL, NULL, '2026-07-18 23:22:40', '2026-07-18 23:22:40'),
 (7, 'WALI', 'Wali Kelas', 'wali_kelas', NULL, NULL, 4, 0, NULL, NULL, '2026-07-18 23:22:40', '2026-07-18 23:22:40'),
-(8, 'GMP', 'Guru Mata Pelajaran', 'mapel', NULL, NULL, 5, 0, NULL, NULL, '2026-07-18 23:22:40', '2026-07-18 23:22:40');
+(8, 'GMP', 'Guru Mata Pelajaran', 'mapel', NULL, NULL, 5, 0, NULL, NULL, '2026-07-18 23:22:40', '2026-07-18 23:22:40'),
+(9, 'GP', 'GURU PIKET', 'lainnya', 8, NULL, 5, 0, NULL, NULL, '2026-09-24 22:04:23', '2026-09-24 22:04:23');
 
 -- --------------------------------------------------------
 
@@ -4571,10 +4699,6 @@ INSERT INTO `jadwal` (`id`, `tahun_ajaran_id`, `kelas_id`, `hari_id`, `jam_id`, 
 (2856, NULL, 56, 3, 8, 525, 8, 1, '2026-08-02 00:27:58', '2026-08-02 00:27:58'),
 (2857, NULL, 56, 3, 9, 525, 8, 1, '2026-08-02 00:28:00', '2026-08-02 00:28:00'),
 (2858, NULL, 56, 3, 13, 525, 8, 1, '2026-08-02 00:28:02', '2026-08-02 00:28:02'),
-(2859, NULL, 56, 3, 1, 526, 9, 1, '2026-08-02 00:29:26', '2026-08-02 00:29:26'),
-(2860, NULL, 56, 3, 2, 526, 9, 1, '2026-08-02 00:29:28', '2026-08-02 00:29:28'),
-(2861, NULL, 56, 3, 3, 526, 9, 1, '2026-08-02 00:29:29', '2026-08-02 00:29:29'),
-(2862, NULL, 56, 3, 4, 526, 9, 1, '2026-08-02 00:29:31', '2026-08-02 00:29:31'),
 (2863, NULL, 56, 4, 1, 527, 35, 1, '2026-08-02 00:32:04', '2026-08-02 00:32:04'),
 (2864, NULL, 56, 4, 2, 527, 35, 1, '2026-08-02 00:32:06', '2026-08-02 00:32:06'),
 (2865, NULL, 56, 4, 3, 527, 35, 1, '2026-08-02 00:32:07', '2026-08-02 00:32:07'),
@@ -5079,10 +5203,6 @@ INSERT INTO `jadwal` (`id`, `tahun_ajaran_id`, `kelas_id`, `hari_id`, `jam_id`, 
 (3390, NULL, 49, 3, 1, 669, 36, 1, '2026-08-02 10:28:11', '2026-08-02 10:28:11'),
 (3391, NULL, 49, 3, 3, 670, 39, 1, '2026-08-02 10:28:14', '2026-08-02 10:28:14'),
 (3392, NULL, 49, 3, 4, 670, 39, 1, '2026-08-02 10:28:17', '2026-08-02 10:28:17'),
-(3393, NULL, 49, 3, 7, 671, 9, 1, '2026-08-02 10:28:24', '2026-08-02 10:28:24'),
-(3394, NULL, 49, 3, 8, 671, 9, 1, '2026-08-02 10:28:26', '2026-08-02 10:28:26'),
-(3395, NULL, 49, 3, 9, 671, 9, 1, '2026-08-02 10:28:28', '2026-08-02 10:28:28'),
-(3396, NULL, 49, 3, 13, 671, 9, 1, '2026-08-02 10:28:30', '2026-08-02 10:28:30'),
 (3397, NULL, 49, 4, 1, 669, 36, 1, '2026-08-02 10:28:47', '2026-08-02 10:28:47'),
 (3398, NULL, 49, 4, 2, 669, 36, 1, '2026-08-02 10:28:47', '2026-08-02 10:28:47'),
 (3399, NULL, 49, 4, 3, 672, 29, 1, '2026-08-02 10:29:00', '2026-08-02 10:29:00'),
@@ -5181,8 +5301,7 @@ INSERT INTO `jadwal` (`id`, `tahun_ajaran_id`, `kelas_id`, `hari_id`, `jam_id`, 
 (3499, NULL, 126, 6, 7, 698, 18, 1, '2026-08-02 11:23:18', '2026-08-02 11:23:18'),
 (3500, NULL, 126, 6, 8, 698, 18, 1, '2026-08-02 11:23:20', '2026-08-02 11:23:20'),
 (3501, NULL, 126, 5, 2, 696, 71, 1, '2026-08-02 11:26:40', '2026-08-02 11:26:40'),
-(3502, NULL, 126, 5, 1, 696, 71, 1, '2026-08-02 11:26:42', '2026-08-02 11:26:42');
-INSERT INTO `jadwal` (`id`, `tahun_ajaran_id`, `kelas_id`, `hari_id`, `jam_id`, `pengampu_id`, `guru_id`, `created_by`, `created_at`, `updated_at`) VALUES
+(3502, NULL, 126, 5, 1, 696, 71, 1, '2026-08-02 11:26:42', '2026-08-02 11:26:42'),
 (3503, NULL, 126, 5, 3, 696, 71, 1, '2026-08-02 11:26:45', '2026-08-02 11:26:45'),
 (3504, NULL, 126, 4, 3, 694, 72, 1, '2026-08-02 11:26:47', '2026-08-02 11:26:47'),
 (3505, NULL, 126, 4, 4, 694, 72, 1, '2026-08-02 11:26:50', '2026-08-02 11:26:50'),
@@ -5190,7 +5309,8 @@ INSERT INTO `jadwal` (`id`, `tahun_ajaran_id`, `kelas_id`, `hari_id`, `jam_id`, 
 (3507, NULL, 126, 6, 13, 694, 72, 1, '2026-08-02 11:26:54', '2026-08-02 11:26:54'),
 (3508, NULL, 78, 1, 1, 700, 1, 1, '2026-08-02 11:36:03', '2026-08-02 11:36:03'),
 (3509, NULL, 78, 1, 2, 700, 1, 1, '2026-08-02 11:36:05', '2026-08-02 11:36:05'),
-(3510, NULL, 78, 1, 3, 700, 1, 1, '2026-08-02 11:36:06', '2026-08-02 11:36:06'),
+(3510, NULL, 78, 1, 3, 700, 1, 1, '2026-08-02 11:36:06', '2026-08-02 11:36:06');
+INSERT INTO `jadwal` (`id`, `tahun_ajaran_id`, `kelas_id`, `hari_id`, `jam_id`, `pengampu_id`, `guru_id`, `created_by`, `created_at`, `updated_at`) VALUES
 (3511, NULL, 78, 1, 4, 700, 1, 1, '2026-08-02 11:36:08', '2026-08-02 11:36:08'),
 (3512, NULL, 78, 1, 7, 700, 1, 1, '2026-08-02 11:36:10', '2026-08-02 11:36:10'),
 (3513, NULL, 78, 1, 8, 700, 1, 1, '2026-08-02 11:36:12', '2026-08-02 11:36:12'),
@@ -5800,8 +5920,7 @@ INSERT INTO `jadwal` (`id`, `tahun_ajaran_id`, `kelas_id`, `hari_id`, `jam_id`, 
 (4137, NULL, 61, 5, 17, 874, 46, 1, '2026-08-03 04:25:20', '2026-08-03 04:25:20'),
 (4138, NULL, 61, 5, 19, 876, 7, 1, '2026-08-03 04:25:29', '2026-08-03 04:25:29'),
 (4139, NULL, 61, 5, 20, 876, 7, 1, '2026-08-03 04:25:31', '2026-08-03 04:25:31'),
-(4140, NULL, 61, 5, 21, 877, 62, 1, '2026-08-03 04:25:35', '2026-08-03 04:25:35');
-INSERT INTO `jadwal` (`id`, `tahun_ajaran_id`, `kelas_id`, `hari_id`, `jam_id`, `pengampu_id`, `guru_id`, `created_by`, `created_at`, `updated_at`) VALUES
+(4140, NULL, 61, 5, 21, 877, 62, 1, '2026-08-03 04:25:35', '2026-08-03 04:25:35'),
 (4141, NULL, 61, 5, 22, 877, 62, 1, '2026-08-03 04:25:37', '2026-08-03 04:25:37'),
 (4142, NULL, 61, 6, 14, 878, 38, 1, '2026-08-03 04:25:48', '2026-08-03 04:25:48'),
 (4143, NULL, 61, 6, 15, 878, 38, 1, '2026-08-03 04:25:50', '2026-08-03 04:25:50'),
@@ -5809,7 +5928,8 @@ INSERT INTO `jadwal` (`id`, `tahun_ajaran_id`, `kelas_id`, `hari_id`, `jam_id`, 
 (4145, NULL, 61, 6, 19, 879, 29, 1, '2026-08-03 04:26:02', '2026-08-03 04:26:02'),
 (4146, NULL, 61, 6, 20, 879, 29, 1, '2026-08-03 04:26:05', '2026-08-03 04:26:05'),
 (4147, NULL, 61, 6, 21, 880, 39, 1, '2026-08-03 04:26:08', '2026-08-03 04:26:08'),
-(4148, NULL, 61, 6, 22, 880, 39, 1, '2026-08-03 04:26:10', '2026-08-03 04:26:10'),
+(4148, NULL, 61, 6, 22, 880, 39, 1, '2026-08-03 04:26:10', '2026-08-03 04:26:10');
+INSERT INTO `jadwal` (`id`, `tahun_ajaran_id`, `kelas_id`, `hari_id`, `jam_id`, `pengampu_id`, `guru_id`, `created_by`, `created_at`, `updated_at`) VALUES
 (4149, NULL, 62, 1, 14, 881, 19, 1, '2026-08-03 04:36:04', '2026-08-03 04:36:04'),
 (4150, NULL, 62, 1, 15, 881, 19, 1, '2026-08-03 04:36:05', '2026-08-03 04:36:05'),
 (4151, NULL, 62, 1, 16, 882, 48, 1, '2026-08-03 04:36:08', '2026-08-03 04:36:08'),
@@ -6240,7 +6360,15 @@ INSERT INTO `jadwal` (`id`, `tahun_ajaran_id`, `kelas_id`, `hari_id`, `jam_id`, 
 (4584, NULL, 60, 1, 17, 857, 60, 1, '2026-08-16 10:11:12', '2026-08-16 10:11:12'),
 (4585, NULL, 60, 1, 21, 856, 7, 1, '2026-08-16 10:11:14', '2026-08-16 10:11:14'),
 (4586, NULL, 60, 1, 22, 856, 7, 1, '2026-08-16 10:11:16', '2026-08-16 10:11:16'),
-(4587, NULL, 61, 1, 17, 869, 7, 1, '2026-08-16 10:11:25', '2026-08-16 10:11:25');
+(4587, NULL, 61, 1, 17, 869, 7, 1, '2026-08-16 10:11:25', '2026-08-16 10:11:25'),
+(4588, NULL, 56, 3, 1, 526, 23, 1, '2026-09-23 05:01:47', '2026-09-23 05:01:47'),
+(4589, NULL, 56, 3, 2, 526, 23, 1, '2026-09-23 05:01:49', '2026-09-23 05:01:49'),
+(4590, NULL, 56, 3, 3, 526, 23, 1, '2026-09-23 05:01:51', '2026-09-23 05:01:51'),
+(4591, NULL, 56, 3, 4, 526, 23, 1, '2026-09-23 05:01:52', '2026-09-23 05:01:52'),
+(4592, NULL, 49, 3, 7, 671, 23, 1, '2026-09-23 05:02:07', '2026-09-23 05:02:07'),
+(4593, NULL, 49, 3, 8, 671, 23, 1, '2026-09-23 05:02:09', '2026-09-23 05:02:09'),
+(4594, NULL, 49, 3, 9, 671, 23, 1, '2026-09-23 05:02:10', '2026-09-23 05:02:10'),
+(4595, NULL, 49, 3, 13, 671, 23, 1, '2026-09-23 05:02:12', '2026-09-23 05:02:12');
 
 -- --------------------------------------------------------
 
@@ -6830,7 +6958,8 @@ INSERT INTO `migrations` (`id`, `version`, `class`, `group`, `namespace`, `time`
 (20, '2026-08-27-000001', 'App\\Database\\Migrations\\CreateLabGambar', 'default', 'App', 1787765041, 14),
 (21, '2026-08-27-000002', 'App\\Database\\Migrations\\CreateUkk', 'default', 'App', 1787822998, 15),
 (22, '2026-09-19-000001', 'App\\Database\\Migrations\\CreateDokumen', 'default', 'App', 1789838250, 16),
-(23, '2026-09-19-000002', 'App\\Database\\Migrations\\AddDokumenSettings', 'default', 'App', 1789838250, 16);
+(23, '2026-09-19-000002', 'App\\Database\\Migrations\\AddDokumenSettings', 'default', 'App', 1789838250, 16),
+(24, '2026-09-20-000001', 'App\\Database\\Migrations\\CreateUjian', 'default', 'App', 1789914969, 17);
 
 -- --------------------------------------------------------
 
@@ -7464,7 +7593,7 @@ INSERT INTO `pengampu` (`id`, `kelas_id`, `mapel_id`, `guru_id`, `jp`, `deleted_
 (523, 76, 13, 35, 4, '2026-07-18 11:29:17', '2026-07-05 13:15:22', '2026-07-05 13:15:22'),
 (524, 56, 78, 7, 4, NULL, '2026-08-02 00:25:44', '2026-08-02 00:25:44'),
 (525, 56, 82, 8, 8, NULL, '2026-08-02 00:26:58', '2026-08-02 00:26:58'),
-(526, 56, 79, 9, 4, NULL, '2026-08-02 00:29:12', '2026-08-02 00:29:12'),
+(526, 56, 79, 23, 4, NULL, '2026-08-02 00:29:12', '2026-09-23 05:00:51'),
 (527, 56, 75, 35, 4, NULL, '2026-08-02 00:30:46', '2026-08-02 00:30:46'),
 (528, 56, 71, 28, 2, NULL, '2026-08-02 00:31:12', '2026-08-02 00:31:12'),
 (529, 56, 69, 16, 2, NULL, '2026-08-02 00:31:50', '2026-08-02 00:31:50'),
@@ -7610,7 +7739,7 @@ INSERT INTO `pengampu` (`id`, `kelas_id`, `mapel_id`, `guru_id`, `jp`, `deleted_
 (668, 49, 75, 35, 4, NULL, '2026-08-02 10:23:44', '2026-08-02 10:23:44'),
 (669, 49, 72, 36, 4, NULL, '2026-08-02 10:24:16', '2026-08-02 10:24:16'),
 (670, 49, 69, 39, 2, NULL, '2026-08-02 10:24:28', '2026-08-02 10:24:28'),
-(671, 49, 79, 9, 4, NULL, '2026-08-02 10:24:44', '2026-08-02 10:24:44'),
+(671, 49, 79, 23, 4, NULL, '2026-08-02 10:24:44', '2026-09-23 05:01:12'),
 (672, 49, 61, 29, 2, NULL, '2026-08-02 10:25:08', '2026-08-02 10:25:08'),
 (673, 49, 78, 7, 4, NULL, '2026-08-02 10:25:17', '2026-08-02 10:25:17'),
 (674, 49, 80, 69, 8, NULL, '2026-08-02 10:25:31', '2026-08-02 10:25:31'),
@@ -10096,6 +10225,102 @@ CREATE TABLE `tempat_uji` (
   `updated_at` datetime DEFAULT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
+-- --------------------------------------------------------
+
+--
+-- Struktur dari tabel `ujian_jadwal`
+--
+
+CREATE TABLE `ujian_jadwal` (
+  `id` int(11) UNSIGNED NOT NULL,
+  `periode_id` int(11) UNSIGNED NOT NULL,
+  `mapel_id` int(11) UNSIGNED DEFAULT NULL,
+  `tingkat` enum('X','XI','XII') NOT NULL,
+  `jurusan_id` int(11) UNSIGNED DEFAULT NULL,
+  `shift` enum('pagi','siang','semua') NOT NULL DEFAULT 'semua',
+  `tanggal` date NOT NULL,
+  `jam_mulai` time DEFAULT NULL,
+  `jam_selesai` time DEFAULT NULL,
+  `ruang` varchar(100) DEFAULT NULL,
+  `keterangan` varchar(255) DEFAULT NULL,
+  `deleted_at` datetime DEFAULT NULL,
+  `created_at` datetime DEFAULT NULL,
+  `updated_at` datetime DEFAULT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+-- --------------------------------------------------------
+
+--
+-- Struktur dari tabel `ujian_pengawas`
+--
+
+CREATE TABLE `ujian_pengawas` (
+  `id` int(11) UNSIGNED NOT NULL,
+  `jadwal_id` int(11) UNSIGNED NOT NULL,
+  `guru_id` int(11) UNSIGNED DEFAULT NULL,
+  `ruang` varchar(100) DEFAULT NULL,
+  `peran` enum('pengawas','cadangan') NOT NULL DEFAULT 'pengawas',
+  `keterangan` varchar(255) DEFAULT NULL,
+  `created_at` datetime DEFAULT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+-- --------------------------------------------------------
+
+--
+-- Struktur dari tabel `ujian_periode`
+--
+
+CREATE TABLE `ujian_periode` (
+  `id` int(11) UNSIGNED NOT NULL,
+  `jenis` enum('ASTS1','ASAS','ASTS2','ASAT') NOT NULL,
+  `tahun_ajaran` varchar(20) NOT NULL,
+  `semester` enum('Ganjil','Genap') NOT NULL,
+  `nama` varchar(100) DEFAULT NULL,
+  `tanggal_mulai` date DEFAULT NULL,
+  `tanggal_selesai` date DEFAULT NULL,
+  `susulan_mulai` date DEFAULT NULL,
+  `susulan_selesai` date DEFAULT NULL,
+  `status` enum('draft','berjalan','selesai') NOT NULL DEFAULT 'draft',
+  `keterangan` varchar(255) DEFAULT NULL,
+  `deleted_at` datetime DEFAULT NULL,
+  `created_at` datetime DEFAULT NULL,
+  `updated_at` datetime DEFAULT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+--
+-- Dumping data untuk tabel `ujian_periode`
+--
+
+INSERT INTO `ujian_periode` (`id`, `jenis`, `tahun_ajaran`, `semester`, `nama`, `tanggal_mulai`, `tanggal_selesai`, `susulan_mulai`, `susulan_selesai`, `status`, `keterangan`, `deleted_at`, `created_at`, `updated_at`) VALUES
+(1, 'ASTS1', '2026/2027', 'Ganjil', NULL, NULL, NULL, NULL, NULL, 'draft', NULL, NULL, '2026-09-20 21:41:39', '2026-09-20 21:41:39'),
+(2, 'ASAS', '2026/2027', 'Ganjil', NULL, NULL, NULL, NULL, NULL, 'draft', NULL, NULL, '2026-09-21 17:46:33', '2026-09-21 17:46:33');
+
+-- --------------------------------------------------------
+
+--
+-- Struktur dari tabel `ujian_susulan`
+--
+
+CREATE TABLE `ujian_susulan` (
+  `id` int(11) UNSIGNED NOT NULL,
+  `periode_id` int(11) UNSIGNED NOT NULL,
+  `jadwal_id` int(11) UNSIGNED DEFAULT NULL,
+  `siswa_id` int(11) UNSIGNED NOT NULL,
+  `mapel_id` int(11) UNSIGNED DEFAULT NULL,
+  `tanggal_ujian` date DEFAULT NULL,
+  `alasan` enum('sakit','izin','alpa','lainnya') NOT NULL DEFAULT 'alpa',
+  `keterangan` varchar(255) DEFAULT NULL,
+  `status` enum('belum','dijadwalkan','selesai','batal') NOT NULL DEFAULT 'belum',
+  `tanggal_susulan` date DEFAULT NULL,
+  `jam_susulan` time DEFAULT NULL,
+  `ruang_susulan` varchar(100) DEFAULT NULL,
+  `pengawas_guru_id` int(11) UNSIGNED DEFAULT NULL,
+  `tanggal_pelaksanaan` date DEFAULT NULL,
+  `deleted_at` datetime DEFAULT NULL,
+  `created_at` datetime DEFAULT NULL,
+  `updated_at` datetime DEFAULT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
 --
 -- Indeks untuk tabel yang dibuang
 --
@@ -10571,6 +10796,45 @@ ALTER TABLE `tempat_uji`
   ADD KEY `nama` (`nama`);
 
 --
+-- Indeks untuk tabel `ujian_jadwal`
+--
+ALTER TABLE `ujian_jadwal`
+  ADD PRIMARY KEY (`id`),
+  ADD KEY `periode_id` (`periode_id`),
+  ADD KEY `mapel_id` (`mapel_id`),
+  ADD KEY `jurusan_id` (`jurusan_id`),
+  ADD KEY `tanggal` (`tanggal`),
+  ADD KEY `periode_id_tingkat` (`periode_id`,`tingkat`);
+
+--
+-- Indeks untuk tabel `ujian_pengawas`
+--
+ALTER TABLE `ujian_pengawas`
+  ADD PRIMARY KEY (`id`),
+  ADD KEY `jadwal_id` (`jadwal_id`),
+  ADD KEY `guru_id` (`guru_id`);
+
+--
+-- Indeks untuk tabel `ujian_periode`
+--
+ALTER TABLE `ujian_periode`
+  ADD PRIMARY KEY (`id`),
+  ADD UNIQUE KEY `jenis_tahun_ajaran` (`jenis`,`tahun_ajaran`),
+  ADD KEY `tahun_ajaran` (`tahun_ajaran`);
+
+--
+-- Indeks untuk tabel `ujian_susulan`
+--
+ALTER TABLE `ujian_susulan`
+  ADD PRIMARY KEY (`id`),
+  ADD UNIQUE KEY `siswa_id_jadwal_id` (`siswa_id`,`jadwal_id`),
+  ADD KEY `periode_id` (`periode_id`),
+  ADD KEY `jadwal_id` (`jadwal_id`),
+  ADD KEY `mapel_id` (`mapel_id`),
+  ADD KEY `status` (`status`),
+  ADD KEY `pengawas_guru_id` (`pengawas_guru_id`);
+
+--
 -- AUTO_INCREMENT untuk tabel yang dibuang
 --
 
@@ -10584,13 +10848,13 @@ ALTER TABLE `absensi_guru`
 -- AUTO_INCREMENT untuk tabel `absensi_hari`
 --
 ALTER TABLE `absensi_hari`
-  MODIFY `id` int(11) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=17;
+  MODIFY `id` int(11) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=19;
 
 --
 -- AUTO_INCREMENT untuk tabel `absensi_kerja`
 --
 ALTER TABLE `absensi_kerja`
-  MODIFY `id` int(11) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=4;
+  MODIFY `id` int(11) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=64;
 
 --
 -- AUTO_INCREMENT untuk tabel `admins`
@@ -10602,7 +10866,7 @@ ALTER TABLE `admins`
 -- AUTO_INCREMENT untuk tabel `api_tokens`
 --
 ALTER TABLE `api_tokens`
-  MODIFY `id` int(11) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=76;
+  MODIFY `id` int(11) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=86;
 
 --
 -- AUTO_INCREMENT untuk tabel `aset`
@@ -10620,7 +10884,7 @@ ALTER TABLE `aset_komputer`
 -- AUTO_INCREMENT untuk tabel `audit_log`
 --
 ALTER TABLE `audit_log`
-  MODIFY `id` int(11) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=3790;
+  MODIFY `id` int(11) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=3827;
 
 --
 -- AUTO_INCREMENT untuk tabel `berita_acara_ukk`
@@ -10632,25 +10896,25 @@ ALTER TABLE `berita_acara_ukk`
 -- AUTO_INCREMENT untuk tabel `biometric_credentials`
 --
 ALTER TABLE `biometric_credentials`
-  MODIFY `id` int(11) UNSIGNED NOT NULL AUTO_INCREMENT;
+  MODIFY `id` int(11) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=2;
 
 --
 -- AUTO_INCREMENT untuk tabel `dokumen`
 --
 ALTER TABLE `dokumen`
-  MODIFY `id` int(11) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=5;
+  MODIFY `id` int(11) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=8;
 
 --
 -- AUTO_INCREMENT untuk tabel `dokumen_akses_log`
 --
 ALTER TABLE `dokumen_akses_log`
-  MODIFY `id` bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=17;
+  MODIFY `id` bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=23;
 
 --
 -- AUTO_INCREMENT untuk tabel `dokumen_folder`
 --
 ALTER TABLE `dokumen_folder`
-  MODIFY `id` int(11) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=2;
+  MODIFY `id` int(11) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=7;
 
 --
 -- AUTO_INCREMENT untuk tabel `dokumen_share`
@@ -10674,7 +10938,7 @@ ALTER TABLE `guru`
 -- AUTO_INCREMENT untuk tabel `guru_jabatan`
 --
 ALTER TABLE `guru_jabatan`
-  MODIFY `id` int(11) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=83;
+  MODIFY `id` int(11) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=86;
 
 --
 -- AUTO_INCREMENT untuk tabel `guru_mapel`
@@ -10692,13 +10956,13 @@ ALTER TABLE `hari`
 -- AUTO_INCREMENT untuk tabel `jabatan`
 --
 ALTER TABLE `jabatan`
-  MODIFY `id` int(11) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=9;
+  MODIFY `id` int(11) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=10;
 
 --
 -- AUTO_INCREMENT untuk tabel `jadwal`
 --
 ALTER TABLE `jadwal`
-  MODIFY `id` int(11) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=4588;
+  MODIFY `id` int(11) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=4596;
 
 --
 -- AUTO_INCREMENT untuk tabel `jadwal_lab`
@@ -10782,7 +11046,7 @@ ALTER TABLE `mata_pelajaran`
 -- AUTO_INCREMENT untuk tabel `migrations`
 --
 ALTER TABLE `migrations`
-  MODIFY `id` bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=24;
+  MODIFY `id` bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=25;
 
 --
 -- AUTO_INCREMENT untuk tabel `nilai_ukk`
@@ -10884,6 +11148,30 @@ ALTER TABLE `teknisi`
 -- AUTO_INCREMENT untuk tabel `tempat_uji`
 --
 ALTER TABLE `tempat_uji`
+  MODIFY `id` int(11) UNSIGNED NOT NULL AUTO_INCREMENT;
+
+--
+-- AUTO_INCREMENT untuk tabel `ujian_jadwal`
+--
+ALTER TABLE `ujian_jadwal`
+  MODIFY `id` int(11) UNSIGNED NOT NULL AUTO_INCREMENT;
+
+--
+-- AUTO_INCREMENT untuk tabel `ujian_pengawas`
+--
+ALTER TABLE `ujian_pengawas`
+  MODIFY `id` int(11) UNSIGNED NOT NULL AUTO_INCREMENT;
+
+--
+-- AUTO_INCREMENT untuk tabel `ujian_periode`
+--
+ALTER TABLE `ujian_periode`
+  MODIFY `id` int(11) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=3;
+
+--
+-- AUTO_INCREMENT untuk tabel `ujian_susulan`
+--
+ALTER TABLE `ujian_susulan`
   MODIFY `id` int(11) UNSIGNED NOT NULL AUTO_INCREMENT;
 
 --
@@ -11155,6 +11443,31 @@ ALTER TABLE `teknisi`
 --
 ALTER TABLE `tempat_uji`
   ADD CONSTRAINT `tempat_uji_lab_id_foreign` FOREIGN KEY (`lab_id`) REFERENCES `lab` (`id`) ON DELETE SET NULL;
+
+--
+-- Ketidakleluasaan untuk tabel `ujian_jadwal`
+--
+ALTER TABLE `ujian_jadwal`
+  ADD CONSTRAINT `ujian_jadwal_jurusan_id_foreign` FOREIGN KEY (`jurusan_id`) REFERENCES `jurusan` (`id`) ON DELETE SET NULL,
+  ADD CONSTRAINT `ujian_jadwal_mapel_id_foreign` FOREIGN KEY (`mapel_id`) REFERENCES `mata_pelajaran` (`id`) ON DELETE SET NULL,
+  ADD CONSTRAINT `ujian_jadwal_periode_id_foreign` FOREIGN KEY (`periode_id`) REFERENCES `ujian_periode` (`id`) ON DELETE CASCADE;
+
+--
+-- Ketidakleluasaan untuk tabel `ujian_pengawas`
+--
+ALTER TABLE `ujian_pengawas`
+  ADD CONSTRAINT `ujian_pengawas_guru_id_foreign` FOREIGN KEY (`guru_id`) REFERENCES `guru` (`id`) ON DELETE SET NULL,
+  ADD CONSTRAINT `ujian_pengawas_jadwal_id_foreign` FOREIGN KEY (`jadwal_id`) REFERENCES `ujian_jadwal` (`id`) ON DELETE CASCADE;
+
+--
+-- Ketidakleluasaan untuk tabel `ujian_susulan`
+--
+ALTER TABLE `ujian_susulan`
+  ADD CONSTRAINT `ujian_susulan_jadwal_id_foreign` FOREIGN KEY (`jadwal_id`) REFERENCES `ujian_jadwal` (`id`) ON DELETE SET NULL,
+  ADD CONSTRAINT `ujian_susulan_mapel_id_foreign` FOREIGN KEY (`mapel_id`) REFERENCES `mata_pelajaran` (`id`) ON DELETE SET NULL,
+  ADD CONSTRAINT `ujian_susulan_pengawas_guru_id_foreign` FOREIGN KEY (`pengawas_guru_id`) REFERENCES `guru` (`id`) ON DELETE SET NULL,
+  ADD CONSTRAINT `ujian_susulan_periode_id_foreign` FOREIGN KEY (`periode_id`) REFERENCES `ujian_periode` (`id`) ON DELETE CASCADE,
+  ADD CONSTRAINT `ujian_susulan_siswa_id_foreign` FOREIGN KEY (`siswa_id`) REFERENCES `siswa` (`id`) ON DELETE CASCADE;
 COMMIT;
 
 /*!40101 SET CHARACTER_SET_CLIENT=@OLD_CHARACTER_SET_CLIENT */;
