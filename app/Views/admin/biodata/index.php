@@ -15,39 +15,16 @@
  * @var array<int,string>             $kelasOpts
  * @var array                         $setting
  * @var bool                          $terbuka
- * @var string                        $tautan     subdomain untuk siswa
- * @var string                        $tautanAlt  cadangan di domain utama
+ * @var string                        $tautan       subdomain untuk siswa
+ * @var string                        $tautanAlt    cadangan di domain utama
+ * @var string                        $batasTeks    batas waktu siap baca ('' bila tanpa batas)
+ * @var string                        $pesanBagikan pesan WA ajakan mengisi (BiodataPesan)
+ * @var string                        $pesanBelum   pesan WA daftar belum mengisi satu kelas ('' bila tak berlaku)
  * @var int                           $maksMassal
  */
 $fmtAngka = static fn (int $n): string => number_format($n, 0, ',', '.');
 $fmtTgl   = static fn (?string $s): string => $s ? date('d/m/Y H:i', strtotime($s)) : '—';
-$bulan    = ['', 'Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni', 'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember'];
-$sekolah  = $setting['school_name'] ?? 'sekolah';
-
-$batas     = $setting['biodata_tutup'] ?? null;
-$batasTeks = '';
-if (! empty($batas)) {
-    $t         = strtotime($batas);
-    $batasTeks = (int) date('j', $t) . ' ' . $bulan[(int) date('n', $t)] . ' ' . date('Y', $t) . ' pukul ' . date('H.i', $t);
-}
-
-// Pesan siap tempel ke grup WhatsApp siswa.
-$pesanBagikan = "Assalamu'alaikum Wr. Wb.\n\n"
-    . 'Kepada seluruh siswa ' . $sekolah . ", mohon segera mengisi *BIODATA SISWA* melalui tautan berikut:\n"
-    . $tautan . "\n\n"
-    . "Siapkan *Kartu Keluarga (KK)* — semua data WAJIB diisi sesuai KK.\n"
-    . ($batasTeks !== '' ? 'Batas pengisian: *' . $batasTeks . "*\n" : '')
-    . "\nCara mengisi: pilih kelas → pilih nama → isi data → kirim.\nTerima kasih.";
-
-// Pesan daftar siswa yang belum mengisi (tab Belum + satu kelas dipilih).
-$pesanBelum = '';
-if ($tab === 'belum' && $kelasId > 0 && $rows !== []) {
-    $pesanBelum = '*Siswa ' . $kelasNama . ' yang BELUM mengisi biodata* (' . count($rows) . " siswa):\n";
-    foreach ($rows as $i => $r) {
-        $pesanBelum .= ($i + 1) . '. ' . $r['nama'] . "\n";
-    }
-    $pesanBelum .= "\nSegera isi di: " . $tautan . "\nSiapkan Kartu Keluarga (KK). Terima kasih.";
-}
+$batas    = $setting['biodata_tutup'] ?? null;
 
 $tabs = [
     'menunggu'  => ['Menunggu Verifikasi', $ringkas['menunggu']],

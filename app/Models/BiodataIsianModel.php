@@ -152,7 +152,8 @@ class BiodataIsianModel extends Model
             ->get()->getResultArray();
 
         foreach ($rows as &$r) {
-            foreach (['total', 'sudah', 'menunggu', 'disetujui', 'perbaikan'] as $k) {
+            // Semua angka dikirim sebagai int — klien bertipe (Flutter) gagal membaca "56".
+            foreach (['id', 'total', 'sudah', 'menunggu', 'disetujui', 'perbaikan'] as $k) {
                 $r[$k] = (int) $r[$k];
             }
             $r['belum'] = $r['total'] - $r['sudah'];

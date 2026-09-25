@@ -30,6 +30,20 @@ class SiswaModel extends Model
 
     public const STATUS = ['aktif', 'lulus', 'pindah', 'keluar'];
 
+    /**
+     * Kolom biodata buku induk (migrasi 2026-09-25), URUT seperti form isian
+     * siswa. Satu daftar untuk Master Siswa web (form/ekspor/impor) dan API.
+     * nama_wali & no_hp_wali adalah kolom lama, jadi tidak di sini.
+     */
+    public const KOLOM_BIODATA = [
+        'status_keluarga', 'anak_ke',
+        'rt', 'rw', 'kelurahan', 'kecamatan', 'kota',
+        'sekolah_asal', 'diterima_kelas', 'diterima_tanggal',
+        'nama_ayah', 'pekerjaan_ayah', 'nama_ibu', 'pekerjaan_ibu',
+        'ortu_alamat', 'ortu_rt', 'ortu_rw', 'ortu_kelurahan', 'ortu_kecamatan', 'ortu_kota', 'ortu_telepon',
+        'alamat_wali', 'pekerjaan_wali',
+    ];
+
     /** Pilihan baku — dipakai form isian publik & Master Siswa. */
     public const AGAMA = ['Islam', 'Kristen', 'Katolik', 'Hindu', 'Buddha', 'Konghucu'];
 

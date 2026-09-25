@@ -4,7 +4,8 @@
  *
  * @var array        $row         baris biodata_isian
  * @var array|null   $siswa       baris siswa + nama_kelas (null bila siswa terhapus permanen)
- * @var array        $bagian      [judul => [[label, lama, baru, jenis(sama|baru|ubah), tetap]]]
+ * @var string       $judulLama   judul kolom pembanding (BiodataVerifikasi::bandingkan)
+ * @var array        $bagian      [judul => [[kunci, label, lama, baru, jenis(sama|baru|ubah), tetap]]]
  * @var array        $hitung      ['baru' => n, 'ubah' => n]
  * @var list<string> $peringatan
  * @var array|null   $admin       penyetuju (full_name, username)
@@ -19,7 +20,6 @@ $lencana = [
 ][$status] ?? [$status, 'bg-slate-100 text-slate-600 border-slate-200'];
 $kembali = site_url('admin/biodata') . '?' . http_build_query(array_filter(['tab' => $status, 'kelas_id' => $kelasId ?: '']));
 $aksi    = site_url('admin/biodata/' . (int) $row['id']);
-$judulLama = $status === 'disetujui' ? 'Sebelum disetujui' : 'Data sekarang (Master Siswa)';
 $data      = \App\Models\BiodataIsianModel::decode($row);
 ?>
 <?= $this->extend('layouts/admin') ?>

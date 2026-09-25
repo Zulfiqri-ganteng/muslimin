@@ -2,16 +2,21 @@
 
 namespace App\Controllers\Api\Admin;
 
+use App\Libraries\BiodataForm;
 use App\Models\SiswaModel;
 use CodeIgniter\HTTP\ResponseInterface;
 use CodeIgniter\Model;
 
 /**
  * Master Siswa (API). Cermin App\Controllers\Admin\Master\Siswa.
- * Rute: /api/v1/admin/master/siswa
+ * Rute: /api/v1/admin/master/siswa   (?q= &kelas_id= &tingkat= &status= &biodata=lengkap|belum)
  *
  * Tingkat & jurusan TIDAK disimpan di tabel siswa — keduanya ikut kelas
  * lewat join, jadi memindah kelas tak pernah meninggalkan data tak sinkron.
+ *
+ * Kolom biodata buku induk (SiswaModel::KOLOM_BIODATA) hanya ditulis bila
+ * DIKIRIM klien — aplikasi versi lama yang belum mengenalnya tetap aman:
+ * menyimpan siswa dari sana tidak menghapus biodata yang sudah diisi.
  */
 class Siswa extends BaseCrud
 {
@@ -50,6 +55,13 @@ class Siswa extends BaseCrud
         if (in_array($status, SiswaModel::STATUS, true)) {
             $builder = $builder->where('siswa.status', $status);
         }
+        // Sama dengan saringan "Biodata lengkap / belum" di web (dari biodata_at).
+        $biodata = strtolower(trim((string) $this->request->getGet('biodata')));
+        if ($biodata === 'lengkap') {
+            $builder = $builder->where('siswa.biodata_at IS NOT NULL');
+        } elseif ($biodata === 'belum') {
+            $builder = $builder->where('siswa.biodata_at', null);
+        }
 
         return $builder;
     }
@@ -66,7 +78,7 @@ class Siswa extends BaseCrud
         $jk     = strtoupper($teks('jenis_kelamin'));
         $status = strtolower($teks('status'));
 
-        return [
+        return $this->collectBiodata($in, $teks) + [
             'nis' => $teks('nis'),
             // NISN unik tapi boleh kosong → string kosong WAJIB jadi NULL,
             // kalau tidak siswa kedua tanpa NISN akan bentrok unique key.
@@ -85,6 +97,28 @@ class Siswa extends BaseCrud
             'status'        => in_array($status, SiswaModel::STATUS, true) ? $status : 'aktif',
             'keterangan'    => $teks('keterangan') ?: null,
         ];
+    }
+
+    /**
+     * Kolom biodata yang ADA di kiriman saja (lihat catatan kelas).
+     * Kosong/null yang dikirim eksplisit = dikosongkan.
+     */
+    private function collectBiodata(array $in, callable $teks): array
+    {
+        $data = [];
+        foreach (SiswaModel::KOLOM_BIODATA as $k) {
+            if (! array_key_exists($k, $in)) {
+                continue;
+            }
+            $v        = $teks($k);
+            $data[$k] = match ($k) {
+                'anak_ke'          => ctype_digit($v) && (int) $v >= 1 && (int) $v <= 99 ? (int) $v : null,
+                'diterima_tanggal' => $this->parseTanggal($v),
+                default            => $v !== '' ? $v : null,
+            };
+        }
+
+        return $data;
     }
 
     /** Terima Y-m-d maupun dd/mm/yyyy agar klien tidak mudah gagal simpan. */
@@ -107,6 +141,23 @@ class Siswa extends BaseCrud
     }
 
     protected function transform(array $r): array
+    {
+        $biodata = [];
+        foreach (SiswaModel::KOLOM_BIODATA as $k) {
+            $biodata[$k] = $r[$k] ?? null;
+        }
+        $biodata['anak_ke']    = isset($r['anak_ke']) ? (int) $r['anak_ke'] : null;
+        $biodata['biodata_at'] = $r['biodata_at'] ?? null;
+        // Lengkap = 27 kolom wajib form isian terisi (ukuran yang sama dengan laporan Excel).
+        $kurang                     = BiodataForm::kolomKosong($r);
+        $biodata['biodata_lengkap'] = $kurang === [];
+        $biodata['biodata_kurang']  = $kurang;
+
+        return $this->transformInti($r) + $biodata;
+    }
+
+    /** Kolom inti (bentuk lama — tidak diubah agar klien lama tetap cocok). */
+    private function transformInti(array $r): array
     {
         return [
             'id'            => (int) $r['id'],

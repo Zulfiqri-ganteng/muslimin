@@ -125,9 +125,23 @@ Kolom lama dipakai ulang: `alamat` = jalan/perumahan siswa, `no_hp` = HP siswa,
 - [x] **B4** Master Siswa ikut kolom baru (35 cek impor, ekspor dibaca ulang)
 - [x] **B5** Laporan Excel siap cetak
 - [x] **B6** Uji ujung-ke-ujung (Chrome sungguhan lewat subdomain) + regresi 53 halaman admin + dokumen ini
-- [ ] **B7** Deploy (langkah di bawah)
-- [ ] **Android A1** API: kolom biodata di `Api\Admin\Siswa` (collect/transform) + endpoint kotak masuk (daftar, detail, setujui, kembalikan) memakai `BiodataVerifikasi`
-- [ ] **Android A2** Flutter: kolom baru di `siswa_form.dart` + layar progres & verifikasi
+- [x] **B7** Deploy web (user push 2026-09-25)
+- [x] **Android A1** API (2026-09-25) — `Api\Admin\Biodata` (12 rute, cermin menu web) +
+      `Api\Admin\Siswa` (kolom biodata di transform, `?biodata=`, tulis PARSIAL: kunci biodata
+      yang tak dikirim tak diubah → aplikasi lama aman). Logika web & API disatukan di
+      `BiodataVerifikasi` (bandingkan, peringatan, setujuiBanyak, simpanPengaturan) dan
+      `BiodataPesan` (tautan, teks WA). Kontrak + contoh respons nyata:
+      **`C:\flutter-muslimin\BLUEPRINT-BIODATA.md`**.
+- [ ] **Android A2** Flutter — dikerjakan AI di project flutter-muslimin memakai blueprint itu
+
+### Rute API (`/api/v1`, Bearer)
+
+`GET admin/biodata` · `GET admin/biodata/meta` · `POST admin/biodata/pengaturan` ·
+`GET admin/biodata/kelas` · `GET admin/biodata/isian?status=&kelas_id=&q=&page=&per=` ·
+`GET admin/biodata/belum?kelas_id=` (+`meta.pesan_wa`) · `GET admin/biodata/laporan?kelas_id=&unduh=1` (biner) ·
+`POST admin/biodata/setujui-massal` · `GET admin/biodata/isian/{id}` ·
+`POST admin/biodata/isian/{id}/setujui|kembalikan` · `DELETE admin/biodata/isian/{id}` ·
+`GET admin/master/siswa?biodata=lengkap|belum`.
 
 ---
 

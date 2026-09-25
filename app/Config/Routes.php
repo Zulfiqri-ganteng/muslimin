@@ -657,6 +657,20 @@ $routes->group('api/v1', ['namespace' => 'App\Controllers\Api', 'filter' => 'cor
         $routes->get('admin/ujian/(:segment)/cetak/rekap-pdf', 'Admin\UjianCetak::rekapPdf/$1');
         $routes->get('admin/ujian/(:segment)/cetak/rekap-excel', 'Admin\UjianCetak::rekapExcel/$1');
         $routes->get('admin/ujian/(:segment)/cetak/jadwal-excel', 'Admin\UjianCetak::jadwalExcel/$1');
+
+        // ===== Isian Biodata Siswa (cermin menu web; form siswa tetap di web) =====
+        $routes->get('admin/biodata', 'Admin\Biodata::index');
+        $routes->get('admin/biodata/meta', 'Admin\Biodata::meta');
+        $routes->post('admin/biodata/pengaturan', 'Admin\Biodata::pengaturan');
+        $routes->get('admin/biodata/kelas', 'Admin\Biodata::kelas');
+        $routes->get('admin/biodata/isian', 'Admin\Biodata::isian');
+        $routes->get('admin/biodata/belum', 'Admin\Biodata::belum');
+        $routes->get('admin/biodata/laporan', 'Admin\Biodata::laporan');
+        $routes->post('admin/biodata/setujui-massal', 'Admin\Biodata::setujuiMassal');
+        $routes->get('admin/biodata/isian/(:num)', 'Admin\Biodata::detail/$1');
+        $routes->post('admin/biodata/isian/(:num)/setujui', 'Admin\Biodata::setujui/$1');
+        $routes->post('admin/biodata/isian/(:num)/kembalikan', 'Admin\Biodata::kembalikan/$1');
+        $routes->delete('admin/biodata/isian/(:num)', 'Admin\Biodata::hapus/$1');
         $routes->get('admin/ujian/(:segment)/cetak/daftar-hadir/(:num)', 'Admin\UjianCetak::daftarHadir/$1/$2');
         $routes->get('admin/ujian/(:segment)/cetak/berita-acara/(:num)', 'Admin\UjianCetak::beritaAcara/$1/$2');
 

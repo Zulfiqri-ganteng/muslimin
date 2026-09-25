@@ -37,19 +37,8 @@ class Siswa extends BaseMaster
     /** Saringan kelengkapan biodata (dari kolom biodata_at). */
     protected const BIODATA = ['lengkap', 'belum'];
 
-    /**
-     * Kolom biodata buku induk, URUT seperti di form isian siswa. Satu daftar
-     * ini dipakai form edit, ekspor, template, dan impor agar selalu seragam.
-     * (nama_wali & no_hp_wali kolom lama, sudah ada di daftar inti.)
-     */
-    private const KOLOM_BIODATA = [
-        'status_keluarga', 'anak_ke',
-        'rt', 'rw', 'kelurahan', 'kecamatan', 'kota',
-        'sekolah_asal', 'diterima_kelas', 'diterima_tanggal',
-        'nama_ayah', 'pekerjaan_ayah', 'nama_ibu', 'pekerjaan_ibu',
-        'ortu_alamat', 'ortu_rt', 'ortu_rw', 'ortu_kelurahan', 'ortu_kecamatan', 'ortu_kota', 'ortu_telepon',
-        'alamat_wali', 'pekerjaan_wali',
-    ];
+    /** Kolom biodata buku induk — satu daftar bersama API (SiswaModel::KOLOM_BIODATA). */
+    private const KOLOM_BIODATA = SiswaModel::KOLOM_BIODATA;
 
     /**
      * Kolom yang ditulis sebagai TEKS di Excel: nomor panjang / berawalan 0
