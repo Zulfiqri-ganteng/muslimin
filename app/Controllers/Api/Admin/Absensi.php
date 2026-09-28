@@ -42,6 +42,7 @@ class Absensi extends BaseApiController
      * GET /api/v1/admin/absensi?tanggal= — data input satu tanggal. Sumber sama
      * dengan web (AbsensiHarian::muat): sesi dikelompokkan per ORANG (guru ganda
      * digabung), `sesi[].guru_id` = guru asli pemilik jadwal (dipakai saat save).
+     * `kelas[]` + `sesi[].kelas_urut` dipakai tampilan per kelas (urut natural).
      */
     public function index()
     {
@@ -65,6 +66,9 @@ class Absensi extends BaseApiController
                     'mapel_id'      => (int) ($s['mapel_id'] ?? 0),
                     // tampilan
                     'kelas'         => $s['nama_kelas'],
+                    'kelas_urut'    => (int) $s['kelas_urut'],
+                    'tingkat'       => $s['tingkat'] ?? null,
+                    'jurusan'       => $s['jurusan_kode'] ?? null,
                     'mapel'         => $s['nama_mapel'],
                     'jam_ke'        => (int) $s['jam_ke'],
                     'shift'         => $s['jam_shift'],
@@ -110,6 +114,8 @@ class Absensi extends BaseApiController
             'total_guru'      => count($grup),
             'ringkas'         => $ringkas,
             'guru'            => $grup,
+            // Kelas bersesi hari itu, urut natural (untuk tampilan per kelas).
+            'kelas'           => $d['kelas'],
             'kehadiran_kerja' => $kerja,
             'guru_options'    => $d['guruOptions'],
             'saran_kerja'     => $d['saran'],

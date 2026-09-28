@@ -730,6 +730,21 @@ $routes->group('api/v1', ['namespace' => 'App\Controllers\Api', 'filter' => 'cor
         $routes->get('admin/absensi/rekap/export/(:segment)', 'Admin\Absensi::rekapExport/$1');
         $routes->get('admin/absensi/rekap/(:num)', 'Admin\Absensi::rekapGuru/$1');
 
+        // ---------- NOTIFIKASI JADWAL GURU (Firebase) ----------
+        $routes->get('admin/notif', 'Admin\Notif::index');
+        $routes->get('admin/notif/opsi', 'Admin\Notif::opsi');
+        $routes->post('admin/notif/pengaturan', 'Admin\Notif::pengaturan');
+        $routes->get('admin/notif/aturan', 'Admin\Notif::aturan');
+        $routes->post('admin/notif/aturan', 'Admin\Notif::aturanStore');
+        $routes->post('admin/notif/aturan/(:num)', 'Admin\Notif::aturanUpdate/$1');
+        $routes->delete('admin/notif/aturan/(:num)', 'Admin\Notif::aturanDestroy/$1');
+        $routes->post('admin/notif/perangkat', 'Admin\Notif::perangkat');
+        $routes->post('admin/notif/perangkat/terima', 'Admin\Notif::perangkatTerima');
+        $routes->post('admin/notif/perangkat/hapus', 'Admin\Notif::perangkatHapus');
+        $routes->get('admin/notif/pratinjau', 'Admin\Notif::pratinjau');
+        $routes->post('admin/notif/uji', 'Admin\Notif::uji');
+        $routes->get('admin/notif/riwayat', 'Admin\Notif::riwayat');
+
         // ---------- PROFIL & PENGATURAN ----------
         $routes->get('admin/profile', 'Admin\Profile::show');
         $routes->post('admin/profile', 'Admin\Profile::update');

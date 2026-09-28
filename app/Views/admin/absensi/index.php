@@ -2,9 +2,10 @@
 <?= $this->section('content') ?>
 
 <?= view('admin/partials/help', [
-    'helpKey'   => 'absensi_v4',
+    'helpKey'   => 'absensi_v5',
     'helpTitle' => 'Cara mengisi absensi guru',
     'helpBody'  => '<p>Pilih <b>tanggal</b> dan <b>shift (Pagi / Siang)</b>. Sistem menampilkan guru yang mengajar pada shift itu dari jadwal KBM — semua <b>default Hadir</b>. Tandai yang <b>Telat / Izin / Sakit / Alpa</b> lewat status tiap sesi atau <b>Set semua</b>.</p>'
+        . '<p class="mt-2"><b>Per Kelas / Per Guru</b> — <b>Per Kelas</b> (bawaan) menampilkan tiap kelas urut X → XII (TKJ 1, 2 … 10) berisi jam & guru pengajarnya; saring per jurusan atau cari nama kelas / guru. <b>Per Guru</b> menampilkan kartu per nama guru dengan tombol <b>Set semua</b>. Pesan WhatsApp selalu ditulis per kelas: <i>nama kelas X jam ke 1-3</i>.</p>'
         . '<p class="mt-2"><b>Belum Hadir</b> — saat laporan dikirim masih ada guru yang belum datang? Tandai di panel <b>Belum Hadir</b> (atau tombol <b>Belum hadir</b> di kartu guru). Nama mereka masuk bagian "belum hadir" di pesan WhatsApp. Begitu guru datang, klik <b>Sudah datang</b>: sesi yang sudah dimulai otomatis ditandai <b>Telat</b> dengan jam saat itu, lalu Simpan. Guru yang <b>tetap</b> di daftar ini dihitung <b>tidak hadir</b> di rekap.</p>'
         . '<p class="mt-2"><b>Kirim WhatsApp</b> — sekali klik: absensi disimpan, pesan disusun otomatis sesuai <b>Format Pesan</b>, lalu WhatsApp terbuka tinggal pilih grup. Nama guru yang punya <b>No. WhatsApp</b> (Master Guru) otomatis menjadi <b>tag</b> di grup. Format pesan bisa diubah lewat tombol <b>Format Pesan</b>.</p>'
         . '<p class="mt-2"><b>Kehadiran Kerja</b> — untuk guru/staf yang masuk tanpa jadwal KBM (TU, wakil kepala, dsb.). Guru berjabatan struktural diisikan otomatis bertanda <span class="rounded bg-amber-50 text-amber-700 border border-amber-200 px-1">disarankan</span>; hapus yang tidak masuk.</p>'
@@ -48,17 +49,28 @@
         'kode' => $g['kode_guru'] ?? '',
     ], $guruOptions);
 
-    // Guru yang punya sesi mengajar per shift (untuk filter kartu & daftar pilihan).
-    $guruShift = ['pagi' => [], 'siang' => []];
+    // Guru yang punya sesi mengajar per shift (untuk filter kartu & daftar pilihan)
+    // + kode jurusan kelas per shift (chip filter tampilan per kelas).
+    $guruShift    = ['pagi' => [], 'siang' => []];
+    $jurusanShift = ['pagi' => [], 'siang' => []];
     foreach ($grup as $g) {
         foreach ($g['sesi'] as $s) {
             $sh = $s['jam_shift'] ?? $s['shift'] ?? 'pagi';
             $guruShift[$sh][(int) $g['guru_id']] = true;
+            if ((string) ($s['jurusan_kode'] ?? '') !== '') {
+                $jurusanShift[$sh][$s['jurusan_kode']] = true;
+            }
         }
+    }
+    foreach ($jurusanShift as $sh => $set) {
+        $jurusanShift[$sh] = array_keys($set);
+        sort($jurusanShift[$sh]);
     }
     $pageCfg = [
         'tanggal'   => $tanggal,
         'shift'     => $shift,
+        'tampilan'  => $tampilan,
+        'jurusan'   => $jurusanShift,
         'belum'     => ['pagi' => $belum['pagi'] ?? [], 'siang' => $belum['siang'] ?? []],
         'piket'     => ['pagi' => $piket['pagi'] ?? [], 'siang' => $piket['siang'] ?? []],
         'guruShift' => ['pagi' => array_keys($guruShift['pagi']), 'siang' => array_keys($guruShift['siang'])],
@@ -71,7 +83,7 @@
     ];
 ?>
 
-<div x-data='absensiPage(<?= htmlspecialchars(json_encode($pageCfg), ENT_QUOTES) ?>)' @change="tick++">
+<div x-data='absensiPage(<?= htmlspecialchars(json_encode($pageCfg), ENT_QUOTES) ?>)' @change="tick++; dirty = true">
 
 <!-- ===================== BAR ATAS: tanggal + shift + ringkasan ===================== -->
 <div class="bg-white rounded-2xl border border-slate-200 shadow-sm p-4 sm:p-5 mb-5">
@@ -265,6 +277,82 @@
         <div x-show="guruShift[shift].length === 0" x-cloak class="bg-white rounded-2xl border border-slate-200 shadow-sm p-10 text-center text-slate-400 mb-5">
             Tidak ada sesi mengajar pada KBM <span x-text="shift"></span> hari ini.
         </div>
+
+        <!-- Pilihan tampilan (per kelas / per guru) + filter kelas -->
+        <div x-show="guruShift[shift].length > 0" class="flex flex-col lg:flex-row lg:items-center gap-3 mb-4">
+            <div class="inline-flex rounded-xl border border-slate-300 p-1 bg-slate-50 self-start">
+                <?php foreach (['kelas' => 'Per Kelas', 'guru' => 'Per Guru'] as $k => $lbl): ?>
+                    <button type="button" @click="gantiTampilan('<?= $k ?>')"
+                            class="rounded-lg px-4 py-1.5 text-sm font-bold transition <?= $tampilan === $k ? 'bg-brand-700 text-white shadow-sm' : 'text-slate-600 hover:bg-white' ?>"><?= $lbl ?></button>
+                <?php endforeach; ?>
+            </div>
+            <?php if ($tampilan === 'kelas'): ?>
+                <div class="flex flex-wrap items-center gap-2 lg:flex-1">
+                    <template x-if="jurusanShift[shift].length > 1">
+                        <div class="flex flex-wrap gap-1.5">
+                            <button type="button" @click="fJur = ''"
+                                    :class="jurAktif() === '' ? 'bg-brand-700 text-white border-brand-700' : 'bg-white text-slate-600 border-slate-300 hover:bg-slate-50'"
+                                    class="rounded-full border px-3 py-1 text-xs font-bold">Semua</button>
+                            <template x-for="j in jurusanShift[shift]" :key="j">
+                                <button type="button" @click="fJur = j"
+                                        :class="jurAktif() === j ? 'bg-brand-700 text-white border-brand-700' : 'bg-white text-slate-600 border-slate-300 hover:bg-slate-50'"
+                                        class="rounded-full border px-3 py-1 text-xs font-bold" x-text="j"></button>
+                            </template>
+                        </div>
+                    </template>
+                    <input type="search" x-model="fCari" @change.stop @keydown.enter.prevent placeholder="Cari kelas / guru…"
+                           class="w-full sm:w-56 lg:ml-auto rounded-xl border border-slate-300 px-3 py-2 text-sm focus:border-brand-500 focus:ring-2 focus:ring-brand-500/20 outline-none">
+                </div>
+            <?php endif; ?>
+        </div>
+
+        <?php if ($tampilan === 'kelas'):
+            // Sesi dikelompokkan per KELAS (urut natural dari AbsensiHarian::muat).
+            $perKelas = [];
+            foreach ($kelas as $k) {
+                $perKelas[(int) $k['kelas_id']] = $k + ['sesi' => [], 'shifts' => [], 'gids' => [], 'cari' => [strtolower($k['nama'])]];
+            }
+            foreach ($grup as $g) {
+                foreach ($g['sesi'] as $s) {
+                    $kid = (int) $s['kelas_id'];
+                    $perKelas[$kid]['sesi'][]                  = ['s' => $s, 'gid' => (int) $g['guru_id'], 'nama' => $g['nama']];
+                    $perKelas[$kid]['shifts'][$s['jam_shift']] = true;
+                    $perKelas[$kid]['gids'][(int) $g['guru_id']] = true;
+                    $perKelas[$kid]['cari'][]                  = strtolower($g['nama']);
+                }
+            }
+        ?>
+            <p x-show="guruShift[shift].length > 0 && jumlahKelasTampil() === 0" x-cloak class="bg-white rounded-2xl border border-slate-200 shadow-sm p-8 text-center text-slate-400 mb-4">
+                Tidak ada kelas yang cocok dengan pencarian.
+            </p>
+            <div class="space-y-4">
+                <?php foreach ($perKelas as $k):
+                    usort($k['sesi'], static fn ($a, $b) => [$a['s']['jam_shift'], (int) $a['s']['jam_ke']] <=> [$b['s']['jam_shift'], (int) $b['s']['jam_ke']]);
+                    $gids = array_keys($k['gids']);
+                ?>
+                    <div data-kelas-card data-shifts="<?= esc(implode(',', array_keys($k['shifts'])), 'attr') ?>"
+                         data-jur="<?= esc((string) ($k['jurusan'] ?? ''), 'attr') ?>"
+                         data-cari="<?= esc(implode('|', array_unique($k['cari'])), 'attr') ?>"
+                         x-show="kelasTampil($el)"
+                         class="bg-white rounded-2xl border shadow-sm overflow-hidden"
+                         :class="<?= esc(json_encode($gids), 'attr') ?>.some(function (g) { return isBelum(g); }) ? 'border-red-300' : 'border-slate-200'">
+                        <div class="flex items-center justify-between gap-2 px-5 py-3 border-b border-slate-100 bg-slate-50">
+                            <h3 class="font-bold text-slate-800"><?= esc($k['nama']) ?>
+                                <?php if (! empty($k['jurusan'])): ?>
+                                    <span class="ml-1 align-middle rounded-full bg-brand-50 text-brand-700 border border-brand-200 px-2 py-0.5 text-[10px] font-semibold"><?= esc($k['jurusan']) ?></span>
+                                <?php endif; ?>
+                            </h3>
+                            <p class="text-xs text-slate-400 shrink-0"><?= count($k['sesi']) ?> jam KBM &middot; <?= count($gids) ?> guru</p>
+                        </div>
+                        <div class="divide-y divide-slate-100">
+                            <?php foreach ($k['sesi'] as $it): ?>
+                                <?= view('admin/absensi/_sesi_row', ['s' => $it['s'], 'gid' => $it['gid'], 'namaGuru' => $it['nama'], 'statusOpts' => $statusOpts, 'mode' => 'kelas'], ['saveData' => false]) ?>
+                            <?php endforeach; ?>
+                        </div>
+                    </div>
+                <?php endforeach; ?>
+            </div>
+        <?php else: ?>
         <div class="space-y-4">
             <?php foreach ($grup as $g): $gid = (int) $g['guru_id']; ?>
                 <div x-show="punyaSesi(<?= $gid ?>)" class="bg-white rounded-2xl border shadow-sm overflow-hidden"
@@ -284,7 +372,7 @@
                                     class="rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white px-2.5 py-1.5 text-xs font-bold">Sudah datang</button>
                             <label class="text-xs font-semibold text-slate-500">Set semua:</label>
                             <select class="rounded-lg border border-slate-300 px-2.5 py-1.5 text-xs font-semibold focus:border-brand-500 outline-none"
-                                    @change.stop="$dispatch('absen-setall', { gid: <?= $gid ?>, shift: shift, val: $event.target.value }); $event.target.selectedIndex = 0; $nextTick(() => tick++)">
+                                    @change.stop="$dispatch('absen-setall', { gid: <?= $gid ?>, shift: shift, val: $event.target.value }); $event.target.selectedIndex = 0; dirty = true; $nextTick(() => tick++)">
                                 <option value="">— pilih —</option>
                                 <?php foreach ($statusOpts as $k => $lbl): ?>
                                     <option value="<?= $k ?>"><?= esc($lbl) ?></option>
@@ -295,54 +383,14 @@
 
                     <!-- Daftar sesi guru (hanya shift terpilih yang tampil) -->
                     <div class="divide-y divide-slate-100">
-                        <?php foreach ($g['sesi'] as $s):
-                            $sh    = $s['jam_shift'] ?? $s['shift'] ?? 'pagi';
-                            $mulai = substr((string) $s['waktu_mulai'], 0, 5);
-                        ?>
-                            <div x-data="{ gid: <?= $gid ?>, sh: '<?= esc($sh, 'js') ?>', mulai: '<?= esc($mulai, 'js') ?>', st: '<?= esc($s['status'], 'js') ?>', jm: '<?= esc($s['jam_masuk'], 'js') ?>', ket: '<?= esc($s['keterangan'], 'js') ?>' }"
-                                 x-show="sh === shift"
-                                 x-on:absen-setall.window="if ($event.detail.gid === gid && $event.detail.shift === sh) { st = $event.detail.val; if (st === 'hadir') { jm = ''; ket = ''; } }"
-                                 x-on:absen-datang.window="if ($event.detail.gid === gid && $event.detail.shift === sh && st === 'hadir' && mulai <= $event.detail.jam) { st = 'telat'; jm = $event.detail.jam; }"
-                                 data-guru-id="<?= $gid ?>" data-guru-asli="<?= (int) $s['guru_id'] ?>" data-shift="<?= esc($sh, 'attr') ?>"
-                                 data-kelas="<?= (int) $s['kelas_id'] ?>" data-jam="<?= (int) $s['jam_id'] ?>"
-                                 data-hari="<?= (int) $s['hari_id'] ?>" data-mapel="<?= (int) ($s['mapel_id'] ?? 0) ?>"
-                                 data-jadwal="<?= (int) $s['jadwal_id'] ?>"
-                                 class="absen-row p-4 border-l-4 transition"
-                                 :class="{
-                                    'border-emerald-400': st==='hadir', 'border-amber-400': st==='telat',
-                                    'border-sky-400': st==='izin', 'border-violet-400': st==='sakit', 'border-red-400': st==='alpa'
-                                 }">
-
-                                <div class="flex flex-col md:flex-row md:items-center gap-3">
-                                    <div class="md:w-64 shrink-0">
-                                        <p class="text-sm font-bold text-slate-700">Jam <?= esc($s['jam_ke']) ?>
-                                            <span class="text-slate-400 font-normal text-xs">(<?= esc($mulai) ?>–<?= esc(substr((string) $s['waktu_selesai'], 0, 5)) ?>)</span>
-                                        </p>
-                                        <p class="text-sm text-slate-600"><?= esc($s['nama_kelas']) ?> &middot; <span class="font-semibold"><?= esc($s['nama_mapel']) ?></span></p>
-                                    </div>
-                                    <div class="shrink-0">
-                                        <select x-model="st" data-role="status"
-                                                class="rounded-lg border border-slate-300 px-3 py-2 text-sm font-semibold focus:border-brand-500 focus:ring-2 focus:ring-brand-500/20 outline-none">
-                                            <?php foreach ($statusOpts as $k => $lbl): ?>
-                                                <option value="<?= $k ?>"><?= esc($lbl) ?></option>
-                                            <?php endforeach; ?>
-                                        </select>
-                                    </div>
-                                    <div class="flex flex-col sm:flex-row gap-2 flex-1" x-show="st !== 'hadir'" x-cloak>
-                                        <input type="time" x-model="jm" data-role="jm"
-                                               class="w-full sm:w-32 rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-brand-500 outline-none"
-                                               title="Jam masuk (opsional)">
-                                        <input type="text" x-model="ket" data-role="ket" maxlength="255"
-                                               placeholder="Keterangan (opsional)…"
-                                               class="flex-1 rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-brand-500 outline-none">
-                                    </div>
-                                </div>
-                            </div>
+                        <?php foreach ($g['sesi'] as $s): ?>
+                            <?= view('admin/absensi/_sesi_row', ['s' => $s, 'gid' => $gid, 'statusOpts' => $statusOpts, 'mode' => 'guru'], ['saveData' => false]) ?>
                         <?php endforeach; ?>
                     </div>
                 </div>
             <?php endforeach; ?>
         </div>
+        <?php endif; ?>
     <?php endif; ?>
 
     <!-- Bar aksi (sticky bawah) -->
@@ -472,6 +520,12 @@
             tpl: cfg.template,
             custom: !!cfg.custom,
             tick: 0,
+            // Ada perubahan belum disimpan (untuk konfirmasi saat ganti tampilan).
+            dirty: false,
+            // Filter tampilan per kelas: kode jurusan & teks cari (kelas / guru).
+            jurusanShift: cfg.jurusan || { pagi: [], siang: [] },
+            fJur: '',
+            fCari: '',
             sending: false,
             tplOpen: false,
             pickOpen: false, pickQ: '', pickSel: [],
@@ -491,6 +545,33 @@
                 const g = this.guru.find(function (x) { return x.id === Number(id); });
                 return g ? g.nama : ('Guru #' + id);
             },
+            // Pindah per kelas ↔ per guru = muat ulang halaman (daftar dirender server).
+            gantiTampilan(t) {
+                if (t === cfg.tampilan) return;
+                if (this.dirty && !confirm('Perubahan yang belum disimpan akan hilang. Tetap ganti tampilan?')) return;
+                const u = new URL(window.location.href);
+                u.searchParams.set('tampilan', t);
+                u.searchParams.set('tanggal', this.tanggal);
+                u.searchParams.set('shift', this.shift);
+                window.location.href = u.toString();
+            },
+            // Jurusan terpilih yang tak ada di shift ini dianggap "Semua".
+            jurAktif() {
+                return this.jurusanShift[this.shift].indexOf(this.fJur) !== -1 ? this.fJur : '';
+            },
+            kelasTampil(el) {
+                if ((el.dataset.shifts || '').split(',').indexOf(this.shift) === -1) return false;
+                const jur = this.jurAktif();
+                if (jur && el.dataset.jur !== jur) return false;
+                const q = this.fCari.trim().toLowerCase();
+                return !q || (el.dataset.cari || '').indexOf(q) !== -1;
+            },
+            jumlahKelasTampil() {
+                const self = this;
+                let n = 0;
+                document.querySelectorAll('[data-kelas-card]').forEach(function (el) { if (self.kelasTampil(el)) n++; });
+                return n;
+            },
             punyaSesi(gid) { return this.guruShift[this.shift].indexOf(gid) !== -1; },
             jumlahSesi(gid) {
                 return document.querySelectorAll('.absen-row[data-guru-id="' + gid + '"][data-shift="' + this.shift + '"]').length;
@@ -503,10 +584,12 @@
             },
             tandaiBelum(gid) {
                 if (!this.isBelum(gid)) this.belum[this.shift].push(Number(gid));
+                this.dirty = true;
                 this.tick++;
             },
             hapusBelum(gid) {
                 this.belum[this.shift] = this.belum[this.shift].filter(function (x) { return x !== Number(gid); });
+                this.dirty = true;
                 this.tick++;
             },
             jamSekarang() {

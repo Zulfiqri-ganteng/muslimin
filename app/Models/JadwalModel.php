@@ -65,7 +65,8 @@ class JadwalModel extends Model
         return $this->select('jadwal.id AS jadwal_id, jadwal.kelas_id, jadwal.guru_id,
                 jadwal.jam_id, jadwal.hari_id, pengampu.mapel_id,
                 guru.nama AS guru_nama, guru.kode_guru,
-                kelas.nama_kelas, kelas.shift,
+                kelas.nama_kelas, kelas.shift, kelas.tingkat, kelas.jurusan_id,
+                jurusan.kode AS jurusan_kode,
                 mata_pelajaran.nama_mapel, mata_pelajaran.kode_mapel,
                 jam_pelajaran.jam_ke, jam_pelajaran.shift AS jam_shift,
                 jam_pelajaran.waktu_mulai, jam_pelajaran.waktu_selesai')
@@ -73,6 +74,7 @@ class JadwalModel extends Model
             ->join('mata_pelajaran', 'mata_pelajaran.id = pengampu.mapel_id')
             ->join('guru', 'guru.id = jadwal.guru_id')
             ->join('kelas', 'kelas.id = jadwal.kelas_id')
+            ->join('jurusan', 'jurusan.id = kelas.jurusan_id', 'left')
             ->join('jam_pelajaran', 'jam_pelajaran.id = jadwal.jam_id')
             ->where('jadwal.hari_id', $hariId)
             ->orderBy('guru.nama', 'ASC')

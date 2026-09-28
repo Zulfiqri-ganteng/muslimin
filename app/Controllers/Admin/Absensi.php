@@ -74,9 +74,17 @@ class Absensi extends BaseController
         $d       = AbsensiHarian::muat($tanggal);
         $setting = (new SettingModel())->get();
 
+        // Tampilan daftar mengajar: per KELAS (bawaan) / per GURU — diingat di sesi.
+        $tampilan = $this->request->getGet('tampilan');
+        if (in_array($tampilan, ['kelas', 'guru'], true)) {
+            session()->set('absensi_tampilan', $tampilan);
+        }
+
         return view('admin/absensi/index', [
             'title'       => 'Absensi Guru',
             'tanggal'     => $tanggal,
+            'tampilan'    => session('absensi_tampilan') === 'guru' ? 'guru' : 'kelas',
+            'kelas'       => $d['kelas'],
             // Shift laporan (pagi/siang) — default menurut jam sekarang.
             'shift'       => AbsensiWa::normalShift($this->request->getGet('shift')),
             'belum'       => $d['belum'],

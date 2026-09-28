@@ -12,6 +12,7 @@ use App\Models\GuruModel;
 use App\Models\HariModel;
 use App\Models\JadwalModel;
 use App\Models\JadwalPiketModel;
+use App\Models\KelasModel;
 
 /**
  * Muat / simpan / batalkan absensi SATU tanggal — dipakai bersama web
@@ -59,9 +60,12 @@ class AbsensiHarian
      * data utamanya; guru yang tidak ikut absensi (guru.ikut_absensi = 0)
      * dibuang. Tiap sesi tetap membawa guru_id aslinya untuk disimpan.
      *
+     * Tiap sesi membawa `kelas_urut` (peringkat natural nama kelas); `kelas`
+     * = daftar kelas bersesi hari itu, sudah urut.
+     *
      * @return array{hariId:int|null,namaHari:string,hariAktif:bool,recorded:bool,total:int,
-     *               grup:list<array>,kerja:list<array>,saran:list<array>,guruOptions:list<array>,
-     *               belum:array,piket:array,jabatanMap:array}
+     *               grup:list<array>,kelas:list<array>,kerja:list<array>,saran:list<array>,
+     *               guruOptions:list<array>,belum:array,piket:array,jabatanMap:array}
      */
     public static function muat(string $tanggal): array
     {
@@ -106,7 +110,33 @@ class AbsensiHarian
             $total++;
         }
         uasort($grup, static fn ($a, $b) => strcasecmp($a['nama'], $b['nama']));
+
+        // Daftar kelas yang punya sesi hari itu, urut NATURAL (tampilan per kelas
+        // di web & Android + pesan WA memakai peringkat yang sama).
+        $kelas = [];
+        foreach ($grup as $g) {
+            foreach ($g['sesi'] as $s) {
+                $kelas[(int) $s['kelas_id']] ??= [
+                    'kelas_id' => (int) $s['kelas_id'],
+                    'nama'     => (string) $s['nama_kelas'],
+                    'tingkat'  => $s['tingkat'] ?? null,
+                    'jurusan'  => $s['jurusan_kode'] ?? null,
+                    'shift'    => $s['jam_shift'],
+                ];
+            }
+        }
+        $urutKelas = KelasModel::urutNatural(array_column($kelas, 'nama', 'kelas_id'));
+        foreach ($kelas as $kid => &$k) {
+            $k['urut'] = $urutKelas[$kid];
+        }
+        unset($k);
+        usort($kelas, static fn ($a, $b) => $a['urut'] <=> $b['urut']);
+
         foreach ($grup as &$g) {
+            foreach ($g['sesi'] as &$s) {
+                $s['kelas_urut'] = $urutKelas[(int) $s['kelas_id']];
+            }
+            unset($s);
             usort($g['sesi'], static fn ($a, $b) => strcmp((string) $a['waktu_mulai'], (string) $b['waktu_mulai']));
         }
         unset($g);
@@ -183,6 +213,7 @@ class AbsensiHarian
             'recorded'    => $recorded,
             'total'       => $total,
             'grup'        => array_values($grup),
+            'kelas'       => $kelas,
             'kerja'       => $kerja,
             'saran'       => $saran,
             'guruOptions' => $guruOptions,

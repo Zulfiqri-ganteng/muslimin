@@ -38,6 +38,58 @@ class KelasModel extends Model
             ->join('fase', 'fase.id = kelas.fase_id', 'left');
     }
 
+    /**
+     * Banding NATURAL dua nama kelas: "X TKJ 2" sebelum "X TKJ 10", dan X
+     * sebelum XI sebelum XII. Urutan teks biasa (MySQL/strcmp) keliru menaruh
+     * "X TKJ 10" tepat setelah "X TKJ 1"; strnatcasecmp() PHP juga keliru
+     * karena MENGABAIKAN spasi ("XI AKL" jatuh di antara "X AKL" & "X TKJ").
+     * Maka nama dipecah jadi potongan angka / bukan-angka: angka dibanding
+     * nilainya, teks dibanding apa adanya (tanpa beda huruf besar-kecil).
+     */
+    public static function bandingNatural(string $a, string $b): int
+    {
+        $potong = static function (string $s): array {
+            preg_match_all('/\d+|\D+/', strtolower(preg_replace('/\s+/', ' ', trim($s))), $m);
+
+            return $m[0];
+        };
+        $pa = $potong($a);
+        $pb = $potong($b);
+
+        for ($i = 0, $n = min(count($pa), count($pb)); $i < $n; $i++) {
+            $x   = $pa[$i];
+            $y   = $pb[$i];
+            $cmp = ctype_digit($x) && ctype_digit($y)
+                ? ((int) $x <=> (int) $y ?: strlen($x) <=> strlen($y))
+                : strcmp($x, $y);
+            if ($cmp !== 0) {
+                return $cmp;
+            }
+        }
+
+        return count($pa) <=> count($pb);
+    }
+
+    /**
+     * Peringkat urut natural nama kelas (lihat bandingNatural).
+     *
+     * @param array<int,string> $nama kelas_id => nama_kelas
+     *
+     * @return array<int,int> kelas_id => peringkat (mulai 1)
+     */
+    public static function urutNatural(array $nama): array
+    {
+        uasort($nama, static fn ($a, $b) => self::bandingNatural((string) $a, (string) $b));
+
+        $urut = [];
+        $i    = 0;
+        foreach (array_keys($nama) as $id) {
+            $urut[(int) $id] = ++$i;
+        }
+
+        return $urut;
+    }
+
     /** Opsi kelas untuk dropdown (id => nama_kelas), di-cache. */
     public function options(): array
     {
