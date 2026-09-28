@@ -73,8 +73,7 @@ class UjiNotif extends BaseCommand
 
         // Salinan DB uji (--db) belum tentu sudah dimigrasi: `spark migrate` selalu
         // memakai DB dari .env, jadi migrasikan di sini lewat koneksi yang sama.
-        if (! db_connect()->tableExists('notif_log')) {
-            CLI::write('Tabel notif belum ada di DB ini — menjalankan migrasi…', 'light_gray');
+        if (is_string($db) && $db !== '') {
             \Config\Services::migrations()->latest();
         }
 
@@ -252,6 +251,26 @@ class UjiNotif extends BaseCommand
         $this->cek('semua aturan nonaktif → diam', NotifJadwal::rencana($this->adminId, self::TANGGAL)['diam'] !== null);
         $model->whereIn('id', $this->aturanUji)->set('aktif', 1)->update();
         $this->cek('aturan Senin tak berlaku di Selasa', $this->itemRencana('2030-01-08') === []);
+
+        // Aturan per SHIFT: A & J dimatikan dulu agar hanya aturan S yang berlaku.
+        $model->whereIn('id', $this->aturanUji)->set('aktif', 0)->update();
+        $s                 = (int) $model->insert(['admin_id' => $this->adminId, 'nama' => 'uji S', 'hari' => json_encode([$hariId]),
+            'shift' => 'pagi', 'guru' => json_encode([]), 'jurusan' => null, 'menit_sebelum' => 5, 'aktif' => 1], true);
+        $this->aturanUji[] = $s;
+        $jumlah            = static fn (string $sh) => count(array_filter($blok, static fn ($b) => $b['shift'] === $sh));
+        $item              = $this->itemRencana();
+        $this->cek('shift pagi: hanya & semua blok KBM pagi', $item !== [] && array_filter($item, static fn ($i) => $i['shift'] !== 'pagi') === []
+            && count($item) === $jumlah('pagi'), count($item) . ' vs ' . $jumlah('pagi'));
+        $model->update($s, ['shift' => 'siang']);
+        $item = $this->itemRencana();
+        $this->cek('shift siang: hanya & semua blok KBM siang', $item !== [] && array_filter($item, static fn ($i) => $i['shift'] !== 'siang') === []
+            && count($item) === $jumlah('siang'), count($item) . ' vs ' . $jumlah('siang'));
+        $model->update($s, ['shift' => 'semua']);
+        $this->cek('shift semua: pagi + siang', count($this->itemRencana()) === count($blok));
+        $this->cek('aturan lama tanpa shift terbaca "semua"', NotifAturanModel::rapikan(['id' => 1, 'nama' => 'x', 'menit_sebelum' => 5, 'aktif' => 1])['shift'] === 'semua');
+        $model->delete($s);
+        $this->aturanUji = array_values(array_diff($this->aturanUji, [$s]));
+        $model->whereIn('id', $this->aturanUji)->set('aktif', 1)->update();
     }
 
     private function itemRencana(string $tanggal = self::TANGGAL): array

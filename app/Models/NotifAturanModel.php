@@ -5,20 +5,24 @@ namespace App\Models;
 use CodeIgniter\Model;
 
 /**
- * Aturan notifikasi jadwal guru milik satu admin: HARI × GURU × JURUSAN +
- * berapa menit sebelum jam masuk. `guru`/`jurusan` kosong = semua. Kolom
- * JSON disimpan sebagai teks; pakai rapikan() untuk membaca.
+ * Aturan notifikasi jadwal guru milik satu admin: HARI × SHIFT × GURU ×
+ * JURUSAN + berapa menit sebelum jam masuk. `guru`/`jurusan` kosong = semua;
+ * shift 'semua' = pagi + siang. Kolom JSON disimpan sebagai teks; pakai
+ * rapikan() untuk membaca.
  */
 class NotifAturanModel extends Model
 {
     protected $table         = 'notif_aturan';
     protected $primaryKey    = 'id';
     protected $returnType    = 'array';
-    protected $allowedFields = ['admin_id', 'nama', 'hari', 'guru', 'jurusan', 'menit_sebelum', 'aktif'];
+    protected $allowedFields = ['admin_id', 'nama', 'hari', 'shift', 'guru', 'jurusan', 'menit_sebelum', 'aktif'];
     protected $useTimestamps = true;
 
     /** Pilihan "berapa menit sebelum jam masuk". */
     public const MENIT = [0, 5, 10, 15, 30];
+
+    /** Pilihan shift KBM: kode => label tampilan. */
+    public const SHIFT = ['semua' => 'Pagi + Siang', 'pagi' => 'Pagi saja', 'siang' => 'Siang saja'];
 
     /** Batas jumlah aturan per admin (cegah daftar tak terkendali). */
     public const MAKS = 50;
@@ -31,11 +35,13 @@ class NotifAturanModel extends Model
 
             return is_array($v) ? array_values(array_unique(array_map('intval', $v))) : [];
         };
+        $shift = (string) ($r['shift'] ?? 'semua');
 
         return [
             'id'            => (int) $r['id'],
             'nama'          => (string) $r['nama'],
             'hari'          => $ids($r['hari'] ?? null),
+            'shift'         => isset(self::SHIFT[$shift]) ? $shift : 'semua',
             'guru'          => $ids($r['guru'] ?? null),
             'jurusan'       => $ids($r['jurusan'] ?? null),
             'menit_sebelum' => (int) $r['menit_sebelum'],

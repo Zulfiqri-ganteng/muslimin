@@ -78,6 +78,12 @@ class Notif extends BaseApiController
             'guru'    => $this->guruOpsi(),
             'jurusan' => $this->jurusanOpsi(),
             'menit'   => NotifAturanModel::MENIT,
+            // Ada key ini = server mendukung aturan per shift (aplikasi menampilkan pilihannya).
+            'shift'   => array_map(
+                static fn ($k, $v) => ['kode' => $k, 'label' => $v],
+                array_keys(NotifAturanModel::SHIFT),
+                NotifAturanModel::SHIFT
+            ),
         ]);
     }
 
@@ -135,7 +141,8 @@ class Notif extends BaseApiController
         if (! $row) {
             return $this->missing('Aturan tidak ditemukan.');
         }
-        $data = $this->validasiAturan($this->body());
+        // Aplikasi lama tak mengirim `shift` → pertahankan nilai tersimpan.
+        $data = $this->validasiAturan($this->body(), (string) ($row['shift'] ?? 'semua'));
         if (isset($data['_galat'])) {
             return $this->invalid($data['_galat']);
         }
@@ -332,10 +339,11 @@ class Notif extends BaseApiController
 
     /**
      * Validasi & bentuk data aturan dari body. Id yang tidak dikenal dibuang.
+     * `shift` tidak dikirim (aplikasi lama) → pakai $shiftLama (bawaan 'semua').
      *
      * @return array<string,mixed> data siap simpan, atau ['_galat' => [...]]
      */
-    private function validasiAturan(array $in): array
+    private function validasiAturan(array $in, string $shiftLama = 'semua'): array
     {
         $ids = static fn ($v) => array_values(array_unique(array_filter(array_map('intval', is_array($v) ? $v : []), static fn ($x) => $x > 0)));
 
@@ -350,10 +358,14 @@ class Notif extends BaseApiController
         $jurusan      = array_values(array_intersect($jurusanMinta, $jurusanValid));
         $menit        = (int) ($in['menit_sebelum'] ?? 5);
         $nama         = trim((string) ($in['nama'] ?? ''));
+        $shift        = array_key_exists('shift', $in) ? strtolower(trim((string) $in['shift'])) : $shiftLama;
 
         $galat = [];
         if ($hari === []) {
             $galat['hari'] = 'Pilih minimal satu hari.';
+        }
+        if (! isset(NotifAturanModel::SHIFT[$shift])) {
+            $galat['shift'] = 'Pilihan shift tidak valid.';
         }
         // Daftar kosong berarti "semua" — jangan sampai pilihan yang semuanya
         // tidak dikenal (mis. guru sudah dihapus) diam-diam jadi SEMUA guru.
@@ -376,6 +388,7 @@ class Notif extends BaseApiController
         return [
             'nama'          => $nama !== '' ? $nama : 'Aturan notifikasi',
             'hari'          => json_encode($hari),
+            'shift'         => $shift,
             'guru'          => json_encode($guru),
             'jurusan'       => json_encode($jurusan),
             'menit_sebelum' => $menit,
@@ -395,6 +408,7 @@ class Notif extends BaseApiController
 
         return $a + [
             'hari_label'    => count($pilihHari) === count($namaHari) ? 'Setiap hari KBM' : implode(', ', $pilihHari),
+            'shift_label'   => 'KBM ' . strtolower(NotifAturanModel::SHIFT[$a['shift']]),
             'guru_label'    => $a['guru'] === [] ? 'Semua guru' : count($a['guru']) . ' guru',
             'jurusan_label' => $a['jurusan'] === [] ? 'Semua jurusan' : implode(', ', array_map(static fn ($id) => $jurusan[$id] ?? ('#' . $id), $a['jurusan'])),
             'menit_label'   => $a['menit_sebelum'] === 0 ? 'Tepat saat jam masuk' : $a['menit_sebelum'] . ' menit sebelum',

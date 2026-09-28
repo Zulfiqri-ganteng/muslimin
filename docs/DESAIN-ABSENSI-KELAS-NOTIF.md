@@ -220,7 +220,8 @@ token Bearer yang sekarang.
    UNIQUE), nama_perangkat, terima (tinyint 1), last_seen_at, created_at,
    updated_at`. UNIQUE `(admin_id, device_id)`.
 2. `notif_aturan` — aturan klien (boleh banyak).
-   `id, admin_id, nama, hari (JSON id hari), guru (JSON id guru ORANG; kosong =
+   `id, admin_id, nama, hari (JSON id hari), shift (semua/pagi/siang, tambahan
+   2026-09-29), guru (JSON id guru ORANG; kosong =
    semua), jurusan (JSON id jurusan; kosong = semua), menit_sebelum (0/5/10/15/30),
    aktif, created_at, updated_at`.
 3. `notif_pengaturan` — saklar per admin.
@@ -407,6 +408,14 @@ dibuat user SETELAH build. Kode selesai & teruji lokal; sisa = langkah user.
       `flutter analyze` bersih, `flutter test` 109/109.
 - [ ] **N8** Deploy notif (berkas kunci + `.env` + cron) + taruh `google-services.json`
       + build APK (**izin user**) + tombol "Kirim notif uji" di HP klien.
+- [x] **N10** (2026-09-29) Aturan per SHIFT: kolom `notif_aturan.shift` (migrasi
+      `2026-09-29-000001`), mesin & API (`opsi.shift`, aplikasi lama tak mengirim shift →
+      nilai lama dipertahankan), pilihan Shift di form Android (tampil hanya bila server
+      mendukung). `dev:uji-notif` 50/50. Build 20.
+- [x] **N10** (2026-09-29) Aturan per SHIFT: kolom `notif_aturan.shift` (migrasi
+      `2026-09-29-000001`), mesin & API (`opsi.shift`; aplikasi lama tak mengirim shift →
+      nilai lama dipertahankan), pilihan Shift di form Android (tampil hanya bila server
+      mendukung). `dev:uji-notif` 50/50. Build 20.
 - [ ] **N9** (opsional) Halaman web pengaturan notif — belum dikerjakan.
 
 ### Uji regresi (jalankan tiap modul disentuh)

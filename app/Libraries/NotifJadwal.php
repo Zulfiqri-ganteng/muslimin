@@ -21,7 +21,7 @@ use Closure;
  * 1. Diam bila: notif dimatikan, dijeda, bukan hari KBM, atau hari ujian.
  * 2. Sesi jadwal hari itu → BLOK MASUK: sesi berurutan (jam ke +1, shift sama)
  *    milik guru (orang) & kelas yang sama digabung; notif hanya di awal blok.
- * 3. Blok dicocokkan ke aturan admin (hari × guru × jurusan). Cocok >1 aturan →
+ * 3. Blok dicocokkan ke aturan admin (hari × shift × guru × jurusan). Cocok >1 aturan →
  *    dipakai menit_sebelum terbesar. Waktu kirim = jam masuk − menit.
  * 4. Blok dengan waktu kirim sama digabung jadi SATU notif.
  * 5. Anti dobel: slot diklaim lewat notif_log.kunci (UNIQUE) sebelum dikirim.
@@ -185,6 +185,7 @@ class NotifJadwal
             $menit = null;
             foreach ($aturan as $a) {
                 if (! in_array($hariId, $a['hari'], true)
+                    || ($a['shift'] !== 'semua' && $a['shift'] !== $b['shift'])
                     || ($a['guru'] !== [] && ! in_array($b['oid'], $a['guru'], true))
                     || ($a['jurusan'] !== [] && ! in_array($b['jurusan_id'], $a['jurusan'], true))) {
                     continue;
