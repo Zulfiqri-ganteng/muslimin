@@ -436,3 +436,6 @@ Migrasi hanya MENAMBAH 4 tabel notif. Lalu build APK (izin user) → rilis.
    (izin user) → rilis.
 6. HP klien: menu Notifikasi Jadwal → nyalakan "Terima notifikasi di HP ini" →
    "Kirim notif uji" → buat aturan.
+7. Uji dari server (tanpa buka aplikasi): `phpm spark notif:uji` (notif uji) atau
+   `phpm spark notif:uji --contoh` (contoh notif JADWAL asli dari aturan; dicatat
+   jenis "uji" sehingga jadwal sungguhan tidak terganggu).
