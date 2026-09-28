@@ -3,6 +3,7 @@
 namespace App\Commands;
 
 use App\Libraries\Fcm;
+use App\Libraries\NotifJadwal;
 use App\Models\NotifAturanModel;
 use App\Models\NotifPerangkatModel;
 use CodeIgniter\CLI\BaseCommand;
@@ -58,8 +59,16 @@ class NotifCek extends BaseCommand
             $hp     = (new NotifPerangkatModel())->where('terima', 1)->countAllResults();
             $aturan = (new NotifAturanModel())->where('aktif', 1)->countAllResults();
             CLI::write('  [INFO]  HP penerima: ' . $hp . ' · aturan aktif: ' . $aturan, 'light_gray');
-        } catch (Throwable $e) {
+        } catch (Throwable) {
             $baris(false, 'tabel notif belum ada — jalankan dulu:  phpm spark migrate');
+        }
+
+        $detik = NotifJadwal::detikSejakCron();
+        if ($detik === null) {
+            $baris(false, 'cron notif:kirim BELUM PERNAH jalan (pasang cron di bawah, tunggu 1–2 menit, cek lagi)');
+        } else {
+            $baris($detik <= 180, 'cron terakhir jalan ' . date('H:i:s', time() - $detik) . ' (' . $detik . ' detik lalu)'
+                . ($detik <= 180 ? '' : ' — TERLALU LAMA: cek pengaturan Cron Jobs'));
         }
 
         CLI::newLine();

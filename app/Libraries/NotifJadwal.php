@@ -33,6 +33,17 @@ class NotifJadwal
     /** Cron telat / terlewat sampai sekian menit masih dikirim. */
     public const TOLERANSI_MENIT = 10;
 
+    /** Kunci cache "detak" cron: timestamp terakhir `notif:kirim` dijalankan cron. */
+    public const CACHE_DETAK = 'notif_cron_detak';
+
+    /** Detik sejak cron terakhir jalan, atau null bila belum pernah tercatat. */
+    public static function detikSejakCron(): ?int
+    {
+        $t = cache()->get(self::CACHE_DETAK);
+
+        return is_int($t) ? max(0, time() - $t) : null;
+    }
+
     private const LABEL_KOSONG = ['izin' => 'izin', 'sakit' => 'sakit', 'alpa' => 'tidak hadir'];
 
     /** Pengganti Fcm::kirim untuk uji otomatis (null = kirim sungguhan). */

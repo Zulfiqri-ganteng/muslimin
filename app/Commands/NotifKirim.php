@@ -45,6 +45,12 @@ class NotifKirim extends BaseCommand
         }
         $kering = array_key_exists('kering', $params) || CLI::getOption('kering') !== null;
 
+        // Detak cron: jam jalan terakhir (dibaca notif:cek & API) — bukti cron hidup
+        // walau tak ada notif yang dikirim. Simulasi (--sekarang/--kering) tak dihitung.
+        if ($ts === null && ! $kering) {
+            cache()->save(NotifJadwal::CACHE_DETAK, time(), 7 * 86400);
+        }
+
         $h = NotifJadwal::jalankan($ts, $kering);
 
         // Diam bila tidak ada apa-apa (cron tiap menit tidak perlu keluaran).
