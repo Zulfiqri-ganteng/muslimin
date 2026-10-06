@@ -3,6 +3,7 @@ $schoolName = $setting['school_name'] ?? 'Sistem Akademik Sekolah';
 $logo       = ! empty($setting['logo']) ? base_url('uploads/' . $setting['logo']) : null;
 $cur        = uri_string();
 $formOpen   = ! empty($setting['form_open']);
+$urlPkl     = config('Pkl')->tautan(); // form pengajuan PKL (subdomain khusus)
 $menu = [
     ['', 'Beranda'],
     ['jadwal-kelas', 'Jadwal Kelas'],
@@ -49,6 +50,7 @@ if ((int) ($setting['dokumen_publik'] ?? 0) === 1) {
             <?php foreach ($menu as [$url, $label]): $active = $cur === $url; ?>
                 <a href="<?= site_url($url) ?>" class="px-3.5 py-2 rounded-lg text-sm font-semibold transition <?= $active ? 'bg-brand-50 text-brand-700' : 'text-slate-600 hover:bg-slate-100' ?>"><?= $label ?></a>
             <?php endforeach; ?>
+            <a href="<?= esc($urlPkl, 'attr') ?>" class="ml-1 inline-flex items-center gap-1.5 px-3.5 py-2 rounded-lg border border-amber-300 bg-amber-50 text-amber-800 hover:bg-amber-100 text-sm font-semibold transition"><svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M21 13.255A23.931 23.931 0 0112 15c-3.183 0-6.22-.62-9-1.745M16 6V4a2 2 0 00-2-2h-4a2 2 0 00-2 2v2m4 6h.01M5 20h14a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/></svg> Ajukan PKL</a>
             <?php if ($formOpen): ?>
                 <a href="<?= site_url('isi') ?>" class="ml-1 px-4 py-2 rounded-lg bg-brand-700 hover:bg-brand-800 text-white text-sm font-semibold transition">Form Kesediaan</a>
             <?php endif; ?>
@@ -64,6 +66,7 @@ if ((int) ($setting['dokumen_publik'] ?? 0) === 1) {
         <?php foreach ($menu as [$url, $label]): ?>
             <a href="<?= site_url($url) ?>" class="block px-3 py-2 rounded-lg text-sm font-semibold text-slate-600 hover:bg-slate-100"><?= $label ?></a>
         <?php endforeach; ?>
+        <a href="<?= esc($urlPkl, 'attr') ?>" class="flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg border border-amber-300 bg-amber-50 text-amber-800 text-sm font-semibold"><svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M21 13.255A23.931 23.931 0 0112 15c-3.183 0-6.22-.62-9-1.745M16 6V4a2 2 0 00-2-2h-4a2 2 0 00-2 2v2m4 6h.01M5 20h14a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/></svg> Ajukan PKL</a>
         <?php if ($formOpen): ?>
             <a href="<?= site_url('isi') ?>" class="block px-3 py-2 rounded-lg bg-brand-700 text-white text-sm font-semibold text-center">Form Kesediaan</a>
         <?php endif; ?>

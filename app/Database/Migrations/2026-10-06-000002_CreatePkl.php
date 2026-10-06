@@ -6,7 +6,7 @@ use CodeIgniter\Database\Migration;
 
 /**
  * Modul PKL / Prakerin — siswa mengajukan tempat PKL lewat tautan publik
- * (subdomain pklbinus.kangmuslim.com) tanpa login; staf memeriksa & menyetujui.
+ * (subdomain binuspkl.kangmuslim.com) tanpa login; staf memeriksa & menyetujui.
  *
  *   1. pkl_pengaturan — baris tunggal (id = 1): saklar buka/tutup form, tingkat
  *                       yang boleh mengajukan, batas tanggal PKL dari sekolah,

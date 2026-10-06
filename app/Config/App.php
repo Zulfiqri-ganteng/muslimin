@@ -35,7 +35,7 @@ class App extends BaseConfig
      *
      * @var list<string>
      */
-    public array $allowedHostnames = ['datasiswa.kangmuslim.com', 'pklbinus.kangmuslim.com'];
+    public array $allowedHostnames = ['datasiswa.kangmuslim.com', 'binuspkl.kangmuslim.com'];
 
     /**
      * --------------------------------------------------------------------------

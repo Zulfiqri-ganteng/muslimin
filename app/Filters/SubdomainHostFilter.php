@@ -8,7 +8,7 @@ use CodeIgniter\HTTP\RequestInterface;
 use CodeIgniter\HTTP\ResponseInterface;
 
 /**
- * Subdomain publik (datasiswa.kangmuslim.com untuk biodata, pklbinus.kangmuslim.com
+ * Subdomain publik (datasiswa.kangmuslim.com untuk biodata, binuspkl.kangmuslim.com
  * untuk PKL) berbagi document root dengan domain utama, jadi secara teknis
  * ia bisa membuka SEMUA halaman — termasuk /admin. Filter global ini
  * membatasinya: di tiap subdomain hanya beranda (`/`) dan alamat berawalan

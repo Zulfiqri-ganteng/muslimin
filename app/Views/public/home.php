@@ -184,6 +184,19 @@
     </section>
 <?php endif; ?>
 
+<!-- AJUKAN PKL -->
+<section class="mt-6">
+    <a href="<?= esc(config('Pkl')->tautan(), 'attr') ?>" class="flex flex-col sm:flex-row sm:items-center gap-4 rounded-2xl border border-amber-200 bg-gradient-to-r from-amber-50 to-white p-5 sm:p-6 shadow-sm hover:shadow-md transition group">
+        <span class="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-amber-500 text-white">
+            <svg class="w-6 h-6" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M21 13.255A23.931 23.931 0 0112 15c-3.183 0-6.22-.62-9-1.745M16 6V4a2 2 0 00-2-2h-4a2 2 0 00-2 2v2m4 6h.01M5 20h14a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/></svg>
+        </span>
+        <span class="min-w-0 flex-1">
+            <span class="block font-bold text-slate-800 group-hover:text-amber-700">Ajukan PKL / Prakerin</span>
+            <span class="block text-sm text-slate-500 mt-0.5">Siswa: isi data tempat PKL-mu di sini — tanpa login, cukup lewat HP.</span>
+        </span>
+        <span class="inline-flex items-center justify-center gap-1.5 rounded-xl bg-amber-500 px-5 py-2.5 text-sm font-bold text-white group-hover:bg-amber-600 transition">Buka Formulir &rarr;</span>
+    </a>
+</section>
 <!-- AKSI CEPAT + INFO -->
 <section class="grid grid-cols-1 lg:grid-cols-3 gap-5 mt-6">
     <a href="<?= site_url('jadwal-kelas') ?>" class="bg-white rounded-2xl border border-slate-200 shadow-sm p-6 hover:shadow-md transition group">

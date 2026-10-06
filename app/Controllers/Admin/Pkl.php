@@ -624,13 +624,9 @@ class Pkl extends BaseController
         return redirect()->to(site_url($alamat))->with($jenis, $pesan);
     }
 
-    /** Alamat form siswa untuk dibagikan: subdomain bila jalan di domain asli, /pkl bila di lokal. */
+    /** Alamat form siswa untuk dibagikan (lihat Config\Pkl::tautan). */
     private function tautanSiswa(): string
     {
-        $dasar = parse_url((string) config('App')->baseURL);
-        $host  = (string) ($dasar['host'] ?? 'localhost');
-        $lokal = $host === 'localhost' || filter_var($host, FILTER_VALIDATE_IP) !== false;
-
-        return $lokal ? site_url('pkl') : (($dasar['scheme'] ?? 'https') . '://' . config('Pkl')->host . '/');
+        return config('Pkl')->tautan();
     }
 }

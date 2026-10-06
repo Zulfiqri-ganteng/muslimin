@@ -21,5 +21,17 @@ use CodeIgniter\Config\BaseConfig;
  */
 class Pkl extends BaseConfig
 {
-    public string $host = 'pklbinus.kangmuslim.com';
+    public string $host = 'binuspkl.kangmuslim.com';
+
+    /**
+     * Alamat form PKL yang dibagikan/ditautkan: https://{host}/ di hosting, dan /pkl di
+     * domain utama saat jalan di laptop (localhost/IP) agar tombolnya tetap bisa diuji.
+     */
+    public function tautan(): string
+    {
+        $host  = (string) (parse_url((string) config('App')->baseURL)['host'] ?? 'localhost');
+        $lokal = $host === 'localhost' || filter_var($host, FILTER_VALIDATE_IP) !== false;
+
+        return $lokal ? site_url('pkl') : 'https://' . $this->host . '/';
+    }
 }
