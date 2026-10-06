@@ -101,7 +101,7 @@ $opsiFase = [
         </div>
     </form>
 
-    <p class="border-b border-slate-100 px-5 py-2.5 text-xs text-slate-400"><?= (int) $total ?> siswa ditampilkan</p>
+    <div class="flex items-center justify-between border-b border-slate-100 px-5 py-2.5"><p class="text-xs text-slate-400"><?= (int) $total ?> siswa ditampilkan</p><a href="<?= esc(site_url('admin/pkl/siswa/excel') . '?' . http_build_query(array_filter(['q' => $q, 'kelas_id' => $kelasId ?: null, 'fase' => $fase])), 'attr') ?>" class="text-xs font-bold text-brand-700 hover:underline">⬇ Unduh Excel (sesuai saringan)</a></div>
 
     <?php if ($rows === []): ?>
         <p class="px-5 py-12 text-center font-semibold text-slate-600">Tidak ada siswa yang cocok.</p>

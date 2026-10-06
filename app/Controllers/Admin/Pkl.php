@@ -7,7 +7,9 @@ use App\Libraries\HakAkses;
 use App\Libraries\IsianBantu;
 use App\Libraries\PklAjuan;
 use App\Libraries\PklForm;
+use App\Libraries\PklNomorSurat;
 use App\Libraries\PklPeringatan;
+use App\Libraries\PklSurat;
 use App\Models\AuditModel;
 use App\Models\PklPengajuanModel;
 use App\Models\PklPengaturanModel;
@@ -91,6 +93,8 @@ class Pkl extends BaseController
             'kelas'   => $this->model->kelasBersiswa(),
             'page'    => $page,
             'jmlHal'  => max(1, (int) ceil($total / self::PER)),
+            'cek'     => $status === 'menunggu' ? $this->ringkasCek($rows) : [],
+            'statusSurat' => $status === 'disetujui' ? (new PklSurat())->statusBanyak(array_map('intval', array_column($rows, 'id'))) : [],
         ]);
     }
 
@@ -114,6 +118,7 @@ class Pkl extends BaseController
 
         $anggota    = $this->model->anggotaDetail((int) $id);
         $peringatan = PklPeringatan::untuk($ajuan, $anggota, $this->p);
+        $surat      = (new PklSurat())->surat((int) $id);
 
         return view('admin/pkl/detail', $this->dasar(PklPengajuanModel::kode((int) $id), 'daftar_' . $ajuan['status']) + [
             'a'          => $ajuan,
@@ -123,6 +128,8 @@ class Pkl extends BaseController
             'adaBahaya'  => in_array('bahaya', array_column($peringatan, 'tingkat'), true),
             'master'     => PklPeringatan::kandidatMaster((string) $ajuan['perusahaan_norm']),
             'kode'       => PklPengajuanModel::kode((int) $id),
+            'surat'      => $surat,
+            'perluUlang' => $surat !== null && PklSurat::sidik($ajuan, $anggota) !== (string) $surat['sidik'],
         ]);
     }
 
@@ -386,6 +393,102 @@ class Pkl extends BaseController
     }
 
     // =================================================================
+    // ACC massal
+    // =================================================================
+
+    private const MAKS_ACC_MASSAL = 200;
+
+    /**
+     * Ringkasan peringatan tiap baris (untuk kolom "Pemeriksaan" di tab Menunggu).
+     *
+     * @param list<array<string, mixed>> $rows
+     *
+     * @return array<int, array{bahaya: int, awas: int, pertama: string}>
+     */
+    private function ringkasCek(array $rows): array
+    {
+        $out = [];
+        foreach ($rows as $r) {
+            $id     = (int) $r['id'];
+            $ajuan  = $this->model->detail($id);
+            $berat  = $ajuan === null ? [] : array_values(array_filter(
+                PklPeringatan::untuk($ajuan, $this->model->anggotaDetail($id), $this->p),
+                static fn (array $w) => in_array($w['tingkat'], ['bahaya', 'awas'], true)
+            ));
+            $out[$id] = [
+                'bahaya'  => count(array_filter($berat, static fn ($w) => $w['tingkat'] === 'bahaya')),
+                'awas'    => count(array_filter($berat, static fn ($w) => $w['tingkat'] === 'awas')),
+                'pertama' => $berat[0]['teks'] ?? '',
+            ];
+        }
+
+        return $out;
+    }
+
+    /**
+     * POST admin/pkl/acc-massal — mode "terpilih" (ids[]) atau "aman" (semua yang menunggu).
+     * Hanya ajuan yang BERSIH dari peringatan bahaya/periksa yang di-ACC; sisanya dilewati dan
+     * dilaporkan dengan alasannya agar diperiksa satu per satu. Tiap ajuan diproses dalam
+     * transaksi sendiri (PklAjuan::ubahStatus), jadi satu yang gagal tak membatalkan yang lain.
+     */
+    public function accMassal(): RedirectResponse
+    {
+        $balik = 'admin/pkl/daftar/menunggu';
+        if ((string) $this->request->getPost('mode') === 'terpilih') {
+            $ids = array_values(array_unique(array_filter(array_map('intval', (array) $this->request->getPost('ids')))));
+            if ($ids === []) {
+                return $this->ke($balik, 'error', 'Centang dulu ajuan yang mau di-ACC.');
+            }
+        } else {
+            $ids = null; // semua yang menunggu
+        }
+
+        $q = db_connect()->table('pkl_pengajuan')->select('id')->where('status', 'menunggu')->orderBy('updated_at', 'ASC')->orderBy('id', 'ASC');
+        if ($ids !== null) {
+            $q->whereIn('id', $ids);
+        }
+        $urut = array_map('intval', array_column($q->limit(self::MAKS_ACC_MASSAL + 1)->get()->getResultArray(), 'id'));
+        if ($urut === []) {
+            return $this->ke($balik, 'success', 'Tidak ada ajuan yang menunggu.');
+        }
+        if (count($urut) > self::MAKS_ACC_MASSAL) {
+            return $this->ke($balik, 'error', 'Terlalu banyak sekaligus (maksimal ' . self::MAKS_ACC_MASSAL . ' ajuan per klik). Pakai pencarian/kelas atau centang sebagian.');
+        }
+
+        $svc    = new PklAjuan();
+        $ok     = 0;
+        $lewat  = [];
+        foreach ($urut as $id) {
+            $ajuan = $this->model->detail($id);
+            if ($ajuan === null || $ajuan['status'] !== 'menunggu') {
+                continue;
+            }
+            $kode  = PklPengajuanModel::kode($id) . ' ' . $ajuan['perusahaan_nama'];
+            $berat = array_values(array_filter(
+                PklPeringatan::untuk($ajuan, $this->model->anggotaDetail($id), $this->p),
+                static fn (array $w) => in_array($w['tingkat'], ['bahaya', 'awas'], true)
+            ));
+            if ($berat !== []) {
+                $lewat[] = $kode . ' — dilewati: ' . mb_substr($berat[0]['teks'], 0, 110) . (count($berat) > 1 ? ' (+' . (count($berat) - 1) . ' peringatan lain)' : '');
+                continue;
+            }
+
+            $hasil = $svc->ubahStatus($id, 'disetujui', $this->konteks(['aksi' => 'acc']), 'ACC massal');
+            if ($hasil['ok']) {
+                $ok++;
+            } else {
+                $lewat[] = $kode . ' — gagal: ' . $this->pesanGagal($hasil);
+            }
+        }
+
+        $this->audit->record('update', 'pkl_pengajuan', null, 'ACC massal PKL: ' . $ok . ' disetujui, ' . count($lewat) . ' dilewati');
+        $pesan = 'ACC massal: ' . $ok . ' ajuan disetujui' . ($lewat !== [] ? ', ' . count($lewat) . ' dilewati (perlu diperiksa satu per satu, lihat daftar merah di bawah).' : '.');
+        $redir = $this->ke($balik, $ok > 0 || $lewat === [] ? 'success' : 'error', $pesan);
+
+        return $lewat !== [] ? $redir->with('errors', array_slice($lewat, 0, 40)) : $redir;
+    }
+
+    // =================================================================
     // Hapus (Operator/Admin — Hubin ditolak oleh Config\Peran)
     // =================================================================
 
@@ -537,6 +640,33 @@ class Pkl extends BaseController
             }
         }
 
+        // ----- Surat: penanda tangan, format & lantai nomor -----
+        $wakaNama = IsianBantu::rapikan((string) ($post['waka_hubin_nama'] ?? ''));
+        if ($wakaNama !== '' && (! IsianBantu::namaOrangSah($wakaNama) || mb_strlen($wakaNama) > 150)) {
+            $galat['waka_hubin_nama'] = 'Nama hanya boleh berisi huruf (titik/koma untuk gelar), maksimal 150 huruf.';
+        }
+        $wakaNip = trim((string) preg_replace('/[^0-9 ]/', '', (string) ($post['waka_hubin_nip'] ?? '')));
+        $jabatan = IsianBantu::rapikan((string) ($post['waka_hubin_jabatan'] ?? ''));
+        if ($jabatan === '') {
+            $jabatan = 'Wakil Kepala Sekolah Bidang Hubungan Industri';
+        }
+        if (mb_strlen($jabatan) > 150) {
+            $galat['waka_hubin_jabatan'] = 'Jabatan terlalu panjang (maksimal 150 huruf).';
+        }
+        $pola = trim((string) ($post['format_nomor'] ?? ''));
+        if ($pola === '') {
+            $pola = PklNomorSurat::BAWAAN;
+        }
+        if (($g = PklNomorSurat::periksa($pola)) !== null) {
+            $galat['format_nomor'] = $g;
+        }
+        $nomorAwal = (isset($post['nomor_awal']) && ctype_digit(trim((string) $post['nomor_awal'])) && (int) $post['nomor_awal'] >= 1 && (int) $post['nomor_awal'] <= 99999) ? (int) $post['nomor_awal'] : null;
+        if ($nomorAwal === null) {
+            $galat['nomor_awal'] = 'Isi angka 1-99999.';
+        }
+        // Lantai nomor berlaku untuk TAHUN ia diisi; bila angkanya tak diubah, tahun lama dipertahankan.
+        $tahunAwal = ($nomorAwal !== null && $nomorAwal !== (int) ($this->p['nomor_awal'] ?? 1)) ? (int) date('Y') : ($this->p['nomor_awal_tahun'] ?? null);
+
         $tutup = trim((string) ($post['form_tutup'] ?? ''));
         $tutupSql = null;
         if ($tutup !== '') {
@@ -560,6 +690,12 @@ class Pkl extends BaseController
             'durasi_min_hari'      => $dMin ?? 30,
             'durasi_maks_hari'     => $dMaks ?? 270,
             'maks_anggota'         => $maksA ?? 5,
+            'waka_hubin_nama'      => $wakaNama !== '' ? $wakaNama : null,
+            'waka_hubin_nip'       => $wakaNip !== '' ? $wakaNip : null,
+            'waka_hubin_jabatan'   => $jabatan,
+            'format_nomor'         => $pola,
+            'nomor_awal'           => $nomorAwal ?? 1,
+            'nomor_awal_tahun'     => $tahunAwal,
         ], $galat];
     }
 

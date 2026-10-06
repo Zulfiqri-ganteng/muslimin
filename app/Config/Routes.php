@@ -93,14 +93,26 @@ $routes->group('admin', static function ($routes) {
         // admin/pkl/hapus DITOLAK untuk Hubin oleh Config\Peran ('kecuali').
         $routes->get('pkl', 'Admin\Pkl::index');
         $routes->get('pkl/daftar', static fn () => redirect()->to(site_url('admin/pkl/daftar/menunggu')));
-        $routes->get('pkl/daftar/(:segment)', 'Admin\Pkl::daftar/$1');
+        $routes->get('pkl/daftar/(:segment)', 'Admin\Pkl::daftar/$1', ['filter' => 'csrf']);
         $routes->get('pkl/siswa', 'Admin\Pkl::siswa');
+        $routes->get('pkl/siswa/excel', 'Admin\PklBerkas::siswaExcel');
         $routes->get('pkl/siswa-kelas', 'Admin\Pkl::siswaKelas');
         $routes->get('pkl/baru', 'Admin\Pkl::baru', ['filter' => 'csrf']);
         $routes->post('pkl/baru', 'Admin\Pkl::simpanBaru', ['filter' => 'csrf']);
         $routes->get('pkl/pengaturan', 'Admin\Pkl::pengaturan', ['filter' => 'csrf']);
         $routes->post('pkl/pengaturan', 'Admin\Pkl::simpanPengaturan', ['filter' => 'csrf']);
         $routes->post('pkl/hapus/(:num)', 'Admin\Pkl::hapus/$1', ['filter' => 'csrf']);
+        // Tahap 4: surat Word, template, impor (lihat Admin\PklBerkas)
+        $routes->post('pkl/acc-massal', 'Admin\Pkl::accMassal', ['filter' => 'csrf']);
+        $routes->post('pkl/surat-massal', 'Admin\PklBerkas::suratMassal', ['filter' => 'csrf']);
+        $routes->post('pkl/(:num)/surat', 'Admin\PklBerkas::surat/$1', ['filter' => 'csrf']);
+        $routes->get('pkl/pengaturan/template', 'Admin\PklBerkas::template');
+        $routes->post('pkl/pengaturan/template', 'Admin\PklBerkas::unggahTemplate', ['filter' => 'csrf']);
+        $routes->post('pkl/pengaturan/template/hapus', 'Admin\PklBerkas::hapusTemplate', ['filter' => 'csrf']);
+        $routes->get('pkl/impor', 'Admin\PklBerkas::impor', ['filter' => 'csrf']);
+        $routes->get('pkl/impor/contoh', 'Admin\PklBerkas::imporContoh');
+        $routes->post('pkl/impor/pratinjau', 'Admin\PklBerkas::imporPratinjau', ['filter' => 'csrf']);
+        $routes->post('pkl/impor/simpan', 'Admin\PklBerkas::imporSimpan', ['filter' => 'csrf']);
         $routes->get('pkl/(:num)', 'Admin\Pkl::detail/$1', ['filter' => 'csrf']);
         $routes->get('pkl/(:num)/ubah', 'Admin\Pkl::ubah/$1', ['filter' => 'csrf']);
         $routes->post('pkl/(:num)/ubah', 'Admin\Pkl::simpanUbah/$1', ['filter' => 'csrf']);

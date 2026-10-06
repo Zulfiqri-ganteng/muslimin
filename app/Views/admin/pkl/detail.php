@@ -26,7 +26,7 @@ if ($status === 'disetujui' && $a['tanggal_mulai'] && $a['tanggal_selesai']) {
 $labelAksi = [
     'kirim' => 'Dikirim siswa', 'kirim_ulang' => 'Dikirim ulang (perbaikan)', 'acc' => 'Disetujui', 'kembalikan' => 'Dikembalikan ke siswa',
     'tolak' => 'Ditolak', 'batal_acc' => 'Persetujuan dibatalkan', 'ubah' => 'Data diubah staf', 'isi_atas_nama' => 'Diisi atas nama siswa',
-    'tunda' => 'Dikembalikan ke antrean',
+    'tunda' => 'Dikembalikan ke antrean', 'surat' => 'Surat diterbitkan', 'cetak' => 'Surat diunduh', 'impor' => 'Diimpor dari Excel',
 ];
 $warnaPeringatan = [
     'bahaya' => ['border-red-300 bg-red-50 text-red-800', 'BAHAYA', 'bg-red-600'],
@@ -44,7 +44,7 @@ $baris = static function (string $label, ?string $isi): string {
 <?= $this->section('content') ?>
 
 <?= view('admin/partials/help', [
-    'helpKey'   => 'pkl_detail_v1',
+    'helpKey'   => 'pkl_detail_v2',
     'helpTitle' => 'Detail Ajuan PKL',
     'helpBody'  => '<p>Periksa dulu <b>peringatan otomatis</b> (merah = bahaya, kuning = periksa, biru = info), lalu putuskan:</p>'
         . '<ul class="mt-2 list-disc pl-5 space-y-1">'
@@ -53,6 +53,7 @@ $baris = static function (string $label, ?string $isi): string {
         . '<li><b>Tolak</b> — siswanya bebas dan boleh mengajukan baru.</li>'
         . '<li><b>Batalkan persetujuan</b> — bila perusahaan menarik diri; ajuan kembali ke siswa untuk diganti.</li>'
         . '<li><b>Ubah</b> — Anda memperbaiki langsung (nama, tanggal, daftar siswa) tanpa mengubah statusnya.</li>'
+        . '<li><b>Surat permohonan</b> (setelah Disetujui) — satu tombol menerbitkan nomor dan mengunduh berkas Word. Bila data berubah sesudahnya muncul tanda <b>Perlu cetak ulang</b>; nomor tetap sama.</li>'
         . '</ul>',
 ]) ?>
 
@@ -168,6 +169,32 @@ $baris = static function (string $label, ?string $isi): string {
                     <?php endif; ?>
                 </div>
             </section>
+
+            <?php if ($status === 'disetujui'): ?>
+                <section class="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+                    <h3 class="text-xs font-bold uppercase tracking-wide text-slate-500">Surat permohonan</h3>
+                    <?php if ($surat): ?>
+                        <p class="mt-2 text-xs text-slate-500">Nomor surat</p>
+                        <p class="font-mono text-sm font-bold text-slate-800"><?= esc($surat['nomor']) ?></p>
+                        <p class="mt-1 text-xs text-slate-400">Tanggal <?= esc(IsianBantu::tanggalIndo($surat['tanggal_surat'])) ?> · diunduh <?= (int) $surat['cetak_ke'] ?> kali</p>
+                        <?php if ($perluUlang): ?>
+                            <p class="mt-2 rounded-lg border border-amber-300 bg-amber-50 px-3 py-2 text-xs font-semibold leading-relaxed text-amber-900">⚠ PERLU CETAK ULANG — data ajuan berubah sejak surat terakhir diunduh. Nomor tetap sama.</p>
+                        <?php endif; ?>
+                        <form method="post" action="<?= site_url('admin/pkl/' . $id . '/surat') ?>" class="mt-3">
+                            <?= csrf_field() ?>
+                            <button type="submit" class="w-full rounded-xl <?= $perluUlang ? 'bg-amber-500 hover:bg-amber-600' : 'bg-brand-700 hover:bg-brand-800' ?> px-4 py-3 text-sm font-bold text-white shadow-sm transition active:scale-95">⬇ <?= $perluUlang ? 'Unduh surat terbaru (.docx)' : 'Unduh surat (.docx)' ?></button>
+                        </form>
+                    <?php else: ?>
+                        <form method="post" action="<?= site_url('admin/pkl/' . $id . '/surat') ?>" class="mt-2 space-y-2">
+                            <?= csrf_field() ?>
+                            <label class="lbl" for="tgl_surat">Tanggal surat</label>
+                            <input id="tgl_surat" type="date" name="tanggal_surat" value="<?= date('Y-m-d') ?>" class="inp">
+                            <button type="submit" class="w-full rounded-xl bg-brand-700 px-4 py-3 text-sm font-bold text-white shadow-sm transition hover:bg-brand-800 active:scale-95">⬇ Terbitkan nomor &amp; unduh surat</button>
+                            <p class="text-xs leading-relaxed text-slate-400">Nomor ditetapkan sekali. Mengunduh lagi nanti memakai nomor yang sama.</p>
+                        </form>
+                    <?php endif; ?>
+                </section>
+            <?php endif; ?>
 
             <section class="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
                 <h3 class="border-b border-slate-100 bg-slate-50 px-5 py-3 text-xs font-bold uppercase tracking-wide text-slate-500">Riwayat</h3>

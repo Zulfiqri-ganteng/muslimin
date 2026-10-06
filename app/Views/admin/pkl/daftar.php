@@ -29,10 +29,11 @@ $urlHal = static function (int $hal) use ($status, $q, $kelasId): string {
 <?= $this->section('content') ?>
 
 <?= view('admin/partials/help', [
-    'helpKey'   => 'pkl_daftar_v1',
+    'helpKey'   => 'pkl_daftar_v2',
     'helpTitle' => 'Kotak Masuk PKL',
     'helpBody'  => '<p>Pilih tab status di atas. Cari berdasarkan <b>nama perusahaan</b> atau <b>nama siswa</b>, atau saring per kelas. Klik baris untuk membuka detail dan mengambil keputusan.</p>'
-        . '<p class="mt-2">Satu baris = satu <b>perusahaan</b> dengan rombongan siswanya (pengaju + teman satu tempat).</p>',
+        . '<p class="mt-2">Satu baris = satu <b>perusahaan</b> dengan rombongan siswanya (pengaju + teman satu tempat).</p>'
+        . '<p class="mt-2">Di tab <b>Menunggu ACC</b> kolom <b>Pemeriksaan</b> menandai ajuan <b>✓ Aman</b> atau <b>⚠ ada peringatan</b>. Tombol <b>ACC massal</b> hanya menyetujui yang Aman; sisanya dilewati supaya diperiksa satu per satu. Di tab <b>Disetujui</b> Anda bisa mengunduh surat PKL banyak sekaligus.</p>',
 ]) ?>
 
 <?= view('admin/pkl/_nav', ['tab' => $tab, 'hitungTab' => $hitungTab]) ?>
@@ -64,6 +65,22 @@ $urlHal = static function (int $hal) use ($status, $q, $kelasId): string {
         </form>
     </div>
 
+    <?php if ($status === 'menunggu' && $rows !== []): ?>
+        <form id="formAcc" method="post" action="<?= site_url('admin/pkl/acc-massal') ?>" class="flex flex-col gap-2 border-b border-slate-100 bg-slate-50 px-5 py-3 sm:flex-row sm:items-center">
+            <?= csrf_field() ?>
+            <span class="text-xs leading-relaxed text-slate-500 sm:mr-auto"><b class="text-green-700">ACC massal:</b> hanya ajuan berlabel <b class="text-green-700">✓ Aman</b> (tanpa peringatan) yang di-ACC. Yang bertanda ⚠ dilewati agar Anda periksa satu per satu.</span>
+            <button type="submit" name="mode" value="terpilih" onclick="return confirm('ACC semua ajuan yang dicentang? Yang punya peringatan akan dilewati.')" class="rounded-lg border border-green-300 bg-white px-3.5 py-2 text-sm font-semibold text-green-700 hover:bg-green-50">✓ ACC terpilih</button>
+            <button type="submit" name="mode" value="aman" onclick="return confirm('ACC SEMUA ajuan yang menunggu dan berlabel Aman (maks. 200)? Yang punya peringatan akan dilewati.')" class="rounded-lg bg-green-600 px-3.5 py-2 text-sm font-semibold text-white hover:bg-green-700">✓ ACC semua yang aman</button>
+        </form>
+    <?php endif; ?>
+    <?php if ($status === 'disetujui' && $rows !== []): ?>
+        <form id="formMassal" method="post" action="<?= site_url('admin/pkl/surat-massal') ?>" class="flex flex-col gap-2 border-b border-slate-100 bg-slate-50 px-5 py-3 sm:flex-row sm:items-center">
+            <?= csrf_field() ?>
+            <span class="text-xs leading-relaxed text-slate-500 sm:mr-auto">Surat PKL: centang ajuan lalu unduh — satu berkas Word, tiap surat di halaman baru. Yang belum bernomor otomatis diberi nomor sesuai urutan persetujuan.</span>
+            <button type="submit" name="mode" value="terpilih" class="rounded-lg border border-brand-200 bg-white px-3.5 py-2 text-sm font-semibold text-brand-700 hover:bg-brand-50">⬇ Unduh surat terpilih</button>
+            <button type="submit" name="mode" value="belum" class="rounded-lg bg-brand-700 px-3.5 py-2 text-sm font-semibold text-white hover:bg-brand-800">⬇ Unduh semua yang belum dicetak / perlu cetak ulang</button>
+        </form>
+    <?php endif; ?>
     <?php if ($rows === []): ?>
         <div class="px-5 py-12 text-center">
             <p class="font-semibold text-slate-700"><?= ($q !== '' || $kelasId > 0) ? 'Tidak ada ajuan yang cocok dengan pencarian.' : 'Belum ada ajuan di sini.' ?></p>
@@ -74,18 +91,18 @@ $urlHal = static function (int $hal) use ($status, $q, $kelasId): string {
             <table class="w-full text-sm">
                 <thead class="bg-slate-50 text-left text-slate-500">
                     <tr>
-                        <th class="px-5 py-3 font-semibold">Bukti</th>
+                        <?php if (in_array($status, ['disetujui', 'menunggu'], true)): ?><th class="w-10 px-5 py-3"><input type="checkbox" aria-label="Pilih semua" onclick="document.querySelectorAll('input[name=&quot;ids[]&quot;]').forEach(c => c.checked = this.checked)"></th><?php endif; ?><th class="px-5 py-3 font-semibold">Bukti</th>
                         <th class="px-3 py-3 font-semibold">Perusahaan</th>
                         <th class="px-3 py-3 font-semibold">Pengaju</th>
                         <th class="px-3 py-3 font-semibold">Periode</th>
                         <th class="px-3 py-3 font-semibold">Diperbarui</th>
-                        <th class="px-5 py-3 text-right font-semibold">Aksi</th>
+                        <?php if ($status === 'disetujui'): ?><th class="px-3 py-3 font-semibold">Surat</th><?php endif; ?><?php if ($status === 'menunggu'): ?><th class="px-3 py-3 font-semibold">Pemeriksaan</th><?php endif; ?><th class="px-5 py-3 text-right font-semibold">Aksi</th>
                     </tr>
                 </thead>
                 <tbody class="divide-y divide-slate-100">
                     <?php foreach ($rows as $r): ?>
                         <tr class="hover:bg-slate-50">
-                            <td class="px-5 py-3 font-mono text-xs font-semibold text-slate-500"><?= esc(PklPengajuanModel::kode((int) $r['id'])) ?></td>
+                            <?php if (in_array($status, ['disetujui', 'menunggu'], true)): ?><td class="px-5 py-3"><input type="checkbox" name="ids[]" value="<?= (int) $r['id'] ?>" form="<?= $status === 'menunggu' ? 'formAcc' : 'formMassal' ?>" aria-label="Pilih <?= esc($r['perusahaan_nama'], 'attr') ?>"></td><?php endif; ?><td class="px-5 py-3 font-mono text-xs font-semibold text-slate-500"><?= esc(PklPengajuanModel::kode((int) $r['id'])) ?></td>
                             <td class="px-3 py-3">
                                 <a href="<?= site_url('admin/pkl/' . $r['id']) ?>" class="font-semibold text-slate-800 hover:text-brand-700"><?= esc($r['perusahaan_nama']) ?></a>
                                 <p class="text-xs text-slate-400"><?= esc($r['perusahaan_kota'] ?? '') ?><?= $r['sumber'] !== 'siswa' ? ' · ' . ($r['sumber'] === 'staf' ? 'diisi staf' : 'impor') : '' ?><?= (int) $r['kirim_ke'] > 1 ? ' · revisi ke-' . ((int) $r['kirim_ke'] - 1) : '' ?></p>
@@ -96,7 +113,7 @@ $urlHal = static function (int $hal) use ($status, $q, $kelasId): string {
                             </td>
                             <td class="whitespace-nowrap px-3 py-3 text-xs text-slate-500"><?= $r['tanggal_mulai'] ? esc(IsianBantu::tanggalIndo($r['tanggal_mulai'])) . '<br>s/d ' . esc(IsianBantu::tanggalIndo($r['tanggal_selesai'])) : '—' ?></td>
                             <td class="whitespace-nowrap px-3 py-3 text-xs text-slate-400"><?= esc(date('d-m-Y H:i', strtotime($r['updated_at']))) ?></td>
-                            <td class="px-5 py-3 text-right"><a href="<?= site_url('admin/pkl/' . $r['id']) ?>" class="inline-flex rounded-lg bg-brand-700 px-3.5 py-1.5 text-xs font-semibold text-white transition hover:bg-brand-800"><?= $status === 'menunggu' ? 'Periksa' : 'Buka' ?></a></td>
+                            <?php if ($status === 'disetujui'): $ss = $statusSurat[(int) $r['id']] ?? null; ?><td class="px-3 py-3 text-xs"><?php if ($ss): ?><span class="font-mono font-semibold text-slate-600"><?= esc($ss['nomor']) ?></span><?php if ($ss['perlu_ulang']): ?><span class="mt-0.5 block font-bold text-amber-600">⚠ perlu cetak ulang</span><?php endif; ?><?php else: ?><span class="text-slate-300">belum ada</span><?php endif; ?></td><?php endif; ?><?php if ($status === 'menunggu'): $c = $cek[(int) $r['id']] ?? null; ?><td class="px-3 py-3 text-xs"><?php if ($c && ($c['bahaya'] + $c['awas']) === 0): ?><span class="font-bold text-green-600">✓ Aman</span><?php elseif ($c): ?><span class="font-bold <?= $c['bahaya'] ? 'text-red-600' : 'text-amber-600' ?>" title="<?= esc($c['pertama'], 'attr') ?>">⚠ <?= (int) ($c['bahaya'] + $c['awas']) ?> peringatan</span><?php endif; ?></td><?php endif; ?><td class="px-5 py-3 text-right"><a href="<?= site_url('admin/pkl/' . $r['id']) ?>" class="inline-flex rounded-lg bg-brand-700 px-3.5 py-1.5 text-xs font-semibold text-white transition hover:bg-brand-800"><?= $status === 'menunggu' ? 'Periksa' : 'Buka' ?></a></td>
                         </tr>
                         <?php if (! empty($r['catatan_staf']) && in_array($status, ['perbaikan', 'ditolak'], true)): ?>
                             <tr><td></td><td colspan="5" class="px-3 pb-3 text-xs text-slate-500"><span class="font-semibold text-slate-600">Catatan sekolah:</span> <?= esc($r['catatan_staf']) ?></td></tr>

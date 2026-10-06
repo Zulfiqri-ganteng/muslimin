@@ -19,6 +19,7 @@ class PklPengaturanModel extends Model
     protected $allowedFields    = [
         'form_buka', 'form_tutup', 'tingkat', 'mulai_paling_awal', 'selesai_paling_akhir',
         'durasi_min_hari', 'durasi_maks_hari', 'maks_anggota',
+        'waka_hubin_nama', 'waka_hubin_nip', 'waka_hubin_jabatan', 'format_nomor', 'nomor_awal', 'nomor_awal_tahun', 'template_surat',
     ];
     protected $useTimestamps = true;
     protected $createdField  = '';

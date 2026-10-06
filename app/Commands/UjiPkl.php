@@ -78,6 +78,7 @@ class UjiPkl extends BaseCommand
         $this->ujiDatabase();
         $this->ujiSaran();
         $this->ujiStaf();
+        $this->ujiSurat();
         $this->bersihkan();
 
         CLI::newLine();
@@ -793,6 +794,253 @@ class UjiPkl extends BaseCommand
         $this->cek('periksaKonsistensi(): seluruh data uji tahap 3 konsisten', array_filter($ajuan->periksaKonsistensi(), fn ($x) => in_array((int) $x['siswa_id'], $s, true)) === []);
         $this->db->table('pkl_pengajuan')->where('id', $a4)->delete();
         $this->cek('hapus ajuan disetujui: siswanya bebas lagi, master TETAP ada', $model->aktifMilik($s[24]) === null && $model->aktifMilik($s[25]) === null && $masterJml('zzuji data lama') === 1);
+    }
+
+    // =================================================================
+    // 7. Tahap 4: nomor surat, surat Word, template, impor
+    // =================================================================
+
+    private function xmlDocx(string $biner): string
+    {
+        $tmp = tempnam(sys_get_temp_dir(), 'ujd');
+        file_put_contents($tmp, $biner);
+        $z   = new \ZipArchive();
+        $xml = $z->open($tmp) === true ? (string) $z->getFromName('word/document.xml') : '';
+        $z->close();
+        @unlink($tmp);
+
+        return $xml;
+    }
+
+    private function xmlSah(string $xml): bool
+    {
+        return $xml !== '' && @(new \DOMDocument())->loadXML($xml) !== false;
+    }
+
+    private function ujiSurat(): void
+    {
+        $this->bagian('Tahap 4: nomor surat, surat Word, template, impor');
+
+        // ---------- pembantu murni ----------
+        $t = new \DateTimeImmutable('2027-03-06');
+        $this->cek('format nomor bawaan', \App\Libraries\PklNomorSurat::format('{urut}/PKL/{tgl}-{bln}-{thn}', 7, $t) === '7/PKL/06-03-2027');
+        $this->cek('format nomor romawi + urut 3 angka', \App\Libraries\PklNomorSurat::format('{urut3}/PKL/{bln_romawi}/{thn}', 7, $t) === '007/PKL/III/2027');
+        $periksa = static fn (string $pola) => \App\Libraries\PklNomorSurat::periksa($pola);
+        $this->cek('pola sah lolos', $periksa('{urut}/PKL/{tgl}-{bln}-{thn}') === null && $periksa('421.5/{urut4}/SMK/{bln_romawi}/{thn}') === null);
+        $this->cek('pola tanpa {urut} ditolak', $periksa('PKL/{tgl}') !== null);
+        $this->cek('pola dengan penanda tak dikenal ditolak', $periksa('{urut}/{ngawur}') !== null);
+        $this->cek('pola berkarakter berbahaya ditolak', $periksa('{urut}<script>') !== null && $periksa('{urut}/{') !== null);
+        $this->cek('pola kosong / terlalu panjang ditolak', $periksa('') !== null && $periksa('{urut}' . str_repeat('a', 100)) !== null);
+
+        // ---------- bahan ----------
+        $k = $this->db->table('kelas')->select('id, nama_kelas')->where('tingkat', 'XI')->where('deleted_at', null)->orderBy('id')->get()->getRowArray();
+        if ($k === null) {
+            $this->cek('bahan uji: kelas XI tersedia', false);
+
+            return;
+        }
+        $kelasXI = (int) $k['id'];
+        $s = [];
+        foreach (range(40, 54) as $n) {
+            $s[$n] = $this->buatSiswa($n, $kelasXI);
+        }
+        $this->pengaturanAsli ??= (function () {
+            $r = (new PklPengaturanModel())->ambil();
+            unset($r['id']);
+
+            return $r;
+        })();
+        $setPeng = fn (array $data) => $this->db->table('pkl_pengaturan')->where('id', 1)->update($data);
+        $setPeng(['format_nomor' => '{urut}/PKL/{tgl}-{bln}-{thn}', 'nomor_awal' => 1, 'nomor_awal_tahun' => null, 'waka_hubin_nama' => 'Budi Santoso, S.Pd.', 'waka_hubin_nip' => '198001012005011001', 'template_surat' => null]);
+
+        $ajuan = new PklAjuan();
+        $svc   = new \App\Libraries\PklSurat();
+        $model = new PklPengajuanModel();
+        $admin = ['oleh' => 'Operator Uji', 'admin_id' => 1, 'peran' => 'operator', 'ip' => '10.9.9.9'];
+        $pj    = static fn (int $id): array => ['siswa_id' => $id, 'kelas_id' => $kelasXI, 'peran' => 'pengaju'];
+        $tm    = static fn (int $id): array => ['siswa_id' => $id, 'kelas_id' => $kelasXI, 'peran' => 'teman'];
+        $tgl   = static fn (int $selisih): string => date('Y-m-d', strtotime(($selisih >= 0 ? '+' : '') . $selisih . ' days'));
+        $setuju = fn (string $nama, array $anggota) => (int) $ajuan->kirimBaru($this->dataLangsung($nama, $tgl(10), $tgl(100)), $anggota, $admin + ['sumber' => 'staf', 'aksi' => 'isi_atas_nama', 'status_awal' => 'disetujui'])['id'];
+        $thn   = (int) date('Y');
+        $maksTahun = fn (int $y): int => (int) $this->db->query('SELECT COALESCE(MAX(urut), 0) m FROM pkl_surat WHERE tahun = ?', [$y])->getRowArray()['m'];
+
+        $a1 = $setuju('PT ZZUJI Surat A', [$pj($s[40]), $tm($s[41])]);
+        $a2 = $setuju('PT ZZUJI Surat B', [$pj($s[42])]);
+        $a3 = (int) $ajuan->kirimBaru($this->dataLangsung('PT ZZUJI Belum ACC', $tgl(10), $tgl(100)), [$pj($s[43])], $admin)['id']; // menunggu
+
+        // ---------- penomoran ----------
+        $dasar = $maksTahun($thn);
+        $r1    = $svc->terbitkan($a1, "$thn-03-06", $admin);
+        $this->cek('terbitkan: nomor pertama = urutan berikutnya, format bawaan', $r1['ok'] && $r1['baru'] === true && (int) $r1['surat']['urut'] === $dasar + 1 && $r1['surat']['nomor'] === ($dasar + 1) . "/PKL/06-03-$thn", json_encode($r1));
+        $r1b = $svc->terbitkan($a1, "$thn-09-09", $admin);
+        $this->cek('terbitkan ulang ajuan yang sama → nomor SAMA, tanggal lama dipertahankan', $r1b['ok'] && $r1b['baru'] === false && $r1b['surat']['nomor'] === $r1['surat']['nomor'] && $r1b['surat']['tanggal_surat'] === "$thn-03-06");
+        $r2 = $svc->terbitkan($a2, "$thn-03-06", $admin);
+        $this->cek('ajuan kedua mendapat nomor berikutnya (tanpa loncat)', (int) $r2['surat']['urut'] === $dasar + 2);
+        $r3 = $svc->terbitkan($a3, "$thn-03-06", $admin);
+        $this->cek('ajuan yang belum disetujui TIDAK bisa diberi nomor', $r3['ok'] === false && ($r3['kode'] ?? '') === 'status' && $svc->surat($a3) === null);
+        $this->cek('tanggal tak sah ditolak', ($svc->terbitkan($a2, '2027-02-30', $admin)['kode'] ?? '') === 'tanggal' && ($svc->terbitkan($a2, 'bukan', $admin)['kode'] ?? '') === 'tanggal');
+        $dup = true;
+        try {
+            $dup = (bool) $this->db->table('pkl_surat')->insert(['pengajuan_id' => $a3, 'tahun' => $thn, 'urut' => $dasar + 1, 'nomor' => 'X', 'tanggal_surat' => "$thn-03-06", 'created_at' => date('Y-m-d H:i:s')]);
+        } catch (\Throwable) {
+            $dup = false;
+        }
+        $this->cek('DB: nomor ganda (tahun, urut) ditolak UNIQUE', $dup === false && $this->db->table('pkl_surat')->where('pengajuan_id', $a3)->countAllResults() === 0);
+
+        $setPeng(['nomor_awal' => $dasar + 20, 'nomor_awal_tahun' => $thn]);
+        $a4 = $setuju('PT ZZUJI Surat C', [$pj($s[44])]);
+        $a5 = $setuju('PT ZZUJI Surat D', [$pj($s[45])]);
+        $r4 = $svc->terbitkan($a4, "$thn-03-06", $admin);
+        $r5 = $svc->terbitkan($a5, "$thn-03-06", $admin);
+        $this->cek('lantai "nomor berikutnya" dihormati lalu lanjut berurutan', (int) $r4['surat']['urut'] === $dasar + 20 && (int) $r5['surat']['urut'] === $dasar + 21);
+        $dasarDepan = $maksTahun($thn + 1);
+        $a6 = $setuju('PT ZZUJI Surat E', [$pj($s[46])]);
+        $r6 = $svc->terbitkan($a6, ($thn + 1) . '-01-10', $admin);
+        $this->cek('tahun berbeda → urutan sendiri (lantai tahun lain tak berlaku)', (int) $r6['surat']['urut'] === $dasarDepan + 1 && (int) $r6['surat']['tahun'] === $thn + 1, json_encode($r6['surat'] ?? null));
+        $setPeng(['nomor_awal' => 1, 'nomor_awal_tahun' => null, 'format_nomor' => '{urut3}/PKL/{bln_romawi}/{thn}']);
+        $a7 = $setuju('PT ZZUJI Surat F', [$pj($s[47])]);
+        $r7 = $svc->terbitkan($a7, "$thn-03-06", $admin);
+        $this->cek('format nomor kustom dipakai', (bool) preg_match('#^\d{3,}/PKL/III/' . $thn . '$#', $r7['surat']['nomor']), (string) ($r7['surat']['nomor'] ?? ''));
+        $setPeng(['format_nomor' => '{urut}/PKL/{tgl}-{bln}-{thn}']);
+
+        // ---------- perlu cetak ulang ----------
+        $st = $svc->statusBanyak([$a1, $a2]);
+        $this->cek('baru diterbitkan: tidak perlu cetak ulang', $st[$a1]['perlu_ulang'] === false && $st[$a2]['perlu_ulang'] === false && $st[$a1]['nomor'] === $r1['surat']['nomor']);
+        $ajuan->ubahIsi($a1, $this->dataLangsung('PT ZZUJI Surat A Ganti', $tgl(10), $tgl(100)), [$pj($s[40]), $tm($s[41])], $admin);
+        $st = $svc->statusBanyak([$a1, $a2]);
+        $this->cek('data ajuan berubah → a1 PERLU CETAK ULANG, a2 tidak', $st[$a1]['perlu_ulang'] === true && $st[$a2]['perlu_ulang'] === false);
+        $m = $svc->muat($a1);
+        $this->cek('sidik langsung (muat) konsisten dengan statusBanyak', \App\Libraries\PklSurat::sidik($m['ajuan'], $m['anggota']) !== (string) $svc->surat($a1)['sidik']);
+
+        // ---------- berkas Word bawaan ----------
+        $b = $svc->bangun([$a1, $a2], $admin);
+        $xml = $b['ok'] ? $this->xmlDocx($b['biner']) : '';
+        $this->cek('bangun 2 surat: berhasil, berkas .docx', $b['ok'] && ($b['jumlah'] ?? 0) === 2 && str_ends_with((string) $b['nama'], '.docx') && str_starts_with((string) $b['biner'], 'PK'), json_encode($b['pesan'] ?? $b['nama'] ?? ''));
+        $this->cek('isi dokumen = XML Word sah', $this->xmlSah($xml));
+        $this->cek('isi memuat nomor, perusahaan, siswa, penanda tangan', str_contains($xml, htmlspecialchars($r1['surat']['nomor'])) && str_contains($xml, 'PT ZZUJI Surat A Ganti') && str_contains($xml, 'ZZUJI PKL 41') && str_contains($xml, 'Budi Santoso, S.Pd.') && str_contains($xml, 'NIP. 198001012005011001'));
+        $this->cek('dua surat dipisah SATU pindah halaman', substr_count($xml, '<w:br w:type="page"/>') === 1);
+        $this->cek('tabel siswa memuat kolom judul & kompetensi keahlian', str_contains($xml, 'Kompetensi Keahlian') && str_contains($xml, 'NISN'));
+        $st = $svc->statusBanyak([$a1, $a2]);
+        $this->cek('setelah diunduh: tak lagi perlu cetak ulang, cetak_ke naik, riwayat tercatat', $st[$a1]['perlu_ulang'] === false && (int) $svc->surat($a1)['cetak_ke'] === 1 && $this->db->table('pkl_riwayat')->where('pengajuan_id', $a1)->where('aksi', 'cetak')->countAllResults() === 1);
+        $b2 = $svc->bangun([$a1], $admin);
+        $this->cek('unduh lagi: nomor tetap, cetak_ke 2', $b2['ok'] && (int) $svc->surat($a1)['cetak_ke'] === 2 && $svc->surat($a1)['nomor'] === $r1['surat']['nomor'] && str_contains((string) $b2['nama'], self::amanNomor($r1['surat']['nomor'])), (string) ($b2['nama'] ?? ''));
+        $tak = $svc->bangun([$a3], $admin);
+        $this->cek('bangun untuk ajuan belum disetujui ditolak', $tak['ok'] === false);
+
+        $a8 = $setuju('PT ZZUJI & <Mitra> "Q"', [$pj($s[48])]);
+        $b8 = $svc->bangun([$a8], $admin);
+        $x8 = $b8['ok'] ? $this->xmlDocx($b8['biner']) : '';
+        $this->cek('karakter khusus (& < > ") di-escape → XML tetap sah & teks utuh', $this->xmlSah($x8) && str_contains($x8, 'PT ZZUJI &amp; &lt;Mitra&gt; &quot;Q&quot;'));
+        $this->cek('nama berkas aman dari karakter terlarang', ! preg_match('#[\\\\/:*?"<>|]#', (string) $b8['nama']), (string) ($b8['nama'] ?? ''));
+
+        // ---------- template Word sekolah ----------
+        $badan = '<w:p><w:r><w:t>Nomor ${nom</w:t></w:r><w:r><w:t>or} untuk ${perusahaan}</w:t></w:r></w:p>'
+            . \App\Libraries\PklDocx::tabel([['${no}', '${siswa_nama}']], [600, 4000])
+            . '<w:p><w:r><w:t>${siswa_daftar} | ${tidak_ada}</w:t></w:r></w:p>';
+        $tmpl = sys_get_temp_dir() . DIRECTORY_SEPARATOR . 'ujitmpl_' . uniqid() . '.docx';
+        file_put_contents($tmpl, \App\Libraries\PklDocx::dokumen([$badan], null));
+        $pen = \App\Libraries\PklDocx::penandaDi($tmpl);
+        $this->cek('penandaDi: penanda yang terpecah antar-bagian ditemukan utuh', in_array('nomor', $pen, true) && in_array('siswa_nama', $pen, true) && in_array('tidak_ada', $pen, true) && ! in_array('nom', $pen, true), json_encode($pen));
+        $baris = static fn (string $no, string $nama): array => ['no' => $no, 'nama' => $nama, 'nis' => '', 'nisn' => '1', 'kelas' => 'XI', 'jurusan' => 'TKJ'];
+        $isi = \App\Libraries\PklDocx::dariTemplate($tmpl, [
+            ['v' => ['nomor' => 'A/1', 'perusahaan' => 'PT & Co', 'siswa_daftar' => "1. Satu\n2. Dua"], 'siswa' => [$baris('1', 'Siswa Satu'), $baris('2', 'Siswa Dua')]],
+            ['v' => ['nomor' => 'B/2', 'perusahaan' => 'CV Lain', 'siswa_daftar' => '1. Tiga'], 'siswa' => [$baris('1', 'Siswa Tiga')]],
+        ]);
+        $xt = $this->xmlDocx($isi);
+        $this->cek('template: hasil XML sah', $this->xmlSah($xt));
+        $this->cek('template: penanda terpecah terisi, nilai ber-& di-escape', str_contains($xt, 'Nomor A/1 untuk PT &amp; Co') && str_contains($xt, 'Nomor B/2 untuk CV Lain'));
+        $this->cek('template: baris tabel digandakan per siswa (2 + 1 = 3 baris)', substr_count($xt, '<w:tr>') === 3 && str_contains($xt, 'Siswa Satu') && str_contains($xt, 'Siswa Dua') && str_contains($xt, 'Siswa Tiga') && ! str_contains($xt, '${no}'));
+        $this->cek('template: penanda tak dikenal dibiarkan terlihat; baris baru jadi <w:br/>; surat dipisah halaman', str_contains($xt, '${tidak_ada}') && str_contains($xt, '<w:br/>') && substr_count($xt, '<w:br w:type="page"/>') === 1);
+        $this->cek('template: berkas pendukung (styles, rels) ikut tersalin', (function () use ($isi) {
+            $f = tempnam(sys_get_temp_dir(), 'ujz');
+            file_put_contents($f, $isi);
+            $z = new \ZipArchive();
+            $z->open($f);
+            $ada = $z->locateName('word/styles.xml') !== false && $z->locateName('[Content_Types].xml') !== false;
+            $z->close();
+            @unlink($f);
+
+            return $ada;
+        })());
+
+        $tujuan = \App\Libraries\PklSurat::dirBerkas() . \App\Libraries\PklSurat::BERKAS_TEMPLATE;
+        copy($tmpl, $tujuan);
+        $setPeng(['template_surat' => \App\Libraries\PklSurat::BERKAS_TEMPLATE]);
+        $bt = $svc->bangun([$a2], $admin);
+        $xb = $bt['ok'] ? $this->xmlDocx($bt['biner']) : '';
+        $this->cek('bangun memakai template unggahan bila ada (bukan surat bawaan)', $bt['ok'] && str_contains($xb, 'untuk PT ZZUJI Surat B') && ! str_contains($xb, 'Kompetensi Keahlian'), json_encode($bt['pesan'] ?? ''));
+        @unlink($tujuan);
+        $setPeng(['template_surat' => null]);
+        $bx = $svc->bangun([$a2], $admin);
+        $this->cek('template dihapus → kembali ke surat bawaan', $bx['ok'] && str_contains($this->xmlDocx($bx['biner']), 'Kompetensi Keahlian'));
+        $setPeng(['template_surat' => 'tidak_ada.docx']);
+        $by = $svc->bangun([$a2], $admin);
+        $this->cek('berkas template hilang dari disk → otomatis surat bawaan (tak error)', $by['ok'] && str_contains($this->xmlDocx($by['biner']), 'Kompetensi Keahlian'));
+        $setPeng(['template_surat' => null]);
+        @unlink($tmpl);
+        $contoh = $svc->contohTemplate();
+        $xc = $this->xmlDocx($contoh);
+        $this->cek('contoh template memuat semua penanda & sah', $this->xmlSah($xc) && str_contains($xc, '${nomor}') && str_contains($xc, '${siswa_nama}') && str_contains($xc, '${waka_nama}'));
+
+        // ---------- impor riwayat lama ----------
+        $x  = new \PhpOffice\PhpSpreadsheet\Spreadsheet();
+        $ws = $x->getActiveSheet();
+        $serial = \PhpOffice\PhpSpreadsheet\Shared\Date::PHPToExcel(new \DateTime('2026-01-05'));
+        $ws->fromArray([
+            ['NIS', 'Nama', 'Kelas', 'Perusahaan', 'Alamat', 'Kota', 'Telepon', 'Kontak', 'Jabatan', 'Mulai', 'Selesai'],
+            ['ZZUJIPKL50', '', '', 'PT ZZUJI Impor', 'Jl. Impor 1, Cikarang', 'bekasi', '021-888 777', 'bapak impor', 'HRD', '2026-01-05', '2026-04-05'],
+            ['ZZUJIPKL51', '', '', 'PT ZZUJI Impor', '', '', '', '', '', $serial, '05/04/2026'],
+            ['', 'zzuji pkl 52', $k['nama_kelas'], 'PT ZZUJI Impor', '', '', '', '', '', '5-1-2026', '2026-04-05'],
+            ['TIDAKADA', '', '', 'PT ZZUJI Impor', '', '', '', '', '', '2026-01-05', '2026-04-05'],
+            ['ZZUJIPKL50', '', '', 'PT ZZUJI Impor', '', '', '', '', '', '2026-01-05', '2026-04-05'],
+            ['ZZUJIPKL53', '', '', 'PT ZZUJI Impor', '', '', '', '', '', 'bukan tanggal', '2026-04-05'],
+            ['ZZUJIPKL40', '', '', 'PT ZZUJI Impor', '', '', '', '', '', '2026-01-05', '2026-04-05'],
+            ['ZZUJIPKL54', '', '', 'PT ZZUJI Impor B', '', 'Jakarta', '', '', '', '2026-02-01', '2026-05-01'],
+            ['', '', '', '', '', '', '', '', '', '', ''],
+        ], null, 'A1');
+        $xlsx = sys_get_temp_dir() . DIRECTORY_SEPARATOR . 'ujiimpor_' . uniqid() . '.xlsx';
+        (new \PhpOffice\PhpSpreadsheet\Writer\Xlsx($x))->save($xlsx);
+
+        $imp = new \App\Libraries\PklImpor();
+        $pra = $imp->baca($xlsx);
+        $this->cek('impor pratinjau: 2 kelompok, 4 siswa, 4 baris bermasalah, baris kosong diabaikan', count($pra['kelompok']) === 2 && $pra['ringkas']['siswa'] === 4 && $pra['ringkas']['galat'] === 4, json_encode($pra['ringkas']));
+        $pesan = implode(' | ', array_column($pra['galat'], 'pesan'));
+        $this->cek('impor: galat jelas (tak ditemukan, dobel, tanggal, sudah aktif)', str_contains($pesan, 'tidak ditemukan') && str_contains($pesan, 'dua kali') && str_contains($pesan, 'Tanggal mulai/selesai') && str_contains($pesan, 'sudah punya ajuan PKL aktif'), $pesan);
+        $kel = $pra['kelompok'][0];
+        $this->cek('impor: tiga format tanggal (teks, serial Excel, d/m/Y & j-n-Y) → satu kelompok; kolom opsional dilengkapi', count($kel['siswa']) === 3 && $kel['mulai'] === '2026-01-05' && $kel['selesai'] === '2026-04-05' && $kel['kota'] === 'Bekasi' && $kel['telepon'] === '021888777' && $kel['kontak_nama'] === 'Bapak Impor');
+        $this->cek('impor: siswa dicocokkan lewat NIS maupun Nama+Kelas (tak peka huruf besar)', array_column($kel['siswa'], 'siswa_id') === [$s[50], $s[51], $s[52]]);
+        $sebelum = $this->db->table('pkl_pengajuan')->countAllResults();
+        $this->cek('impor: pratinjau TIDAK menyimpan apa pun', $this->db->table('pkl_pengajuan')->countAllResults() === $sebelum);
+
+        $sim = $imp->simpan($pra, $admin);
+        $this->cek('impor simpan: 2 ajuan, 4 siswa', $sim['dibuat'] === 2 && $sim['siswa'] === 4 && $sim['gagal'] === [], json_encode($sim));
+        $row = $this->db->query("SELECT p.* FROM pkl_pengajuan p JOIN pkl_anggota a ON a.pengajuan_id = p.id WHERE a.siswa_id = ? AND a.peran = 'pengaju'", [$s[50]])->getRowArray() ?? [];
+        $this->cek('impor: ajuan Disetujui, sumber impor, tertaut master', ($row['status'] ?? '') === 'disetujui' && ($row['sumber'] ?? '') === 'impor' && (int) ($row['perusahaan_id'] ?? 0) > 0 && ($row['perusahaan_nama'] ?? '') === 'PT ZZUJI Impor');
+        $idImp = (int) ($row['id'] ?? 0);
+        $this->cek('impor: ketiga siswa terkunci; pengaju & teman benar', $this->kunci($idImp) === [$s[50] => $s[50], $s[51] => $s[51], $s[52] => $s[52]] && $this->db->table('pkl_anggota')->where('pengajuan_id', $idImp)->where('peran', 'teman')->countAllResults() === 2);
+        $this->cek('impor: riwayat "impor" tercatat, Status Siswa membaca mereka sebagai sudah PKL', $this->db->table('pkl_riwayat')->where('pengajuan_id', $idImp)->where('aksi', 'impor')->countAllResults() === 1 && count(array_filter($model->statusSiswa(['XI'], 0, 'ZZUJI PKL 5', 'sudah_pkl', 50, 1)[0], static fn ($r) => (int) $r['ajuan_id'] === $idImp)) === 3);
+        $jml = $this->db->table('pkl_pengajuan')->countAllResults();
+        $sim2 = $imp->simpan($pra, $admin);
+        $this->cek('impor disimpan DUA KALI: tak ada ajuan ganda (siswa sudah terkunci), gagal dilaporkan', $sim2['dibuat'] === 0 && count($sim2['gagal']) === 2 && $this->db->table('pkl_pengajuan')->countAllResults() === $jml, json_encode($sim2));
+        @unlink($xlsx);
+        $bad = sys_get_temp_dir() . DIRECTORY_SEPARATOR . 'ujirusak_' . uniqid() . '.xlsx';
+        file_put_contents($bad, 'bukan excel');
+        $galatBaca = '';
+        try {
+            $imp->baca($bad);
+        } catch (\RuntimeException $e) {
+            $galatBaca = $e->getMessage();
+        }
+        @unlink($bad);
+        $this->cek('berkas rusak/kosong → pesan ramah berbahasa Indonesia, bukan galat sistem', $galatBaca !== '' && ! str_contains($galatBaca, 'PhpOffice') && ! str_contains($galatBaca, '.php'), $galatBaca);
+        $this->cek('contoh berkas impor sah (zip xlsx)', str_starts_with(\App\Libraries\PklImpor::contoh(), 'PK'));
+        $this->cek('periksaKonsistensi(): data uji tahap 4 konsisten', array_filter($ajuan->periksaKonsistensi(), fn ($z) => in_array((int) $z['siswa_id'], $s, true)) === []);
+    }
+
+    /** Padanan PklSurat::amanNama untuk nomor (garis miring → strip) — dipakai mencocokkan nama berkas unduhan. */
+    private static function amanNomor(string $nomor): string
+    {
+        return \App\Libraries\PklSurat::amanNama($nomor);
     }
 
     // =================================================================

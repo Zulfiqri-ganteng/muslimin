@@ -62,7 +62,7 @@ class Peran extends BaseConfig
             // di 'akses' (tolak-secara-bawaan); jangan menambah awalan itu ke Hubin. Dijaga dev:uji-pkl.
             'akses'   => ['admin/pkl'],
             // Pengecualian dari 'akses': alamat di bawah awalan ini DITOLAK walau induknya boleh.
-            'kecuali' => ['admin/pkl/pengaturan', 'admin/pkl/hapus'],
+            'kecuali' => ['admin/pkl/pengaturan', 'admin/pkl/hapus', 'admin/pkl/impor'],
             'api'     => false,
         ],
     ];

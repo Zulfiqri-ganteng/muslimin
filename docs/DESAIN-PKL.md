@@ -225,8 +225,26 @@ Tampilan beda per peran: **Hubin** = fokus memutuskan (antrean "Menunggu ACC" di
       samping, tanpa galat JS). Skrip HTTP/foto ada di folder sementara (tidak di repo).
       **Definisi "Sudah PKL"** = ajuan sudah disetujui (dirinci belum mulai / sedang / selesai
       menurut tanggal); "Sudah mengisi" = punya ajuan aktif.
-- [ ] **T4 Surat Word + nomor + rekap** — PhpWord · template bawaan & unggahan · nomor surat ·
-      cetak satuan/massal · "perlu cetak ulang" · Excel status siswa · impor riwayat PKL lama.
+- [x] **ACC MASSAL (tambahan, 2026-10-08):** tab Menunggu punya kolom "Pemeriksaan" (✓ Aman / ⚠ n peringatan) + tombol
+      "ACC terpilih" & "ACC semua yang aman" (`Admin\Pkl::accMassal`, maks 200/klik). HANYA ajuan tanpa peringatan
+      bahaya/periksa yang di-ACC; sisanya dilewati & dilaporkan beralasan. Tiap ajuan transaksi sendiri; riwayat
+      "ACC massal". Uji HTTP 10 cek.
+- [x] **T4 Surat Word + nomor + rekap — SELESAI 2026-10-08** (lokal). **Migrasi BARU:**
+      `2026-10-08-000001_PklSurat` (tabel `pkl_surat` UNIQUE(tahun, urut) + 7 kolom di `pkl_pengaturan`).
+      TANPA PhpWord (vendor ikut di git, hosting hanya `git pull`): `Libraries\PklDocx` membuat .docx sendiri
+      lewat ZipArchive — surat bawaan (kop+logo sekolah, tabel siswa+kompetensi keahlian, ruang TTD+stempel
+      KOSONG), pengisi TEMPLATE Word sekolah (penanda `${...}`, penanda yang dipecah Word dirapikan, baris
+      tabel digandakan per siswa), penggabung surat massal (pindah halaman). `PklNomorSurat` (format bertoken,
+      per tahun, lantai "nomor berikutnya"), `PklSurat` (terbitkan dikunci FOR UPDATE + UNIQUE, sidik data →
+      "perlu cetak ulang", rakit satu/massal; >60 surat → ZIP), `PklImpor` (Excel riwayat lama, pratinjau
+      dulu, cocok lewat NIS atau Nama+Kelas, gabung per perusahaan+tanggal), `Admin\PklBerkas` + view
+      `admin/pkl/impor`. UI: blok Surat di detail, kolom Surat + unduh massal di tab Disetujui, bagian Surat &
+      template & tautan impor di Pengaturan, tombol Excel di Status Siswa. Hubin: boleh unduh surat & Excel,
+      DITOLAK untuk template & impor (`kecuali` admin/pkl/impor). Template unggahan disimpan di
+      `writable/pkl/` (perlu bisa ditulis di hosting). **Uji:** `dev:uji-pkl` 268 cek + HTTP 28 cek.
+      **BELUM dibuka di Microsoft Word sungguhan** (hanya divalidasi XML & urutan elemen) — minta user
+      membuka satu surat hasil unduhan dan melapor bila Word mengeluh. Contoh surat sekolah dari teman user
+      belum diterima → surat bawaan; ganti lewat unggah template.
 - [ ] **T5 Uji menyeluruh + panduan + pasang** — e2e Chrome (subdomain) · regresi halaman admin ·
       help card semua halaman · langkah deploy (`git pull`, `phpm spark migrate`, subdomain).
 

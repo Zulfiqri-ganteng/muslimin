@@ -32,7 +32,7 @@ $tinjau = [
 <?= $this->section('content') ?>
 
 <?= view('admin/partials/help', [
-    'helpKey'   => 'pkl_pengaturan_v1',
+    'helpKey'   => 'pkl_pengaturan_v2',
     'helpTitle' => 'Pengaturan PKL',
     'helpBody'  => '<p>Atur <b>kapan</b> siswa boleh mengisi, <b>siapa</b> yang boleh (tingkat), dan <b>pagar tanggal</b> PKL.</p>'
         . '<ul class="mt-2 list-disc pl-5 space-y-1">'
@@ -40,6 +40,8 @@ $tinjau = [
         . '<li><b>Lama PKL</b> menjaga PKL yang terlalu singkat/panjang akibat salah ketik.</li>'
         . '<li>Form <b>tertutup</b> secara bawaan. Buka hanya saat tautan siap dibagikan; bisa diberi <b>batas waktu</b> agar menutup sendiri.</li>'
         . '<li>Siswa yang sudah punya ajuan aktif tetap tidak bisa mengajukan lagi, apa pun pengaturannya.</li>'
+        . '<li><b>Surat permohonan:</b> isi nama/NIP/jabatan Waka Hubin dan format nomor surat. Untuk kop dan kalimat persis surat sekolah, unggah <b>template Word</b> (unduh contohnya dulu).</li>'
+        . '<li><b>Impor riwayat PKL lama</b> dari Excel ada di bagian bawah halaman ini.</li>'
         . '</ul>',
 ]) ?>
 
@@ -142,6 +144,47 @@ $tinjau = [
         </div>
     </section>
 
+    <!-- Surat -->
+    <section class="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm"
+             x-data="{ pola: <?= esc(json_encode($nilai('format_nomor', \App\Libraries\PklNomorSurat::BAWAAN)), 'attr') ?>,
+                       contoh() { const d = new Date(), p = n => String(n).padStart(2, '0'), r = ['I','II','III','IV','V','VI','VII','VIII','IX','X','XI','XII'];
+                                  return (this.pola || '').split('{urut}').join('7').split('{urut3}').join('007').split('{urut4}').join('0007').split('{tgl}').join(p(d.getDate())).split('{bln}').join(p(d.getMonth() + 1)).split('{bln_romawi}').join(r[d.getMonth()]).split('{thn}').join(d.getFullYear()); } }">
+        <h3 class="border-b border-slate-100 bg-slate-50 px-5 py-3 text-xs font-bold uppercase tracking-wide text-slate-500">Surat permohonan PKL</h3>
+        <div class="space-y-4 p-5">
+            <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                <div>
+                    <label class="lbl" for="f_waka_nama">Nama Waka Hubin (penanda tangan)</label>
+                    <input id="f_waka_nama" type="text" name="waka_hubin_nama" maxlength="150" value="<?= esc($nilai('waka_hubin_nama'), 'attr') ?>" class="inp <?= $cls('waka_hubin_nama') ?>" placeholder="Contoh: Budi Santoso, S.Pd.">
+                    <?= $err('waka_hubin_nama') ?>
+                </div>
+                <div>
+                    <label class="lbl" for="f_waka_nip">NIP <span class="font-normal text-slate-400">(opsional)</span></label>
+                    <input id="f_waka_nip" type="text" name="waka_hubin_nip" maxlength="40" inputmode="numeric" value="<?= esc($nilai('waka_hubin_nip'), 'attr') ?>" class="inp" placeholder="Hanya angka">
+                </div>
+            </div>
+            <div>
+                <label class="lbl" for="f_waka_jabatan">Jabatan di surat</label>
+                <input id="f_waka_jabatan" type="text" name="waka_hubin_jabatan" maxlength="150" value="<?= esc($nilai('waka_hubin_jabatan', 'Wakil Kepala Sekolah Bidang Hubungan Industri'), 'attr') ?>" class="inp <?= $cls('waka_hubin_jabatan') ?>">
+                <?= $err('waka_hubin_jabatan') ?>
+            </div>
+            <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                <div>
+                    <label class="lbl" for="f_format_nomor">Format nomor surat</label>
+                    <input id="f_format_nomor" type="text" name="format_nomor" maxlength="100" x-model="pola" class="inp font-mono <?= $cls('format_nomor') ?>">
+                    <p class="mt-1 text-xs text-slate-500">Contoh hasil: <b class="font-mono text-slate-700" x-text="contoh()"></b></p>
+                    <p class="mt-1 text-[11px] leading-relaxed text-slate-400">Penanda: <code>{urut}</code> <code>{urut3}</code> (007) <code>{tgl}</code> <code>{bln}</code> <code>{bln_romawi}</code> <code>{thn}</code>. Urutan dihitung per tahun dan ditetapkan sekali per surat.</p>
+                    <?= $err('format_nomor') ?>
+                </div>
+                <div>
+                    <label class="lbl" for="f_nomor_awal">Nomor berikutnya (tahun ini)</label>
+                    <input id="f_nomor_awal" type="number" min="1" max="99999" name="nomor_awal" value="<?= esc($nilai('nomor_awal', '1'), 'attr') ?>" class="inp <?= $cls('nomor_awal') ?>">
+                    <p class="mt-1 text-xs text-slate-400">Isi bila sekolah sudah memakai nomor berjalan (mis. sudah sampai 44 → isi 45). Nomor tak pernah mundur atau ganda.</p>
+                    <?= $err('nomor_awal') ?>
+                </div>
+            </div>
+        </div>
+    </section>
+
     <div class="rounded-2xl border border-slate-200 bg-white px-5 py-3.5 text-sm text-slate-600 shadow-sm">
         Dengan pengaturan tersimpan saat ini, <b><?= (int) $siswa['total'] ?></b> siswa dihitung (belum mengisi: <b><?= (int) $siswa['belum_isi'] ?></b>).
         Perubahan tingkat langsung mengubah daftar kelas dan nama yang dilihat siswa.
@@ -152,4 +195,43 @@ $tinjau = [
     </div>
 </form>
 
+<?php $templateAda = \App\Libraries\PklSurat::pathTemplate($p) !== null; ?>
+<div class="mx-auto mt-5 max-w-3xl space-y-5">
+    <section class="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+        <h3 class="border-b border-slate-100 bg-slate-50 px-5 py-3 text-xs font-bold uppercase tracking-wide text-slate-500">Template surat Word milik sekolah</h3>
+        <div class="space-y-3 p-5 text-sm text-slate-600">
+            <p>
+                Saat ini surat memakai
+                <b class="<?= $templateAda ? 'text-green-700' : 'text-slate-800' ?>"><?= $templateAda ? 'TEMPLATE UNGGAHAN sekolah' : 'tampilan BAWAAN' ?></b>.
+                Ingin kop, huruf, dan kalimat persis seperti surat sekolah? Unduh contoh, sunting di Word (jangan ubah penanda <code>${...}</code>), lalu unggah.
+            </p>
+            <div class="flex flex-wrap gap-2">
+                <a href="<?= site_url('admin/pkl/pengaturan/template?contoh=1') ?>" class="rounded-lg border border-slate-300 px-3.5 py-2 font-semibold text-slate-700 hover:bg-slate-50">⬇ Unduh contoh template</a>
+                <?php if ($templateAda): ?><a href="<?= site_url('admin/pkl/pengaturan/template') ?>" class="rounded-lg border border-slate-300 px-3.5 py-2 font-semibold text-slate-700 hover:bg-slate-50">⬇ Unduh template aktif</a><?php endif; ?>
+            </div>
+            <form method="post" action="<?= site_url('admin/pkl/pengaturan/template') ?>" enctype="multipart/form-data" class="flex flex-col gap-2 sm:flex-row sm:items-center">
+                <?= csrf_field() ?>
+                <input type="file" name="template" accept=".docx" required class="block w-full text-sm file:mr-3 file:rounded-lg file:border-0 file:bg-brand-50 file:px-3.5 file:py-2 file:font-semibold file:text-brand-700">
+                <button type="submit" class="shrink-0 rounded-lg bg-brand-700 px-4 py-2.5 font-semibold text-white hover:bg-brand-800">Unggah template</button>
+            </form>
+            <?php if ($templateAda): ?>
+                <form method="post" action="<?= site_url('admin/pkl/pengaturan/template/hapus') ?>" onsubmit="return confirm('Hapus template dan kembali ke surat bawaan?')">
+                    <?= csrf_field() ?>
+                    <button type="submit" class="text-xs font-semibold text-red-600 hover:underline">Hapus template (kembali ke surat bawaan)</button>
+                </form>
+            <?php endif; ?>
+            <details class="rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-xs leading-relaxed">
+                <summary class="cursor-pointer font-bold text-slate-700">Daftar penanda yang bisa dipakai</summary>
+                <p class="mt-2"><b>Umum:</b> <?php foreach (\App\Libraries\PklSurat::SKALAR as $k): ?><code class="mr-1">${<?= $k ?>}</code><?php endforeach; ?></p>
+                <p class="mt-2"><b>Tabel siswa</b> (taruh dalam SATU baris tabel; baris itu otomatis digandakan sebanyak siswa): <?php foreach (\App\Libraries\PklSurat::BARIS as $k): ?><code class="mr-1">${<?= $k ?>}</code><?php endforeach; ?></p>
+            </details>
+        </div>
+    </section>
+
+    <section class="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+        <h3 class="text-xs font-bold uppercase tracking-wide text-slate-500">Data PKL lama</h3>
+        <p class="mt-2 text-sm text-slate-600">Punya daftar siswa yang sudah PKL sebelum sistem ini (di Excel)? Impor supaya mereka tercatat sudah PKL dan tak bisa mengajukan lagi.</p>
+        <a href="<?= site_url('admin/pkl/impor') ?>" class="mt-3 inline-flex rounded-lg border border-brand-200 bg-brand-50 px-4 py-2 text-sm font-semibold text-brand-700 hover:bg-brand-100">Impor riwayat PKL dari Excel →</a>
+    </section>
+</div>
 <?= $this->endSection() ?>
