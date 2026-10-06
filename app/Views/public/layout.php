@@ -54,6 +54,7 @@ if ((int) ($setting['dokumen_publik'] ?? 0) === 1) {
             <?php if ($formOpen): ?>
                 <a href="<?= site_url('isi') ?>" class="ml-1 px-4 py-2 rounded-lg bg-brand-700 hover:bg-brand-800 text-white text-sm font-semibold transition">Form Kesediaan</a>
             <?php endif; ?>
+            <a href="<?= site_url('admin/login') ?>" class="ml-1 inline-flex items-center gap-1.5 px-3.5 py-2 rounded-lg border border-slate-300 text-slate-700 hover:bg-slate-100 text-sm font-semibold transition"><svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/></svg> Login</a>
         </nav>
 
         <!-- mobile toggle -->
@@ -70,6 +71,7 @@ if ((int) ($setting['dokumen_publik'] ?? 0) === 1) {
         <?php if ($formOpen): ?>
             <a href="<?= site_url('isi') ?>" class="block px-3 py-2 rounded-lg bg-brand-700 text-white text-sm font-semibold text-center">Form Kesediaan</a>
         <?php endif; ?>
+        <a href="<?= site_url('admin/login') ?>" class="flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg border border-slate-300 text-slate-700 text-sm font-semibold"><svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/></svg> Login</a>
     </div>
 </header>
 

@@ -784,6 +784,10 @@ class UjiPkl extends BaseCommand
         $this->cek('hak akses: Hubin DITOLAK di pengaturan & hapus (termasuk tipuan huruf/garis)', ! \App\Libraries\HakAkses::boleh('hubin', 'admin/pkl/pengaturan') && ! \App\Libraries\HakAkses::boleh('hubin', 'admin/pkl/hapus/3') && ! \App\Libraries\HakAkses::boleh('hubin', 'ADMIN/PKL/Pengaturan') && ! \App\Libraries\HakAkses::boleh('hubin', 'admin//pkl/pengaturan/') && ! \App\Libraries\HakAkses::boleh('hubin', 'admin/pkl/pengaturan?x=1'));
         $this->cek('hak akses: Operator & Admin boleh pengaturan dan hapus', \App\Libraries\HakAkses::boleh('operator', 'admin/pkl/pengaturan') && \App\Libraries\HakAkses::boleh('operator', 'admin/pkl/hapus/3') && \App\Libraries\HakAkses::boleh('admin', 'admin/pkl/pengaturan'));
         $this->cek('hak akses: Hubin tetap tak boleh area lain; peran tak dikenal tak boleh apa pun', ! \App\Libraries\HakAkses::boleh('hubin', 'admin/master/siswa') && ! \App\Libraries\HakAkses::boleh('hubin', 'admin/akun') && ! \App\Libraries\HakAkses::boleh('xyz', 'admin/pkl'));
+        $terlarang = ['admin/biodata', 'admin/biodata/12', 'admin/biodata/laporan', 'admin/master/siswa', 'admin/master/kelas', 'admin/master/guru', 'admin/master/jurusan', 'admin/master/mapel', 'admin/dokumen', 'admin/settings', 'admin/dashboard'];
+        $bocor = array_values(array_filter($terlarang, static fn (string $a) => \App\Libraries\HakAkses::boleh('hubin', $a)));
+        $this->cek('KEPUTUSAN: Hubin TIDAK boleh Isian Biodata Siswa & Master Data (dan area non-PKL lain)', $bocor === [], json_encode($bocor));
+        $this->cek('Operator tetap boleh Isian Biodata & Master Siswa/Kelas (tak ikut terkunci)', \App\Libraries\HakAkses::boleh('operator', 'admin/biodata') && \App\Libraries\HakAkses::boleh('operator', 'admin/master/siswa') && \App\Libraries\HakAkses::boleh('operator', 'admin/master/kelas'));
 
         // ---------- 6h. konsistensi akhir & hapus ----------
         $this->cek('periksaKonsistensi(): seluruh data uji tahap 3 konsisten', array_filter($ajuan->periksaKonsistensi(), fn ($x) => in_array((int) $x['siswa_id'], $s, true)) === []);

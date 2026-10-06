@@ -57,7 +57,7 @@ Satu sumber kebenaran: `Config\Peran` (daftar peran + awalan alamat yang boleh d
 |---|---|---|
 | admin | semua (`*`) + Kelola Akun | dashboard |
 | operator | `admin/pkl`, `biodata`, `master/siswa`, `master/kelas`, `dokumen` | admin/pkl |
-| hubin | `admin/pkl` | admin/pkl |
+| hubin | `admin/pkl` — KECUALI `admin/pkl/pengaturan` & `admin/pkl/hapus`. **Tidak boleh** Isian Biodata Siswa & Master Data (keputusan user 2026-10-07) | admin/pkl |
 | (semua) | `admin/profile`, `admin/logout` | |
 
 Tambahan di Tahap 1: kolom `admins.aktif` (nonaktifkan tanpa hapus; sesi yang sedang berjalan

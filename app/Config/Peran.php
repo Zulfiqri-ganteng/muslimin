@@ -57,6 +57,9 @@ class Peran extends BaseConfig
             'label'   => 'Waka Hubin',
             'ringkas' => 'Hanya menu PKL: periksa dan ACC ajuan, ubah data, cetak surat. Tidak bisa menghapus data atau mengatur form.',
             'beranda' => 'admin/pkl',
+            // CATATAN KEPUTUSAN (2026-10-07): Hubin TIDAK BOLEH melihat Isian Biodata Siswa
+            // (admin/biodata) maupun Master Data (admin/master/*). Cukup dengan tidak mendaftarkannya
+            // di 'akses' (tolak-secara-bawaan); jangan menambah awalan itu ke Hubin. Dijaga dev:uji-pkl.
             'akses'   => ['admin/pkl'],
             // Pengecualian dari 'akses': alamat di bawah awalan ini DITOLAK walau induknya boleh.
             'kecuali' => ['admin/pkl/pengaturan', 'admin/pkl/hapus'],
