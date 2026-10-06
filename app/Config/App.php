@@ -27,14 +27,15 @@ class App extends BaseConfig
      * also accepts 'http://media.example.com/' and 'http://accounts.example.com/':
      *     ['media.example.com', 'accounts.example.com']
      *
-     * Subdomain form isian biodata siswa (lihat Config\Biodata) WAJIB ada di
-     * sini. Tanpanya CI4 menganggap host itu asing, memakai host baseURL, dan
-     * pengunjung datasiswa.* malah dilempar ke domain utama. Ditulis langsung
-     * karena .env tidak bisa mengisi properti array yang default-nya kosong.
+     * Subdomain form isian biodata siswa (Config\Biodata) dan form pengajuan
+     * PKL (Config\Pkl) WAJIB ada di sini. Tanpanya CI4 menganggap host itu
+     * asing, memakai host baseURL, dan pengunjung subdomain malah dilempar ke
+     * domain utama. Ditulis langsung karena .env tidak bisa mengisi properti
+     * array yang default-nya kosong.
      *
      * @var list<string>
      */
-    public array $allowedHostnames = ['datasiswa.kangmuslim.com'];
+    public array $allowedHostnames = ['datasiswa.kangmuslim.com', 'pklbinus.kangmuslim.com'];
 
     /**
      * --------------------------------------------------------------------------

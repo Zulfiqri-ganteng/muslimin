@@ -14,7 +14,7 @@ use CodeIgniter\Filters\PerformanceMetrics;
 use CodeIgniter\Filters\SecureHeaders;
 use App\Filters\AuthFilter;
 use App\Filters\ApiAuthFilter;
-use App\Filters\BiodataHostFilter;
+use App\Filters\SubdomainHostFilter;
 
 class Filters extends BaseFilters
 {
@@ -39,7 +39,7 @@ class Filters extends BaseFilters
         'performance'   => PerformanceMetrics::class,
         'auth'          => AuthFilter::class,
         'apiauth'       => ApiAuthFilter::class,
-        'biodatahost'   => BiodataHostFilter::class,
+        'subdomainhost' => SubdomainHostFilter::class,
     ];
 
     /**
@@ -78,8 +78,8 @@ class Filters extends BaseFilters
      */
     public array $globals = [
         'before' => [
-            // Subdomain biodata hanya melayani form biodata (lihat filternya).
-            'biodatahost',
+            // Subdomain biodata & PKL hanya melayani form masing-masing (lihat filternya).
+            'subdomainhost',
             // 'honeypot',
             // 'csrf',
             // 'invalidchars',

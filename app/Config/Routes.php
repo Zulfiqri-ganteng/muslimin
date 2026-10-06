@@ -47,6 +47,17 @@ $routes->post('biodata/buka', 'Biodata::buka');
 $routes->post('biodata/kirim', 'Biodata::kirim');
 $routes->get('biodata/selesai', 'Biodata::selesai');
 
+// ===== Pengajuan PKL / Prakerin siswa (TANPA login) — docs/DESAIN-PKL.md =====
+// Pola sama dengan biodata: pintu utama subdomain (config Pkl::$host), pintu
+// cadangan /pkl di domain utama. Alamat staf ada di admin/pkl (grup admin).
+$routes->get('/', 'Pkl::index', ['hostname' => config('Pkl')->host]);
+$routes->get('pkl', 'Pkl::index');
+$routes->get('pkl/siswa', 'Pkl::siswa');
+$routes->get('pkl/perusahaan', 'Pkl::perusahaan');
+$routes->post('pkl/buka', 'Pkl::buka');
+$routes->post('pkl/kirim', 'Pkl::kirim');
+$routes->get('pkl/selesai', 'Pkl::selesai');
+
 // ===================== ADMIN =====================
 $routes->group('admin', static function ($routes) {
     // Autentikasi (tanpa filter)
@@ -75,6 +86,39 @@ $routes->group('admin', static function ($routes) {
         $routes->post('biodata/(:num)/setujui', 'Admin\Biodata::setujui/$1');
         $routes->post('biodata/(:num)/kembalikan', 'Admin\Biodata::kembalikan/$1');
         $routes->post('biodata/(:num)/hapus', 'Admin\Biodata::hapus/$1');
+
+        // ===== PKL / Prakerin (staf) — docs/DESAIN-PKL.md =====
+        // Aksi pengubah data = POST + CSRF (halaman berformulir ikut difilter csrf agar cookie
+        // token terkirim). Rute statis SEBELUM pola (:num). Awalan admin/pkl/pengaturan dan
+        // admin/pkl/hapus DITOLAK untuk Hubin oleh Config\Peran ('kecuali').
+        $routes->get('pkl', 'Admin\Pkl::index');
+        $routes->get('pkl/daftar', static fn () => redirect()->to(site_url('admin/pkl/daftar/menunggu')));
+        $routes->get('pkl/daftar/(:segment)', 'Admin\Pkl::daftar/$1');
+        $routes->get('pkl/siswa', 'Admin\Pkl::siswa');
+        $routes->get('pkl/siswa-kelas', 'Admin\Pkl::siswaKelas');
+        $routes->get('pkl/baru', 'Admin\Pkl::baru', ['filter' => 'csrf']);
+        $routes->post('pkl/baru', 'Admin\Pkl::simpanBaru', ['filter' => 'csrf']);
+        $routes->get('pkl/pengaturan', 'Admin\Pkl::pengaturan', ['filter' => 'csrf']);
+        $routes->post('pkl/pengaturan', 'Admin\Pkl::simpanPengaturan', ['filter' => 'csrf']);
+        $routes->post('pkl/hapus/(:num)', 'Admin\Pkl::hapus/$1', ['filter' => 'csrf']);
+        $routes->get('pkl/(:num)', 'Admin\Pkl::detail/$1', ['filter' => 'csrf']);
+        $routes->get('pkl/(:num)/ubah', 'Admin\Pkl::ubah/$1', ['filter' => 'csrf']);
+        $routes->post('pkl/(:num)/ubah', 'Admin\Pkl::simpanUbah/$1', ['filter' => 'csrf']);
+        $routes->post('pkl/(:num)/acc', 'Admin\Pkl::acc/$1', ['filter' => 'csrf']);
+        $routes->post('pkl/(:num)/kembalikan', 'Admin\Pkl::kembalikan/$1', ['filter' => 'csrf']);
+        $routes->post('pkl/(:num)/tolak', 'Admin\Pkl::tolak/$1', ['filter' => 'csrf']);
+        $routes->post('pkl/(:num)/batal-acc', 'Admin\Pkl::batalAcc/$1', ['filter' => 'csrf']);
+
+        // ===== Kelola Akun Staf (khusus peran admin — dijaga Config\Peran) =====
+        // Semua aksi pengubah data memakai POST. Rute ini bisa menaikkan peran
+        // seseorang, jadi DILINDUNGI CSRF walau filter csrf belum aktif global
+        // (utang lama SEC1): formulirnya memuat csrf_field(), dan GET ikut difilter
+        // agar cookie token terkirim saat halaman dibuka.
+        $routes->get('akun', 'Admin\Akun::index', ['filter' => 'csrf']);
+        $routes->post('akun', 'Admin\Akun::store', ['filter' => 'csrf']);
+        $routes->post('akun/(:num)', 'Admin\Akun::update/$1', ['filter' => 'csrf']);
+        $routes->post('akun/(:num)/reset-sandi', 'Admin\Akun::resetSandi/$1', ['filter' => 'csrf']);
+        $routes->post('akun/(:num)/status', 'Admin\Akun::status/$1', ['filter' => 'csrf']);
 
         // ===== Manajemen Dokumen =====
         // Semua aksi yang mengubah data memakai POST (modul baru sengaja

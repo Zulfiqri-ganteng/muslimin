@@ -3,6 +3,7 @@
 namespace App\Controllers\Admin;
 
 use App\Controllers\BaseController;
+use App\Libraries\HakAkses;
 use App\Models\AdminModel;
 
 class Profile extends BaseController
@@ -92,14 +93,27 @@ class Profile extends BaseController
         if (! password_verify($old, $admin['password'])) {
             return redirect()->back()->with('error', 'Password lama salah.');
         }
-        if (strlen($new) < 6) {
-            return redirect()->back()->with('error', 'Password baru minimal 6 karakter.');
+        if (mb_strlen($new) < 8) {
+            return redirect()->back()->with('error', 'Password baru minimal 8 karakter.');
         }
         if ($new !== $confirm) {
             return redirect()->back()->with('error', 'Konfirmasi password tidak cocok.');
         }
+        if (password_verify($new, $admin['password'])) {
+            return redirect()->back()->with('error', 'Password baru harus berbeda dari password lama.');
+        }
 
-        $this->model->update($id, ['password' => password_hash($new, PASSWORD_DEFAULT)]);
+        // Sekaligus melepas kewajiban ganti sandi (sandi sementara dari admin).
+        $wajib = (int) ($admin['wajib_ganti_sandi'] ?? 0) === 1;
+        $this->model->update($id, [
+            'password'          => password_hash($new, PASSWORD_DEFAULT),
+            'wajib_ganti_sandi' => 0,
+        ]);
+
+        if ($wajib) {
+            return redirect()->to(site_url(HakAkses::beranda($admin['role'] ?? null)))
+                ->with('success', 'Password berhasil diganti. Selamat bekerja!');
+        }
 
         return redirect()->to(site_url('admin/profile'))->with('success', 'Password berhasil diganti.');
     }

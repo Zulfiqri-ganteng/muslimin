@@ -14,6 +14,8 @@ class AdminModel extends Model
 
     protected $allowedFields = [
         'full_name', 'email', 'username', 'password', 'phone', 'photo', 'role',
+        // Akun staf bertingkat peran (migrasi 2026-10-06-000001)
+        'aktif', 'wajib_ganti_sandi', 'last_login_at',
     ];
 
     protected $useTimestamps = true;
@@ -25,6 +27,18 @@ class AdminModel extends Model
         'username'  => 'required|min_length[4]|max_length[100]|is_unique[admins.username,id,{id}]',
         'email'     => 'required|valid_email|is_unique[admins.email,id,{id}]',
     ];
+
+    /**
+     * Jumlah akun berperan 'admin' yang AKTIF selain $kecualiId. Penjaga supaya
+     * sistem tak pernah kehilangan pengelola terakhirnya (lihat Admin\Akun).
+     */
+    public function adminAktifSelain(int $kecualiId): int
+    {
+        return $this->where('role', 'admin')
+            ->where('aktif', 1)
+            ->where('id !=', $kecualiId)
+            ->countAllResults();
+    }
 
     /**
      * Cari admin berdasarkan username atau email (untuk login).

@@ -3,6 +3,7 @@
 namespace App\Filters;
 
 use App\Libraries\ApiAuth;
+use App\Libraries\HakAkses;
 use App\Models\AdminModel;
 use App\Models\ApiTokenModel;
 use CodeIgniter\Filters\FilterInterface;
@@ -36,6 +37,18 @@ class ApiAuthFilter implements FilterInterface
             return $this->unauthorized('Akun tidak ditemukan.');
         }
 
+        // Akun yang dinonaktifkan langsung terputus (401 → aplikasi otomatis keluar).
+        if ((int) ($admin['aktif'] ?? 1) !== 1) {
+            return $this->unauthorized('Akun Anda sudah tidak aktif. Hubungi admin sekolah.');
+        }
+
+        // API admin belum dipilah per peran, jadi hanya peran yang diizinkan
+        // (Config\Peran 'api') yang boleh lewat — menutup pintu belakang bagi
+        // akun terbatas (Operator/Hubin) yang login lewat aplikasi.
+        if (! HakAkses::bolehApi($admin['role'] ?? null)) {
+            return $this->forbidden('Peran akun ini belum bisa memakai aplikasi. Silakan gunakan situs web.');
+        }
+
         unset($admin['password']);
         ApiAuth::set($admin, (int) $tokenRow['id']);
         (new ApiTokenModel())->touch((int) $tokenRow['id']);
@@ -48,8 +61,18 @@ class ApiAuthFilter implements FilterInterface
 
     private function unauthorized(string $message): ResponseInterface
     {
+        return $this->galat(401, $message);
+    }
+
+    private function forbidden(string $message): ResponseInterface
+    {
+        return $this->galat(403, $message);
+    }
+
+    private function galat(int $kode, string $message): ResponseInterface
+    {
         return service('response')
-            ->setStatusCode(401)
+            ->setStatusCode($kode)
             ->setJSON([
                 'status'  => 'error',
                 'ok'      => false,

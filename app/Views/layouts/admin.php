@@ -35,6 +35,13 @@
         ['title' => 'KESISWAAN', 'items' => [
             ['admin/biodata',        'Isian Biodata Siswa', 'M10 6H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V8a2 2 0 00-2-2h-5m-4 0V5a2 2 0 114 0v1m-4 0a2 2 0 104 0m-5 8a2 2 0 100-4 2 2 0 000 4zm0 0c1.306 0 2.417.835 2.83 2M9 14a3.001 3.001 0 00-2.83 2M15 11h3m-3 4h2'],
         ]],
+        ['title' => 'PKL / PRAKERIN', 'items' => [
+            ['admin/pkl',            'Beranda PKL', 'M21 13.255A23.931 23.931 0 0112 15c-3.183 0-6.22-.62-9-1.745M16 6V4a2 2 0 00-2-2h-4a2 2 0 00-2 2v2m4 6h.01M5 20h14a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z', true],
+            ['admin/pkl/daftar',     'Kotak Masuk',    'M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4'],
+            ['admin/pkl/siswa',      'Status Siswa',   'M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4'],
+            ['admin/pkl/baru',       'Isi atas Nama',  'M12 9v3m0 0v3m0-3h3m-3 0H9m12 0a9 9 0 11-18 0 9 9 0 0118 0z'],
+            ['admin/pkl/pengaturan', 'Pengaturan PKL', 'M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065zM15 12a3 3 0 11-6 0 3 3 0 016 0z'],
+        ]],
         ['title' => 'MASTER DATA', 'items' => [
             ['admin/master/guru',    'Guru',           'M17 20h5v-2a4 4 0 00-3-3.87M9 20H4v-2a4 4 0 013-3.87m6-1.13a4 4 0 10-4 0m6 0a4 4 0 10-2 0M7 8a4 4 0 108 0 4 4 0 00-8 0z'],
             ['admin/master/siswa',   'Siswa',          'M12 14l9-5-9-5-9 5 9 5zm0 0l6.16-3.422a12.083 12.083 0 01.665 6.479A11.952 11.952 0 0012 20.055a11.952 11.952 0 00-6.824-2.998 12.078 12.078 0 01.665-6.479L12 14zm-4 6v-7.5l4-2.222'],
@@ -99,11 +106,26 @@
         ['title' => 'SISTEM', 'items' => [
             ['admin/pengumuman', 'Pengumuman', 'M11 5.882V19.24a1.76 1.76 0 01-3.417.592l-2.147-6.15M18 13a3 3 0 100-6M5.436 13.683A4.001 4.001 0 017 6h1.832c4.1 0 7.625-1.234 9.168-3v14c-1.543-1.766-5.067-3-9.168-3H7a3.988 3.988 0 01-1.564-.317z'],
             ['admin/audit', 'Audit Log', 'M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01'],
+            ['admin/akun', 'Kelola Akun', 'M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z'],
             ['admin/settings', 'Pengaturan Sekolah', 'M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z M15 12a3 3 0 11-6 0 3 3 0 016 0z'],
             ['admin/profile',  'Profil Saya',        'M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z'],
         ]],
     ];
     $admin = session('admin') ?? [];
+
+    // Menu per peran: hanya tampilkan yang boleh dibuka (sumber aturan SAMA dengan
+    // penjaga rute — Config\Peran — jadi menu & akses tak mungkin berselisih).
+    $peranKini = (string) ($admin['role'] ?? '');
+    $groups    = array_values(array_filter(array_map(static function (array $g) use ($peranKini): array {
+        $g['items'] = array_values(array_filter(
+            $g['items'],
+            static fn (array $it): bool => \App\Libraries\HakAkses::boleh($peranKini, $it[0])
+        ));
+        return $g;
+    }, $groups), static fn (array $g): bool => $g['items'] !== []));
+    $labelPeranKini  = \App\Libraries\HakAkses::label($peranKini);
+    $bolehFormPublik = \App\Libraries\HakAkses::boleh($peranKini, 'admin/submissions');
+
     $setting = (new \App\Models\SettingModel())->get();
     $schoolName = $setting['school_name'] ?? 'Panel Admin';
     $schoolLogo = ! empty($setting['logo']) ? base_url('uploads/' . $setting['logo']) : null;
@@ -111,9 +133,10 @@
     // helper render satu link menu
     $renderLink = static function (array $it) use ($cur) {
         [$url, $label, $icon] = $it;
+        $persis = (bool) ($it[3] ?? false); // true = menyala hanya di alamat itu sendiri, bukan turunannya
         // cocokkan persis atau sebagai prefiks segmen (agar 'admin/jadwal'
         // tidak ikut menyala saat membuka 'admin/jadwal-guru')
-        $active = $cur === $url || str_starts_with($cur, $url . '/');
+        $active = $cur === $url || (! $persis && str_starts_with($cur, $url . '/'));
         $cls = $active ? 'bg-white/15 text-white' : 'text-brand-100 hover:bg-white/10';
         echo '<a href="' . site_url($url) . '" title="' . esc($label) . '" '
             . ':class="collapsed && !sidebar ? \'lg:justify-center\' : \'\'" '
@@ -166,6 +189,7 @@
             <?php endif; ?>
         <?php endforeach; ?>
 
+        <?php if ($bolehFormPublik): // tautan form kesediaan guru — tak relevan bagi Operator/Hubin ?>
         <div class="pt-2">
             <a href="<?= site_url('isi') ?>" target="_blank" title="Lihat Form Publik"
                :class="collapsed && !sidebar ? 'lg:justify-center' : ''"
@@ -174,6 +198,7 @@
                 <span x-show="!collapsed || sidebar">Lihat Form Publik</span>
             </a>
         </div>
+        <?php endif; ?>
     </nav>
 
     <!-- Footer: tombol keluar (flex, tidak lagi absolute → tak menumpuk) -->
@@ -201,7 +226,7 @@
         <div class="flex items-center gap-3">
             <div class="text-right hidden sm:block leading-tight">
                 <p class="text-sm font-semibold text-slate-700"><?= esc($admin['full_name'] ?? 'Admin') ?></p>
-                <p class="text-xs text-slate-400">@<?= esc($admin['username'] ?? '') ?></p>
+                <p class="text-xs text-slate-400"><span class="font-semibold text-brand-600"><?= esc($labelPeranKini) ?></span> · @<?= esc($admin['username'] ?? '') ?></p>
             </div>
             <a href="<?= site_url('admin/profile') ?>" class="block h-9 w-9 rounded-full overflow-hidden bg-brand-100 ring-2 ring-brand-200">
                 <?php if (! empty($admin['photo'])): ?>

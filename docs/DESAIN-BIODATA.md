@@ -87,7 +87,7 @@ Kolom lama dipakai ulang: `alamat` = jalan/perumahan siswa, `no_hp` = HP siswa,
 | **Lengkap** = 27 kolom wajib terisi di **Master Siswa** (bukan dari isian) | `BiodataLaporan`, `BiodataForm::kolomKosong` |
 | Impor Excel siswa: **sel kosong = tidak diubah**; 15 kolom lama template tetap urutan, kolom biodata di belakang | `Admin\Master\Siswa::kolomImpor/normalizeImportRow` |
 | Ekspor: nomor ditulis `setCellValueExplicit(TYPE_STRING)`, **jangan** awalan `'` | `Admin\Master\Siswa::export` |
-| Subdomain hanya melayani `/` & `biodata/*`, selain itu 302 ke domain utama | `BiodataHostFilter` (global) |
+| Subdomain hanya melayani `/` & `biodata/*`, selain itu 302 ke domain utama | `SubdomainHostFilter` (global, kini juga melayani subdomain PKL) |
 | Host subdomain harus ada di `App::$allowedHostnames` (ditulis langsung, .env tak bisa) | `Config\App`, `Config\Biodata` |
 | Data pribadi hanya keluar lewat "buka ulang" ber-NISN/tanggal lahir + `LoginThrottle` | `Controllers\Biodata::buka` |
 | API Android lama (`Api\Admin\Siswa::collect`) hanya menulis 15 kolom lama → biodata aman | teruji B6 |
@@ -100,8 +100,8 @@ Kolom lama dipakai ulang: `alamat` = jalan/perumahan siswa, `no_hp` = HP siswa,
 | Lapisan | Berkas |
 |---|---|
 | Migrasi | `app/Database/Migrations/2026-09-25-000002_CreateBiodataSiswa.php` |
-| Config | `app/Config/Biodata.php`, `App.php` (allowedHostnames), `Filters.php` (`biodatahost`), `Routes.php` |
-| Filter | `app/Filters/BiodataHostFilter.php` |
+| Config | `app/Config/Biodata.php`, `App.php` (allowedHostnames), `Filters.php` (`subdomainhost`), `Routes.php` |
+| Filter | `app/Filters/SubdomainHostFilter.php` |
 | Model | `app/Models/BiodataIsianModel.php`, `SiswaModel.php` (+kolom, AGAMA/STATUS_KELUARGA/PEKERJAAN), `SettingModel.php` |
 | Library | `app/Libraries/BiodataForm.php` (rapikan+validasi), `BiodataVerifikasi.php` (setujui/kembalikan/hapus), `BiodataLaporan.php` (Excel) |
 | Controller | `app/Controllers/Biodata.php` (publik), `app/Controllers/Admin/Biodata.php`, `Admin/Master/Siswa.php` |

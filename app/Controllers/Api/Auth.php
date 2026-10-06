@@ -3,6 +3,7 @@
 namespace App\Controllers\Api;
 
 use App\Libraries\ApiAuth;
+use App\Libraries\HakAkses;
 use App\Libraries\LoginThrottle;
 use App\Models\AdminModel;
 use App\Models\ApiTokenModel;
@@ -53,7 +54,14 @@ class Auth extends BaseApiController
         }
 
         $throttle->clear($login, $ip);
+
+        // Sandi benar → baru aman memberi tahu status akun & peran.
+        if ($tolak = $this->tolakAkun($admin)) {
+            return $tolak;
+        }
+
         $token = (new ApiTokenModel())->issue((int) $admin['id'], $device ?: null);
+        db_connect()->table('admins')->where('id', (int) $admin['id'])->update(['last_login_at' => date('Y-m-d H:i:s')]);
         unset($admin['password']);
 
         return $this->ok([
@@ -125,9 +133,13 @@ class Auth extends BaseApiController
         if (! $admin) {
             return $this->failure('Akun tidak ditemukan.', 401);
         }
+        if ($tolak = $this->tolakAkun($admin)) {
+            return $tolak;
+        }
 
         $throttle->clear($deviceId, $ip);
         $token = (new ApiTokenModel())->issue((int) $admin['id'], $cred['device_name'] ?? null);
+        db_connect()->table('admins')->where('id', (int) $admin['id'])->update(['last_login_at' => date('Y-m-d H:i:s')]);
         unset($admin['password']);
 
         return $this->ok([
@@ -178,6 +190,25 @@ class Auth extends BaseApiController
         }
         ApiAuth::clear();
         return $this->ok(null, 'Anda telah keluar.');
+    }
+
+    /**
+     * Akun nonaktif atau berperan yang belum boleh memakai aplikasi tidak
+     * diberi token (null = boleh lanjut). Peran diatur di Config\Peran.
+     */
+    private function tolakAkun(array $admin)
+    {
+        if ((int) ($admin['aktif'] ?? 1) !== 1) {
+            return $this->failure('Akun Anda dinonaktifkan. Hubungi admin sekolah.', 403);
+        }
+        if (! HakAkses::bolehApi($admin['role'] ?? null)) {
+            return $this->failure(
+                'Akun ' . HakAkses::label($admin['role'] ?? null) . ' belum bisa dipakai di aplikasi Android. Silakan gunakan situs web.',
+                403
+            );
+        }
+
+        return null;
     }
 
     /** Bentuk profil admin yang aman dikirim ke klien. */

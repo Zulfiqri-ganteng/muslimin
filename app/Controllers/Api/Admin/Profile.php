@@ -93,14 +93,18 @@ class Profile extends BaseApiController
         if (! password_verify($old, $admin['password'])) {
             return $this->failure('Password lama salah.', 422);
         }
-        if (strlen($new) < 6) {
-            return $this->invalid(['new_password' => 'Password baru minimal 6 karakter.']);
+        if (mb_strlen($new) < 8) {
+            return $this->invalid(['new_password' => 'Password baru minimal 8 karakter.']);
         }
         if ($new !== $confirm) {
             return $this->invalid(['confirm_password' => 'Konfirmasi password tidak cocok.']);
         }
 
-        $this->model->update($id, ['password' => password_hash($new, PASSWORD_DEFAULT)]);
+        // Selaras dengan web: ikut melepas kewajiban ganti sandi sementara.
+        $this->model->update($id, [
+            'password'          => password_hash($new, PASSWORD_DEFAULT),
+            'wajib_ganti_sandi' => 0,
+        ]);
 
         return $this->ok(null, 'Password berhasil diganti.');
     }

@@ -1,6 +1,13 @@
 <?= $this->extend('layouts/admin') ?>
 <?= $this->section('content') ?>
 
+<?php if ((int) ($admin['wajib_ganti_sandi'] ?? 0) === 1): ?>
+    <div class="mb-5 max-w-4xl rounded-2xl border border-amber-300 bg-amber-50 px-5 py-4 text-sm text-amber-900">
+        <p class="font-bold">Ganti kata sandi sementara Anda dulu.</p>
+        <p class="mt-0.5 text-amber-800">Akun ini memakai kata sandi sementara dari admin. Demi keamanan, isi bagian <b>Ganti Password</b> di bawah (password lama = sandi sementara). Setelah itu semua menu Anda terbuka.</p>
+    </div>
+<?php endif; ?>
+
 <div class="grid grid-cols-1 lg:grid-cols-3 gap-5 max-w-4xl">
     <!-- Kartu Profil -->
     <div class="bg-white rounded-2xl border border-slate-200 shadow-sm p-6 text-center h-fit">
@@ -13,7 +20,7 @@
         </div>
         <h2 class="mt-4 font-bold text-lg text-slate-800"><?= esc($admin['full_name']) ?></h2>
         <p class="text-sm text-slate-400">@<?= esc($admin['username']) ?></p>
-        <span class="mt-2 inline-block text-xs font-semibold px-3 py-1 rounded-full bg-brand-50 text-brand-700 capitalize"><?= esc($admin['role']) ?></span>
+        <span class="mt-2 inline-block text-xs font-semibold px-3 py-1 rounded-full bg-brand-50 text-brand-700"><?= esc(\App\Libraries\HakAkses::label($admin['role'] ?? null)) ?></span>
         <dl class="mt-5 text-left text-sm space-y-2 border-t border-slate-100 pt-4">
             <div class="flex justify-between"><dt class="text-slate-400">Email</dt><dd class="font-medium text-slate-600 truncate ml-2"><?= esc($admin['email']) ?></dd></div>
             <div class="flex justify-between"><dt class="text-slate-400">No. HP</dt><dd class="font-medium text-slate-600"><?= esc($admin['phone'] ?: '-') ?></dd></div>
@@ -67,7 +74,7 @@
                 <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div>
                         <label class="lbl">Password Baru</label>
-                        <input type="password" name="new_password" required class="inp" placeholder="Min. 6 karakter">
+                        <input type="password" name="new_password" required minlength="8" autocomplete="new-password" class="inp" placeholder="Min. 8 karakter">
                     </div>
                     <div>
                         <label class="lbl">Konfirmasi Password Baru</label>
