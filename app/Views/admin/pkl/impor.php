@@ -26,7 +26,7 @@ use App\Libraries\IsianBantu;
 <?= view('admin/pkl/_nav', ['tab' => 'impor', 'hitungTab' => $hitungTab]) ?>
 
 <div class="mx-auto max-w-4xl space-y-5">
-    <section class="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+    <section class="rise rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
         <h2 class="font-bold text-slate-800">1. Siapkan &amp; unggah berkas</h2>
         <p class="mt-1 text-sm text-slate-500">Kolom: <b>NIS, Nama, Kelas, Perusahaan, Alamat, Kota, Telepon, Kontak, Jabatan, Mulai, Selesai</b>. Wajib: Perusahaan, Mulai, Selesai, dan NIS (atau Nama + Kelas).</p>
         <div class="mt-3 flex flex-col gap-2 sm:flex-row sm:items-center">

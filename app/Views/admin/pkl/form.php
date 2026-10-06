@@ -78,7 +78,7 @@ $input = static function (string $k, string $label, string $nilai, array $o = []
     <?php endif; ?>
 
     <!-- Siswa -->
-    <section class="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+    <section class="rise overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
         <h3 class="border-b border-slate-100 bg-slate-50 px-5 py-3 text-xs font-bold uppercase tracking-wide text-slate-500">Siswa</h3>
         <div class="space-y-4 p-5">
             <div>
@@ -135,7 +135,7 @@ $input = static function (string $k, string $label, string $nilai, array $o = []
     </section>
 
     <!-- Perusahaan -->
-    <section class="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+    <section class="rise overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
         <h3 class="border-b border-slate-100 bg-slate-50 px-5 py-3 text-xs font-bold uppercase tracking-wide text-slate-500">Perusahaan</h3>
         <div class="space-y-4 p-5">
             <?php $input('perusahaan_nama', 'Nama perusahaan', $val('perusahaan_nama'), ['wajib' => true, 'maks' => 150, 'ph' => 'Contoh: PT Telkom Indonesia', 'hint' => 'Periksa ejaannya — nama ini jadi saran untuk siswa lain setelah di-ACC.']) ?>
@@ -154,7 +154,7 @@ $input = static function (string $k, string $label, string $nilai, array $o = []
     </section>
 
     <!-- Periode -->
-    <section class="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+    <section class="rise overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
         <h3 class="border-b border-slate-100 bg-slate-50 px-5 py-3 text-xs font-bold uppercase tracking-wide text-slate-500">Periode PKL</h3>
         <div class="space-y-4 p-5">
             <?php if (! empty($p['mulai_paling_awal']) && ! empty($p['selesai_paling_akhir'])): ?>
@@ -173,7 +173,7 @@ $input = static function (string $k, string $label, string $nilai, array $o = []
     </section>
 
     <!-- Kontak pengaju -->
-    <section class="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+    <section class="rise overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
         <h3 class="border-b border-slate-100 bg-slate-50 px-5 py-3 text-xs font-bold uppercase tracking-wide text-slate-500">Kontak pengaju</h3>
         <div class="grid grid-cols-1 gap-4 p-5 sm:grid-cols-2">
             <?php $input('hp', 'No. HP / WhatsApp', $hp, ['maks' => 20, 'ph' => '081234567890', 'hint' => 'Boleh kosong untuk data lama.']) ?>
@@ -182,7 +182,7 @@ $input = static function (string $k, string $label, string $nilai, array $o = []
     </section>
 
     <?php if (! $ubah): ?>
-        <section class="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+        <section class="rise overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
             <h3 class="border-b border-slate-100 bg-slate-50 px-5 py-3 text-xs font-bold uppercase tracking-wide text-slate-500">Status awal</h3>
             <div class="grid grid-cols-1 gap-3 p-5 sm:grid-cols-2">
                 <?php $awal = ($old['status_awal'] ?? 'menunggu') === 'disetujui' ? 'disetujui' : 'menunggu'; ?>

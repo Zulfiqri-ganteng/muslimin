@@ -81,10 +81,18 @@ class PklBerkas extends BaseController
                 db_connect()->table('pkl_pengajuan')->select('id')->where('status', 'disetujui')->get()->getResultArray(),
                 'id'
             ));
-            $status = $this->surat->statusBanyak($semua);
-            $ids    = array_values(array_filter($semua, static fn (int $i) => ! isset($status[$i]) || $status[$i]['perlu_ulang']));
-            if ($ids === []) {
-                return $this->ke($balik, 'success', 'Semua surat sudah dicetak dan datanya tidak berubah. Tidak ada yang perlu diunduh.');
+            if ($mode === 'semua') {
+                // Semua ajuan yang disetujui (termasuk yang sudah pernah dicetak) — untuk cetak ulang massal.
+                $ids = $semua;
+                if ($ids === []) {
+                    return $this->ke($balik, 'error', 'Belum ada ajuan yang disetujui.');
+                }
+            } else {
+                $status = $this->surat->statusBanyak($semua);
+                $ids    = array_values(array_filter($semua, static fn (int $i) => ! isset($status[$i]) || $status[$i]['perlu_ulang']));
+                if ($ids === []) {
+                    return $this->ke($balik, 'success', 'Semua surat sudah dicetak dan datanya tidak berubah. Tidak ada yang perlu diunduh. Mau mencetak ulang semuanya? Pakai tombol "Unduh SEMUA surat".');
+                }
             }
         }
         if (count($ids) > self::MAKS_SURAT_MASSAL) {
@@ -110,7 +118,23 @@ class PklBerkas extends BaseController
         }
         $this->audit->record('update', 'pkl_surat', $ids[0] ?? null, 'Surat PKL diunduh: ' . $hasil['jumlah'] . ' surat (' . $hasil['nama'] . ')');
 
-        return $this->response->download($hasil['nama'], $hasil['biner'])->setFileName($hasil['nama']);
+        return $this->berkas($hasil['nama'], $hasil['biner']);
+    }
+
+    /**
+     * Unduhan dari form: ikut menyetel cookie penanda selesai (nilainya = token dari halaman) supaya
+     * layar "Memproses…" di halaman bisa ditutup — unduhan tidak memuat ulang halaman, jadi tanpa ini
+     * layar itu berputar terus. Cookie dikirim lewat header (respons unduhan tak memproses cookie CI4).
+     */
+    private function berkas(string $nama, string $biner)
+    {
+        $respons = $this->response->download($nama, $biner)->setFileName($nama);
+        $token   = (string) $this->request->getPost('unduh_token');
+        if (preg_match('/^[0-9]{1,40}$/', $token) === 1) {
+            $respons->setHeader('Set-Cookie', 'unduh_selesai=' . $token . '; Path=/; Max-Age=120; SameSite=Lax');
+        }
+
+        return $respons;
     }
 
     // =================================================================

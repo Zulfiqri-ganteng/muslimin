@@ -131,7 +131,7 @@ $ikonAwas = '<svg class="w-6 h-6 shrink-0" fill="none" stroke="currentColor" str
     <?= view('pkl/_header', ['setting' => $setting]) ?>
 
     <!-- Persiapan — hanya di langkah pertama -->
-    <div x-show="step === 0" class="mt-4 rounded-2xl border-2 border-amber-300 bg-amber-50 px-4 py-4 sm:px-5 flex gap-3 text-amber-500">
+    <div x-show="step === 0" class="rise rise-2 mt-4 rounded-2xl border-2 border-amber-300 bg-amber-50 px-4 py-4 sm:px-5 flex gap-3 text-amber-500">
         <?= $ikonAwas ?>
         <div class="text-sm text-amber-900 leading-relaxed">
             <p class="font-extrabold">Siapkan dulu sebelum mengisi:</p>
@@ -146,7 +146,7 @@ $ikonAwas = '<svg class="w-6 h-6 shrink-0" fill="none" stroke="currentColor" str
     </div>
 
     <!-- Stepper -->
-    <div class="mt-4 bg-white rounded-2xl shadow-sm border border-slate-200 p-4 sm:p-5" id="pklTop">
+    <div class="rise rise-3 mt-4 bg-white rounded-2xl shadow-sm border border-slate-200 p-4 sm:p-5" id="pklTop">
         <div class="flex items-center justify-between mb-3">
             <p class="text-sm font-semibold text-brand-700">Langkah <span x-text="step + 1">1</span> dari <?= count($langkah) ?></p>
             <p class="text-xs font-semibold text-slate-400" x-text="judulLangkah[step]"><?= esc($langkah[0]) ?></p>

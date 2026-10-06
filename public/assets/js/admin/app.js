@@ -226,13 +226,45 @@
                 sidebar: false,
                 collapsed: JSON.parse(localStorage.getItem('sb_collapsed') || 'false'),
                 loading: false,
+                pesan: 'Memproses…',
                 init: function () {
                     var self = this;
                     this.$watch('collapsed', function (v) { localStorage.setItem('sb_collapsed', v); });
                     document.addEventListener('submit', function (e) {
-                        if (e.target.tagName === 'FORM' && !e.target.hasAttribute('data-noload')) { self.loading = true; }
+                        var f = e.target;
+                        if (f.tagName !== 'FORM' || f.hasAttribute('data-noload')) { return; }
+                        if (f.hasAttribute('data-unduh')) { self.mulaiUnduh(f); return; }
+                        self.pesan = 'Memproses…';
+                        self.loading = true;
                     });
                     window.addEventListener('pageshow', function () { self.loading = false; });
+                },
+                /* Form yang hasilnya BERKAS unduhan (halaman tidak dimuat ulang, jadi 'pageshow' tak pernah
+                 * terjadi). Server menyetel cookie `unduh_selesai=<token>` pada respons berkas; layar
+                 * loading ditutup begitu cookie itu terbaca (atau paling lama 2 menit). Bila server
+                 * malah mengalihkan (mis. pesan galat), halaman dimuat ulang dan layar hilang sendiri. */
+                mulaiUnduh: function (form) {
+                    var self = this;
+                    var token = String(Date.now()) + String(Math.floor(Math.random() * 1000000));
+                    var isian = form.querySelector('input[name="unduh_token"]');
+                    if (!isian) {
+                        isian = document.createElement('input');
+                        isian.type = 'hidden';
+                        isian.name = 'unduh_token';
+                        form.appendChild(isian);
+                    }
+                    isian.value = token;
+                    self.pesan = 'Menyiapkan berkas surat…';
+                    self.loading = true;
+                    var batas = Date.now() + 120000;
+                    var timer = setInterval(function () {
+                        var selesai = document.cookie.split('; ').indexOf('unduh_selesai=' + token) !== -1;
+                        if (selesai || Date.now() > batas) {
+                            clearInterval(timer);
+                            self.loading = false;
+                            document.cookie = 'unduh_selesai=; Max-Age=0; Path=/';
+                        }
+                    }, 300);
                 },
             };
         });

@@ -20,21 +20,57 @@ $hubin = $peran === 'hubin';
 <?= $this->section('content') ?>
 
 <?= view('admin/partials/help', [
-    'helpKey'   => 'pkl_beranda_v1',
+    'helpKey'   => 'pkl_beranda_v2',
     'helpTitle' => 'Beranda PKL',
     'helpBody'  => '<p>Siswa mengisi ajuan PKL sendiri lewat tautan di HP. Di sini Anda <b>memeriksa</b> ajuan yang masuk lalu memutuskan: <b>ACC</b>, <b>kembalikan</b> (siswa memperbaiki), atau <b>tolak</b>.</p>'
         . '<ul class="mt-2 list-disc pl-5 space-y-1">'
         . '<li><b>Menunggu ACC</b> — antrean ajuan baru, yang paling lama di atas.</li>'
         . '<li><b>Status Siswa</b> — melihat siapa yang <b>sudah/belum mengisi</b> dan siapa yang <b>sudah/belum PKL</b>.</li>'
         . '<li><b>Isi atas Nama</b> — bila siswa tak bisa mengisi sendiri, atau untuk memasukkan data PKL lama.</li>'
+        . '<li><b>Persiapan</b> (kotak kuning, hanya Operator/Admin) — daftar yang harus siap sebelum tautan dibagikan: tanggal &amp; tingkat, nama Waka Hubin untuk surat, dan form dibuka. Hilang sendiri bila semuanya siap.</li>'
         . '<li>Setiap keputusan tercatat (siapa, kapan) dan terlihat di riwayat tiap ajuan.</li>'
         . '</ul>',
 ]) ?>
 
 <?= view('admin/pkl/_nav', ['tab' => $tab, 'hitungTab' => $hitungTab]) ?>
 
+<?php
+// Daftar persiapan: hanya untuk yang boleh membuka Pengaturan, dan hanya selama ada yang belum siap.
+$wakaOk  = trim((string) ($p['waka_hubin_nama'] ?? '')) !== '';
+$pagarOk = $alasan !== 'belum_siap';
+$bukaOk  = $alasan === null;
+$persiapan = [
+    [$pagarOk, 'Tingkat & batas tanggal PKL diisi', 'Tanpa ini form belum bisa dibuka.', site_url('admin/pkl/pengaturan')],
+    [$wakaOk, 'Nama Waka Hubin (penanda tangan surat) diisi', 'Tanpa ini nama di bawah tanda tangan surat hanya titik-titik.', site_url('admin/pkl/pengaturan#surat')],
+    [$bukaOk, 'Form dibuka untuk siswa', 'Siswa baru bisa mengajukan setelah form dibuka.', site_url('admin/pkl/pengaturan')],
+];
+$siap = count(array_filter(array_column($persiapan, 0)));
+?>
+<?php if ($bolehPengaturan && $siap < count($persiapan)): ?>
+    <section class="rise rise-1 mb-5 overflow-hidden rounded-2xl border border-amber-200 bg-gradient-to-br from-amber-50 to-white shadow-sm">
+        <div class="flex items-center justify-between gap-3 border-b border-amber-100 px-5 py-3">
+            <h2 class="text-sm font-bold text-amber-900">Persiapan sebelum tautan dibagikan ke siswa</h2>
+            <span class="rounded-full bg-amber-100 px-2.5 py-0.5 text-xs font-bold text-amber-800"><?= $siap ?> / <?= count($persiapan) ?> siap</span>
+        </div>
+        <ul class="divide-y divide-amber-100">
+            <?php foreach ($persiapan as [$ok, $judul, $ket, $url]): ?>
+                <li>
+                    <a href="<?= esc($url, 'attr') ?>" class="flex items-start gap-3 px-5 py-3 transition hover:bg-amber-50">
+                        <span class="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full text-[11px] font-extrabold <?= $ok ? 'bg-green-500 text-white' : 'border-2 border-amber-400 bg-white text-transparent' ?>"><?= $ok ? '✓' : '·' ?></span>
+                        <span class="min-w-0">
+                            <span class="block text-sm font-semibold <?= $ok ? 'text-slate-400 line-through' : 'text-slate-800' ?>"><?= esc($judul) ?></span>
+                            <?php if (! $ok): ?><span class="block text-xs text-slate-500"><?= esc($ket) ?></span><?php endif; ?>
+                        </span>
+                        <?php if (! $ok): ?><span class="ml-auto shrink-0 self-center text-xs font-bold text-amber-700">Atur →</span><?php endif; ?>
+                    </a>
+                </li>
+            <?php endforeach; ?>
+        </ul>
+    </section>
+<?php endif; ?>
+
 <!-- Status form siswa -->
-<div class="mb-5 flex flex-col gap-3 rounded-2xl border px-5 py-4 shadow-sm sm:flex-row sm:items-center sm:justify-between <?= $alasan === null ? 'border-green-200 bg-green-50' : 'border-amber-200 bg-amber-50' ?>"
+<div class="rise rise-2 mb-5 flex flex-col gap-3 rounded-2xl border px-5 py-4 shadow-sm sm:flex-row sm:items-center sm:justify-between <?= $alasan === null ? 'border-green-200 bg-green-50' : 'border-amber-200 bg-amber-50' ?>"
      x-data="{ tersalin: false, salin() { navigator.clipboard.writeText(<?= esc(json_encode($tautan), 'attr') ?>).then(() => { this.tersalin = true; setTimeout(() => this.tersalin = false, 2000); }); } }">
     <div class="min-w-0">
         <p class="flex items-center gap-2 text-sm font-bold <?= $alasan === null ? 'text-green-800' : 'text-amber-900' ?>">
@@ -62,14 +98,14 @@ $hubin = $peran === 'hubin';
 </div>
 
 <!-- Angka status ajuan -->
-<div class="mb-5 grid grid-cols-2 gap-3 lg:grid-cols-4">
+<div class="rise rise-3 mb-5 grid grid-cols-2 gap-3 lg:grid-cols-4">
     <?php foreach ([
         ['menunggu', 'Menunggu ACC', 'text-blue-700', $hubin ? 'Menunggu keputusan Anda' : 'Perlu diperiksa'],
         ['perbaikan', 'Perlu perbaikan', 'text-amber-600', 'Di tangan siswa'],
         ['disetujui', 'Disetujui', 'text-green-600', 'Siap dibuatkan surat'],
         ['ditolak', 'Ditolak', 'text-red-600', 'Siswa boleh mengajukan lagi'],
     ] as [$st, $label, $warna, $ket]): ?>
-        <a href="<?= site_url('admin/pkl/daftar/' . $st) ?>" class="rounded-2xl border border-slate-200 bg-white px-4 py-3.5 shadow-sm transition hover:border-brand-300 hover:shadow">
+        <a href="<?= site_url('admin/pkl/daftar/' . $st) ?>" class="lift rounded-2xl border border-slate-200 bg-white px-4 py-3.5 shadow-sm hover:border-brand-300">
             <p class="text-xs font-semibold text-slate-400"><?= esc($label) ?></p>
             <p class="mt-1 text-3xl font-extrabold <?= $warna ?>"><?= (int) ($hitung[$st] ?? 0) ?></p>
             <p class="mt-0.5 text-[11px] text-slate-400"><?= esc($ket) ?></p>
@@ -78,7 +114,7 @@ $hubin = $peran === 'hubin';
 </div>
 
 <!-- Dua angka utama: sudah mengisi, sudah PKL -->
-<div class="mb-5 grid grid-cols-1 gap-3 lg:grid-cols-2">
+<div class="rise rise-4 mb-5 grid grid-cols-1 gap-3 lg:grid-cols-2">
     <?php foreach ([
         ['Sudah mengisi', $siswa['sudah_isi'], $siswa['belum_isi'], $siswa['persen_isi'], 'belum mengisi', 'bg-blue-500', 'belum_mengisi'],
         ['Sudah dapat tempat PKL (disetujui)', $siswa['sudah_pkl'], $siswa['belum_pkl'], $siswa['persen_pkl'], 'belum PKL', 'bg-green-500', 'sudah_pkl'],
@@ -88,7 +124,7 @@ $hubin = $peran === 'hubin';
                 <p class="text-sm font-bold text-slate-700"><?= esc($judul) ?></p>
                 <p class="text-2xl font-extrabold text-slate-800"><?= (int) $persen ?>%</p>
             </div>
-            <div class="mt-2 h-2.5 w-full overflow-hidden rounded-full bg-slate-100"><div class="h-full rounded-full <?= $warnaBar ?>" style="width: <?= (int) $persen ?>%"></div></div>
+            <div class="mt-2 h-2.5 w-full overflow-hidden rounded-full bg-slate-100"><div class="bar-grow h-full rounded-full <?= $warnaBar ?>" style="width: <?= (int) $persen ?>%"></div></div>
             <p class="mt-2 text-xs text-slate-500"><b class="text-slate-700"><?= (int) $sudah ?></b> siswa sudah · <b class="text-slate-700"><?= (int) $belum ?></b> <?= esc($labelBelum) ?> · dari <b><?= (int) $siswa['total'] ?></b> siswa tingkat <?= esc(implode('/', $tingkat) ?: '—') ?></p>
         </div>
     <?php endforeach; ?>
@@ -101,7 +137,7 @@ $hubin = $peran === 'hubin';
 <?php endif; ?>
 
 <!-- Antrean -->
-<div class="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+<div class="rise rise-5 overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
     <div class="flex flex-col gap-2 border-b border-slate-100 px-5 py-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
             <h2 class="font-bold text-slate-800"><?= $hubin ? 'Menunggu keputusan Anda' : 'Antrean ajuan baru' ?></h2>

@@ -56,7 +56,7 @@ $tinjau = [
     <?php endif; ?>
 
     <!-- Buka / tutup -->
-    <section class="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+    <section class="rise overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
         <h3 class="border-b border-slate-100 bg-slate-50 px-5 py-3 text-xs font-bold uppercase tracking-wide text-slate-500">Form siswa</h3>
         <div class="space-y-4 p-5">
             <?php if ($alasan !== null): ?><p class="rounded-xl border border-amber-200 bg-amber-50 px-4 py-2.5 text-sm text-amber-900"><?= esc($tinjau[$alasan] ?? '') ?></p>
@@ -91,7 +91,7 @@ $tinjau = [
     </section>
 
     <!-- Siapa -->
-    <section class="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+    <section class="rise overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
         <h3 class="border-b border-slate-100 bg-slate-50 px-5 py-3 text-xs font-bold uppercase tracking-wide text-slate-500">Siapa yang boleh mengajukan</h3>
         <div class="space-y-4 p-5">
             <div>
@@ -115,7 +115,7 @@ $tinjau = [
     </section>
 
     <!-- Pagar tanggal -->
-    <section class="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+    <section class="rise overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
         <h3 class="border-b border-slate-100 bg-slate-50 px-5 py-3 text-xs font-bold uppercase tracking-wide text-slate-500">Pagar tanggal &amp; lama PKL</h3>
         <div class="space-y-4 p-5">
             <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
@@ -145,7 +145,7 @@ $tinjau = [
     </section>
 
     <!-- Surat -->
-    <section class="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm"
+    <section id="surat" class="scroll-mt-24 overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm"
              x-data="{ pola: <?= esc(json_encode($nilai('format_nomor', \App\Libraries\PklNomorSurat::BAWAAN)), 'attr') ?>,
                        contoh() { const d = new Date(), p = n => String(n).padStart(2, '0'), r = ['I','II','III','IV','V','VI','VII','VIII','IX','X','XI','XII'];
                                   return (this.pola || '').split('{urut}').join('7').split('{urut3}').join('007').split('{urut4}').join('0007').split('{tgl}').join(p(d.getDate())).split('{bln}').join(p(d.getMonth() + 1)).split('{bln_romawi}').join(r[d.getMonth()]).split('{thn}').join(d.getFullYear()); } }">
@@ -156,6 +156,7 @@ $tinjau = [
                     <label class="lbl" for="f_waka_nama">Nama Waka Hubin (penanda tangan)</label>
                     <input id="f_waka_nama" type="text" name="waka_hubin_nama" maxlength="150" value="<?= esc($nilai('waka_hubin_nama'), 'attr') ?>" class="inp <?= $cls('waka_hubin_nama') ?>" placeholder="Contoh: Budi Santoso, S.Pd.">
                     <?= $err('waka_hubin_nama') ?>
+                    <?php if (trim((string) $nilai('waka_hubin_nama')) === ''): ?><p class="hint font-semibold text-amber-700">Belum diisi: nama di bawah tanda tangan surat akan berupa titik-titik.</p><?php endif; ?>
                 </div>
                 <div>
                     <label class="lbl" for="f_waka_nip">NIP <span class="font-normal text-slate-400">(opsional)</span></label>
@@ -197,7 +198,7 @@ $tinjau = [
 
 <?php $templateAda = \App\Libraries\PklSurat::pathTemplate($p) !== null; ?>
 <div class="mx-auto mt-5 max-w-3xl space-y-5">
-    <section class="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+    <section class="rise overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
         <h3 class="border-b border-slate-100 bg-slate-50 px-5 py-3 text-xs font-bold uppercase tracking-wide text-slate-500">Template surat Word milik sekolah</h3>
         <div class="space-y-3 p-5 text-sm text-slate-600">
             <p>

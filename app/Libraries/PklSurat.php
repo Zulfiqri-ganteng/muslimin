@@ -75,10 +75,15 @@ final class PklSurat
         return $ajuan === null ? null : ['ajuan' => $ajuan, 'anggota' => $this->model->anggotaDetail($id)];
     }
 
-    /** Sidik data yang tampil di surat — berubah bila perusahaan/tanggal/siswa berubah. */
-    public static function sidik(array $ajuan, array $anggota): string
+    /**
+     * Sidik data yang tampil di surat — berubah bila perusahaan/tanggal/siswa atau penanda tangan
+     * (nama/NIP/jabatan Waka Hubin di Pengaturan PKL) berubah. $p = pengaturan PKL (dibaca bila kosong).
+     */
+    public static function sidik(array $ajuan, array $anggota, ?array $p = null): string
     {
+        $p ??= (new PklPengaturanModel())->ambil();
         $dasar = [
+            (string) ($p['waka_hubin_nama'] ?? ''), (string) ($p['waka_hubin_nip'] ?? ''), (string) ($p['waka_hubin_jabatan'] ?? ''),
             (string) $ajuan['perusahaan_nama'], (string) ($ajuan['perusahaan_alamat'] ?? ''), (string) ($ajuan['perusahaan_kota'] ?? ''),
             (string) ($ajuan['perusahaan_telepon'] ?? ''), (string) ($ajuan['kontak_nama'] ?? ''), (string) ($ajuan['kontak_jabatan'] ?? ''),
             (string) ($ajuan['tanggal_mulai'] ?? ''), (string) ($ajuan['tanggal_selesai'] ?? ''),
@@ -118,6 +123,7 @@ final class PklSurat
         }
 
         $out     = [];
+        $p       = (new PklPengaturanModel())->ambil();
         $ajuan   = [];
         foreach ($this->db->table('pkl_pengajuan')->whereIn('id', array_keys($surat))->get()->getResultArray() as $r) {
             $ajuan[(int) $r['id']] = $r;
@@ -132,7 +138,7 @@ final class PklSurat
         foreach ($surat as $id => $s) {
             $out[$id] = [
                 'nomor'       => (string) $s['nomor'],
-                'perlu_ulang' => isset($ajuan[$id]) && self::sidik($ajuan[$id], $anggota[$id] ?? []) !== (string) $s['sidik'],
+                'perlu_ulang' => isset($ajuan[$id]) && self::sidik($ajuan[$id], $anggota[$id] ?? [], $p) !== (string) $s['sidik'],
             ];
         }
 
@@ -184,7 +190,7 @@ final class PklSurat
 
             $baris = [
                 'pengajuan_id' => $id, 'tahun' => $tahun, 'urut' => $urut, 'nomor' => PklNomorSurat::format($pola, $urut, $tgl),
-                'tanggal_surat' => $tanggal, 'cetak_ke' => 0, 'sidik' => self::sidik($muat['ajuan'], $muat['anggota']),
+                'tanggal_surat' => $tanggal, 'cetak_ke' => 0, 'sidik' => self::sidik($muat['ajuan'], $muat['anggota'], $p),
                 'dibuat_oleh' => $konteks['admin_id'] ?? null, 'created_at' => $now, 'updated_at' => $now,
             ];
             if (! $this->db->table('pkl_surat')->insert($baris)) {
@@ -281,7 +287,7 @@ final class PklSurat
                 continue;
             }
             $daftar[]      = $this->isi($m['ajuan'], $m['anggota'], $t['surat'], $setting, $p);
-            $sidik[$id]    = self::sidik($m['ajuan'], $m['anggota']);
+            $sidik[$id]    = self::sidik($m['ajuan'], $m['anggota'], $p);
             $nomor[$id]    = (string) $t['surat']['nomor'];
         }
         if ($daftar === []) {

@@ -44,7 +44,7 @@ $baris = static function (string $label, ?string $isi): string {
 <?= $this->section('content') ?>
 
 <?= view('admin/partials/help', [
-    'helpKey'   => 'pkl_detail_v2',
+    'helpKey'   => 'pkl_detail_v3',
     'helpTitle' => 'Detail Ajuan PKL',
     'helpBody'  => '<p>Periksa dulu <b>peringatan otomatis</b> (merah = bahaya, kuning = periksa, biru = info), lalu putuskan:</p>'
         . '<ul class="mt-2 list-disc pl-5 space-y-1">'
@@ -53,7 +53,7 @@ $baris = static function (string $label, ?string $isi): string {
         . '<li><b>Tolak</b> — siswanya bebas dan boleh mengajukan baru.</li>'
         . '<li><b>Batalkan persetujuan</b> — bila perusahaan menarik diri; ajuan kembali ke siswa untuk diganti.</li>'
         . '<li><b>Ubah</b> — Anda memperbaiki langsung (nama, tanggal, daftar siswa) tanpa mengubah statusnya.</li>'
-        . '<li><b>Surat permohonan</b> (setelah Disetujui) — satu tombol menerbitkan nomor dan mengunduh berkas Word. Bila data berubah sesudahnya muncul tanda <b>Perlu cetak ulang</b>; nomor tetap sama.</li>'
+        . '<li><b>Surat permohonan</b> (setelah Disetujui) — satu tombol menerbitkan nomor dan mengunduh berkas Word. Bila data berubah sesudahnya (termasuk nama/NIP Waka Hubin di Pengaturan) muncul tanda <b>Perlu cetak ulang</b>; nomor tetap sama. Tanda tangan dan stempel Waka Hubin dibubuhkan basah di kertas hasil cetak (ruangnya sengaja dikosongkan).</li>'
         . '</ul>',
 ]) ?>
 
@@ -62,7 +62,7 @@ $baris = static function (string $label, ?string $isi): string {
     <?= view('admin/pkl/_nav', ['tab' => $tab, 'hitungTab' => $hitungTab]) ?>
 
     <!-- Kepala -->
-    <div class="mb-5 rounded-2xl border border-slate-200 bg-white px-5 py-4 shadow-sm">
+    <div class="rise rise-1 mb-5 rounded-2xl border border-slate-200 bg-white px-5 py-4 shadow-sm">
         <a href="<?= site_url('admin/pkl/daftar/' . $status) ?>" class="text-xs font-semibold text-brand-700 hover:underline">← Kembali ke daftar <?= esc(['menunggu' => 'Menunggu ACC', 'perbaikan' => 'Perbaikan', 'disetujui' => 'Disetujui', 'ditolak' => 'Ditolak'][$status] ?? '') ?></a>
         <div class="mt-2 flex flex-wrap items-center gap-2.5">
             <h2 class="text-xl font-extrabold text-slate-800"><?= esc($a['perusahaan_nama']) ?></h2>
@@ -88,7 +88,7 @@ $baris = static function (string $label, ?string $isi): string {
         </div>
     <?php endif; ?>
 
-    <div class="grid grid-cols-1 gap-5 lg:grid-cols-3">
+    <div class="rise rise-2 grid grid-cols-1 gap-5 lg:grid-cols-3">
         <!-- Kolom kiri: data -->
         <div class="space-y-5 lg:col-span-2">
             <section class="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
@@ -148,7 +148,7 @@ $baris = static function (string $label, ?string $isi): string {
 
         <!-- Kolom kanan: aksi + riwayat -->
         <div class="space-y-5">
-            <section class="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm lg:sticky lg:top-20">
+            <section class="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
                 <h3 class="text-xs font-bold uppercase tracking-wide text-slate-500">Keputusan</h3>
                 <div class="mt-3 flex flex-col gap-2">
                     <?php if (in_array($status, ['menunggu', 'perbaikan', 'ditolak'], true)): ?>
@@ -173,6 +173,10 @@ $baris = static function (string $label, ?string $isi): string {
             <?php if ($status === 'disetujui'): ?>
                 <section class="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
                     <h3 class="text-xs font-bold uppercase tracking-wide text-slate-500">Surat permohonan</h3>
+                    <?php if (trim((string) ($p['waka_hubin_nama'] ?? '')) === ''): ?>
+                        <p class="mt-2 rounded-lg border border-red-300 bg-red-50 px-3 py-2 text-xs font-semibold leading-relaxed text-red-800">⚠ Nama Waka Hubin belum diisi, jadi di bawah tanda tangan surat hanya titik-titik.
+                            <?php if ($bolehPengaturan): ?><a href="<?= site_url('admin/pkl/pengaturan#surat') ?>" class="underline">Isi di Pengaturan PKL</a>, lalu unduh surat lagi (nomor tetap sama).<?php else: ?>Minta Operator mengisinya di Pengaturan PKL.<?php endif; ?></p>
+                    <?php endif; ?>
                     <?php if ($surat): ?>
                         <p class="mt-2 text-xs text-slate-500">Nomor surat</p>
                         <p class="font-mono text-sm font-bold text-slate-800"><?= esc($surat['nomor']) ?></p>
@@ -180,12 +184,12 @@ $baris = static function (string $label, ?string $isi): string {
                         <?php if ($perluUlang): ?>
                             <p class="mt-2 rounded-lg border border-amber-300 bg-amber-50 px-3 py-2 text-xs font-semibold leading-relaxed text-amber-900">⚠ PERLU CETAK ULANG — data ajuan berubah sejak surat terakhir diunduh. Nomor tetap sama.</p>
                         <?php endif; ?>
-                        <form method="post" action="<?= site_url('admin/pkl/' . $id . '/surat') ?>" class="mt-3">
+                        <form method="post" action="<?= site_url('admin/pkl/' . $id . '/surat') ?>" data-unduh class="mt-3">
                             <?= csrf_field() ?>
                             <button type="submit" class="w-full rounded-xl <?= $perluUlang ? 'bg-amber-500 hover:bg-amber-600' : 'bg-brand-700 hover:bg-brand-800' ?> px-4 py-3 text-sm font-bold text-white shadow-sm transition active:scale-95">⬇ <?= $perluUlang ? 'Unduh surat terbaru (.docx)' : 'Unduh surat (.docx)' ?></button>
                         </form>
                     <?php else: ?>
-                        <form method="post" action="<?= site_url('admin/pkl/' . $id . '/surat') ?>" class="mt-2 space-y-2">
+                        <form method="post" action="<?= site_url('admin/pkl/' . $id . '/surat') ?>" data-unduh class="mt-2 space-y-2">
                             <?= csrf_field() ?>
                             <label class="lbl" for="tgl_surat">Tanggal surat</label>
                             <input id="tgl_surat" type="date" name="tanggal_surat" value="<?= date('Y-m-d') ?>" class="inp">

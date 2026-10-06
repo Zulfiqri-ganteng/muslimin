@@ -242,11 +242,32 @@ Tampilan beda per peran: **Hubin** = fokus memutuskan (antrean "Menunggu ACC" di
       template & tautan impor di Pengaturan, tombol Excel di Status Siswa. Hubin: boleh unduh surat & Excel,
       DITOLAK untuk template & impor (`kecuali` admin/pkl/impor). Template unggahan disimpan di
       `writable/pkl/` (perlu bisa ditulis di hosting). **Uji:** `dev:uji-pkl` 268 cek + HTTP 28 cek.
-      **BELUM dibuka di Microsoft Word sungguhan** (hanya divalidasi XML & urutan elemen) — minta user
-      membuka satu surat hasil unduhan dan melapor bila Word mengeluh. Contoh surat sekolah dari teman user
+      **Diuji di Microsoft Word 16 asli (2026-10-07, otomatisasi COM di laptop dev):** dua surat (satu perusahaan 3 siswa,
+      satu 1 siswa) terbuka TANPA galat/dialog perbaikan, 2 halaman (tiap surat muat satu halaman), 2 tabel. Berkas awal
+      tampil "[Compatibility Mode]" → ditambah `word/settings.xml` (compatibilityMode 15) di `PklDocx::dokumen`.
+      Ekspor PDF lewat COM macet (bukan masalah berkas), jadi tampilan visual halaman belum dilihat — user tetap
+      diminta membuka satu surat dan melapor bila ada yang janggal. Contoh surat sekolah dari teman user
       belum diterima → surat bawaan; ganti lewat unggah template.
-- [ ] **T5 Uji menyeluruh + panduan + pasang** — e2e Chrome (subdomain) · regresi halaman admin ·
-      help card semua halaman · langkah deploy (`git pull`, `phpm spark migrate`, subdomain).
+- [x] **Perbaikan dari uji user di produksi (sesi malam, lokal, belum di-push):**
+      (a) layar "Memproses…" berputar terus setelah unduh surat → form unduh bertanda `data-unduh`; server menyetel
+      cookie `unduh_selesai=<token>` lewat header (`PklBerkas::berkas`; respons unduhan CI4 tak memproses
+      cookie), `adminLayout.mulaiUnduh` (admin/app.js) menutup layar begitu cookie terbaca (maks 2 menit);
+      (b) kartu "Keputusan" di detail ajuan lengket dan menimpa kartu Surat/Riwayat → lengket dihapus;
+      (c) nama Waka kosong di surat = belum diisi di Pengaturan PKL → peringatan merah di detail, tab Disetujui,
+      Beranda ("Persiapan"), dan hint di Pengaturan; nama/NIP/jabatan Waka kini ikut "sidik" surat
+      (`PklSurat::sidik($ajuan,$anggota,$p)`) sehingga mengisinya menandai surat lama "perlu cetak ulang"
+      (setelah deploy, surat yang sudah pernah diunduh tampil "perlu cetak ulang" sekali — wajar);
+      (d) tombol baru **"Unduh SEMUA surat"** (`mode=semua`, maks 300) + checkbox pilih di kartu HP.
+      Uji: `uji_unduh.mjs` 16 cek.
+- [x] **Upgrade tampilan (sesi malam):** beranda publik (`public/layout.php`, `home.php`: navbar dengan garis bawah
+      meluncur & menu HP beranimasi, hero, kartu Layanan, angka berhitung naik, footer), kepala/sukses/tutup form PKL
+      siswa, dan halaman PKL staf (animasi `rise`/`lift`/`bar-grow`, kotak "Persiapan"). Gaya bersama ada di
+      `resources/css/app.css` (rise, reveal, lift, orb, nav-link, btn-shine, bar-grow; menghormati "kurangi gerakan").
+      Logo hilang → huruf awal sekolah. Panel admin umum (dashboard admin, menu lain) TIDAK diubah.
+- [x] **T5 ringan — SELESAI:** `docs/PANDUAN-DEPLOY-PKL.md` (pasang, siapkan, pemakaian, teks WhatsApp, pemecahan masalah).
+      Regresi hijau: `dev:uji-pkl` 268 · HTTP surat 28 · HTTP staf 84 · ACC massal 10 · unduh 16.
+      **Sisa (bukan kode):** user membuka SATU surat .docx di Microsoft Word asli & melapor; contoh surat sekolah +
+      foto kertas isian dari teman user (→ unggah template di Pengaturan PKL / sesuaikan kolom); deploy ke hosting.
 
 **Sengaja belum dikerjakan:** Android (setelah web 100%), jurnal/absensi/nilai PKL, notifikasi
 otomatis, ACC dua tingkat, akun siswa/guru.

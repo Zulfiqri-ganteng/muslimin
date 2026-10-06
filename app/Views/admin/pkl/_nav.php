@@ -14,10 +14,10 @@ $tabs = [
     ['siswa', 'Status Siswa', site_url('admin/pkl/siswa'), null],
 ];
 ?>
-<nav class="-mx-1 mb-5 flex gap-1.5 overflow-x-auto px-1 pb-1" aria-label="Menu PKL">
+<nav class="rise -mx-1 mb-5 flex gap-1.5 overflow-x-auto px-1 pb-1" aria-label="Menu PKL">
     <?php foreach ($tabs as [$kode, $label, $url, $jumlah]): $aktif = $tab === $kode; ?>
         <a href="<?= esc($url, 'attr') ?>"
-           class="inline-flex shrink-0 items-center gap-2 rounded-xl px-3.5 py-2 text-sm font-semibold transition <?= $aktif ? 'bg-brand-700 text-white shadow-sm' : 'border border-slate-200 bg-white text-slate-600 hover:bg-slate-50' ?>">
+           class="inline-flex shrink-0 items-center gap-2 rounded-xl px-3.5 py-2 text-sm font-semibold transition active:scale-95 <?= $aktif ? 'bg-brand-700 text-white shadow-md shadow-brand-700/20' : 'border border-slate-200 bg-white text-slate-600 hover:border-brand-200 hover:bg-brand-50 hover:text-brand-700' ?>"<?= $aktif ? ' aria-current="page"' : '' ?>>
             <?= esc($label) ?>
             <?php if ($jumlah !== null): ?>
                 <span class="inline-flex min-w-[1.4rem] justify-center rounded-full px-1.5 py-0.5 text-[11px] font-bold <?= $aktif ? 'bg-white/20 text-white' : ($kode === 'daftar_menunggu' && $jumlah > 0 ? 'bg-amber-100 text-amber-800' : 'bg-slate-100 text-slate-500') ?>"><?= (int) $jumlah ?></span>

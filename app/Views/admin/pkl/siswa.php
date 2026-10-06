@@ -85,7 +85,7 @@ $opsiFase = [
     <?php endforeach; ?>
 </div>
 
-<div class="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+<div class="rise rise-1 overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
     <form method="get" class="grid grid-cols-1 gap-2 border-b border-slate-100 p-4 sm:grid-cols-[1fr_12rem_15rem_auto]">
         <input type="search" name="q" value="<?= esc($q, 'attr') ?>" placeholder="Cari nama siswa…" class="inp" aria-label="Cari nama">
         <select name="kelas_id" class="inp" aria-label="Kelas">

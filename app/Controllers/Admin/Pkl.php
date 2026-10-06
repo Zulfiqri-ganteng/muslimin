@@ -129,7 +129,7 @@ class Pkl extends BaseController
             'master'     => PklPeringatan::kandidatMaster((string) $ajuan['perusahaan_norm']),
             'kode'       => PklPengajuanModel::kode((int) $id),
             'surat'      => $surat,
-            'perluUlang' => $surat !== null && PklSurat::sidik($ajuan, $anggota) !== (string) $surat['sidik'],
+            'perluUlang' => $surat !== null && PklSurat::sidik($ajuan, $anggota, $this->p) !== (string) $surat['sidik'],
         ]);
     }
 
