@@ -14,7 +14,7 @@
         <div class="text-center mb-6">
             <div class="inline-flex h-14 w-14 items-center justify-center rounded-2xl bg-gold-400 text-brand-900 text-2xl font-extrabold shadow-lg">K</div>
             <h1 class="mt-4 text-white text-2xl font-bold">Panel Admin</h1>
-            <p class="text-brand-200 text-sm">Sistem Kesediaan Guru Mengajar</p>
+            <p class="text-brand-200 text-sm">Sistem Informasi Akademik Sekolah (BINUS)</p>
         </div>
 
         <div class="bg-white rounded-2xl shadow-2xl p-7">
@@ -44,7 +44,7 @@
                 </button>
             </form>
         </div>
-        <p class="text-center text-brand-200 text-xs mt-6">&copy; <?= date('Y') ?> &middot; Sistem Kesediaan Guru Mengajar</p>
+        <p class="text-center text-brand-200 text-xs mt-6">&copy; <?= date('Y') ?> &middot; Sistem Informasi Akademik Sekolah (BINUS)</p>
         <?= view('partials/kredit', ['kreditKelas' => 'mt-1 text-center text-brand-200 text-xs']) ?>
     </div>
 </body>

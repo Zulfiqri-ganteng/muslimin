@@ -258,6 +258,7 @@
     </main>
 
     <footer class="px-4 sm:px-6 pb-5 text-center text-xs text-slate-400">
+        <p>&copy; <?= date('Y') ?> &middot; Sistem Informasi Akademik Sekolah (BINUS)</p>
         <?= view('partials/kredit', ['kreditKelas' => '']) ?>
     </footer>
 </div>

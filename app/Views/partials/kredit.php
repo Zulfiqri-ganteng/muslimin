@@ -8,4 +8,4 @@
  *                               terbawa ke partial, jangan pakai nama umum spt $kelas)
  */
 ?>
-<p class="<?= esc(is_string($kreditKelas ?? null) ? $kreditKelas : 'mt-1') ?>">Design By <a href="https://www.instagram.com/zufieee/" target="_blank" rel="noopener noreferrer" class="font-semibold hover:underline">zufieee</a></p>
+<p class="<?= esc(is_string($kreditKelas ?? null) ? $kreditKelas : 'mt-1') ?>">Design By <a href="https://www.instagram.com/zufieee/" target="_blank" rel="noopener noreferrer" class="font-semibold hover:underline">Zulfiqri,S.Kom</a></p>

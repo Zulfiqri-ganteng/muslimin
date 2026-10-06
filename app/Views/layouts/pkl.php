@@ -28,6 +28,7 @@ $schoolName = $setting['school_name'] ?? 'Sekolah';
 
     <footer class="pb-8 pt-2 text-center text-xs text-slate-400 px-4">
         &copy; <?= date('Y') ?> <?= esc($schoolName) ?> &middot; Data pribadimu hanya dipakai untuk administrasi sekolah.
+        <span class="block mt-0.5">Sistem Informasi Akademik Sekolah (BINUS)</span>
         <?= view('partials/kredit') ?>
     </footer>
 

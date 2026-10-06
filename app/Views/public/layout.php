@@ -83,6 +83,7 @@ if ((int) ($setting['dokumen_publik'] ?? 0) === 1) {
     <div class="max-w-6xl mx-auto px-4 sm:px-6 py-6 text-center text-sm text-slate-400">
         &copy; <?= date('Y') ?> <?= esc($schoolName) ?>
         <?php if (! empty($setting['academic_year'])): ?> &middot; T.P. <?= esc($setting['academic_year']) ?><?php endif; ?>
+        <span class="block mt-0.5">Sistem Informasi Akademik Sekolah (BINUS)</span>
         <?= view('partials/kredit') ?>
     </div>
 </footer>
