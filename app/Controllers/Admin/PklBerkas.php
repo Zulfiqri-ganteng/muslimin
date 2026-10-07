@@ -68,47 +68,17 @@ class PklBerkas extends BaseController
     /** POST admin/pkl/surat-massal — mode "terpilih" (ids[]) atau "belum" (belum dicetak / perlu cetak ulang). */
     public function suratMassal()
     {
-        $mode = (string) $this->request->getPost('mode');
         $balik = 'admin/pkl/daftar/disetujui';
-
-        if ($mode === 'terpilih') {
-            $ids = array_values(array_unique(array_filter(array_map('intval', (array) $this->request->getPost('ids')))));
-            if ($ids === []) {
-                return $this->ke($balik, 'error', 'Centang dulu ajuan yang suratnya mau diunduh.');
-            }
-        } else {
-            $semua = array_map('intval', array_column(
-                db_connect()->table('pkl_pengajuan')->select('id')->where('status', 'disetujui')->get()->getResultArray(),
-                'id'
-            ));
-            if ($mode === 'semua') {
-                // Semua ajuan yang disetujui (termasuk yang sudah pernah dicetak) — untuk cetak ulang massal.
-                $ids = $semua;
-                if ($ids === []) {
-                    return $this->ke($balik, 'error', 'Belum ada ajuan yang disetujui.');
-                }
-            } else {
-                $status = $this->surat->statusBanyak($semua);
-                $ids    = array_values(array_filter($semua, static fn (int $i) => ! isset($status[$i]) || $status[$i]['perlu_ulang']));
-                if ($ids === []) {
-                    return $this->ke($balik, 'success', 'Semua surat sudah dicetak dan datanya tidak berubah. Tidak ada yang perlu diunduh. Mau mencetak ulang semuanya? Pakai tombol "Unduh SEMUA surat".');
-                }
-            }
+        $pilih = $this->surat->pilihUntukUnduh((string) $this->request->getPost('mode'), (array) $this->request->getPost('ids'), self::MAKS_SURAT_MASSAL);
+        if ($pilih['ok'] === false) {
+            return $this->ke($balik, 'error', $pilih['pesan']);
         }
-        if (count($ids) > self::MAKS_SURAT_MASSAL) {
-            return $this->ke($balik, 'error', 'Terlalu banyak sekaligus (maksimal ' . self::MAKS_SURAT_MASSAL . ' surat). Pakai saringan/centang sebagian.');
+        if ($pilih['ids'] === []) {
+            return $this->ke($balik, 'success', $pilih['pesan']);
         }
 
-        // Urutan nomor = urutan persetujuan (yang lebih dulu disetujui mendapat nomor lebih kecil).
-        $urut = array_map('intval', array_column(
-            db_connect()->table('pkl_pengajuan')->select('id')->whereIn('id', $ids)->where('status', 'disetujui')
-                ->orderBy('diputuskan_at', 'ASC')->orderBy('id', 'ASC')->get()->getResultArray(),
-            'id'
-        ));
-
-        return $this->unduh($urut, date('Y-m-d'), $balik);
+        return $this->unduh($pilih['ids'], date('Y-m-d'), $balik);
     }
-
     /** @param list<int> $ids */
     private function unduh(array $ids, string $tanggal, string $balik)
     {
@@ -147,9 +117,9 @@ class PklBerkas extends BaseController
         if ($this->request->getGet('contoh') === '1') {
             return $this->response->download('Contoh Template Surat PKL.docx', $this->surat->contohTemplate())->setFileName('Contoh Template Surat PKL.docx');
         }
-        $path = PklSurat::pathTemplate((new PklPengaturanModel())->ambil());
+        $path = PklSurat::pathAktif((new PklPengaturanModel())->ambil());
         if ($path === null) {
-            return $this->ke('admin/pkl/pengaturan', 'error', 'Belum ada template yang diunggah. Unduh "contoh template" untuk memulai.');
+            return $this->ke('admin/pkl/pengaturan', 'error', 'Template surat tidak ditemukan. Unduh "contoh template" untuk memulai.');
         }
 
         return $this->response->download('Template Surat PKL.docx', (string) file_get_contents($path))->setFileName('Template Surat PKL.docx');
@@ -178,7 +148,7 @@ class PklBerkas extends BaseController
         // Uji isi dengan data contoh: template yang rusak ditolak SEKARANG, bukan saat staf mencetak surat.
         try {
             $v = array_fill_keys(PklSurat::SKALAR, 'Contoh');
-            $baris = ['no' => '1', 'nama' => 'Contoh Siswa', 'nis' => '1', 'nisn' => '1', 'kelas' => 'XI', 'jurusan' => 'TKJ'];
+            $baris = ['no' => '1', 'nama' => 'Contoh Siswa', 'nis' => '1', 'nisn' => '1', 'kelas' => 'XI', 'jurusan' => 'TKJ', 'hp' => '081234567890'];
             $biner = PklDocx::dariTemplate($sementara, [['v' => $v, 'siswa' => [$baris]]]);
             $dom   = new \DOMDocument();
             $zip   = new \ZipArchive();
@@ -219,6 +189,60 @@ class PklBerkas extends BaseController
     }
 
     // =================================================================
+    // Tanda tangan Waka Hubin (Hubin & Admin; Operator ditolak oleh Config\Peran 'kecuali')
+    // =================================================================
+
+    public function ttd()
+    {
+        $p = (new PklPengaturanModel())->ambil();
+
+        return view('admin/pkl/ttd', $this->dasar('Tanda Tangan Waka Hubin', 'ttd') + [
+            'ada' => PklSurat::infoTtd($p) !== null,
+            'ver' => (int) @filemtime(PklSurat::dirBerkas() . (string) ($p['ttd_hubin'] ?? '')),
+        ]);
+    }
+
+    /** GET admin/pkl/ttd/gambar — pratinjau gambar tanda tangan (hanya yang berhak membuka halaman ttd). */
+    public function ttdGambar()
+    {
+        $info = PklSurat::infoTtd((new PklPengaturanModel())->ambil());
+        if ($info === null) {
+            return $this->response->setStatusCode(404, 'Belum ada tanda tangan');
+        }
+
+        return $this->response
+            ->setHeader('Content-Type', $info['ext'] === 'png' ? 'image/png' : 'image/jpeg')
+            ->setHeader('Cache-Control', 'private, no-store')
+            ->setHeader('X-Content-Type-Options', 'nosniff')
+            ->setBody((string) file_get_contents($info['path']));
+    }
+
+    public function unggahTtd(): RedirectResponse
+    {
+        $balik  = 'admin/pkl/ttd';
+        $berkas = $this->request->getFile('ttd');
+        if ($berkas === null || ! $berkas->isValid() || $berkas->hasMoved()) {
+            return $this->ke($balik, 'error', 'Pilih gambar tanda tangan (PNG atau JPG) dulu.');
+        }
+        $hasil = PklSurat::simpanTtd($berkas->getTempName(), (int) $berkas->getSize());
+        if (! $hasil['ok']) {
+            return $this->ke($balik, 'error', $hasil['pesan']);
+        }
+        $a = (array) session('admin');
+        $this->audit->record('update', 'pkl_pengaturan', 1, 'Tanda tangan Waka Hubin diunggah oleh ' . ($a['full_name'] ?? '?') . ' (' . ($a['role'] ?? '?') . ')');
+
+        return $this->ke($balik, 'success', $hasil['pesan']);
+    }
+
+    public function hapusTtd(): RedirectResponse
+    {
+        PklSurat::hapusTtd();
+        $a = (array) session('admin');
+        $this->audit->record('update', 'pkl_pengaturan', 1, 'Tanda tangan Waka Hubin dihapus oleh ' . ($a['full_name'] ?? '?'));
+
+        return $this->ke('admin/pkl/ttd', 'success', 'Tanda tangan dihapus. Surat kembali memberi ruang kosong untuk tanda tangan basah.');
+    }
+    // =================================================================
     // Excel Status Siswa
     // =================================================================
 
@@ -233,7 +257,7 @@ class PklBerkas extends BaseController
         [$rows] = $this->model->statusSiswa($tingkat, $kelas, $q, $fase, 100000, 1);
         $r      = $this->model->ringkasanSiswa($tingkat, $kelas);
         $label  = [
-            'belum' => 'Belum mengisi', 'ditolak' => 'Ditolak (perlu ajukan ulang)', 'menunggu' => 'Menunggu ACC', 'perbaikan' => 'Perlu perbaikan',
+            'belum' => 'Belum mengisi', 'ditolak' => 'Ditolak (perlu ajukan ulang)', 'menunggu' => 'Menunggu keputusan Hubin', 'perbaikan' => 'Perlu perbaikan',
             'belum_mulai' => 'Disetujui, belum mulai', 'sedang' => 'Sedang PKL', 'selesai' => 'Selesai PKL', 'disetujui' => 'Disetujui',
         ];
         $setting = (new SettingModel())->get();
@@ -247,7 +271,7 @@ class PklBerkas extends BaseController
         $ws->getStyle('A1')->getFont()->setBold(true)->setSize(14);
         $ws->getStyle('A3')->getFont()->setBold(true);
 
-        $judul = ['No', 'Nama', 'Kelas', 'Status', 'Perusahaan', 'Kota', 'Mulai', 'Selesai', 'No. Bukti', 'Nomor Surat'];
+        $judul = ['No', 'Nama', 'Kelas', 'Status', 'Perusahaan', 'Kota', 'Disetujui oleh', 'Waktu ACC', 'No. Bukti', 'Nomor Surat'];
         $ws->fromArray($judul, null, 'A5');
         $ws->getStyle('A5:J5')->getFont()->setBold(true);
         $ws->getStyle('A5:J5')->getFill()->setFillType('solid')->getStartColor()->setRGB('D9E2F3');
@@ -257,7 +281,7 @@ class PklBerkas extends BaseController
         foreach ($rows as $i => $s) {
             $ws->fromArray([
                 $i + 1, $s['nama'], $s['nama_kelas'], $label[$s['fase']] ?? $s['fase'], $s['perusahaan_nama'] ?? '', $s['perusahaan_kota'] ?? '',
-                ! empty($s['tanggal_mulai']) ? IsianBantu::tanggalIndo($s['tanggal_mulai']) : '', ! empty($s['tanggal_selesai']) ? IsianBantu::tanggalIndo($s['tanggal_selesai']) : '',
+                $s['acc_nama'] ?? '', ! empty($s['acc_at']) ? date('d-m-Y H:i', strtotime((string) $s['acc_at'])) : '',
                 ! empty($s['ajuan_id']) ? PklPengajuanModel::kode((int) $s['ajuan_id']) : '', $s['nomor_surat'] ?? '',
             ], null, 'A' . $no++);
         }
@@ -345,13 +369,14 @@ class PklBerkas extends BaseController
     // Pembantu
     // =================================================================
 
-    private function dasar(string $judul): array
+    private function dasar(string $judul, string $tab = 'impor'): array
     {
         $peran = (string) (session('admin')['role'] ?? '');
 
         return [
-            'title' => $judul, 'tab' => 'impor', 'peran' => $peran, 'p' => (new PklPengaturanModel())->ambil(),
+            'title' => $judul, 'tab' => $tab, 'peran' => $peran, 'p' => (new PklPengaturanModel())->ambil(),
             'bolehPengaturan' => HakAkses::boleh($peran, 'admin/pkl/pengaturan'), 'bolehHapus' => HakAkses::boleh($peran, 'admin/pkl/hapus'),
+            'bolehAcc' => HakAkses::bolehAcc($peran), 'bolehTtd' => HakAkses::boleh($peran, 'admin/pkl/ttd'),
             'hitungTab' => $this->model->hitungStatus(),
         ];
     }

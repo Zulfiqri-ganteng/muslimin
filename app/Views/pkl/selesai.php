@@ -1,7 +1,7 @@
 <?php
 /**
  * @var array  $setting
- * @var array  $info    ['nama','kelas','no','revisi','perusahaan','mulai','selesai','jumlah']
+ * @var array  $info    ['nama','kelas','no','revisi','perusahaan','jumlah','batas','hari']
  * @var string $urlForm
  */
 
@@ -20,7 +20,7 @@ $jumlah = (int) ($info['jumlah'] ?? 1);
         <h2 class="mt-5 text-xl font-extrabold text-slate-800"><?= ! empty($info['revisi']) ? 'Perbaikan Terkirim!' : 'Ajuan PKL Terkirim!' ?></h2>
         <p class="mt-2 text-slate-500 leading-relaxed">
             Terima kasih, <b class="text-slate-700"><?= esc($info['nama'] ?? '') ?></b><?php if (! empty($info['kelas'])): ?> (<?= esc($info['kelas']) ?>)<?php endif; ?>.
-            Ajuan PKL-mu sudah kami terima dan akan diperiksa oleh sekolah.
+            Ajuan PKL-mu sudah kami terima dan diteruskan ke Waka Hubin untuk diputuskan.
         </p>
 
         <div class="rise rise-3 mt-5 rounded-xl border border-brand-100 bg-gradient-to-br from-brand-50 to-white px-5 py-4">
@@ -34,10 +34,12 @@ $jumlah = (int) ($info['jumlah'] ?? 1);
                 <dt class="text-slate-500">Perusahaan</dt>
                 <dd class="font-semibold text-slate-800 break-words"><?= esc($info['perusahaan'] ?? '') ?></dd>
             </div>
-            <div class="grid grid-cols-[6.5rem_1fr] gap-3 px-4 py-2.5">
-                <dt class="text-slate-500">Periode</dt>
-                <dd class="font-semibold text-slate-800"><?= esc(IsianBantu::tanggalIndo($info['mulai'] ?? null)) ?> &ndash; <?= esc(IsianBantu::tanggalIndo($info['selesai'] ?? null)) ?></dd>
-            </div>
+            <?php if (! empty($info['batas'])): ?>
+                <div class="grid grid-cols-[6.5rem_1fr] gap-3 px-4 py-2.5">
+                    <dt class="text-slate-500">Keputusan</dt>
+                    <dd class="font-semibold text-slate-800">paling lambat <?= esc(IsianBantu::tanggalIndo($info['batas'])) ?></dd>
+                </div>
+            <?php endif; ?>
             <div class="grid grid-cols-[6.5rem_1fr] gap-3 px-4 py-2.5">
                 <dt class="text-slate-500">Jumlah siswa</dt>
                 <dd class="font-semibold text-slate-800"><?= $jumlah ?> siswa<?= $jumlah > 1 ? ' (kamu + ' . ($jumlah - 1) . ' teman)' : '' ?></dd>
@@ -46,6 +48,7 @@ $jumlah = (int) ($info['jumlah'] ?? 1);
 
         <p class="mt-5 text-sm text-slate-500">
             Kamu <b>tidak perlu mengisi lagi</b>; temanmu yang tercantum juga tidak perlu mengisi.
+            <b>Jangan mengajukan ulang</b> — tunggu keputusan Waka Hubin<?= ! empty($info['hari']) ? ' (paling lambat ' . (int) $info['hari'] . ' hari)' : '' ?>.
             Jika ada data yang salah atau sekolah meminta perbaikan, hubungi operator sekolah atau Waka Hubin.
         </p>
         <a href="<?= esc($urlForm, 'attr') ?>" class="mt-5 inline-block text-sm font-semibold text-brand-600 hover:text-brand-800">&larr; Kembali ke halaman awal</a>

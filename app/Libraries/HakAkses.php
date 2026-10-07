@@ -58,6 +58,58 @@ final class HakAkses
         return $p !== null && ! empty($p['api']);
     }
 
+    /** Boleh menyetujui (ACC) ajuan PKL? Hanya Waka Hubin, dan Admin sebagai cadangan. */
+    public static function bolehAcc(?string $peran): bool
+    {
+        $p = self::peran($peran);
+
+        return $p !== null && ! empty($p['acc']);
+    }
+
+    /**
+     * Daftar awalan alamat API yang boleh dipakai peran ini, untuk aplikasi (menyusun menu): ['*'] = semua
+     * (Admin), ['pkl'] = hanya modul PKL (Operator, Waka Hubin), [] = tidak boleh memakai API.
+     *
+     * @return list<string>
+     */
+    public static function aksesApi(?string $peran): array
+    {
+        $p = self::peran($peran);
+        if ($p === null || empty($p['api'])) {
+            return [];
+        }
+        if (in_array('*', (array) ($p['akses'] ?? []), true)) {
+            return ['*'];
+        }
+
+        return array_values(array_map('strval', (array) ($p['api_akses'] ?? [])));
+    }
+
+    /**
+     * Bolehkah peran ini memakai alamat API ini? Admin: semua. Peran lain: hanya awalan di 'api_akses'
+     * (mis. 'pkl' → "pkl", "pkl/ajuan/12"). Alamat API tanpa "api/v1/".
+     */
+    public static function bolehApiAlamat(?string $peran, string $alamat): bool
+    {
+        $p = self::peran($peran);
+        if ($p === null || empty($p['api'])) {
+            return false;
+        }
+        if (in_array('*', (array) ($p['akses'] ?? []), true)) {
+            return true;
+        }
+        if (str_contains($alamat, '..')) { // jalur penyusup (pkl/../admin/…) tak pernah lolos
+            return false;
+        }
+        foreach ((array) ($p['api_akses'] ?? []) as $awalan) {
+            if (self::cocokAwalan($alamat, (string) $awalan)) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
     /**
      * Bolehkah peran ini membuka alamat ini?
      *
@@ -71,6 +123,9 @@ final class HakAkses
         }
 
         $alamat = self::rapikan($alamat);
+        if (str_contains($alamat, '..')) { // jalur penyusup (admin/pkl/../master/…) tak pernah lolos
+            return false;
+        }
 
         foreach (config(Peran::class)->umum as $awalan) {
             if (self::cocokAwalan($alamat, $awalan)) {

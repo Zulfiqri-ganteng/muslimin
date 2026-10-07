@@ -109,6 +109,11 @@ $routes->group('admin', static function ($routes) {
         $routes->get('pkl/pengaturan/template', 'Admin\PklBerkas::template');
         $routes->post('pkl/pengaturan/template', 'Admin\PklBerkas::unggahTemplate', ['filter' => 'csrf']);
         $routes->post('pkl/pengaturan/template/hapus', 'Admin\PklBerkas::hapusTemplate', ['filter' => 'csrf']);
+        // Tanda tangan Waka Hubin: Hubin & Admin saja (Operator ditolak oleh Config\Peran 'kecuali').
+        $routes->get('pkl/ttd', 'Admin\PklBerkas::ttd', ['filter' => 'csrf']);
+        $routes->get('pkl/ttd/gambar', 'Admin\PklBerkas::ttdGambar');
+        $routes->post('pkl/ttd', 'Admin\PklBerkas::unggahTtd', ['filter' => 'csrf']);
+        $routes->post('pkl/ttd/hapus', 'Admin\PklBerkas::hapusTtd', ['filter' => 'csrf']);
         $routes->get('pkl/impor', 'Admin\PklBerkas::impor', ['filter' => 'csrf']);
         $routes->get('pkl/impor/contoh', 'Admin\PklBerkas::imporContoh');
         $routes->post('pkl/impor/pratinjau', 'Admin\PklBerkas::imporPratinjau', ['filter' => 'csrf']);
@@ -800,6 +805,30 @@ $routes->group('api/v1', ['namespace' => 'App\Controllers\Api', 'filter' => 'cor
         $routes->get('admin/notif/pratinjau', 'Admin\Notif::pratinjau');
         $routes->post('admin/notif/uji', 'Admin\Notif::uji');
         $routes->get('admin/notif/riwayat', 'Admin\Notif::riwayat');
+
+        // ---------- PKL / PRAKERIN (Operator, Waka Hubin, Admin) ----------
+        // Gerbang peran: Config\Peran 'api_akses' (awalan "pkl"). Aturan ACC (hanya Waka Hubin, Admin = cadangan
+        // "mewakili") dijaga di Libraries\PklKeputusan — sama persis dengan web. Dokumentasi: docs/API-PKL.md.
+        $routes->get('pkl/meta', 'Pkl::meta');
+        $routes->get('pkl/ringkasan', 'Pkl::ringkasan');
+        $routes->get('pkl/ajuan', 'Pkl::daftar');
+        $routes->post('pkl/ajuan', 'Pkl::buat');
+        $routes->get('pkl/ajuan/(:num)', 'Pkl::detail/$1');
+        $routes->post('pkl/ajuan/(:num)/ubah', 'Pkl::ubah/$1');
+        $routes->delete('pkl/ajuan/(:num)', 'Pkl::hapus/$1');
+        $routes->post('pkl/ajuan/(:num)/acc', 'Pkl::acc/$1');
+        $routes->post('pkl/ajuan/(:num)/kembalikan', 'Pkl::kembalikan/$1');
+        $routes->post('pkl/ajuan/(:num)/tolak', 'Pkl::tolak/$1');
+        $routes->post('pkl/ajuan/(:num)/batal-acc', 'Pkl::batalAcc/$1');
+        $routes->post('pkl/ajuan/(:num)/surat', 'Pkl::surat/$1');
+        $routes->post('pkl/acc-massal', 'Pkl::accMassal');
+        $routes->post('pkl/surat-massal', 'Pkl::suratMassal');
+        $routes->get('pkl/siswa', 'Pkl::siswa');
+        $routes->get('pkl/siswa/ringkasan', 'Pkl::siswaRingkas');
+        $routes->get('pkl/ttd', 'Pkl::ttd');
+        $routes->get('pkl/ttd/gambar', 'Pkl::ttdGambar');
+        $routes->post('pkl/ttd', 'Pkl::ttdUnggah');
+        $routes->delete('pkl/ttd', 'Pkl::ttdHapus');
 
         // ---------- PROFIL & PENGATURAN ----------
         $routes->get('admin/profile', 'Admin\Profile::show');

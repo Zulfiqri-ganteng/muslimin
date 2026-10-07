@@ -305,12 +305,18 @@ final class PklDocx
     // Template Word milik sekolah
     // =================================================================
 
+    /** Awalan nilai penanda yang berisi XML mentah (mis. gambar) — bukan teks biasa. */
+    public const RAW = "\x00RAW\x00";
+
     /**
      * Isi template untuk banyak surat → biner .docx (satu dokumen, tiap surat di halaman baru).
      *
      * @param list<array{v: array<string,string>, siswa: list<array<string,string>>}> $daftar
+     * @param list<array{id: string, ext: string, biner: string}>                        $media gambar tambahan
+     *        (mis. tanda tangan Waka Hubin): disimpan di word/media/{id}.{ext} dan didaftarkan sebagai
+     *        relasi dengan Id = $id, supaya XML mentah di nilai penanda bisa merujuknya (r:embed="$id").
      */
-    public static function dariTemplate(string $pathTemplate, array $daftar): string
+    public static function dariTemplate(string $pathTemplate, array $daftar, array $media = []): string
     {
         $zip = new \ZipArchive();
         if ($zip->open($pathTemplate) !== true) {
@@ -333,10 +339,19 @@ final class PklDocx
 
         $badan = self::rapikanPenanda($badan);
         $hasil = [];
-        foreach ($daftar as $surat) {
-            $hasil[] = self::isiPenanda(self::gandakanBaris($badan, $surat['siswa']), $surat['v']);
+        $idGambar = 1000;
+        foreach (array_values($daftar) as $i => $surat) {
+            $isi = self::isiPenanda(self::gandakanBaris($badan, $surat['siswa']), $surat['v']);
+            $isi = self::idGambarUnik($isi, $idGambar);
+            if ($i > 0) {
+                $isi = self::mulaiHalamanBaru($isi);
+            }
+            $hasil[] = $isi;
         }
-        $baru = $awal . implode('<w:p><w:r><w:br w:type="page"/></w:r></w:p>', $hasil) . $sect . $akhir;
+        // Surat ke-2 dst. memulai halaman lewat pageBreakBefore di paragraf pertamanya (bukan paragraf
+        // pemisah), supaya tidak ada baris kosong di puncak halaman yang menggeser isi surat.
+        $baru = $awal . implode('', $hasil) . $sect . $akhir;
+        $baru = self::buangIdSunting($baru);
 
         // Salin seluruh isi template, ganti document.xml saja.
         $sumber = new \ZipArchive();
@@ -351,7 +366,97 @@ final class PklDocx
         $sumber->close();
         $bagian['word/document.xml'] = $baru;
 
+        // Media tambahan: berkas + relasi + tipe konten.
+        foreach ($media as $m) {
+            $id  = preg_replace('/[^A-Za-z0-9_]/', '', (string) $m['id']);
+            $ext = strtolower(preg_replace('/[^a-z0-9]/i', '', (string) $m['ext']));
+            $bagian['word/media/' . $id . '.' . $ext] = $m['biner'];
+
+            $rel = $bagian['word/_rels/document.xml.rels'] ?? '';
+            if ($rel !== '' && ! str_contains($rel, 'Id="' . $id . '"')) {
+                $bagian['word/_rels/document.xml.rels'] = str_replace(
+                    '</Relationships>',
+                    '<Relationship Id="' . $id . '" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/image" Target="media/' . $id . '.' . $ext . '"/></Relationships>',
+                    $rel
+                );
+            }
+            $tipe = $bagian['[Content_Types].xml'] ?? '';
+            if ($tipe !== '' && ! preg_match('/Extension="' . preg_quote($ext, '/') . '"/i', $tipe)) {
+                $mime = ['png' => 'image/png', 'jpg' => 'image/jpeg', 'jpeg' => 'image/jpeg'][$ext] ?? 'application/octet-stream';
+                $bagian['[Content_Types].xml'] = preg_replace('/(<Types[^>]*>)/', '$1<Default Extension="' . $ext . '" ContentType="' . $mime . '"/>', $tipe, 1) ?? $tipe;
+            }
+        }
+
         return self::zip($bagian);
+    }
+
+    /**
+     * Anchor gambar tanda tangan (di belakang teks, di sisi kiri paragraf) untuk disisipkan lewat nilai
+     * penanda ber-awalan RAW. $relId = Id relasi (lihat $media di dariTemplate); ukuran dalam EMU.
+     */
+    public static function gambarTtd(string $relId, int $cx, int $cy, int $offsetKiri = 215900): string
+    {
+        $relId = preg_replace('/[^A-Za-z0-9_]/', '', $relId);
+
+        return self::RAW . '<w:drawing><wp:anchor distT="0" distB="0" distL="114300" distR="114300" simplePos="0" relativeHeight="251659264" behindDoc="1" locked="0" layoutInCell="1" allowOverlap="1">'
+            . '<wp:simplePos x="0" y="0"/><wp:positionH relativeFrom="column"><wp:posOffset>' . $offsetKiri . '</wp:posOffset></wp:positionH>'
+            . '<wp:positionV relativeFrom="paragraph"><wp:posOffset>0</wp:posOffset></wp:positionV>'
+            . '<wp:extent cx="' . $cx . '" cy="' . $cy . '"/><wp:effectExtent l="0" t="0" r="0" b="0"/><wp:wrapNone/>'
+            . '<wp:docPr id="1" name="Tanda tangan Waka Hubin"/><wp:cNvGraphicFramePr><a:graphicFrameLocks xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main" noChangeAspect="1"/></wp:cNvGraphicFramePr>'
+            . '<a:graphic xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main"><a:graphicData uri="http://schemas.openxmlformats.org/drawingml/2006/picture">'
+            . '<pic:pic xmlns:pic="http://schemas.openxmlformats.org/drawingml/2006/picture"><pic:nvPicPr><pic:cNvPr id="0" name="ttd_hubin"/><pic:cNvPicPr/></pic:nvPicPr>'
+            . '<pic:blipFill><a:blip r:embed="' . $relId . '"><a:clrChange><a:clrFrom><a:srgbClr val="FFFFFF"/></a:clrFrom><a:clrTo><a:srgbClr val="FFFFFF"><a:alpha val="0"/></a:srgbClr></a:clrTo></a:clrChange></a:blip><a:stretch><a:fillRect/></a:stretch></pic:blipFill>'
+            . '<pic:spPr><a:xfrm><a:off x="0" y="0"/><a:ext cx="' . $cx . '" cy="' . $cy . '"/></a:xfrm><a:prstGeom prst="rect"><a:avLst/></a:prstGeom></pic:spPr></pic:pic>'
+            . '</a:graphicData></a:graphic></wp:anchor></w:drawing>';
+    }
+
+    /** Beri tiap gambar bernomor unik (id duplikat antar-salinan surat membuat Word rewel). */
+    private static function idGambarUnik(string $xml, int &$hitung): string
+    {
+        return preg_replace_callback('/<wp:docPr id="\d+"/', static function () use (&$hitung): string {
+            return '<wp:docPr id="' . (++$hitung) . '"';
+        }, $xml) ?? $xml;
+    }
+
+    /** Tandai paragraf pertama badan surat: mulai di halaman baru. */
+    private static function mulaiHalamanBaru(string $badan): string
+    {
+        $pemisah = '<w:p><w:r><w:br w:type="page"/></w:r></w:p>';
+        $tbl     = strpos($badan, '<w:tbl>');
+
+        // Paragraf PERTAMA yang bukan "<w:p .../>" (kosong ringkas).
+        $pos = 0;
+        $m   = null;
+        while (preg_match('/<w:p(?=[ >])[^>]*>/', $badan, $m, PREG_OFFSET_CAPTURE, $pos)) {
+            if (! str_ends_with($m[0][0], '/>')) {
+                break;
+            }
+            $pos = $m[0][1] + strlen($m[0][0]);
+            $m   = null;
+        }
+        // Tak ada paragraf, atau badan diawali tabel (pageBreakBefore tak berlaku di dalam tabel) → pemisah biasa.
+        if ($m === null || ($tbl !== false && $tbl < $m[0][1])) {
+            return $pemisah . $badan;
+        }
+
+        $akhirTag = $m[0][1] + strlen($m[0][0]);
+        if (preg_match('/\G\s*<w:pPr>/', $badan, $pp, 0, $akhirTag)) {
+            $sisip = $akhirTag + strlen($pp[0]);
+            // urutan skema pPr: pStyle, keepNext, keepLines, pageBreakBefore, ...
+            if (preg_match('/\G\s*<w:pStyle [^>]*\/>(?:\s*<w:keepNext\/>)?(?:\s*<w:keepLines\/>)?/', $badan, $ps, 0, $sisip)) {
+                $sisip += strlen($ps[0]);
+            }
+
+            return substr($badan, 0, $sisip) . '<w:pageBreakBefore/>' . substr($badan, $sisip);
+        }
+
+        return substr($badan, 0, $akhirTag) . '<w:pPr><w:pageBreakBefore/></w:pPr>' . substr($badan, $akhirTag);
+    }
+
+    /** Atribut penyuntingan opsional (id paragraf/gambar) yang jadi ganda saat surat digandakan. */
+    private static function buangIdSunting(string $xml): string
+    {
+        return preg_replace('/\s(?:w14:paraId|w14:textId|wp14:anchorId|wp14:editId)="[^"]*"/', '', $xml) ?? $xml;
     }
 
     /** Nama-nama penanda ${...} yang ada di template (setelah dirapikan). @return list<string> */
@@ -385,7 +490,7 @@ final class PklDocx
             foreach ($siswa as $s) {
                 $hasil .= self::isiPenanda($m[0], [
                     'no' => $s['no'], 'siswa_nama' => $s['nama'], 'siswa_nis' => $s['nis'] ?? '', 'siswa_nisn' => $s['nisn'],
-                    'siswa_kelas' => $s['kelas'], 'siswa_jurusan' => $s['jurusan'],
+                    'siswa_kelas' => $s['kelas'], 'siswa_jurusan' => $s['jurusan'], 'siswa_hp' => $s['hp'] ?? '-',
                 ]);
             }
 
@@ -400,7 +505,13 @@ final class PklDocx
                 return $m[0]; // penanda tak dikenal dibiarkan terlihat agar ketahuan salah ketiknya
             }
 
-            return str_replace("\n", '</w:t><w:br/><w:t xml:space="preserve">', self::esc((string) $v[$m[1]]));
+            $nilai = (string) $v[$m[1]];
+            if (str_starts_with($nilai, self::RAW)) {
+                // XML mentah (gambar): menutup <w:t> yang memuat penanda, lalu membukanya lagi.
+                return '</w:t>' . substr($nilai, strlen(self::RAW)) . '<w:t xml:space="preserve">';
+            }
+
+            return str_replace("\n", '</w:t><w:br/><w:t xml:space="preserve">', self::esc($nilai));
         }, $xml) ?? $xml;
     }
 

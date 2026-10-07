@@ -17,14 +17,18 @@ use CodeIgniter\HTTP\ResponseInterface;
  * Form pengajuan PKL / Prakerin siswa — PUBLIK, tanpa login. Rancangan: docs/DESAIN-PKL.md.
  *
  * Alur siswa: pilih kelas → pilih nama → data perusahaan → teman satu tempat
- * (opsional) → periode + HP + tanggal lahir → periksa & kirim. Ajuan masuk ke
- * kotak masuk staf (pkl_pengajuan, status `menunggu`).
+ * (opsional, maks 5 siswa termasuk pengaju; HP tiap siswa wajib) → HP pengaju →
+ * periksa & kirim. Tanggal PKL & tanggal lahir TIDAK ditanyakan. Ajuan masuk ke
+ * kotak masuk staf (pkl_pengajuan, status `menunggu`) dan diputuskan Waka Hubin
+ * paling lambat N hari (Pengaturan, bawaan 5) sejak dikirim.
  *
  * Pengaman:
  *   - satu siswa satu ajuan AKTIF — dijaga 3 lapis: daftar nama menandai & mengunci
- *     siswa yang sudah aktif, validasi di sini, dan UNIQUE pkl_anggota.siswa_aktif;
+ *     siswa yang sudah aktif, validasi di sini, dan UNIQUE pkl_anggota.siswa_aktif.
+ *     Selama ajuan menunggu keputusan Hubin siswa TIDAK boleh mengajukan ulang (pesan
+ *     menyebut nomor bukti, jam kirim, dan batas keputusan);
  *   - ajuan terkunci setelah kirim; hanya yang dikembalikan staf (`perbaikan`) bisa
- *     dibuka lagi, oleh PENGAJU, dengan tanggal lahir (dibatasi LoginThrottle);
+ *     dibuka lagi, oleh PENGAJU, dengan nomor HP yang ia isi (dibatasi LoginThrottle);
  *   - daftar nama hanya memuat status — tak pernah data perusahaan atau ajuan orang lain;
  *   - form default TUTUP; buka/tutup & batas waktu diatur di Pengaturan PKL;
  *   - jebakan bot (kolom tersembunyi `website`) + batas kiriman per IP.
@@ -61,9 +65,11 @@ class Pkl extends BaseController
         }
 
         return view('pkl/form', [
-            'setting' => $this->setting,
-            'p'       => $this->p,
-            'kelas'   => $this->daftarKelas(),
+            'setting'    => $this->setting,
+            'p'          => $this->p,
+            'kelas'      => $this->daftarKelas(),
+            'batasHari'  => PklPengaturanModel::batasHari($this->p),
+            'maksSiswa'  => PklPengaturanModel::maksSiswa($this->p),
         ]);
     }
 
@@ -82,12 +88,15 @@ class Pkl extends BaseController
             return $this->json(['ok' => false, 'message' => 'Kelas ini belum termasuk yang boleh mengajukan PKL.'], 422);
         }
 
+        $hari = PklPengaturanModel::batasHari($this->p);
         $data = array_map(static fn (array $r) => [
             'id'     => (int) $r['id'],
             'nama'   => $r['nama'],
             'jk'     => $r['jenis_kelamin'],
             'status' => $r['aktif'] ?? ((int) $r['pernah_ditolak'] === 1 ? 'ditolak' : 'belum'),
             'peran'  => $r['aktif'] !== null ? $r['peran'] : null,
+            // Hanya tanggal (bukan data ajuan): kapan keputusan Waka Hubin paling lambat keluar.
+            'batas'  => $r['aktif'] === 'menunggu' ? substr((string) PklPengajuanModel::batasKeputusan($r['diajukan_at'] ?? null, $hari), 0, 10) : null,
         ], (new PklPengajuanModel())->daftarSiswaKelas($kelasId));
 
         return $this->json(['ok' => true, 'data' => $data]);
@@ -116,7 +125,7 @@ class Pkl extends BaseController
 
     /**
      * POST pkl/buka — buka kembali ajuan yang dikembalikan staf. Hanya PENGAJU,
-     * dengan tanggal lahir yang dulu ia isi ATAU tanggal lahir di Master Siswa
+     * dengan nomor HP yang dulu ia isi di ajuan ATAU nomor HP di Master Siswa
      * (jaga-jaga salah ketik waktu pertama mengisi).
      */
     public function buka(): ResponseInterface
@@ -126,7 +135,7 @@ class Pkl extends BaseController
         }
 
         $id    = (int) $this->request->getPost('siswa_id');
-        $tgl   = trim((string) $this->request->getPost('tanggal_lahir'));
+        $hpIn  = trim((string) $this->request->getPost('hp'));
         $siswa = $this->siswaBoleh($id);
         if ($siswa === null) {
             return $this->json(['ok' => false, 'message' => 'Data siswa tidak ditemukan.'], 404);
@@ -140,8 +149,8 @@ class Pkl extends BaseController
         if ($milik['peran'] !== 'pengaju') {
             return $this->json(['ok' => false, 'message' => 'Ajuan ini diajukan oleh temanmu. Hanya yang mengajukan yang bisa memperbaikinya — minta dia membukanya, atau hubungi operator sekolah.'], 409);
         }
-        if ($tgl === '' || IsianBantu::tanggal($tgl, 1980, (int) date('Y')) === null) {
-            return $this->json(['ok' => false, 'message' => 'Isi tanggal lahirmu dengan benar.'], 422);
+        if ($hpIn === '' || ! IsianBantu::teleponMurni($hpIn) || ! IsianBantu::hpSah(IsianBantu::telepon($hpIn))) {
+            return $this->json(['ok' => false, 'message' => 'Isi nomor HP-mu dengan benar (contoh: 081234567890).'], 422);
         }
 
         $throttle = new LoginThrottle();
@@ -155,12 +164,13 @@ class Pkl extends BaseController
             ], 429);
         }
 
-        $cocok = $tgl === (string) ($milik['tgl_lahir_anggota'] ?? '')
-            || ($tgl === (string) ($siswa['tanggal_lahir'] ?? ''));
+        $hp    = IsianBantu::telepon($hpIn);
+        $cocok = ($hp !== '' && $hp === IsianBantu::telepon((string) ($milik['hp_anggota'] ?? '')))
+            || ($hp !== '' && $hp === IsianBantu::telepon((string) ($siswa['no_hp'] ?? '')));
         if (! $cocok) {
             $throttle->hit($kunci, $ip, 'pkl');
 
-            return $this->json(['ok' => false, 'message' => 'Tanggal lahir tidak cocok dengan yang kamu isi sebelumnya.'], 422);
+            return $this->json(['ok' => false, 'message' => 'Nomor HP tidak cocok dengan yang kamu isi sebelumnya.'], 422);
         }
 
         $throttle->clear($kunci, $ip);
@@ -182,14 +192,12 @@ class Pkl extends BaseController
                 'perusahaan_telepon' => $milik['perusahaan_telepon'],
                 'kontak_nama'        => $milik['kontak_nama'],
                 'kontak_jabatan'     => $milik['kontak_jabatan'],
-                'tanggal_mulai'      => $milik['tanggal_mulai'],
-                'tanggal_selesai'    => $milik['tanggal_selesai'],
                 'hp'                 => $pengaju['hp'] ?? null,
-                'tanggal_lahir'      => $pengaju['tanggal_lahir'] ?? null,
                 'teman'              => array_values(array_map(static fn (array $a) => [
                     'id'    => (int) $a['siswa_id'],
                     'nama'  => $a['nama'],
                     'kelas' => $a['nama_kelas'],
+                    'hp'    => $a['hp'] ?? null,
                 ], array_filter($anggota, static fn (array $a) => $a['peran'] === 'teman'))),
             ],
         ]);
@@ -226,14 +234,14 @@ class Pkl extends BaseController
                 return $this->json(['ok' => false, 'message' => 'Ajuan ini tidak sedang dibuka untuk perbaikan.'], 409);
             }
             if (! $this->sudahDibuka($ajuanId)) {
-                return $this->json(['ok' => false, 'message' => 'Buka ajuanmu dulu dengan tanggal lahir.'], 403);
+                return $this->json(['ok' => false, 'message' => 'Buka ajuanmu dulu dengan nomor HP.'], 403);
             }
         } elseif ($milik !== null) {
-            return $this->json(['ok' => false, 'message' => $this->pesanTerkunci($milik['status'])], 409);
+            return $this->json(['ok' => false, 'message' => $this->pesanTerkunci($milik)], 409);
         }
 
         [$data, $galat] = PklForm::proses($this->request->getPost(), $this->p);
-        [$teman, $galatTeman] = $this->periksaTeman($data['teman'], $id, $ajuanId > 0 ? $ajuanId : null);
+        [$teman, $galatTeman] = $this->periksaTeman($data['teman'], $id, $ajuanId > 0 ? $ajuanId : null, $data['teman_hp'] ?? []);
         $galat += $galatTeman;
         if ($galat !== []) {
             return $this->json(['ok' => false, 'message' => 'Masih ada isian yang perlu diperbaiki.', 'errors' => $galat], 422);
@@ -269,9 +277,9 @@ class Pkl extends BaseController
             'no'         => PklPengajuanModel::kode((int) $hasil['id']),
             'revisi'     => $ajuanId > 0,
             'perusahaan' => $data['perusahaan_nama'],
-            'mulai'      => $data['tanggal_mulai'],
-            'selesai'    => $data['tanggal_selesai'],
             'jumlah'     => count($anggota),
+            'batas'      => substr((string) PklPengajuanModel::batasKeputusan(date('Y-m-d H:i:s'), PklPengaturanModel::batasHari($this->p)), 0, 10),
+            'hari'       => PklPengaturanModel::batasHari($this->p),
         ]);
 
         return $this->json(['ok' => true, 'redirect' => site_url('pkl/selesai')]);
@@ -362,11 +370,12 @@ class Pkl extends BaseController
      * aktif lain (ajuan yang sedang diperbaiki ini sendiri tentu tidak dihitung).
      * Pesan menyebut NAMA yang dipilih sendiri oleh pengaju — tak membuka data lain.
      *
-     * @param list<int> $ids
+     * @param list<int>          $ids
+     * @param array<int, string> $hpTeman id siswa → HP yang sudah dirapikan PklForm
      *
-     * @return array{0: list<array{siswa_id:int, kelas_id:?int, peran:string}>, 1: array<string, string>}
+     * @return array{0: list<array{siswa_id:int, kelas_id:?int, peran:string, hp:?string}>, 1: array<string, string>}
      */
-    private function periksaTeman(array $ids, int $pengajuId, ?int $ajuanSendiri): array
+    private function periksaTeman(array $ids, int $pengajuId, ?int $ajuanSendiri, array $hpTeman = []): array
     {
         if ($ids === []) {
             return [[], []];
@@ -387,7 +396,7 @@ class Pkl extends BaseController
             } elseif ($s['aktif_di'] !== null && (int) $s['aktif_di'] !== (int) $ajuanSendiri) {
                 $masalah[] = $s['nama'] . ' (sudah punya ajuan PKL)';
             } else {
-                $baris[] = ['siswa_id' => $tid, 'kelas_id' => (int) $s['kelas_id'] ?: null, 'peran' => 'teman'];
+                $baris[] = ['siswa_id' => $tid, 'kelas_id' => (int) $s['kelas_id'] ?: null, 'peran' => 'teman', 'hp' => $hpTeman[$tid] ?? null];
             }
         }
 
@@ -406,7 +415,7 @@ class Pkl extends BaseController
                 if (in_array($pengajuId, $ids, true)) {
                     $milik = $model->aktifMilik($pengajuId);
 
-                    return $this->json(['ok' => false, 'message' => $this->pesanTerkunci($milik['status'] ?? 'menunggu')], 409);
+                    return $this->json(['ok' => false, 'message' => $this->pesanTerkunci($milik ?? ['status' => 'menunggu'])], 409);
                 }
 
                 return $this->json([
@@ -432,11 +441,31 @@ class Pkl extends BaseController
         return $waktu > 0 && (time() - $waktu) <= self::BUKA_TTL;
     }
 
-    private function pesanTerkunci(string $status): string
+    /**
+     * Pesan saat siswa mencoba mengajukan padahal ajuannya masih aktif. Menyebut nomor bukti, jam kirim,
+     * dan batas keputusan Waka Hubin supaya siswa tahu harus menunggu — bukan mengajukan ulang.
+     *
+     * @param array<string, mixed> $milik baris ajuan aktif (PklPengajuanModel::aktifMilik)
+     */
+    private function pesanTerkunci(array $milik): string
     {
-        return $status === 'disetujui'
-            ? 'Ajuan PKL-mu sudah disetujui sekolah. Jika ada perubahan, hubungi operator sekolah atau Waka Hubin.'
-            : 'Kamu sudah mengajukan PKL dan sedang diperiksa sekolah. Jika ada yang salah, hubungi operator sekolah atau Waka Hubin.';
+        $kode = isset($milik['id']) ? PklPengajuanModel::kode((int) $milik['id']) : 'ajuanmu';
+        if (($milik['status'] ?? '') === 'disetujui') {
+            return 'Ajuan PKL-mu (' . $kode . ') sudah DISETUJUI Waka Hubin. Jika ada perubahan, hubungi operator sekolah atau Waka Hubin.';
+        }
+        if (($milik['status'] ?? '') === 'perbaikan') {
+            return 'Ajuan PKL-mu (' . $kode . ') sedang dikembalikan untuk diperbaiki. Pilih namamu di langkah 1 lalu buka ajuanmu — jangan membuat ajuan baru.';
+        }
+
+        $hari  = PklPengaturanModel::batasHari($this->p);
+        $kirim = $milik['diajukan_at'] ?? ($milik['created_at'] ?? null);
+        $batas = PklPengajuanModel::batasKeputusan($kirim, $hari);
+
+        return 'Kamu sudah mengajukan PKL (' . $kode . ')'
+            . ($kirim ? ' pada ' . IsianBantu::tanggalIndo(substr((string) $kirim, 0, 10)) : '')
+            . ' dan ajuanmu sedang menunggu keputusan Waka Hubin'
+            . ($batas ? ' (paling lambat ' . IsianBantu::tanggalIndo(substr($batas, 0, 10)) . ')' : '')
+            . '. Jangan mengajukan ulang — tunggu keputusannya. Bila lewat batas belum ada kabar, hubungi operator sekolah atau Waka Hubin.';
     }
 
     /** Alamat form: beranda bila dibuka lewat subdomain, /pkl bila lewat domain utama. */

@@ -2,7 +2,7 @@
 /**
  * Tab navigasi PKL (dipakai semua halaman staf PKL).
  *
- * @var string                $tab        beranda | daftar_{status} | siswa | baru | pengaturan
+ * @var string                $tab        beranda | daftar_{status} | siswa | baru | pengaturan | ttd
  * @var array<string, int>    $hitungTab  jumlah ajuan per status
  */
 $tabs = [
@@ -13,6 +13,10 @@ $tabs = [
     ['daftar_ditolak', 'Ditolak', site_url('admin/pkl/daftar/ditolak'), $hitungTab['ditolak'] ?? 0],
     ['siswa', 'Status Siswa', site_url('admin/pkl/siswa'), null],
 ];
+// Tanda tangan Waka Hubin: hanya untuk yang berhak (Hubin & Admin).
+if (\App\Libraries\HakAkses::boleh((string) (session('admin')['role'] ?? ''), 'admin/pkl/ttd')) {
+    $tabs[] = ['ttd', 'Tanda Tangan', site_url('admin/pkl/ttd'), null];
+}
 ?>
 <nav class="rise -mx-1 mb-5 flex gap-1.5 overflow-x-auto px-1 pb-1" aria-label="Menu PKL">
     <?php foreach ($tabs as [$kode, $label, $url, $jumlah]): $aktif = $tab === $kode; ?>

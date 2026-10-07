@@ -17,8 +17,12 @@ use CodeIgniter\Config\BaseConfig;
  * 'kecuali': (opsional) awalan alamat yang DITOLAK walau berada di bawah 'akses'.
  *            Dipakai mis. Hubin boleh admin/pkl tetapi bukan admin/pkl/pengaturan.
  * 'beranda': halaman pertama setelah login.
- * 'api'    : boleh memakai aplikasi Android (token API). Dimatikan untuk peran
- *            terbatas karena API admin belum dipilah per peran.
+ * 'api'    : boleh memakai aplikasi Android (token API). Admin boleh semua API;
+ *            peran lain hanya ke API yang awalannya tercantum di 'api_akses'.
+ * 'api_akses': (opsional) awalan alamat API (tanpa "api/v1/") yang boleh dipakai peran
+ *            terbatas, mis. 'pkl'. Dibaca App\Libraries\HakAkses::bolehApiAlamat().
+ * 'acc'    : boleh MENYETUJUI (ACC) ajuan PKL. Aturan sekolah: hanya Waka Hubin; Admin boleh sebagai
+ *            cadangan bila Hubin berhalangan (tercatat sebagai "mewakili"); Operator TIDAK boleh.
  *
  * Akun lama berperan 'admin' (nilai bawaan kolom admins.role) → akses penuh,
  * jadi menambahkan sistem peran TIDAK mengubah apa pun bagi akun yang sudah ada.
@@ -39,10 +43,11 @@ class Peran extends BaseConfig
             'beranda' => 'admin/dashboard',
             'akses'   => ['*'],
             'api'     => true,
+            'acc'     => true,
         ],
         self::OPERATOR => [
             'label'   => 'Operator Sekolah',
-            'ringkas' => 'Kerja harian: PKL (periksa, ACC, ubah, isi atas nama, cetak, pengaturan), Isian Biodata, Master Siswa & Kelas, Arsip Dokumen.',
+            'ringkas' => 'Kerja harian: PKL (periksa, kembalikan, ubah, isi atas nama, cetak surat, pengaturan), Isian Biodata, Master Siswa & Kelas, Arsip Dokumen. TIDAK bisa meng-ACC ajuan PKL (hanya Waka Hubin).',
             'beranda' => 'admin/pkl',
             'akses'   => [
                 'admin/pkl',
@@ -51,11 +56,15 @@ class Peran extends BaseConfig
                 'admin/master/kelas',
                 'admin/dokumen',
             ],
-            'api' => false,
+            // Tanda tangan Waka Hubin hanya diunggah/dihapus Hubin atau Admin — Operator tidak boleh menyentuhnya.
+            'kecuali'   => ['admin/pkl/ttd'],
+            'api'       => true,
+            'api_akses' => ['pkl'],
+            'acc'       => false,
         ],
         self::HUBIN => [
             'label'   => 'Waka Hubin',
-            'ringkas' => 'Hanya menu PKL: periksa dan ACC ajuan, ubah data, cetak surat. Tidak bisa menghapus data atau mengatur form.',
+            'ringkas' => 'Hanya menu PKL: periksa dan ACC ajuan (satu-satunya yang bertugas ACC), ubah data, cetak surat. Tidak bisa menghapus data atau mengatur form.',
             'beranda' => 'admin/pkl',
             // CATATAN KEPUTUSAN (2026-10-07): Hubin TIDAK BOLEH melihat Isian Biodata Siswa
             // (admin/biodata) maupun Master Data (admin/master/*). Cukup dengan tidak mendaftarkannya
@@ -63,7 +72,9 @@ class Peran extends BaseConfig
             'akses'   => ['admin/pkl'],
             // Pengecualian dari 'akses': alamat di bawah awalan ini DITOLAK walau induknya boleh.
             'kecuali' => ['admin/pkl/pengaturan', 'admin/pkl/hapus', 'admin/pkl/impor'],
-            'api'     => false,
+            'api'       => true,
+            'api_akses' => ['pkl'],
+            'acc'       => true,
         ],
     ];
 

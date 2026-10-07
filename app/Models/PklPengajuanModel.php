@@ -29,7 +29,8 @@ class PklPengajuanModel extends Model
         'status', 'sumber', 'tahun_ajaran', 'perusahaan_id', 'perusahaan_nama', 'perusahaan_norm',
         'perusahaan_alamat', 'perusahaan_kota', 'perusahaan_telepon', 'kontak_nama', 'kontak_jabatan',
         'tanggal_mulai', 'tanggal_selesai', 'catatan_staf', 'kirim_ke', 'ip_address',
-        'diputuskan_at', 'diputuskan_oleh',
+        'diputuskan_at', 'diputuskan_oleh', 'diajukan_at',
+        'acc_admin_id', 'acc_nama', 'acc_peran', 'acc_at', 'acc_ip', 'acc_kode',
     ];
     protected $useTimestamps = true;
     protected $createdField  = 'created_at';
@@ -50,6 +51,40 @@ class PklPengajuanModel extends Model
         return in_array($status, self::AKTIF, true);
     }
 
+    /** Batas keputusan Waka Hubin: akhir hari ke-$hari sejak jam kirim. Null bila jam kirim tak diketahui. */
+    public static function batasKeputusan(?string $diajukanAt, int $hari): ?string
+    {
+        $t = $diajukanAt !== null && $diajukanAt !== '' ? strtotime($diajukanAt) : false;
+        if ($t === false) {
+            return null;
+        }
+
+        return date('Y-m-d', strtotime('+' . max(1, $hari) . ' days', $t)) . ' 23:59:59';
+    }
+
+    /**
+     * Sisa hari menuju batas keputusan (0 = hari ini batasnya, negatif = terlambat), atau null.
+     */
+    public static function sisaHari(?string $diajukanAt, int $hari): ?int
+    {
+        $batas = self::batasKeputusan($diajukanAt, $hari);
+        if ($batas === null) {
+            return null;
+        }
+
+        return (int) round((strtotime(substr($batas, 0, 10)) - strtotime(date('Y-m-d'))) / 86400);
+    }
+
+    /** Banyak ajuan MENUNGGU yang sudah lewat batas keputusan Waka Hubin. */
+    public function hitungTerlambat(int $hari): int
+    {
+        return (int) ($this->db->query(
+            "SELECT COUNT(*) n FROM pkl_pengajuan WHERE status = 'menunggu'"
+            . ' AND DATE_ADD(DATE(COALESCE(diajukan_at, created_at)), INTERVAL ? DAY) < CURDATE()',
+            [max(1, $hari)]
+        )->getRowArray()['n'] ?? 0);
+    }
+
     /**
      * Siswa aktif satu kelas beserta status PKL-nya — bahan daftar nama di form.
      *
@@ -65,7 +100,7 @@ class PklPengajuanModel extends Model
     public function daftarSiswaKelas(int $kelasId): array
     {
         return $this->db->table('siswa s')
-            ->select("s.id, s.nama, s.jenis_kelamin, a.peran, p.status AS aktif,"
+            ->select("s.id, s.nama, s.jenis_kelamin, a.peran, p.status AS aktif, p.diajukan_at,"
                 . " EXISTS(SELECT 1 FROM pkl_anggota ar JOIN pkl_pengajuan pr ON pr.id = ar.pengajuan_id"
                 . " WHERE ar.siswa_id = s.id AND pr.status = 'ditolak') AS pernah_ditolak", false)
             ->join('pkl_anggota a', 'a.siswa_aktif = s.id', 'left')
@@ -84,7 +119,7 @@ class PklPengajuanModel extends Model
     public function aktifMilik(int $siswaId): ?array
     {
         return $this->db->table('pkl_anggota a')
-            ->select('p.*, a.id AS anggota_id, a.peran, a.tanggal_lahir AS tgl_lahir_anggota')
+            ->select('p.*, a.id AS anggota_id, a.peran, a.hp AS hp_anggota, a.tanggal_lahir AS tgl_lahir_anggota')
             ->join('pkl_pengajuan p', 'p.id = a.pengajuan_id')
             ->where('a.siswa_aktif', $siswaId)
             ->get()->getRowArray();
@@ -100,7 +135,7 @@ class PklPengajuanModel extends Model
     {
         return $this->db->table('pkl_anggota a')
             ->select('a.id, a.siswa_id, a.peran, a.hp, a.tanggal_lahir, a.kelas_id, a.siswa_aktif,'
-                . ' s.nama, s.jenis_kelamin, s.nis, s.nisn, s.tanggal_lahir AS tgl_lahir_master,'
+                . ' s.nama, s.jenis_kelamin, s.nis, s.nisn, s.no_hp AS hp_master, s.tanggal_lahir AS tgl_lahir_master,'
                 . ' s.status AS status_siswa, s.kelas_id AS kelas_sekarang, s.deleted_at AS siswa_dihapus,'
                 . ' k.nama_kelas, k.tingkat, j.nama AS jurusan_nama')
             ->join('siswa s', 's.id = a.siswa_id')
@@ -108,7 +143,7 @@ class PklPengajuanModel extends Model
             ->join('jurusan j', 'j.id = k.jurusan_id', 'left')
             ->where('a.pengajuan_id', $pengajuanId)
             ->orderBy("(a.peran = 'pengaju')", 'DESC', false)
-            ->orderBy('s.nama', 'ASC')
+            ->orderBy('a.id', 'ASC') // urutan dipilih: pengaju dulu, lalu teman sesuai urutan ditambahkan (seperti surat sekolah)
             ->get()->getResultArray();
     }
 
@@ -171,7 +206,8 @@ class PklPengajuanModel extends Model
     {
         $b = $this->db->table('pkl_pengajuan p')
             ->select('p.id, p.status, p.sumber, p.perusahaan_nama, p.perusahaan_kota, p.tanggal_mulai, p.tanggal_selesai,'
-                . ' p.kirim_ke, p.catatan_staf, p.created_at, p.updated_at, p.diputuskan_at, sp.nama AS pengaju, kp.nama_kelas AS pengaju_kelas,'
+                . ' p.kirim_ke, p.catatan_staf, p.created_at, p.updated_at, p.diputuskan_at, p.diajukan_at,'
+                . ' p.acc_nama, p.acc_peran, p.acc_at, sp.nama AS pengaju, kp.nama_kelas AS pengaju_kelas,'
                 . ' (SELECT COUNT(*) FROM pkl_anggota ax WHERE ax.pengajuan_id = p.id) AS jumlah', false)
             ->join("pkl_anggota ap", "ap.pengajuan_id = p.id AND ap.peran = 'pengaju'", 'left')
             ->join('siswa sp', 'sp.id = ap.siswa_id', 'left')
@@ -191,7 +227,7 @@ class PklPengajuanModel extends Model
         }
 
         $total = $b->countAllResults(false);
-        $urut  = $status === 'menunggu' ? 'p.updated_at ASC' : 'p.updated_at DESC';
+        $urut  = $status === 'menunggu' ? 'COALESCE(p.diajukan_at, p.updated_at) ASC' : 'p.updated_at DESC';
         $rows  = $b->orderBy($urut, '', false)->orderBy('p.id', 'ASC')->limit($per, ($page - 1) * $per)->get()->getResultArray();
 
         return [$rows, $total];
@@ -270,7 +306,7 @@ class PklPengajuanModel extends Model
         $in   = implode(',', array_fill(0, count($tingkat), '?'));
         $bind = [$hariIni, $hariIni];
         $sql  = "SELECT s.id, s.nama, s.jenis_kelamin, k.id AS kelas_id, k.nama_kelas, k.tingkat,"
-            . " p.id AS ajuan_id, p.perusahaan_nama, p.perusahaan_kota, p.tanggal_mulai, p.tanggal_selesai, a.peran, sr.nomor AS nomor_surat,"
+            . " p.id AS ajuan_id, p.perusahaan_nama, p.perusahaan_kota, p.tanggal_mulai, p.tanggal_selesai, p.acc_nama, p.acc_at, a.peran, sr.nomor AS nomor_surat,"
             . " CASE"
             . " WHEN p.id IS NULL AND EXISTS (SELECT 1 FROM pkl_anggota ar JOIN pkl_pengajuan pr ON pr.id = ar.pengajuan_id WHERE ar.siswa_id = s.id AND pr.status = 'ditolak') THEN 'ditolak'"
             . " WHEN p.id IS NULL THEN 'belum'"

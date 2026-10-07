@@ -13,7 +13,10 @@ namespace App\Libraries;
  *     dijadikan "PT Maju Jaya" (singkatan badan usaha dikapitalkan, nama yang
  *     sudah BESAR/campuran dibiarkan karena bisa saja singkatan merek),
  *   - nomor telepon diseragamkan ke awalan 0 (+62 / 62 → 0),
- *   - tanggal dicek terhadap pagar dari sekolah (pengaturan PKL) dan lama PKL,
+ *   - nomor HP pengaju DAN tiap teman wajib (dicetak di tabel surat),
+ *   - tanggal PKL & tanggal lahir TIDAK ditanyakan lagi (aturan sekolah 2026-10-07; waktu PKL
+ *     disepakati sekolah dengan perusahaan). Tanggal hanya dibaca bila $opsi['tanggal'] = true
+ *     (impor riwayat lama), lalu dicek terhadap pagar sekolah bila ada,
  *   - kolom kosong disimpan NULL.
  * Pesan galat ditulis dalam bahasa sehari-hari karena yang membaca siswa.
  */
@@ -27,11 +30,11 @@ final class PklForm
         'perusahaan_telepon' => 'Telepon Perusahaan',
         'kontak_nama'        => 'Nama Pimpinan/Kontak',
         'kontak_jabatan'     => 'Jabatan Pimpinan/Kontak',
-        'tanggal_mulai'      => 'Tanggal Mulai PKL',
-        'tanggal_selesai'    => 'Tanggal Selesai PKL',
         'hp'                 => 'No. HP/WhatsApp',
-        'tanggal_lahir'      => 'Tanggal Lahir',
     ];
+
+    /** Batas keras siswa per ajuan (aturan sekolah): Pengaturan PKL tak bisa melampauinya. */
+    public const MAKS_SISWA = 5;
 
     /** Panjang maksimum = lebar kolom tabel. */
     private const MAKS = [
@@ -55,13 +58,15 @@ final class PklForm
      * Rapikan + periksa kiriman form.
      *
      * Kunci kiriman: perusahaan_nama/_alamat/_kota/_telepon, kontak_nama, kontak_jabatan,
-     * tanggal_mulai, tanggal_selesai (Y-m-d), hp, tanggal_lahir (Y-m-d), teman[] (id siswa),
-     * pernyataan ('1').
+     * hp (pengaju), teman[] (id siswa), teman_hp[id] (HP tiap teman), pernyataan ('1'),
+     * dan (hanya bila $opsi['tanggal']) tanggal_mulai, tanggal_selesai (Y-m-d).
      *
-     * $p    = baris pkl_pengaturan (pagar tanggal, lama PKL, maks anggota).
+     * $p    = baris pkl_pengaturan (maks anggota; pagar tanggal bila tanggal dibaca).
      * $opsi = ['pernyataan' => false] lewati centang pernyataan (staf mengisi atas nama);
-     *         ['batas' => false]      lewati pagar tanggal & lama PKL (staf, dengan konfirmasi);
-     *         ['kontak' => false]     HP & tanggal lahir pengaju boleh kosong (staf / data lama).
+     *         ['kontak' => false]     HP pengaju boleh kosong (staf / data lama);
+     *         ['hp_teman' => false]   HP teman boleh kosong (staf / data lama);
+     *         ['tanggal' => true]     baca tanggal PKL (impor riwayat lama);
+     *         ['batas' => false]      lewati pagar tanggal & lama PKL.
      *
      * @return array{0: array<string, mixed>, 1: array<string, string>} [data siap simpan, galat per kolom]
      */
@@ -105,28 +110,27 @@ final class PklForm
         }
         $d['kontak_jabatan'] = $in('kontak_jabatan');
 
-        // ================= Periode PKL =================
-        $thn     = (int) date('Y');
-        $mulai   = IsianBantu::tanggal($in('tanggal_mulai'), $thn - 1, $thn + 2);
-        $selesai = IsianBantu::tanggal($in('tanggal_selesai'), $thn - 1, $thn + 2);
-        if ($mulai === null) {
-            $e['tanggal_mulai'] = $in('tanggal_mulai') === ''
-                ? 'Tanggal mulai PKL wajib diisi.'
-                : 'Tanggal mulai tidak valid. Periksa tanggal, bulan, dan tahunnya.';
-        }
-        if ($selesai === null) {
-            $e['tanggal_selesai'] = $in('tanggal_selesai') === ''
-                ? 'Tanggal selesai PKL wajib diisi.'
-                : 'Tanggal selesai tidak valid. Periksa tanggal, bulan, dan tahunnya.';
-        }
-        $d['tanggal_mulai']   = $mulai;
-        $d['tanggal_selesai'] = $selesai;
-
-        if ($mulai !== null && $selesai !== null && $selesai <= $mulai) {
-            $e['tanggal_selesai'] = 'Tanggal selesai harus setelah tanggal mulai.';
-        }
-        if (($opsi['batas'] ?? true) === true) {
-            self::periksaBatas($e, $p, $mulai, $selesai);
+        // ================= Periode PKL (tidak ditanyakan; hanya impor riwayat lama) =================
+        $d['tanggal_mulai']   = null;
+        $d['tanggal_selesai'] = null;
+        if (($opsi['tanggal'] ?? false) === true) {
+            $thn     = (int) date('Y');
+            $mulai   = IsianBantu::tanggal($in('tanggal_mulai'), $thn - 15, $thn + 2);
+            $selesai = IsianBantu::tanggal($in('tanggal_selesai'), $thn - 15, $thn + 2);
+            if ($in('tanggal_mulai') !== '' && $mulai === null) {
+                $e['tanggal_mulai'] = 'Tanggal mulai tidak valid. Periksa tanggal, bulan, dan tahunnya.';
+            }
+            if ($in('tanggal_selesai') !== '' && $selesai === null) {
+                $e['tanggal_selesai'] = 'Tanggal selesai tidak valid. Periksa tanggal, bulan, dan tahunnya.';
+            }
+            $d['tanggal_mulai']   = $mulai;
+            $d['tanggal_selesai'] = $selesai;
+            if ($mulai !== null && $selesai !== null && $selesai <= $mulai) {
+                $e['tanggal_selesai'] = 'Tanggal selesai harus setelah tanggal mulai.';
+            }
+            if (($opsi['batas'] ?? true) === true) {
+                self::periksaBatas($e, $p, $mulai, $selesai);
+            }
         }
 
         // ================= Kontak pengaju =================
@@ -143,16 +147,29 @@ final class PklForm
             $e['hp'] = 'Nomor HP tidak valid. Harus diawali 08 dan 10–14 angka (contoh: 081234567890).';
         }
 
-        $d['tanggal_lahir'] = IsianBantu::tanggal($in('tanggal_lahir'), $thn - 40, $thn - 8);
-        if ($d['tanggal_lahir'] === null && ($kontakWajib || $in('tanggal_lahir') !== '')) {
-            $e['tanggal_lahir'] = $in('tanggal_lahir') === ''
-                ? 'Tanggal lahir wajib diisi (dipakai untuk membuka ajuanmu bila perlu diperbaiki).'
-                : 'Tanggal lahir tidak valid. Periksa tanggal, bulan, dan tahunnya.';
-        }
-
         // ================= Teman satu tempat =================
         $d['teman'] = self::idTeman($post['teman'] ?? []);
-        $maksTeman  = max(0, (int) ($p['maks_anggota'] ?? 5) - 1);
+        $maksTeman  = max(0, min(self::MAKS_SISWA, max(1, (int) ($p['maks_anggota'] ?? self::MAKS_SISWA))) - 1);
+
+        // HP tiap teman (dicetak di tabel surat). Kunci galat: hp_teman_<id siswa>.
+        $d['teman_hp']  = [];
+        $hpTemanWajib   = ($opsi['hp_teman'] ?? true) === true;
+        $kiriman        = is_array($post['teman_hp'] ?? null) ? $post['teman_hp'] : [];
+        foreach ($d['teman'] as $tid) {
+            $mentah = IsianBantu::rapikan((string) ($kiriman[$tid] ?? ''));
+            $hp     = IsianBantu::telepon($mentah);
+            if ($mentah === '') {
+                if ($hpTemanWajib) {
+                    $e['hp_teman_' . $tid] = 'Nomor HP temanmu wajib diisi (tercetak di surat).';
+                }
+            } elseif (! IsianBantu::teleponMurni($mentah)) {
+                $e['hp_teman_' . $tid] = self::PESAN_HURUF_TELEPON;
+            } elseif (! IsianBantu::hpSah($hp)) {
+                $e['hp_teman_' . $tid] = 'Nomor HP tidak valid. Harus diawali 08 dan 10–14 angka (contoh: 081234567890).';
+            } else {
+                $d['teman_hp'][$tid] = $hp;
+            }
+        }
         if (count($d['teman']) > $maksTeman) {
             $e['teman'] = $maksTeman === 0
                 ? 'Perusahaan ini hanya menerima satu siswa per ajuan. Hapus temanmu dari daftar.'
@@ -174,9 +191,9 @@ final class PklForm
         // Nama pembanding untuk cari & deteksi perusahaan ganda.
         $d['perusahaan_norm'] = self::normPerusahaan($d['perusahaan_nama']);
 
-        // Kosong → NULL (kecuali daftar teman).
+        // Kosong → NULL (kecuali daftar teman & HP teman).
         foreach ($d as $k => $v) {
-            if ($k !== 'teman' && ($v === '' || $v === null)) {
+            if ($k !== 'teman' && $k !== 'teman_hp' && ($v === '' || $v === null)) {
                 $d[$k] = null;
             }
         }

@@ -13,11 +13,13 @@ use PhpOffice\PhpSpreadsheet\Writer\Xlsx;
  * yang sudah PKL tidak bisa mengajukan lagi dan laporan "sudah/belum PKL" lengkap.
  *
  * Satu baris = satu siswa. Baris dengan perusahaan + tanggal mulai + tanggal selesai yang sama
- * digabung menjadi SATU ajuan (siswa pertama = pengaju). Hasilnya ajuan berstatus Disetujui,
- * sumber "impor". Dua langkah: baca() → pratinjau (tak ada yang disimpan) → simpan().
+ * (tanggal boleh kosong) digabung menjadi SATU ajuan (siswa pertama = pengaju). Hasilnya ajuan
+ * berstatus Disetujui bersumber "impor" — BUKAN persetujuan Waka Hubin lewat sistem, dan ditandai
+ * begitu di catatan ACC. Dua langkah: baca() → pratinjau (tak ada yang disimpan) → simpan().
  *
  * Kolom (judul baris pertama, urutan bebas): NIS, Nama, Kelas, Perusahaan, Alamat, Kota, Telepon,
- * Kontak, Jabatan, Mulai, Selesai. Siswa dicocokkan lewat NIS; bila NIS kosong, lewat Nama + Kelas.
+ * Kontak, Jabatan, Mulai, Selesai (dua terakhir opsional). Siswa dicocokkan lewat NIS; bila NIS
+ * kosong, lewat Nama + Kelas.
  */
 final class PklImpor
 {
@@ -99,7 +101,7 @@ final class PklImpor
                 }
             }
         }
-        foreach (['perusahaan', 'mulai', 'selesai'] as $wajib) {
+        foreach (['perusahaan'] as $wajib) {
             if (! isset($peta[$wajib])) {
                 throw new \RuntimeException('Judul kolom "' . ucfirst($wajib) . '" tidak ditemukan di baris pertama. Unduh contoh berkas lalu ikuti judulnya.');
             }
@@ -125,14 +127,18 @@ final class PklImpor
             }
 
             $perusahaan = $ambil('perusahaan');
-            $mulai      = self::tanggal($b[$peta['mulai']] ?? null);
-            $selesai    = self::tanggal($b[$peta['selesai']] ?? null);
+            $mentahMulai   = isset($peta['mulai']) ? trim((string) ($b[$peta['mulai']] ?? '')) : '';
+            $mentahSelesai = isset($peta['selesai']) ? trim((string) ($b[$peta['selesai']] ?? '')) : '';
+            $mulai      = isset($peta['mulai']) ? self::tanggal($b[$peta['mulai']] ?? null) : null;
+            $selesai    = isset($peta['selesai']) ? self::tanggal($b[$peta['selesai']] ?? null) : null;
             if (mb_strlen($perusahaan) < 3) {
                 $galat[] = ['baris' => $no, 'pesan' => 'Nama perusahaan kosong/terlalu pendek.'];
                 continue;
             }
-            if ($mulai === null || $selesai === null || $selesai <= $mulai) {
-                $galat[] = ['baris' => $no, 'pesan' => 'Tanggal mulai/selesai tidak valid (pakai format 2026-01-05 atau 05/01/2026, dan selesai harus setelah mulai).'];
+            // Tanggal opsional; bila diisi harus sah (salah ketik tidak boleh lolos diam-diam).
+            if (($mentahMulai !== '' && $mulai === null) || ($mentahSelesai !== '' && $selesai === null)
+                || ($mulai !== null && $selesai !== null && $selesai <= $mulai)) {
+                $galat[] = ['baris' => $no, 'pesan' => 'Tanggal mulai/selesai tidak valid (pakai format 2026-01-05 atau 05/01/2026, selesai harus setelah mulai) — atau kosongkan keduanya.'];
                 continue;
             }
 
@@ -205,7 +211,7 @@ final class PklImpor
                 'perusahaan_alamat' => $k['alamat'] !== '' ? $k['alamat'] : null, 'perusahaan_kota' => $k['kota'] !== '' ? $k['kota'] : null,
                 'perusahaan_telepon' => $k['telepon'] !== '' ? $k['telepon'] : null, 'kontak_nama' => $k['kontak_nama'] !== '' ? $k['kontak_nama'] : null,
                 'kontak_jabatan' => $k['kontak_jabatan'] !== '' ? $k['kontak_jabatan'] : null,
-                'tanggal_mulai' => $k['mulai'], 'tanggal_selesai' => $k['selesai'], 'hp' => null, 'tanggal_lahir' => null,
+                'tanggal_mulai' => $k['mulai'], 'tanggal_selesai' => $k['selesai'], 'hp' => null,
             ];
             $anggota = [];
             foreach ($k['siswa'] as $i => $s) {

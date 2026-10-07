@@ -222,6 +222,9 @@ class Auth extends BaseApiController
             'phone'     => $a['phone'] ?? null,
             'photo'     => $this->uploadUrl($a['photo'] ?? null),
             'role'      => $a['role'] ?? 'admin',
+            // Untuk aplikasi: menu mana yang tampil & apakah tombol ACC PKL ditampilkan (server tetap yang menjaga).
+            'akses_api' => HakAkses::aksesApi($a['role'] ?? null),
+            'boleh_acc' => HakAkses::bolehAcc($a['role'] ?? null),
         ];
     }
 }

@@ -269,5 +269,51 @@ Tampilan beda per peran: **Hubin** = fokus memutuskan (antrean "Menunggu ACC" di
       **Sisa (bukan kode):** user membuka SATU surat .docx di Microsoft Word asli & melapor; contoh surat sekolah +
       foto kertas isian dari teman user (→ unggah template di Pengaturan PKL / sesuaikan kolom); deploy ke hosting.
 
-**Sengaja belum dikerjakan:** Android (setelah web 100%), jurnal/absensi/nilai PKL, notifikasi
+- [x] **FORMAT SURAT SEKOLAH + ATURAN BARU (2026-10-07 siang, permintaan klien — lokal, belum di-push):**
+      Sumber: `downloadpublic/295 Surat Izin PKL BINUS - Ilyasha ALL XII TKJ 5.docx` (surat resmi sekolah).
+      1. **Surat = surat resmi sekolah, persis.** Template bawaan `app/Libraries/Surat/surat_pkl_binus.docx` dibangun
+         dari contoh itu (kop gambar TIFF, F4 21×33 cm, tabel NO|NAMA|KELAS|KONSENTRASI KEAHLIAN|NOMOR HANDPHONE,
+         TTD+nama Kepsek, "NB"). Hanya data yang berubah (penanda `${...}`). Skrip pembangun: lihat catatan di bawah.
+         Ditambah blok **Waka Hubin** di kiri TTD Kepsek (jabatan 2 baris, gambar TTD, nama) dan **kaki surat catatan ACC**
+         (bingkai di dasar halaman: siapa meng-ACC, kapan, kode verifikasi, siapa mencetak). Diuji di Word 16 asli (2 surat =
+         2 halaman, render PNG per halaman lewat EMF). Nomor `{urut}/SMK-BN/PKL/{bln_romawi}/{thn}` (295/SMK-BN/PKL/IX/2026);
+         nama berkas `{urut} Surat Izin PKL BINUS - {nama_depan} {all} {kelas}.docx` (`{all}`=ALL bila >1 siswa), pola bisa diatur
+         (`PklNamaBerkas`). Urutan siswa di tabel = urutan dipilih (pengaju dulu), bukan alfabet. HP tiap siswa dari `pkl_anggota.hp`
+         (cadangan `siswa.no_hp`, selain itu "-"). Mesin: `PklDocx::dariTemplate($path,$daftar,$media)` — pageBreakBefore (bukan
+         paragraf pemisah), id gambar unik, atribut paraId dibuang, media tambahan (TTD Hubin) + relasi + tipe konten, nilai
+         penanda RAW (`PklDocx::RAW`) untuk XML gambar. Template unggahan sekolah tetap diutamakan; `contohTemplate()` = template bawaan.
+      2. **Form siswa:** tanggal lahir & tanggal mulai/selesai DIHAPUS (kolom DB dibiarkan nullable, tak dipakai); maks 5 siswa
+         (batas keras `PklForm::MAKS_SISWA`, Pengaturan 1–5); **HP wajib untuk pengaju DAN tiap teman** (`teman_hp[id]`, galat
+         `hp_teman_<id>`); buka-ulang ajuan perbaikan kini pakai **nomor HP** (bukan tgl lahir); pernyataan + pesan "jangan
+         mengajukan ulang, tunggu keputusan Waka Hubin maks N hari". Pagar tanggal/durasi dihapus dari Pengaturan & `alasanTutup`.
+      3. **Perketat ajuan:** siswa dengan ajuan aktif tak bisa mengajukan lagi (pesan memuat nomor bukti, tanggal kirim, batas
+         keputusan); daftar nama memuat `batas`; `pkl_pengajuan.diajukan_at` (jam kirim; diperbarui saat kirim ulang) + Pengaturan
+         `batas_keputusan_hari` (bawaan 5) → Kotak Masuk/detail/Beranda menandai **TERLAMBAT**.
+      4. **ACC HANYA Waka Hubin** (`Config\Peran` flag `acc`, `HakAkses::bolehAcc`): ACC, tolak, batalkan persetujuan, ACC massal,
+         "langsung disetujui", dan mengubah/menghapus ajuan yang sudah disetujui → Hubin/Admin saja (Operator: ditolak di controller,
+         tombol disembunyikan, percobaan masuk Audit Log; Operator tetap boleh memeriksa, **mengembalikan**, mengubah ajuan belum
+         disetujui, mengisi atas nama (menunggu), mencetak surat). **Admin = cadangan** dan WAJIB mencentang "mewakili Waka Hubin"
+         (tercatat di riwayat + kaki surat). Hapus ajuan disetujui hanya Admin.
+      5. **Catatan ACC** (`pkl_pengajuan.acc_nama/acc_peran/acc_admin_id/acc_at/acc_ip/acc_kode`) disalin saat ACC (tak ikut berubah
+         bila akun diganti nama), dikosongkan saat persetujuan dicabut/ditolak/dikirim ulang; impor → `acc_peran='impor'`. Kartu
+         "Persetujuan (ACC)" di detail, kolom "Disetujui oleh" di tab Disetujui & Excel. `PklAjuan::kodeVerifikasi` = HMAC 6 huruf-angka.
+         **Gambar TTD digital Waka Hubin** diunggah Hubin/Admin di tab "Tanda Tangan" (`admin/pkl/ttd`, Operator ditolak via 'kecuali'),
+         disimpan `writable/pkl/ttd_hubin.png|jpg`, dipasang HANYA pada surat yang di-ACC akun Hubin (ACC Admin/impor → ruang kosong,
+         kaki surat menjelaskan). Sidik surat kini memuat penanda tangan, Kepsek, kontak NB, TTD, catatan ACC, HP siswa.
+      6. Migrasi baru: `2026-10-09-000001_PklSuratSekolah` (kolom di pkl_pengaturan & pkl_pengajuan, pola nomor lama → baru bila belum
+         diubah, maks_anggota ≤ 5, backfill acc_* dari data keputusan lama). **Uji:** `dev:uji-pkl` 319 cek + HTTP `uji_aturan_baru.mjs` 71 cek.
+      Membangun ulang template dari contoh sekolah: skrip `bangun_template.php` (DOM: ganti teks ber-run-terpecah dengan `${…}`,
+      sisakan 1 baris tabel contoh, sisip blok Hubin & kaki ACC, ganti penomoran otomatis butir NB dengan "1." tertulis).
+- [x] **API ANDROID PKL (backend) — SELESAI 2026-10-07** (lokal, belum di-push). Dokumentasi lengkap: `docs/API-PKL.md`.
+      `app/Controllers/Api/Pkl.php` (20 rute `pkl/…` di grup `apiauth`): meta, ringkasan, daftar/detail ajuan (+blok `hak` per ajuan),
+      isi atas nama/ubah/hapus, acc/kembalikan/tolak/batal-acc, acc-massal, surat satu & massal (biner .docx/.zip), status siswa,
+      tanda tangan Waka Hubin. Gerbang: `Config\Peran 'api_akses'` (Operator & Hubin hanya `pkl/…`, Admin semua) via
+      `ApiAuthFilter` → `HakAkses::bolehApiAlamat`; `auth/login` & `auth/me` kini memuat `admin.akses_api` (`HakAkses::aksesApi`) dan
+      `admin.boleh_acc`. Logika bersama web+API dipindah ke library (tanpa duplikasi aturan): `PklKeputusan` (putuskan/ACC massal),
+      `PklStaf::periksaAnggota`, `PklSurat::pilihUntukUnduh/simpanTtd/hapusTtd`. Uji: `uji_api_pkl.mjs` **99/99**, regresi
+      `dev:uji-pkl` 319/319 + `uji_aturan_baru.mjs` 71/71.
+- [ ] **Layar Flutter PKL (tahap berikut, `fluter-muslimin`):** beranda PKL (angka + antrean + TERLAMBAT), daftar per status, detail
+      (tombol dari `data.hak`; dialog ACC: centang "paham" bila `ada_bahaya`, "mewakili Waka Hubin" bila Admin), unduh/bagikan surat
+      (biner), Status Siswa, tanda tangan (Hubin/Admin). Menu hanya bila `admin.akses_api` memuat `pkl` atau `*`. Tanya sebelum `flutter build`.
+**Sengaja belum dikerjakan:** layar Flutter PKL, jurnal/absensi/nilai PKL, notifikasi
 otomatis, ACC dua tingkat, akun siswa/guru.

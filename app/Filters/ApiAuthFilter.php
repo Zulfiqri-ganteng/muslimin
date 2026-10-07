@@ -49,6 +49,14 @@ class ApiAuthFilter implements FilterInterface
             return $this->forbidden('Peran akun ini belum bisa memakai aplikasi. Silakan gunakan situs web.');
         }
 
+        // Peran terbatas (Operator/Hubin) hanya boleh ke alamat API yang diizinkan Config\Peran 'api_akses'
+        // (mis. "pkl"), plus keperluan akun sendiri ("auth/…": profil, keluar, sidik jari). Selain itu 403
+        // — API admin lain (master data, dll.) tetap tertutup bagi mereka. Admin: semua.
+        $alamat = trim((string) preg_replace('#^api/v1/?#i', '', trim((string) $this->jalur($request), '/')), '/');
+        if (! str_starts_with(strtolower($alamat), 'auth/') && ! HakAkses::bolehApiAlamat($admin['role'] ?? null, $alamat)) {
+            return $this->forbidden('Akun ' . HakAkses::label($admin['role'] ?? null) . ' tidak punya akses ke fitur ini di aplikasi.');
+        }
+
         unset($admin['password']);
         ApiAuth::set($admin, (int) $tokenRow['id']);
         (new ApiTokenModel())->touch((int) $tokenRow['id']);
@@ -57,6 +65,12 @@ class ApiAuthFilter implements FilterInterface
     public function after(RequestInterface $request, ResponseInterface $response, $arguments = null)
     {
         // tidak ada aksi setelah request
+    }
+
+    /** Jalur permintaan relatif terhadap baseURL (mis. "api/v1/pkl/ajuan"), tanpa query. */
+    private function jalur(RequestInterface $request): string
+    {
+        return method_exists($request, 'getPath') ? (string) $request->getPath() : '';
     }
 
     private function unauthorized(string $message): ResponseInterface

@@ -1,10 +1,10 @@
 <?php
 /**
  * Form staf: isi atas nama siswa (baru) atau ubah langsung (ubah). Komponen Alpine `pklFormStaf`
- * (assets/js/admin/pkl.js) mengurus pemilih siswa dan peringatan tanggal di luar pagar.
+ * (assets/js/admin/pkl.js) mengurus pemilih siswa. Tanggal PKL & tanggal lahir tidak ditanyakan lagi.
  *
  * @var ?array      $a         ajuan (mode ubah) atau null
- * @var array       $orang     ['pengaju' => ?{id,nama,kelas}, 'teman' => list<{id,nama,kelas}>]
+ * @var array       $orang     ['pengaju' => ?{id,nama,kelas}, 'teman' => list<{id,nama,kelas,hp}>]
  * @var array       $old       isian yang gagal disimpan
  * @var array       $galat     galat per kolom (+ 'umum')
  * @var list<array> $kelas
@@ -15,29 +15,22 @@ use App\Libraries\IsianBantu;
 use App\Models\PklPengajuanModel;
 
 $val = static fn (string $k): string => (string) ($old[$k] ?? $a[$k] ?? '');
-// Isi HP & tanggal lahir pengaju saat ubah: dari anggota pengaju.
+// Isi HP pengaju saat ubah: dari anggota pengaju.
 $pengajuRow = null;
 foreach ($anggota as $s) {
     if ($s['peran'] === 'pengaju') {
         $pengajuRow = $s;
     }
 }
-$hp  = (string) ($old['hp'] ?? ($pengajuRow['hp'] ?? ''));
-$lhr = (string) ($old['tanggal_lahir'] ?? ($pengajuRow['tanggal_lahir'] ?? ''));
+$hp = (string) ($old['hp'] ?? ($pengajuRow['hp'] ?? ''));
 
 $config = [
     'urlSiswa' => site_url('admin/pkl/siswa-kelas'),
     'ubah'     => $ubah,
     'pengaju'  => $orang['pengaju'],
     'teman'    => $orang['teman'],
-    'maks'     => max(1, (int) ($p['maks_anggota'] ?? 1)),
-    'batas'    => [
-        'awal' => (string) ($p['mulai_paling_awal'] ?? ''), 'akhir' => (string) ($p['selesai_paling_akhir'] ?? ''),
-        'min' => (int) ($p['durasi_min_hari'] ?? 0), 'maks' => (int) ($p['durasi_maks_hari'] ?? 0),
-    ],
-    'mulai'    => $val('tanggal_mulai'),
-    'selesai'  => $val('tanggal_selesai'),
-    'luar'     => ($old['luar_batas'] ?? '') === '1',
+    'maks'     => \App\Models\PklPengaturanModel::maksSiswa($p),
+    'galatHp'  => array_filter($galat, static fn ($k) => str_starts_with((string) $k, 'hp_teman_'), ARRAY_FILTER_USE_KEY),
 ];
 
 $err = static fn (string $k) => isset($galat[$k]) ? '<p class="err-msg">' . esc($galat[$k]) . '</p>' : '';
@@ -55,11 +48,11 @@ $input = static function (string $k, string $label, string $nilai, array $o = []
 <?= $this->section('content') ?>
 
 <?= view('admin/partials/help', [
-    'helpKey'   => 'pkl_form_v1',
+    'helpKey'   => 'pkl_form_v2',
     'helpTitle' => $ubah ? 'Ubah Data Ajuan' : 'Isi atas Nama Siswa',
     'helpBody'  => $ubah
         ? '<p>Perbaiki data ajuan langsung tanpa mengubah statusnya. Pengaju tidak bisa diganti; teman boleh ditambah atau dikurangi.</p><p class="mt-2">Bila ajuan sudah <b>disetujui</b> dan nama perusahaan diubah, tautan ke master ikut menyesuaikan.</p>'
-        : '<p>Dipakai bila siswa tidak bisa mengisi sendiri, atau untuk memasukkan <b>riwayat PKL yang sudah ada</b> sebelum sistem ini dipakai.</p><ul class="mt-2 list-disc pl-5 space-y-1"><li>Pilih <b>langsung disetujui</b> untuk data lama yang sudah pasti — siswanya langsung terkunci dan tak bisa mengajukan lagi.</li><li>HP dan tanggal lahir boleh kosong.</li><li>Tanggal di luar pagar sekolah butuh centang konfirmasi dan tercatat di riwayat.</li></ul>',
+        : '<p>Dipakai bila siswa tidak bisa mengisi sendiri, atau untuk memasukkan data PKL yang sudah ada.</p><ul class="mt-2 list-disc pl-5 space-y-1"><li>Ajuan masuk antrean <b>Menunggu keputusan Waka Hubin</b>. Opsi <b>langsung disetujui</b> (data lama yang sudah pasti) hanya ada untuk Waka Hubin / Admin.</li><li>Nomor HP pengaju dan teman boleh kosong; bila kosong, surat memakai nomor di Master Siswa (atau tanda "-").</li><li>Waktu PKL dan tanggal lahir tidak perlu diisi.</li></ul>',
 ]) ?>
 
 <?= view('admin/pkl/_nav', ['tab' => $tab, 'hitungTab' => $hitungTab]) ?>
@@ -102,9 +95,13 @@ $input = static function (string $k, string $label, string $nilai, array $o = []
                 <p class="lbl">Teman satu tempat <span class="font-normal text-slate-400">(<span x-text="teman.length"></span> dari maks <span x-text="maks - 1"></span>)</span></p>
                 <ul class="space-y-2">
                     <template x-for="t in teman" :key="t.id">
-                        <li class="flex items-center justify-between gap-3 rounded-xl border border-slate-200 px-4 py-2.5">
-                            <span class="min-w-0 text-sm"><b class="text-slate-800" x-text="t.nama"></b> <span class="text-xs text-slate-500" x-text="t.kelas ? '(' + t.kelas + ')' : ''"></span></span>
-                            <span class="flex items-center gap-2"><input type="hidden" name="teman[]" :value="t.id"><button type="button" @click="hapusTeman(t.id)" class="rounded-lg px-2.5 py-1 text-xs font-bold text-red-600 hover:bg-red-50">Hapus</button></span>
+                        <li class="rounded-xl border border-slate-200 px-4 py-2.5">
+                            <div class="flex items-center justify-between gap-3">
+                                <span class="min-w-0 text-sm"><b class="text-slate-800" x-text="t.nama"></b> <span class="text-xs text-slate-500" x-text="t.kelas ? '(' + t.kelas + ')' : ''"></span></span>
+                                <span class="flex items-center gap-2"><input type="hidden" name="teman[]" :value="t.id"><button type="button" @click="hapusTeman(t.id)" class="rounded-lg px-2.5 py-1 text-xs font-bold text-red-600 hover:bg-red-50">Hapus</button></span>
+                            </div>
+                            <input type="tel" inputmode="tel" maxlength="20" :name="'teman_hp[' + t.id + ']'" x-model="t.hp" placeholder="No. HP (opsional)" aria-label="No. HP teman" class="inp mt-2" :class="errHp(t.id) && 'inp-err'" autocomplete="off">
+                            <p class="err-msg" x-show="errHp(t.id)" x-text="errHp(t.id)"></p>
                         </li>
                     </template>
                 </ul>
@@ -153,31 +150,11 @@ $input = static function (string $k, string $label, string $nilai, array $o = []
         </div>
     </section>
 
-    <!-- Periode -->
-    <section class="rise overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
-        <h3 class="border-b border-slate-100 bg-slate-50 px-5 py-3 text-xs font-bold uppercase tracking-wide text-slate-500">Periode PKL</h3>
-        <div class="space-y-4 p-5">
-            <?php if (! empty($p['mulai_paling_awal']) && ! empty($p['selesai_paling_akhir'])): ?>
-                <p class="rounded-xl border border-slate-200 bg-slate-50 px-4 py-2.5 text-xs text-slate-600">Pagar sekolah: <b><?= esc(IsianBantu::tanggalIndo($p['mulai_paling_awal'])) ?></b> s/d <b><?= esc(IsianBantu::tanggalIndo($p['selesai_paling_akhir'])) ?></b>, lama <b><?= (int) $p['durasi_min_hari'] ?>–<?= (int) $p['durasi_maks_hari'] ?> hari</b>.</p>
-            <?php endif; ?>
-            <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                <?php $input('tanggal_mulai', 'Tanggal mulai', $val('tanggal_mulai'), ['wajib' => true, 'type' => 'date', 'model' => 'mulai']) ?>
-                <?php $input('tanggal_selesai', 'Tanggal selesai', $val('tanggal_selesai'), ['wajib' => true, 'type' => 'date', 'model' => 'selesai']) ?>
-            </div>
-            <p x-cloak x-show="infoDurasi()" x-text="infoDurasi()" class="text-sm font-bold text-brand-700"></p>
-            <label x-cloak x-show="luarBatas()" class="flex cursor-pointer items-start gap-3 rounded-xl border-2 border-amber-300 bg-amber-50 p-3.5">
-                <input type="checkbox" name="luar_batas" value="1" x-model="konfirmLuar" class="mt-0.5 h-4 w-4">
-                <span class="text-sm text-amber-900"><b>Tanggal ini di luar pagar sekolah.</b> Centang bila memang disengaja (mis. data lama). Ini akan dicatat di riwayat ajuan.</span>
-            </label>
-        </div>
-    </section>
-
     <!-- Kontak pengaju -->
     <section class="rise overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
         <h3 class="border-b border-slate-100 bg-slate-50 px-5 py-3 text-xs font-bold uppercase tracking-wide text-slate-500">Kontak pengaju</h3>
         <div class="grid grid-cols-1 gap-4 p-5 sm:grid-cols-2">
-            <?php $input('hp', 'No. HP / WhatsApp', $hp, ['maks' => 20, 'ph' => '081234567890', 'hint' => 'Boleh kosong untuk data lama.']) ?>
-            <?php $input('tanggal_lahir', 'Tanggal lahir', $lhr, ['type' => 'date', 'hint' => 'Kunci siswa membuka ajuan bila dikembalikan. Kosong = Anda yang memperbaiki.']) ?>
+            <?php $input('hp', 'No. HP / WhatsApp', $hp, ['maks' => 20, 'ph' => '081234567890', 'hint' => 'Tercetak di surat. Boleh kosong untuk data lama.']) ?>
         </div>
     </section>
 
@@ -190,17 +167,24 @@ $input = static function (string $k, string $label, string $nilai, array $o = []
                     <input type="radio" name="status_awal" value="menunggu" <?= $awal === 'menunggu' ? 'checked' : '' ?> class="mt-1">
                     <span><b class="block text-sm text-slate-800">Menunggu pemeriksaan</b><span class="text-xs text-slate-500">Masuk antrean seperti ajuan siswa; diputuskan nanti.</span></span>
                 </label>
-                <label class="flex cursor-pointer items-start gap-3 rounded-xl border p-3.5 transition has-[:checked]:border-green-500 has-[:checked]:bg-green-50 has-[:checked]:ring-2 has-[:checked]:ring-green-500/20 border-slate-200">
-                    <input type="radio" name="status_awal" value="disetujui" <?= $awal === 'disetujui' ? 'checked' : '' ?> class="mt-1">
-                    <span><b class="block text-sm text-slate-800">Langsung disetujui</b><span class="text-xs text-slate-500">Untuk data lama yang sudah pasti. Siswa langsung terkunci.</span></span>
-                </label>
+                <?php if (! empty($bolehAcc)): ?>
+                    <label class="flex cursor-pointer items-start gap-3 rounded-xl border p-3.5 transition has-[:checked]:border-green-500 has-[:checked]:bg-green-50 has-[:checked]:ring-2 has-[:checked]:ring-green-500/20 border-slate-200">
+                        <input type="radio" name="status_awal" value="disetujui" <?= $awal === 'disetujui' ? 'checked' : '' ?> class="mt-1">
+                        <span><b class="block text-sm text-slate-800">Langsung disetujui</b><span class="text-xs text-slate-500">Untuk data lama yang sudah pasti; tercatat Anda yang menyetujui. Siswa langsung terkunci.</span></span>
+                    </label>
+                <?php else: ?>
+                    <div class="flex items-start gap-3 rounded-xl border border-dashed border-slate-300 bg-slate-50 p-3.5">
+                        <span class="mt-1 text-slate-400" aria-hidden="true">🔒</span>
+                        <span><b class="block text-sm text-slate-600">Langsung disetujui</b><span class="text-xs text-slate-500">Hanya Waka Hubin (atau Admin) yang bisa menyetujui. Simpan sebagai menunggu, lalu minta Waka Hubin meng-ACC.</span></span>
+                    </div>
+                <?php endif; ?>
             </div>
         </section>
     <?php endif; ?>
 
     <div class="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
         <a href="<?= site_url($ubah ? 'admin/pkl/' . $a['id'] : 'admin/pkl') ?>" class="rounded-xl border border-slate-300 px-6 py-3 text-center text-sm font-semibold text-slate-600 transition hover:bg-slate-50">Batal</a>
-        <button type="submit" :disabled="!pengaju || (luarBatas() && !konfirmLuar) || kirimTertunda" class="rounded-xl bg-brand-700 px-8 py-3 text-sm font-bold text-white shadow-sm transition hover:bg-brand-800 disabled:cursor-not-allowed disabled:opacity-50">
+        <button type="submit" :disabled="!pengaju || kirimTertunda" class="rounded-xl bg-brand-700 px-8 py-3 text-sm font-bold text-white shadow-sm transition hover:bg-brand-800 disabled:cursor-not-allowed disabled:opacity-50">
             <?= $ubah ? 'Simpan perubahan' : 'Simpan ajuan' ?>
         </button>
     </div>

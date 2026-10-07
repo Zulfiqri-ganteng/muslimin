@@ -12,7 +12,8 @@ Bahasa sederhana, urut dari atas ke bawah. Rancangan teknis ada di `DESAIN-PKL.m
    git pull
    phpm spark migrate
    ```
-   Migrasi PKL ada 3: `AddAkunStaf` (akun staf), `CreatePkl` (tabel PKL), `PklSurat` (nomor surat). Yang sudah pernah
+   Migrasi PKL ada 4: `AddAkunStaf` (akun staf), `CreatePkl` (tabel PKL), `PklSurat` (nomor surat), dan yang terbaru
+   `PklSuratSekolah` (kolom catatan ACC, batas keputusan, tanda tangan Waka Hubin, format surat sekolah). Yang sudah pernah
    dijalankan dilewati sendiri; kalau tak ada yang baru, tidak apa-apa.
 3. Pastikan folder penyimpan template surat bisa ditulis:
    ```
@@ -32,39 +33,54 @@ Bahasa sederhana, urut dari atas ke bawah. Rancangan teknis ada di `DESAIN-PKL.m
 1. Login sebagai Admin → menu **Kelola Akun** → buat akun **Operator Sekolah** dan **Waka Hubin**.
    Sandi sementara tampil **sekali saja**, catat dan berikan ke orangnya. Mereka wajib menggantinya saat login pertama.
 2. Login sebagai Operator → **PKL / PRAKERIN → Pengaturan PKL**, isi:
-   - Tingkat yang boleh mengajukan (XI, XII, atau keduanya), tanggal PKL paling awal dan paling akhir, lama PKL
-     minimal dan maksimal, jumlah siswa maksimal per perusahaan.
-   - **Surat permohonan PKL**: nama, NIP, dan jabatan Waka Hubin (nama inilah yang tercetak di bawah ruang tanda
-     tangan), serta format nomor surat. Kalau nama tidak diisi, di surat hanya ada titik-titik.
-   - Opsional: unggah **template Word** milik sekolah (unduh "contoh template" dulu, sunting di Word, jangan ubah
-     penanda `${...}`, lalu unggah).
+   - Tingkat yang boleh mengajukan (XI, XII, atau keduanya), jumlah siswa maksimal per perusahaan (paling banyak 5),
+     dan **batas hari keputusan Waka Hubin** (bawaan 5 hari). Siswa tidak lagi mengisi tanggal lahir maupun tanggal PKL.
+   - **Surat permohonan PKL**: nama, NIP, dan jabatan Waka Hubin, nama Kepala Sekolah, nama & HP kontak sekolah untuk
+     catatan "NB" di surat, format nomor surat (`295/SMK-BN/PKL/VII/2026`) dan format nama berkas
+     (`295 Surat Izin PKL BINUS - Ilyasha ALL XII TKJ 5`). Surat sudah memakai format resmi sekolah (template bawaan),
+     jadi unggah template Word sendiri hanya bila sekolah mengubah format suratnya.
    - Terakhir, nyalakan **Form dibuka**.
    Kotak kuning **"Persiapan"** di Beranda PKL menandai mana yang belum siap dan hilang sendiri bila semuanya beres.
-3. **Uji coba satu kali**: pakai satu siswa contoh. Buka tautan siswa → isi sampai terkirim → login Operator →
+3. **Waka Hubin unggah tanda tangan digital** (login sebagai Waka Hubin → PKL → tab **Tanda Tangan**; PNG/JPG, maks 1 MB,
+   latar putih boleh). Gambar ini terpasang di surat **hanya bila Waka Hubin sendiri yang meng-ACC**.
+4. **Uji coba satu kali**: pakai satu siswa contoh. Buka tautan siswa → isi sampai terkirim → login **Waka Hubin** →
    Kotak Masuk → Periksa → ACC → Disetujui → buka ajuannya → **Terbitkan nomor & unduh surat** → buka berkasnya di
-   Microsoft Word. Setelah puas, hapus ajuan uji coba itu (tombol "Hapus ajuan ini") agar nomor surat dan statistik bersih.
+   Microsoft Word. Setelah puas, minta Admin menghapus ajuan uji coba itu agar nomor surat dan statistik bersih.
    Nomor surat pertama bisa diatur lewat "nomor berikutnya" di Pengaturan bila perlu.
-4. Bagikan tautan ke siswa (contoh pesan di bagian D).
+5. Bagikan tautan ke siswa (contoh pesan di bagian D).
 
 ## C. Pemakaian sehari-hari (Operator / Waka Hubin)
+
+**Aturan sekolah: yang meng-ACC (menyetujui), menolak, atau mencabut persetujuan hanya Waka Hubin.** Operator hanya memeriksa,
+mengembalikan untuk diperbaiki, mengisi atas nama, dan mencetak surat — tombol ACC tidak muncul di akun Operator, dan bila
+dipaksa tetap ditolak sistem (tercatat di Audit Log). Admin hanya cadangan bila Waka Hubin berhalangan: wajib mencentang
+"saya mewakili Waka Hubin", dan di kaki surat tertulis jelas bahwa ACC dilakukan Admin. Keputusan Waka Hubin dibatasi
+**5 hari** sejak ajuan dikirim; yang lewat batas ditandai **TERLAMBAT**.
 
 | Mau apa | Di mana |
 |---|---|
 | Periksa ajuan baru | PKL → **Kotak Masuk** → tab *Menunggu ACC* → **Periksa** |
-| ACC banyak sekaligus | Tab *Menunggu ACC* → centang lalu **ACC terpilih**, atau **ACC semua yang aman**. Hanya ajuan berlabel ✓ Aman yang disetujui; yang bertanda ⚠ dilewati dan dijelaskan alasannya |
+| ACC banyak sekaligus (**Waka Hubin/Admin**) | Tab *Menunggu ACC* → centang lalu **ACC terpilih**, atau **ACC semua yang aman**. Hanya ajuan berlabel ✓ Aman yang disetujui; yang bertanda ⚠ dilewati dan dijelaskan alasannya |
 | Minta siswa memperbaiki | Detail ajuan → **Kembalikan** (wajib alasan) |
 | Cetak surat satu ajuan | Tab *Disetujui* → buka ajuan → **Terbitkan nomor & unduh surat** |
 | Cetak banyak surat | Tab *Disetujui* → **Unduh surat terpilih**, **Yang belum dicetak / perlu cetak ulang**, atau **Unduh SEMUA surat** (tiap surat di halaman baru; lebih dari 60 surat jadi berkas ZIP) |
 | Siapa yang belum mengisi / belum PKL | **Status Siswa** (ada tombol Excel) |
 | Siswa tak bisa mengisi sendiri / data PKL lama | **Isi atas Nama**, atau **Impor** Excel (Operator/Admin) |
 
-Surat dicetak, lalu **Waka Hubin menandatangani dan memberi stempel basah** di kertas, kemudian siswa membawanya ke
-perusahaan. Gambar tanda tangan/stempel sengaja tidak dipasang otomatis.
+Surat memakai **format resmi sekolah** (kop, tabel siswa, TTD dan nama Kepala Sekolah, catatan "NB"), ditambah blok
+**Waka Hubin** (jabatan, gambar tanda tangan, nama) dan **kaki surat** berisi catatan ACC: siapa yang menyetujui, kapan, dan
+kode verifikasi — sehingga jelas siapa yang bertanggung jawab. Gambar tanda tangan Waka Hubin terpasang hanya bila **Waka Hubin
+sendiri** yang meng-ACC; bila Admin yang meng-ACC, ruang tanda tangan dibiarkan kosong untuk tanda tangan basah. Surat dicetak,
+distempel bila perlu, lalu siswa membawanya ke perusahaan.
 
-Tanda **"Perlu cetak ulang"** muncul bila data berubah setelah surat diunduh (perusahaan, tanggal, siswa, atau
-nama/NIP/jabatan Waka Hubin). Nomor surat tidak berubah, jadi cukup unduh lagi dan cetak ulang.
+Tanda **"Perlu cetak ulang"** muncul bila data berubah setelah surat diunduh (perusahaan, siswa, HP, penanda tangan, tanda
+tangan, atau catatan ACC). Nomor surat tidak berubah, jadi cukup unduh lagi dan cetak ulang.
 
 Waka Hubin **tidak** bisa membuka Pengaturan PKL, Hapus, Impor, Isian Biodata Siswa, dan Master Data (sengaja).
+Operator tidak bisa membuka tab Tanda Tangan. Ajuan yang **sudah disetujui** hanya bisa diubah Waka Hubin/Admin dan hanya
+bisa dihapus Admin.
+
+Aplikasi Android: Operator dan Waka Hubin cukup login di aplikasi; yang tampil hanya menu PKL (API: `docs/API-PKL.md`).
 
 ## D. Contoh pesan WhatsApp untuk siswa
 
@@ -75,8 +91,9 @@ silakan isi pengajuan tempat PKL lewat tautan ini (cukup dari HP, tanpa login):
 https://binuspkl.kangmuslim.com/
 
 Siapkan dulu: nama & alamat lengkap perusahaan, nomor telepon perusahaan, nama pimpinan/kontak,
-tanggal mulai-selesai PKL, dan nama teman yang satu tempat (kalau ada).
+nomor HP kamu, dan nama + nomor HP teman yang satu tempat (maksimal 5 siswa per perusahaan).
 Cukup SATU siswa yang mengisi untuk satu kelompok. Simpan/tangkap layar nomor bukti di akhir.
+Setelah terkirim, JANGAN mengajukan ulang: tunggu keputusan Waka Hubin paling lama 5 hari.
 Isi paling lambat: [tanggal]. Kalau ada kendala, hubungi operator sekolah.
 ```
 
@@ -89,5 +106,8 @@ Isi paling lambat: [tanggal]. Kalau ada kendala, hubungi operator sekolah.
 | Nama di bawah tanda tangan surat titik-titik | Nama Waka Hubin belum diisi di Pengaturan PKL. Isi, lalu unduh surat lagi |
 | Layar "Menyiapkan berkas…" lama | Surat sedang dirakit (banyak surat butuh beberapa detik). Layar tertutup sendiri begitu berkas turun. Jangan klik dua kali |
 | Tombol Pengaturan tidak ada | Akun Anda Waka Hubin; hanya Operator/Admin yang boleh |
+| Tombol ACC tidak ada / "hanya boleh dilakukan Waka Hubin" | Akun Anda Operator. Minta Waka Hubin yang meng-ACC (Admin hanya cadangan) |
+| Gambar tanda tangan Hubin tak muncul di surat | Surat itu di-ACC oleh Admin (bukan Hubin), atau tanda tangan belum diunggah di tab Tanda Tangan. Setelah diunggah, unduh surat lagi |
+| Siswa bilang "tidak bisa mengajukan lagi" | Memang aturannya: siswa yang sudah mengajukan menunggu keputusan Waka Hubin. Bila salah isi, Operator mengembalikannya untuk diperbaiki, atau Operator/Admin menghapus ajuannya (yang sudah disetujui hanya Admin) |
 | Surat berantakan di Word | Kabari pengembang, sertakan berkasnya. Sementara, hapus template unggahan agar memakai surat bawaan |
 | Tampilan lama / tak berubah setelah update | Muat ulang paksa (Ctrl+F5) |

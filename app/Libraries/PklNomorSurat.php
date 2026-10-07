@@ -3,7 +3,7 @@
 namespace App\Libraries;
 
 /**
- * Format nomor surat PKL bertoken. Pola default: {urut}/PKL/{tgl}-{bln}-{thn}
+ * Format nomor surat PKL bertoken. Pola default (surat sekolah): {urut}/SMK-BN/PKL/{bln_romawi}/{thn}
  *
  *   {urut}  nomor urut apa adanya (7)      {urut3} tiga angka (007)    {urut4} empat angka (0007)
  *   {tgl}   tanggal surat 2 angka (06)     {bln}   bulan 2 angka (01)
@@ -16,7 +16,8 @@ final class PklNomorSurat
     private const ROMAWI = ['I', 'II', 'III', 'IV', 'V', 'VI', 'VII', 'VIII', 'IX', 'X', 'XI', 'XII'];
     private const TOKEN  = ['{urut}', '{urut3}', '{urut4}', '{tgl}', '{bln}', '{bln_romawi}', '{thn}'];
 
-    public const BAWAAN = '{urut}/PKL/{tgl}-{bln}-{thn}';
+    /** Bawaan = format nomor surat resmi sekolah: 295/SMK-BN/PKL/VII/2026. */
+    public const BAWAAN = '{urut}/SMK-BN/PKL/{bln_romawi}/{thn}';
 
     public static function format(string $pola, int $urut, \DateTimeInterface $tanggal): string
     {

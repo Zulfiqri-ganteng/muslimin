@@ -7,8 +7,11 @@ use App\Libraries\HakAkses;
 use App\Libraries\IsianBantu;
 use App\Libraries\PklAjuan;
 use App\Libraries\PklForm;
+use App\Libraries\PklKeputusan;
+use App\Libraries\PklNamaBerkas;
 use App\Libraries\PklNomorSurat;
 use App\Libraries\PklPeringatan;
+use App\Libraries\PklStaf;
 use App\Libraries\PklSurat;
 use App\Models\AuditModel;
 use App\Models\PklPengajuanModel;
@@ -16,13 +19,18 @@ use App\Models\PklPengaturanModel;
 use App\Models\SettingModel;
 use CodeIgniter\HTTP\RedirectResponse;
 use CodeIgniter\HTTP\ResponseInterface;
+use Config\Peran;
 
 /**
  * PKL / Prakerin — sisi staf (Operator Sekolah, Waka Hubin, Admin). Rancangan: docs/DESAIN-PKL.md.
  *
- * Operator dan Hubin sama-sama boleh memeriksa, ACC, mengembalikan, menolak, mengubah, dan
- * mengisi atas nama. Hanya Operator/Admin yang boleh Pengaturan dan Hapus (pembatas ada di
- * Config\Peran → 'kecuali', dibaca penjaga rute, jadi tombolnya pun disembunyikan untuk Hubin).
+ * ATURAN SEKOLAH (2026-10-07): yang berhak MENYETUJUI (ACC), menolak, dan mencabut persetujuan
+ * hanyalah Waka Hubin. Admin web boleh sebagai CADANGAN bila Hubin berhalangan (wajib mencentang
+ * "mewakili Waka Hubin"; tercatat sebagai peran admin di kaki surat). Operator TIDAK boleh —
+ * ia memeriksa, mengembalikan untuk diperbaiki, mengubah, mengisi atas nama, dan mencetak surat.
+ * Hak ini dibaca dari Config\Peran ('acc') lewat HakAkses::bolehAcc() dan dijaga DI SINI (bukan
+ * hanya disembunyikan di tampilan); percobaan yang ditolak masuk Audit Log.
+ * Hanya Operator/Admin yang boleh Pengaturan dan Hapus (Config\Peran → 'kecuali').
  *
  * Pengaman kesalahan manusia:
  *   - kembalikan / tolak / batalkan persetujuan WAJIB beralasan (alasan dibaca siswa & tercatat);
@@ -66,6 +74,7 @@ class Pkl extends BaseController
             'alasan'  => PklPengaturanModel::alasanTutup($this->p),
             'tautan'  => $this->tautanSiswa(),
             'tingkat' => $tingkat,
+            'terlambat' => $this->model->hitungTerlambat(PklPengaturanModel::batasHari($this->p)),
         ]);
     }
 
@@ -130,6 +139,8 @@ class Pkl extends BaseController
             'kode'       => PklPengajuanModel::kode((int) $id),
             'surat'      => $surat,
             'perluUlang' => $surat !== null && PklSurat::sidik($ajuan, $anggota, $this->p) !== (string) $surat['sidik'],
+            'sisaHari'   => $ajuan['status'] === 'menunggu' ? PklPengajuanModel::sisaHari($ajuan['diajukan_at'] ?? $ajuan['created_at'], PklPengaturanModel::batasHari($this->p)) : null,
+            'batasKeputusan' => $ajuan['status'] === 'menunggu' ? PklPengajuanModel::batasKeputusan($ajuan['diajukan_at'] ?? $ajuan['created_at'], PklPengaturanModel::batasHari($this->p)) : null,
         ]);
     }
 
@@ -153,61 +164,19 @@ class Pkl extends BaseController
         return $this->putuskan((int) $id, 'batal_acc');
     }
 
-    /** Satu pintu untuk semua keputusan; aturan tiap aksi ada di $aturan. */
+    /**
+     * Satu pintu untuk semua keputusan. Seluruh aturan (hak ACC, Admin "mewakili", status asal, alasan wajib,
+     * peringatan bahaya, pencatatan) ada di Libraries\PklKeputusan — dipakai juga oleh API Android.
+     */
     private function putuskan(int $id, string $aksi): RedirectResponse
     {
-        $ajuan = $this->model->find($id);
-        $balik = 'admin/pkl/' . $id;
-        if ($ajuan === null) {
-            return $this->ke('admin/pkl/daftar/menunggu', 'error', 'Ajuan tidak ditemukan (mungkin sudah dihapus).');
+        $hasil = (new PklKeputusan())->putuskan($id, $aksi, (array) $this->request->getPost(), $this->konteks(['saluran' => 'web']), $this->p);
+        if ($hasil['kode'] === 'tidak_ada') {
+            return $this->ke('admin/pkl/daftar/menunggu', 'error', $hasil['pesan']);
         }
 
-        // aksi => [status baru, status asal yang boleh, catatan wajib?, kata kerja]
-        $aturan = [
-            'acc'       => ['disetujui', ['menunggu', 'perbaikan', 'ditolak'], false, 'disetujui'],
-            'kembalikan' => ['perbaikan', ['menunggu'], true, 'dikembalikan untuk diperbaiki'],
-            'tolak'     => ['ditolak', ['menunggu', 'perbaikan'], true, 'ditolak'],
-            'batal_acc' => ['perbaikan', ['disetujui'], true, 'persetujuannya dibatalkan (dikembalikan untuk diperbaiki)'],
-        ][$aksi];
-        [$baru, $asal, $wajibCatatan, $kata] = $aturan;
-
-        if (! in_array($ajuan['status'], $asal, true)) {
-            return $this->ke($balik, 'error', 'Aksi ini tidak bisa dilakukan: status ajuan sudah "' . $ajuan['status'] . '". Muat ulang halaman.');
-        }
-
-        $catatan = IsianBantu::rapikan((string) $this->request->getPost('catatan'));
-        if ($wajibCatatan && mb_strlen($catatan) < 5) {
-            return $this->ke($balik, 'error', 'Alasan wajib diisi (minimal 5 huruf) — siswa akan membacanya.');
-        }
-        if (mb_strlen($catatan) > 255) {
-            return $this->ke($balik, 'error', 'Alasan terlalu panjang (maksimal 255 huruf).');
-        }
-
-        $opsi = [];
-        if ($aksi === 'acc') {
-            $anggota = $this->model->anggotaDetail($id);
-            $detail  = $this->model->detail($id);
-            $bahaya  = in_array('bahaya', array_column(PklPeringatan::untuk($detail, $anggota, $this->p), 'tingkat'), true);
-            if ($bahaya && $this->request->getPost('paham') !== '1') {
-                return $this->ke($balik, 'error', 'Ada peringatan BAHAYA pada ajuan ini. Bereskan dulu, atau centang "sudah saya periksa" bila Anda yakin.');
-            }
-            $pilih = (int) $this->request->getPost('perusahaan_id');
-            if ($pilih > 0) {
-                $opsi['perusahaan_id'] = $pilih;
-            }
-        }
-
-        $hasil = (new PklAjuan())->ubahStatus($id, $baru, $this->konteks(['aksi' => $aksi]), $catatan !== '' ? $catatan : null, $opsi);
-        if (! $hasil['ok']) {
-            return $this->ke($balik, 'error', $this->pesanGagal($hasil));
-        }
-
-        $kode = PklPengajuanModel::kode($id);
-        $this->audit->record('update', 'pkl_pengajuan', $id, 'PKL ' . $kode . ' ' . $kata . ' — ' . $ajuan['perusahaan_nama'] . ($catatan !== '' ? ' (' . mb_substr($catatan, 0, 80) . ')' : ''));
-
-        return $this->ke($balik, 'success', 'Ajuan ' . $kode . ' ' . $kata . '.');
+        return $this->ke('admin/pkl/' . $id, $hasil['ok'] ? 'success' : 'error', $hasil['pesan']);
     }
-
     // =================================================================
     // Isi atas nama & ubah langsung
     // =================================================================
@@ -223,9 +192,12 @@ class Pkl extends BaseController
         [$data, $galat] = PklForm::proses($post, $this->p, $this->opsiForm($post));
 
         $pengajuId = (int) ($post['siswa_id'] ?? 0);
-        [$anggota, $galatAnggota] = $this->periksaAnggota($pengajuId, $data['teman'], null);
+        [$anggota, $galatAnggota] = $this->periksaAnggota($pengajuId, $data['teman'], null, $data['teman_hp'] ?? []);
         $galat += $galatAnggota;
         $statusAwal = ($post['status_awal'] ?? '') === 'disetujui' ? 'disetujui' : 'menunggu';
+        if ($statusAwal === 'disetujui' && ! HakAkses::bolehAcc($this->peranSaya())) {
+            $galat['umum'] = 'Menyimpan ajuan langsung berstatus DISETUJUI hanya boleh dilakukan Waka Hubin (atau Admin). Simpan sebagai menunggu, lalu minta Waka Hubin meng-ACC.';
+        }
 
         if ($galat !== []) {
             return $this->tampilForm(null, $post, $galat, []);
@@ -253,6 +225,9 @@ class Pkl extends BaseController
         if ($ajuan === null) {
             return $this->ke('admin/pkl/daftar/menunggu', 'error', 'Ajuan tidak ditemukan.');
         }
+        if ($ajuan['status'] === 'disetujui' && ! HakAkses::bolehAcc($this->peranSaya())) {
+            return $this->ke('admin/pkl/' . (int) $id, 'error', 'Ajuan yang sudah DISETUJUI hanya boleh diubah Waka Hubin (atau Admin), karena persetujuannya berlaku untuk isi yang sekarang.');
+        }
 
         return $this->tampilForm($ajuan, [], [], $this->model->anggotaDetail((int) $id));
     }
@@ -263,6 +238,9 @@ class Pkl extends BaseController
         $ajuan = $this->model->detail($id);
         if ($ajuan === null) {
             return $this->ke('admin/pkl/daftar/menunggu', 'error', 'Ajuan tidak ditemukan.');
+        }
+        if ($ajuan['status'] === 'disetujui' && ! HakAkses::bolehAcc($this->peranSaya())) {
+            return $this->ke('admin/pkl/' . $id, 'error', 'Ajuan yang sudah DISETUJUI hanya boleh diubah Waka Hubin (atau Admin), karena persetujuannya berlaku untuk isi yang sekarang.');
         }
         $lama = $this->model->anggotaDetail($id);
 
@@ -275,13 +253,13 @@ class Pkl extends BaseController
                 $pengajuLama = (int) $a['siswa_id'];
             }
         }
-        [$anggota, $galatAnggota] = $this->periksaAnggota($pengajuLama, $data['teman'], $id);
+        [$anggota, $galatAnggota] = $this->periksaAnggota($pengajuLama, $data['teman'], $id, $data['teman_hp'] ?? []);
         $galat += $galatAnggota;
         if ($galat !== []) {
             return $this->tampilForm($ajuan, $post, $galat, $lama);
         }
 
-        $catatan = ($post['luar_batas'] ?? '') === '1' ? 'tanggal di luar pagar sekolah (dikonfirmasi)' : null;
+        $catatan = null;
         $hasil   = (new PklAjuan())->ubahIsi($id, $data, $anggota, $this->konteks(['aksi' => 'ubah', 'catatan' => $catatan]));
         if (! $hasil['ok']) {
             return $this->tampilForm($ajuan, $post, ['umum' => $this->pesanGagal($hasil)], $lama);
@@ -293,55 +271,17 @@ class Pkl extends BaseController
         return $this->ke('admin/pkl/' . $id, 'success', 'Data ajuan ' . $kode . ' diperbarui.');
     }
 
-    /** Opsi PklForm untuk staf: pernyataan tak perlu, HP/tgl lahir opsional, pagar tanggal bisa dilewati dengan konfirmasi. */
+    /** Opsi PklForm untuk staf: pernyataan tak perlu, HP pengaju & teman boleh kosong (data lama / belum ada). */
     private function opsiForm(array $post): array
     {
-        return ['pernyataan' => false, 'kontak' => false, 'batas' => ($post['luar_batas'] ?? '') !== '1'];
+        return ['pernyataan' => false, 'kontak' => false, 'hp_teman' => false];
     }
 
-    /**
-     * Pengaju + teman: aktif, belum terkunci di ajuan lain (selain ajuan ini sendiri). Staf boleh
-     * memilih siswa dari tingkat mana pun (riwayat lama), jadi tingkat TIDAK dibatasi di sini.
-     *
-     * @param list<int> $temanIds
-     *
-     * @return array{0: list<array{siswa_id:int, kelas_id:?int, peran:string}>, 1: array<string, string>}
-     */
-    private function periksaAnggota(int $pengajuId, array $temanIds, ?int $ajuanSendiri): array
+    /** Pengaju + teman: aktif & belum terkunci di ajuan lain (aturan di Libraries\PklStaf, dipakai juga API). */
+    private function periksaAnggota(int $pengajuId, array $temanIds, ?int $ajuanSendiri, array $hpTeman = []): array
     {
-        $info  = $this->model->siswaUntukDipilih(array_merge([$pengajuId], $temanIds));
-        $galat = [];
-        $baris = [];
-
-        $pg = $info[$pengajuId] ?? null;
-        if ($pg === null || $pg['status'] !== 'aktif') {
-            $galat['siswa_id'] = 'Pilih siswa pengaju yang masih aktif.';
-        } elseif ($pg['aktif_di'] !== null && (int) $pg['aktif_di'] !== (int) $ajuanSendiri) {
-            $galat['siswa_id'] = $pg['nama'] . ' sudah punya ajuan PKL aktif (' . PklPengajuanModel::kode((int) $pg['aktif_di']) . ').';
-        } else {
-            $baris[] = ['siswa_id' => $pengajuId, 'kelas_id' => (int) $pg['kelas_id'] ?: null, 'peran' => 'pengaju'];
-        }
-
-        $masalah = [];
-        foreach ($temanIds as $tid) {
-            $s = $info[$tid] ?? null;
-            if ($tid === $pengajuId) {
-                $masalah[] = 'pengaju tak perlu dipilih sebagai teman';
-            } elseif ($s === null || $s['status'] !== 'aktif') {
-                $masalah[] = 'ada siswa yang tidak ditemukan/tidak aktif';
-            } elseif ($s['aktif_di'] !== null && (int) $s['aktif_di'] !== (int) $ajuanSendiri) {
-                $masalah[] = $s['nama'] . ' (sudah punya ajuan ' . PklPengajuanModel::kode((int) $s['aktif_di']) . ')';
-            } else {
-                $baris[] = ['siswa_id' => $tid, 'kelas_id' => (int) $s['kelas_id'] ?: null, 'peran' => 'teman'];
-            }
-        }
-        if ($masalah !== []) {
-            $galat['teman'] = 'Teman berikut tidak bisa ditambahkan: ' . implode('; ', $masalah) . '.';
-        }
-
-        return [$baris, $galat];
+        return PklStaf::periksaAnggota($pengajuId, $temanIds, $ajuanSendiri, $hpTeman);
     }
-
     /** Form isi-atas-nama ($ajuan null) / ubah-langsung ($ajuan terisi). */
     private function tampilForm(?array $ajuan, array $post, array $galat, array $anggota)
     {
@@ -354,12 +294,12 @@ class Pkl extends BaseController
             $orang['pengaju'] = $nama[(int) ($post['siswa_id'] ?? 0)] ?? null;
             foreach ((array) ($post['teman'] ?? []) as $tid) {
                 if (isset($nama[(int) $tid])) {
-                    $orang['teman'][] = $nama[(int) $tid];
+                    $orang['teman'][] = $nama[(int) $tid] + ['hp' => (string) (((array) ($post['teman_hp'] ?? []))[(int) $tid] ?? '')];
                 }
             }
         } else {
             foreach ($anggota as $s) {
-                $baris = ['id' => (int) $s['siswa_id'], 'nama' => $s['nama'], 'kelas' => (string) ($s['nama_kelas'] ?? '')];
+                $baris = ['id' => (int) $s['siswa_id'], 'nama' => $s['nama'], 'kelas' => (string) ($s['nama_kelas'] ?? ''), 'hp' => (string) ($s['hp'] ?? '')];
                 if ($s['peran'] === 'pengaju') {
                     $orang['pengaju'] = $baris;
                 } else {
@@ -396,8 +336,6 @@ class Pkl extends BaseController
     // ACC massal
     // =================================================================
 
-    private const MAKS_ACC_MASSAL = 200;
-
     /**
      * Ringkasan peringatan tiap baris (untuk kolom "Pemeriksaan" di tab Menunggu).
      *
@@ -426,68 +364,16 @@ class Pkl extends BaseController
     }
 
     /**
-     * POST admin/pkl/acc-massal — mode "terpilih" (ids[]) atau "aman" (semua yang menunggu).
-     * Hanya ajuan yang BERSIH dari peringatan bahaya/periksa yang di-ACC; sisanya dilewati dan
-     * dilaporkan dengan alasannya agar diperiksa satu per satu. Tiap ajuan diproses dalam
-     * transaksi sendiri (PklAjuan::ubahStatus), jadi satu yang gagal tak membatalkan yang lain.
+     * POST admin/pkl/acc-massal — mode "terpilih" (ids[]) atau "aman" (semua yang menunggu). Hanya Waka Hubin
+     * (Admin cadangan, wajib "mewakili"); aturan lengkap di Libraries\PklKeputusan::accMassal.
      */
     public function accMassal(): RedirectResponse
     {
-        $balik = 'admin/pkl/daftar/menunggu';
-        if ((string) $this->request->getPost('mode') === 'terpilih') {
-            $ids = array_values(array_unique(array_filter(array_map('intval', (array) $this->request->getPost('ids')))));
-            if ($ids === []) {
-                return $this->ke($balik, 'error', 'Centang dulu ajuan yang mau di-ACC.');
-            }
-        } else {
-            $ids = null; // semua yang menunggu
-        }
+        $hasil = (new PklKeputusan())->accMassal((array) $this->request->getPost(), $this->konteks(['saluran' => 'web']), $this->p);
+        $redir = $this->ke('admin/pkl/daftar/menunggu', $hasil['ok'] ? 'success' : 'error', $hasil['pesan']);
 
-        $q = db_connect()->table('pkl_pengajuan')->select('id')->where('status', 'menunggu')->orderBy('updated_at', 'ASC')->orderBy('id', 'ASC');
-        if ($ids !== null) {
-            $q->whereIn('id', $ids);
-        }
-        $urut = array_map('intval', array_column($q->limit(self::MAKS_ACC_MASSAL + 1)->get()->getResultArray(), 'id'));
-        if ($urut === []) {
-            return $this->ke($balik, 'success', 'Tidak ada ajuan yang menunggu.');
-        }
-        if (count($urut) > self::MAKS_ACC_MASSAL) {
-            return $this->ke($balik, 'error', 'Terlalu banyak sekaligus (maksimal ' . self::MAKS_ACC_MASSAL . ' ajuan per klik). Pakai pencarian/kelas atau centang sebagian.');
-        }
-
-        $svc    = new PklAjuan();
-        $ok     = 0;
-        $lewat  = [];
-        foreach ($urut as $id) {
-            $ajuan = $this->model->detail($id);
-            if ($ajuan === null || $ajuan['status'] !== 'menunggu') {
-                continue;
-            }
-            $kode  = PklPengajuanModel::kode($id) . ' ' . $ajuan['perusahaan_nama'];
-            $berat = array_values(array_filter(
-                PklPeringatan::untuk($ajuan, $this->model->anggotaDetail($id), $this->p),
-                static fn (array $w) => in_array($w['tingkat'], ['bahaya', 'awas'], true)
-            ));
-            if ($berat !== []) {
-                $lewat[] = $kode . ' — dilewati: ' . mb_substr($berat[0]['teks'], 0, 110) . (count($berat) > 1 ? ' (+' . (count($berat) - 1) . ' peringatan lain)' : '');
-                continue;
-            }
-
-            $hasil = $svc->ubahStatus($id, 'disetujui', $this->konteks(['aksi' => 'acc']), 'ACC massal');
-            if ($hasil['ok']) {
-                $ok++;
-            } else {
-                $lewat[] = $kode . ' — gagal: ' . $this->pesanGagal($hasil);
-            }
-        }
-
-        $this->audit->record('update', 'pkl_pengajuan', null, 'ACC massal PKL: ' . $ok . ' disetujui, ' . count($lewat) . ' dilewati');
-        $pesan = 'ACC massal: ' . $ok . ' ajuan disetujui' . ($lewat !== [] ? ', ' . count($lewat) . ' dilewati (perlu diperiksa satu per satu, lihat daftar merah di bawah).' : '.');
-        $redir = $this->ke($balik, $ok > 0 || $lewat === [] ? 'success' : 'error', $pesan);
-
-        return $lewat !== [] ? $redir->with('errors', array_slice($lewat, 0, 40)) : $redir;
+        return ($hasil['dilewati'] ?? []) !== [] ? $redir->with('errors', $hasil['dilewati']) : $redir;
     }
-
     // =================================================================
     // Hapus (Operator/Admin — Hubin ditolak oleh Config\Peran)
     // =================================================================
@@ -498,6 +384,12 @@ class Pkl extends BaseController
         $ajuan = $this->model->detail($id);
         if ($ajuan === null) {
             return $this->ke('admin/pkl/daftar/menunggu', 'error', 'Ajuan tidak ditemukan (mungkin sudah dihapus).');
+        }
+        // Ajuan yang sudah DISETUJUI Waka Hubin hanya boleh dihapus Admin (Operator tidak boleh menghapus keputusan Hubin).
+        if ($ajuan['status'] === 'disetujui' && $this->peranSaya() !== Peran::ADMIN) {
+            $this->audit->record('delete', 'pkl_pengajuan', $id, 'DITOLAK: ' . HakAkses::label($this->peranSaya()) . ' mencoba menghapus ajuan yang sudah disetujui, PKL ' . PklPengajuanModel::kode($id));
+
+            return $this->ke('admin/pkl/' . $id, 'error', 'Ajuan yang sudah DISETUJUI Waka Hubin hanya boleh dihapus Admin. Minta Waka Hubin membatalkan persetujuannya, atau hubungi Admin.');
         }
         if ($ajuan['status'] === 'disetujui' && $this->request->getPost('paham') !== '1') {
             return $this->ke('admin/pkl/' . $id, 'error', 'Ajuan ini SUDAH DISETUJUI. Centang konfirmasi bila benar-benar ingin menghapusnya.');
@@ -580,8 +472,8 @@ class Pkl extends BaseController
 
         $this->pengModel->update(1, $data);
         $this->audit->record('update', 'pkl_pengaturan', 1, 'Pengaturan PKL: form ' . ($data['form_buka'] ? 'DIBUKA' : 'ditutup')
-            . ', tingkat ' . $data['tingkat'] . ', ' . ($data['mulai_paling_awal'] ?? '-') . ' s/d ' . ($data['selesai_paling_akhir'] ?? '-')
-            . ', lama ' . $data['durasi_min_hari'] . '–' . $data['durasi_maks_hari'] . ' hari, maks ' . $data['maks_anggota'] . ' siswa');
+            . ', tingkat ' . $data['tingkat'] . ', maks ' . $data['maks_anggota'] . ' siswa, batas keputusan ' . $data['batas_keputusan_hari'] . ' hari'
+            . ', Waka Hubin ' . ($data['waka_hubin_nama'] ?? '(kosong)') . ', format nomor ' . $data['format_nomor']);
 
         return $this->ke('admin/pkl/pengaturan', 'success', $data['form_buka'] ? 'Pengaturan disimpan. Form siswa sekarang TERBUKA.' : 'Pengaturan disimpan. Form siswa tertutup.');
     }
@@ -599,45 +491,14 @@ class Pkl extends BaseController
             $galat['tingkat'] = 'Pilih minimal satu tingkat yang boleh mengajukan.';
         }
 
-        $tgl = static fn (string $k): ?string => IsianBantu::tanggal(trim((string) ($post[$k] ?? '')), (int) date('Y') - 1, (int) date('Y') + 3);
-        $awal  = $tgl('mulai_paling_awal');
-        $akhir = $tgl('selesai_paling_akhir');
-        foreach (['mulai_paling_awal' => 'awal', 'selesai_paling_akhir' => 'akhir'] as $k => $nama) {
-            $mentah = trim((string) ($post[$k] ?? ''));
-            if ($mentah !== '' && $$nama === null) {
-                $galat[$k] = 'Tanggal tidak valid atau tahunnya di luar jangkauan.';
-            } elseif ($mentah === '' && $buka === 1) {
-                $galat[$k] = 'Wajib diisi sebelum form dibuka — ini pagar penjaga salah ketik tanggal siswa.';
-            }
-        }
-        if ($awal !== null && $akhir !== null && $awal >= $akhir) {
-            $galat['selesai_paling_akhir'] = 'Tanggal paling akhir harus setelah tanggal paling awal.';
-        }
-        if ($buka === 1 && $akhir !== null && $akhir < date('Y-m-d')) {
-            $galat['selesai_paling_akhir'] = 'Tanggal paling akhir sudah lewat — form tak akan bisa dipakai.';
-        }
-
         $angka = static fn (string $k, int $min, int $maks): ?int => (isset($post[$k]) && ctype_digit(trim((string) $post[$k])) && (int) $post[$k] >= $min && (int) $post[$k] <= $maks) ? (int) $post[$k] : null;
-        $dMin  = $angka('durasi_min_hari', 1, 365);
-        $dMaks = $angka('durasi_maks_hari', 1, 730);
-        $maksA = $angka('maks_anggota', 1, 20);
-        if ($dMin === null) {
-            $galat['durasi_min_hari'] = 'Isi angka 1–365.';
-        }
-        if ($dMaks === null) {
-            $galat['durasi_maks_hari'] = 'Isi angka 1–730.';
-        }
+        $maksA = $angka('maks_anggota', 1, PklForm::MAKS_SISWA);
         if ($maksA === null) {
-            $galat['maks_anggota'] = 'Isi angka 1–20.';
+            $galat['maks_anggota'] = 'Isi angka 1–' . PklForm::MAKS_SISWA . ' (aturan sekolah: maksimal ' . PklForm::MAKS_SISWA . ' siswa per ajuan).';
         }
-        if ($dMin !== null && $dMaks !== null && $dMin > $dMaks) {
-            $galat['durasi_maks_hari'] = 'Lama maksimal tidak boleh lebih kecil dari lama minimal.';
-        }
-        if ($dMin !== null && $awal !== null && $akhir !== null && ! isset($galat['selesai_paling_akhir'])) {
-            $rentang = IsianBantu::hariInklusif($awal, $akhir);
-            if ($rentang < $dMin) {
-                $galat['selesai_paling_akhir'] = 'Rentang tanggal hanya ' . $rentang . ' hari, lebih pendek dari lama PKL minimal (' . $dMin . ' hari) — tak ada siswa yang bisa lolos.';
-            }
+        $hariKeputusan = $angka('batas_keputusan_hari', 1, 30);
+        if ($hariKeputusan === null) {
+            $galat['batas_keputusan_hari'] = 'Isi angka 1–30 (hari).';
         }
 
         // ----- Surat: penanda tangan, format & lantai nomor -----
@@ -653,6 +514,20 @@ class Pkl extends BaseController
         if (mb_strlen($jabatan) > 150) {
             $galat['waka_hubin_jabatan'] = 'Jabatan terlalu panjang (maksimal 150 huruf).';
         }
+
+        $kepsek = IsianBantu::rapikan((string) ($post['kepsek_nama'] ?? ''));
+        if ($kepsek !== '' && (! IsianBantu::namaOrangSah($kepsek) || mb_strlen($kepsek) > 150)) {
+            $galat['kepsek_nama'] = 'Nama Kepala Sekolah hanya boleh berisi huruf (titik/koma untuk gelar), maksimal 150 huruf.';
+        }
+        $kontakNama = IsianBantu::rapikan((string) ($post['kontak_surat_nama'] ?? ''));
+        if ($kontakNama !== '' && (! IsianBantu::namaOrangSah($kontakNama) || mb_strlen($kontakNama) > 150)) {
+            $galat['kontak_surat_nama'] = 'Nama kontak hanya boleh berisi huruf (titik/koma untuk gelar), maksimal 150 huruf.';
+        }
+        $kontakHp = trim((string) preg_replace('/[^0-9+ \-]/', '', (string) ($post['kontak_surat_hp'] ?? '')));
+        if (mb_strlen($kontakHp) > 30) {
+            $galat['kontak_surat_hp'] = 'Nomor kontak terlalu panjang (maksimal 30 karakter).';
+        }
+
         $pola = trim((string) ($post['format_nomor'] ?? ''));
         if ($pola === '') {
             $pola = PklNomorSurat::BAWAAN;
@@ -666,6 +541,14 @@ class Pkl extends BaseController
         }
         // Lantai nomor berlaku untuk TAHUN ia diisi; bila angkanya tak diubah, tahun lama dipertahankan.
         $tahunAwal = ($nomorAwal !== null && $nomorAwal !== (int) ($this->p['nomor_awal'] ?? 1)) ? (int) date('Y') : ($this->p['nomor_awal_tahun'] ?? null);
+
+        $polaBerkas = trim((string) ($post['format_nama_berkas'] ?? ''));
+        if ($polaBerkas === '') {
+            $polaBerkas = PklNamaBerkas::BAWAAN;
+        }
+        if (($g = PklNamaBerkas::periksa($polaBerkas)) !== null) {
+            $galat['format_nama_berkas'] = $g;
+        }
 
         $tutup = trim((string) ($post['form_tutup'] ?? ''));
         $tutupSql = null;
@@ -681,24 +564,25 @@ class Pkl extends BaseController
             }
         }
 
+        // Kolom pagar tanggal & lama PKL lama TIDAK disentuh (tak dipakai lagi; nilainya dibiarkan).
         return [[
             'form_buka'            => $buka,
             'form_tutup'           => $tutupSql,
             'tingkat'              => implode(',', $tingkat),
-            'mulai_paling_awal'    => $awal,
-            'selesai_paling_akhir' => $akhir,
-            'durasi_min_hari'      => $dMin ?? 30,
-            'durasi_maks_hari'     => $dMaks ?? 270,
-            'maks_anggota'         => $maksA ?? 5,
+            'maks_anggota'         => $maksA ?? PklForm::MAKS_SISWA,
+            'batas_keputusan_hari' => $hariKeputusan ?? 5,
             'waka_hubin_nama'      => $wakaNama !== '' ? $wakaNama : null,
             'waka_hubin_nip'       => $wakaNip !== '' ? $wakaNip : null,
             'waka_hubin_jabatan'   => $jabatan,
+            'kepsek_nama'          => $kepsek !== '' ? $kepsek : null,
+            'kontak_surat_nama'    => $kontakNama !== '' ? $kontakNama : null,
+            'kontak_surat_hp'      => $kontakHp !== '' ? $kontakHp : null,
             'format_nomor'         => $pola,
+            'format_nama_berkas'   => $polaBerkas,
             'nomor_awal'           => $nomorAwal ?? 1,
             'nomor_awal_tahun'     => $tahunAwal,
         ], $galat];
     }
-
     // =================================================================
     // Pembantu
     // =================================================================
@@ -716,8 +600,16 @@ class Pkl extends BaseController
             'p'              => $this->p,
             'bolehPengaturan' => HakAkses::boleh($peran, 'admin/pkl/pengaturan'),
             'bolehHapus'     => HakAkses::boleh($peran, 'admin/pkl/hapus'),
+            'bolehAcc'       => HakAkses::bolehAcc($peran),
+            'bolehTtd'       => HakAkses::boleh($peran, 'admin/pkl/ttd'),
+            'batasHari'      => PklPengaturanModel::batasHari($this->p),
             'hitungTab'      => $this->model->hitungStatus(),
         ];
+    }
+
+    private function peranSaya(): string
+    {
+        return (string) (session('admin')['role'] ?? '');
     }
 
     /** Konteks pencatat riwayat: siapa, perannya, dari IP mana. */

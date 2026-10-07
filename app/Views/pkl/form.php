@@ -7,22 +7,17 @@
  * agar sinyal putus / tab tertutup tidak membuat siswa mengulang dari awal.
  *
  * @var array                                            $setting
- * @var array                                            $p       baris pkl_pengaturan
- * @var array<string, list<array{id:int, nama:string}>>  $kelas   per tingkat
+ * @var array                                            $p         baris pkl_pengaturan
+ * @var array<string, list<array{id:int, nama:string}>>  $kelas     per tingkat
+ * @var int                                              $batasHari batas keputusan Waka Hubin (hari)
+ * @var int                                              $maksSiswa maksimal siswa per ajuan (≤ 5)
  */
 
 use App\Libraries\IsianBantu;
 
-$bulan = IsianBantu::BULAN;
-$thn   = (int) date('Y');
-
-$awal       = (string) ($p['mulai_paling_awal'] ?? '');
-$akhir      = (string) ($p['selesai_paling_akhir'] ?? '');
-$thnAwal    = (int) substr($awal, 0, 4);
-$thnAkhir   = (int) substr($akhir, 0, 4);
-$maksAnggota = max(1, (int) ($p['maks_anggota'] ?? 1));
-$durMin     = (int) ($p['durasi_min_hari'] ?? 0);
-$durMaks    = (int) ($p['durasi_maks_hari'] ?? 0);
+$bulan       = IsianBantu::BULAN;
+$maksAnggota = max(1, (int) ($maksSiswa ?? 5));
+$batasHari   = max(1, (int) ($batasHari ?? 5));
 
 $kelasMap = [];
 foreach ($kelas as $tingkat => $daftar) {
@@ -39,12 +34,10 @@ $config = [
     'kelas'          => $kelasMap,
     'bulan'          => $bulan,
     'maksAnggota'    => $maksAnggota,
-    // Pagar tanggal dalam satu tahun → tahunnya terisi otomatis (kurangi satu ketukan & satu salah pilih).
-    'tahunTunggal'   => ($thnAwal > 0 && $thnAwal === $thnAkhir) ? $thnAwal : null,
-    'batas'          => ['awal' => $awal, 'akhir' => $akhir, 'min' => $durMin, 'maks' => $durMaks],
+    'batasHari'      => $batasHari,
 ];
 
-$langkah = ['Cari Nama', 'Perusahaan', 'Teman', 'Waktu & Kontak', 'Kirim'];
+$langkah = ['Cari Nama', 'Perusahaan', 'Teman', 'Kontak', 'Kirim'];
 
 // ---------------------------------------------------------------------
 // Pembangun elemen form (menjaga markup tiap kolom seragam)
@@ -75,30 +68,6 @@ $input = static function (string $k, string $label, array $o = []) use ($tanda, 
         . '>';
     if (! empty($o['hint'])) {
         echo '<p class="hint">' . $o['hint'] . '</p>';
-    }
-    echo $galat($err) . '</div>';
-};
-
-/** Tanggal sebagai 3 pilihan (tgl / bulan / tahun) — lebih mudah dari date picker HP. */
-$tanggal = static function (string $awalan, string $err, string $label, int $dari, int $sampai, bool $turun, string $hint = '') use ($tanda, $galat, $bulan): void {
-    echo '<div><span class="lbl">' . esc($label) . $tanda(true) . '</span>';
-    echo '<div class="grid grid-cols-[4.5rem_1fr_5.5rem] gap-2">';
-    echo '<select x-model="f.' . $awalan . '_d" class="inp inp-lg !px-2" :class="err.' . $err . ' && \'inp-err\'" aria-label="Tanggal"><option value="">Tgl</option>';
-    for ($i = 1; $i <= 31; $i++) {
-        echo '<option value="' . $i . '">' . $i . '</option>';
-    }
-    echo '</select><select x-model="f.' . $awalan . '_m" class="inp inp-lg !px-2" :class="err.' . $err . ' && \'inp-err\'" aria-label="Bulan"><option value="">Bulan</option>';
-    foreach ($bulan as $i => $b) {
-        echo '<option value="' . ($i + 1) . '">' . $b . '</option>';
-    }
-    echo '</select><select x-model="f.' . $awalan . '_y" class="inp inp-lg !px-2" :class="err.' . $err . ' && \'inp-err\'" aria-label="Tahun"><option value="">Tahun</option>';
-    $tahun = range($dari, $sampai);
-    foreach ($turun ? array_reverse($tahun) : $tahun as $y) {
-        echo '<option value="' . $y . '">' . $y . '</option>';
-    }
-    echo '</select></div>';
-    if ($hint !== '') {
-        echo '<p class="hint">' . $hint . '</p>';
     }
     echo $galat($err) . '</div>';
 };
@@ -138,10 +107,11 @@ $ikonAwas = '<svg class="w-6 h-6 shrink-0" fill="none" stroke="currentColor" str
             <ul class="mt-1 list-disc pl-5 space-y-0.5">
                 <li>Nama, <b>alamat lengkap</b>, dan telepon perusahaan tempat PKL</li>
                 <li>Nama pimpinan atau kontak di perusahaan (bila ada)</li>
-                <li>Tanggal mulai &amp; selesai PKL — antara <b><?= esc(IsianBantu::tanggalIndo($awal)) ?></b> dan <b><?= esc(IsianBantu::tanggalIndo($akhir)) ?></b></li>
-                <li>Nama teman yang PKL di tempat yang sama (maksimal <b><?= $maksAnggota ?></b> siswa per perusahaan)</li>
+                <li><b>Nomor HP aktif</b> kamu dan semua temanmu (tercetak di surat)</li>
+                <li>Nama teman yang PKL di tempat yang sama (maksimal <b><?= $maksAnggota ?></b> siswa per perusahaan, termasuk kamu)</li>
             </ul>
             <p class="mt-2 font-semibold">Satu siswa hanya boleh punya satu ajuan. Jangan mengisi atas nama orang lain.</p>
+            <p class="mt-1.5 rounded-lg bg-amber-100/70 px-3 py-2 font-semibold">Setelah dikirim, <b>jangan mengajukan ulang</b>. Tunggu keputusan Waka Hubin, paling lambat <b><?= $batasHari ?> hari</b> sejak kamu mengirim.</p>
         </div>
     </div>
 
@@ -224,9 +194,13 @@ $ikonAwas = '<svg class="w-6 h-6 shrink-0" fill="none" stroke="currentColor" str
                         <div class="rounded-xl border p-4" :class="pilih.status === 'disetujui' ? 'border-green-200 bg-green-50' : 'border-blue-200 bg-blue-50'">
                             <p class="font-extrabold" :class="pilih.status === 'disetujui' ? 'text-green-800' : 'text-blue-800'" x-text="pilih.status === 'disetujui' ? '✓ Ajuan PKL sudah disetujui sekolah' : '✓ Ajuan PKL sudah dikirim'"></p>
                             <p class="mt-1 text-sm text-slate-600">
-                                <span x-text="pilih.nama"></span> tidak perlu mengisi lagi<span x-show="pilih.status === 'menunggu'"> — ajuannya sedang diperiksa sekolah</span>.
-                                Jika ada data yang salah, hubungi operator sekolah atau Waka Hubin.
+                                <span x-text="pilih.nama"></span> tidak perlu mengisi lagi<span x-show="pilih.status === 'menunggu'"> — ajuannya sedang menunggu keputusan Waka Hubin</span>.
+                                <b>Jangan mengajukan ulang.</b>
                             </p>
+                            <p x-show="pilih.status === 'menunggu' && pilih.batas" class="mt-2 rounded-lg border border-blue-200 bg-white/70 px-3 py-2 text-sm font-semibold text-blue-900">
+                                Keputusan Waka Hubin paling lambat <span x-text="tglIndo(pilih.batas)"></span>. Lewat tanggal itu belum ada kabar? Hubungi operator sekolah atau Waka Hubin.
+                            </p>
+                            <p class="mt-2 text-xs text-slate-500">Jika ada data yang salah, hubungi operator sekolah atau Waka Hubin.</p>
                         </div>
                     </template>
 
@@ -235,15 +209,11 @@ $ikonAwas = '<svg class="w-6 h-6 shrink-0" fill="none" stroke="currentColor" str
                         <div class="rounded-xl border-2 border-amber-300 bg-amber-50 p-4 space-y-3">
                             <div>
                                 <p class="font-extrabold text-amber-900">Sekolah meminta kamu memperbaiki ajuan PKL.</p>
-                                <p class="mt-1 text-sm text-amber-900">Untuk membuka ajuanmu, masukkan <b>tanggal lahir</b> yang dulu kamu isi di formulir ini.</p>
+                                <p class="mt-1 text-sm text-amber-900">Untuk membuka ajuanmu, masukkan <b>nomor HP</b> yang dulu kamu isi di formulir ini.</p>
                             </div>
                             <div>
-                                <span class="lbl">Tanggal Lahir</span>
-                                <div class="grid grid-cols-[4.5rem_1fr_5.5rem] gap-2">
-                                    <select x-model="buka.d" class="inp inp-lg !px-2 bg-white" aria-label="Tanggal"><option value="">Tgl</option><?php for ($i = 1; $i <= 31; $i++): ?><option value="<?= $i ?>"><?= $i ?></option><?php endfor; ?></select>
-                                    <select x-model="buka.m" class="inp inp-lg !px-2 bg-white" aria-label="Bulan"><option value="">Bulan</option><?php foreach ($bulan as $i => $b): ?><option value="<?= $i + 1 ?>"><?= $b ?></option><?php endforeach; ?></select>
-                                    <select x-model="buka.y" class="inp inp-lg !px-2 bg-white" aria-label="Tahun"><option value="">Tahun</option><?php for ($y = $thn - 8; $y >= $thn - 40; $y--): ?><option value="<?= $y ?>"><?= $y ?></option><?php endfor; ?></select>
-                                </div>
+                                <label class="lbl" for="bukaHp">Nomor HP / WhatsApp</label>
+                                <input id="bukaHp" type="tel" inputmode="tel" x-model="buka.hp" maxlength="20" autocomplete="tel" class="inp inp-lg bg-white" placeholder="Contoh: 081234567890">
                             </div>
                             <p x-show="buka.pesan" x-text="buka.pesan" class="text-sm font-semibold text-red-600"></p>
                             <button type="button" @click="bukaAjuan()" :disabled="buka.proses" class="btn-nav-primary w-full disabled:opacity-60">
@@ -325,7 +295,7 @@ $ikonAwas = '<svg class="w-6 h-6 shrink-0" fill="none" stroke="currentColor" str
             <div class="p-5 sm:p-6 space-y-5">
                 <div class="rounded-xl border border-brand-100 bg-brand-50 px-4 py-3 text-sm leading-relaxed text-slate-700">
                     <?php if ($maksAnggota > 1): ?>
-                        <p>Ada temanmu yang PKL di <b>perusahaan yang sama</b>? Tambahkan di sini — cukup <b>satu orang</b> yang mengisi, temanmu <b>tidak perlu mengisi lagi</b>. Kalau PKL sendirian, langsung tekan <b>Lanjut</b>.</p>
+                        <p>Ada temanmu yang PKL di <b>perusahaan yang sama</b>? Tambahkan di sini — cukup <b>satu orang</b> yang mengisi, temanmu <b>tidak perlu mengisi lagi</b>. Isi juga <b>nomor HP</b> tiap teman. Kalau PKL sendirian, langsung tekan <b>Lanjut</b>.</p>
                         <p class="mt-1.5 text-xs text-slate-500">Maksimal <b><?= $maksAnggota ?></b> siswa per perusahaan (termasuk kamu). Hanya siswa yang belum mengajukan PKL yang bisa dipilih.</p>
                     <?php else: ?>
                         <p>Perusahaan hanya menerima <b>satu siswa</b> per ajuan, jadi langkah ini bisa dilewati. Tekan <b>Lanjut</b>.</p>
@@ -337,12 +307,20 @@ $ikonAwas = '<svg class="w-6 h-6 shrink-0" fill="none" stroke="currentColor" str
                     <p x-show="!teman.length" class="rounded-xl border-2 border-dashed border-slate-200 px-4 py-5 text-center text-sm text-slate-500">Belum ada teman yang dipilih.</p>
                     <ul class="space-y-2">
                         <template x-for="t in teman" :key="t.id">
-                            <li class="flex items-center justify-between gap-3 rounded-xl border border-slate-200 bg-white px-4 py-3">
-                                <span class="min-w-0">
-                                    <span class="block truncate font-semibold text-slate-800" x-text="t.nama"></span>
-                                    <span class="block text-xs text-slate-500" x-text="t.kelas ? 'Kelas ' + t.kelas : ''"></span>
-                                </span>
-                                <button type="button" @click="hapusTeman(t.id)" class="shrink-0 rounded-lg px-3 py-1.5 text-xs font-bold text-red-600 hover:bg-red-50" :aria-label="'Hapus ' + t.nama">Hapus</button>
+                            <li class="rounded-xl border border-slate-200 bg-white px-4 py-3">
+                                <div class="flex items-center justify-between gap-3">
+                                    <span class="min-w-0">
+                                        <span class="block truncate font-semibold text-slate-800" x-text="t.nama"></span>
+                                        <span class="block text-xs text-slate-500" x-text="t.kelas ? 'Kelas ' + t.kelas : ''"></span>
+                                    </span>
+                                    <button type="button" @click="hapusTeman(t.id)" class="shrink-0 rounded-lg px-3 py-1.5 text-xs font-bold text-red-600 hover:bg-red-50" :aria-label="'Hapus ' + t.nama">Hapus</button>
+                                </div>
+                                <div class="mt-2">
+                                    <label class="lbl !mb-1 !text-xs" :for="'hp_teman_' + t.id">No. HP <span x-text="t.nama.split(' ')[0]"></span> <span class="text-red-500">*</span></label>
+                                    <input type="tel" inputmode="tel" maxlength="20" autocomplete="off" :id="'hp_teman_' + t.id" x-model="t.hp"
+                                           class="inp inp-lg" :class="err['hp_teman_' + t.id] && 'inp-err'" placeholder="Contoh: 081234567890">
+                                    <p class="err-msg" x-cloak x-show="err['hp_teman_' + t.id]" x-text="err['hp_teman_' + t.id]"></p>
+                                </div>
                             </li>
                         </template>
                     </ul>
@@ -386,32 +364,23 @@ $ikonAwas = '<svg class="w-6 h-6 shrink-0" fill="none" stroke="currentColor" str
             </div>
         </section>
 
-        <!-- ============ LANGKAH 4 — WAKTU & KONTAK ============ -->
+        <!-- ============ LANGKAH 4 — KONTAK ============ -->
         <section class="bio-card" x-cloak x-show="step === 3">
-            <?= $kepala(4, 'Waktu PKL & Kontak') ?>
+            <?= $kepala(4, 'Kontak Kamu') ?>
             <div class="p-5 sm:p-6 space-y-5">
                 <div class="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm leading-relaxed text-amber-900">
-                    Periode PKL harus <b>di antara <?= esc(IsianBantu::tanggalIndo($awal)) ?> dan <?= esc(IsianBantu::tanggalIndo($akhir)) ?></b>,
-                    dengan lama <b><?= $durMin ?>&ndash;<?= $durMaks ?> hari</b>.
+                    Waktu PKL <b>tidak perlu diisi</b> — sekolah yang menyepakatinya dengan perusahaan.
+                    Pastikan nomor HP di bawah <b>aktif</b>, karena tercetak di surat dan dipakai bila perusahaan atau sekolah menghubungimu.
                 </div>
 
-                <?php $tanggal('mulai', 'tanggal_mulai', 'Tanggal Mulai PKL', $thnAwal, $thnAkhir, false) ?>
-                <?php $tanggal('selesai', 'tanggal_selesai', 'Tanggal Selesai PKL', $thnAwal, $thnAkhir, false) ?>
-                <p x-cloak x-show="infoDurasi()" x-text="infoDurasi()" class="text-sm font-bold" :class="durasiWajar() ? 'text-brand-700' : 'text-red-600'"></p>
-
-                <hr class="border-slate-200">
-
-                <?php $input('hp', 'No. HP / WhatsApp kamu', ['mode' => 'tel', 'maks' => 20, 'auto' => 'tel', 'ph' => 'Contoh: 081234567890', 'hint' => 'Nomor <b>yang aktif sekarang</b> — dipakai sekolah bila perlu menghubungimu.']) ?>
-
-                <?php $tanggal('lahir', 'tanggal_lahir', 'Tanggal Lahir', $thn - 40, $thn - 8, true, 'Dipakai untuk <b>membuka ajuanmu</b> bila sekolah memintamu memperbaikinya. Ingat tanggal ini.') ?>
+                <?php $input('hp', 'No. HP / WhatsApp kamu', ['mode' => 'tel', 'maks' => 20, 'auto' => 'tel', 'ph' => 'Contoh: 081234567890', 'hint' => 'Nomor <b>yang aktif sekarang</b>. Nomor ini juga dipakai untuk membuka ajuanmu bila sekolah memintamu memperbaikinya.']) ?>
             </div>
         </section>
-
         <!-- ============ LANGKAH 5 — PERIKSA & KIRIM ============ -->
         <section class="bio-card" x-cloak x-show="step === 4">
             <?= $kepala(5, 'Periksa & Kirim') ?>
             <div class="p-5 sm:p-6 space-y-5">
-                <p class="text-sm leading-relaxed text-slate-600">Periksa sekali lagi. Setelah dikirim, ajuan <b>terkunci</b> dan tidak bisa kamu ubah sendiri.</p>
+                <p class="text-sm leading-relaxed text-slate-600">Periksa sekali lagi. Setelah dikirim, ajuan <b>terkunci</b> dan tidak bisa kamu ubah sendiri. Keputusan Waka Hubin keluar paling lambat <b><?= $batasHari ?> hari</b> setelah kamu mengirim.</p>
 
                 <!-- Siswa -->
                 <div class="overflow-hidden rounded-xl border border-slate-200">
@@ -421,11 +390,11 @@ $ikonAwas = '<svg class="w-6 h-6 shrink-0" fill="none" stroke="currentColor" str
                     </div>
                     <ul class="divide-y divide-slate-100 text-sm">
                         <li class="flex items-center justify-between gap-3 px-4 py-2.5">
-                            <span class="min-w-0"><span class="block truncate font-semibold text-slate-800" x-text="pilih ? pilih.nama : ''"></span><span class="block text-xs text-slate-500" x-text="'Kelas ' + namaKelas()"></span></span>
+                            <span class="min-w-0"><span class="block truncate font-semibold text-slate-800" x-text="pilih ? pilih.nama : ''"></span><span class="block text-xs text-slate-500" x-text="'Kelas ' + namaKelas() + ' · HP ' + tampil('hp')"></span></span>
                             <span class="shrink-0 rounded-full bg-brand-100 px-2 py-0.5 text-[11px] font-bold text-brand-700">Pengaju</span>
                         </li>
                         <template x-for="t in teman" :key="t.id">
-                            <li class="px-4 py-2.5"><span class="block font-semibold text-slate-800" x-text="t.nama"></span><span class="block text-xs text-slate-500" x-text="t.kelas ? 'Kelas ' + t.kelas : ''"></span></li>
+                            <li class="px-4 py-2.5"><span class="block font-semibold text-slate-800" x-text="t.nama"></span><span class="block text-xs text-slate-500" x-text="(t.kelas ? 'Kelas ' + t.kelas + ' · ' : '') + 'HP ' + (String(t.hp || '').trim() || '—')"></span></li>
                         </template>
                     </ul>
                 </div>
@@ -446,30 +415,10 @@ $ikonAwas = '<svg class="w-6 h-6 shrink-0" fill="none" stroke="currentColor" str
                     </dl>
                 </div>
 
-                <!-- Waktu & kontak -->
-                <div class="overflow-hidden rounded-xl border border-slate-200">
-                    <div class="flex items-center justify-between bg-slate-50 px-4 py-2.5">
-                        <p class="bio-sub">Waktu &amp; Kontak</p>
-                        <button type="button" @click="keLangkah(3)" class="text-xs font-bold text-brand-600 hover:text-brand-800">Ubah</button>
-                    </div>
-                    <dl class="divide-y divide-slate-100">
-                        <?php foreach (['tanggal_mulai' => 'Mulai', 'tanggal_selesai' => 'Selesai', 'hp' => 'No. HP', 'tanggal_lahir' => 'Tanggal Lahir'] as $k => $lbl): ?>
-                            <div class="grid grid-cols-[7rem_1fr] sm:grid-cols-[9rem_1fr] gap-3 px-4 py-2.5 text-sm">
-                                <dt class="text-slate-500"><?= esc($lbl) ?></dt>
-                                <dd class="font-semibold text-slate-800 break-words" x-text="tampil('<?= $k ?>')"></dd>
-                            </div>
-                        <?php endforeach; ?>
-                        <div class="grid grid-cols-[7rem_1fr] sm:grid-cols-[9rem_1fr] gap-3 px-4 py-2.5 text-sm" x-show="infoDurasi()">
-                            <dt class="text-slate-500">Lama PKL</dt>
-                            <dd class="font-semibold text-slate-800" x-text="infoDurasi().replace('Lama PKL: ', '')"></dd>
-                        </div>
-                    </dl>
-                </div>
-
                 <label class="check-card !items-start" :class="err.pernyataan && '!border-red-400'">
                     <input type="checkbox" x-model="f.pernyataan" class="sr-only">
                     <span class="check-box mt-0.5"></span>
-                    <span class="text-sm text-slate-700">Saya menyatakan data di atas <b>sudah benar</b>, dan siap memperbaikinya bila diminta sekolah.</span>
+                    <span class="text-sm text-slate-700">Saya menyatakan data di atas <b>sudah benar</b>, siap memperbaikinya bila diminta sekolah, dan <b>tidak akan mengajukan ulang</b> — saya menunggu keputusan Waka Hubin (paling lambat <?= $batasHari ?> hari).</span>
                 </label>
                 <?= $galat('pernyataan') ?>
             </div>

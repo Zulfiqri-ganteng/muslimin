@@ -21,10 +21,16 @@ use CodeIgniter\Database\BaseConnection;
  *   ['ok' => false, 'kode' => 'bentrok'|'status'|'tidak_ada'|'pengaju_beda'|'galat', ...]
  *
  * $anggota = daftar baris anggota, PENGAJU PERTAMA:
- *   [['siswa_id' => int, 'kelas_id' => ?int, 'peran' => 'pengaju'|'teman'], ...]
- * $data    = keluaran PklForm::proses() (kunci perusahaan_*, kontak_*, tanggal_*, hp, tanggal_lahir).
+ *   [['siswa_id' => int, 'kelas_id' => ?int, 'peran' => 'pengaju'|'teman', 'hp' => ?string (teman)], ...]
+ *   HP pengaju diambil dari $data['hp'].
+ * $data    = keluaran PklForm::proses() (kunci perusahaan_*, kontak_*, hp; tanggal_* hanya riwayat lama).
  * $konteks = ['oleh' => 'Siswa: Nama', 'admin_id' => ?int, 'peran' => ?string, 'ip' => ?string,
  *             'sumber' => 'siswa'|'staf'|'impor', 'tahun_ajaran' => ?string, 'aksi' => ?string].
+ *
+ * CATATAN ACC: tiap kali status menjadi `disetujui`, kolom acc_* (nama, peran, jam, IP, kode verifikasi)
+ * disalin SEKETIKA dari $konteks — tak ikut berubah bila akunnya kelak diganti namanya — dan dikosongkan
+ * lagi saat persetujuan dicabut. Dicetak di kaki surat. Siapa yang BERHAK meng-ACC dijaga di lapisan
+ * controller/API (HakAkses::bolehAcc), bukan di sini.
  */
 final class PklAjuan
 {
@@ -33,6 +39,44 @@ final class PklAjuan
     public function __construct(?BaseConnection $db = null)
     {
         $this->db = $db ?? db_connect();
+    }
+
+    /**
+     * Kode verifikasi ACC, mis. PKL-00522-8F3A9C: nomor bukti + 6 huruf-angka tanda tangan HMAC dari
+     * (ajuan, jam ACC, akun penyetuju). Tidak bisa ditebak tanpa kunci aplikasi; staf bisa mencocokkannya
+     * dengan yang tertera di halaman detail.
+     */
+    public static function kodeVerifikasi(int $id, string $accAt, ?int $adminId): string
+    {
+        $kunci = (string) (env('encryption.key') ?: 'pkl-bina-nusa');
+
+        return PklPengajuanModel::kode($id) . '-' . strtoupper(substr(hash_hmac('sha256', $id . '|' . $accAt . '|' . (int) $adminId, $kunci), 0, 6));
+    }
+
+    /**
+     * Kolom acc_* untuk ajuan yang BARU disetujui.
+     *
+     * @return array<string, mixed>
+     */
+    private function kolomAcc(int $id, array $konteks, string $now): array
+    {
+        $adminId = isset($konteks['admin_id']) ? ((int) $konteks['admin_id'] ?: null) : null;
+        $peran   = ($konteks['sumber'] ?? '') === 'impor' ? 'impor' : (string) ($konteks['peran'] ?? '');
+
+        return [
+            'acc_admin_id' => $adminId,
+            'acc_nama'     => mb_substr((string) ($konteks['oleh'] ?? 'Staf'), 0, 150),
+            'acc_peran'    => $peran !== '' ? mb_substr($peran, 0, 20) : null,
+            'acc_at'       => $now,
+            'acc_ip'       => $konteks['ip'] ?? null,
+            'acc_kode'     => self::kodeVerifikasi($id, $now, $adminId),
+        ];
+    }
+
+    /** @return array<string, null> semua kolom acc_* dikosongkan */
+    private static function kosongAcc(): array
+    {
+        return ['acc_admin_id' => null, 'acc_nama' => null, 'acc_peran' => null, 'acc_at' => null, 'acc_ip' => null, 'acc_kode' => null];
     }
 
     /**
@@ -63,6 +107,7 @@ final class PklAjuan
                 'ip_address'      => $konteks['ip'] ?? null,
                 'diputuskan_at'   => $statusAwal === 'disetujui' ? $now : null,
                 'diputuskan_oleh' => $statusAwal === 'disetujui' ? ($konteks['admin_id'] ?? null) : null,
+                'diajukan_at'     => $now,
                 'created_at'      => $now,
                 'updated_at'      => $now,
             ]);
@@ -70,6 +115,13 @@ final class PklAjuan
                 return ['ok' => false, 'kode' => 'galat'];
             }
             $id = $r['id'];
+
+            if ($statusAwal === 'disetujui') {
+                $up = $this->db->table('pkl_pengajuan')->where('id', $id)->update($this->kolomAcc($id, $konteks, $now));
+                if (! $up) {
+                    return ['ok' => false, 'kode' => 'galat'];
+                }
+            }
 
             foreach ($anggota as $m) {
                 $gagal = $this->sisipAnggota($id, $m, $data, $now);
@@ -114,15 +166,15 @@ final class PklAjuan
 
             $r = $this->jalankan(
                 'UPDATE pkl_pengajuan SET status = ?, kirim_ke = kirim_ke + 1, catatan_staf = NULL,'
-                . ' diputuskan_at = NULL, diputuskan_oleh = NULL, ip_address = ?, updated_at = ?,'
+                . ' diputuskan_at = NULL, diputuskan_oleh = NULL, diajukan_at = ?, ip_address = ?, updated_at = ?,'
+                . ' acc_admin_id = NULL, acc_nama = NULL, acc_peran = NULL, acc_at = NULL, acc_ip = NULL, acc_kode = NULL,'
                 . ' perusahaan_nama = ?, perusahaan_norm = ?, perusahaan_alamat = ?, perusahaan_kota = ?,'
-                . ' perusahaan_telepon = ?, kontak_nama = ?, kontak_jabatan = ?, tanggal_mulai = ?, tanggal_selesai = ?'
+                . ' perusahaan_telepon = ?, kontak_nama = ?, kontak_jabatan = ?'
                 . ' WHERE id = ?',
                 [
-                    'menunggu', $konteks['ip'] ?? null, $now,
+                    'menunggu', $now, $konteks['ip'] ?? null, $now,
                     $data['perusahaan_nama'], $data['perusahaan_norm'], $data['perusahaan_alamat'], $data['perusahaan_kota'],
-                    $data['perusahaan_telepon'], $data['kontak_nama'], $data['kontak_jabatan'],
-                    $data['tanggal_mulai'], $data['tanggal_selesai'], $id,
+                    $data['perusahaan_telepon'], $data['kontak_nama'], $data['kontak_jabatan'], $id,
                 ]
             );
             if (! $r['ok']) {
@@ -146,10 +198,10 @@ final class PklAjuan
                 if (isset($petaAda[$sid])) {
                     $pengaju = ($m['peran'] ?? 'teman') === 'pengaju';
                     $up      = $this->jalankan(
-                        'UPDATE pkl_anggota SET peran = ?, kelas_id = ?, hp = ?, tanggal_lahir = ? WHERE id = ?',
+                        'UPDATE pkl_anggota SET peran = ?, kelas_id = ?, hp = ? WHERE id = ?',
                         [
                             $m['peran'] ?? 'teman', $m['kelas_id'] ?? null,
-                            $pengaju ? $data['hp'] : null, $pengaju ? $data['tanggal_lahir'] : null, $petaAda[$sid],
+                            $pengaju ? ($data['hp'] ?? null) : ($m['hp'] ?? null), $petaAda[$sid],
                         ]
                     );
                     if (! $up['ok']) {
@@ -226,6 +278,12 @@ final class PklAjuan
                 return ['ok' => false, 'kode' => 'galat'];
             }
 
+            // Catatan ACC: terisi bila disetujui, dikosongkan bila status lain (persetujuan dicabut/ditolak).
+            $acc = $status === 'disetujui' ? $this->kolomAcc($id, $konteks, $now) : self::kosongAcc();
+            if (! $this->db->table('pkl_pengajuan')->where('id', $id)->update($acc)) {
+                return ['ok' => false, 'kode' => 'galat'];
+            }
+
             $sync = $this->jalankan(
                 PklPengajuanModel::aktif($status)
                     ? 'UPDATE pkl_anggota SET siswa_aktif = siswa_id WHERE pengajuan_id = ?'
@@ -288,13 +346,12 @@ final class PklAjuan
             $r = $this->jalankan(
                 'UPDATE pkl_pengajuan SET updated_at = ?, perusahaan_id = ?,'
                 . ' perusahaan_nama = ?, perusahaan_norm = ?, perusahaan_alamat = ?, perusahaan_kota = ?,'
-                . ' perusahaan_telepon = ?, kontak_nama = ?, kontak_jabatan = ?, tanggal_mulai = ?, tanggal_selesai = ?'
+                . ' perusahaan_telepon = ?, kontak_nama = ?, kontak_jabatan = ?'
                 . ' WHERE id = ?',
                 [
                     $now, $perusahaanId,
                     $data['perusahaan_nama'], $data['perusahaan_norm'], $data['perusahaan_alamat'], $data['perusahaan_kota'],
-                    $data['perusahaan_telepon'], $data['kontak_nama'], $data['kontak_jabatan'],
-                    $data['tanggal_mulai'], $data['tanggal_selesai'], $id,
+                    $data['perusahaan_telepon'], $data['kontak_nama'], $data['kontak_jabatan'], $id,
                 ]
             );
             if (! $r['ok']) {
@@ -314,8 +371,10 @@ final class PklAjuan
             foreach ($anggota as $m) {
                 $sid = (int) $m['siswa_id'];
                 if (isset($petaAda[$sid])) {
-                    if (($m['peran'] ?? 'teman') === 'pengaju') {
-                        $up = $this->jalankan('UPDATE pkl_anggota SET hp = ?, tanggal_lahir = ? WHERE id = ?', [$data['hp'], $data['tanggal_lahir'], $petaAda[$sid]]);
+                    // HP diperbarui bila diisi (kosong = biarkan yang lama).
+                    $hpBaru = ($m['peran'] ?? 'teman') === 'pengaju' ? ($data['hp'] ?? null) : ($m['hp'] ?? null);
+                    if ($hpBaru !== null && $hpBaru !== '') {
+                        $up = $this->jalankan('UPDATE pkl_anggota SET hp = ? WHERE id = ?', [$hpBaru, $petaAda[$sid]]);
                         if (! $up['ok']) {
                             return ['ok' => false, 'kode' => 'galat'];
                         }
@@ -432,13 +491,14 @@ final class PklAjuan
             'perusahaan_telepon' => $data['perusahaan_telepon'],
             'kontak_nama'        => $data['kontak_nama'],
             'kontak_jabatan'     => $data['kontak_jabatan'],
-            'tanggal_mulai'      => $data['tanggal_mulai'],
-            'tanggal_selesai'    => $data['tanggal_selesai'],
+            // Tanggal PKL tidak ditanyakan lagi; hanya terisi untuk riwayat lama (impor).
+            'tanggal_mulai'      => $data['tanggal_mulai'] ?? null,
+            'tanggal_selesai'    => $data['tanggal_selesai'] ?? null,
         ];
     }
 
     /**
-     * Tambah satu anggota (aktif). HP & tanggal lahir hanya milik pengaju.
+     * Tambah satu anggota (aktif). HP pengaju dari $data['hp'], HP teman dari $m['hp'].
      *
      * @return array<string, mixed>|null null bila berhasil, selain itu hasil gagal siap kembalikan
      */
@@ -452,8 +512,7 @@ final class PklAjuan
             'siswa_id'      => $sid,
             'peran'         => $m['peran'] ?? 'teman',
             'kelas_id'      => $m['kelas_id'] ?? null,
-            'hp'            => $pengaju ? $data['hp'] : null,
-            'tanggal_lahir' => $pengaju ? $data['tanggal_lahir'] : null,
+            'hp'            => $pengaju ? ($data['hp'] ?? null) : ($m['hp'] ?? null),
             'siswa_aktif'   => $aktif ? $sid : null,
             'created_at'    => $now,
         ]);

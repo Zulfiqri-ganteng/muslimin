@@ -1,6 +1,7 @@
 <?php
 /**
- * Pengaturan PKL (Operator/Admin): buka-tutup form siswa, tingkat, pagar tanggal, lama PKL.
+ * Pengaturan PKL (Operator/Admin): buka-tutup form siswa, tingkat, maks siswa, batas keputusan Waka Hubin,
+ * data surat resmi (Waka Hubin, Kepala Sekolah, kontak NB, format nomor & nama berkas).
  *
  * @var array   $galat   galat per kolom
  * @var array   $old     isian yang gagal disimpan
@@ -25,22 +26,21 @@ if ($nilai('form_tutup') !== '') {
 $tinjau = [
     'belum_dibuka'  => 'Form saat ini TERTUTUP (saklar mati).',
     'sudah_ditutup' => 'Form saat ini TERTUTUP karena batas waktu sudah lewat.',
-    'belum_siap'    => 'Saklar menyala, tetapi form belum bisa dipakai: tingkat atau pagar tanggal belum lengkap.',
+    'belum_siap'    => 'Saklar menyala, tetapi form belum bisa dipakai: pilih dulu tingkat kelas yang boleh mengajukan.',
 ];
 ?>
 <?= $this->extend('layouts/admin') ?>
 <?= $this->section('content') ?>
 
 <?= view('admin/partials/help', [
-    'helpKey'   => 'pkl_pengaturan_v2',
+    'helpKey'   => 'pkl_pengaturan_v3',
     'helpTitle' => 'Pengaturan PKL',
-    'helpBody'  => '<p>Atur <b>kapan</b> siswa boleh mengisi, <b>siapa</b> yang boleh (tingkat), dan <b>pagar tanggal</b> PKL.</p>'
+    'helpBody'  => '<p>Atur <b>kapan</b> siswa boleh mengisi, <b>siapa</b> yang boleh (tingkat), dan data yang tercetak di surat resmi sekolah.</p>'
         . '<ul class="mt-2 list-disc pl-5 space-y-1">'
-        . '<li><b>Pagar tanggal</b> menjaga salah ketik tahun/bulan: siswa tidak bisa memilih tanggal di luar rentang ini. Perusahaan boleh punya tanggal berbeda-beda, asal di dalam pagar.</li>'
-        . '<li><b>Lama PKL</b> menjaga PKL yang terlalu singkat/panjang akibat salah ketik.</li>'
         . '<li>Form <b>tertutup</b> secara bawaan. Buka hanya saat tautan siap dibagikan; bisa diberi <b>batas waktu</b> agar menutup sendiri.</li>'
-        . '<li>Siswa yang sudah punya ajuan aktif tetap tidak bisa mengajukan lagi, apa pun pengaturannya.</li>'
-        . '<li><b>Surat permohonan:</b> isi nama/NIP/jabatan Waka Hubin dan format nomor surat. Untuk kop dan kalimat persis surat sekolah, unggah <b>template Word</b> (unduh contohnya dulu).</li>'
+        . '<li><b>Maksimal siswa per perusahaan</b> paling banyak 5 (aturan sekolah).</li>'
+        . '<li>Siswa yang sudah mengajukan <b>tidak bisa mengajukan lagi</b> selama ajuannya menunggu keputusan Waka Hubin. <b>Batas keputusan</b> (bawaan 5 hari sejak dikirim) memberi tanda merah pada yang terlambat.</li>'
+        . '<li><b>Surat permohonan:</b> isi nama/NIP/jabatan Waka Hubin, nama Kepala Sekolah, kontak "NB" di bawah surat, format nomor surat, dan pola nama berkas. Format surat sudah <u>persis surat resmi sekolah</u>; hanya isi data yang berubah. Tanda tangan digital Waka Hubin diunggah Waka Hubin sendiri di tab <b>Tanda Tangan</b>.</li>'
         . '<li><b>Impor riwayat PKL lama</b> dari Excel ada di bagian bawah halaman ini.</li>'
         . '</ul>',
 ]) ?>
@@ -107,46 +107,30 @@ $tinjau = [
             </div>
             <div class="max-w-xs">
                 <label class="lbl" for="f_maks_anggota">Maksimal siswa per perusahaan</label>
-                <input id="f_maks_anggota" type="number" min="1" max="20" name="maks_anggota" value="<?= esc($nilai('maks_anggota', '5'), 'attr') ?>" class="inp <?= $cls('maks_anggota') ?>">
-                <p class="mt-1 text-xs text-slate-400">Termasuk pengaju. 1 = tidak boleh ada teman satu tempat.</p>
+                <input id="f_maks_anggota" type="number" min="1" max="5" name="maks_anggota" value="<?= esc($nilai('maks_anggota', '5'), 'attr') ?>" class="inp <?= $cls('maks_anggota') ?>">
+                <p class="mt-1 text-xs text-slate-400">Termasuk pengaju. Paling banyak 5 (aturan sekolah). 1 = tidak boleh ada teman satu tempat.</p>
                 <?= $err('maks_anggota') ?>
             </div>
         </div>
     </section>
 
-    <!-- Pagar tanggal -->
+    <!-- Batas keputusan Waka Hubin -->
     <section class="rise overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
-        <h3 class="border-b border-slate-100 bg-slate-50 px-5 py-3 text-xs font-bold uppercase tracking-wide text-slate-500">Pagar tanggal &amp; lama PKL</h3>
-        <div class="space-y-4 p-5">
-            <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                <div>
-                    <label class="lbl" for="f_awal">PKL paling awal mulai</label>
-                    <input id="f_awal" type="date" name="mulai_paling_awal" value="<?= esc($nilai('mulai_paling_awal'), 'attr') ?>" class="inp <?= $cls('mulai_paling_awal') ?>">
-                    <?= $err('mulai_paling_awal') ?>
-                </div>
-                <div>
-                    <label class="lbl" for="f_akhir">PKL paling akhir selesai</label>
-                    <input id="f_akhir" type="date" name="selesai_paling_akhir" value="<?= esc($nilai('selesai_paling_akhir'), 'attr') ?>" class="inp <?= $cls('selesai_paling_akhir') ?>">
-                    <?= $err('selesai_paling_akhir') ?>
-                </div>
-                <div>
-                    <label class="lbl" for="f_dmin">Lama PKL minimal (hari)</label>
-                    <input id="f_dmin" type="number" min="1" max="365" name="durasi_min_hari" value="<?= esc($nilai('durasi_min_hari', '30'), 'attr') ?>" class="inp <?= $cls('durasi_min_hari') ?>">
-                    <?= $err('durasi_min_hari') ?>
-                </div>
-                <div>
-                    <label class="lbl" for="f_dmaks">Lama PKL maksimal (hari)</label>
-                    <input id="f_dmaks" type="number" min="1" max="730" name="durasi_maks_hari" value="<?= esc($nilai('durasi_maks_hari', '270'), 'attr') ?>" class="inp <?= $cls('durasi_maks_hari') ?>">
-                    <?= $err('durasi_maks_hari') ?>
-                </div>
+        <h3 class="border-b border-slate-100 bg-slate-50 px-5 py-3 text-xs font-bold uppercase tracking-wide text-slate-500">Batas keputusan Waka Hubin</h3>
+        <div class="space-y-3 p-5">
+            <div class="max-w-xs">
+                <label class="lbl" for="f_batas_hari">Waka Hubin memutuskan paling lambat (hari)</label>
+                <input id="f_batas_hari" type="number" min="1" max="30" name="batas_keputusan_hari" value="<?= esc($nilai('batas_keputusan_hari', '5'), 'attr') ?>" class="inp <?= $cls('batas_keputusan_hari') ?>">
+                <?= $err('batas_keputusan_hari') ?>
             </div>
-            <p class="text-xs text-slate-400">Contoh: PKL boleh mulai paling awal 4 Januari dan selesai paling akhir 30 Juni; tiap perusahaan boleh memilih tanggalnya sendiri di dalam rentang itu.</p>
+            <p class="text-xs leading-relaxed text-slate-500">Dihitung sejak siswa menekan Kirim. Siswa diberi tahu tanggal batasnya dan diminta <b>tidak mengajukan ulang</b> selama menunggu. Ajuan yang lewat batas ditandai merah di Kotak Masuk dan Beranda PKL.</p>
         </div>
     </section>
-
     <!-- Surat -->
     <section id="surat" class="scroll-mt-24 overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm"
              x-data="{ pola: <?= esc(json_encode($nilai('format_nomor', \App\Libraries\PklNomorSurat::BAWAAN)), 'attr') ?>,
+                       berkas: <?= esc(json_encode($nilai('format_nama_berkas', \App\Libraries\PklNamaBerkas::BAWAAN)), 'attr') ?>,
+                       contohBerkas() { return (this.berkas || '').split('{urut}').join('295').split('{urut3}').join('295').split('{urut4}').join('0295').split('{nama_depan}').join('Ilyasha').split('{nama_pengaju}').join('Ilyasha Hawari').split('{all}').join('ALL').split('{kelas}').join('XII TKJ 5').split('{perusahaan}').join('PT Antarestar').split('{thn}').join(new Date().getFullYear()).replace(/\s+/g, ' ').trim() + '.docx'; },
                        contoh() { const d = new Date(), p = n => String(n).padStart(2, '0'), r = ['I','II','III','IV','V','VI','VII','VIII','IX','X','XI','XII'];
                                   return (this.pola || '').split('{urut}').join('7').split('{urut3}').join('007').split('{urut4}').join('0007').split('{tgl}').join(p(d.getDate())).split('{bln}').join(p(d.getMonth() + 1)).split('{bln_romawi}').join(r[d.getMonth()]).split('{thn}').join(d.getFullYear()); } }">
         <h3 class="border-b border-slate-100 bg-slate-50 px-5 py-3 text-xs font-bold uppercase tracking-wide text-slate-500">Surat permohonan PKL</h3>
@@ -170,6 +154,29 @@ $tinjau = [
             </div>
             <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
                 <div>
+                    <label class="lbl" for="f_kepsek">Nama Kepala Sekolah <span class="font-normal text-slate-400">(di bawah tanda tangan Kepala Sekolah)</span></label>
+                    <input id="f_kepsek" type="text" name="kepsek_nama" maxlength="150" value="<?= esc($nilai('kepsek_nama'), 'attr') ?>" class="inp <?= $cls('kepsek_nama') ?>" placeholder="Contoh: Napis Kuturupi, S.T">
+                    <?= $err('kepsek_nama') ?>
+                </div>
+                <div>
+                    <p class="lbl">Tanda tangan digital Waka Hubin</p>
+                    <p class="text-xs leading-relaxed text-slate-500">Diunggah oleh Waka Hubin sendiri di tab <b>Tanda Tangan</b> (Operator tidak bisa). Terpasang hanya pada surat yang di-ACC akun Waka Hubin. Saat ini: <b class="<?= \App\Libraries\PklSurat::infoTtd($p) !== null ? 'text-green-700' : 'text-slate-700' ?>"><?= \App\Libraries\PklSurat::infoTtd($p) !== null ? 'sudah ada' : 'belum ada (ruang dikosongkan)' ?></b>.</p>
+                </div>
+            </div>
+            <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                <div>
+                    <label class="lbl" for="f_kontak_nama">Kontak "NB" di bawah surat <span class="font-normal text-slate-400">(nama)</span></label>
+                    <input id="f_kontak_nama" type="text" name="kontak_surat_nama" maxlength="150" value="<?= esc($nilai('kontak_surat_nama'), 'attr') ?>" class="inp <?= $cls('kontak_surat_nama') ?>" placeholder="Contoh: Puguh Wira Sakti, S.Pd.">
+                    <?= $err('kontak_surat_nama') ?>
+                </div>
+                <div>
+                    <label class="lbl" for="f_kontak_hp">Kontak "NB" <span class="font-normal text-slate-400">(nomor HP)</span></label>
+                    <input id="f_kontak_hp" type="text" name="kontak_surat_hp" maxlength="30" inputmode="tel" value="<?= esc($nilai('kontak_surat_hp'), 'attr') ?>" class="inp <?= $cls('kontak_surat_hp') ?>" placeholder="Contoh: 0812 8584 526">
+                    <?= $err('kontak_surat_hp') ?>
+                </div>
+            </div>
+            <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                <div>
                     <label class="lbl" for="f_format_nomor">Format nomor surat</label>
                     <input id="f_format_nomor" type="text" name="format_nomor" maxlength="100" x-model="pola" class="inp font-mono <?= $cls('format_nomor') ?>">
                     <p class="mt-1 text-xs text-slate-500">Contoh hasil: <b class="font-mono text-slate-700" x-text="contoh()"></b></p>
@@ -182,6 +189,13 @@ $tinjau = [
                     <p class="mt-1 text-xs text-slate-400">Isi bila sekolah sudah memakai nomor berjalan (mis. sudah sampai 44 → isi 45). Nomor tak pernah mundur atau ganda.</p>
                     <?= $err('nomor_awal') ?>
                 </div>
+            </div>
+            <div>
+                <label class="lbl" for="f_format_nama_berkas">Pola nama berkas surat (satu surat)</label>
+                <input id="f_format_nama_berkas" type="text" name="format_nama_berkas" maxlength="150" x-model="berkas" class="inp font-mono <?= $cls('format_nama_berkas') ?>">
+                <p class="mt-1 text-xs text-slate-500">Contoh hasil: <b class="font-mono text-slate-700" x-text="contohBerkas()"></b></p>
+                <p class="mt-1 text-[11px] leading-relaxed text-slate-400">Penanda: <code>{urut}</code> <code>{nama_depan}</code> <code>{nama_pengaju}</code> <code>{all}</code> (= ALL bila siswa lebih dari satu) <code>{kelas}</code> <code>{perusahaan}</code> <code>{thn}</code>.</p>
+                <?= $err('format_nama_berkas') ?>
             </div>
         </div>
     </section>
@@ -203,11 +217,11 @@ $tinjau = [
         <div class="space-y-3 p-5 text-sm text-slate-600">
             <p>
                 Saat ini surat memakai
-                <b class="<?= $templateAda ? 'text-green-700' : 'text-slate-800' ?>"><?= $templateAda ? 'TEMPLATE UNGGAHAN sekolah' : 'tampilan BAWAAN' ?></b>.
-                Ingin kop, huruf, dan kalimat persis seperti surat sekolah? Unduh contoh, sunting di Word (jangan ubah penanda <code>${...}</code>), lalu unggah.
+                <b class="<?= $templateAda ? 'text-green-700' : 'text-slate-800' ?>"><?= $templateAda ? 'TEMPLATE UNGGAHAN sekolah' : 'FORMAT SURAT RESMI SEKOLAH (bawaan sistem)' ?></b>.
+                Format bawaan sudah persis surat resmi sekolah (kop, kalimat, tabel, tanda tangan). Bila format surat kelak berubah, unduh template, sunting di Word (jangan ubah penanda <code>${...}</code>), lalu unggah.
             </p>
             <div class="flex flex-wrap gap-2">
-                <a href="<?= site_url('admin/pkl/pengaturan/template?contoh=1') ?>" class="rounded-lg border border-slate-300 px-3.5 py-2 font-semibold text-slate-700 hover:bg-slate-50">⬇ Unduh contoh template</a>
+                <a href="<?= site_url('admin/pkl/pengaturan/template?contoh=1') ?>" class="rounded-lg border border-slate-300 px-3.5 py-2 font-semibold text-slate-700 hover:bg-slate-50">⬇ Unduh template format sekolah</a>
                 <?php if ($templateAda): ?><a href="<?= site_url('admin/pkl/pengaturan/template') ?>" class="rounded-lg border border-slate-300 px-3.5 py-2 font-semibold text-slate-700 hover:bg-slate-50">⬇ Unduh template aktif</a><?php endif; ?>
             </div>
             <form method="post" action="<?= site_url('admin/pkl/pengaturan/template') ?>" enctype="multipart/form-data" class="flex flex-col gap-2 sm:flex-row sm:items-center">
@@ -218,7 +232,7 @@ $tinjau = [
             <?php if ($templateAda): ?>
                 <form method="post" action="<?= site_url('admin/pkl/pengaturan/template/hapus') ?>" onsubmit="return confirm('Hapus template dan kembali ke surat bawaan?')">
                     <?= csrf_field() ?>
-                    <button type="submit" class="text-xs font-semibold text-red-600 hover:underline">Hapus template (kembali ke surat bawaan)</button>
+                    <button type="submit" class="text-xs font-semibold text-red-600 hover:underline">Hapus template unggahan (kembali ke format sekolah bawaan)</button>
                 </form>
             <?php endif; ?>
             <details class="rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-xs leading-relaxed">

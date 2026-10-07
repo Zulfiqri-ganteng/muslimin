@@ -20,9 +20,9 @@ $hubin = $peran === 'hubin';
 <?= $this->section('content') ?>
 
 <?= view('admin/partials/help', [
-    'helpKey'   => 'pkl_beranda_v2',
+    'helpKey'   => 'pkl_beranda_v3',
     'helpTitle' => 'Beranda PKL',
-    'helpBody'  => '<p>Siswa mengisi ajuan PKL sendiri lewat tautan di HP. Di sini Anda <b>memeriksa</b> ajuan yang masuk lalu memutuskan: <b>ACC</b>, <b>kembalikan</b> (siswa memperbaiki), atau <b>tolak</b>.</p>'
+    'helpBody'  => '<p>Siswa mengisi ajuan PKL sendiri lewat tautan di HP. Di sini ajuan <b>diperiksa</b> lalu diputuskan. <b>ACC dan tolak hanya dilakukan Waka Hubin</b> (Admin sebagai cadangan); Operator memeriksa dan bisa <b>mengembalikan</b> ajuan agar siswa memperbaiki.</p>'
         . '<ul class="mt-2 list-disc pl-5 space-y-1">'
         . '<li><b>Menunggu ACC</b> — antrean ajuan baru, yang paling lama di atas.</li>'
         . '<li><b>Status Siswa</b> — melihat siapa yang <b>sudah/belum mengisi</b> dan siapa yang <b>sudah/belum PKL</b>.</li>'
@@ -40,7 +40,7 @@ $wakaOk  = trim((string) ($p['waka_hubin_nama'] ?? '')) !== '';
 $pagarOk = $alasan !== 'belum_siap';
 $bukaOk  = $alasan === null;
 $persiapan = [
-    [$pagarOk, 'Tingkat & batas tanggal PKL diisi', 'Tanpa ini form belum bisa dibuka.', site_url('admin/pkl/pengaturan')],
+    [$pagarOk, 'Tingkat kelas yang boleh mengajukan dipilih', 'Tanpa ini form belum bisa dibuka.', site_url('admin/pkl/pengaturan')],
     [$wakaOk, 'Nama Waka Hubin (penanda tangan surat) diisi', 'Tanpa ini nama di bawah tanda tangan surat hanya titik-titik.', site_url('admin/pkl/pengaturan#surat')],
     [$bukaOk, 'Form dibuka untuk siswa', 'Siswa baru bisa mengajukan setelah form dibuka.', site_url('admin/pkl/pengaturan')],
 ];
@@ -79,7 +79,7 @@ $siap = count(array_filter(array_column($persiapan, 0)));
         </p>
         <p class="mt-0.5 text-xs <?= $alasan === null ? 'text-green-700' : 'text-amber-800' ?>">
             <?php if ($alasan === null): ?>
-                Tingkat <b><?= esc(implode(' & ', $tingkat)) ?></b> · PKL antara <b><?= esc(\App\Libraries\IsianBantu::tanggalIndo($p['mulai_paling_awal'])) ?></b> dan <b><?= esc(\App\Libraries\IsianBantu::tanggalIndo($p['selesai_paling_akhir'])) ?></b>
+                Tingkat <b><?= esc(implode(' & ', $tingkat)) ?></b> · maks <b><?= (int) \App\Models\PklPengaturanModel::maksSiswa($p) ?></b> siswa per ajuan · keputusan Waka Hubin paling lambat <b><?= (int) $batasHari ?> hari</b>
                 <?php if (! empty($p['form_tutup'])): ?> · tutup otomatis <b><?= esc(date('d-m-Y H:i', strtotime($p['form_tutup']))) ?></b><?php endif; ?>
             <?php else: ?>
                 <?= esc($pesanTutup[$alasan] ?? '') ?>
@@ -97,10 +97,18 @@ $siap = count(array_filter(array_column($persiapan, 0)));
     </div>
 </div>
 
+<?php if (($terlambat ?? 0) > 0): ?>
+    <a href="<?= site_url('admin/pkl/daftar/menunggu') ?>" class="rise mb-5 flex items-center gap-3 rounded-2xl border border-red-300 bg-red-50 px-5 py-3.5 text-sm text-red-800 shadow-sm transition hover:bg-red-100">
+        <span class="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-red-600 text-base font-extrabold text-white" aria-hidden="true">!</span>
+        <span><b><?= (int) $terlambat ?> ajuan</b> sudah melewati batas keputusan Waka Hubin (<?= (int) $batasHari ?> hari sejak dikirim siswa). Segera diputuskan.</span>
+        <span class="ml-auto shrink-0 font-bold">Lihat →</span>
+    </a>
+<?php endif; ?>
+
 <!-- Angka status ajuan -->
 <div class="rise rise-3 mb-5 grid grid-cols-2 gap-3 lg:grid-cols-4">
     <?php foreach ([
-        ['menunggu', 'Menunggu ACC', 'text-blue-700', $hubin ? 'Menunggu keputusan Anda' : 'Perlu diperiksa'],
+        ['menunggu', 'Menunggu ACC', 'text-blue-700', $hubin ? 'Menunggu keputusan Anda' : 'Menunggu keputusan Waka Hubin'],
         ['perbaikan', 'Perlu perbaikan', 'text-amber-600', 'Di tangan siswa'],
         ['disetujui', 'Disetujui', 'text-green-600', 'Siap dibuatkan surat'],
         ['ditolak', 'Ditolak', 'text-red-600', 'Siswa boleh mengajukan lagi'],
@@ -140,7 +148,7 @@ $siap = count(array_filter(array_column($persiapan, 0)));
 <div class="rise rise-5 overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
     <div class="flex flex-col gap-2 border-b border-slate-100 px-5 py-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
-            <h2 class="font-bold text-slate-800"><?= $hubin ? 'Menunggu keputusan Anda' : 'Antrean ajuan baru' ?></h2>
+            <h2 class="font-bold text-slate-800"><?= $hubin ? 'Menunggu keputusan Anda' : 'Antrean ajuan — menunggu keputusan Waka Hubin' ?></h2>
             <p class="text-xs text-slate-400">Yang paling lama menunggu ada di atas.</p>
         </div>
         <a href="<?= site_url('admin/pkl/baru') ?>" class="inline-flex items-center justify-center rounded-lg border border-brand-200 bg-brand-50 px-3.5 py-2 text-sm font-semibold text-brand-700 transition hover:bg-brand-100">+ Isi atas Nama</a>

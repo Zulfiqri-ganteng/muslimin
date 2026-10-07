@@ -10,11 +10,16 @@
  * @var array       $master      ['persis' => ?array, 'mirip' => list<array>]
  * @var string      $kode
  * @var bool        $bolehHapus
+ * @var bool        $bolehAcc    peran ini berhak ACC/tolak/cabut persetujuan (Waka Hubin; Admin cadangan)
+ * @var ?int        $sisaHari    sisa hari menuju batas keputusan Waka Hubin (negatif = terlambat), hanya untuk status menunggu
+ * @var ?string     $batasKeputusan
  */
 
 use App\Libraries\HakAkses;
 use App\Libraries\IsianBantu;
+use App\Libraries\PklSurat;
 
+$namaSaya = (string) (session('admin')['full_name'] ?? '');
 $id     = (int) $a['id'];
 $status = (string) $a['status'];
 $hari   = ($a['tanggal_mulai'] && $a['tanggal_selesai']) ? IsianBantu::hariInklusif($a['tanggal_mulai'], $a['tanggal_selesai']) : null;
@@ -44,15 +49,15 @@ $baris = static function (string $label, ?string $isi): string {
 <?= $this->section('content') ?>
 
 <?= view('admin/partials/help', [
-    'helpKey'   => 'pkl_detail_v3',
+    'helpKey'   => 'pkl_detail_v4',
     'helpTitle' => 'Detail Ajuan PKL',
     'helpBody'  => '<p>Periksa dulu <b>peringatan otomatis</b> (merah = bahaya, kuning = periksa, biru = info), lalu putuskan:</p>'
         . '<ul class="mt-2 list-disc pl-5 space-y-1">'
-        . '<li><b>ACC</b> — perusahaan otomatis didaftarkan ke master dan menjadi saran untuk siswa lain, jadi periksa ejaan namanya dulu (bisa lewat <b>Ubah</b>).</li>'
-        . '<li><b>Kembalikan</b> — siswa memperbaiki sendiri; tulis alasan yang jelas, mereka akan membacanya.</li>'
-        . '<li><b>Tolak</b> — siswanya bebas dan boleh mengajukan baru.</li>'
-        . '<li><b>Batalkan persetujuan</b> — bila perusahaan menarik diri; ajuan kembali ke siswa untuk diganti.</li>'
-        . '<li><b>Ubah</b> — Anda memperbaiki langsung (nama, tanggal, daftar siswa) tanpa mengubah statusnya.</li>'
+        . '<li><b>ACC</b> — <u>hanya Waka Hubin</u> (Admin sebagai cadangan, harus menyatakan mewakili Waka Hubin). Tercatat siapa, kapan, dan tercetak di kaki surat. Perusahaan otomatis didaftarkan ke master, jadi periksa ejaan namanya dulu.</li>'
+        . '<li><b>Kembalikan</b> — boleh Operator atau Waka Hubin; siswa memperbaiki sendiri, tulis alasan yang jelas.</li>'
+        . '<li><b>Tolak</b> / <b>Batalkan persetujuan</b> — hanya Waka Hubin (atau Admin). Tolak: siswanya bebas mengajukan baru. Batalkan: bila perusahaan menarik diri.</li>'
+        . '<li><b>Ubah</b> — memperbaiki langsung (nama perusahaan, daftar siswa, HP) tanpa mengubah statusnya. Ajuan yang sudah disetujui hanya boleh diubah Waka Hubin / Admin.</li>'
+        . '<li><b>Batas keputusan</b> — Waka Hubin memutuskan paling lambat sekian hari sejak siswa mengirim (diatur di Pengaturan); yang lewat ditandai merah.</li>'
         . '<li><b>Surat permohonan</b> (setelah Disetujui) — satu tombol menerbitkan nomor dan mengunduh berkas Word. Bila data berubah sesudahnya (termasuk nama/NIP Waka Hubin di Pengaturan) muncul tanda <b>Perlu cetak ulang</b>; nomor tetap sama. Tanda tangan dan stempel Waka Hubin dibubuhkan basah di kertas hasil cetak (ruangnya sengaja dikosongkan).</li>'
         . '</ul>',
 ]) ?>
@@ -75,6 +80,14 @@ $baris = static function (string $label, ?string $isi): string {
             <p class="mt-3 rounded-xl border border-slate-200 bg-slate-50 px-4 py-2.5 text-sm text-slate-700"><span class="font-bold">Catatan untuk siswa:</span> <?= esc($a['catatan_staf']) ?></p>
         <?php endif; ?>
     </div>
+
+    <!-- Batas keputusan Waka Hubin -->
+    <?php if ($status === 'menunggu' && ($sisaHari ?? null) !== null): ?>
+        <div class="rise mb-5 flex flex-col gap-1 rounded-xl border px-4 py-3 text-sm sm:flex-row sm:items-center sm:gap-3 <?= $sisaHari < 0 ? 'border-red-300 bg-red-50 text-red-800' : ($sisaHari <= 1 ? 'border-amber-300 bg-amber-50 text-amber-900' : 'border-blue-200 bg-blue-50 text-blue-900') ?>">
+            <span class="font-extrabold"><?= $sisaHari < 0 ? 'TERLAMBAT ' . abs($sisaHari) . ' hari' : ($sisaHari === 0 ? 'HARI INI batasnya' : 'Sisa ' . $sisaHari . ' hari') ?></span>
+            <span>Batas keputusan Waka Hubin: <b><?= esc(IsianBantu::tanggalIndo(substr((string) $batasKeputusan, 0, 10))) ?></b> (<?= (int) $batasHari ?> hari sejak dikirim siswa <?= esc(date('d-m-Y H:i', strtotime((string) ($a['diajukan_at'] ?? $a['created_at'])))) ?>).</span>
+        </div>
+    <?php endif; ?>
 
     <!-- Peringatan otomatis -->
     <?php if ($peringatan !== []): ?>
@@ -113,6 +126,7 @@ $baris = static function (string $label, ?string $isi): string {
                 </dl>
             </section>
 
+            <?php if ($a['tanggal_mulai'] || $a['tanggal_selesai']): // tanggal tak ditanyakan lagi; hanya riwayat lama ?>
             <section class="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
                 <h3 class="border-b border-slate-100 bg-slate-50 px-5 py-3 text-xs font-bold uppercase tracking-wide text-slate-500">Periode PKL</h3>
                 <dl class="divide-y divide-slate-100">
@@ -121,6 +135,7 @@ $baris = static function (string $label, ?string $isi): string {
                     <?= $baris('Lama', $hari !== null ? $hari . ' hari (± ' . max(1, (int) round($hari / 30)) . ' bulan)' : '') ?>
                 </dl>
             </section>
+            <?php endif; ?>
 
             <section class="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
                 <h3 class="border-b border-slate-100 bg-slate-50 px-5 py-3 text-xs font-bold uppercase tracking-wide text-slate-500">Siswa (<?= count($anggota) ?>)</h3>
@@ -134,12 +149,10 @@ $baris = static function (string $label, ?string $isi): string {
                                 </p>
                                 <p class="text-xs text-slate-500">Kelas <?= esc($s['nama_kelas'] ?? '—') ?> · NIS <?= esc($s['nis'] ?: '—') ?> · NISN <?= esc($s['nisn'] ?: '—') ?></p>
                             </div>
-                            <?php if ($s['peran'] === 'pengaju'): ?>
-                                <p class="text-xs text-slate-500 sm:text-right">
-                                    HP <b class="text-slate-700"><?= esc($s['hp'] ?: '—') ?></b><br>
-                                    Lahir <b class="text-slate-700"><?= esc(IsianBantu::tanggalIndo($s['tanggal_lahir']) ?: '—') ?></b>
-                                </p>
-                            <?php endif; ?>
+                            <p class="text-xs text-slate-500 sm:text-right">
+                                HP <b class="text-slate-700"><?= esc(($s['hp'] ?? '') !== '' ? $s['hp'] : (($s['hp_master'] ?? '') !== '' ? $s['hp_master'] : '—')) ?></b>
+                                <?php if (($s['hp'] ?? '') === '' && ($s['hp_master'] ?? '') !== ''): ?><br><span class="text-slate-400">(dari Master Siswa)</span><?php endif; ?>
+                            </p>
                         </li>
                     <?php endforeach; ?>
                 </ul>
@@ -151,24 +164,48 @@ $baris = static function (string $label, ?string $isi): string {
             <section class="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
                 <h3 class="text-xs font-bold uppercase tracking-wide text-slate-500">Keputusan</h3>
                 <div class="mt-3 flex flex-col gap-2">
-                    <?php if (in_array($status, ['menunggu', 'perbaikan', 'ditolak'], true)): ?>
+                    <?php if ($bolehAcc && in_array($status, ['menunggu', 'perbaikan', 'ditolak'], true)): ?>
                         <button type="button" @click="dlg = 'acc'" class="rounded-xl bg-green-600 px-4 py-3 text-sm font-bold text-white shadow-sm transition hover:bg-green-700 active:scale-95"><?= $status === 'ditolak' ? '✓ ACC (hidupkan kembali)' : '✓ ACC' ?></button>
                     <?php endif; ?>
                     <?php if ($status === 'menunggu'): ?>
                         <button type="button" @click="dlg = 'kembalikan'" class="rounded-xl bg-amber-500 px-4 py-3 text-sm font-bold text-white shadow-sm transition hover:bg-amber-600 active:scale-95">↩ Kembalikan untuk diperbaiki</button>
                     <?php endif; ?>
-                    <?php if (in_array($status, ['menunggu', 'perbaikan'], true)): ?>
+                    <?php if ($bolehAcc && in_array($status, ['menunggu', 'perbaikan'], true)): ?>
                         <button type="button" @click="dlg = 'tolak'" class="rounded-xl border-2 border-red-300 px-4 py-2.5 text-sm font-bold text-red-600 transition hover:bg-red-50 active:scale-95">✕ Tolak</button>
                     <?php endif; ?>
-                    <?php if ($status === 'disetujui'): ?>
+                    <?php if ($bolehAcc && $status === 'disetujui'): ?>
                         <button type="button" @click="dlg = 'batal'" class="rounded-xl border-2 border-amber-300 px-4 py-2.5 text-sm font-bold text-amber-700 transition hover:bg-amber-50 active:scale-95">↩ Batalkan persetujuan</button>
                     <?php endif; ?>
-                    <a href="<?= site_url('admin/pkl/' . $id . '/ubah') ?>" class="rounded-xl border border-slate-300 px-4 py-2.5 text-center text-sm font-semibold text-slate-700 transition hover:bg-slate-50">✎ Ubah data langsung</a>
-                    <?php if ($bolehHapus): ?>
+                    <?php if ($status !== 'disetujui' || $bolehAcc): ?>
+                        <a href="<?= site_url('admin/pkl/' . $id . '/ubah') ?>" class="rounded-xl border border-slate-300 px-4 py-2.5 text-center text-sm font-semibold text-slate-700 transition hover:bg-slate-50">✎ Ubah data langsung</a>
+                    <?php endif; ?>
+                    <?php if (! $bolehAcc): ?>
+                        <p class="rounded-xl border border-slate-200 bg-slate-50 px-3.5 py-3 text-xs leading-relaxed text-slate-600">🔒 <b>ACC, tolak, dan batalkan persetujuan hanya dilakukan Waka Hubin.</b> Anda bisa memeriksa, mengembalikan ajuan untuk diperbaiki<?= $status === 'disetujui' ? '' : ', dan mengubah datanya' ?>, serta mencetak surat setelah disetujui.</p>
+                    <?php endif; ?>
+                    <?php if ($bolehHapus && ($status !== 'disetujui' || $peran === 'admin')): ?>
                         <button type="button" @click="dlg = 'hapus'" class="mt-1 rounded-xl px-4 py-2 text-xs font-semibold text-slate-400 transition hover:bg-red-50 hover:text-red-600">Hapus ajuan ini</button>
                     <?php endif; ?>
                 </div>
             </section>
+
+            <?php if ($status === 'disetujui' && ! empty($a['acc_at'])): $peranAcc = (string) ($a['acc_peran'] ?? ''); ?>
+                <section class="rounded-2xl border border-green-200 bg-green-50/60 p-5 shadow-sm">
+                    <h3 class="text-xs font-bold uppercase tracking-wide text-green-800">Persetujuan (ACC)</h3>
+                    <dl class="mt-3 space-y-2.5 text-sm">
+                        <div><dt class="text-xs text-slate-500">Disetujui oleh</dt><dd class="font-semibold text-slate-800"><?= esc($a['acc_nama'] ?: '—') ?></dd></div>
+                        <div><dt class="text-xs text-slate-500">Sebagai</dt><dd class="font-semibold text-slate-800"><?= esc(match ($peranAcc) {
+                            'hubin' => 'Waka Hubin', 'admin' => 'Admin — mewakili Waka Hubin', 'operator' => 'Operator (tanpa wewenang ACC; data lama)', 'impor' => 'Data riwayat (diimpor, bukan ACC sistem)', default => 'Tidak tercatat',
+                        }) ?></dd></div>
+                        <div><dt class="text-xs text-slate-500">Waktu</dt><dd class="font-semibold text-slate-800"><?= esc(PklSurat::waktuIndo((string) $a['acc_at'])) ?></dd></div>
+                        <?php if (! empty($a['acc_kode'])): ?><div><dt class="text-xs text-slate-500">Kode verifikasi</dt><dd class="font-mono text-xs font-bold text-slate-700"><?= esc($a['acc_kode']) ?></dd></div><?php endif; ?>
+                    </dl>
+                    <?php if ($peranAcc !== 'hubin'): ?>
+                        <p class="mt-3 rounded-lg border border-amber-300 bg-amber-50 px-3 py-2 text-xs font-semibold leading-relaxed text-amber-900">
+                            <?= $peranAcc === 'admin' ? 'ACC ini dilakukan Admin sebagai pengganti Waka Hubin. Tanda tangan digital Waka Hubin TIDAK dipasang di surat; kaki surat menjelaskan hal ini.' : 'Persetujuan ini bukan dari Waka Hubin lewat sistem. Mohon dikonfirmasi ke Waka Hubin.' ?>
+                        </p>
+                    <?php endif; ?>
+                </section>
+            <?php endif; ?>
 
             <?php if ($status === 'disetujui'): ?>
                 <section class="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
@@ -256,10 +293,14 @@ $baris = static function (string $label, ?string $isi): string {
     if ($adaBahaya) {
         $isiAcc .= '<label class="flex cursor-pointer items-start gap-2 rounded-xl border border-red-300 bg-red-50 p-3 text-red-800"><input type="checkbox" name="paham" value="1" required class="mt-0.5"><span class="text-sm font-semibold">Ada peringatan BAHAYA di halaman ini. Saya sudah memeriksanya dan tetap ingin meng-ACC.</span></label>';
     }
+    $isiAcc .= '<p class="rounded-xl border border-slate-200 bg-slate-50 px-4 py-2.5 text-xs leading-relaxed text-slate-600">Persetujuan ini akan <b>tercatat atas nama ' . esc($namaSaya) . '</b> (' . esc(HakAkses::label($peran)) . ') lengkap dengan tanggal &amp; jam, dan tercetak di kaki surat permohonan.</p>';
+    if ($peran === 'admin') {
+        $isiAcc .= '<label class="flex cursor-pointer items-start gap-2 rounded-xl border border-amber-300 bg-amber-50 p-3 text-amber-900"><input type="checkbox" name="wakil" value="1" required class="mt-0.5"><span class="text-sm font-semibold">Saya meng-ACC sebagai <b>Admin yang mewakili Waka Hubin</b> (Waka Hubin berhalangan). Ini akan tertulis jelas di surat.</span></label>';
+    }
     $dialog('acc', 'ACC ajuan ' . esc($kode) . '?', $id . '/acc', $isiAcc, '✓ Ya, ACC', 'bg-green-600 hover:bg-green-700');
 
     $dialog('kembalikan', 'Kembalikan untuk diperbaiki', $id . '/kembalikan',
-        '<p>Siswa pengaju akan membuka ajuannya lagi (dengan tanggal lahirnya) dan memperbaikinya.</p>' . $kotakAlasan('Contoh: Alamat perusahaan belum lengkap, tambahkan nomor gedung dan kode pos.'),
+        '<p>Siswa pengaju akan membuka ajuannya lagi (dengan nomor HP-nya) dan memperbaikinya, lalu mengirim ulang untuk diputuskan Waka Hubin.</p>' . $kotakAlasan('Contoh: Alamat perusahaan belum lengkap, tambahkan nomor gedung dan kode pos.'),
         '↩ Kembalikan', 'bg-amber-500 hover:bg-amber-600');
     $dialog('tolak', 'Tolak ajuan ' . esc($kode), $id . '/tolak',
         '<p>Seluruh siswa dalam ajuan ini <b>dibebaskan</b> dan boleh mengajukan baru dari awal.</p>' . $kotakAlasan('Contoh: Perusahaan tidak menerima siswa PKL pada periode ini.'),

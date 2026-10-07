@@ -7,8 +7,9 @@ use App\Models\PklPengaturanModel;
 
 /**
  * Peringatan otomatis di halaman detail ajuan — membantu staf menangkap kesalahan
- * manusia SEBELUM menekan ACC: perusahaan ganda/mirip, tanggal di luar pagar,
- * anggota bermasalah, kontak kosong, dan tanda ajuan "iseng".
+ * manusia SEBELUM menekan ACC: perusahaan ganda/mirip, anggota bermasalah,
+ * HP siswa kosong (tercetak di surat), dan tanda ajuan "iseng". Tanggal PKL tidak
+ * lagi ditanyakan, jadi tak ada peringatan tanggal.
  *
  * Tiap peringatan: ['tingkat' => 'bahaya'|'awas'|'info', 'teks' => string].
  *   bahaya = jangan ACC sebelum dibereskan · awas = periksa dulu · info = sekadar tahu.
@@ -85,27 +86,9 @@ final class PklPeringatan
             $tmb('awas', 'Alamat perusahaan kosong — surat tak bisa dialamatkan.');
         }
 
-        // ---------- Tanggal ----------
-        $mulai   = (string) ($ajuan['tanggal_mulai'] ?? '');
-        $selesai = (string) ($ajuan['tanggal_selesai'] ?? '');
-        if ($mulai === '' || $selesai === '') {
-            $tmb('bahaya', 'Tanggal PKL belum lengkap.');
-        } else {
-            [, $galat] = PklForm::proses([
-                'perusahaan_nama' => 'Contoh Perusahaan', 'perusahaan_alamat' => 'Alamat contoh perusahaan', 'perusahaan_kota' => 'Kota',
-                'tanggal_mulai' => $mulai, 'tanggal_selesai' => $selesai, 'hp' => '081234567890',
-                'tanggal_lahir' => ((int) date('Y') - 16) . '-01-01',
-            ], $p, ['pernyataan' => false]);
-            foreach (['tanggal_mulai', 'tanggal_selesai'] as $kunci) {
-                if (isset($galat[$kunci])) {
-                    $tmb($ringan, 'Tanggal di luar aturan saat ini: ' . $galat[$kunci]);
-                }
-            }
-        }
-
         // ---------- Anggota ----------
         $boleh = PklPengaturanModel::tingkatBoleh($p);
-        $maks  = (int) ($p['maks_anggota'] ?? 0);
+        $maks  = PklPengaturanModel::maksSiswa($p);
         if ($maks > 0 && count($anggota) > $maks) {
             $tmb('awas', 'Jumlah siswa (' . count($anggota) . ') melebihi batas ' . $maks . ' per perusahaan.');
         }
@@ -123,15 +106,9 @@ final class PklPeringatan
             if ($aktif && $a['siswa_aktif'] === null) {
                 $tmb('bahaya', 'Data ' . $nama . ' tidak terkunci padahal ajuan aktif — jalankan pemeriksaan data.');
             }
-            if ($a['peran'] === 'pengaju') {
-                if (trim((string) ($a['hp'] ?? '')) === '') {
-                    $tmb($ringan, 'No. HP pengaju (' . $nama . ') kosong — sekolah tak bisa menghubunginya.');
-                }
-                if ($a['tanggal_lahir'] === null) {
-                    $tmb('info', $nama . ' tak punya tanggal lahir kunci — ia tak bisa membuka sendiri ajuannya bila dikembalikan (Anda yang memperbaiki).');
-                } elseif ($a['tgl_lahir_master'] !== null && $a['tgl_lahir_master'] !== $a['tanggal_lahir']) {
-                    $tmb('awas', 'Tanggal lahir yang diisi ' . $nama . ' (' . IsianBantu::tanggalIndo($a['tanggal_lahir']) . ') TIDAK sama dengan Master Siswa (' . IsianBantu::tanggalIndo($a['tgl_lahir_master']) . '). Bisa salah ketik, atau ajuan diisi orang lain.');
-                }
+            // HP tercetak di tabel surat: cukup bila ada di ajuan ATAU di Master Siswa (no_hp).
+            if (trim((string) ($a['hp'] ?? '')) === '' && trim((string) ($a['hp_master'] ?? '')) === '') {
+                $tmb($ringan, 'No. HP ' . ($a['peran'] === 'pengaju' ? 'pengaju ' : '') . '(' . $nama . ') kosong — di surat akan tertulis "-" dan sekolah tak bisa menghubunginya.');
             }
         }
 

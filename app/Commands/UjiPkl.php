@@ -79,6 +79,7 @@ class UjiPkl extends BaseCommand
         $this->ujiSaran();
         $this->ujiStaf();
         $this->ujiSurat();
+        $this->ujiAturanBaru();
         $this->bersihkan();
 
         CLI::newLine();
@@ -131,8 +132,8 @@ class UjiPkl extends BaseCommand
     // 2. Aturan form (PklForm::proses)
     // =================================================================
 
-    /** Isian sah, lalu tiap uji mengubah SATU hal. */
-    private function postSah(int $y): array
+    /** Isian sah, lalu tiap uji mengubah SATU hal. (Tanggal PKL & tanggal lahir tidak ditanyakan lagi.) */
+    private function postSah(): array
     {
         return [
             'perusahaan_nama'    => 'pt maju jaya sentosa',
@@ -141,30 +142,25 @@ class UjiPkl extends BaseCommand
             'perusahaan_telepon' => '+62 21 8877 6655',
             'kontak_nama'        => 'bapak andi wijaya',
             'kontak_jabatan'     => 'Manajer HRD',
-            'tanggal_mulai'      => "$y-01-11",
-            'tanggal_selesai'    => "$y-04-11",
             'hp'                 => '0812-3456-7890',
-            'tanggal_lahir'      => ((int) date('Y') - 16) . '-05-17',
             'teman'              => ['5', '7', '7', 'abc', '-3', '0', ''],
+            'teman_hp'           => ['5' => '0812-3456-7891', '7' => '+62 812 3456 7892'],
             'pernyataan'         => '1',
         ];
     }
 
-    private function pagar(int $y): array
+    private function pagar(int $y = 0): array
     {
-        return [
-            'mulai_paling_awal' => "$y-01-04", 'selesai_paling_akhir' => "$y-06-30",
-            'durasi_min_hari' => 30, 'durasi_maks_hari' => 270, 'maks_anggota' => 5,
-        ];
+        return ['maks_anggota' => 5];
     }
 
     private function ujiForm(): void
     {
         $this->bagian('Aturan form (PklForm::proses)');
         $y = (int) date('Y') + 1;
-        $p = $this->pagar($y);
+        $p = $this->pagar();
 
-        [$d, $e] = PklForm::proses($this->postSah($y), $p);
+        [$d, $e] = PklForm::proses($this->postSah(), $p);
         $this->cek('isian sah → tanpa galat', $e === [], json_encode($e));
         $this->cek('nama huruf kecil → "PT Maju Jaya Sentosa"', $d['perusahaan_nama'] === 'PT Maju Jaya Sentosa', (string) $d['perusahaan_nama']);
         $this->cek('kota BESAR → "Bekasi"', $d['perusahaan_kota'] === 'Bekasi');
@@ -172,16 +168,22 @@ class UjiPkl extends BaseCommand
         $this->cek('kontak → "Bapak Andi Wijaya"', $d['kontak_nama'] === 'Bapak Andi Wijaya');
         $this->cek('HP dinormalkan', $d['hp'] === '081234567890');
         $this->cek('teman: duplikat & sampah dibuang → [5,7]', $d['teman'] === [5, 7], json_encode($d['teman']));
+        $this->cek('HP tiap teman dinormalkan (teman_hp[id])', $d['teman_hp'] === [5 => '081234567891', 7 => '081234567892'], json_encode($d['teman_hp']));
         $this->cek('perusahaan_norm terisi', $d['perusahaan_norm'] === 'maju jaya sentosa');
+        $this->cek('tanggal PKL TIDAK dibaca/ditanyakan (selalu null)', $d['tanggal_mulai'] === null && $d['tanggal_selesai'] === null);
+        $this->cek('tanggal lahir TIDAK ada lagi di hasil', ! array_key_exists('tanggal_lahir', $d));
 
-        [$d, $e] = PklForm::proses(array_merge($this->postSah($y), ['perusahaan_nama' => 'PT MAJU JAYA', 'teman' => '3,4']), $p);
+        [$d, $e] = PklForm::proses(array_merge($this->postSah(), ['tanggal_mulai' => 'ngawur', 'tanggal_selesai' => '1900-01-01', 'tanggal_lahir' => 'x']), $p);
+        $this->cek('kiriman tanggal ngawur diabaikan, tanpa galat', $e === [] && $d['tanggal_mulai'] === null, json_encode($e));
+
+        [$d, $e] = PklForm::proses(array_merge($this->postSah(), ['perusahaan_nama' => 'PT MAJU JAYA', 'teman' => '3,4', 'teman_hp' => ['3' => '081234567893', '4' => '081234567894']]), $p);
         $this->cek('nama BESAR dibiarkan', $d['perusahaan_nama'] === 'PT MAJU JAYA');
-        $this->cek('teman dari teks "3,4"', $d['teman'] === [3, 4]);
+        $this->cek('teman dari teks "3,4"', $d['teman'] === [3, 4] && $e === [], json_encode($e));
 
-        [$d, $e] = PklForm::proses(array_merge($this->postSah($y), ['perusahaan_nama' => 'cv. abadi sentosa tbk']), $p);
+        [$d, $e] = PklForm::proses(array_merge($this->postSah(), ['perusahaan_nama' => 'cv. abadi sentosa tbk']), $p);
         $this->cek('"cv. abadi sentosa tbk" → CV. Abadi Sentosa Tbk', $d['perusahaan_nama'] === 'CV. Abadi Sentosa Tbk', (string) $d['perusahaan_nama']);
 
-        [$d] = PklForm::proses(array_merge($this->postSah($y), ['perusahaan_telepon' => '', 'kontak_nama' => '', 'kontak_jabatan' => '']), $p);
+        [$d] = PklForm::proses(array_merge($this->postSah(), ['perusahaan_telepon' => '', 'kontak_nama' => '', 'kontak_jabatan' => '']), $p);
         $this->cek('kolom opsional kosong → NULL', $d['perusahaan_telepon'] === null && $d['kontak_nama'] === null && $d['kontak_jabatan'] === null);
 
         // [judul, perubahan, kunci galat yang diharapkan]
@@ -195,95 +197,98 @@ class UjiPkl extends BaseCommand
             ['telepon perusahaan terlalu pendek', ['perusahaan_telepon' => '123'], 'perusahaan_telepon'],
             ['telepon perusahaan 0000000000', ['perusahaan_telepon' => '0000000000'], 'perusahaan_telepon'],
             ['kontak mengandung angka', ['kontak_nama' => 'Andi123'], 'kontak_nama'],
-            ['tanggal mulai kosong', ['tanggal_mulai' => ''], 'tanggal_mulai'],
-            ['tanggal mulai 30 Februari', ['tanggal_mulai' => "$y-02-30"], 'tanggal_mulai'],
-            ['tanggal mulai sebelum pagar', ['tanggal_mulai' => "$y-01-03"], 'tanggal_mulai'],
-            ['tanggal mulai setelah pagar akhir', ['tanggal_mulai' => "$y-07-15", 'tanggal_selesai' => "$y-08-20"], 'tanggal_mulai'],
-            ['tanggal selesai melewati pagar', ['tanggal_selesai' => "$y-07-01"], 'tanggal_selesai'],
-            ['tanggal selesai sama dengan mulai', ['tanggal_selesai' => "$y-01-11"], 'tanggal_selesai'],
-            ['tanggal selesai sebelum mulai', ['tanggal_selesai' => "$y-01-05"], 'tanggal_selesai'],
-            ['tahun salah ketik (jauh)', ['tanggal_selesai' => ($y + 5) . '-04-11'], 'tanggal_selesai'],
-            ['lama PKL kurang dari minimal', ['tanggal_selesai' => "$y-01-20"], 'tanggal_selesai'],
             ['HP berisi huruf O (bukan angka 0)', ['hp' => '0812345678OO'], 'hp'],
             ['telepon perusahaan berisi huruf', ['perusahaan_telepon' => '0224-52 1234 99x'], 'perusahaan_telepon'],
             ['HP kosong', ['hp' => ''], 'hp'],
             ['HP telepon rumah', ['hp' => '02188776655'], 'hp'],
             ['HP terlalu pendek', ['hp' => '0812345'], 'hp'],
-            ['tanggal lahir kosong', ['tanggal_lahir' => ''], 'tanggal_lahir'],
-            ['tanggal lahir terlalu muda', ['tanggal_lahir' => ((int) date('Y') - 3) . '-05-17'], 'tanggal_lahir'],
-            ['tanggal lahir terlalu tua', ['tanggal_lahir' => ((int) date('Y') - 60) . '-05-17'], 'tanggal_lahir'],
+            ['HP teman kosong (wajib, tercetak di surat)', ['teman_hp' => ['5' => '', '7' => '081234567892']], 'hp_teman_5'],
+            ['HP teman tidak dikirim sama sekali', ['teman_hp' => []], 'hp_teman_5'],
+            ['HP teman berisi huruf', ['teman_hp' => ['5' => '08123456789O', '7' => '081234567892']], 'hp_teman_5'],
+            ['HP teman telepon rumah', ['teman_hp' => ['5' => '081234567891', '7' => '02188776655']], 'hp_teman_7'],
             ['pernyataan tidak dicentang', ['pernyataan' => ''], 'pernyataan'],
-            ['teman melebihi batas (5 teman, maks 4)', ['teman' => [1, 2, 3, 4, 5]], 'teman'],
+            ['teman melebihi batas (5 teman, maks 5 siswa)', ['teman' => [1, 2, 3, 4, 5], 'teman_hp' => ['1' => '081234567891', '2' => '081234567892', '3' => '081234567893', '4' => '081234567894', '5' => '081234567895']], 'teman'],
         ];
         foreach ($kasus as [$judul, $ubah, $kunci]) {
-            [, $e] = PklForm::proses(array_merge($this->postSah($y), $ubah), $p);
+            [, $e] = PklForm::proses(array_merge($this->postSah(), $ubah), $p);
             $this->cek('galat: ' . $judul, isset($e[$kunci]), json_encode($e));
         }
 
-        // Lama PKL lebih dari maksimal (pagar longgar agar tidak tertutup galat pagar).
-        $longgar = ['mulai_paling_awal' => "$y-01-01", 'selesai_paling_akhir' => "$y-12-31", 'durasi_min_hari' => 30, 'durasi_maks_hari' => 60, 'maks_anggota' => 5];
-        [, $e] = PklForm::proses($this->postSah($y), $longgar);
-        $this->cek('galat: lama PKL melebihi maksimal (91 > 60 hari)', isset($e['tanggal_selesai']) && str_contains($e['tanggal_selesai'], 'maksimal'), json_encode($e));
-
-        // Tepat di batas pagar harus lolos.
-        [, $e] = PklForm::proses(array_merge($this->postSah($y), ['tanggal_mulai' => "$y-01-04", 'tanggal_selesai' => "$y-06-30"]), $p);
-        $this->cek('tepat di batas pagar (4 Jan – 30 Jun) lolos', $e === [], json_encode($e));
-        [, $e] = PklForm::proses(array_merge($this->postSah($y), ['tanggal_mulai' => "$y-01-04", 'tanggal_selesai' => "$y-02-02"]), $p);
-        $this->cek('tepat 30 hari (minimal) lolos', $e === [], json_encode($e));
-        [, $e] = PklForm::proses(array_merge($this->postSah($y), ['tanggal_mulai' => "$y-01-04", 'tanggal_selesai' => "$y-02-01"]), $p);
-        $this->cek('29 hari (kurang 1 dari minimal) ditolak', isset($e['tanggal_selesai']));
+        // Batas keras 5 siswa: pengaturan yang lebih longgar tak bisa menembusnya.
+        [, $e] = PklForm::proses(array_merge($this->postSah(), ['teman' => [1, 2, 3, 4, 5], 'teman_hp' => ['1' => '081234567891', '2' => '081234567892', '3' => '081234567893', '4' => '081234567894', '5' => '081234567895']]), ['maks_anggota' => 20]);
+        $this->cek('maks_anggota=20 di pengaturan TETAP dipotong ke 5 siswa', isset($e['teman']), json_encode($e));
+        $this->cek('PklPengaturanModel::maksSiswa: 20→5, 3→3, kosong→5', PklPengaturanModel::maksSiswa(['maks_anggota' => 20]) === 5 && PklPengaturanModel::maksSiswa(['maks_anggota' => 3]) === 3 && PklPengaturanModel::maksSiswa([]) === 5);
 
         // Satu siswa saja per ajuan.
-        [, $e] = PklForm::proses($this->postSah($y), array_merge($p, ['maks_anggota' => 1]));
+        [, $e] = PklForm::proses($this->postSah(), ['maks_anggota' => 1]);
         $this->cek('maks_anggota=1: teman ditolak', isset($e['teman']) && str_contains($e['teman'], 'satu siswa'), json_encode($e));
-        [, $e] = PklForm::proses(array_merge($this->postSah($y), ['teman' => []]), array_merge($p, ['maks_anggota' => 1]));
+        [, $e] = PklForm::proses(array_merge($this->postSah(), ['teman' => [], 'teman_hp' => []]), ['maks_anggota' => 1]);
         $this->cek('maks_anggota=1: tanpa teman lolos', $e === [], json_encode($e));
+        [, $e] = PklForm::proses(array_merge($this->postSah(), ['teman' => [], 'teman_hp' => []]), $p);
+        $this->cek('PKL sendirian (tanpa teman) lolos', $e === [], json_encode($e));
 
         // Opsi staf.
-        [, $e] = PklForm::proses(array_merge($this->postSah($y), ['pernyataan' => '']), $p, ['pernyataan' => false]);
+        [, $e] = PklForm::proses(array_merge($this->postSah(), ['pernyataan' => '']), $p, ['pernyataan' => false]);
         $this->cek('opsi pernyataan=false: tanpa centang lolos', ! isset($e['pernyataan']));
-        [, $e] = PklForm::proses(array_merge($this->postSah($y), ['tanggal_mulai' => "$y-01-03"]), $p, ['batas' => false]);
-        $this->cek('opsi batas=false: di luar pagar lolos', ! isset($e['tanggal_mulai']), json_encode($e));
-        [, $e] = PklForm::proses(array_merge($this->postSah($y), ['tanggal_mulai' => "$y-02-30"]), $p, ['batas' => false]);
-        $this->cek('opsi batas=false: tanggal tak sah TETAP ditolak', isset($e['tanggal_mulai']));
+        [, $e] = PklForm::proses(array_merge($this->postSah(), ['teman_hp' => []]), $p, ['hp_teman' => false]);
+        $this->cek('opsi hp_teman=false: HP teman boleh kosong', $e === [], json_encode($e));
+        [$d, $e] = PklForm::proses(array_merge($this->postSah(), ['hp' => '']), $p, ['kontak' => false]);
+        $this->cek('opsi kontak=false: HP pengaju boleh kosong → NULL', ! isset($e['hp']) && $d['hp'] === null, json_encode($e));
+
+        // Tanggal hanya dibaca untuk impor riwayat lama (opsi tanggal).
+        [$d, $e] = PklForm::proses(array_merge($this->postSah(), ['tanggal_mulai' => "$y-01-11", 'tanggal_selesai' => "$y-04-11"]), $p, ['tanggal' => true]);
+        $this->cek('opsi tanggal=true: tanggal sah dibaca', $e === [] && $d['tanggal_mulai'] === "$y-01-11" && $d['tanggal_selesai'] === "$y-04-11", json_encode($e));
+        [, $e] = PklForm::proses(array_merge($this->postSah(), ['tanggal_mulai' => "$y-02-30"]), $p, ['tanggal' => true]);
+        $this->cek('opsi tanggal=true: 30 Februari ditolak', isset($e['tanggal_mulai']));
+        [, $e] = PklForm::proses(array_merge($this->postSah(), ['tanggal_mulai' => "$y-04-11", 'tanggal_selesai' => "$y-01-11"]), $p, ['tanggal' => true]);
+        $this->cek('opsi tanggal=true: selesai sebelum mulai ditolak', isset($e['tanggal_selesai']));
 
         // Form kosong total: semua kolom wajib terdeteksi, tidak ada exception.
         [, $e] = PklForm::proses([], $p);
-        $wajib = ['perusahaan_nama', 'perusahaan_alamat', 'perusahaan_kota', 'tanggal_mulai', 'tanggal_selesai', 'hp', 'tanggal_lahir', 'pernyataan'];
+        $wajib = ['perusahaan_nama', 'perusahaan_alamat', 'perusahaan_kota', 'hp', 'pernyataan'];
         $this->cek('form kosong: semua kolom wajib bergalat', array_diff($wajib, array_keys($e)) === [], json_encode(array_keys($e)));
+        $this->cek('form kosong: tanggal & tanggal lahir TIDAK lagi wajib', ! isset($e['tanggal_mulai']) && ! isset($e['tanggal_selesai']) && ! isset($e['tanggal_lahir']));
 
         // Panjang berlebih.
-        [, $e] = PklForm::proses(array_merge($this->postSah($y), ['perusahaan_nama' => str_repeat('Abc ', 50)]), $p);
+        [, $e] = PklForm::proses(array_merge($this->postSah(), ['perusahaan_nama' => str_repeat('Abc ', 50)]), $p);
         $this->cek('nama perusahaan > 150 huruf ditolak', isset($e['perusahaan_nama']));
     }
-
     // =================================================================
     // 3. Pengaturan
     // =================================================================
 
     private function ujiPengaturan(): void
     {
-        $this->bagian('Pengaturan PKL (buka/tutup & tingkat)');
+        $this->bagian('Pengaturan PKL (buka/tutup, tingkat, maks siswa, batas keputusan)');
         $depan = date('Y-m-d H:i:s', time() + 3600);
         $lalu  = date('Y-m-d H:i:s', time() - 3600);
-        $siap  = ['form_buka' => 1, 'form_tutup' => null, 'tingkat' => 'XI', 'mulai_paling_awal' => '2027-01-04', 'selesai_paling_akhir' => '2027-06-30'];
+        $siap  = ['form_buka' => 1, 'form_tutup' => null, 'tingkat' => 'XI'];
 
         $this->cek('default (form_buka=0) → belum_dibuka', PklPengaturanModel::alasanTutup(['form_buka' => 0] + $siap) === 'belum_dibuka');
         $this->cek('siap & terbuka → null', PklPengaturanModel::alasanTutup($siap) === null);
+        $this->cek('terbuka TANPA pagar tanggal (tak dipakai lagi)', PklPengaturanModel::alasanTutup($siap + ['mulai_paling_awal' => null, 'selesai_paling_akhir' => null]) === null);
         $this->cek('formTerbuka() true saat siap', PklPengaturanModel::formTerbuka($siap));
         $this->cek('batas waktu lewat → sudah_ditutup', PklPengaturanModel::alasanTutup(['form_tutup' => $lalu] + $siap) === 'sudah_ditutup');
         $this->cek('batas waktu masih depan → terbuka', PklPengaturanModel::alasanTutup(['form_tutup' => $depan] + $siap) === null);
         $this->cek('tanpa tingkat → belum_siap', PklPengaturanModel::alasanTutup(['tingkat' => ''] + $siap) === 'belum_siap');
         $this->cek('tingkat sampah → belum_siap', PklPengaturanModel::alasanTutup(['tingkat' => 'Z,Q'] + $siap) === 'belum_siap');
-        $this->cek('tanpa tanggal awal → belum_siap', PklPengaturanModel::alasanTutup(['mulai_paling_awal' => null] + $siap) === 'belum_siap');
-        $this->cek('tanpa tanggal akhir → belum_siap', PklPengaturanModel::alasanTutup(['selesai_paling_akhir' => ''] + $siap) === 'belum_siap');
-        $this->cek('awal > akhir → belum_siap', PklPengaturanModel::alasanTutup(['mulai_paling_awal' => '2027-07-01'] + $siap) === 'belum_siap');
         $this->cek('tingkatBoleh("XII, XI ,Z") → [XI, XII]', PklPengaturanModel::tingkatBoleh(['tingkat' => 'XII, XI ,Z']) === ['XI', 'XII']);
+
+        // Batas keputusan Waka Hubin (bawaan 5 hari).
+        $this->cek('batasHari: bawaan 5, kosong → 5, 0 → 5, 99 → 30', PklPengaturanModel::batasHari([]) === 5 && PklPengaturanModel::batasHari(['batas_keputusan_hari' => 0]) === 5 && PklPengaturanModel::batasHari(['batas_keputusan_hari' => 99]) === 30 && PklPengaturanModel::batasHari(['batas_keputusan_hari' => 3]) === 3);
+        $this->cek('batasKeputusan: dikirim 7 Okt 10:00 + 5 hari → 12 Okt 23:59:59', PklPengajuanModel::batasKeputusan('2026-10-07 10:00:00', 5) === '2026-10-12 23:59:59');
+        $this->cek('batasKeputusan: jam kirim kosong → null', PklPengajuanModel::batasKeputusan(null, 5) === null && PklPengajuanModel::batasKeputusan('', 5) === null);
+        $this->cek('sisaHari: dikirim hari ini → 5; 5 hari lalu → 0; 6 hari lalu → -1',
+            PklPengajuanModel::sisaHari(date('Y-m-d H:i:s'), 5) === 5
+            && PklPengajuanModel::sisaHari(date('Y-m-d H:i:s', strtotime('-5 days')), 5) === 0
+            && PklPengajuanModel::sisaHari(date('Y-m-d H:i:s', strtotime('-6 days')), 5) === -1);
 
         $baris = (new PklPengaturanModel())->ambil();
         $this->cek('baris pengaturan ada, form default TUTUP di instalasi baru', isset($baris['id']) && (int) $baris['id'] === 1);
+        $this->cek('pengaturan baru: kolom surat sekolah ada (kepsek, kontak NB, pola nama berkas, batas hari)',
+            array_key_exists('kepsek_nama', $baris) && array_key_exists('kontak_surat_nama', $baris) && array_key_exists('format_nama_berkas', $baris) && array_key_exists('batas_keputusan_hari', $baris));
+        $this->cek('maks_anggota di database tak lebih dari 5', (int) $baris['maks_anggota'] <= 5);
     }
-
     // =================================================================
     // 4. Database: anti-ganda, transaksi, status
     // =================================================================
@@ -291,19 +296,16 @@ class UjiPkl extends BaseCommand
     /** @return array{0: array<string,mixed>, 1: array<string,mixed>} [data form, konteks] */
     private function dataAjuan(string $nama = 'PT Uji Satu', string $bulanHariMulai = '01-11'): array
     {
-        $y = (int) date('Y') + 1;
         [$d, $e] = PklForm::proses([
             'perusahaan_nama' => $nama, 'perusahaan_alamat' => 'Jl. Uji Coba No. 1, Bekasi', 'perusahaan_kota' => 'Bekasi',
-            'tanggal_mulai' => "$y-$bulanHariMulai", 'tanggal_selesai' => "$y-04-11", 'hp' => '081234567890',
-            'tanggal_lahir' => ((int) date('Y') - 16) . '-05-17', 'pernyataan' => '1',
-        ], $this->pagar($y));
+            'hp' => '081234567890', 'pernyataan' => '1',
+        ], $this->pagar());
         if ($e !== []) {
             throw new \RuntimeException('dataAjuan tidak sah: ' . json_encode($e));
         }
 
         return [$d, ['oleh' => 'Siswa: Uji', 'ip' => '10.9.9.9', 'sumber' => 'siswa', 'tahun_ajaran' => '2026/2027']];
     }
-
     private function buatSiswa(int $n, int $kelasId, string $status = 'aktif'): int
     {
         $now = date('Y-m-d H:i:s');
@@ -454,7 +456,8 @@ class UjiPkl extends BaseCommand
         $row = $this->db->table('pkl_pengajuan')->where('id', $a1)->get()->getRowArray();
         $this->cek('kirimUlang: status menunggu, kirim_ke 2', $row['status'] === 'menunggu' && (int) $row['kirim_ke'] === 2);
         $this->cek('kirimUlang: catatan staf & penetap dikosongkan', $row['catatan_staf'] === null && $row['diputuskan_at'] === null && $row['diputuskan_oleh'] === null);
-        $this->cek('kirimUlang: data perusahaan & tanggal diganti', $row['perusahaan_nama'] === 'PT Uji Dua Baru' && $row['perusahaan_norm'] === 'uji dua baru' && $row['tanggal_mulai'] === ((int) date('Y') + 1) . '-02-01');
+        $this->cek('kirimUlang: data perusahaan diganti', $row['perusahaan_nama'] === 'PT Uji Dua Baru' && $row['perusahaan_norm'] === 'uji dua baru');
+        $this->cek('kirimUlang: jam kirim (dasar batas keputusan) diperbarui & catatan ACC kosong', ! empty($row['diajukan_at']) && $row['acc_at'] === null && $row['acc_nama'] === null && $row['acc_kode'] === null);
         $this->cek('kirimUlang: s3 dikeluarkan, s4 masuk & terkunci', $this->kunci($a1) === [$s[1] => $s[1], $s[2] => $s[2], $s[4] => $s[4]], json_encode($this->kunci($a1)));
         $this->cek('kirimUlang: s3 BEBAS lagi (boleh mengajukan sendiri)', $model->aktifMilik($s[3]) === null);
         $this->cek('kirimUlang: pengaju tetap satu orang', $this->db->table('pkl_anggota')->where('pengajuan_id', $a1)->where('peran', 'pengaju')->countAllResults() === 1);
@@ -675,7 +678,7 @@ class UjiPkl extends BaseCommand
         $sebelum = $this->db->table('pkl_pengajuan')->where('id', $a5)->get()->getRowArray();
         $r = $ajuan->ubahIsi($a5, $baru, [$pj($s[26]), $tm($s[28])], $admin + ['aksi' => 'ubah', 'catatan' => 'uji']);
         $row = $this->db->table('pkl_pengajuan')->where('id', $a5)->get()->getRowArray();
-        $this->cek('ubahIsi: data & tanggal berubah, STATUS tetap menunggu', $r['ok'] === true && $row['perusahaan_nama'] === 'PT ZZUJI Ubah Baru' && $row['status'] === 'menunggu' && $row['tanggal_mulai'] === $tgl(20) && (int) $row['kirim_ke'] === (int) $sebelum['kirim_ke']);
+        $this->cek('ubahIsi: data berubah, tanggal lama TIDAK disentuh, STATUS tetap menunggu', $r['ok'] === true && $row['perusahaan_nama'] === 'PT ZZUJI Ubah Baru' && $row['status'] === 'menunggu' && $row['tanggal_mulai'] === $sebelum['tanggal_mulai'] && (int) $row['kirim_ke'] === (int) $sebelum['kirim_ke']);
         $this->cek('ubahIsi: teman diganti (27 keluar, 28 masuk & terkunci), 27 bebas', $this->kunci($a5) === [$s[26] => $s[26], $s[28] => $s[28]] && $model->aktifMilik($s[27]) === null);
         $this->cek('ubahIsi: HP pengaju diperbarui, riwayat "ubah" bercatatan', $this->db->table('pkl_anggota')->where('pengajuan_id', $a5)->where('peran', 'pengaju')->get()->getRowArray()['hp'] === '085211112222' && $this->db->table('pkl_riwayat')->where('pengajuan_id', $a5)->where('aksi', 'ubah')->get()->getRowArray()['catatan'] === 'uji');
         $r = $ajuan->ubahIsi($a5, $baru, [$pj($s[28])], $admin);
@@ -759,13 +762,13 @@ class UjiPkl extends BaseCommand
         $ada = static fn (array $daftar, string $tingkat, string $potong): bool => (bool) array_filter($daftar, static fn ($x) => $x['tingkat'] === $tingkat && str_contains($x['teks'], $potong));
 
         $dw = $w($model->detail($a6), $model->anggotaDetail($a6), $pg);
-        $this->cek('peringatan: tanggal di luar pagar sekolah → awas', $ada($dw, 'awas', 'Tanggal di luar aturan'), json_encode($dw));
+        $this->cek('peringatan: tanggal PKL tak lagi diperiksa (tak ada peringatan tanggal)', ! $ada($dw, 'awas', 'Tanggal') && ! $ada($dw, 'bahaya', 'Tanggal') && ! $ada($dw, 'info', 'Tanggal'), json_encode($dw));
         $this->cek('peringatan: telepon perusahaan kosong → info', $ada($dw, 'info', 'Telepon perusahaan kosong'));
 
         $this->db->table('pkl_anggota')->where('pengajuan_id', $a6)->update(['hp' => null, 'tanggal_lahir' => '2011-01-01']);
         $dw = $w($model->detail($a6), $model->anggotaDetail($a6), $pg);
         $this->cek('peringatan: HP pengaju kosong → awas', $ada($dw, 'awas', 'No. HP pengaju'));
-        $this->cek('peringatan: tanggal lahir TIDAK sama dengan Master Siswa → awas', $ada($dw, 'awas', 'TIDAK sama dengan Master Siswa'));
+        $this->cek('peringatan: tanggal lahir tak lagi dipakai (tak ada peringatan tanggal lahir)', ! $ada($dw, 'awas', 'tanggal lahir') && ! $ada($dw, 'awas', 'Master Siswa (') && ! $ada($dw, 'info', 'tanggal lahir'));
 
         $a9 = (int) $ajuan->kirimBaru($this->dataLangsung('PT ZZUJI Alfa Pind', $tgl(10), $tgl(100)), [$pj($s[29])], $ctx)['id'];
         $dw = $w($model->detail($a9), $model->anggotaDetail($a9), $pg);
@@ -917,13 +920,13 @@ class UjiPkl extends BaseCommand
         $xml = $b['ok'] ? $this->xmlDocx($b['biner']) : '';
         $this->cek('bangun 2 surat: berhasil, berkas .docx', $b['ok'] && ($b['jumlah'] ?? 0) === 2 && str_ends_with((string) $b['nama'], '.docx') && str_starts_with((string) $b['biner'], 'PK'), json_encode($b['pesan'] ?? $b['nama'] ?? ''));
         $this->cek('isi dokumen = XML Word sah', $this->xmlSah($xml));
-        $this->cek('isi memuat nomor, perusahaan, siswa, penanda tangan', str_contains($xml, htmlspecialchars($r1['surat']['nomor'])) && str_contains($xml, 'PT ZZUJI Surat A Ganti') && str_contains($xml, 'ZZUJI PKL 41') && str_contains($xml, 'Budi Santoso, S.Pd.') && str_contains($xml, 'NIP. 198001012005011001'));
-        $this->cek('dua surat dipisah SATU pindah halaman', substr_count($xml, '<w:br w:type="page"/>') === 1);
-        $this->cek('tabel siswa memuat kolom judul & kompetensi keahlian', str_contains($xml, 'Kompetensi Keahlian') && str_contains($xml, 'NISN'));
+        $this->cek('isi memuat nomor, perusahaan, siswa, nama Waka Hubin & Kepsek', str_contains($xml, htmlspecialchars($r1['surat']['nomor'])) && str_contains($xml, 'PT ZZUJI Surat A Ganti') && str_contains($xml, 'ZZUJI PKL 41') && str_contains($xml, 'Budi Santoso, S.Pd.') && str_contains($xml, 'Napis Kuturupi'));
+        $this->cek('dua surat dipisah SATU pindah halaman (pageBreakBefore, tanpa baris kosong pemisah)', substr_count($xml, '<w:pageBreakBefore/>') === 1 && ! str_contains($xml, '<w:br w:type="page"/>'));
+        $this->cek('tabel siswa format sekolah: judul KONSENTRASI KEAHLIAN & NOMOR HANDPHONE', str_contains($xml, 'KONSENTRASI') && str_contains($xml, 'HANDPHONE') && ! str_contains($xml, '${'));
         $st = $svc->statusBanyak([$a1, $a2]);
         $this->cek('setelah diunduh: tak lagi perlu cetak ulang, cetak_ke naik, riwayat tercatat', $st[$a1]['perlu_ulang'] === false && (int) $svc->surat($a1)['cetak_ke'] === 1 && $this->db->table('pkl_riwayat')->where('pengajuan_id', $a1)->where('aksi', 'cetak')->countAllResults() === 1);
         $b2 = $svc->bangun([$a1], $admin);
-        $this->cek('unduh lagi: nomor tetap, cetak_ke 2', $b2['ok'] && (int) $svc->surat($a1)['cetak_ke'] === 2 && $svc->surat($a1)['nomor'] === $r1['surat']['nomor'] && str_contains((string) $b2['nama'], self::amanNomor($r1['surat']['nomor'])), (string) ($b2['nama'] ?? ''));
+        $this->cek('unduh lagi: nomor tetap, cetak_ke 2, nama berkas "{urut} Surat Izin PKL BINUS - …"', $b2['ok'] && (int) $svc->surat($a1)['cetak_ke'] === 2 && $svc->surat($a1)['nomor'] === $r1['surat']['nomor'] && str_starts_with((string) $b2['nama'], (int) $r1['surat']['urut'] . ' Surat Izin PKL BINUS - '), (string) ($b2['nama'] ?? ''));
         $tak = $svc->bangun([$a3], $admin);
         $this->cek('bangun untuk ajuan belum disetujui ditolak', $tak['ok'] === false);
 
@@ -950,7 +953,7 @@ class UjiPkl extends BaseCommand
         $this->cek('template: hasil XML sah', $this->xmlSah($xt));
         $this->cek('template: penanda terpecah terisi, nilai ber-& di-escape', str_contains($xt, 'Nomor A/1 untuk PT &amp; Co') && str_contains($xt, 'Nomor B/2 untuk CV Lain'));
         $this->cek('template: baris tabel digandakan per siswa (2 + 1 = 3 baris)', substr_count($xt, '<w:tr>') === 3 && str_contains($xt, 'Siswa Satu') && str_contains($xt, 'Siswa Dua') && str_contains($xt, 'Siswa Tiga') && ! str_contains($xt, '${no}'));
-        $this->cek('template: penanda tak dikenal dibiarkan terlihat; baris baru jadi <w:br/>; surat dipisah halaman', str_contains($xt, '${tidak_ada}') && str_contains($xt, '<w:br/>') && substr_count($xt, '<w:br w:type="page"/>') === 1);
+        $this->cek('template: penanda tak dikenal dibiarkan terlihat; baris baru jadi <w:br/>; surat dipisah halaman', str_contains($xt, '${tidak_ada}') && str_contains($xt, '<w:br/>') && substr_count($xt, '<w:pageBreakBefore/>') === 1);
         $this->cek('template: berkas pendukung (styles, rels) ikut tersalin', (function () use ($isi) {
             $f = tempnam(sys_get_temp_dir(), 'ujz');
             file_put_contents($f, $isi);
@@ -972,15 +975,15 @@ class UjiPkl extends BaseCommand
         @unlink($tujuan);
         $setPeng(['template_surat' => null]);
         $bx = $svc->bangun([$a2], $admin);
-        $this->cek('template dihapus → kembali ke surat bawaan', $bx['ok'] && str_contains($this->xmlDocx($bx['biner']), 'Kompetensi Keahlian'));
+        $this->cek('template dihapus → kembali ke format surat sekolah bawaan', $bx['ok'] && str_contains($this->xmlDocx($bx['biner']), 'KONSENTRASI KEAHLIAN'));
         $setPeng(['template_surat' => 'tidak_ada.docx']);
         $by = $svc->bangun([$a2], $admin);
-        $this->cek('berkas template hilang dari disk → otomatis surat bawaan (tak error)', $by['ok'] && str_contains($this->xmlDocx($by['biner']), 'Kompetensi Keahlian'));
+        $this->cek('berkas template hilang dari disk → otomatis format sekolah bawaan (tak error)', $by['ok'] && str_contains($this->xmlDocx($by['biner']), 'KONSENTRASI KEAHLIAN'));
         $setPeng(['template_surat' => null]);
         @unlink($tmpl);
         $contoh = $svc->contohTemplate();
         $xc = $this->xmlDocx($contoh);
-        $this->cek('contoh template memuat semua penanda & sah', $this->xmlSah($xc) && str_contains($xc, '${nomor}') && str_contains($xc, '${siswa_nama}') && str_contains($xc, '${waka_nama}'));
+        $this->cek('contoh template (format sekolah) memuat penanda utama & sah', $this->xmlSah($xc) && str_contains($xc, '${nomor}') && str_contains($xc, '${siswa_nama}') && str_contains($xc, '${siswa_hp}') && str_contains($xc, '${hubin_nama}') && str_contains($xc, '${acc_footer}') && str_contains($xc, '${ttd_hubin}'));
 
         // ---------- impor riwayat lama ----------
         $x  = new \PhpOffice\PhpSpreadsheet\Spreadsheet();
@@ -1035,6 +1038,204 @@ class UjiPkl extends BaseCommand
         $this->cek('berkas rusak/kosong → pesan ramah berbahasa Indonesia, bukan galat sistem', $galatBaca !== '' && ! str_contains($galatBaca, 'PhpOffice') && ! str_contains($galatBaca, '.php'), $galatBaca);
         $this->cek('contoh berkas impor sah (zip xlsx)', str_starts_with(\App\Libraries\PklImpor::contoh(), 'PK'));
         $this->cek('periksaKonsistensi(): data uji tahap 4 konsisten', array_filter($ajuan->periksaKonsistensi(), fn ($z) => in_array((int) $z['siswa_id'], $s, true)) === []);
+    }
+
+    // =================================================================
+    // 8. Aturan baru: ACC khusus Waka Hubin + catatan ACC, surat format sekolah, hak akses API
+    // =================================================================
+
+    private function ujiAturanBaru(): void
+    {
+        $this->bagian('Aturan baru: ACC khusus Hubin, catatan ACC, surat format sekolah, API per peran');
+        $H = \App\Libraries\HakAkses::class;
+
+        // ---------- hak akses ----------
+        $this->cek('bolehAcc: Admin & Hubin YA; Operator TIDAK; peran tak dikenal/kosong TIDAK', $H::bolehAcc('admin') && $H::bolehAcc('hubin') && ! $H::bolehAcc('operator') && ! $H::bolehAcc('xyz') && ! $H::bolehAcc(null) && ! $H::bolehAcc(''));
+        $this->cek('tanda tangan Hubin (admin/pkl/ttd): Hubin & Admin boleh, Operator DITOLAK (juga gambar & tipuan huruf)', $H::boleh('hubin', 'admin/pkl/ttd') && $H::boleh('admin', 'admin/pkl/ttd') && ! $H::boleh('operator', 'admin/pkl/ttd') && ! $H::boleh('operator', 'admin/pkl/ttd/gambar') && ! $H::boleh('operator', 'ADMIN/pkl/TTD') && ! $H::boleh('operator', 'admin//pkl/ttd/'));
+        $this->cek('Operator tetap boleh PKL lain (daftar, detail, pengaturan, impor, surat)', $H::boleh('operator', 'admin/pkl') && $H::boleh('operator', 'admin/pkl/12') && $H::boleh('operator', 'admin/pkl/pengaturan') && $H::boleh('operator', 'admin/pkl/impor') && $H::boleh('operator', 'admin/pkl/12/surat'));
+        $this->cek('API: Admin semua alamat; Operator & Hubin HANYA "pkl…" (alamat lain & pkl-lain ditolak)',
+            $H::bolehApiAlamat('admin', 'admin/master/siswa') && $H::bolehApiAlamat('admin', 'pkl/ajuan')
+            && $H::bolehApiAlamat('operator', 'pkl') && $H::bolehApiAlamat('operator', 'pkl/ajuan/3') && $H::bolehApiAlamat('hubin', 'pkl/ajuan/3/acc')
+            && ! $H::bolehApiAlamat('operator', 'admin/master/siswa') && ! $H::bolehApiAlamat('hubin', 'admin/dashboard') && ! $H::bolehApiAlamat('operator', 'pkl-lain')
+            && ! $H::bolehApiAlamat('xyz', 'pkl') && ! $H::bolehApiAlamat(null, 'pkl') && ! $H::bolehApiAlamat('hubin', 'PKL/../admin/dashboard'));
+        $this->cek('bolehApi: Operator & Hubin kini true (dibatasi api_akses), peran tak dikenal false', $H::bolehApi('operator') && $H::bolehApi('hubin') && $H::bolehApi('admin') && ! $H::bolehApi('xyz'));
+
+        // ---------- nomor surat & nama berkas (pembantu murni) ----------
+        $this->cek('nomor bawaan = format surat sekolah: 295/SMK-BN/PKL/IX/2026', \App\Libraries\PklNomorSurat::format(\App\Libraries\PklNomorSurat::BAWAAN, 295, new \DateTimeImmutable('2026-09-03')) === '295/SMK-BN/PKL/IX/2026' && \App\Libraries\PklNomorSurat::periksa(\App\Libraries\PklNomorSurat::BAWAAN) === null);
+        $NB = \App\Libraries\PklNamaBerkas::class;
+        $pola = $NB::BAWAAN;
+        $this->cek('nama berkas: "295 Surat Izin PKL BINUS - Ilyasha ALL XII TKJ 5" (lebih dari 1 siswa)', $NB::format($pola, ['urut' => 295, 'nama_pengaju' => 'Ilyasha Hawari', 'kelas' => 'XII TKJ 5', 'jumlah' => 5]) === '295 Surat Izin PKL BINUS - Ilyasha ALL XII TKJ 5');
+        $this->cek('nama berkas: siswa sendirian → tanpa "ALL", spasi rapi', $NB::format($pola, ['urut' => 296, 'nama_pengaju' => 'Dewi Lestari', 'kelas' => 'XI TKJ 1', 'jumlah' => 1]) === '296 Surat Izin PKL BINUS - Dewi XI TKJ 1');
+        $this->cek('nama berkas: nama depan singkatan ("M Fahri Alfarizi") memakai dua kata', $NB::namaDepan('M Fahri Alfarizi') === 'M Fahri' && $NB::namaDepan('Ilyasha Hawari') === 'Ilyasha' && $NB::namaDepan('') === '');
+        $this->cek('nama berkas: karakter terlarang dibuang, pola ngawur → pola bawaan', ! preg_match('#[\\\\/:*?"<>|]#', $NB::format('{urut} PKL {perusahaan}', ['urut' => 1, 'perusahaan' => 'PT A/B: "C"'])) && $NB::format('{ngawur}', ['urut' => 7, 'nama_pengaju' => 'Ani Budi', 'kelas' => 'X', 'jumlah' => 2]) === '7 Surat Izin PKL BINUS - Ani ALL X');
+        $this->cek('nama berkas: periksa pola (token tak dikenal, karakter, kosong, panjang)', $NB::periksa($pola) === null && $NB::periksa('{urut} {ngawur}') !== null && $NB::periksa('{urut}<x>') !== null && $NB::periksa('') !== null && $NB::periksa(str_repeat('a', 151)) !== null);
+        $this->cek('nama berkas: contoh()', str_ends_with($NB::contoh($pola), '.docx') && str_starts_with($NB::contoh($pola), '295 Surat Izin PKL BINUS - Ilyasha ALL'));
+
+        $PS = \App\Libraries\PklSurat::class;
+        $this->cek('tanggalSurat: "03 September 2026" (hari 2 angka); waktuIndo: "Rabu, 07 Oktober 2026 pukul 09.41 WIB"', $PS::tanggalSurat('2026-09-03') === '03 September 2026' && $PS::waktuIndo('2026-10-07 09:41:00') === 'Rabu, 07 Oktober 2026 pukul 09.41 WIB');
+        $this->cek('bagiDuaBaris: jabatan panjang dibagi dua; pendek tetap satu', $PS::bagiDuaBaris('Wakil Kepala Sekolah Bidang Hubungan Industri', 30) === ['Wakil Kepala Sekolah Bidang', 'Hubungan Industri'] && $PS::bagiDuaBaris('Waka Hubin', 30) === ['Waka Hubin', '']);
+        $acc = static fn (string $peran, string $nama): array => ['acc_peran' => $peran, 'acc_nama' => $nama, 'acc_at' => '2026-10-07 09:41:00', 'acc_kode' => 'PKL-00001-ABC123'];
+        $ekstra = ['oleh' => 'Ani Operator', 'peran' => 'operator', 'sekarang' => '2026-10-07 10:00:00'];
+        $fh = $PS::catatanAcc($acc('hubin', 'Budi Santoso, S.Pd.'), ['waka_hubin_jabatan' => 'Waka Hubin'], $ekstra);
+        $fa = $PS::catatanAcc($acc('admin', 'Admin Sistem'), [], $ekstra);
+        $fi = $PS::catatanAcc($acc('impor', 'Ani Operator'), [], $ekstra);
+        $this->cek('catatan ACC Hubin: nama, jabatan, waktu, kode, pencetak', str_contains($fh, 'Budi Santoso, S.Pd. (Waka Hubin)') && str_contains($fh, 'Rabu, 07 Oktober 2026 pukul 09.41 WIB') && str_contains($fh, 'PKL-00001-ABC123') && str_contains($fh, 'Dicetak oleh Ani Operator (Operator Sekolah)'), $fh);
+        $this->cek('catatan ACC Admin: jujur "mewakili Waka Hubin"; impor: "bukan persetujuan elektronik Waka Hubin"', str_contains($fa, 'mewakili Waka Hubin') && str_contains($fi, 'bukan persetujuan elektronik Waka Hubin'), $fa . ' || ' . $fi);
+
+        // ---------- data ----------
+        $k = $this->db->table('kelas')->select('id, nama_kelas')->where('tingkat', 'XI')->where('deleted_at', null)->orderBy('id')->get()->getRowArray();
+        if ($k === null) {
+            $this->cek('bahan uji aturan baru: kelas XI tersedia', false);
+
+            return;
+        }
+        $kelasXI = (int) $k['id'];
+        $s = [];
+        foreach (range(60, 70) as $n) {
+            $s[$n] = $this->buatSiswa($n, $kelasXI);
+        }
+        $this->pengaturanAsli ??= (function () {
+            $r = (new PklPengaturanModel())->ambil();
+            unset($r['id']);
+
+            return $r;
+        })();
+        $setPeng = fn (array $data) => $this->db->table('pkl_pengaturan')->where('id', 1)->update($data);
+
+        $ajuan  = new PklAjuan();
+        $svc    = new \App\Libraries\PklSurat();
+        $model  = new PklPengajuanModel();
+        $hubin  = ['oleh' => 'Budi Hubin', 'admin_id' => 7, 'peran' => 'hubin', 'ip' => '10.9.9.9'];
+        $adm    = ['oleh' => 'Admin Uji', 'admin_id' => 8, 'peran' => 'admin', 'ip' => '10.9.9.9'];
+        $oper   = ['oleh' => 'Operator Uji', 'admin_id' => 9, 'peran' => 'operator', 'ip' => '10.9.9.9'];
+        $ctx    = ['oleh' => 'Siswa: Uji', 'ip' => '10.9.9.9', 'sumber' => 'siswa', 'tahun_ajaran' => '2026/2027'];
+        $pj     = static fn (int $id, string $hp = '081200000001'): array => ['siswa_id' => $id, 'kelas_id' => $kelasXI, 'peran' => 'pengaju', 'hp' => $hp];
+        $tm     = static fn (int $id, ?string $hp): array => ['siswa_id' => $id, 'kelas_id' => $kelasXI, 'peran' => 'teman', 'hp' => $hp];
+        $dat    = fn (string $nama, string $hp = '081200000001'): array => $this->dataLangsung($nama, '', '', ['tanggal_mulai' => null, 'tanggal_selesai' => null, 'hp' => $hp]);
+        $kodeRe = '/^PKL-\d{5}-[A-F0-9]{6}$/';
+
+        // ---------- catatan ACC di database ----------
+        $r = $ajuan->kirimBaru($dat('PT ZZUJI Acc Hubin'), [$pj($s[60]), $tm($s[61], '081200000002'), $tm($s[62], null)], $hubin + ['sumber' => 'staf', 'aksi' => 'isi_atas_nama', 'status_awal' => 'disetujui']);
+        $ah  = (int) ($r['id'] ?? 0);
+        $row = $this->db->table('pkl_pengajuan')->where('id', $ah)->get()->getRowArray() ?? [];
+        $this->cek('ACC langsung oleh Hubin: acc_peran=hubin, nama, jam, IP, admin_id, kode', ($row['acc_peran'] ?? '') === 'hubin' && ($row['acc_nama'] ?? '') === 'Budi Hubin' && ! empty($row['acc_at']) && ($row['acc_ip'] ?? '') === '10.9.9.9' && (int) ($row['acc_admin_id'] ?? 0) === 7 && preg_match($kodeRe, (string) ($row['acc_kode'] ?? '')) === 1, json_encode($row));
+        $this->cek('kode verifikasi dapat dihitung ulang & bergantung pada penyetuju', ($row['acc_kode'] ?? '') === PklAjuan::kodeVerifikasi($ah, (string) $row['acc_at'], 7) && PklAjuan::kodeVerifikasi($ah, (string) $row['acc_at'], 8) !== $row['acc_kode'] && PklAjuan::kodeVerifikasi($ah, (string) $row['acc_at'], 7) === PklAjuan::kodeVerifikasi($ah, (string) $row['acc_at'], 7));
+        $this->cek('ajuan baru: jam kirim (diajukan_at) tercatat', ! empty($row['diajukan_at']));
+        $hp = [];
+        foreach ($this->db->table('pkl_anggota')->where('pengajuan_id', $ah)->get()->getResultArray() as $a) {
+            $hp[(int) $a['siswa_id']] = $a['hp'];
+        }
+        $this->cek('HP TIAP anggota tersimpan (pengaju & teman; teman tanpa HP = NULL)', ($hp[$s[60]] ?? null) === '081200000001' && ($hp[$s[61]] ?? null) === '081200000002' && array_key_exists($s[62], $hp) && $hp[$s[62]] === null, json_encode($hp));
+
+        $ajuan->ubahStatus($ah, 'perbaikan', $hubin, 'uji kembalikan');
+        $row = $this->db->table('pkl_pengajuan')->where('id', $ah)->get()->getRowArray();
+        $this->cek('dikembalikan: catatan ACC DIKOSONGKAN semua', $row['acc_peran'] === null && $row['acc_nama'] === null && $row['acc_at'] === null && $row['acc_kode'] === null && $row['acc_admin_id'] === null);
+        $ajuan->ubahStatus($ah, 'disetujui', $adm, 'Mewakili Waka Hubin');
+        $row = $this->db->table('pkl_pengajuan')->where('id', $ah)->get()->getRowArray();
+        $this->cek('ACC ulang oleh ADMIN: acc_peran=admin, nama Admin, kode baru, riwayat mencatat peran admin', $row['acc_peran'] === 'admin' && $row['acc_nama'] === 'Admin Uji' && preg_match($kodeRe, (string) $row['acc_kode']) === 1 && $this->db->table('pkl_riwayat')->where('pengajuan_id', $ah)->where('aksi', 'acc')->where('peran', 'admin')->countAllResults() === 1);
+        $ajuan->ubahStatus($ah, 'ditolak', $hubin, 'uji tolak');
+        $this->cek('ditolak: catatan ACC kosong', $this->db->table('pkl_pengajuan')->where('id', $ah)->get()->getRowArray()['acc_peran'] === null);
+
+        $ai = (int) $ajuan->kirimBaru($dat('PT ZZUJI Impor ACC'), [$pj($s[63])], $oper + ['sumber' => 'impor', 'aksi' => 'impor', 'status_awal' => 'disetujui'])['id'];
+        $this->cek('impor: acc_peran=impor (BUKAN persetujuan Hubin), nama pengimpor tercatat', $this->db->table('pkl_pengajuan')->where('id', $ai)->get()->getRowArray()['acc_peran'] === 'impor' && $this->db->table('pkl_pengajuan')->where('id', $ai)->get()->getRowArray()['acc_nama'] === 'Operator Uji');
+
+        // batas keputusan & terlambat
+        $am = (int) $ajuan->kirimBaru($dat('PT ZZUJI Menunggu SLA'), [$pj($s[64])], $ctx)['id'];
+        $this->cek('aktifMilik memuat HP pengaju (untuk membuka ajuan perbaikan)', ($model->aktifMilik($s[64])['hp_anggota'] ?? '') === '081200000001');
+        $t0 = $model->hitungTerlambat(5);
+        $this->db->table('pkl_pengajuan')->where('id', $am)->update(['diajukan_at' => date('Y-m-d H:i:s', strtotime('-7 days'))]);
+        $this->cek('hitungTerlambat: ajuan menunggu 7 hari lalu (batas 5) dihitung terlambat; batas 10 hari tidak', $model->hitungTerlambat(5) === $t0 + 1 && $model->hitungTerlambat(10) <= $t0);
+        $this->db->table('pkl_pengajuan')->where('id', $am)->update(['status' => 'perbaikan']);
+        $this->db->table('pkl_anggota')->where('pengajuan_id', $am)->update(['siswa_aktif' => $s[64]]);
+        $this->cek('hitungTerlambat: hanya status MENUNGGU yang dihitung', $model->hitungTerlambat(5) === $t0);
+        $this->db->table('pkl_pengajuan')->where('id', $am)->update(['status' => 'menunggu']);
+
+        // ---------- surat format sekolah ----------
+        $ttdFile = \App\Libraries\PklSurat::dirBerkas() . 'ttd_hubin.png';
+        $im = imagecreatetruecolor(300, 100);
+        imagefill($im, 0, 0, imagecolorallocate($im, 255, 255, 255));
+        imageline($im, 10, 80, 290, 20, imagecolorallocate($im, 10, 20, 120));
+        imagepng($im, $ttdFile);
+        $setPeng(['format_nomor' => \App\Libraries\PklNomorSurat::BAWAAN, 'nomor_awal' => 1, 'nomor_awal_tahun' => null, 'waka_hubin_nama' => 'Budi Santoso, S.Pd.', 'waka_hubin_jabatan' => 'Wakil Kepala Sekolah Bidang Hubungan Industri',
+            'kepsek_nama' => 'Napis Kuturupi, S.T', 'kontak_surat_nama' => 'Puguh Wira Sakti, S.Pd.', 'kontak_surat_hp' => '0812 8584 526', 'ttd_hubin' => 'ttd_hubin.png', 'template_surat' => null, 'format_nama_berkas' => \App\Libraries\PklNamaBerkas::BAWAAN]);
+
+        $ah2 = (int) $ajuan->kirimBaru($dat('PT ZZUJI Surat Hubin', '089677424011'), [$pj($s[65], '089677424011'), $tm($s[66], '085232498164'), $tm($s[67], '085780554867')], $hubin + ['sumber' => 'staf', 'aksi' => 'isi_atas_nama', 'status_awal' => 'disetujui'])['id'];
+        $aa2 = (int) $ajuan->kirimBaru($dat('PT ZZUJI Surat Admin', '082113453105'), [$pj($s[68], '082113453105')], $adm + ['sumber' => 'staf', 'aksi' => 'isi_atas_nama', 'status_awal' => 'disetujui'])['id'];
+        $b = $svc->bangun([$ah2, $aa2], $oper);
+        $z = '';
+        $zipOk = false;
+        $media = [];
+        $rels = '';
+        $tipe = '';
+        if ($b['ok']) {
+            $tmp = tempnam(sys_get_temp_dir(), 'ujb');
+            file_put_contents($tmp, $b['biner']);
+            $zp = new \ZipArchive();
+            $zipOk = $zp->open($tmp) === true;
+            $z    = $zipOk ? (string) $zp->getFromName('word/document.xml') : '';
+            $rels = $zipOk ? (string) $zp->getFromName('word/_rels/document.xml.rels') : '';
+            $tipe = $zipOk ? (string) $zp->getFromName('[Content_Types].xml') : '';
+            for ($i = 0; $zipOk && $i < $zp->numFiles; $i++) {
+                $media[] = (string) $zp->getNameIndex($i);
+            }
+            $zp->close();
+            @unlink($tmp);
+        }
+        $this->cek('surat sekolah (2 surat): berhasil, XML sah, tanpa penanda tersisa', $b['ok'] && $zipOk && $this->xmlSah($z) && ! str_contains($z, '${'), json_encode($b['pesan'] ?? ''));
+        $this->cek('isi mengikuti surat sekolah: kalimat tetap, Kepala SMK Bina Nusa, Kepsek, NB kontak, tanggal "dd Bulan yyyy"',
+            str_contains($z, 'Praktek Kerja ') && str_contains($z, 'Bapak/Ibu Pimpinan') && str_contains($z, 'Kepala ') && str_contains($z, 'Napis Kuturupi, S.T') && str_contains($z, 'Puguh Wira Sakti, S.Pd.') && str_contains($z, '0812 8584 526')
+            && preg_match('/Bekasi, \d{2} (Januari|Februari|Maret|April|Mei|Juni|Juli|Agustus|September|Oktober|November|Desember) \d{4}/', preg_replace('/<[^>]+>/', '', $z) ?? '') === 1);
+        $this->cek('tabel: HP tiap siswa & nama perusahaan tercetak', str_contains($z, '089677424011') && str_contains($z, '085232498164') && str_contains($z, '085780554867') && str_contains($z, '082113453105') && str_contains($z, 'PT ZZUJI Surat Hubin') && str_contains($z, 'PT ZZUJI Surat Admin'));
+        $this->cek('blok Waka Hubin: nama, jabatan (dua baris), kaki ACC Hubin & Admin ("mewakili"), pencetak', str_contains($z, 'Budi Santoso, S.Pd.') && str_contains($z, 'Wakil Kepala Sekolah Bidang') && str_contains($z, 'Hubungan Industri') && str_contains($z, 'Disetujui oleh: Budi Hubin') && str_contains($z, 'Admin Uji (Admin Sistem, mewakili Waka Hubin') && str_contains($z, 'Dicetak oleh Operator Uji (Operator Sekolah)'));
+        $this->cek('urutan surat: 2 surat, tepat SATU pageBreakBefore, tanpa paraId ganda', substr_count($z, '<w:pageBreakBefore/>') === 1 && ! str_contains($z, 'w14:paraId'));
+        preg_match_all('/<wp:docPr id="(\d+)"/', $z, $idm);
+        $this->cek('gambar: id unik, jumlah = kop(2) + TTD Kepsek(2) + TTD Hubin(1, hanya yang di-ACC akun Hubin) = 5', count($idm[1]) === 5 && count(array_unique($idm[1])) === 5, json_encode($idm[1]));
+        $this->cek('berkas tanda tangan Hubin ikut dibungkus (media + relasi + tipe png)', in_array('word/media/rIdTtdHubin.png', $media, true) && str_contains($rels, 'Id="rIdTtdHubin"') && str_contains($tipe, 'Extension="png"') && in_array('word/media/image1.tiff', $media, true), json_encode($media));
+        $this->cek('pengaturan settings.xml sekolah tetap (mode kompatibilitas modern, bukan dibuat ulang)', $zipOk && str_contains($z, 'w:body'));
+
+        $b1 = $svc->bangun([$ah2], $oper);
+        $b2 = $svc->bangun([$aa2], $oper);
+        $urut1 = (int) $svc->surat($ah2)['urut'];
+        $urut2 = (int) $svc->surat($aa2)['urut'];
+        $this->cek('nama berkas satu surat: "{urut} Surat Izin PKL BINUS - ZZUJI ALL {kelas}" (3 siswa → ALL)', $b1['ok'] && $b1['nama'] === $urut1 . ' Surat Izin PKL BINUS - ZZUJI ALL ' . $k['nama_kelas'] . '.docx', (string) ($b1['nama'] ?? ''));
+        $this->cek('nama berkas satu siswa: tanpa "ALL"', $b2['ok'] && $b2['nama'] === $urut2 . ' Surat Izin PKL BINUS - ZZUJI ' . $k['nama_kelas'] . '.docx', (string) ($b2['nama'] ?? ''));
+        $this->cek('nomor surat memakai format sekolah (…/SMK-BN/PKL/{bln romawi}/{tahun})', (bool) preg_match('#^\d+/SMK-BN/PKL/(I|II|III|IV|V|VI|VII|VIII|IX|X|XI|XII)/\d{4}$#', (string) $svc->surat($ah2)['nomor']), (string) $svc->surat($ah2)['nomor']);
+
+        // tanpa gambar TTD → ruang kosong (gambar berkurang 1)
+        @unlink($ttdFile);
+        $b3 = $svc->bangun([$ah2], $oper);
+        $z3 = $b3['ok'] ? $this->xmlDocx($b3['biner']) : '';
+        $this->cek('tanpa gambar tanda tangan: surat tetap jadi, hanya 2 gambar (kop + TTD Kepsek)', $b3['ok'] && substr_count($z3, '<wp:docPr') === 2 && ! str_contains($z3, '${'), json_encode($b3['pesan'] ?? ''));
+
+        // sidik: perubahan penanda tangan / HP / ACC ⇒ perlu cetak ulang
+        $st = $svc->statusBanyak([$ah2]);
+        $this->cek('sesudah diunduh: tidak perlu cetak ulang', $st[$ah2]['perlu_ulang'] === false);
+        $setPeng(['waka_hubin_nama' => 'Budi Santoso Baru, S.Pd.']);
+        $this->cek('nama Waka Hubin diubah → perlu cetak ulang', $svc->statusBanyak([$ah2])[$ah2]['perlu_ulang'] === true);
+        $svc->bangun([$ah2], $oper);
+        $this->cek('diunduh ulang → bersih lagi', $svc->statusBanyak([$ah2])[$ah2]['perlu_ulang'] === false);
+        $this->db->table('pkl_anggota')->where('pengajuan_id', $ah2)->where('siswa_id', $s[66])->update(['hp' => '081299999999']);
+        $this->cek('HP siswa diubah → perlu cetak ulang', $svc->statusBanyak([$ah2])[$ah2]['perlu_ulang'] === true);
+        $svc->bangun([$ah2], $oper);
+        $this->db->table('pkl_pengajuan')->where('id', $ah2)->update(['acc_nama' => 'Orang Lain']);
+        $this->cek('catatan ACC berubah → perlu cetak ulang', $svc->statusBanyak([$ah2])[$ah2]['perlu_ulang'] === true);
+
+        // HP kosong → memakai Master Siswa, selain itu "-"
+        $this->db->table('siswa')->where('id', $s[67])->update(['no_hp' => '087700001111']);
+        $this->db->table('pkl_anggota')->where('pengajuan_id', $ah2)->where('siswa_id', $s[67])->update(['hp' => null]);
+        $this->db->table('pkl_anggota')->where('pengajuan_id', $ah2)->where('siswa_id', $s[66])->update(['hp' => null]);
+        $b4 = $svc->bangun([$ah2], $oper);
+        $z4 = $b4['ok'] ? preg_replace('/<[^>]+>/', ' ', $this->xmlDocx($b4['biner'])) : '';
+        $this->cek('HP anggota kosong: dipakai HP dari Master Siswa; bila keduanya kosong tertulis "-"', str_contains((string) $z4, '087700001111') && preg_match_all('/\s-\s/', (string) $z4) >= 2, substr((string) $z4, 0, 120));
+
+        // urutan siswa di surat = urutan dipilih (pengaju lalu teman sesuai urutan masuk), bukan alfabet
+        $urutNama = array_column($model->anggotaDetail($ah2), 'nama');
+        $this->cek('urutan siswa: pengaju dulu, lalu urutan masuk (bukan alfabet)', $urutNama === ['ZZUJI PKL 65', 'ZZUJI PKL 66', 'ZZUJI PKL 67'], json_encode($urutNama));
+
+        // ---------- konsistensi & bersih-bersih ----------
+        @unlink($ttdFile);
+        $this->cek('periksaKonsistensi(): data uji aturan baru konsisten', array_filter($ajuan->periksaKonsistensi(), fn ($x) => in_array((int) $x['siswa_id'], $s, true)) === []);
+        $this->db->table('siswa')->where('id', $s[67])->update(['no_hp' => null]);
     }
 
     /** Padanan PklSurat::amanNama untuk nomor (garis miring → strip) — dipakai mencocokkan nama berkas unduhan. */
