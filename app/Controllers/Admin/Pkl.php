@@ -271,10 +271,10 @@ class Pkl extends BaseController
         return $this->ke('admin/pkl/' . $id, 'success', 'Data ajuan ' . $kode . ' diperbarui.');
     }
 
-    /** Opsi PklForm untuk staf: pernyataan tak perlu, HP pengaju & teman boleh kosong (data lama / belum ada). */
+    /** Opsi PklForm untuk staf: pernyataan tak perlu; HP pengaju & tiap teman TETAP wajib (tercetak di surat), sama seperti form siswa. */
     private function opsiForm(array $post): array
     {
-        return ['pernyataan' => false, 'kontak' => false, 'hp_teman' => false];
+        return ['pernyataan' => false];
     }
 
     /** Pengaju + teman: aktif & belum terkunci di ajuan lain (aturan di Libraries\PklStaf, dipakai juga API). */

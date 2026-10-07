@@ -15,6 +15,14 @@ Bahasa sederhana, urut dari atas ke bawah. Rancangan teknis ada di `DESAIN-PKL.m
    Migrasi PKL ada 4: `AddAkunStaf` (akun staf), `CreatePkl` (tabel PKL), `PklSurat` (nomor surat), dan yang terbaru
    `PklSuratSekolah` (kolom catatan ACC, batas keputusan, tanda tangan Waka Hubin, format surat sekolah). Yang sudah pernah
    dijalankan dilewati sendiri; kalau tak ada yang baru, tidak apa-apa.
+
+   > **AWAS — migrasi `PklKosongkanData` MENGHAPUS PERMANEN seluruh data ajuan PKL** (ajuan, siswa di dalamnya, riwayat,
+   > nomor surat, dan daftar perusahaan master) lalu memulai nomor dari awal (PKL-00001, nomor surat kembali ke "nomor
+   > awal" di Pengaturan PKL). Data siswa (Master Siswa), akun, dan Pengaturan PKL (nama Waka Hubin, tanda tangan, dsb.)
+   > TIDAK ikut terhapus. Hanya jalankan `phpm spark migrate` bila memang ingin mulai dari nol — misalnya sebelum link
+   > dibagikan ke siswa sungguhan. **Cadangkan database dulu** (cPanel → *Backup* → *Download a MySQL Database Backup*,
+   > atau phpMyAdmin → Export). Migrasi ini hanya berjalan SEKALI; sesudahnya `migrate` tidak menghapus apa-apa lagi.
+   > Setelah itu, cek **Pengaturan PKL → nomor berikutnya** (mis. 295 bila mau melanjutkan penomoran sekolah).
 3. Pastikan folder penyimpan template surat bisa ditulis:
    ```
    mkdir -p ~/kangmuslim/writable/pkl

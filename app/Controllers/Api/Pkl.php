@@ -269,7 +269,7 @@ class Pkl extends BaseApiController
     public function buat(): ResponseInterface
     {
         $in = $this->body();
-        [$data, $galat] = PklForm::proses($in, $this->p, ['pernyataan' => false, 'kontak' => false, 'hp_teman' => false]);
+        [$data, $galat] = PklForm::proses($in, $this->p, ['pernyataan' => false]);
         $pengajuId = (int) ($in['siswa_id'] ?? 0);
         [$anggota, $galatAnggota] = PklStaf::periksaAnggota($pengajuId, $data['teman'], null, $data['teman_hp'] ?? []);
         $galat += $galatAnggota;
@@ -307,7 +307,7 @@ class Pkl extends BaseApiController
         }
         $lama = $this->model->anggotaDetail($id);
         $in   = $this->body();
-        [$data, $galat] = PklForm::proses($in, $this->p, ['pernyataan' => false, 'kontak' => false, 'hp_teman' => false]);
+        [$data, $galat] = PklForm::proses($in, $this->p, ['pernyataan' => false]);
 
         $pengajuLama = 0;
         foreach ($lama as $s) {

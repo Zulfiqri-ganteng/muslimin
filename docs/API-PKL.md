@@ -57,7 +57,7 @@ Admin yang ACC tercatat "Admin — mewakili Waka Hubin" dan **gambar tanda tanga
   `riwayat[]`, dan **`hak`** (apa yang BOLEH dilakukan peran ini pada ajuan ini: `acc, kembalikan, tolak, batal_acc, ubah, hapus, surat,
   wajib_wakil`) — aplikasi cukup menampilkan tombol sesuai `hak`.
 - `POST pkl/ajuan` — isi atas nama. JSON: `siswa_id` (pengaju), `perusahaan_nama`, `perusahaan_alamat`, `perusahaan_kota`, `hp`,
-  `teman` (`[id,…]`, maks sesuai pengaturan), `teman_hp` (`{"<id>": "08…"}`), opsional `perusahaan_telepon`, `kontak_nama`,
+  `teman` (`[id,…]`, maks sesuai pengaturan), `teman_hp` (`{"<id>": "08…"}`) — **`hp` pengaju dan `teman_hp` SETIAP teman wajib** (422 `hp` / `hp_teman_<id>` bila kosong atau tak sah; berlaku juga di `…/ubah`) —, opsional `perusahaan_telepon`, `kontak_nama`,
   `kontak_jabatan`, `status_awal` (`menunggu` bawaan | `disetujui` hanya Hubin/Admin). Siswa yang sudah punya ajuan aktif → `422`
   (`siswa_id`/`teman`). Balasan `201` `{id, kode, status}`.
 - `POST pkl/ajuan/{id}/ubah` — isi sama seperti di atas (tanpa `status_awal`); pengaju tak bisa diganti.

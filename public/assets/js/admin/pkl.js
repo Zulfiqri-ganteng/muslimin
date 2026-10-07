@@ -1,7 +1,7 @@
 /**
  * Halaman staf PKL — komponen Alpine `pklFormStaf` (form "Isi atas Nama" & "Ubah langsung"):
  *   - pemilih siswa (pengaju & teman): kelas → nama, siswa yang sudah punya ajuan aktif terkunci;
- *   - HP tiap teman (opsional; server tetap penentu: PklForm::proses).
+ *   - HP tiap teman (wajib; server tetap penentu: PklForm::proses).
  * Data dari server lewat atribut data-config pada elemen <form>.
  */
 document.addEventListener('alpine:init', function () {

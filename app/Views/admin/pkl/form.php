@@ -52,7 +52,7 @@ $input = static function (string $k, string $label, string $nilai, array $o = []
     'helpTitle' => $ubah ? 'Ubah Data Ajuan' : 'Isi atas Nama Siswa',
     'helpBody'  => $ubah
         ? '<p>Perbaiki data ajuan langsung tanpa mengubah statusnya. Pengaju tidak bisa diganti; teman boleh ditambah atau dikurangi.</p><p class="mt-2">Bila ajuan sudah <b>disetujui</b> dan nama perusahaan diubah, tautan ke master ikut menyesuaikan.</p>'
-        : '<p>Dipakai bila siswa tidak bisa mengisi sendiri, atau untuk memasukkan data PKL yang sudah ada.</p><ul class="mt-2 list-disc pl-5 space-y-1"><li>Ajuan masuk antrean <b>Menunggu keputusan Waka Hubin</b>. Opsi <b>langsung disetujui</b> (data lama yang sudah pasti) hanya ada untuk Waka Hubin / Admin.</li><li>Nomor HP pengaju dan teman boleh kosong; bila kosong, surat memakai nomor di Master Siswa (atau tanda "-").</li><li>Waktu PKL dan tanggal lahir tidak perlu diisi.</li></ul>',
+        : '<p>Dipakai bila siswa tidak bisa mengisi sendiri, atau untuk memasukkan data PKL yang sudah ada.</p><ul class="mt-2 list-disc pl-5 space-y-1"><li>Ajuan masuk antrean <b>Menunggu keputusan Waka Hubin</b>. Opsi <b>langsung disetujui</b> (data lama yang sudah pasti) hanya ada untuk Waka Hubin / Admin.</li><li>Nomor HP pengaju dan <b>setiap teman wajib diisi</b> (tercetak di surat) — sama seperti form siswa.</li><li>Waktu PKL dan tanggal lahir tidak perlu diisi.</li></ul>',
 ]) ?>
 
 <?= view('admin/pkl/_nav', ['tab' => $tab, 'hitungTab' => $hitungTab]) ?>
@@ -100,7 +100,7 @@ $input = static function (string $k, string $label, string $nilai, array $o = []
                                 <span class="min-w-0 text-sm"><b class="text-slate-800" x-text="t.nama"></b> <span class="text-xs text-slate-500" x-text="t.kelas ? '(' + t.kelas + ')' : ''"></span></span>
                                 <span class="flex items-center gap-2"><input type="hidden" name="teman[]" :value="t.id"><button type="button" @click="hapusTeman(t.id)" class="rounded-lg px-2.5 py-1 text-xs font-bold text-red-600 hover:bg-red-50">Hapus</button></span>
                             </div>
-                            <input type="tel" inputmode="tel" maxlength="20" :name="'teman_hp[' + t.id + ']'" x-model="t.hp" placeholder="No. HP (opsional)" aria-label="No. HP teman" class="inp mt-2" :class="errHp(t.id) && 'inp-err'" autocomplete="off">
+                            <input type="tel" inputmode="tel" maxlength="20" :name="'teman_hp[' + t.id + ']'" x-model="t.hp" placeholder="No. HP teman (wajib)" required aria-label="No. HP teman (wajib diisi)" class="inp mt-2" :class="errHp(t.id) && 'inp-err'" autocomplete="off">
                             <p class="err-msg" x-show="errHp(t.id)" x-text="errHp(t.id)"></p>
                         </li>
                     </template>
@@ -154,7 +154,7 @@ $input = static function (string $k, string $label, string $nilai, array $o = []
     <section class="rise overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
         <h3 class="border-b border-slate-100 bg-slate-50 px-5 py-3 text-xs font-bold uppercase tracking-wide text-slate-500">Kontak pengaju</h3>
         <div class="grid grid-cols-1 gap-4 p-5 sm:grid-cols-2">
-            <?php $input('hp', 'No. HP / WhatsApp', $hp, ['maks' => 20, 'ph' => '081234567890', 'hint' => 'Tercetak di surat. Boleh kosong untuk data lama.']) ?>
+            <?php $input('hp', 'No. HP / WhatsApp', $hp, ['wajib' => true, 'maks' => 20, 'ph' => '081234567890', 'hint' => 'Wajib diisi. Tercetak di surat.']) ?>
         </div>
     </section>
 
