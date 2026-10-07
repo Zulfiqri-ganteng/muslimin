@@ -29,11 +29,11 @@ Bahasa sederhana, urut dari atas ke bawah. Rancangan teknis ada di `DESAIN-PKL.m
    chmod 775 ~/kangmuslim/writable/pkl
    ```
 4. **Subdomain** (cPanel → *Domains* → *Create A New Domain*):
-   - Domain: `binuspkl.kangmuslim.com`
+   - Domain: `pklbinanusa.kangmuslim.com`
    - Centang **Share document root** (folder sama dengan kangmuslim.com).
-   - Hapus subdomain lama `pklbinus` bila masih ada.
-   - Buka *SSL/TLS Status* → klik **Run AutoSSL** sampai `binuspkl` bergembok. Jangan menyertakan domain wildcard.
-5. Buka `https://binuspkl.kangmuslim.com/` di HP. Kalau muncul "Pengajuan PKL Belum Dibuka", pemasangan sudah benar
+   - Hapus subdomain lama (`pklbinus` atau `binuspkl`) bila masih ada.
+   - Buka *SSL/TLS Status* → klik **Run AutoSSL** sampai `pklbinanusa` bergembok. Jangan menyertakan domain wildcard.
+5. Buka `https://pklbinanusa.kangmuslim.com/` di HP. Kalau muncul "Pengajuan PKL Belum Dibuka", pemasangan sudah benar
    (form memang belum dibuka, lihat bagian B).
 
 ## B. Siapkan sebelum dibagikan ke siswa
@@ -96,7 +96,7 @@ Aplikasi Android: Operator dan Waka Hubin cukup login di aplikasi; yang tampil h
 Assalamu'alaikum. Untuk siswa kelas XI yang akan PKL:
 silakan isi pengajuan tempat PKL lewat tautan ini (cukup dari HP, tanpa login):
 
-https://binuspkl.kangmuslim.com/
+https://pklbinanusa.kangmuslim.com/
 
 Siapkan dulu: nama & alamat lengkap perusahaan, nomor telepon perusahaan, nama pimpinan/kontak,
 nomor HP kamu, dan nama + nomor HP teman yang satu tempat (maksimal 5 siswa per perusahaan).
@@ -110,7 +110,7 @@ Isi paling lambat: [tanggal]. Kalau ada kendala, hubungi operator sekolah.
 | Gejala | Penyebab / tindakan |
 |---|---|
 | Halaman siswa bilang "Belum Dibuka / Sudah Berakhir" | Form belum dibuka atau lewat batas waktu. Atur di Pengaturan PKL |
-| `https://binuspkl...` tidak aman / tak terbuka | AutoSSL belum selesai (tunggu beberapa menit lalu *Run AutoSSL*), atau subdomain tidak memakai "Share document root" |
+| `https://pklbinanusa...` tidak aman / tak terbuka | AutoSSL belum selesai (tunggu beberapa menit lalu *Run AutoSSL*), atau subdomain tidak memakai "Share document root" |
 | Nama di bawah tanda tangan surat titik-titik | Nama Waka Hubin belum diisi di Pengaturan PKL. Isi, lalu unduh surat lagi |
 | Layar "Menyiapkan berkas…" lama | Surat sedang dirakit (banyak surat butuh beberapa detik). Layar tertutup sendiri begitu berkas turun. Jangan klik dua kali |
 | Tombol Pengaturan tidak ada | Akun Anda Waka Hubin; hanya Operator/Admin yang boleh |

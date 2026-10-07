@@ -121,7 +121,6 @@ $ikonLogin = '<svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" st
         <div class="max-w-6xl mx-auto px-4 sm:px-6 py-4 text-center text-xs text-brand-300">
             &copy; <?= date('Y') ?> <?= esc($schoolName) ?>
             <?php if (! empty($setting['academic_year'])): ?> &middot; T.P. <?= esc($setting['academic_year']) ?><?php endif; ?>
-            &middot; Sistem Informasi Akademik Sekolah (BINUS)
             <?= view('partials/kredit') ?>
         </div>
     </div>

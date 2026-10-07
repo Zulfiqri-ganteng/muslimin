@@ -1,7 +1,7 @@
 # API PKL / Prakerin untuk Aplikasi Android (staf)
 
 Untuk akun **Operator Sekolah**, **Waka Hubin**, dan **Admin**. Form pengajuan SISWA tetap di web
-(`https://binuspkl.kangmuslim.com/`) — aplikasi cukup menampilkan tautannya (`form.tautan` di `pkl/ringkasan`).
+(`https://pklbinanusa.kangmuslim.com/`) — aplikasi cukup menampilkan tautannya (`form.tautan` di `pkl/ringkasan`).
 
 Aturan bisnisnya SAMA PERSIS dengan web, karena keduanya memanggil library yang sama
 (`PklKeputusan`, `PklStaf`, `PklForm`, `PklAjuan`, `PklSurat`). Rancangan: `DESAIN-PKL.md`. Controller: `app/Controllers/Api/Pkl.php`.

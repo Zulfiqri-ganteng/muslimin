@@ -1,4 +1,4 @@
-# Fitur: PKL / Prakerin Online (binuspkl.kangmuslim.com)
+# Fitur: PKL / Prakerin Online (pklbinanusa.kangmuslim.com)
 
 Dokumen kerja. **Centang tiap tahap selesai** agar pekerjaan bisa dilanjutkan di sesi baru
 tanpa kehilangan konteks.
@@ -38,7 +38,7 @@ Skala (data asli, 2026-09-24): kelas XI = 561 siswa, XII = 432 (AKL 37/38, MPLB 
 8. **Output wajib jelas:** siapa yang sudah/belum mengisi dan siapa yang sudah/belum PKL.
 9. **Web dulu sampai 100% sempurna; Android ditunda.** Tampilan wajib profesional; wajib teliti
    terhadap kesalahan manusia. Target ±2 hari. Kerja per tahap, berhenti & lapor tiap tahap.
-10. Subdomain siswa **binuspkl.kangmuslim.com** (dibuat user di cPanel, document root sama dengan
+10. Subdomain siswa **pklbinanusa.kangmuslim.com** (dibuat user di cPanel, document root sama dengan
     domain utama, seperti datasiswa). Panel staf tetap di kangmuslim.com/admin.
 
 Menunggu dari teman user (dikirim 2026-10-07): **contoh surat Word** yang sekarang dipakai dan
@@ -122,7 +122,7 @@ cadangan ZIP). Bila data berubah setelah surat dicetak → penanda **"perlu ceta
 
 ## Alur
 
-**Siswa** (HP, tanpa login) — `https://binuspkl.kangmuslim.com`:
+**Siswa** (HP, tanpa login) — `https://pklbinanusa.kangmuslim.com`:
 1. Pilih kelas → nama → konfirmasi "Benar ini kamu?" (nama yang sudah aktif bertanda & terkunci).
 2. Data perusahaan (nama dengan saran, alamat, kota, telepon, kontak/pimpinan + jabatan).
 3. Teman satu tempat (opsional, maks. sesuai pengaturan) — hanya siswa yang belum aktif.
@@ -200,7 +200,7 @@ Tampilan beda per peran: **Hubin** = fokus memutuskan (antrean "Menunggu ACC" di
       **Catatan:** form default TUTUP dan layar Pengaturan baru ada di T3 → sebelum T3, form hanya
       bisa dibuka lewat SQL. Foto layar baru 1 dari ±25 yg diperiksa mata.
       **Deploy (bersama T1):** `git pull` → `phpm spark migrate` (2 migrasi: T1 + T2) → buat
-      subdomain binuspkl.kangmuslim.com di cPanel (document root sama) → pastikan Biodata masih normal.
+      subdomain pklbinanusa.kangmuslim.com di cPanel (document root sama) → pastikan Biodata masih normal.
 - [x] **T3 Kotak masuk staf + Status Siswa + Pengaturan — SELESAI 2026-10-07** (lokal; tanpa
       migrasi baru, memakai tabel T2). Dibangun: `Admin\Pkl` (beranda, kotak masuk per status,
       detail, ACC / kembalikan / tolak / batalkan persetujuan, isi atas nama, ubah langsung, hapus,

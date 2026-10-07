@@ -21,7 +21,7 @@ use CodeIgniter\Config\BaseConfig;
  */
 class Pkl extends BaseConfig
 {
-    public string $host = 'binuspkl.kangmuslim.com';
+    public string $host = 'pklbinanusa.kangmuslim.com';
 
     /**
      * Alamat form PKL yang dibagikan/ditautkan: https://{host}/ di hosting, dan /pkl di

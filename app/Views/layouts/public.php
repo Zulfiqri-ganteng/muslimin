@@ -14,7 +14,7 @@
     <?= $this->renderSection('content') ?>
 
     <footer class="py-6 text-center text-xs text-slate-400">
-        &copy; <?= date('Y') ?> <?= esc($setting['school_name'] ?? '') ?> &middot; Sistem Informasi Akademik Sekolah (BINUS)
+        &copy; <?= date('Y') ?> <?= esc($setting['school_name'] ?? '') ?>
         <?= view('partials/kredit') ?>
     </footer>
 
