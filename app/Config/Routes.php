@@ -825,6 +825,7 @@ $routes->group('api/v1', ['namespace' => 'App\Controllers\Api', 'filter' => 'cor
         $routes->post('pkl/surat-massal', 'Pkl::suratMassal');
         $routes->get('pkl/siswa', 'Pkl::siswa');
         $routes->get('pkl/siswa/ringkasan', 'Pkl::siswaRingkas');
+        $routes->get('pkl/siswa-kelas', 'Pkl::siswaKelas');
         $routes->get('pkl/ttd', 'Pkl::ttd');
         $routes->get('pkl/ttd/gambar', 'Pkl::ttdGambar');
         $routes->post('pkl/ttd', 'Pkl::ttdUnggah');

@@ -225,6 +225,8 @@ class Auth extends BaseApiController
             // Untuk aplikasi: menu mana yang tampil & apakah tombol ACC PKL ditampilkan (server tetap yang menjaga).
             'akses_api' => HakAkses::aksesApi($a['role'] ?? null),
             'boleh_acc' => HakAkses::bolehAcc($a['role'] ?? null),
+            // true = sandi sementara dari admin: aplikasi wajib membuka layar ganti sandi lebih dulu.
+            'wajib_ganti_sandi' => (int) ($a['wajib_ganti_sandi'] ?? 0) === 1,
         ];
     }
 }

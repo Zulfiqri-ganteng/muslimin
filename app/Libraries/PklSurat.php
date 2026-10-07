@@ -87,7 +87,7 @@ final class PklSurat
 
     /**
      * Gambar tanda tangan Waka Hubin yang diunggah, atau null: ['path','ext','cx','cy'] — ukuran EMU,
-     * dimuat dalam kotak 4,2 × 1,5 cm dengan perbandingan asli.
+     * dimuat dalam kotak 4,2 × 1,8 cm dengan perbandingan asli (ruang tanda tangan di template = 4 baris ≈ 1,95 cm).
      *
      * @return array{path: string, ext: string, cx: int, cy: int}|null
      */
@@ -102,7 +102,7 @@ final class PklSurat
         if ($info === false || ! in_array($info[2], [IMAGETYPE_PNG, IMAGETYPE_JPEG], true) || $info[0] < 1 || $info[1] < 1) {
             return null;
         }
-        $skala = min(1512000 / $info[0], 540000 / $info[1]);
+        $skala = min(1512000 / $info[0], 648000 / $info[1]);
 
         return [
             'path' => $path,
@@ -498,8 +498,16 @@ final class PklSurat
                 'operator' => $nama . ' (Operator Sekolah — tanpa wewenang ACC; mohon dikonfirmasi Waka Hubin)',
                 default    => $nama !== '' ? $nama : 'tidak tercatat',
             };
+            // Tiap keterangan satu baris pendek (tidak terpotong di tengah kode verifikasi).
             $baris1 = 'Surat ini disetujui secara elektronik melalui Sistem Informasi Akademik Sekolah (BINUS).';
-            $baris2 = 'Disetujui oleh: ' . $siapa . ($waktu !== '' ? ' · ' . $waktu : '') . ($kode !== '' ? ' · Kode verifikasi: ' . $kode : '');
+            $baris2 = 'Disetujui oleh: ' . $siapa;
+            $rinci  = array_filter([
+                $waktu !== '' ? 'Waktu persetujuan: ' . $waktu : '',
+                $kode !== '' ? 'Kode verifikasi: ' . $kode : '',
+            ], static fn (string $b) => $b !== '');
+            if ($rinci !== []) {
+                $baris2 .= "\n" . implode(' · ', $rinci);
+            }
         }
 
         $baris3 = '';

@@ -12,9 +12,10 @@ Aturan bisnisnya SAMA PERSIS dengan web, karena keduanya memanggil library yang 
 - Amplop respons: `{ "status", "ok", "message", "data", "meta"? }`. Galat validasi: HTTP 422 dengan `data.errors = {kolom: pesan}`.
 - Kode HTTP: `200/201` berhasil · `401` token tak ada/kedaluwarsa · `403` peran tak berhak · `404` tak ada · `409` status ajuan sudah
   berubah / bentrok · `422` isian tidak sah.
-- **Gerbang peran.** Operator & Waka Hubin HANYA boleh alamat berawalan `pkl/…` (+ `auth/…`); alamat API lain → `403`.
+- **Gerbang peran.** Operator & Waka Hubin HANYA boleh alamat berawalan `pkl/…`, `auth/…`, dan `admin/profile…` (profil & ganti sandi sendiri, sama seperti di web); alamat API lain → `403`.
   Admin boleh semua. Info untuk menyusun menu ada di `auth/login` & `auth/me` → `admin.akses_api` (`["pkl"]` / `["*"]`) dan
-  `admin.boleh_acc` (true untuk Waka Hubin & Admin). **Server tetap yang menjaga**; menyembunyikan tombol di aplikasi hanya kenyamanan.
+  `admin.boleh_acc` (true untuk Waka Hubin & Admin), dan `admin.wajib_ganti_sandi` (true = sandi sementara). **Server tetap yang menjaga**; menyembunyikan tombol di aplikasi hanya kenyamanan.
+- **Sandi sementara.** Operator/Waka Hubin yang masih `wajib_ganti_sandi` hanya boleh `auth/…` dan `admin/profile…`; API PKL membalas `403` "Anda masih memakai sandi sementara…" sampai sandi diganti (Admin tidak dibatasi, agar aplikasi lama tetap jalan).
 
 ## Siapa boleh apa
 
@@ -60,7 +61,7 @@ Admin yang ACC tercatat "Admin — mewakili Waka Hubin" dan **gambar tanda tanga
   `kontak_jabatan`, `status_awal` (`menunggu` bawaan | `disetujui` hanya Hubin/Admin). Siswa yang sudah punya ajuan aktif → `422`
   (`siswa_id`/`teman`). Balasan `201` `{id, kode, status}`.
 - `POST pkl/ajuan/{id}/ubah` — isi sama seperti di atas (tanpa `status_awal`); pengaju tak bisa diganti.
-- `DELETE pkl/ajuan/{id}` — body opsional `{"paham": true}` (wajib bila ajuan sudah disetujui).
+- `DELETE pkl/ajuan/{id}` — konfirmasi `{"paham": true}` di body **atau** `?paham=1` di alamat (wajib bila ajuan sudah disetujui).
 
 ### Keputusan (body JSON; semuanya mengembalikan `{id, kode, status}`)
 - `POST pkl/ajuan/{id}/acc` — `{catatan?, perusahaan_id?, paham?, wakil?}`.
@@ -85,6 +86,7 @@ Admin yang ACC tercatat "Admin — mewakili Waka Hubin" dan **gambar tanda tanga
   belum_mulai, sedang, selesai, disetujui` (kosong = semua); `per` maks 100 (bawaan 50). Baris: `siswa_id, nama, kelas, fase, fase_label,
   ajuan_id, kode, perusahaan, kota, nomor_surat, acc_nama, acc_waktu`.
 - `GET pkl/siswa/ringkasan?kelas_id=` → angka sudah/belum mengisi & PKL + persen.
+- `GET pkl/siswa-kelas?kelas_id=` → siswa aktif satu kelas (semua tingkat) + `status` (`belum|ditolak` boleh dipilih; `menunggu|perbaikan|disetujui` terkunci) — untuk pemilih siswa di form isi atas nama.
 
 ### Tanda tangan digital Waka Hubin (Waka Hubin / Admin)
 - `GET pkl/ttd` → `{ada, jenis, versi, atas_nama, jabatan, gambar_url}`.
@@ -100,6 +102,7 @@ Admin yang ACC tercatat "Admin — mewakili Waka Hubin" dan **gambar tanda tanga
 5. Pesan galat dari server berbahasa Indonesia sederhana dan boleh langsung ditampilkan ke pengguna.
 
 ## Pengujian
-`node uji_api_pkl.mjs` (skrip di folder sementara sesi, bukan di repo) — 99 cek HTTP: login 3 peran, gerbang alamat, seluruh matriks
+`node uji_api_pkl.mjs` (skrip di folder sementara sesi, bukan di repo) — 109 cek HTTP: login 3 peran, gerbang alamat, seluruh matriks
 hak di atas, ACC/tolak/batal/massal, surat satu & massal (+ cek gambar tanda tangan hanya pada ACC Hubin), tanda tangan, hapus,
-status siswa, serta jejak riwayat & Audit Log. Lulus 99/99 pada 2026-10-07; data ujinya dibersihkan sendiri.
+status siswa, profil & sandi sementara, serta jejak riwayat & Audit Log. Lulus 109/109 pada 2026-10-07; data ujinya dibersihkan sendiri.
+Contoh respons nyata untuk tim Flutter: `C:lutter-muslimin	estixturespkl`; kontrak sisi aplikasi: `C:lutter-musliminBLUEPRINT-PKL.md`.

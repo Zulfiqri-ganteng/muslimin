@@ -57,6 +57,15 @@ class ApiAuthFilter implements FilterInterface
             return $this->forbidden('Akun ' . HakAkses::label($admin['role'] ?? null) . ' tidak punya akses ke fitur ini di aplikasi.');
         }
 
+        // Peran terbatas yang masih memakai sandi sementara: hanya boleh ganti sandi (admin/profile) atau keluar
+        // (auth/…), sama seperti di web. Admin tidak diubah perilakunya (aplikasi lama sudah beredar).
+        if ((int) ($admin['wajib_ganti_sandi'] ?? 0) === 1
+            && ! in_array('*', HakAkses::aksesApi($admin['role'] ?? null), true)
+            && ! str_starts_with(strtolower($alamat), 'auth/')
+            && ! HakAkses::cocokAwalan(strtolower($alamat), 'admin/profile')) {
+            return $this->forbidden('Anda masih memakai sandi sementara. Ganti sandi lebih dulu (menu Profil → Ganti Password).');
+        }
+
         unset($admin['password']);
         ApiAuth::set($admin, (int) $tokenRow['id']);
         (new ApiTokenModel())->touch((int) $tokenRow['id']);

@@ -347,9 +347,10 @@ class Pkl extends BaseApiController
 
             return $this->forbidden('Ajuan yang sudah DISETUJUI Waka Hubin hanya boleh dihapus Admin. Minta Waka Hubin membatalkan persetujuannya, atau hubungi Admin.');
         }
-        $in = $this->body();
-        if ($a['status'] === 'disetujui' && ($in['paham'] ?? '') !== '1' && ($in['paham'] ?? false) !== true) {
-            return $this->invalid(['paham' => 'Ajuan ini SUDAH DISETUJUI. Kirim "paham": true bila benar-benar ingin menghapusnya.']);
+        // Konfirmasi boleh lewat body JSON {"paham": true} atau alamat ?paham=1 (DELETE di sebagian klien tak membawa body).
+        $paham = $this->body()['paham'] ?? $this->request->getGet('paham');
+        if ($a['status'] === 'disetujui' && ! in_array($paham, [true, 1, '1', 'true'], true)) {
+            return $this->invalid(['paham' => 'Ajuan ini SUDAH DISETUJUI. Kirim "paham": true (atau ?paham=1) bila benar-benar ingin menghapusnya.']);
         }
         $nama = array_map(static fn (array $s) => $s['nama'], $this->model->anggotaDetail($id));
         $this->model->delete($id); // CASCADE: anggota & riwayat ikut terhapus, siswanya bebas lagi
@@ -437,6 +438,26 @@ class Pkl extends BaseApiController
         ], $rows);
 
         return $this->collection($item, ['page' => $page, 'perPage' => $per, 'total' => $total], 'Status PKL siswa.');
+    }
+
+    /**
+     * GET pkl/siswa-kelas?kelas_id= — siswa aktif satu kelas + status PKL-nya, untuk pemilih siswa di form isi atas nama.
+     * Semua tingkat (staf boleh mengisi riwayat tingkat lain). Hanya status, tanpa data perusahaan siswa lain.
+     * `status`: belum | ditolak (boleh dipilih) · menunggu | perbaikan | disetujui (sudah terkunci di ajuan lain).
+     */
+    public function siswaKelas(): ResponseInterface
+    {
+        $kelasId = (int) $this->request->getGet('kelas_id');
+        if ($kelasId < 1) {
+            return $this->invalid(['kelas_id' => 'Pilih kelas dulu.']);
+        }
+        $data = array_map(static fn (array $r) => [
+            'id'     => (int) $r['id'],
+            'nama'   => $r['nama'],
+            'status' => $r['aktif'] ?? ((int) $r['pernah_ditolak'] === 1 ? 'ditolak' : 'belum'),
+        ], $this->model->daftarSiswaKelas($kelasId));
+
+        return $this->ok($data, 'Siswa kelas ini.');
     }
 
     public function siswaRingkas(): ResponseInterface

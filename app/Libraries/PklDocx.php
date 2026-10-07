@@ -400,7 +400,7 @@ final class PklDocx
 
         return self::RAW . '<w:drawing><wp:anchor distT="0" distB="0" distL="114300" distR="114300" simplePos="0" relativeHeight="251659264" behindDoc="1" locked="0" layoutInCell="1" allowOverlap="1">'
             . '<wp:simplePos x="0" y="0"/><wp:positionH relativeFrom="column"><wp:posOffset>' . $offsetKiri . '</wp:posOffset></wp:positionH>'
-            . '<wp:positionV relativeFrom="paragraph"><wp:posOffset>0</wp:posOffset></wp:positionV>'
+            . '<wp:positionV relativeFrom="paragraph"><wp:posOffset>40000</wp:posOffset></wp:positionV>'
             . '<wp:extent cx="' . $cx . '" cy="' . $cy . '"/><wp:effectExtent l="0" t="0" r="0" b="0"/><wp:wrapNone/>'
             . '<wp:docPr id="1" name="Tanda tangan Waka Hubin"/><wp:cNvGraphicFramePr><a:graphicFrameLocks xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main" noChangeAspect="1"/></wp:cNvGraphicFramePr>'
             . '<a:graphic xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main"><a:graphicData uri="http://schemas.openxmlformats.org/drawingml/2006/picture">'

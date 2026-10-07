@@ -304,6 +304,11 @@ Tampilan beda per peran: **Hubin** = fokus memutuskan (antrean "Menunggu ACC" di
          diubah, maks_anggota ≤ 5, backfill acc_* dari data keputusan lama). **Uji:** `dev:uji-pkl` 319 cek + HTTP `uji_aturan_baru.mjs` 71 cek.
       Membangun ulang template dari contoh sekolah: skrip `bangun_template.php` (DOM: ganti teks ber-run-terpecah dengan `${…}`,
       sisakan 1 baris tabel contoh, sisip blok Hubin & kaki ACC, ganti penomoran otomatis butir NB dengan "1." tertulis).
+- [x] **Perapian tampilan surat (2026-10-07 malam, atas permintaan user; lokal):** ruang tanda tangan Waka Hubin 4 baris (sama dengan Kepala
+      Sekolah; kotak gambar TTD 4,2 × 1,8 cm, `PklSurat::infoTtd` / `PklDocx::gambarTtd`); blok **NB** diberi jarak 18 pt dari nama penanda tangan, "NB :" tebal,
+      11 pt, rata kiri, paragraf kosong di dalamnya dibuang; kaki ACC jadi 4 baris pendek (Disetujui oleh · Waktu persetujuan + Kode verifikasi ·
+      Dicetak oleh) sehingga kode verifikasi tak terpotong. Template `surat_pkl_binus.docx` ditambal lewat skrip DOM sekali jalan; sidik surat TIDAK
+      berubah (surat lama tak ditandai "perlu cetak ulang"). Diperiksa di Word 16 asli (2 surat = 2 halaman); `dev:uji-pkl` 319 · HTTP 71 · API 109 hijau.
 - [x] **API ANDROID PKL (backend) — SELESAI 2026-10-07** (lokal, belum di-push). Dokumentasi lengkap: `docs/API-PKL.md`.
       `app/Controllers/Api/Pkl.php` (20 rute `pkl/…` di grup `apiauth`): meta, ringkasan, daftar/detail ajuan (+blok `hak` per ajuan),
       isi atas nama/ubah/hapus, acc/kembalikan/tolak/batal-acc, acc-massal, surat satu & massal (biner .docx/.zip), status siswa,
@@ -312,7 +317,7 @@ Tampilan beda per peran: **Hubin** = fokus memutuskan (antrean "Menunggu ACC" di
       `admin.boleh_acc`. Logika bersama web+API dipindah ke library (tanpa duplikasi aturan): `PklKeputusan` (putuskan/ACC massal),
       `PklStaf::periksaAnggota`, `PklSurat::pilihUntukUnduh/simpanTtd/hapusTtd`. Uji: `uji_api_pkl.mjs` **99/99**, regresi
       `dev:uji-pkl` 319/319 + `uji_aturan_baru.mjs` 71/71.
-- [ ] **Layar Flutter PKL (tahap berikut, `fluter-muslimin`):** beranda PKL (angka + antrean + TERLAMBAT), daftar per status, detail
+- [ ] **Layar Flutter PKL (tahap berikut, `C:lutter-muslimin`) — KONTRAK SUDAH DITULIS 2026-10-07:** `C:lutter-musliminBLUEPRINT-PKL.md` (+ `CLAUDE.md`, fixture respons nyata di `test/fixtures/pkl/`); tahap P0–P7, belum dikerjakan. Ringkasan: beranda PKL (angka + antrean + TERLAMBAT), daftar per status, detail
       (tombol dari `data.hak`; dialog ACC: centang "paham" bila `ada_bahaya`, "mewakili Waka Hubin" bila Admin), unduh/bagikan surat
       (biner), Status Siswa, tanda tangan (Hubin/Admin). Menu hanya bila `admin.akses_api` memuat `pkl` atau `*`. Tanya sebelum `flutter build`.
 **Sengaja belum dikerjakan:** layar Flutter PKL, jurnal/absensi/nilai PKL, notifikasi

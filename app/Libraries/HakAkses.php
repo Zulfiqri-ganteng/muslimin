@@ -101,6 +101,12 @@ final class HakAkses
         if (str_contains($alamat, '..')) { // jalur penyusup (pkl/../admin/…) tak pernah lolos
             return false;
         }
+        // Keperluan akun sendiri (profil, ganti sandi) terbuka bagi semua peran, sama seperti di web ('umum').
+        foreach (config(Peran::class)->umum as $awalan) {
+            if (self::cocokAwalan($alamat, (string) $awalan)) {
+                return true;
+            }
+        }
         foreach ((array) ($p['api_akses'] ?? []) as $awalan) {
             if (self::cocokAwalan($alamat, (string) $awalan)) {
                 return true;
