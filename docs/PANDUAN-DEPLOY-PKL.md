@@ -41,7 +41,7 @@ Bahasa sederhana, urut dari atas ke bawah. Rancangan teknis ada di `DESAIN-PKL.m
      jadi unggah template Word sendiri hanya bila sekolah mengubah format suratnya.
    - Terakhir, nyalakan **Form dibuka**.
    Kotak kuning **"Persiapan"** di Beranda PKL menandai mana yang belum siap dan hilang sendiri bila semuanya beres.
-3. **Waka Hubin unggah tanda tangan digital** (login sebagai Waka Hubin → PKL → tab **Tanda Tangan**; PNG/JPG, maks 1 MB,
+3. **Waka Hubin unggah tanda tangan digital** (login sebagai Waka Hubin → sidebar **PKL / PRAKERIN → Tanda Tangan**, atau tab **Tanda Tangan** di bagian atas halaman PKL; PNG/JPG, maks 1 MB,
    latar putih boleh). Gambar ini terpasang di surat **hanya bila Waka Hubin sendiri yang meng-ACC**.
 4. **Uji coba satu kali**: pakai satu siswa contoh. Buka tautan siswa → isi sampai terkirim → login **Waka Hubin** →
    Kotak Masuk → Periksa → ACC → Disetujui → buka ajuannya → **Terbitkan nomor & unduh surat** → buka berkasnya di
