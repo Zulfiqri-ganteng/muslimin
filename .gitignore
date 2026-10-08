@@ -153,3 +153,5 @@ _modules/*
 /downloadpublic/
 # Data resmi 1.727 siswa (NISN, tgl lahir, alamat, orang tua) dari sekolah. JANGAN di-commit (repo PUBLIK). Ditambahkan 2026-10-08.
 /formatdatasekolah/
+# Berkas Excel resmi siswa & laporan/cadangannya (data pribadi) — jangan di-commit. Ditambahkan 2026-10-08.
+/writable/data-sekolah/
