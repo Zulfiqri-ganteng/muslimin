@@ -18,6 +18,7 @@ class SettingModel extends Model
         'dok_maks_mb', 'dok_izinkan_video', 'dok_kuota_mb', 'dokumen_publik',
         'wa_template_absensi', 'absensi_potongan_jp', 'absensi_transport',
         'biodata_open', 'biodata_tutup',
+        'school_postal_code', 'school_accreditation', 'supervisor_name', 'supervisor_nip',
     ];
 
     protected $useTimestamps = true;

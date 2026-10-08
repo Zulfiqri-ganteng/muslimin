@@ -229,6 +229,7 @@ $routes->group('admin', static function ($routes) {
             $routes->get('siswa/delete/(:num)', 'Admin\Master\Siswa::delete/$1');
             $routes->get('siswa/(:num)', 'Admin\Master\Siswa::detail/$1');
             $routes->get('siswa/export', 'Admin\Master\Siswa::export');
+            $routes->get('siswa/export-resmi', 'Admin\Master\Siswa::exportResmi');
             $routes->get('siswa/template', 'Admin\Master\Siswa::template');
             $routes->post('siswa/import-preview', 'Admin\Master\Siswa::importPreview');
             $routes->post('siswa/import-commit', 'Admin\Master\Siswa::importCommit');

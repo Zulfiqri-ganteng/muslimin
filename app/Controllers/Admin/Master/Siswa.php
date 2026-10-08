@@ -5,7 +5,9 @@ namespace App\Controllers\Admin\Master;
 use App\Libraries\BiodataForm;
 use App\Libraries\HakAkses;
 use App\Libraries\SiswaDetail;
+use App\Libraries\SiswaExcel8355;
 use App\Models\KelasModel;
+use App\Models\SettingModel;
 use App\Models\SiswaModel;
 use CodeIgniter\Database\BaseConnection;
 use CodeIgniter\Model;
@@ -401,6 +403,19 @@ class Siswa extends BaseMaster
             ? trim((string) preg_replace('/[^A-Za-z0-9]+/', '-', (string) array_key_first($perKelas)), '-') . '-'
             : '';
         $this->streamXlsx($ss, 'Data-Siswa-' . $bagian . date('Ymd-His'));
+    }
+
+    /**
+     * Unduh "Daftar Nama Siswa Kelas X, XI, XII (Format 8355)" — Excel dengan bentuk persis berkas resmi sekolah.
+     * TAMBAHAN: ekspor biasa (export) tetap ada. Selalu semua siswa aktif (tidak mengikuti filter layar).
+     */
+    public function exportResmi()
+    {
+        $ss = SiswaExcel8355::buat(
+            SiswaExcel8355::kelompokkan(SiswaExcel8355::ambil(db_connect())),
+            (new SettingModel())->get()
+        );
+        $this->streamXlsx($ss, 'Daftar-Nama-Siswa-Format-8355-' . date('Ymd-His'));
     }
 
     /** Isi baris data mulai baris 7 (baris 1–5 KOP, baris 6 judul kolom); nomor urut mulai 1 per lembar. */

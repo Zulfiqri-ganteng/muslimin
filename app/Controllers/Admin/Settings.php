@@ -31,6 +31,11 @@ class Settings extends BaseController
             'school_level'    => trim((string) $this->request->getPost('school_level')),
             'headmaster_name' => trim((string) $this->request->getPost('headmaster_name')),
             'headmaster_nip'  => trim((string) $this->request->getPost('headmaster_nip')),
+            // Untuk Daftar Nama Siswa (Format 8355)
+            'supervisor_name'      => trim((string) $this->request->getPost('supervisor_name')),
+            'supervisor_nip'       => trim((string) $this->request->getPost('supervisor_nip')),
+            'school_postal_code'   => trim((string) $this->request->getPost('school_postal_code')),
+            'school_accreditation' => trim((string) $this->request->getPost('school_accreditation')),
             'city'            => trim((string) $this->request->getPost('city')),
             'academic_year'   => trim((string) $this->request->getPost('academic_year')),
             'address'         => trim((string) $this->request->getPost('address')),

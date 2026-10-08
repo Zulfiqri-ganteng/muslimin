@@ -85,3 +85,21 @@ Jalankan laporan sekali lagi: `phpm spark siswa:data-8355`. Seharusnya **"ada ko
 
 - Salah sebagian: perbaiki manual di Master Siswa, atau minta siswa memperbaiki lewat Isian Biodata.
 - Salah banyak: pulihkan dari **cadangan database** (langkah A.2). Berkas `cadangan-*.csv` berisi nilai lama kolom yang diubah (untuk melihat data sebelum).
+
+## G. Menghapus siswa yang sudah keluar (perintah `siswa:hapus-keluar`)
+
+Siswa di sistem yang **tidak ada** di Excel resmi dianggap sudah keluar. Jalankan **setelah** bagian C selesai (laporan akhir 0 perubahan).
+Butuh `Data Siswa.xlsx` ada di `writable/data-sekolah/` (unggah lagi bila sudah dihapus). Penghapusannya **hapus lunak**: baris siswa tetap ada di database, hanya ditandai terhapus, jadi bisa dipulihkan.
+
+1. **Cadangkan database** dulu (phpMyAdmin → Ekspor), seperti langkah A.2.
+2. Laporan saja (tidak menghapus): `phpm spark siswa:hapus-keluar`. Buka `writable/data-sekolah/laporan-hapus-keluar/`:
+   - `akan_dihapus.csv` — daftar siswa yang akan dihapus (periksa sekilas).
+   - `ditahan.csv` — yang TIDAK dihapus otomatis beserta alasannya (namanya mirip siswa resmi yang belum punya kelas = kemungkinan orang yang sama; atau masih punya ajuan PKL aktif).
+3. Yang ditahan, putuskan satu-satu:
+   - orang yang sama dengan siswa resmi → gabungkan manual (lengkapi data siswa lama, hapus yang tanpa kelas), JANGAN dipaksa;
+   - pasti orang lain → tambahkan `--paksa ID,ID` agar tetap dihapus;
+   - tidak ingin dihapus sama sekali → `--kecuali ID,ID`.
+4. Hapus sungguhan: `phpm spark siswa:hapus-keluar --tulis` (ditambah `--paksa`/`--kecuali` bila perlu). Daftar yang dihapus disimpan di `writable/data-sekolah/cadangan/hapus-keluar-<tanggal-jam>.csv` dan satu catatan masuk Audit Log.
+5. Perintah berhenti sendiri bila yang akan dihapus lebih dari 150 siswa (tanda ada yang salah, mis. Excel belum diterapkan).
+
+Memulihkan (bila salah hapus): di phpMyAdmin jalankan `UPDATE siswa SET deleted_at = NULL WHERE id IN (…id dari berkas hapus-keluar…);`

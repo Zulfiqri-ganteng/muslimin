@@ -112,6 +112,7 @@ $blokAlamat = static function (string $p) use ($kolom, $label): void {
         ],
         'exportUrl'   => site_url('admin/master/siswa/export') . ($qsExport !== [] ? '?' . http_build_query($qsExport) : ''),
         'exportTitle' => 'Unduh data siswa sesuai filter yang dipilih (mis. satu kelas saja) ke file Excel',
+        'extraActions' => '<a href="' . site_url('admin/master/siswa/export-resmi') . '" title="Unduh Daftar Nama Siswa Kelas X, XI, XII dengan format persis berkas sekolah (Format 8355): semua siswa aktif per jurusan, lengkap dengan tanda tangan" class="inline-flex items-center gap-1.5 rounded-lg border border-emerald-300 bg-emerald-50 text-emerald-700 hover:bg-emerald-100 text-sm font-semibold px-3.5 py-2.5 transition"><svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>Format 8355</a>',
         'filterLangsung' => true,
         'bulkUrl'     => site_url('admin/master/siswa/bulk-delete'),
         'bulkLabel'   => 'siswa',

@@ -90,7 +90,26 @@
                 </div>
                 <div>
                     <label class="lbl">NIP Kepala Sekolah</label>
-                    <input type="text" name="headmaster_nip" value="<?= esc($setting['headmaster_nip']) ?>" class="inp">
+                    <input type="text" name="headmaster_nip" value="<?= esc($setting['headmaster_nip']) ?>" class="inp" placeholder="Kosongkan bila tidak ada">
+                </div>
+            </div>
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                    <label class="lbl">Pengawas Pembina</label>
+                    <input type="text" name="supervisor_name" value="<?= esc($setting['supervisor_name'] ?? '') ?>" class="inp" placeholder="Nama & gelar">
+                    <p class="text-xs text-slate-400 mt-1">Tanda tangan "Mengetahui," pada Daftar Nama Siswa (Format 8355).</p>
+                </div>
+                <div>
+                    <label class="lbl">NIP Pengawas Pembina</label>
+                    <input type="text" name="supervisor_nip" value="<?= esc($setting['supervisor_nip'] ?? '') ?>" class="inp">
+                </div>
+                <div>
+                    <label class="lbl">Kode Pos Sekolah</label>
+                    <input type="text" name="school_postal_code" value="<?= esc($setting['school_postal_code'] ?? '') ?>" class="inp" maxlength="10">
+                </div>
+                <div>
+                    <label class="lbl">Status Akreditasi</label>
+                    <input type="text" name="school_accreditation" value="<?= esc($setting['school_accreditation'] ?? '') ?>" class="inp" maxlength="20" placeholder="Contoh: B">
                 </div>
             </div>
             <div>

@@ -71,6 +71,7 @@ ob_start(); ?>
             Export
         </a>
     <?php endif; ?>
+    <?= $extraActions ?? '' ?>
 
     <?php if ($bulkUrl): ?>
         <!-- Muncul hanya saat ada baris tercentang (ditangani global di assets/js/admin/app.js) -->
