@@ -234,7 +234,7 @@ final class PklSurat
             (string) ($ajuan['perusahaan_telepon'] ?? ''), (string) ($ajuan['kontak_nama'] ?? ''), (string) ($ajuan['kontak_jabatan'] ?? ''),
         ];
         $siswa = array_map(static fn (array $a) => [
-            (int) $a['siswa_id'], (string) $a['nama'], (string) ($a['nisn'] ?? ''), (string) ($a['nama_kelas'] ?? ''), (string) ($a['jurusan_nama'] ?? ''),
+            (int) $a['siswa_id'], (string) $a['nama'], (string) ($a['nis'] ?? ''), (string) ($a['nisn'] ?? ''), (string) ($a['nama_kelas'] ?? ''), (string) ($a['jurusan_nama'] ?? ''),
             trim((string) ($a['hp'] ?? '')) !== '' ? (string) $a['hp'] : (string) ($a['hp_master'] ?? ''),
         ], $anggota);
         usort($siswa, static fn ($x, $y) => $x[0] <=> $y[0]);
@@ -275,7 +275,7 @@ final class PklSurat
         }
         $anggota = [];
         foreach ($this->db->table('pkl_anggota a')
-            ->select('a.pengajuan_id, a.siswa_id, a.hp, s.no_hp AS hp_master, s.nama, s.nisn, k.nama_kelas, j.nama AS jurusan_nama')
+            ->select('a.pengajuan_id, a.siswa_id, a.hp, s.no_hp AS hp_master, s.nama, s.nis, s.nisn, k.nama_kelas, j.nama AS jurusan_nama')
             ->join('siswa s', 's.id = a.siswa_id')->join('kelas k', 'k.id = a.kelas_id', 'left')->join('jurusan j', 'j.id = k.jurusan_id', 'left')
             ->whereIn('a.pengajuan_id', array_keys($surat))->get()->getResultArray() as $r) {
             $anggota[(int) $r['pengajuan_id']][] = $r;

@@ -914,6 +914,10 @@ class UjiPkl extends BaseCommand
         $this->cek('data ajuan berubah → a1 PERLU CETAK ULANG, a2 tidak', $st[$a1]['perlu_ulang'] === true && $st[$a2]['perlu_ulang'] === false);
         $m = $svc->muat($a1);
         $this->cek('sidik langsung (muat) konsisten dengan statusBanyak', \App\Libraries\PklSurat::sidik($m['ajuan'], $m['anggota']) !== (string) $svc->surat($a1)['sidik']);
+        // NIS tercetak di surat → bila NIS siswa berubah (mis. diisi data resmi sekolah), surat lama harus ditandai "perlu cetak ulang".
+        $m2 = $m;
+        $m2['anggota'][0]['nis'] = (string) ($m2['anggota'][0]['nis'] ?? '') . '9';
+        $this->cek('NIS siswa berubah → sidik surat berubah (ditandai perlu cetak ulang)', \App\Libraries\PklSurat::sidik($m2['ajuan'], $m2['anggota']) !== \App\Libraries\PklSurat::sidik($m['ajuan'], $m['anggota']));
 
         // ---------- berkas Word bawaan ----------
         $b = $svc->bangun([$a1, $a2], $admin);
@@ -1186,6 +1190,7 @@ class UjiPkl extends BaseCommand
             str_contains($z, 'Praktek Kerja ') && str_contains($z, 'Bapak/Ibu Pimpinan') && str_contains($z, 'Kepala ') && str_contains($z, 'Napis Kuturupi, S.T') && str_contains($z, 'Puguh Wira Sakti, S.Pd.') && str_contains($z, '0812 8584 526')
             && preg_match('/Bekasi, \d{2} (Januari|Februari|Maret|April|Mei|Juni|Juli|Agustus|September|Oktober|November|Desember) \d{4}/', preg_replace('/<[^>]+>/', '', $z) ?? '') === 1);
         $this->cek('tabel: HP tiap siswa & nama perusahaan tercetak', str_contains($z, '089677424011') && str_contains($z, '085232498164') && str_contains($z, '085780554867') && str_contains($z, '082113453105') && str_contains($z, 'PT ZZUJI Surat Hubin') && str_contains($z, 'PT ZZUJI Surat Admin'));
+        $this->cek('tabel: kolom NIS (setelah NO) tercetak untuk tiap siswa; NISN TIDAK dicetak', str_contains($z, '>NIS<') && substr_count($z, self::NIS) >= 3 && ! str_contains($z, '>NISN<') && strpos($z, '>NIS<') > strpos($z, '>NO<') && strpos($z, '>NIS<') < strpos($z, '>NAMA<'));
         $this->cek('blok Waka Hubin: nama, jabatan (dua baris), kaki ACC Hubin & Admin ("mewakili"), pencetak', str_contains($z, 'Budi Santoso, S.Pd.') && str_contains($z, 'Wakil Kepala Sekolah Bidang') && str_contains($z, 'Hubungan Industri') && str_contains($z, 'Disetujui oleh: Budi Hubin') && str_contains($z, 'Admin Uji (Admin Sistem, mewakili Waka Hubin') && str_contains($z, 'Dicetak oleh Operator Uji (Operator Sekolah)'));
         $this->cek('urutan surat: 2 surat, tepat SATU pageBreakBefore, tanpa paraId ganda', substr_count($z, '<w:pageBreakBefore/>') === 1 && ! str_contains($z, 'w14:paraId'));
         preg_match_all('/<wp:docPr id="(\d+)"/', $z, $idm);

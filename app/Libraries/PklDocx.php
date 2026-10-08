@@ -237,9 +237,9 @@ final class PklDocx
             . ', dengan ini kami mengajukan permohonan agar peserta didik berikut dapat melaksanakan PKL di perusahaan/instansi yang Bapak/Ibu pimpin:',
             ['jc' => 'both', 'first' => 720, 'after' => 120]);
 
-        $baris = [['No', 'Nama', 'NISN', 'Kelas', 'Kompetensi Keahlian']];
+        $baris = [['No', 'Nama', 'NIS', 'Kelas', 'Kompetensi Keahlian']];
         foreach ($siswa as $s) {
-            $baris[] = [$s['no'], $s['nama'], $s['nisn'], $s['kelas'], $s['jurusan']];
+            $baris[] = [$s['no'], $s['nama'], $s['nis'] ?? '', $s['kelas'], $s['jurusan']];
         }
         $x .= self::tabel($baris, [600, 3300, 1500, 1455, 2500], ['judul' => true, 'jc' => ['center', 'left', 'center', 'center', 'left']]);
 
