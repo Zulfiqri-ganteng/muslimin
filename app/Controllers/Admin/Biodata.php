@@ -36,6 +36,11 @@ class Biodata extends BaseController
     /** Batas satu kali "setujui massal" agar aman dari batas waktu eksekusi hosting. */
     private const MAKS_MASSAL = 300;
 
+    /** "Kembalikan semua" hanya satu UPDATE (ringan), jadi batasnya jauh lebih longgar. */
+    private const MAKS_KEMBALIKAN = 3000;
+
+    private const CATATAN_BAWAAN = 'Data sekolah (NIS, NISN, tempat & tanggal lahir) sudah diperbarui. Mohon buka kembali isianmu, periksa semua data sampai benar, lalu kirim ulang.';
+
     private BiodataIsianModel $isian;
     private AuditModel $audit;
 
@@ -101,6 +106,9 @@ class Biodata extends BaseController
                 ? BiodataPesan::belumMengisi($kelasNama, array_column($rows, 'nama'))
                 : '',
             'maksMassal'   => self::MAKS_MASSAL,
+            // "Kembalikan semua yang sudah mengisi" (tab menunggu & disetujui): jumlah sesuai saringan + catatan bawaan.
+            'bisaKembali'   => in_array($tab, ['menunggu', 'disetujui'], true) ? $this->isian->hitungBisaDikembalikan($kelasId, $q) : 0,
+            'catatanBawaan' => self::CATATAN_BAWAAN,
         ]);
     }
 
@@ -239,6 +247,29 @@ class Biodata extends BaseController
         }
 
         return redirect()->to($kembali)->with('success', $pesan);
+    }
+
+    /**
+     * POST — kembalikan SEMUA isian yang sudah masuk (menunggu + disetujui) untuk diperbaiki, sesuai saringan kelas/pencarian.
+     * Catatan yang sama dikirim ke semua siswa. Data di Master Siswa tidak berubah.
+     */
+    public function kembalikanMassal(): RedirectResponse
+    {
+        $kelasId = (int) $this->request->getPost('kelas_id');
+        $q       = trim((string) $this->request->getPost('q'));
+        $tab     = in_array($this->request->getPost('tab'), ['menunggu', 'disetujui'], true) ? (string) $this->request->getPost('tab') : 'disetujui';
+        $kembali = site_url('admin/biodata') . '?' . http_build_query(array_filter(['tab' => $tab, 'kelas_id' => $kelasId ?: '', 'q' => $q]));
+
+        $hasil = (new BiodataVerifikasi())->kembalikanBanyak(
+            $this->isian->idBisaDikembalikan($kelasId, $q, self::MAKS_KEMBALIKAN),
+            (string) $this->request->getPost('catatan')
+        );
+        if (! $hasil['ok']) {
+            return redirect()->to($kembali)->with('error', $hasil['pesan']);
+        }
+        $this->audit->record('update', 'biodata_isian', null, 'Kembalikan massal isian biodata untuk diperbaiki: ' . $hasil['jumlah'] . ' isian');
+
+        return redirect()->to(site_url('admin/biodata') . '?tab=perbaikan')->with('success', $hasil['pesan'] . ' Siswa membukanya lagi di form (pakai NISN atau tanggal lahir yang dulu diisi).');
     }
 
     // =================================================================

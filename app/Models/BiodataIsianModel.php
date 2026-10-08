@@ -260,6 +260,34 @@ class BiodataIsianModel extends Model
         ));
     }
 
+    /** Builder isian yang SUDAH masuk (menunggu / disetujui) milik siswa aktif — dasar "kembalikan semua". */
+    private function sudahMengisi(int $kelasId, string $q): \CodeIgniter\Database\BaseBuilder
+    {
+        $b = $this->db->table('biodata_isian b')
+            ->join('siswa s', 's.id = b.siswa_id')
+            ->where('s.deleted_at', null)
+            ->where('s.status', 'aktif')
+            ->whereIn('b.status', ['menunggu', 'disetujui']);
+        $this->saring($b, $kelasId, $q);
+
+        return $b;
+    }
+
+    /** Jumlah isian (menunggu + disetujui) sesuai saringan yang bisa dikembalikan untuk diperbaiki. */
+    public function hitungBisaDikembalikan(int $kelasId, string $q): int
+    {
+        return (int) $this->sudahMengisi($kelasId, $q)->countAllResults();
+    }
+
+    /** Id isian (menunggu + disetujui) sesuai saringan. @return list<int> */
+    public function idBisaDikembalikan(int $kelasId, string $q, int $batas): array
+    {
+        return array_map('intval', array_column(
+            $this->sudahMengisi($kelasId, $q)->select('b.id')->orderBy('b.id', 'ASC')->limit($batas)->get()->getResultArray(),
+            'id'
+        ));
+    }
+
     /**
      * Saringan kelas + kata kunci (nama / NISN) yang dipakai bersama.
      * Syarat: builder memakai alias "s" (siswa) dan "b" (biodata_isian).

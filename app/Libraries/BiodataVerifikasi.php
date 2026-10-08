@@ -125,6 +125,35 @@ final class BiodataVerifikasi
         return ['ok' => true, 'pesan' => 'Isian dikembalikan. Siswa bisa membukanya lagi di form dengan NISN / tanggal lahir.'];
     }
 
+    /**
+     * Kembalikan BANYAK isian sekaligus (menunggu / disetujui → perbaikan) dengan satu catatan yang sama.
+     * Satu perintah UPDATE; data di Master Siswa TIDAK berubah (siswa tinggal membuka isiannya lagi, memeriksa, mengirim ulang).
+     * Isian yang sudah "perbaikan" dilewati.
+     *
+     * @param list<int> $ids
+     *
+     * @return array{ok: bool, pesan: string, jumlah: int}
+     */
+    public function kembalikanBanyak(array $ids, string $catatan): array
+    {
+        $catatan = trim(preg_replace('/\s+/u', ' ', $catatan) ?? '');
+        if ($catatan === '') {
+            return ['ok' => false, 'pesan' => 'Tulis catatan untuk siswa: apa yang harus diperiksa / diperbaiki.', 'jumlah' => 0];
+        }
+        if ($ids === []) {
+            return ['ok' => false, 'pesan' => 'Tidak ada isian yang bisa dikembalikan.', 'jumlah' => 0];
+        }
+
+        $db = db_connect();
+        $db->table('biodata_isian')
+            ->whereIn('id', $ids)
+            ->whereIn('status', ['menunggu', 'disetujui'])
+            ->update(['status' => 'perbaikan', 'catatan_admin' => mb_substr($catatan, 0, 255), 'updated_at' => date('Y-m-d H:i:s')]);
+        $n = $db->affectedRows();
+
+        return ['ok' => true, 'pesan' => $n . ' isian dikembalikan ke siswa untuk diperbaiki.', 'jumlah' => $n];
+    }
+
     /** Hapus isian — siswa bisa mengisi dari nol. Data yang sudah masuk Master Siswa TIDAK ikut terhapus. */
     public function hapus(int $isianId): array
     {

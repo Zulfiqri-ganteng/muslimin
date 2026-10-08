@@ -138,6 +138,15 @@ class Biodata extends BaseController
         $buka[$id] = time();
         session()->set(self::SESI_BUKA, $buka);
 
+        // Isian lama dibuat sebelum data resmi sekolah masuk: NIS/NISN yang kini tercatat di Master Siswa
+        // mengisi kolom yang masih kosong, supaya siswa tinggal memeriksa (dicek SETELAH verifikasi di atas).
+        foreach (['nis', 'nisn'] as $k) {
+            $resmi = trim((string) ($siswa[$k] ?? ''));
+            if (trim((string) ($lama[$k] ?? '')) === '' && preg_match('/^\d{5,}$/', $resmi) === 1) {
+                $lama[$k] = $resmi;
+            }
+        }
+
         return $this->json([
             'ok'      => true,
             'data'    => $lama,

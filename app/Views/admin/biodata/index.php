@@ -124,6 +124,7 @@ $tombolSekunder = 'inline-flex items-center justify-center gap-1.5 rounded-lg bo
         • Isian <b>tidak langsung</b> mengubah Master Siswa. Buka <b>Periksa</b> untuk membandingkan data lama dengan isian siswa, lalu <b>Setujui</b> — baru saat itu datanya masuk ke Master Siswa (web &amp; aplikasi Android). Setelah menyetujui, isian berikutnya langsung terbuka.<br>
         • Banyak isian sekaligus? Centang lalu <b>Setujui terpilih</b>, atau <b>Setujui semua</b> (maks. ' . (int) $maksMassal . ' per klik).<br>
         • Ada yang salah? <b>Kembalikan</b> dengan catatan — siswa membuka isiannya lagi di form memakai NISN / tanggal lahir. <b>Hapus isian</b> membuat siswa mengisi dari nol.<br>
+        • Mau mengembalikan <b>semua</b> yang sudah mengisi sekaligus (mis. setelah data sekolah diperbarui)? Di tab <b>Menunggu</b> atau <b>Disetujui</b> buka bar kuning <b>Kembalikan semua…</b>, tulis catatan, lalu kirim. Bisa dipersempit per kelas lewat saringan kelas.<br>
         • Tab <b>Belum Mengisi</b> + pilih satu kelas → muncul pesan WhatsApp berisi daftar nama untuk dikirim ke wali kelas.</p>
         <p class="mt-1">• Form bisa <b>dibuka/ditutup</b> kapan saja, dan bisa diberi <b>batas waktu</b> agar tertutup otomatis.</p>
         <p class="mt-1">• <b>Unduh Laporan</b> — Excel siap cetak berisi rekap per kelas dan daftar nama tiap kelas (lengkap / belum lengkap + kolom yang masih kurang), lengkap dengan kop dan tanda tangan. Data biodata lengkap (nama orang tua, alamat, dll.) ada di <b>Master Data → Siswa → Export</b>. “Lengkap” dihitung dari data <b>Master Siswa</b>, jadi isian yang belum disetujui belum terhitung lengkap.</p>',
@@ -333,6 +334,30 @@ $tombolSekunder = 'inline-flex items-center justify-center gap-1.5 rounded-lg bo
                     <?php endif; ?>
                 </div>
             </form>
+        <?php endif; ?>
+
+        <?php if (in_array($tab, ['menunggu', 'disetujui'], true) && ($bisaKembali ?? 0) > 0): ?>
+            <!-- Kembalikan SEMUA yang sudah mengisi (menunggu + disetujui), sesuai saringan kelas/pencarian di atas -->
+            <details class="group border-b border-slate-100 bg-amber-50/40">
+                <summary class="cursor-pointer list-none flex items-center justify-between gap-3 px-4 sm:px-5 py-3 text-sm font-semibold text-amber-900 hover:bg-amber-50">
+                    <span>↩ Kembalikan semua yang sudah mengisi untuk diperbaiki (<?= $fmtAngka($bisaKembali) ?><?= $kelasNama !== '' ? ' di ' . esc($kelasNama) : '' ?>)</span>
+                    <span class="text-xs font-normal text-amber-700 group-open:hidden">Klik untuk membuka</span>
+                </summary>
+                <form method="post" action="<?= site_url('admin/biodata/kembalikan-massal') ?>" class="px-4 sm:px-5 pb-4 space-y-3">
+                    <?= csrf_field() ?>
+                    <input type="hidden" name="tab" value="<?= esc($tab, 'attr') ?>">
+                    <input type="hidden" name="kelas_id" value="<?= $kelasId ?: '' ?>">
+                    <input type="hidden" name="q" value="<?= esc($q, 'attr') ?>">
+                    <label class="block text-xs font-bold uppercase tracking-wide text-slate-500" for="catatanMassal">Catatan untuk siswa (sama untuk semua)</label>
+                    <textarea id="catatanMassal" name="catatan" rows="3" maxlength="255" required
+                              class="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm focus:border-brand-500 outline-none"><?= esc($catatanBawaan ?? '') ?></textarea>
+                    <p class="text-xs text-slate-500 leading-relaxed">Mencakup isian <b>menunggu</b> dan <b>disetujui</b><?= $kelasNama !== '' ? ' di ' . esc($kelasNama) : ($q !== '' ? ' yang cocok dengan pencarian' : ' dari SEMUA kelas') ?>. Isian pindah ke tab <b>Perbaikan</b>; data di Master Siswa <b>tidak berubah</b>. Siswa membukanya lagi di form (pakai NISN atau tanggal lahir yang dulu diisi), memeriksa, lalu mengirim ulang.</p>
+                    <button data-confirm="Kembalikan <?= (int) $bisaKembali ?> isian<?= $kelasNama !== '' ? ' di ' . esc($kelasNama, 'attr') : '' ?> ke siswa untuk diperbaiki? Siswa harus membuka dan mengirim ulang isiannya."
+                            class="rounded-lg bg-amber-500 hover:bg-amber-600 px-4 py-2 text-sm font-semibold text-white transition">
+                        ↩ Kembalikan <?= $fmtAngka($bisaKembali) ?> isian
+                    </button>
+                </form>
+            </details>
         <?php endif; ?>
 
         <?php if ($tab === 'menunggu'): ?>

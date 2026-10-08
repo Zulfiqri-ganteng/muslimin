@@ -82,6 +82,7 @@ $routes->group('admin', static function ($routes) {
         $routes->get('biodata/laporan', 'Admin\Biodata::laporan');
         $routes->post('biodata/pengaturan', 'Admin\Biodata::pengaturan');
         $routes->post('biodata/setujui-massal', 'Admin\Biodata::setujuiMassal');
+        $routes->post('biodata/kembalikan-massal', 'Admin\Biodata::kembalikanMassal');
         $routes->get('biodata/(:num)', 'Admin\Biodata::detail/$1');
         $routes->post('biodata/(:num)/setujui', 'Admin\Biodata::setujui/$1');
         $routes->post('biodata/(:num)/kembalikan', 'Admin\Biodata::kembalikan/$1');
