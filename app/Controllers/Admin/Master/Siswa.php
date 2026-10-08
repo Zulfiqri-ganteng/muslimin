@@ -3,6 +3,8 @@
 namespace App\Controllers\Admin\Master;
 
 use App\Libraries\BiodataForm;
+use App\Libraries\HakAkses;
+use App\Libraries\SiswaDetail;
 use App\Models\KelasModel;
 use App\Models\SiswaModel;
 use CodeIgniter\Database\BaseConnection;
@@ -133,6 +135,24 @@ class Siswa extends BaseMaster
         $this->audit->record('update', $this->auditTable, $id, 'Ubah siswa ' . $data['nama']);
 
         return $this->goIndex('Siswa diperbarui.');
+    }
+
+    /** GET admin/master/siswa/{id} — halaman Detail Siswa: semua data satu siswa (read-only). */
+    public function detail($id)
+    {
+        $d = SiswaDetail::muat((int) $id);
+        if ($d === null) {
+            return $this->goIndex(null, 'Siswa tidak ditemukan (mungkin sudah dihapus).');
+        }
+        $peran = (string) (session('admin')['role'] ?? '');
+
+        return view('admin/master/siswa_detail', [
+            'title'      => 'Detail Siswa',
+            'd'          => $d,
+            'bolehPkl'   => HakAkses::boleh($peran, 'admin/pkl'),
+            'bolehBio'   => HakAkses::boleh($peran, 'admin/biodata'),
+            'urlDaftar'  => $this->indexUrl(),
+        ]);
     }
 
     /** Isi form tambah/edit (form lengkap: kolom kosong memang berarti dikosongkan). */

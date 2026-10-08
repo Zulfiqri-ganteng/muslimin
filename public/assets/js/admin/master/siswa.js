@@ -7,6 +7,19 @@
 document.addEventListener('alpine:init', function () {
     Alpine.data('siswaPage', function () {
         return window.masterList({
+            // Tombol "Edit data" di halaman Detail Siswa membuka daftar dengan ?q=<NIS>&edit=<id>: langsung buka modal edit siswa itu.
+            onInit: function () {
+                var id = Number(new URLSearchParams(window.location.search).get('edit') || 0);
+                if (!id) { return; }
+                var self = this;
+                this.$nextTick(function () {
+                    var tombol = self.$el.querySelectorAll('button[data-row]');
+                    for (var i = 0; i < tombol.length; i++) {
+                        var baris = JSON.parse(tombol[i].getAttribute('data-row') || '{}');
+                        if (Number(baris.id) === id) { self.openEdit(baris); return; }
+                    }
+                });
+            },
             mapEdit: function (r) {
                 var teks = function (v) {
                     return v === null || v === undefined ? '' : String(v);

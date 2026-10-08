@@ -65,7 +65,7 @@ $blokAlamat = static function (string $p) use ($kolom, $label): void {
 <?= $this->section('content') ?>
 
 <?= view('admin/partials/help', [
-    'helpKey'   => 'siswa_v4',
+    'helpKey'   => 'siswa_v5',
     'helpTitle' => 'Master Siswa',
     'helpBody'  => '<p>Data siswa lengkap sesuai buku induk: identitas, alamat, sekolah asal, orang tua, wali, dan kelas. Tingkat dan jurusan <b>mengikuti kelas</b> siswa, jadi cukup pilih kelasnya saja.</p>
         <p class="mt-1">• <b>Biodata dari siswa</b> — siswa bisa mengisi biodatanya sendiri lewat menu <b>Isian Biodata Siswa</b>. Setelah admin menyetujui isiannya, datanya otomatis masuk ke sini dan siswa ditandai <span class="font-semibold text-emerald-700">Biodata ✓</span>. Pakai saringan <b>Biodata lengkap / belum</b> untuk melihat siapa yang belum.<br>
@@ -74,6 +74,7 @@ $blokAlamat = static function (string $p) use ($kolom, $label): void {
         • Kolom <b>Kelas</b> pada file impor diisi <b>nama kelas</b> persis seperti di Master Kelas (mis. <i>X TKJ 1</i>).<br>
         • <b>Penting:</b> NIS bisa berganti ke NIS asli setelah biodata disetujui. Untuk impor ulang, pakai file hasil <b>Export terbaru</b>, bukan file lama — NIS lama akan dianggap siswa baru.<br>
         • <b>Filter</b> — memilih kelas/tingkat/status/biodata langsung menyaring tabel (tanpa klik Cari). Pilihan <b>— Tanpa kelas —</b> menampilkan siswa yang belum ditempatkan di kelas.<br>
+        • <b>Detail</b> — klik <b>nama siswa</b> atau ikon <b>mata</b> di kolom Aksi untuk melihat SEMUA data satu siswa (identitas, kelas, alamat, orang tua, wali, STTB, status biodata &amp; PKL). Dari sana tombol <b>Edit data</b> membuka form ubah.<br>
         • <b>Data Sekolah</b> — nama orang tua versi sekolah, nomor &amp; tahun STTB (ijazah SMP) sesuai Daftar Nama Siswa resmi (Format 8355). Kolom ini ada di <b>paling kanan</b> template impor.<br>
         • <b>Export</b> — mengunduh sesuai pilihan filter (pilih satu kelas = hanya kelas itu), berisi seluruh kolom biodata. Bila isinya lebih dari satu kelas, file Excel berisi tab <b>Semua Kelas</b> + <b>satu tab per kelas</b> (klik nama kelas di bawah layar Excel).</p>
         <p class="mt-1">• Status <b>Aktif</b> yang dihitung pada grafik jumlah siswa di halaman publik. Siswa lulus/pindah/keluar tetap tersimpan sebagai arsip.</p>',
@@ -147,7 +148,7 @@ $blokAlamat = static function (string $p) use ($kolom, $label): void {
                             <td class="pl-6 pr-2 py-3"><input type="checkbox" class="row-check rounded border-slate-300 text-brand-600 focus:ring-brand-500" value="<?= (int) $r['id'] ?>"></td>
                             <td class="px-4 py-3 font-semibold text-brand-700"><?= esc($r['nis']) ?></td>
                             <td class="px-4 py-3">
-                                <div class="font-medium text-slate-800"><?= esc($r['nama']) ?></div>
+                                <a href="<?= site_url('admin/master/siswa/' . (int) $r['id']) ?>" class="font-medium text-slate-800 hover:text-brand-700 hover:underline" title="Lihat detail siswa"><?= esc($r['nama']) ?></a>
                                 <?php if (! empty($r['nisn']) || ! empty($r['biodata_at'])): ?>
                                     <div class="text-xs text-slate-400">
                                         <?php if (! empty($r['nisn'])): ?>NISN <?= esc($r['nisn']) ?><?php endif; ?>
@@ -166,6 +167,7 @@ $blokAlamat = static function (string $p) use ($kolom, $label): void {
                             <td class="px-4 py-3 text-right whitespace-nowrap">
                                 <?= view('admin/master/partials/row_actions', [
                                     'row'       => $r,
+                                    'detailUrl' => site_url('admin/master/siswa/' . (int) $r['id']),
                                     'deleteUrl' => site_url('admin/master/siswa/delete/' . $r['id']),
                                     'confirm'   => 'Hapus data siswa ini?',
                                 ]) ?>

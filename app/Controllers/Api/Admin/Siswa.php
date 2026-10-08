@@ -3,6 +3,7 @@
 namespace App\Controllers\Api\Admin;
 
 use App\Libraries\BiodataForm;
+use App\Libraries\SiswaDetail;
 use App\Models\SiswaModel;
 use CodeIgniter\HTTP\ResponseInterface;
 use CodeIgniter\Model;
@@ -220,6 +221,28 @@ class Siswa extends BaseCrud
     protected function freshRow(int $id): array
     {
         return $this->model->withRelations()->where('siswa.id', $id)->first() ?? [];
+    }
+
+    /**
+     * GET .../siswa/{id} — DETAIL LENGKAP satu siswa (sama dengan halaman web "Detail Siswa").
+     * Kunci-kunci datar lama + `jurusan_nama`, lalu: `bagian` (judul → baris {kunci,label,nilai} yang SUDAH diformat
+     * tampil), `biodata` (disahkan_pada, kurang[], isian), `pkl` (ajuan aktif atau null), `jejak`.
+     */
+    public function show($id = null): ResponseInterface
+    {
+        $d = SiswaDetail::muat((int) $id);
+        if ($d === null) {
+            return $this->missing('Siswa tidak ditemukan (mungkin sudah dihapus).');
+        }
+        $bagian = array_map(static fn (array $b): array => [
+            'judul' => $b[0],
+            'baris' => array_map(static fn (array $x): array => ['kunci' => $x[0], 'label' => $x[1], 'nilai' => $x[2]], $b[1]),
+        ], $d['bagian']);
+
+        return $this->ok($this->transform($d['siswa']) + [
+            'jurusan_nama' => $d['siswa']['jurusan_nama'] ?? null,
+            'bagian' => $bagian, 'biodata' => $d['biodata'], 'pkl' => $d['pkl'], 'jejak' => $d['jejak'],
+        ], 'Detail siswa.');
     }
 
     /** Ringkasan agregat untuk dashboard admin: GET .../siswa/statistik */

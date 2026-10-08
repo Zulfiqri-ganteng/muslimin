@@ -227,6 +227,7 @@ $routes->group('admin', static function ($routes) {
             $routes->post('siswa', 'Admin\Master\Siswa::store');
             $routes->post('siswa/(:num)', 'Admin\Master\Siswa::update/$1');
             $routes->get('siswa/delete/(:num)', 'Admin\Master\Siswa::delete/$1');
+            $routes->get('siswa/(:num)', 'Admin\Master\Siswa::detail/$1');
             $routes->get('siswa/export', 'Admin\Master\Siswa::export');
             $routes->get('siswa/template', 'Admin\Master\Siswa::template');
             $routes->post('siswa/import-preview', 'Admin\Master\Siswa::importPreview');
@@ -638,6 +639,8 @@ $routes->group('api/v1', ['namespace' => 'App\Controllers\Api', 'filter' => 'cor
 
         // Siswa — ringkasan agregat (untuk dashboard admin)
         $routes->get('admin/master/siswa/statistik', 'Admin\Siswa::statistik');
+        // Siswa — detail lengkap satu siswa (id angka; 'statistik' di atas tidak bentrok)
+        $routes->get('admin/master/siswa/(:num)', 'Admin\Siswa::show/$1');
 
         // Guru — jabatan yang disandang (boleh lebih dari satu, satu utama)
         $routes->get('admin/master/guru/(:num)/jabatan', 'Admin\Guru::jabatanGet/$1');
