@@ -67,8 +67,10 @@ class AuthFilter implements FilterInterface
         if (! HakAkses::boleh($peran, $alamat)) {
             $beranda = HakAkses::beranda($peran);
 
-            // Jaga dari putaran tanpa ujung bila beranda peran sendiri tak boleh dibuka.
-            if (HakAkses::cocokAwalan($alamat, $beranda) || ! HakAkses::boleh($peran, $beranda)) {
+            // Jaga dari putaran tanpa ujung: 403 hanya bila yang ditolak adalah beranda itu sendiri, atau beranda peran
+            // tak boleh dibuka. Alamat DI BAWAH beranda (mis. admin/pkl/laporan yang haknya dicabut Admin) cukup dialihkan
+            // ke beranda dengan pesan — lebih ramah daripada tulisan "Akses ditolak" polos.
+            if (strtolower(trim($alamat, '/')) === strtolower(trim($beranda, '/')) || ! HakAkses::boleh($peran, $beranda)) {
                 return service('response')->setStatusCode(403)
                     ->setBody('Akses ditolak. Peran akun Anda tidak diizinkan membuka halaman ini.');
             }

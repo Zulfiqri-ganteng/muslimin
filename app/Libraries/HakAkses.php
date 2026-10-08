@@ -58,12 +58,19 @@ final class HakAkses
         return $p !== null && ! empty($p['api']);
     }
 
-    /** Boleh menyetujui (ACC) ajuan PKL? Hanya Waka Hubin, dan Admin sebagai cadangan. */
+    /**
+     * Boleh menyetujui (ACC) ajuan PKL? Ditentukan Admin di PKL → Hak Akses (Libraries\PklHak).
+     * Bawaan: Waka Hubin; Admin selalu boleh (cadangan, wajib menyatakan "mewakili").
+     */
     public static function bolehAcc(?string $peran): bool
     {
-        $p = self::peran($peran);
+        return self::bolehPkl($peran, 'acc');
+    }
 
-        return $p !== null && ! empty($p['acc']);
+    /** Hak PKL yang diatur Admin (acc, surat, laporan, ubah, ttd, pengaturan, hapus) — lihat PklHak::HAK. */
+    public static function bolehPkl(?string $peran, string $hak): bool
+    {
+        return self::peran($peran) !== null && PklHak::boleh($peran, $hak);
     }
 
     /**
@@ -146,11 +153,29 @@ final class HakAkses
         }
         foreach ($p['akses'] as $awalan) {
             if ($awalan === '*' || self::cocokAwalan($alamat, $awalan)) {
-                return true;
+                return self::lolosHakPkl($peran, $alamat);
             }
         }
 
         return false;
+    }
+
+    /**
+     * Lapis kedua khusus PKL: peran sudah punya akses "admin/pkl", tetapi sebagian alamatnya menuntut hak yang
+     * diatur Admin (ACC, unduh surat, laporan, tanda tangan, pengaturan, hapus, ubah) atau khusus Admin.
+     * Alamat PKL lain (beranda, daftar, detail, status siswa) terbuka bagi semua yang punya akses PKL.
+     */
+    private static function lolosHakPkl(?string $peran, string $alamat): bool
+    {
+        $hak = PklHak::hakUntukAlamat($alamat);
+        if ($hak === null) {
+            return true;
+        }
+        if ($hak === 'khusus_admin') {
+            return (string) $peran === 'admin';
+        }
+
+        return PklHak::boleh($peran, $hak);
     }
 
     /**

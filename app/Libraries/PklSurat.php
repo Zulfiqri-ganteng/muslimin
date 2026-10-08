@@ -331,6 +331,10 @@ final class PklSurat
             $lantai = ((int) ($p['nomor_awal_tahun'] ?? 0) === $tahun) ? max(1, (int) $p['nomor_awal']) : 1;
             $urut   = max($maks + 1, $lantai);
             $pola   = (string) ($p['format_nomor'] ?? '') !== '' ? (string) $p['format_nomor'] : PklNomorSurat::BAWAAN;
+            if (PklNomorSurat::periksa($pola) !== null) { // format tersimpan yang rusak (mis. "{urut}00") tak boleh menerbitkan nomor ngawur
+                log_message('error', '[PKL] format nomor surat tidak sah "' . $pola . '"; memakai format bawaan.');
+                $pola = PklNomorSurat::BAWAAN;
+            }
             $now    = date('Y-m-d H:i:s');
 
             $baris = [
@@ -388,7 +392,7 @@ final class PklSurat
         $alamat  = trim((string) ($ajuan['perusahaan_alamat'] ?? ''));
         $kota    = trim((string) ($ajuan['perusahaan_kota'] ?? ''));
 
-        $wakaNama    = trim((string) ($p['waka_hubin_nama'] ?? ''));
+        $wakaNama    = IsianBantu::rapikanGelar((string) ($p['waka_hubin_nama'] ?? ''));
         $wakaJabatan = trim((string) ($p['waka_hubin_jabatan'] ?? '')) !== '' ? trim((string) $p['waka_hubin_jabatan']) : 'Wakil Kepala Sekolah Bidang Hubungan Industri';
         [$jab1, $jab2] = self::bagiDuaBaris($wakaJabatan, 30);
 
@@ -415,8 +419,8 @@ final class PklSurat
                 'sekolah' => (string) ($setting['school_name'] ?? ''), 'sekolah_alamat' => (string) ($setting['address'] ?? ''),
                 'sekolah_telepon' => (string) ($setting['phone'] ?? ''), 'sekolah_email' => (string) ($setting['email'] ?? ''),
                 'waka_nama' => $wakaNama, 'waka_nip' => (string) ($p['waka_hubin_nip'] ?? ''), 'waka_jabatan' => $wakaJabatan,
-                'kepsek_nama' => (string) ($p['kepsek_nama'] ?? ''),
-                'kontak_sekolah_nama' => (string) ($p['kontak_surat_nama'] ?? ''), 'kontak_sekolah_hp' => (string) ($p['kontak_surat_hp'] ?? ''),
+                'kepsek_nama' => IsianBantu::rapikanGelar((string) ($p['kepsek_nama'] ?? '')),
+                'kontak_sekolah_nama' => IsianBantu::rapikanGelar((string) ($p['kontak_surat_nama'] ?? '')), 'kontak_sekolah_hp' => (string) ($p['kontak_surat_hp'] ?? ''),
                 'hubin_nama' => $wakaNama !== '' ? $wakaNama : '........................................',
                 'hubin_jabatan' => $wakaJabatan, 'hubin_jabatan_1' => $jab1, 'hubin_jabatan_2' => $jab2,
                 'ttd_hubin' => $ttdRaw,
@@ -495,7 +499,7 @@ final class PklSurat
             $siapa = match ($peran) {
                 'hubin'    => $nama . ' (' . $jabatanHubin . ')',
                 'admin'    => $nama . ' (Admin Sistem, mewakili Waka Hubin karena Waka Hubin berhalangan)',
-                'operator' => $nama . ' (Operator Sekolah — tanpa wewenang ACC; mohon dikonfirmasi Waka Hubin)',
+                'operator' => $nama . ' (Operator Sekolah, diberi wewenang ACC oleh Admin sekolah)',
                 default    => $nama !== '' ? $nama : 'tidak tercatat',
             };
             // Tiap keterangan satu baris pendek (tidak terpotong di tengah kode verifikasi).
@@ -529,7 +533,7 @@ final class PklSurat
      *
      * @param list<int> $ids
      *
-     * @return array{ok: bool, pesan?: string, biner?: string, nama?: string, jumlah?: int, dilewati?: int}
+     * @return array{ok: bool, pesan?: string, biner?: string, nama?: string, jumlah?: int, dilewati?: int, ids?: list<int>}
      */
     public function bangun(array $ids, array $konteks, ?string $tanggal = null): array
     {
@@ -596,7 +600,7 @@ final class PklSurat
             (new PklAjuan($this->db))->catat((int) $id, 'cetak', $konteks, 'Surat ' . $nomor[$id] . ' diunduh');
         }
 
-        return ['ok' => true, 'biner' => $biner, 'nama' => $nama, 'jumlah' => count($daftar), 'dilewati' => $lewat];
+        return ['ok' => true, 'biner' => $biner, 'nama' => $nama, 'jumlah' => count($daftar), 'dilewati' => $lewat, 'ids' => array_map('intval', array_keys($sidik))];
     }
     /**
      * Template untuk diedit/diunggah ulang: berkas surat bawaan sekolah lengkap dengan penanda ${...}.

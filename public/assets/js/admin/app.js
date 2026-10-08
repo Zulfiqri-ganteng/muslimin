@@ -257,12 +257,17 @@
                     self.pesan = 'Menyiapkan berkas surat…';
                     self.loading = true;
                     var batas = Date.now() + 120000;
+                    var adaWa = form.hasAttribute('data-pkl-wa');
                     var timer = setInterval(function () {
                         var selesai = document.cookie.split('; ').indexOf('unduh_selesai=' + token) !== -1;
                         if (selesai || Date.now() > batas) {
                             clearInterval(timer);
                             self.loading = false;
                             document.cookie = 'unduh_selesai=; Max-Age=0; Path=/';
+                            /* Unduhan surat PKL selesai → halaman boleh menawarkan "Kabari lewat WhatsApp" (pkl-unduh.js). */
+                            if (selesai && adaWa) {
+                                window.dispatchEvent(new CustomEvent('pkl:unduh-selesai', { detail: { token: token } }));
+                            }
                         }
                     }, 300);
                 },

@@ -36,6 +36,20 @@ final class IsianBantu
         return $s;
     }
 
+    /**
+     * Titik penutup gelar yang terlupa: "Napis Kuturupi, S.T" → "Napis Kuturupi, S.T.". Hanya bila kata TERAKHIR
+     * berbentuk singkatan bertitik di tengah (S.T, S.Pd, M.Pd.I) dan belum diakhiri titik; nama biasa tak disentuh.
+     */
+    public static function rapikanGelar(string $nama): string
+    {
+        $nama = trim($nama);
+        if ($nama !== '' && preg_match('/(?<=[\s,])(?:\p{L}{1,6}\.)+\p{L}{1,6}$/u', $nama)) {
+            return $nama . '.';
+        }
+
+        return $nama;
+    }
+
     /** Nama orang: huruf, boleh titik, koma, petik, strip (gelar & nama ber-tanda). */
     public static function namaOrangSah(string $s): bool
     {

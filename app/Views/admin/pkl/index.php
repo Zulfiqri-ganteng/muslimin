@@ -34,6 +34,30 @@ $hubin = $peran === 'hubin';
 
 <?= view('admin/pkl/_nav', ['tab' => $tab, 'hitungTab' => $hitungTab]) ?>
 
+<?php if (! empty($suratRingkas)): // Surat & biaya: hanya bagi yang memegang hak unduh surat / laporan pembayaran ?>
+    <section class="rise rise-1 mb-5 grid grid-cols-1 gap-3 sm:grid-cols-3">
+        <?php if (! empty($bolehSurat)): ?>
+            <a href="<?= site_url('admin/pkl/daftar/disetujui') ?>" class="group rounded-2xl border border-slate-200 bg-white px-5 py-4 shadow-sm transition hover:border-brand-300 hover:shadow-md">
+                <p class="text-[11px] font-bold uppercase tracking-wide text-slate-400">Surat belum diunduh</p>
+                <p class="mt-1 text-2xl font-extrabold <?= $suratRingkas['belum_bernomor'] > 0 ? 'text-amber-600' : 'text-slate-800' ?>"><?= (int) $suratRingkas['belum_bernomor'] ?></p>
+                <p class="mt-0.5 text-xs text-slate-400 group-hover:text-brand-700">Ajuan disetujui yang suratnya belum terbit →</p>
+            </a>
+            <a href="<?= site_url('admin/pkl/daftar/disetujui') ?>" class="group rounded-2xl border border-slate-200 bg-white px-5 py-4 shadow-sm transition hover:border-green-300 hover:shadow-md">
+                <p class="text-[11px] font-bold uppercase tracking-wide text-slate-400">Siswa belum dikabari WhatsApp</p>
+                <p class="mt-1 text-2xl font-extrabold <?= $suratRingkas['belum_dikabari'] > 0 ? 'text-green-700' : 'text-slate-800' ?>"><?= (int) $suratRingkas['belum_dikabari'] ?></p>
+                <p class="mt-0.5 text-xs text-slate-400 group-hover:text-green-700">Surat sudah terbit, siswa belum diberi tahu →</p>
+            </a>
+        <?php endif; ?>
+        <?php if (! empty($bolehLaporan)): ?>
+            <a href="<?= site_url('admin/pkl/laporan') ?>" class="group rounded-2xl border border-slate-200 bg-white px-5 py-4 shadow-sm transition hover:border-brand-300 hover:shadow-md">
+                <p class="text-[11px] font-bold uppercase tracking-wide text-slate-400">Uang tercatat bulan ini</p>
+                <p class="mt-1 text-2xl font-extrabold text-brand-700"><?= esc(\App\Libraries\PklBiaya::rupiah((int) $suratRingkas['uang_bulan_ini'])) ?></p>
+                <p class="mt-0.5 text-xs text-slate-400 group-hover:text-brand-700">Buka Laporan Pembayaran →</p>
+            </a>
+        <?php endif; ?>
+    </section>
+<?php endif; ?>
+
 <?php
 // Daftar persiapan: hanya untuk yang boleh membuka Pengaturan, dan hanya selama ada yang belum siap.
 $wakaOk  = trim((string) ($p['waka_hubin_nama'] ?? '')) !== '';

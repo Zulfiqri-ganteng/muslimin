@@ -5,9 +5,11 @@ namespace App\Controllers\Admin;
 use App\Controllers\BaseController;
 use App\Libraries\HakAkses;
 use App\Libraries\IsianBantu;
+use App\Libraries\PklBiaya;
 use App\Libraries\PklDocx;
 use App\Libraries\PklImpor;
 use App\Libraries\PklSurat;
+use App\Libraries\PklUnduh;
 use App\Models\AuditModel;
 use App\Models\PklPengajuanModel;
 use App\Models\PklPengaturanModel;
@@ -79,14 +81,27 @@ class PklBerkas extends BaseController
 
         return $this->unduh($pilih['ids'], date('Y-m-d'), $balik);
     }
-    /** @param list<int> $ids */
+    /**
+     * Satu pintu unduhan (aturan di Libraries\PklUnduh, dipakai juga API): hak 'surat' → biaya divalidasi dulu →
+     * surat dibangun → biaya dicatat. Kiriman biaya dari dialog: biaya[siswa_id][…] dan/atau semua[…].
+     *
+     * @param list<int> $ids
+     */
     private function unduh(array $ids, string $tanggal, string $balik)
     {
-        $hasil = $this->surat->bangun($ids, $this->konteks(), $tanggal);
+        $masukan = ['biaya' => (array) $this->request->getPost('biaya'), 'semua' => (array) $this->request->getPost('semua')];
+        $hasil   = PklUnduh::proses($ids, $tanggal, $masukan, $this->konteks());
         if (! $hasil['ok']) {
-            return $this->ke($balik, 'error', $hasil['pesan'] ?? 'Surat gagal dibuat.');
+            return $this->ke($balik, 'error', $hasil['pesan']);
         }
-        $this->audit->record('update', 'pkl_surat', $ids[0] ?? null, 'Surat PKL diunduh: ' . $hasil['jumlah'] . ' surat (' . $hasil['nama'] . ')');
+        $this->audit->record('update', 'pkl_surat', $ids[0] ?? null, 'Surat PKL diunduh: ' . $hasil['jumlah'] . ' surat (' . $hasil['nama'] . ')'
+            . ($hasil['catat']['item'] > 0 ? ', biaya dicatat ' . $hasil['catat']['item'] . ' item ' . PklBiaya::rupiah((int) $hasil['catat']['total']) : ''));
+
+        // Daftar surat yang baru terbit disimpan sebentar, supaya halaman bisa menawarkan "Kabari lewat WhatsApp".
+        $token = (string) $this->request->getPost('unduh_token');
+        if (preg_match('/^[0-9]{1,40}$/', $token) === 1) {
+            cache()->save('pkl_unduh_' . $token, ['admin' => (int) session('admin.id'), 'ids' => $hasil['ids']], 1800);
+        }
 
         return $this->berkas($hasil['nama'], $hasil['biner']);
     }
@@ -377,6 +392,7 @@ class PklBerkas extends BaseController
             'title' => $judul, 'tab' => $tab, 'peran' => $peran, 'p' => (new PklPengaturanModel())->ambil(),
             'bolehPengaturan' => HakAkses::boleh($peran, 'admin/pkl/pengaturan'), 'bolehHapus' => HakAkses::boleh($peran, 'admin/pkl/hapus'),
             'bolehAcc' => HakAkses::bolehAcc($peran), 'bolehTtd' => HakAkses::boleh($peran, 'admin/pkl/ttd'),
+            'bolehSurat' => HakAkses::bolehPkl($peran, 'surat'), 'bolehLaporan' => HakAkses::bolehPkl($peran, 'laporan'),
             'hitungTab' => $this->model->hitungStatus(),
         ];
     }

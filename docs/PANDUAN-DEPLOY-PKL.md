@@ -30,6 +30,26 @@ Bahasa sederhana, urut dari atas ke bawah. Rancangan teknis ada di `DESAIN-PKL.m
 5. Buka `https://pklbinanusa.kangmuslim.com/` di HP. Kalau muncul "Pengajuan PKL Belum Dibuka", pemasangan sudah benar
    (form memang belum dibuka, lihat bagian B).
 
+## A2. Pembaruan 2026-10-09 — hak diatur Admin, biaya, WhatsApp, nomor 001
+
+Dibawa oleh `git pull` + `phpm spark migrate` yang sama (tidak ada langkah server lain). **Cadangkan database dulu** (cPanel → Backup / phpMyAdmin → Export), karena ada migrasi yang menghapus data.
+
+1. Migrasi baru ada **dua** dan berjalan berurutan:
+   - `PklHakBiayaWa` — menambah kolom/tabel hak, biaya, pembayaran, beasiswa, keringanan, kabar WhatsApp; memperbaiki **format nomor `{urut}00/…` → `{urut3}/…`** dan titik "S.T." pada nama Kepala Sekolah.
+   - `PklBersihkanDataUji` — **MENGHAPUS PERMANEN semua ajuan PKL uji coba** (ajuan, siswa pada ajuan, surat bernomor, perusahaan master, catatan biaya) dan mengembalikan nomor surat ke 001. Data siswa, akun, dan Pengaturan PKL tetap utuh.
+     **Pengaman:** bila sudah ada ajuan yang dibuat sejak **13 Okt 2026**, migrasi ini TIDAK menghapus apa-apa (dianggap data sungguhan) dan hanya mencatat di Audit Log.
+     Jalankan **sebelum** tautan form dibagikan ke siswa.
+2. Login sebagai **Admin** → menu **PKL → Hak Akses**. Bawaan: Waka Hubin = ACC + ubah + tanda tangan; Operator = unduh surat + laporan + ubah + pengaturan. Ubah bila perlu (berlaku langsung; web & aplikasi).
+3. **PKL → Pengaturan** (Operator/Admin): periksa **Format nomor surat** (pilih "Tiga angka: 001"), nominal **Biaya** (Rp 300.000 / 150.000 / 50.000 / 10.000), dan **Pesan WhatsApp**.
+4. Cek nama Kepala Sekolah di Pengaturan PKL tertulis "…, S.T." (titik penutup ditambahkan otomatis saat disimpan/dicetak).
+
+### Cara kerja baru (menimpa bagian C di bawah bila bertentangan)
+- **Waka Hubin tidak bisa mengunduh/mencetak surat** (bawaan) — hanya ACC. **Operator** yang mengunduh surat; sebelum berkas dibuat muncul kotak **Catat biaya**: centang biaya yang sudah diterima tiap siswa
+  (wajib minimal satu per siswa; atau Beasiswa 3 tahun / Keringanan beralasan). Satu surat → per siswa; banyak surat → satu set untuk semua. Salah catat? Detail ajuan → kartu **Pembayaran siswa** → hapus catatan (wajib alasan).
+- Setelah unduhan selesai muncul **Kabari via WhatsApp**: tekan tombol hijau, WhatsApp terbuka dengan pesan siap kirim, tekan Kirim. Nomor diambil dari HP yang siswa isi di form. Tombolnya juga ada di daftar Disetujui dan halaman detail.
+- **PKL → Laporan Pembayaran**: siapa, kelas, jurusan, sudah bayar berapa, Lunas/Sebagian/Belum, beasiswa; filter; **Unduh Excel** (Rincian, Rekap Kelas, Rekap Jurusan).
+- Hapus ajuan kini bawaan **Admin saja** (Admin bisa memberi hak itu ke Operator di Hak Akses).
+
 ## B. Siapkan sebelum dibagikan ke siswa
 
 1. Login sebagai Admin → menu **Kelola Akun** → buat akun **Operator Sekolah** dan **Waka Hubin**.

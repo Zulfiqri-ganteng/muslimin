@@ -19,6 +19,11 @@ Aturan bisnisnya SAMA PERSIS dengan web, karena keduanya memanggil library yang 
 
 ## Siapa boleh apa
 
+> **PEMBARUAN 2026-10-09:** hak PKL kini **diatur Admin** (web: PKL → Hak Akses; API: `GET/POST pkl/hak-akses`), bukan lagi tetap per peran.
+> Tabel di bawah = hak **bawaan sebelum** pembaruan; yang berlaku sekarang ada di bagian **"Hak diatur Admin, biaya, WhatsApp, laporan"**
+> (di bawah) — bawaan baru: Waka Hubin = ACC + ubah + tanda tangan; Operator = unduh surat + laporan + ubah + pengaturan; hapus = Admin saja.
+> **Waka Hubin tidak lagi mengunduh surat** (agar jelas siapa menyetujui dan siapa mencetak). Yang bertentangan dengan bagian baru dianggap usang.
+
 | Aksi | Operator | Waka Hubin | Admin |
 |---|:-:|:-:|:-:|
 | Lihat daftar/detail/ringkasan/status siswa | ✅ | ✅ | ✅ |
@@ -94,6 +99,44 @@ Admin yang ACC tercatat "Admin — mewakili Waka Hubin" dan **gambar tanda tanga
 - `POST pkl/ttd` — `multipart/form-data`, berkas pada kolom **`ttd`** (PNG/JPG, ≤ 1 MB, 100–4000 px; jenis dicek dari isi berkas).
 - `DELETE pkl/ttd`.
 
+## Hak diatur Admin, biaya, WhatsApp, laporan (pembaruan 2026-10-09)
+
+Rancangan & alasan: `docs/DESAIN-PKL.md` (bagian "Hak akses diatur Admin, biaya, WhatsApp, laporan"). Kontrak sisi aplikasi: `C:\flutter-muslimin\BLUEPRINT-PKL-BIAYA.md`.
+Contoh respons nyata (data disamarkan): `C:\flutter-muslimin\test\fixtures\pkl\` (daftar berkas di `_CATATAN.txt`).
+
+### Tujuh hak (`Libraries\PklHak`)
+`acc` (ACC/tolak/batal ACC/ACC massal) · `surat` (unduh surat + catat biaya + WhatsApp + koreksi biaya) · `laporan` (Laporan Pembayaran) ·
+`ubah` (kembalikan, ubah, isi atas nama) · `ttd` (tanda tangan digital Waka Hubin) · `pengaturan` (pengaturan, nominal biaya, impor) · `hapus`.
+Bawaan: **Hubin** = `acc`, `ubah`, `ttd` · **Operator** = `surat`, `laporan`, `ubah`, `pengaturan` · **Admin** = semua, selalu (tak bisa dicabut).
+Disimpan di `pkl_pengaturan.hak_peran` (JSON); kosong/rusak = bawaan. Berlaku **langsung**, di web & API.
+Terbaca di: `auth/login`, `auth/biometric/login`, `auth/me` → `data.admin.hak_pkl` (kunci → bool) · `GET pkl/meta` → `data.hak` (+ `hak_pkl` = kamus judul/keterangan) ·
+`GET pkl/ringkasan` → `data.hak` · `GET pkl/ajuan/{id}` → `data.hak` per ajuan (kunci baru: `kembalikan`, `surat`, `pembayaran`, `koreksi_pembayaran`).
+`hak.atur_hak` = true hanya Admin. Pelanggaran → **403** (pesan menyebut peran dan "PKL → Hak Akses").
+
+### Endpoint baru
+| Metode | Endpoint | Hak | Keterangan |
+|---|---|---|---|
+| GET | `pkl/biaya[?semua=1]` | PKL | jenis biaya aktif (`semua=1` + hak `pengaturan`: termasuk nonaktif), `sumber_beasiswa`, `bulan_default`, `maks_jumlah_bulan`, `aturan`, `wa_templat`, `wa_penanda` |
+| POST | `pkl/biaya` | `pengaturan` | `{biaya:{kode:{nama,nominal,aktif}}, wa_pesan?}` — sebagian boleh; 422 bila nominal tak sah / semua nonaktif / penanda asing |
+| GET | `pkl/surat/siap?mode=&ids[]=` | `surat` | keadaan biaya tiap siswa sebelum unduh |
+| POST | `pkl/ajuan/{id}/surat`, `pkl/surat-massal` | `surat` | kini WAJIB memuat biaya (di bawah) |
+| GET | `pkl/ajuan/{id}/pembayaran` | `surat`/`laporan` | catatan biaya per siswa (+ `data.pembayaran` pada detail ajuan) |
+| POST | `pkl/ajuan/{id}/pembayaran/hapus` | `surat` | `{pembayaran_id, alasan(5–200)}` |
+| POST | `pkl/ajuan/{id}/pembayaran/beasiswa-cabut` | `surat` | `{siswa_id, alasan}` |
+| GET | `pkl/wa?ids[]=` | `surat` | siswa + tautan `https://wa.me/62…?text=…` + pesan; `alasan_tidak` bila HP tak sah |
+| POST | `pkl/ajuan/{id}/wa/{siswa_id}/tandai` | `surat` | catat "sudah dikabari" |
+| GET | `pkl/laporan?kelas_id=&jurusan=TKJ\|AKL\|MP&status=lunas\|sebagian\|belum&q=&dari=&sampai=&beasiswa=1&page=&per=` | `laporan` | `{ringkas, jenis, baris[]}` + `meta{page,perPage,total}` |
+| GET | `pkl/laporan/excel?…` | `laporan` | berkas `.xlsx` (lembar Rincian, Rekap Kelas, Rekap Jurusan) |
+| GET / POST | `pkl/hak-akses` | **Admin** | matriks, kamus, bawaan, peringatan; simpan `{hak:{hubin:[…],operator:[…]}}` |
+
+### Unduh surat dengan biaya
+Body: `{"tanggal_surat"?, "biaya": {"<siswa_id>": {"jenis":["pkl","spp"],"bulan":"2026-10","jumlah_bulan":1,"beasiswa":"sktm","beasiswa_ket":"…","keringanan":"alasan"}}, "semua": {"jenis":[…],"bulan":"2026-10","jumlah_bulan":1}}`
+(massal juga `mode`, `ids`). **Gerbang:** tiap siswa wajib punya minimal satu catatan — biaya baru, biaya yang sudah tercatat untuk ajuan itu, beasiswa aktif (membebaskan SPP),
+atau keringanan beralasan (≥ 5 huruf); jika tidak → **422** `data.errors` (`umum` = pesan menyebut nama siswa; atau per `siswa_id`), **tidak ada berkas, nomor surat tidak terpakai**.
+Pembayaran dicatat **setelah** berkas jadi (satu transaksi, tak digandakan: UNIQUE siswa+jenis+periode). Header balasan sukses: `X-Jumlah-Surat`, `X-Surat-Ids` (id ajuan terbit),
+`X-Biaya-Dicatat` (`item:total`). Jenis biaya: `pkl` (sekali per tahun ajaran), `spp`/`tabungan`/`osis` (bulanan; `bulan` YYYY-MM, `jumlah_bulan` 1–12).
+Nomor surat kini berformat tiga angka secara bawaan (`001/SMK-BN/PKL/X/2026`); format diatur Admin/Operator di Pengaturan PKL (`{urut}`, `{urut3}`, `{urut4}`).
+
 ## Catatan untuk pembuat aplikasi
 1. Setelah login, baca `admin.akses_api`: bila `["pkl"]`, tampilkan HANYA menu PKL (jangan panggil API lain → 403).
 2. Tombol per ajuan dibaca dari `data.hak` pada detail; jangan menebak dari peran.
@@ -102,6 +145,10 @@ Admin yang ACC tercatat "Admin — mewakili Waka Hubin" dan **gambar tanda tanga
 5. Pesan galat dari server berbahasa Indonesia sederhana dan boleh langsung ditampilkan ke pengguna.
 
 ## Pengujian
+**2026-10-09 (hak/biaya/WhatsApp/laporan):** `php spark dev:uji-pkl-biaya` (124 cek: hak & alamat, gerbang biaya, beasiswa, keringanan, koreksi, nomor 3 angka, titik gelar di Word, WhatsApp, laporan & Excel);
+skrip HTTP+API sementara (71 cek: tiap peran lewat web & Bearer, rute dijaga hak, unduh berkas, rantai CSRF penandaan WhatsApp, hak berubah langsung); uji peramban Chrome (29 cek: dialog biaya, unduhan sungguhan,
+dialog WhatsApp, sidebar). Regresi `php spark dev:uji-pkl` 322/322. Skrip uji lama:
+
 `node uji_api_pkl.mjs` (skrip di folder sementara sesi, bukan di repo) — 109 cek HTTP: login 3 peran, gerbang alamat, seluruh matriks
 hak di atas, ACC/tolak/batal/massal, surat satu & massal (+ cek gambar tanda tangan hanya pada ACC Hubin), tanda tangan, hapus,
 status siswa, profil & sandi sementara, serta jejak riwayat & Audit Log. Lulus 109/109 pada 2026-10-07; data ujinya dibersihkan sendiri.

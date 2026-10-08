@@ -325,3 +325,43 @@ Tampilan beda per peran: **Hubin** = fokus memutuskan (antrean "Menunggu ACC" di
       (biner), Status Siswa, tanda tangan (Hubin/Admin). Menu hanya bila `admin.akses_api` memuat `pkl` atau `*`. Tanya sebelum `flutter build`.
 **Sengaja belum dikerjakan:** layar Flutter PKL, jurnal/absensi/nilai PKL, notifikasi
 otomatis, ACC dua tingkat, akun siswa/guru.
+
+## Hak akses diatur Admin, biaya, WhatsApp, laporan (2026-10-09)
+
+Permintaan klien (Waka Hubin + operator TU): (1) yang **menyetujui** (ACC) dan yang **mencetak** surat harus jelas berbeda orang — Waka Hubin cukup ACC, tanpa tombol cetak; (2) aturan siapa-boleh-apa
+**diatur Admin**, bukan tetap di kode; (3) saat surat diunduh **wajib mencatat biaya** (Biaya PKL, SPP, Tabungan Wajib, Iuran OSIS) + laporan Excel (siapa, kelas, jurusan, bayar berapa) **tanpa menu input
+biaya terpisah**; (4) siswa dikabari lewat WhatsApp setelah suratnya terbit (dipilih **manual** `wa.me`, bukan gateway); (5) nomor surat berformat `001`; (6) sidebar admin dirapikan; (7) data uji PKL dibersihkan.
+
+### Keputusan (user, 2026-10-08/09)
+- Hak bawaan: **Hubin** = ACC, ubah, tanda tangan · **Operator** = unduh surat, laporan, ubah, pengaturan · **Admin** = semua (selalu, tak bisa dicabut, ACC-nya wajib "mewakili"). Halaman Hak Akses **khusus Admin**
+  (jika Operator bisa mengubahnya, ia bisa memberi dirinya hak ACC). ACC dan Unduh surat masing-masing harus dipegang minimal satu peran; bila satu peran memegang keduanya → tetap disimpan **dengan peringatan**
+  "pemisahan tugas hilang" + Audit Log. Operator yang diberi hak ACC: surat tidak memakai tanda tangan digital Hubin dan kaki surat menulis "diberi wewenang ACC oleh Admin sekolah".
+- Biaya: **Biaya PKL** Rp 300.000 (sekali per kegiatan/tahun ajaran) · **SPP** Rp 150.000, **Tabungan Wajib** Rp 50.000, **Iuran OSIS** Rp 10.000 (**bulanan**). Nominal & aktif diatur Admin/Operator ber-hak `pengaturan`;
+  tiap catatan menyimpan nominal saat dicatat. **Wajib minimal satu catatan per siswa**: biaya baru / yang sudah tercatat untuk ajuan itu / **Beasiswa 3 tahun** (sumber SKTM | Yayasan | Lainnya; membebaskan **SPP saja**;
+  menempel pada siswa, berakhir 30 Juni tahun masuk + 3) / **Keringanan-ditunda** beralasan. Satu surat → tabel per siswa; unduh massal → satu set centang untuk semua (tanpa Beasiswa/Keringanan).
+- Laporan Pembayaran: **Lunas** = Biaya PKL (tahun ajaran ajuan) + semua biaya bulanan untuk **bulan surat** tercatat (SPP bebas bila beasiswa); **Sebagian**; **Belum**; kekurangan = nominal yang seharusnya sudah ada. Jurusan disatukan
+  (TKJ/TJKT/TKJT → TKJ). Filter tanggal memilih siswa yang punya catatan pada rentang itu dan menghitung "uang masuk" pada rentang itu; status tetap dari seluruh catatan.
+- WhatsApp: tautan `https://wa.me/62…?text=…` dari **HP yang siswa isi di form PKL** (`pkl_anggota.hp`; Master Siswa `no_hp` hanya terisi 63 dari 1.787 siswa aktif); pesan tanpa rincian uang, templat bisa diubah; "sudah dikabari" dicatat
+  (`pkl_anggota.dikabari_at/oleh`). Sistem hanya tahu surat **diunduh**, bukan sudah dicetak di kertas → redaksi "sudah diterbitkan dan siap diambil".
+- Nomor surat: bawaan produksi sempat tersimpan `{urut}00/…` (hasil 100, 200, 600). Sekarang format yang menempelkan angka pada `{urut}` **ditolak**; ada pilihan siap pakai (tanpa nol / `{urut3}` 001 / `{urut4}` 0001);
+  migrasi memperbaiki nilai persis `{urut}00/SMK-BN/PKL/{bln_romawi}/{thn}` → `{urut3}/…`; `terbitkan()` memakai format bawaan bila format tersimpan rusak.
+- Titik gelar: "Napis Kuturupi, S.T" → "S.T." — `IsianBantu::rapikanGelar` dipakai saat menyimpan Pengaturan (PKL & Sekolah) dan saat mencetak (surat Word, Excel 8355); migrasi memperbaiki nilai lama yang persis dikenal.
+- Sidebar admin (`layouts/admin.php`): urut menurut alur kerja — **KESISWAAN (Data Siswa paling atas)**, PKL, Surat Sekolah, Guru, Jadwal & Absensi, Ujian, UKK, Laboratorium, Arsip & Info, Sistem; satu modul satu grup (laporan ikut modulnya);
+  akordeon (grup berisi halaman aktif terbuka, lainnya terlipat, ingatan di peramban), kotak "Cari menu". Alamat halaman tidak berubah; menu tiap peran tetap disaring `HakAkses`.
+
+### Data & kode
+- Migrasi `2026-10-12-000001_PklHakBiayaWa`: `pkl_pengaturan.hak_peran` (JSON) + `wa_pesan`; `pkl_anggota.dikabari_at/dikabari_oleh`; tabel `pkl_biaya` (4 baris awal), `pkl_pembayaran` (UNIQUE siswa+biaya+periode, nominal disalin),
+  `pkl_beasiswa` (satu per siswa), `pkl_keringanan`; perapian data lama (titik gelar Kepsek, format nomor). Idempoten, ada `down()`.
+- Migrasi `2026-10-12-000002_PklBersihkanDataUji`: **menghapus permanen** ajuan/anggota/riwayat/surat/perusahaan master + catatan biaya/beasiswa/keringanan, nomor surat kembali ke 001. Pengaman: bila ada ajuan dibuat **sejak
+  `BATAS_UJI` (2026-10-13)** migrasi tidak menghapus apa pun (dianggap data sungguhan) dan hanya mencatat di Audit Log. Siswa, akun, Pengaturan PKL, jenis biaya tidak disentuh. **Cadangkan DB dulu.**
+- `Libraries\PklHak` (hak, pemetaan alamat → hak, simpan + peringatan) dibaca `HakAkses::boleh()` (lapis kedua untuk `admin/pkl/…`), menu, tombol, controller web & API. `Config\Peran` tak lagi memuat `acc`/`kecuali` PKL.
+  `AuthFilter`: alamat di bawah beranda yang haknya dicabut kini **dialihkan** ke beranda dengan pesan (dulu "Akses ditolak" polos).
+- `Libraries\PklBiaya` (jenis, siap, rencana/gerbang, catat, koreksi), `PklUnduh` (satu pintu unduh: hak → gerbang → surat → catat), `PklWa`, `PklLaporanBiaya` (data + Excel), `Controllers\Admin\PklBiaya|PklHakAkses|PklDasar`,
+  `Api\Pkl` (+13 endpoint), view `_unduh.php` (dialog biaya + dialog WhatsApp), `laporan.php`, `hak_akses.php`, `assets/js/admin/pkl-unduh.js`.
+- Pelajaran: `esc($x,'attr')` menulis spasi/kurung sebagai entitas hex (`&#x20;`) → uji teks harus mendekode; POST berbalasan JSON **mengganti token CSRF** (`Security::$regenerate`) → respons `tandai` WhatsApp mengirim `csrf` baru dan
+  JS memperbarui semua `input[name=csrf_test_name]`; balasan unduhan berkas TIDAK mengganti token; `env database.default.database=…` TIDAK mengalihkan `spark migrate` ke DB lain (pakai `.env`) — migrasi pembersih sempat
+  berjalan di DB lokal saat diuji (hasilnya benar; data uji lokal diimpor ulang dari `database/dbasli.sql`).
+
+### Pengujian
+`php spark dev:uji-pkl-biaya` (124 cek) · `php spark dev:uji-pkl` (322; satu cek diubah: Operator tidak lagi boleh hapus secara bawaan) · skrip HTTP+API (71+3) dan peramban Chrome (29) di folder sementara sesi (bukan di repo).
+Hasil 2026-10-09: semua hijau. Fixture Flutter: `C:\flutter-muslimin\test\fixtures\pkl\`. Kontrak Android: `C:\flutter-muslimin\BLUEPRINT-PKL-BIAYA.md`.

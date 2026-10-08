@@ -34,7 +34,7 @@ class Settings extends BaseApiController
         $data = [
             'school_name'     => trim((string) ($in['school_name'] ?? '')),
             'school_level'    => trim((string) ($in['school_level'] ?? '')),
-            'headmaster_name' => trim((string) ($in['headmaster_name'] ?? '')),
+            'headmaster_name' => \App\Libraries\IsianBantu::rapikanGelar((string) ($in['headmaster_name'] ?? '')),
             'headmaster_nip'  => trim((string) ($in['headmaster_nip'] ?? '')),
             'city'            => trim((string) ($in['city'] ?? '')),
             'academic_year'   => trim((string) ($in['academic_year'] ?? '')),

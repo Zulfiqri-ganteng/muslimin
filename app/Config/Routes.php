@@ -126,6 +126,21 @@ $routes->group('admin', static function ($routes) {
         $routes->post('pkl/(:num)/kembalikan', 'Admin\Pkl::kembalikan/$1', ['filter' => 'csrf']);
         $routes->post('pkl/(:num)/tolak', 'Admin\Pkl::tolak/$1', ['filter' => 'csrf']);
         $routes->post('pkl/(:num)/batal-acc', 'Admin\Pkl::batalAcc/$1', ['filter' => 'csrf']);
+        // Hak yang diatur Admin (Libraries\PklHak): biaya saat unduh surat + kabar WhatsApp + koreksi ('surat'), Laporan
+        // Pembayaran ('laporan'), nominal biaya ('pengaturan'). Halaman Hak Akses KHUSUS ADMIN. Dijaga HakAkses::boleh
+        // (lapis kedua PKL) dan diperiksa lagi di tiap aksi controller.
+        $routes->get('pkl/surat/siap', 'Admin\PklBiaya::siap');
+        $routes->get('pkl/surat/hasil/(:segment)', 'Admin\PklBiaya::hasil/$1');
+        $routes->get('pkl/wa', 'Admin\PklBiaya::wa');
+        $routes->post('pkl/(:num)/wa/(:num)/tandai', 'Admin\PklBiaya::tandaiWa/$1/$2', ['filter' => 'csrf']);
+        $routes->post('pkl/(:num)/pembayaran/hapus', 'Admin\PklBiaya::hapusPembayaran/$1', ['filter' => 'csrf']);
+        $routes->post('pkl/(:num)/pembayaran/beasiswa-cabut', 'Admin\PklBiaya::cabutBeasiswa/$1', ['filter' => 'csrf']);
+        $routes->post('pkl/pengaturan/biaya', 'Admin\PklBiaya::simpanBiaya', ['filter' => 'csrf']);
+        $routes->get('pkl/laporan', 'Admin\PklBiaya::laporan');
+        $routes->get('pkl/laporan/excel', 'Admin\PklBiaya::laporanExcel');
+        $routes->get('pkl/hak-akses', 'Admin\PklHakAkses::index', ['filter' => 'csrf']);
+        $routes->post('pkl/hak-akses', 'Admin\PklHakAkses::simpan', ['filter' => 'csrf']);
+        $routes->post('pkl/hak-akses/bawaan', 'Admin\PklHakAkses::bawaan', ['filter' => 'csrf']);
 
         // ===== Kelola Akun Staf (khusus peran admin — dijaga Config\Peran) =====
         // Semua aksi pengubah data memakai POST. Rute ini bisa menaikkan peran
@@ -835,6 +850,20 @@ $routes->group('api/v1', ['namespace' => 'App\Controllers\Api', 'filter' => 'cor
         $routes->get('pkl/ttd/gambar', 'Pkl::ttdGambar');
         $routes->post('pkl/ttd', 'Pkl::ttdUnggah');
         $routes->delete('pkl/ttd', 'Pkl::ttdHapus');
+        // Hak yang diatur Admin (PklHak) — biaya saat unduh surat, WhatsApp manual, Laporan Pembayaran, Hak Akses. Hak dijaga di controller.
+        $routes->get('pkl/surat/siap', 'Pkl::suratSiap');
+        $routes->get('pkl/biaya', 'Pkl::biaya');
+        $routes->post('pkl/biaya', 'Pkl::biayaSimpan');
+        $routes->get('pkl/ajuan/(:num)/pembayaran', 'Pkl::pembayaran/$1');
+        $routes->post('pkl/ajuan/(:num)/pembayaran/hapus', 'Pkl::pembayaranHapus/$1');
+        $routes->post('pkl/ajuan/(:num)/pembayaran/beasiswa-cabut', 'Pkl::beasiswaCabut/$1');
+        $routes->get('pkl/wa', 'Pkl::wa');
+        $routes->post('pkl/ajuan/(:num)/wa/(:num)/tandai', 'Pkl::waTandai/$1/$2');
+        $routes->get('pkl/laporan', 'Pkl::laporan');
+        $routes->get('pkl/laporan/excel', 'Pkl::laporanExcel');
+        $routes->get('pkl/hak-akses', 'Pkl::hakAkses');
+        $routes->post('pkl/hak-akses', 'Pkl::hakAksesSimpan');
+
 
         // ---------- PROFIL & PENGATURAN ----------
         $routes->get('admin/profile', 'Admin\Profile::show');

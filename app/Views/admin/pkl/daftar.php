@@ -16,7 +16,7 @@ use App\Libraries\IsianBantu;
 use App\Models\PklPengajuanModel;
 
 // Kotak centang tabel: ACC massal hanya untuk yang berhak ACC (Waka Hubin / Admin); surat massal untuk semua staf.
-$bisaPilih  = $status === 'disetujui' || ($status === 'menunggu' && ! empty($bolehAcc));
+$bisaPilih  = ($status === 'disetujui' && ! empty($bolehSurat)) || ($status === 'menunggu' && ! empty($bolehAcc));
 $formPilih  = $status === 'menunggu' ? 'formAcc' : 'formMassal';
 $keterangan = [
     'menunggu'  => 'Ajuan baru dari siswa, menunggu keputusan Waka Hubin (ACC hanya oleh Waka Hubin). Yang paling lama menunggu ada di atas.',
@@ -32,11 +32,11 @@ $urlHal = static function (int $hal) use ($status, $q, $kelasId): string {
 <?= $this->section('content') ?>
 
 <?= view('admin/partials/help', [
-    'helpKey'   => 'pkl_daftar_v3',
+    'helpKey'   => 'pkl_daftar_v4',
     'helpTitle' => 'Kotak Masuk PKL',
     'helpBody'  => '<p>Pilih tab status di atas. Cari berdasarkan <b>nama perusahaan</b> atau <b>nama siswa</b>, atau saring per kelas. Klik baris untuk membuka detail dan mengambil keputusan.</p>'
         . '<p class="mt-2">Satu baris = satu <b>perusahaan</b> dengan rombongan siswanya (pengaju + teman satu tempat).</p>'
-        . '<p class="mt-2">Di tab <b>Menunggu ACC</b> kolom <b>Pemeriksaan</b> menandai ajuan <b>✓ Aman</b> atau <b>⚠ ada peringatan</b>. Tombol <b>ACC massal</b> hanya menyetujui yang Aman; sisanya dilewati supaya diperiksa satu per satu. Di tab <b>Disetujui</b> Anda bisa mengunduh surat PKL banyak sekaligus: <b>Unduh surat terpilih</b> (yang dicentang), <b>Yang belum dicetak / perlu cetak ulang</b>, atau <b>Unduh SEMUA surat</b>. Di HP, centang ada di kiri tiap kartu. Selama unduhan disiapkan layar menampilkan &quot;Menyiapkan berkas&quot; &mdash; tunggu sampai berkas muncul.</p>',
+        . '<p class="mt-2">Di tab <b>Menunggu ACC</b> kolom <b>Pemeriksaan</b> menandai ajuan <b>✓ Aman</b> atau <b>⚠ ada peringatan</b>. Tombol <b>ACC massal</b> hanya menyetujui yang Aman; sisanya dilewati supaya diperiksa satu per satu. Di tab <b>Disetujui</b> yang berhak (diatur Admin) bisa mengunduh surat PKL banyak sekaligus: <b>Unduh surat terpilih</b> (yang dicentang), <b>Yang belum dicetak / perlu cetak ulang</b>, atau <b>Unduh SEMUA surat</b>. Sebelum berkas dibuat muncul kotak <b>Catat biaya</b> (Biaya PKL, SPP, Tabungan, OSIS, beasiswa) &mdash; wajib minimal satu centang per siswa. Setelah unduhan selesai muncul tombol <b>Kabari via WhatsApp</b> untuk memberi tahu siswa. Di HP, centang ada di kiri tiap kartu.</p>',
 ]) ?>
 
 <?= view('admin/pkl/_nav', ['tab' => $tab, 'hitungTab' => $hitungTab]) ?>
@@ -83,17 +83,22 @@ $urlHal = static function (int $hal) use ($status, $q, $kelasId): string {
         </form>
     <?php endif; ?>
     <?php if ($status === 'disetujui' && $rows !== []): ?>
-        <form id="formMassal" method="post" action="<?= site_url('admin/pkl/surat-massal') ?>" data-unduh class="flex flex-col gap-2 border-b border-slate-100 bg-slate-50 px-5 py-3 sm:flex-row sm:flex-wrap sm:items-center">
-            <?= csrf_field() ?>
+        <div class="flex flex-col gap-2 border-b border-slate-100 bg-slate-50 px-5 py-3 sm:flex-row sm:flex-wrap sm:items-center">
             <?php if (trim((string) ($p['waka_hubin_nama'] ?? '')) === ''): ?>
                 <p class="w-full rounded-lg border border-red-300 bg-red-50 px-3 py-2 text-xs font-semibold leading-relaxed text-red-800">⚠ Nama Waka Hubin belum diisi, jadi di bawah tanda tangan surat hanya titik-titik.
-                    <?php if ($bolehPengaturan): ?><a href="<?= site_url('admin/pkl/pengaturan#surat') ?>" class="underline">Isi di Pengaturan PKL</a>, lalu unduh ulang.<?php else: ?>Minta Operator mengisinya di Pengaturan PKL.<?php endif; ?></p>
+                    <?php if ($bolehPengaturan): ?><a href="<?= site_url('admin/pkl/pengaturan#surat') ?>" class="underline">Isi di Pengaturan PKL</a>, lalu unduh ulang.<?php else: ?>Minta yang berhak mengisinya di Pengaturan PKL.<?php endif; ?></p>
             <?php endif; ?>
-            <span class="text-xs leading-relaxed text-slate-500 sm:mr-auto">Surat PKL: centang ajuan lalu unduh — satu berkas Word, tiap surat di halaman baru. Yang belum bernomor otomatis diberi nomor sesuai urutan persetujuan.</span>
-            <button type="submit" name="mode" value="terpilih" class="rounded-lg border border-brand-200 bg-white px-3.5 py-2 text-sm font-semibold text-brand-700 hover:bg-brand-50">⬇ Unduh surat terpilih</button>
-            <button type="submit" name="mode" value="belum" class="rounded-lg border border-brand-200 bg-white px-3.5 py-2 text-sm font-semibold text-brand-700 hover:bg-brand-50">⬇ Yang belum dicetak / perlu cetak ulang</button>
-            <button type="submit" name="mode" value="semua" class="rounded-lg bg-brand-700 px-3.5 py-2 text-sm font-semibold text-white hover:bg-brand-800">⬇ Unduh SEMUA surat</button>
-        </form>
+            <?php if (! empty($bolehSurat)): ?>
+                <form id="formMassal" onsubmit="return false"></form>
+                <span class="text-xs leading-relaxed text-slate-500 sm:mr-auto">Surat PKL: centang ajuan lalu unduh. Sebelum berkas dibuat, Anda <b>wajib mencatat biaya</b> yang diterima dari tiap siswa. Yang belum bernomor otomatis diberi nomor sesuai urutan persetujuan.</span>
+                <button type="button" onclick="window.dispatchEvent(new CustomEvent('pkl-unduh', {detail: {mode: 'terpilih'}}))" class="rounded-lg border border-brand-200 bg-white px-3.5 py-2 text-sm font-semibold text-brand-700 hover:bg-brand-50">⬇ Unduh surat terpilih</button>
+                <button type="button" onclick="window.dispatchEvent(new CustomEvent('pkl-unduh', {detail: {mode: 'belum'}}))" class="rounded-lg border border-brand-200 bg-white px-3.5 py-2 text-sm font-semibold text-brand-700 hover:bg-brand-50">⬇ Yang belum dicetak / perlu cetak ulang</button>
+                <button type="button" onclick="window.dispatchEvent(new CustomEvent('pkl-unduh', {detail: {mode: 'semua'}}))" class="rounded-lg bg-brand-700 px-3.5 py-2 text-sm font-semibold text-white hover:bg-brand-800">⬇ Unduh SEMUA surat</button>
+                <button type="button" onclick="window.dispatchEvent(new CustomEvent('pkl-wa', {detail: {ids: Array.prototype.map.call(document.querySelectorAll('input[name=&quot;ids[]&quot;]:checked'), function (c) { return c.value; })}}))" class="rounded-lg border border-green-300 bg-white px-3.5 py-2 text-sm font-semibold text-green-700 hover:bg-green-50">💬 Kabari via WhatsApp (terpilih)</button>
+            <?php else: ?>
+                <p class="text-xs leading-relaxed text-slate-600">🔒 <b>Surat diunduh oleh peran yang diberi hak itu oleh Admin</b> (bawaan: Operator Sekolah), supaya jelas siapa yang menyetujui dan siapa yang mencetak. Anda tetap bisa melihat nomor dan status tiap surat di sini.</p>
+            <?php endif; ?>
+        </div>
     <?php endif; ?>
     <?php if ($rows === []): ?>
         <div class="px-5 py-12 text-center">
@@ -131,7 +136,7 @@ $urlHal = static function (int $hal) use ($status, $q, $kelasId): string {
                                 <?php if ($sisa !== null): ?><br><span class="font-bold <?= $sisa < 0 ? 'text-red-600' : ($sisa <= 1 ? 'text-amber-600' : 'text-slate-400') ?>"><?= $sisa < 0 ? 'TERLAMBAT ' . abs($sisa) . ' hari' : ($sisa === 0 ? 'batas HARI INI' : 'sisa ' . $sisa . ' hari') ?></span><?php endif; ?></td>
                             <td class="whitespace-nowrap px-3 py-3 text-xs text-slate-400"><?= esc(date('d-m-Y H:i', strtotime($r['updated_at']))) ?></td>
                             <?php if ($status === 'disetujui'): ?><td class="px-3 py-3 text-xs"><?php if (! empty($r['acc_nama'])): ?><span class="font-semibold text-slate-700"><?= esc($r['acc_nama']) ?></span><span class="block text-slate-400"><?= esc(match ((string) ($r['acc_peran'] ?? '')) { 'hubin' => 'Waka Hubin', 'admin' => 'Admin (mewakili Hubin)', 'operator' => 'Operator (data lama)', 'impor' => 'Diimpor', default => '' }) ?><?= ! empty($r['acc_at']) ? ' · ' . esc(date('d-m-Y H:i', strtotime((string) $r['acc_at']))) : '' ?></span><?php else: ?><span class="text-slate-300">—</span><?php endif; ?></td><?php endif; ?>
-                            <?php if ($status === 'disetujui'): $ss = $statusSurat[(int) $r['id']] ?? null; ?><td class="px-3 py-3 text-xs"><?php if ($ss): ?><span class="font-mono font-semibold text-slate-600"><?= esc($ss['nomor']) ?></span><?php if ($ss['perlu_ulang']): ?><span class="mt-0.5 block font-bold text-amber-600">⚠ perlu cetak ulang</span><?php endif; ?><?php else: ?><span class="text-slate-300">belum ada</span><?php endif; ?></td><?php endif; ?><?php if ($status === 'menunggu'): $c = $cek[(int) $r['id']] ?? null; ?><td class="px-3 py-3 text-xs"><?php if ($c && ($c['bahaya'] + $c['awas']) === 0): ?><span class="font-bold text-green-600">✓ Aman</span><?php elseif ($c): ?><span class="font-bold <?= $c['bahaya'] ? 'text-red-600' : 'text-amber-600' ?>" title="<?= esc($c['pertama'], 'attr') ?>">⚠ <?= (int) ($c['bahaya'] + $c['awas']) ?> peringatan</span><?php endif; ?></td><?php endif; ?><td class="px-5 py-3 text-right"><a href="<?= site_url('admin/pkl/' . $r['id']) ?>" class="inline-flex rounded-lg bg-brand-700 px-3.5 py-1.5 text-xs font-semibold text-white transition hover:bg-brand-800"><?= $status === 'menunggu' ? 'Periksa' : 'Buka' ?></a></td>
+                            <?php if ($status === 'disetujui'): $ss = $statusSurat[(int) $r['id']] ?? null; ?><td class="px-3 py-3 text-xs"><?php if ($ss): ?><span class="font-mono font-semibold text-slate-600"><?= esc($ss['nomor']) ?></span><?php if ($ss['perlu_ulang']): ?><span class="mt-0.5 block font-bold text-amber-600">⚠ perlu cetak ulang</span><?php endif; ?><?php else: ?><span class="text-slate-300">belum ada</span><?php endif; ?></td><?php endif; ?><?php if ($status === 'menunggu'): $c = $cek[(int) $r['id']] ?? null; ?><td class="px-3 py-3 text-xs"><?php if ($c && ($c['bahaya'] + $c['awas']) === 0): ?><span class="font-bold text-green-600">✓ Aman</span><?php elseif ($c): ?><span class="font-bold <?= $c['bahaya'] ? 'text-red-600' : 'text-amber-600' ?>" title="<?= esc($c['pertama'], 'attr') ?>">⚠ <?= (int) ($c['bahaya'] + $c['awas']) ?> peringatan</span><?php endif; ?></td><?php endif; ?><td class="whitespace-nowrap px-5 py-3 text-right"><?php if ($status === 'disetujui' && ! empty($bolehSurat) && ! empty($statusSurat[(int) $r['id']])): ?><button type="button" title="Kabari siswa lewat WhatsApp" onclick="window.dispatchEvent(new CustomEvent('pkl-wa', {detail: {ids: [<?= (int) $r['id'] ?>]}}))" class="mr-1.5 inline-flex rounded-lg border border-green-300 bg-white px-2.5 py-1.5 text-xs font-semibold text-green-700 transition hover:bg-green-50">💬 WA</button><?php endif; ?><a href="<?= site_url('admin/pkl/' . $r['id']) ?>" class="inline-flex rounded-lg bg-brand-700 px-3.5 py-1.5 text-xs font-semibold text-white transition hover:bg-brand-800"><?= $status === 'menunggu' ? 'Periksa' : 'Buka' ?></a></td>
                         </tr>
                         <?php if (! empty($r['catatan_staf']) && in_array($status, ['perbaikan', 'ditolak'], true)): ?>
                             <tr><td></td><td colspan="5" class="px-3 pb-3 text-xs text-slate-500"><span class="font-semibold text-slate-600">Catatan sekolah:</span> <?= esc($r['catatan_staf']) ?></td></tr>
@@ -177,5 +182,9 @@ $urlHal = static function (int $hal) use ($status, $q, $kelasId): string {
         <?php endif; ?>
     <?php endif; ?>
 </div>
+
+<?php if ($status === 'disetujui' && ! empty($bolehSurat)): // kotak dialog catat biaya + kabar WhatsApp ?>
+    <?= view('admin/pkl/_unduh') ?>
+<?php endif; ?>
 
 <?= $this->endSection() ?>

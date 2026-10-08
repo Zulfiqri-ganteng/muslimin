@@ -11,9 +11,9 @@ use Config\Peran;
  * supaya hasilnya selalu sama. Isinya: siapa yang berhak, status asal yang sah, alasan wajib, pemeriksaan
  * peringatan "bahaya", dan pencatatan (riwayat, catatan ACC, Audit Log).
  *
- * ATURAN SEKOLAH: ACC, tolak, dan batalkan persetujuan hanya Waka Hubin (HakAkses::bolehAcc). Admin sebagai
- * cadangan wajib menyatakan "mewakili Waka Hubin" ($in['wakil'] = '1') saat ACC. Operator hanya boleh
- * mengembalikan ajuan untuk diperbaiki.
+ * ATURAN SEKOLAH: ACC, tolak, dan batalkan persetujuan hanya untuk peran yang diberi hak ACC oleh Admin (PklHak, 'acc';
+ * bawaan: Waka Hubin). Admin selalu boleh sebagai cadangan dan wajib menyatakan "mewakili Waka Hubin" ($in['wakil'] = '1')
+ * saat ACC. Mengembalikan ajuan untuk diperbaiki menuntut hak 'ubah'.
  *
  * $konteks = ['oleh', 'admin_id', 'peran', 'ip', 'saluran' => 'web'|'aplikasi'].
  *
@@ -73,7 +73,12 @@ final class PklKeputusan
         if (in_array($aksi, self::KHUSUS_HUBIN, true) && ! HakAkses::bolehAcc($peran)) {
             $this->audit->record('update', 'pkl_pengajuan', $id, 'DITOLAK: ' . HakAkses::label($peran) . ' mencoba "' . $aksi . '" pada PKL ' . $kode . $this->saluran($konteks));
 
-            return $this->gagal('dilarang', 'Keputusan ini hanya boleh dilakukan Waka Hubin. Akun ' . HakAkses::label($peran) . ' bisa memeriksa dan mengembalikan ajuan untuk diperbaiki, tetapi tidak bisa menyetujui atau menolaknya.', 403);
+            return $this->gagal('dilarang', 'Keputusan ini hanya boleh dilakukan peran yang diberi hak ACC (bawaan: Waka Hubin). Akun ' . HakAkses::label($peran) . ' tidak punya hak ACC; Admin bisa mengaturnya di PKL → Hak Akses.', 403);
+        }
+        if ($aksi === 'kembalikan' && ! HakAkses::bolehPkl($peran, 'ubah')) {
+            $this->audit->record('update', 'pkl_pengajuan', $id, 'DITOLAK: ' . HakAkses::label($peran) . ' mencoba mengembalikan PKL ' . $kode . $this->saluran($konteks));
+
+            return $this->gagal('dilarang', 'Akun ' . HakAkses::label($peran) . ' tidak punya hak memeriksa/mengembalikan ajuan. Admin bisa mengaturnya di PKL → Hak Akses.', 403);
         }
         $mewakili = $peran === Peran::ADMIN && in_array($aksi, self::KHUSUS_HUBIN, true);
         if ($aksi === 'acc' && $mewakili && ($in['wakil'] ?? '') !== '1' && ($in['wakil'] ?? false) !== true) {
@@ -131,7 +136,7 @@ final class PklKeputusan
         if (! HakAkses::bolehAcc($peran)) {
             $this->audit->record('update', 'pkl_pengajuan', null, 'DITOLAK: ' . HakAkses::label($peran) . ' mencoba ACC massal PKL' . $this->saluran($konteks));
 
-            return $this->gagal('dilarang', 'ACC hanya boleh dilakukan Waka Hubin. Akun ' . HakAkses::label($peran) . ' tidak bisa meng-ACC.', 403);
+            return $this->gagal('dilarang', 'ACC hanya boleh dilakukan peran yang diberi hak ACC (bawaan: Waka Hubin). Akun ' . HakAkses::label($peran) . ' tidak bisa meng-ACC.', 403);
         }
         $mewakili = $peran === Peran::ADMIN;
         if ($mewakili && ($in['wakil'] ?? '') !== '1' && ($in['wakil'] ?? false) !== true) {

@@ -67,7 +67,19 @@ class Pkl extends BaseController
         $tingkat = PklPengaturanModel::tingkatBoleh($this->p);
         [$antrean] = $this->model->daftar('menunggu', '', 0, 8, 1);
 
+        $peranIni = $this->peranSaya();
+        $suratRingkas = null;
+        if (HakAkses::bolehPkl($peranIni, 'surat') || HakAkses::bolehPkl($peranIni, 'laporan')) {
+            $db = db_connect();
+            $suratRingkas = [
+                'belum_bernomor' => (int) $db->query("SELECT COUNT(*) n FROM pkl_pengajuan p WHERE p.status = 'disetujui' AND NOT EXISTS (SELECT 1 FROM pkl_surat s WHERE s.pengajuan_id = p.id)")->getRowArray()['n'],
+                'belum_dikabari' => (int) $db->query("SELECT COUNT(*) n FROM pkl_anggota a JOIN pkl_pengajuan p ON p.id = a.pengajuan_id AND p.status = 'disetujui' JOIN pkl_surat s ON s.pengajuan_id = p.id WHERE a.dikabari_at IS NULL")->getRowArray()['n'],
+                'uang_bulan_ini' => (int) ($db->query('SELECT COALESCE(SUM(nominal), 0) n FROM pkl_pembayaran WHERE created_at >= ?', [date('Y-m-01 00:00:00')])->getRowArray()['n'] ?? 0),
+            ];
+        }
+
         return view('admin/pkl/index', $this->dasar('Beranda PKL', 'beranda') + [
+            'suratRingkas' => $suratRingkas,
             'hitung'  => $this->model->hitungStatus(),
             'siswa'   => $this->model->ringkasanSiswa($tingkat),
             'antrean' => $antrean,
@@ -128,8 +140,13 @@ class Pkl extends BaseController
         $anggota    = $this->model->anggotaDetail((int) $id);
         $peringatan = PklPeringatan::untuk($ajuan, $anggota, $this->p);
         $surat      = (new PklSurat())->surat((int) $id);
+        $peranIni   = $this->peranSaya();
+        // Catatan biaya hanya dilihat yang memegang hak unduh surat atau laporan pembayaran (data keuangan siswa).
+        $pembayaran = ($ajuan['status'] === 'disetujui' && (HakAkses::bolehPkl($peranIni, 'surat') || HakAkses::bolehPkl($peranIni, 'laporan')))
+            ? (new \App\Libraries\PklBiaya())->untukAjuan((int) $id) : null;
 
         return view('admin/pkl/detail', $this->dasar(PklPengajuanModel::kode((int) $id), 'daftar_' . $ajuan['status']) + [
+            'pembayaran' => $pembayaran,
             'a'          => $ajuan,
             'anggota'    => $anggota,
             'riwayat'    => $this->model->riwayat((int) $id),
@@ -452,7 +469,7 @@ class Pkl extends BaseController
             'tautan'  => $this->tautanSiswa(),
             'alasan'  => PklPengaturanModel::alasanTutup($this->p),
             'siswa'   => $this->model->ringkasanSiswa(PklPengaturanModel::tingkatBoleh($this->p)),
-        ]);
+        ] + $this->dataBiaya());
     }
 
     public function simpanPengaturan()
@@ -467,7 +484,7 @@ class Pkl extends BaseController
                 'tautan' => $this->tautanSiswa(),
                 'alasan' => PklPengaturanModel::alasanTutup($this->p),
                 'siswa'  => $this->model->ringkasanSiswa(PklPengaturanModel::tingkatBoleh($this->p)),
-            ]);
+            ] + $this->dataBiaya());
         }
 
         $this->pengModel->update(1, $data);
@@ -476,6 +493,16 @@ class Pkl extends BaseController
             . ', Waka Hubin ' . ($data['waka_hubin_nama'] ?? '(kosong)') . ', format nomor ' . $data['format_nomor']);
 
         return $this->ke('admin/pkl/pengaturan', 'success', $data['form_buka'] ? 'Pengaturan disimpan. Form siswa sekarang TERBUKA.' : 'Pengaturan disimpan. Form siswa tertutup.');
+    }
+
+    /** Jenis biaya + pesan WhatsApp untuk bagian bawah halaman Pengaturan PKL. */
+    private function dataBiaya(): array
+    {
+        return [
+            'jenisBiaya'  => (new \App\Libraries\PklBiaya())->jenis(true),
+            'waPesan'     => (string) ($this->p['wa_pesan'] ?? ''),
+            'sekolahNama' => (string) ((new SettingModel())->get()['school_name'] ?? ''),
+        ];
     }
 
     /**
@@ -502,7 +529,7 @@ class Pkl extends BaseController
         }
 
         // ----- Surat: penanda tangan, format & lantai nomor -----
-        $wakaNama = IsianBantu::rapikan((string) ($post['waka_hubin_nama'] ?? ''));
+        $wakaNama = IsianBantu::rapikanGelar(IsianBantu::rapikan((string) ($post['waka_hubin_nama'] ?? '')));
         if ($wakaNama !== '' && (! IsianBantu::namaOrangSah($wakaNama) || mb_strlen($wakaNama) > 150)) {
             $galat['waka_hubin_nama'] = 'Nama hanya boleh berisi huruf (titik/koma untuk gelar), maksimal 150 huruf.';
         }
@@ -515,11 +542,11 @@ class Pkl extends BaseController
             $galat['waka_hubin_jabatan'] = 'Jabatan terlalu panjang (maksimal 150 huruf).';
         }
 
-        $kepsek = IsianBantu::rapikan((string) ($post['kepsek_nama'] ?? ''));
+        $kepsek = IsianBantu::rapikanGelar(IsianBantu::rapikan((string) ($post['kepsek_nama'] ?? '')));
         if ($kepsek !== '' && (! IsianBantu::namaOrangSah($kepsek) || mb_strlen($kepsek) > 150)) {
             $galat['kepsek_nama'] = 'Nama Kepala Sekolah hanya boleh berisi huruf (titik/koma untuk gelar), maksimal 150 huruf.';
         }
-        $kontakNama = IsianBantu::rapikan((string) ($post['kontak_surat_nama'] ?? ''));
+        $kontakNama = IsianBantu::rapikanGelar(IsianBantu::rapikan((string) ($post['kontak_surat_nama'] ?? '')));
         if ($kontakNama !== '' && (! IsianBantu::namaOrangSah($kontakNama) || mb_strlen($kontakNama) > 150)) {
             $galat['kontak_surat_nama'] = 'Nama kontak hanya boleh berisi huruf (titik/koma untuk gelar), maksimal 150 huruf.';
         }
@@ -602,6 +629,9 @@ class Pkl extends BaseController
             'bolehHapus'     => HakAkses::boleh($peran, 'admin/pkl/hapus'),
             'bolehAcc'       => HakAkses::bolehAcc($peran),
             'bolehTtd'       => HakAkses::boleh($peran, 'admin/pkl/ttd'),
+            'bolehSurat'     => HakAkses::bolehPkl($peran, 'surat'),
+            'bolehLaporan'   => HakAkses::bolehPkl($peran, 'laporan'),
+            'bolehUbah'      => HakAkses::bolehPkl($peran, 'ubah'),
             'batasHari'      => PklPengaturanModel::batasHari($this->p),
             'hitungTab'      => $this->model->hitungStatus(),
         ];

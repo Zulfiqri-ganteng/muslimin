@@ -141,7 +141,7 @@ final class SiswaExcel8355
         ];
         $ttd = [
             'kiri'  => [trim((string) ($setting['supervisor_name'] ?? '')), trim((string) ($setting['supervisor_nip'] ?? ''))],
-            'kanan' => [trim((string) ($setting['headmaster_name'] ?? '')), trim((string) ($setting['headmaster_nip'] ?? ''))],
+            'kanan' => [IsianBantu::rapikanGelar((string) ($setting['headmaster_name'] ?? '')), trim((string) ($setting['headmaster_nip'] ?? ''))],
             'jabatan' => 'Kepala ' . self::judulSekolah($sekolah),
         ];
 

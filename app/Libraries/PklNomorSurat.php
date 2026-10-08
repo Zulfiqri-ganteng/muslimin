@@ -19,6 +19,16 @@ final class PklNomorSurat
     /** Bawaan = format nomor surat resmi sekolah: 295/SMK-BN/PKL/VII/2026. */
     public const BAWAAN = '{urut}/SMK-BN/PKL/{bln_romawi}/{thn}';
 
+    /**
+     * Pilihan siap pakai di Pengaturan PKL (supaya tak perlu mengetik penanda): [pola, keterangan].
+     * Nol di depan HANYA bisa lewat {urut3}/{urut4}; menulis "{urut}00" menghasilkan 100, 200, 600 — bukan 001.
+     */
+    public const PRESET = [
+        ['{urut}/SMK-BN/PKL/{bln_romawi}/{thn}', 'Tanpa nol: 1, 2, 3 …'],
+        ['{urut3}/SMK-BN/PKL/{bln_romawi}/{thn}', 'Tiga angka: 001, 002, 003 …'],
+        ['{urut4}/SMK-BN/PKL/{bln_romawi}/{thn}', 'Empat angka: 0001, 0002, 0003 …'],
+    ];
+
     public static function format(string $pola, int $urut, \DateTimeInterface $tanggal): string
     {
         return strtr($pola, [
@@ -49,6 +59,10 @@ final class PklNomorSurat
         }
         if (! str_contains($pola, '{urut}') && ! str_contains($pola, '{urut3}') && ! str_contains($pola, '{urut4}')) {
             return 'Format nomor harus memuat {urut} (atau {urut3} / {urut4}) agar tiap surat punya nomor berbeda.';
+        }
+        // Angka menempel di {urut} (mis. "{urut}00") bukan nol di depan: nomor 6 jadi "600". Tolak, arahkan ke {urut3}.
+        if (preg_match('/\{urut[34]?\}\d|\d\{urut[34]?\}/', $pola)) {
+            return 'Jangan menempelkan angka di depan/belakang {urut} (mis. "{urut}00" menghasilkan 100, 200, 600 — bukan 001). Untuk nomor 001, 002, 003 pakai {urut3}; untuk 0001 pakai {urut4}.';
         }
         preg_match_all('/\{[^}]*\}/', $pola, $m);
         foreach ($m[0] as $token) {

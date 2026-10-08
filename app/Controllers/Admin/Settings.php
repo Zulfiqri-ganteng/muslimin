@@ -29,7 +29,7 @@ class Settings extends BaseController
         $data = [
             'school_name'     => trim((string) $this->request->getPost('school_name')),
             'school_level'    => trim((string) $this->request->getPost('school_level')),
-            'headmaster_name' => trim((string) $this->request->getPost('headmaster_name')),
+            'headmaster_name' => \App\Libraries\IsianBantu::rapikanGelar((string) $this->request->getPost('headmaster_name')),
             'headmaster_nip'  => trim((string) $this->request->getPost('headmaster_nip')),
             // Untuk Daftar Nama Siswa (Format 8355)
             'supervisor_name'      => trim((string) $this->request->getPost('supervisor_name')),

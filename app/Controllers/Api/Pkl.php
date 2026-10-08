@@ -5,11 +5,16 @@ namespace App\Controllers\Api;
 use App\Libraries\HakAkses;
 use App\Libraries\IsianBantu;
 use App\Libraries\PklAjuan;
+use App\Libraries\PklBiaya;
 use App\Libraries\PklForm;
+use App\Libraries\PklHak;
 use App\Libraries\PklKeputusan;
+use App\Libraries\PklLaporanBiaya;
 use App\Libraries\PklPeringatan;
 use App\Libraries\PklStaf;
 use App\Libraries\PklSurat;
+use App\Libraries\PklUnduh;
+use App\Libraries\PklWa;
 use App\Models\AuditModel;
 use App\Models\PklPengajuanModel;
 use App\Models\PklPengaturanModel;
@@ -36,8 +41,14 @@ use Config\Peran;
  *   DELETE pkl/ajuan/{id}                    hapus
  *   POST   pkl/ajuan/{id}/acc|kembalikan|tolak|batal-acc   {catatan, paham, perusahaan_id, wakil}
  *   POST   pkl/acc-massal                    {mode: terpilih|aman, ids, wakil}
- *   POST   pkl/ajuan/{id}/surat              {tanggal_surat?} → berkas .docx (unduhan)
- *   POST   pkl/surat-massal                  {mode: terpilih|belum|semua, ids} → .docx / .zip
+ *   POST   pkl/ajuan/{id}/surat              {tanggal_surat?, biaya, semua} → berkas .docx (unduhan). WAJIB mencatat biaya (hak 'surat')
+ *   POST   pkl/surat-massal                  {mode: terpilih|belum|semua, ids, biaya?, semua?} → .docx / .zip. Header X-Surat-Ids = id ajuan terbit
+ *   GET    pkl/surat/siap?mode=&ids[]=       keadaan biaya tiap siswa sebelum unduh (jenis biaya, yang sudah tercatat, beasiswa)
+ *   GET    pkl/biaya                         jenis biaya aktif + sumber beasiswa + aturan  |  POST pkl/biaya (hak 'pengaturan') simpan nominal & pesan WA
+ *   GET    pkl/ajuan/{id}/pembayaran         catatan biaya siswa pada ajuan  |  POST …/pembayaran/hapus {pembayaran_id, alasan}  |  POST …/pembayaran/beasiswa-cabut {siswa_id, alasan}
+ *   GET    pkl/wa?ids[]=                     siswa + tautan WhatsApp (wa.me) + pesan siap kirim  |  POST pkl/ajuan/{id}/wa/{siswa_id}/tandai
+ *   GET    pkl/laporan?…  | GET pkl/laporan/excel?…   Laporan Pembayaran (hak 'laporan')
+ *   GET    pkl/hak-akses  | POST pkl/hak-akses {hak:{hubin:[…],operator:[…]}}   KHUSUS ADMIN
  *   GET    pkl/siswa?kelas_id=&fase=&q=&page=&per=   Status Siswa
  *   GET    pkl/ttd | GET pkl/ttd/gambar | POST pkl/ttd (berkas "ttd") | DELETE pkl/ttd   tanda tangan Waka Hubin (Hubin/Admin)
  */
@@ -59,10 +70,11 @@ class Pkl extends BaseApiController
         'kirim' => 'Dikirim siswa', 'kirim_ulang' => 'Dikirim ulang (perbaikan)', 'acc' => 'Disetujui', 'kembalikan' => 'Dikembalikan ke siswa',
         'tolak' => 'Ditolak', 'batal_acc' => 'Persetujuan dibatalkan', 'ubah' => 'Data diubah staf', 'isi_atas_nama' => 'Diisi atas nama siswa',
         'tunda' => 'Dikembalikan ke antrean', 'surat' => 'Surat diterbitkan', 'cetak' => 'Surat diunduh', 'impor' => 'Diimpor dari Excel',
+        'bayar' => 'Biaya dicatat', 'koreksi_bayar' => 'Catatan biaya dikoreksi', 'kabari' => 'Siswa dikabari (WhatsApp)',
     ];
 
     private const LABEL_PERAN_ACC = [
-        'hubin' => 'Waka Hubin', 'admin' => 'Admin — mewakili Waka Hubin', 'operator' => 'Operator (tanpa wewenang ACC; data lama)', 'impor' => 'Data riwayat (diimpor, bukan ACC sistem)',
+        'hubin' => 'Waka Hubin', 'admin' => 'Admin — mewakili Waka Hubin', 'operator' => 'Operator (diberi wewenang ACC oleh Admin)', 'impor' => 'Data riwayat (diimpor, bukan ACC sistem)',
     ];
 
     private const MAKS_SURAT_MASSAL = 300;
@@ -89,6 +101,7 @@ class Pkl extends BaseApiController
             'fase_siswa'    => self::LABEL_FASE,
             'aksi_riwayat'  => self::LABEL_AKSI,
             'peran_acc'     => self::LABEL_PERAN_ACC,
+            'hak_pkl'       => array_map(static fn (array $h) => ['judul' => $h[0], 'keterangan' => $h[1]], PklHak::HAK),
             'aturan'        => [
                 'maks_siswa'           => PklPengaturanModel::maksSiswa($this->p),
                 'batas_keputusan_hari' => PklPengaturanModel::batasHari($this->p),
@@ -208,6 +221,8 @@ class Pkl extends BaseApiController
                 'nomor' => $surat['nomor'], 'tanggal_surat' => $surat['tanggal_surat'], 'diunduh_kali' => (int) $surat['cetak_ke'],
                 'perlu_cetak_ulang' => PklSurat::sidik($a, $anggota, $this->p) !== (string) $surat['sidik'],
             ],
+            'pembayaran'    => ($a['status'] === 'disetujui' && (HakAkses::bolehPkl($this->peran(), 'surat') || HakAkses::bolehPkl($this->peran(), 'laporan')))
+                ? (new PklBiaya())->untukAjuan($id) : null,
             'riwayat'       => array_map(static fn (array $r) => [
                 'aksi' => $r['aksi'], 'label' => self::LABEL_AKSI[$r['aksi']] ?? $r['aksi'], 'oleh' => $r['oleh'], 'peran' => $r['peran'], 'catatan' => $r['catatan'], 'waktu' => $r['created_at'],
             ], $this->model->riwayat($id)),
@@ -274,6 +289,9 @@ class Pkl extends BaseApiController
         [$anggota, $galatAnggota] = PklStaf::periksaAnggota($pengajuId, $data['teman'], null, $data['teman_hp'] ?? []);
         $galat += $galatAnggota;
 
+        if (! HakAkses::bolehPkl($this->peran(), 'ubah')) {
+            return $this->forbidden('Akun ' . HakAkses::label($this->peran()) . ' tidak punya hak mengisi ajuan atas nama siswa.');
+        }
         $statusAwal = ($in['status_awal'] ?? '') === 'disetujui' ? 'disetujui' : 'menunggu';
         if ($statusAwal === 'disetujui' && ! HakAkses::bolehAcc($this->peran())) {
             return $this->failure('Menyimpan ajuan langsung berstatus DISETUJUI hanya boleh dilakukan Waka Hubin (atau Admin). Simpan sebagai menunggu, lalu minta Waka Hubin meng-ACC.', 403);
@@ -301,6 +319,9 @@ class Pkl extends BaseApiController
         $a  = $this->model->detail($id);
         if ($a === null) {
             return $this->missing('Ajuan tidak ditemukan.');
+        }
+        if (! HakAkses::bolehPkl($this->peran(), 'ubah')) {
+            return $this->forbidden('Akun ' . HakAkses::label($this->peran()) . ' tidak punya hak mengubah ajuan.');
         }
         if ($a['status'] === 'disetujui' && ! HakAkses::bolehAcc($this->peran())) {
             return $this->failure('Ajuan yang sudah DISETUJUI hanya boleh diubah Waka Hubin (atau Admin), karena persetujuannya berlaku untuk isi yang sekarang.', 403);
@@ -372,7 +393,8 @@ class Pkl extends BaseApiController
         if ($a['status'] !== 'disetujui') {
             return $this->failure('Surat hanya bisa dibuat untuk ajuan yang sudah DISETUJUI.', 409);
         }
-        $tanggal = trim((string) ($this->body()['tanggal_surat'] ?? ''));
+        $in      = $this->body();
+        $tanggal = trim((string) ($in['tanggal_surat'] ?? ''));
         if ($tanggal === '') {
             $tanggal = date('Y-m-d');
         }
@@ -381,7 +403,7 @@ class Pkl extends BaseApiController
             return $this->invalid(['tanggal_surat' => 'Tanggal surat tidak valid (format YYYY-MM-DD).']);
         }
 
-        return $this->unduh([$id], $tanggal);
+        return $this->unduh([$id], $tanggal, $in);
     }
 
     public function suratMassal()
@@ -395,22 +417,264 @@ class Pkl extends BaseApiController
             return $this->ok(['jumlah' => 0], $pilih['pesan']);
         }
 
-        return $this->unduh($pilih['ids'], date('Y-m-d'));
+        return $this->unduh($pilih['ids'], date('Y-m-d'), $in);
     }
 
-    /** @param list<int> $ids */
-    private function unduh(array $ids, string $tanggal)
+    /**
+     * Satu pintu unduhan (aturan di Libraries\PklUnduh, sama dengan web): hak 'surat' → biaya wajib dicatat → surat dibuat.
+     * Kiriman biaya: {"biaya": {"<siswa_id>": {"jenis": ["pkl","spp"], "bulan": "2026-10", "jumlah_bulan": 1, "beasiswa": "sktm", "keringanan": "…"}},
+     * "semua": {"jenis": [...], "bulan": "2026-10", "jumlah_bulan": 1}}. Galat biaya = 422 dengan rincian per siswa.
+     *
+     * @param list<int> $ids
+     */
+    private function unduh(array $ids, string $tanggal, array $in = []): ResponseInterface
     {
-        $hasil = (new PklSurat())->bangun($ids, $this->konteks(), $tanggal);
+        $hasil = PklUnduh::proses($ids, $tanggal, ['biaya' => (array) ($in['biaya'] ?? []), 'semua' => (array) ($in['semua'] ?? [])], $this->konteks());
         if (! $hasil['ok']) {
-            return $this->failure($hasil['pesan'] ?? 'Surat gagal dibuat.', 422);
+            if ($hasil['http'] === 403) {
+                return $this->forbidden($hasil['pesan']);
+            }
+
+            return $hasil['http'] === 422
+                ? $this->invalid($hasil['galat'] !== [] ? array_map('strval', $hasil['galat']) : [$hasil['kode'] => $hasil['pesan']], $hasil['pesan'])
+                : $this->failure($hasil['pesan'], $hasil['http']);
         }
-        $this->audit->record('update', 'pkl_surat', $ids[0] ?? null, 'Surat PKL diunduh: ' . $hasil['jumlah'] . ' surat (' . $hasil['nama'] . ') (via aplikasi)');
+        $this->audit->record('update', 'pkl_surat', $ids[0] ?? null, 'Surat PKL diunduh: ' . $hasil['jumlah'] . ' surat (' . $hasil['nama'] . ')'
+            . ($hasil['catat']['item'] > 0 ? ', biaya dicatat ' . $hasil['catat']['item'] . ' item ' . PklBiaya::rupiah((int) $hasil['catat']['total']) : '') . ' (via aplikasi)');
 
         return $this->response
             ->download($hasil['nama'], $hasil['biner'])
             ->setFileName($hasil['nama'])
-            ->setHeader('X-Jumlah-Surat', (string) $hasil['jumlah']);
+            ->setHeader('X-Jumlah-Surat', (string) $hasil['jumlah'])
+            ->setHeader('X-Surat-Ids', implode(',', $hasil['ids']))
+            ->setHeader('X-Biaya-Dicatat', $hasil['catat']['item'] . ':' . $hasil['catat']['total']);
+    }
+
+    // ================================================================= biaya, pembayaran, WhatsApp
+
+    /** GET pkl/surat/siap?mode=terpilih|belum|semua&ids[]= — keadaan biaya tiap siswa sebelum unduh (hak 'surat'). */
+    public function suratSiap(): ResponseInterface
+    {
+        if (! HakAkses::bolehPkl($this->peran(), 'surat')) {
+            return $this->forbidden('Akun ' . HakAkses::label($this->peran()) . ' tidak punya hak mengunduh surat PKL.');
+        }
+        $pilih = (new PklSurat())->pilihUntukUnduh((string) $this->request->getGet('mode'), (array) $this->request->getGet('ids'), self::MAKS_SURAT_MASSAL);
+        if ($pilih['ok'] === false) {
+            return $this->invalid(['ids' => $pilih['pesan']], $pilih['pesan']);
+        }
+        if ($pilih['ids'] === []) {
+            return $this->ok(['kosong' => true, 'pesan' => $pilih['pesan'], 'surat' => [], 'siswa' => []], $pilih['pesan']);
+        }
+        $data = (new PklBiaya())->siap($pilih['ids']);
+        $data['siswa'] = array_values($data['siswa']);
+        $data['kosong'] = false;
+
+        return $this->ok($data, 'Keadaan biaya siswa.');
+    }
+
+    /**
+     * GET pkl/biaya — jenis biaya aktif (untuk menyusun kotak pencatatan) + aturan.
+     * `?semua=1` (hak 'pengaturan') juga menyertakan jenis NONAKTIF, untuk layar pengaturan biaya.
+     */
+    public function biaya(): ResponseInterface
+    {
+        $b     = new PklBiaya();
+        $semua = $this->request->getGet('semua') === '1' && HakAkses::boleh($this->peran(), 'admin/pkl/pengaturan');
+
+        return $this->ok([
+            'jenis'            => $b->jenis($semua),
+            'sumber_beasiswa'  => PklBiaya::SUMBER_BEASISWA,
+            'bulan_default'    => PklBiaya::bulanIni(),
+            'maks_jumlah_bulan' => PklBiaya::MAKS_BULAN,
+            'aturan'           => [
+                'wajib_minimal_satu_catatan_per_siswa' => true,
+                'beasiswa_membebaskan'                 => ['spp'],
+                'alasan_keringanan_min_huruf'          => 5,
+            ],
+            'wa_templat'       => trim((string) ($this->p['wa_pesan'] ?? '')) !== '' ? (string) $this->p['wa_pesan'] : PklWa::PESAN_BAWAAN,
+            'wa_penanda'       => PklWa::TOKEN,
+        ], 'Jenis biaya PKL.');
+    }
+
+    /** POST pkl/biaya (hak 'pengaturan') — {"biaya": {"spp": {"nama": "…", "nominal": 150000, "aktif": true}}, "wa_pesan": "…"} */
+    public function biayaSimpan(): ResponseInterface
+    {
+        if (! HakAkses::boleh($this->peran(), 'admin/pkl/pengaturan')) {
+            return $this->forbidden('Akun ' . HakAkses::label($this->peran()) . ' tidak boleh mengubah pengaturan PKL.');
+        }
+        $in  = $this->body();
+        $biaya = new PklBiaya();
+        // Kiriman sebagian diperbolehkan: jenis yang tak disebut, atau kolom yang tak disebut, tetap seperti sekarang.
+        $kirim = (array) ($in['biaya'] ?? []);
+        foreach ($biaya->jenis(true) as $j) {
+            $k = is_array($kirim[$j['kode']] ?? null) ? $kirim[$j['kode']] : [];
+            $kirim[$j['kode']] = [
+                'nama'    => $k['nama'] ?? $j['nama'],
+                'nominal' => $k['nominal'] ?? (string) $j['nominal'],
+                'aktif'   => array_key_exists('aktif', $k) ? $k['aktif'] : (bool) $j['aktif'],
+            ];
+        }
+        $hasil = $biaya->simpanJenis($kirim, $this->konteks());
+        if (! $hasil['ok']) {
+            return $this->invalid($hasil['galat'], $hasil['pesan']);
+        }
+        if (array_key_exists('wa_pesan', $in)) {
+            $pesan = trim((string) $in['wa_pesan']);
+            $galat = ($pesan !== '' && $pesan !== PklWa::PESAN_BAWAAN) ? PklWa::periksaPesan($pesan) : null;
+            if ($galat !== null) {
+                return $this->invalid(['wa_pesan' => $galat], $galat);
+            }
+            db_connect()->table('pkl_pengaturan')->where('id', 1)->update(['wa_pesan' => ($pesan === '' || $pesan === PklWa::PESAN_BAWAAN) ? null : $pesan, 'updated_at' => date('Y-m-d H:i:s')]);
+        }
+
+        return $this->ok($biaya->jenis(true), $hasil['pesan']);
+    }
+
+    /** GET pkl/ajuan/{id}/pembayaran — catatan biaya siswa pada ajuan (hak 'surat' atau 'laporan'). */
+    public function pembayaran($id): ResponseInterface
+    {
+        $id = (int) $id;
+        if (! HakAkses::bolehPkl($this->peran(), 'surat') && ! HakAkses::bolehPkl($this->peran(), 'laporan')) {
+            return $this->forbidden('Akun ' . HakAkses::label($this->peran()) . ' tidak punya hak melihat catatan biaya.');
+        }
+        if ($this->model->find($id) === null) {
+            return $this->missing('Ajuan tidak ditemukan.');
+        }
+
+        return $this->ok((new PklBiaya())->untukAjuan($id), 'Catatan biaya ajuan ' . PklPengajuanModel::kode($id) . '.');
+    }
+
+    /** POST pkl/ajuan/{id}/pembayaran/hapus {pembayaran_id, alasan} */
+    public function pembayaranHapus($id): ResponseInterface
+    {
+        if (! HakAkses::bolehPkl($this->peran(), 'surat')) {
+            return $this->forbidden('Akun ' . HakAkses::label($this->peran()) . ' tidak punya hak mengoreksi catatan biaya.');
+        }
+        $in    = $this->body();
+        $hasil = (new PklBiaya())->hapusPembayaran((int) ($in['pembayaran_id'] ?? 0), (int) $id, (string) ($in['alasan'] ?? ''), $this->konteks());
+
+        return $hasil['ok'] ? $this->ok(null, $hasil['pesan']) : ($hasil['http'] === 422 ? $this->invalid(['alasan' => $hasil['pesan']], $hasil['pesan']) : $this->failure($hasil['pesan'], $hasil['http']));
+    }
+
+    /** POST pkl/ajuan/{id}/pembayaran/beasiswa-cabut {siswa_id, alasan} */
+    public function beasiswaCabut($id): ResponseInterface
+    {
+        if (! HakAkses::bolehPkl($this->peran(), 'surat')) {
+            return $this->forbidden('Akun ' . HakAkses::label($this->peran()) . ' tidak punya hak mengoreksi catatan biaya.');
+        }
+        $in    = $this->body();
+        $hasil = (new PklBiaya())->cabutBeasiswa((int) ($in['siswa_id'] ?? 0), (int) $id, (string) ($in['alasan'] ?? ''), $this->konteks());
+
+        return $hasil['ok'] ? $this->ok(null, $hasil['pesan']) : ($hasil['http'] === 422 ? $this->invalid(['alasan' => $hasil['pesan']], $hasil['pesan']) : $this->failure($hasil['pesan'], $hasil['http']));
+    }
+
+    /** GET pkl/wa?ids[]= — siswa yang bisa dikabari + tautan wa.me + pesan siap kirim (hak 'surat'). */
+    public function wa(): ResponseInterface
+    {
+        if (! HakAkses::bolehPkl($this->peran(), 'surat')) {
+            return $this->forbidden('Akun ' . HakAkses::label($this->peran()) . ' tidak punya hak mengabari siswa.');
+        }
+        $ids = array_slice(array_values(array_unique(array_filter(array_map('intval', (array) $this->request->getGet('ids'))))), 0, self::MAKS_SURAT_MASSAL);
+
+        return $this->ok((new PklWa())->daftar($ids, $this->p, (new SettingModel())->get()), 'Daftar WhatsApp siswa.');
+    }
+
+    /** POST pkl/ajuan/{id}/wa/{siswa_id}/tandai — setelah tautan WhatsApp dibuka, catat "sudah dikabari". */
+    public function waTandai($id, $siswaId): ResponseInterface
+    {
+        if (! HakAkses::bolehPkl($this->peran(), 'surat')) {
+            return $this->forbidden('Akun ' . HakAkses::label($this->peran()) . ' tidak punya hak mengabari siswa.');
+        }
+        if (! (new PklWa())->tandai((int) $id, (int) $siswaId, $this->konteks())) {
+            return $this->missing('Siswa tidak ditemukan pada ajuan yang disetujui.');
+        }
+
+        return $this->ok(['waktu' => date('Y-m-d H:i:s')], 'Siswa ditandai sudah dikabari.');
+    }
+
+    // ================================================================= laporan pembayaran
+
+    /** @return array{kelas_id: int, jurusan: string, status: string, q: string, dari: string, sampai: string, beasiswa: bool} */
+    private function saringanLaporan(): array
+    {
+        $jur = strtoupper(trim((string) $this->request->getGet('jurusan')));
+        $st  = strtolower(trim((string) $this->request->getGet('status')));
+        $tgl = static fn (string $s): string => preg_match('/^\d{4}-\d{2}-\d{2}$/', $s) === 1 ? $s : '';
+
+        return [
+            'kelas_id' => (int) $this->request->getGet('kelas_id'),
+            'jurusan'  => in_array($jur, ['TKJ', 'AKL', 'MP'], true) ? $jur : '',
+            'status'   => isset(PklLaporanBiaya::STATUS[$st]) ? $st : '',
+            'q'        => IsianBantu::rapikan((string) $this->request->getGet('q')),
+            'dari'     => $tgl((string) $this->request->getGet('dari')),
+            'sampai'   => $tgl((string) $this->request->getGet('sampai')),
+            'beasiswa' => $this->request->getGet('beasiswa') === '1',
+        ];
+    }
+
+    /** GET pkl/laporan?kelas_id=&jurusan=TKJ|AKL|MP&status=lunas|sebagian|belum&q=&dari=&sampai=&beasiswa=1&page=&per= */
+    public function laporan(): ResponseInterface
+    {
+        if (! HakAkses::bolehPkl($this->peran(), 'laporan')) {
+            return $this->forbidden('Akun ' . HakAkses::label($this->peran()) . ' tidak punya hak melihat Laporan Pembayaran.');
+        }
+        $hasil = (new PklLaporanBiaya())->data($this->saringanLaporan());
+        $page  = max(1, (int) $this->request->getGet('page'));
+        $per   = max(1, min(200, (int) ($this->request->getGet('per') ?: 50)));
+        $total = count($hasil['baris']);
+
+        return $this->ok([
+            'ringkas' => $hasil['ringkas'],
+            'jenis'   => $hasil['jenis'],
+            'baris'   => array_slice($hasil['baris'], ($page - 1) * $per, $per),
+        ], 'Laporan Pembayaran PKL.', ['page' => $page, 'perPage' => $per, 'total' => $total]);
+    }
+
+    /** GET pkl/laporan/excel?… — berkas .xlsx (lembar Rincian, Rekap Kelas, Rekap Jurusan) sesuai saringan. */
+    public function laporanExcel()
+    {
+        if (! HakAkses::bolehPkl($this->peran(), 'laporan')) {
+            return $this->forbidden('Akun ' . HakAkses::label($this->peran()) . ' tidak punya hak mengunduh Laporan Pembayaran.');
+        }
+        $f     = $this->saringanLaporan();
+        $svc   = new PklLaporanBiaya();
+        $hasil = $svc->data($f);
+        $biner = $svc->excel($hasil, ['teks' => ''], (new SettingModel())->get());
+        $nama  = 'Laporan Pembayaran PKL ' . date('Y-m-d') . '.xlsx';
+        $this->audit->record('update', 'pkl_pembayaran', null, 'Laporan Pembayaran PKL diunduh (' . count($hasil['baris']) . ' siswa) (via aplikasi)');
+
+        return $this->response->download($nama, $biner)->setFileName($nama)->setHeader('X-Jumlah-Baris', (string) count($hasil['baris']));
+    }
+
+    // ================================================================= hak akses (khusus Admin)
+
+    public function hakAkses(): ResponseInterface
+    {
+        if ($this->peran() !== Peran::ADMIN) {
+            return $this->forbidden('Hak Akses PKL hanya bisa dilihat dan diatur Admin.');
+        }
+
+        return $this->ok([
+            'peran_atur' => PklHak::PERAN_ATUR,
+            'hak'        => array_map(static fn (array $h) => ['judul' => $h[0], 'keterangan' => $h[1]], PklHak::HAK),
+            'matriks'    => PklHak::matriks(),
+            'bawaan'     => PklHak::BAWAAN,
+            'peringatan' => PklHak::peringatan(),
+        ], 'Hak akses PKL.');
+    }
+
+    /** POST pkl/hak-akses {"hak": {"hubin": ["acc","ubah","ttd"], "operator": ["surat","laporan","ubah","pengaturan"]}} */
+    public function hakAksesSimpan(): ResponseInterface
+    {
+        if ($this->peran() !== Peran::ADMIN) {
+            return $this->forbidden('Hak Akses PKL hanya bisa diatur Admin.');
+        }
+        $hasil = PklHak::simpan((array) ($this->body()['hak'] ?? []), $this->konteks());
+        if (! $hasil['ok']) {
+            return $this->invalid(['hak' => $hasil['pesan']], $hasil['pesan']);
+        }
+
+        return $this->ok(['matriks' => PklHak::matriks(), 'peringatan' => $hasil['peringatan']], $hasil['pesan']);
     }
 
     // ================================================================= status siswa
@@ -576,6 +840,12 @@ class Pkl extends BaseApiController
             'pengaturan'      => HakAkses::boleh($peran, 'admin/pkl/pengaturan'),
             'hapus'           => HakAkses::boleh($peran, 'admin/pkl/hapus'),
             'tanda_tangan'    => HakAkses::boleh($peran, 'admin/pkl/ttd'),
+            // Hak yang diatur Admin (PKL → Hak Akses). Aplikasi menampilkan/menyembunyikan tombol menurut ini; server tetap penjaga.
+            'surat'           => HakAkses::bolehPkl($peran, 'surat'),
+            'laporan'         => HakAkses::bolehPkl($peran, 'laporan'),
+            'ubah'            => HakAkses::bolehPkl($peran, 'ubah'),
+            'atur_hak'        => $peran === Peran::ADMIN,
+            'hak_pkl'         => PklHak::petaUntuk($peran),
         ];
     }
 
@@ -590,9 +860,12 @@ class Pkl extends BaseApiController
             'kembalikan'  => $status === 'menunggu',
             'tolak'       => $acc && in_array($status, ['menunggu', 'perbaikan'], true),
             'batal_acc'   => $acc && $status === 'disetujui',
-            'ubah'        => $status !== 'disetujui' || $acc,
+            'kembalikan'  => $status === 'menunggu' && HakAkses::bolehPkl($peran, 'ubah'),
+            'ubah'        => HakAkses::bolehPkl($peran, 'ubah') && ($status !== 'disetujui' || $acc),
             'hapus'       => HakAkses::boleh($peran, 'admin/pkl/hapus') && ($status !== 'disetujui' || $peran === Peran::ADMIN),
-            'surat'       => $status === 'disetujui',
+            'surat'       => $status === 'disetujui' && HakAkses::bolehPkl($peran, 'surat'),
+            'pembayaran'  => $status === 'disetujui' && (HakAkses::bolehPkl($peran, 'surat') || HakAkses::bolehPkl($peran, 'laporan')),
+            'koreksi_pembayaran' => $status === 'disetujui' && HakAkses::bolehPkl($peran, 'surat'),
             'wajib_wakil' => $peran === Peran::ADMIN,
         ];
     }

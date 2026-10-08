@@ -33,7 +33,7 @@ $tinjau = [
 <?= $this->section('content') ?>
 
 <?= view('admin/partials/help', [
-    'helpKey'   => 'pkl_pengaturan_v3',
+    'helpKey'   => 'pkl_pengaturan_v4',
     'helpTitle' => 'Pengaturan PKL',
     'helpBody'  => '<p>Atur <b>kapan</b> siswa boleh mengisi, <b>siapa</b> yang boleh (tingkat), dan data yang tercetak di surat resmi sekolah.</p>'
         . '<ul class="mt-2 list-disc pl-5 space-y-1">'
@@ -41,6 +41,8 @@ $tinjau = [
         . '<li><b>Maksimal siswa per perusahaan</b> paling banyak 5 (aturan sekolah).</li>'
         . '<li>Siswa yang sudah mengajukan <b>tidak bisa mengajukan lagi</b> selama ajuannya menunggu keputusan Waka Hubin. <b>Batas keputusan</b> (bawaan 5 hari sejak dikirim) memberi tanda merah pada yang terlambat.</li>'
         . '<li><b>Surat permohonan:</b> isi nama/NIP/jabatan Waka Hubin, nama Kepala Sekolah, kontak "NB" di bawah surat, format nomor surat, dan pola nama berkas. Format surat sudah <u>persis surat resmi sekolah</u>; hanya isi data yang berubah. Tanda tangan digital Waka Hubin diunggah Waka Hubin sendiri di tab <b>Tanda Tangan</b>.</li>'
+        . '<li><b>Format nomor surat</b>: pilih salah satu tombol siap pakai (mis. <i>Tiga angka: 001, 002</i>). Nol di depan hanya lewat <code>{urut3}</code>; menulis &quot;{urut}00&quot; menghasilkan 100, 200, 600 sehingga ditolak.</li>'
+        . '<li><b>Biaya &amp; pesan WhatsApp</b> (bagian bawah): nominal tiap jenis biaya yang dicatat saat surat diunduh (catatan lama tidak berubah) dan templat pesan yang dikirim manual ke siswa.</li>'
         . '<li><b>Impor riwayat PKL lama</b> dari Excel ada di bagian bawah halaman ini.</li>'
         . '</ul>',
 ]) ?>
@@ -155,7 +157,7 @@ $tinjau = [
             <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
                 <div>
                     <label class="lbl" for="f_kepsek">Nama Kepala Sekolah <span class="font-normal text-slate-400">(di bawah tanda tangan Kepala Sekolah)</span></label>
-                    <input id="f_kepsek" type="text" name="kepsek_nama" maxlength="150" value="<?= esc($nilai('kepsek_nama'), 'attr') ?>" class="inp <?= $cls('kepsek_nama') ?>" placeholder="Contoh: Napis Kuturupi, S.T">
+                    <input id="f_kepsek" type="text" name="kepsek_nama" maxlength="150" value="<?= esc($nilai('kepsek_nama'), 'attr') ?>" class="inp <?= $cls('kepsek_nama') ?>" placeholder="Contoh: Napis Kuturupi, S.T.">
                     <?= $err('kepsek_nama') ?>
                 </div>
                 <div>
@@ -179,8 +181,13 @@ $tinjau = [
                 <div>
                     <label class="lbl" for="f_format_nomor">Format nomor surat</label>
                     <input id="f_format_nomor" type="text" name="format_nomor" maxlength="100" x-model="pola" class="inp font-mono <?= $cls('format_nomor') ?>">
-                    <p class="mt-1 text-xs text-slate-500">Contoh hasil: <b class="font-mono text-slate-700" x-text="contoh()"></b></p>
-                    <p class="mt-1 text-[11px] leading-relaxed text-slate-400">Penanda: <code>{urut}</code> <code>{urut3}</code> (007) <code>{tgl}</code> <code>{bln}</code> <code>{bln_romawi}</code> <code>{thn}</code>. Urutan dihitung per tahun dan ditetapkan sekali per surat.</p>
+                    <p class="mt-1 text-xs text-slate-500">Contoh hasil (surat ke-7): <b class="font-mono text-slate-700" x-text="contoh()"></b></p>
+                    <div class="mt-2 flex flex-wrap gap-1.5" aria-label="Pilihan format siap pakai">
+                        <?php foreach (\App\Libraries\PklNomorSurat::PRESET as [$polaPilihan, $ketPilihan]): ?>
+                            <button type="button" @click="pola = <?= esc(json_encode($polaPilihan), 'attr') ?>" class="rounded-lg border px-2.5 py-1 text-xs font-semibold transition" :class="pola === <?= esc(json_encode($polaPilihan), 'attr') ?> ? 'border-brand-500 bg-brand-50 text-brand-700' : 'border-slate-200 text-slate-600 hover:bg-slate-50'"><?= esc($ketPilihan) ?></button>
+                        <?php endforeach; ?>
+                    </div>
+                    <p class="mt-1.5 text-[11px] leading-relaxed text-slate-400">Penanda: <code>{urut}</code> (7) <code>{urut3}</code> (007) <code>{urut4}</code> (0007) <code>{tgl}</code> <code>{bln}</code> <code>{bln_romawi}</code> <code>{thn}</code>. <b>Nol di depan hanya lewat <code>{urut3}</code>/<code>{urut4}</code></b> &mdash; menulis &quot;{urut}00&quot; menghasilkan 100, 200, 600. Urutan dihitung per tahun dan ditetapkan sekali per surat; surat yang sudah bernomor tidak berubah.</p>
                     <?= $err('format_nomor') ?>
                 </div>
                 <div>
@@ -242,6 +249,50 @@ $tinjau = [
             </details>
         </div>
     </section>
+
+    <?php if (isset($jenisBiaya)): $galatBiaya = (array) (session()->getFlashdata('galat_biaya') ?? []); $waNilai = (string) (old('wa_pesan') ?? ($waPesan ?? '')); ?>
+    <form id="biaya" method="post" action="<?= site_url('admin/pkl/pengaturan/biaya') ?>" class="scroll-mt-24 space-y-5"
+          x-data="{ pesan: <?= esc(json_encode($waNilai !== '' ? $waNilai : \App\Libraries\PklWa::PESAN_BAWAAN), 'attr') ?>,
+                    contoh() { return (this.pesan || '').split('{nama}').join('Dewi Lestari').split('{kelas}').join('XI TKJ 1').split('{perusahaan}').join('PT Antarestar').split('{nomor_surat}').join('007/SMK-BN/PKL/X/2026').split('{tanggal_surat}').join('8 Oktober 2026').split('{sekolah}').join(<?= esc(json_encode((string) ($sekolahNama ?? 'SMK Bina Nusa')), 'attr') ?>); } }">
+        <?= csrf_field() ?>
+        <section class="rise overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+            <h3 class="border-b border-slate-100 bg-slate-50 px-5 py-3 text-xs font-bold uppercase tracking-wide text-slate-500">Biaya yang dicatat saat surat diunduh</h3>
+            <div class="space-y-3 p-5">
+                <p class="text-xs leading-relaxed text-slate-500">Nominal ini dipakai untuk catatan <b>berikutnya</b>; catatan yang sudah ada menyimpan nominalnya sendiri dan tidak berubah. <b>Bulanan</b> = dicatat per bulan (pilihan bulan saat mengunduh); <b>sekali per kegiatan</b> = sekali per tahun ajaran. Jenis yang dinonaktifkan tidak muncul di kotak pencatatan.</p>
+                <?php if (isset($galatBiaya['umum'])): ?><p class="err-msg"><?= esc($galatBiaya['umum']) ?></p><?php endif; ?>
+                <?php foreach ($jenisBiaya as $jb): $kb = $jb['kode']; ?>
+                    <div class="grid grid-cols-1 gap-2 rounded-xl border border-slate-200 p-3 sm:grid-cols-[1fr_9rem_9rem_auto] sm:items-end">
+                        <div>
+                            <label class="lbl" for="biaya_<?= $kb ?>_nama">Nama</label>
+                            <input id="biaya_<?= $kb ?>_nama" type="text" name="biaya[<?= $kb ?>][nama]" maxlength="80" value="<?= esc((string) (old('biaya')[$kb]['nama'] ?? $jb['nama']), 'attr') ?>" class="inp <?= isset($galatBiaya[$kb . '.nama']) ? 'inp-err' : '' ?>">
+                            <?php if (isset($galatBiaya[$kb . '.nama'])): ?><p class="err-msg"><?= esc($galatBiaya[$kb . '.nama']) ?></p><?php endif; ?>
+                        </div>
+                        <div>
+                            <label class="lbl" for="biaya_<?= $kb ?>_nominal">Nominal (Rp)</label>
+                            <input id="biaya_<?= $kb ?>_nominal" type="text" inputmode="numeric" name="biaya[<?= $kb ?>][nominal]" value="<?= esc((string) (old('biaya')[$kb]['nominal'] ?? $jb['nominal']), 'attr') ?>" class="inp text-right font-mono <?= isset($galatBiaya[$kb . '.nominal']) ? 'inp-err' : '' ?>">
+                            <?php if (isset($galatBiaya[$kb . '.nominal'])): ?><p class="err-msg"><?= esc($galatBiaya[$kb . '.nominal']) ?></p><?php endif; ?>
+                        </div>
+                        <p class="pb-2.5 text-xs font-semibold text-slate-500"><?= $jb['siklus'] === 'bulanan' ? 'Bulanan' : 'Sekali per kegiatan' ?></p>
+                        <label class="flex items-center gap-2 pb-2 text-sm font-medium text-slate-600"><input type="checkbox" name="biaya[<?= $kb ?>][aktif]" value="1" <?= (old('biaya') !== null ? ! empty(old('biaya')[$kb]['aktif']) : (bool) $jb['aktif']) ? 'checked' : '' ?> class="h-4 w-4"> Aktif</label>
+                    </div>
+                <?php endforeach; ?>
+            </div>
+        </section>
+
+        <section class="rise overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+            <h3 class="border-b border-slate-100 bg-slate-50 px-5 py-3 text-xs font-bold uppercase tracking-wide text-slate-500">Pesan WhatsApp ke siswa</h3>
+            <div class="space-y-3 p-5">
+                <p class="text-xs leading-relaxed text-slate-500">Dikirim <b>manual</b> oleh staf lewat tombol &quot;Kabari via WA&quot; setelah surat diunduh (WhatsApp terbuka dengan pesan ini; tinggal menekan Kirim). Sebaiknya tanpa rincian uang. Penanda: <?php foreach (\App\Libraries\PklWa::TOKEN as $tk): ?><code class="mr-1"><?= esc($tk) ?></code><?php endforeach; ?></p>
+                <textarea name="wa_pesan" rows="3" maxlength="<?= \App\Libraries\PklWa::MAKS_PESAN ?>" x-model="pesan" class="inp"></textarea>
+                <p class="text-xs text-slate-500">Contoh hasil: <span class="font-semibold text-slate-700" x-text="contoh()"></span></p>
+                <button type="button" @click="pesan = <?= esc(json_encode(\App\Libraries\PklWa::PESAN_BAWAAN), 'attr') ?>" class="text-xs font-semibold text-brand-700 hover:underline">Kembalikan ke pesan bawaan</button>
+            </div>
+        </section>
+        <div class="flex justify-end">
+            <button type="submit" class="rounded-xl bg-brand-700 px-8 py-3 text-sm font-bold text-white shadow-sm transition hover:bg-brand-800 active:scale-95">Simpan biaya &amp; pesan WhatsApp</button>
+        </div>
+    </form>
+    <?php endif; ?>
 
     <section class="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
         <h3 class="text-xs font-bold uppercase tracking-wide text-slate-500">Data PKL lama</h3>
