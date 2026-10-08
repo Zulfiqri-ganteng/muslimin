@@ -21,6 +21,8 @@ class SiswaModel extends Model
         'ortu_alamat', 'ortu_rt', 'ortu_rw', 'ortu_kelurahan', 'ortu_kecamatan', 'ortu_kota', 'ortu_telepon',
         'alamat_wali', 'pekerjaan_wali',
         'biodata_at',
+        // Daftar Nama Siswa resmi sekolah, Format 8355 (migrasi 2026-10-10-000001)
+        'nama_orang_tua', 'sttb_nomor', 'sttb_tahun',
     ];
     protected $useTimestamps  = true;
     protected $createdField   = 'created_at';
@@ -42,6 +44,20 @@ class SiswaModel extends Model
         'nama_ayah', 'pekerjaan_ayah', 'nama_ibu', 'pekerjaan_ibu',
         'ortu_alamat', 'ortu_rt', 'ortu_rw', 'ortu_kelurahan', 'ortu_kecamatan', 'ortu_kota', 'ortu_telepon',
         'alamat_wali', 'pekerjaan_wali',
+    ];
+
+    /**
+     * Kolom dari Daftar Nama Siswa resmi sekolah (Format 8355), migrasi 2026-10-10. Satu daftar untuk
+     * Master Siswa web (form/ekspor/impor), API, dan ekspor Format 8355. Kolom NIS/NISN/tempat-tanggal
+     * lahir/agama/alamat orang tua versi sekolah sudah ada di kolom inti & biodata.
+     */
+    public const KOLOM_SEKOLAH = ['nama_orang_tua', 'sttb_nomor', 'sttb_tahun'];
+
+    /** Label tampilan kolom KOLOM_SEKOLAH (sengaja di sini, bukan di BiodataForm::LABEL milik form isian siswa). */
+    public const LABEL_SEKOLAH = [
+        'nama_orang_tua' => 'Nama Orang Tua (versi sekolah)',
+        'sttb_nomor'     => 'STTB Nomor',
+        'sttb_tahun'     => 'STTB Tahun',
     ];
 
     /** Pilihan baku — dipakai form isian publik & Master Siswa. */
@@ -71,6 +87,9 @@ class SiswaModel extends Model
         'status'           => 'permit_empty|in_list[aktif,lulus,pindah,keluar]',
         'anak_ke'          => 'permit_empty|is_natural_no_zero|less_than[100]',
         'diterima_tanggal' => 'permit_empty|valid_date[Y-m-d]',
+        'nama_orang_tua'   => 'permit_empty|max_length[150]',
+        'sttb_nomor'       => 'permit_empty|max_length[60]',
+        'sttb_tahun'       => 'permit_empty|is_natural_no_zero|greater_than[1989]|less_than[2101]',
     ];
     protected $validationMessages = [
         'nis'  => ['is_unique' => 'NIS sudah terdaftar.', 'required' => 'NIS wajib diisi.'],

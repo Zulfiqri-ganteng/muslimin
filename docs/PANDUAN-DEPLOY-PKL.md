@@ -116,6 +116,7 @@ Isi paling lambat: [tanggal]. Kalau ada kendala, hubungi operator sekolah.
 | Tombol Pengaturan tidak ada | Akun Anda Waka Hubin; hanya Operator/Admin yang boleh |
 | Tombol ACC tidak ada / "hanya boleh dilakukan Waka Hubin" | Akun Anda Operator. Minta Waka Hubin yang meng-ACC (Admin hanya cadangan) |
 | Gambar tanda tangan Hubin tak muncul di surat | Surat itu di-ACC oleh Admin (bukan Hubin), atau tanda tangan belum diunggah di tab Tanda Tangan. Setelah diunggah, unduh surat lagi |
+| Siswa hanya bisa ajak 1 teman (tulisan "Maksimal 2 siswa per perusahaan") | Angka di **Pengaturan PKL → Maksimal siswa per perusahaan** tersimpan lebih kecil dari 5. Ubah jadi **5** lalu Simpan — berlaku langsung, siswa cukup muat ulang halaman. |
 | Siswa bilang "tidak bisa mengajukan lagi" | Memang aturannya: siswa yang sudah mengajukan menunggu keputusan Waka Hubin. Bila salah isi, Operator mengembalikannya untuk diperbaiki, atau Operator/Admin menghapus ajuannya (yang sudah disetujui hanya Admin) |
 | Surat berantakan di Word | Kabari pengembang, sertakan berkasnya. Sementara, hapus template unggahan agar memakai surat bawaan |
 | Tampilan lama / tak berubah setelah update | Muat ulang paksa (Ctrl+F5) |

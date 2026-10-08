@@ -38,6 +38,9 @@ document.addEventListener('alpine:init', function () {
                     'sekolah_asal', 'diterima_kelas', 'nama_ayah', 'pekerjaan_ayah', 'nama_ibu', 'pekerjaan_ibu',
                     'ortu_alamat', 'ortu_rt', 'ortu_rw', 'ortu_kelurahan', 'ortu_kecamatan', 'ortu_kota',
                     'ortu_telepon', 'alamat_wali', 'pekerjaan_wali',
+                    // Daftar Nama Siswa resmi sekolah (Format 8355). WAJIB ada di sini: form menyimpan SEMUA kolom,
+                    // jadi kolom yang tak dipetakan akan tampil kosong dan terhapus saat disimpan.
+                    'nama_orang_tua', 'sttb_nomor', 'sttb_tahun',
                 ].forEach(function (k) { data[k] = teks(r[k]); });
 
                 return data;

@@ -37,6 +37,7 @@ class Siswa extends BaseCrud
     protected function applyFilters($builder)
     {
         $q       = trim((string) $this->request->getGet('q'));
+        $tanpaKelas = strtolower(trim((string) $this->request->getGet('kelas_id'))) === 'tanpa'; // siswa yang belum ditempatkan di kelas
         $kelasId = (int) $this->request->getGet('kelas_id');
         $tingkat = strtoupper(trim((string) $this->request->getGet('tingkat')));
         $status  = strtolower(trim((string) $this->request->getGet('status')));
@@ -48,6 +49,8 @@ class Siswa extends BaseCrud
         }
         if ($kelasId > 0) {
             $builder = $builder->where('siswa.kelas_id', $kelasId);
+        } elseif ($tanpaKelas) {
+            $builder = $builder->where('siswa.kelas_id', null);
         }
         if (in_array($tingkat, ['X', 'XI', 'XII'], true)) {
             $builder = $builder->where('kelas.tingkat', $tingkat);
@@ -78,7 +81,7 @@ class Siswa extends BaseCrud
         $jk     = strtoupper($teks('jenis_kelamin'));
         $status = strtolower($teks('status'));
 
-        return $this->collectBiodata($in, $teks) + [
+        return $this->collectBiodata($in, $teks) + $this->collectSekolah($in, $teks) + [
             'nis' => $teks('nis'),
             // NISN unik tapi boleh kosong → string kosong WAJIB jadi NULL,
             // kalau tidak siswa kedua tanpa NISN akan bentrok unique key.
@@ -121,6 +124,26 @@ class Siswa extends BaseCrud
         return $data;
     }
 
+    /**
+     * Kolom Format 8355 (SiswaModel::KOLOM_SEKOLAH) — sama seperti biodata: hanya yang DIKIRIM klien yang
+     * ditulis, sehingga aplikasi versi lama tidak menghapusnya saat menyimpan siswa.
+     */
+    private function collectSekolah(array $in, callable $teks): array
+    {
+        $data = [];
+        foreach (SiswaModel::KOLOM_SEKOLAH as $k) {
+            if (! array_key_exists($k, $in)) {
+                continue;
+            }
+            $v        = $teks($k);
+            $data[$k] = $k === 'sttb_tahun'
+                ? (ctype_digit($v) && (int) $v >= 1990 && (int) $v <= 2100 ? (int) $v : null)
+                : ($v !== '' ? $v : null);
+        }
+
+        return $data;
+    }
+
     /** Terima Y-m-d maupun dd/mm/yyyy agar klien tidak mudah gagal simpan. */
     private function parseTanggal(string $nilai): ?string
     {
@@ -153,7 +176,14 @@ class Siswa extends BaseCrud
         $biodata['biodata_lengkap'] = $kurang === [];
         $biodata['biodata_kurang']  = $kurang;
 
-        return $this->transformInti($r) + $biodata;
+        // Format 8355 — kunci BARU (tambahan; klien lama mengabaikannya).
+        $sekolah = [];
+        foreach (SiswaModel::KOLOM_SEKOLAH as $k) {
+            $sekolah[$k] = $r[$k] ?? null;
+        }
+        $sekolah['sttb_tahun'] = isset($r['sttb_tahun']) ? (int) $r['sttb_tahun'] : null;
+
+        return $this->transformInti($r) + $biodata + $sekolah;
     }
 
     /** Kolom inti (bentuk lama — tidak diubah agar klien lama tetap cocok). */

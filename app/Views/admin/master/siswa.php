@@ -26,8 +26,9 @@ $opsiTingkat = array_combine($tingkatList, array_map(static fn ($t) => 'Kelas ' 
 $opsiBiodata = ['lengkap' => 'Biodata lengkap', 'belum' => 'Biodata belum'];
 
 // URL export ikut membawa filter yang sedang aktif.
+$nilaiKelas = $kelasId === -1 ? 'tanpa' : ($kelasId ?: ''); // -1 = saringan "Tanpa kelas"
 $qsExport = array_filter([
-    'kelas_id' => $kelasId ?: '',
+    'kelas_id' => $nilaiKelas,
     'tingkat'  => $tingkat,
     'status'   => $status,
     'biodata'  => $biodata,
@@ -64,7 +65,7 @@ $blokAlamat = static function (string $p) use ($kolom, $label): void {
 <?= $this->section('content') ?>
 
 <?= view('admin/partials/help', [
-    'helpKey'   => 'siswa_v3',
+    'helpKey'   => 'siswa_v4',
     'helpTitle' => 'Master Siswa',
     'helpBody'  => '<p>Data siswa lengkap sesuai buku induk: identitas, alamat, sekolah asal, orang tua, wali, dan kelas. Tingkat dan jurusan <b>mengikuti kelas</b> siswa, jadi cukup pilih kelasnya saja.</p>
         <p class="mt-1">• <b>Biodata dari siswa</b> — siswa bisa mengisi biodatanya sendiri lewat menu <b>Isian Biodata Siswa</b>. Setelah admin menyetujui isiannya, datanya otomatis masuk ke sini dan siswa ditandai <span class="font-semibold text-emerald-700">Biodata ✓</span>. Pakai saringan <b>Biodata lengkap / belum</b> untuk melihat siapa yang belum.<br>
@@ -72,7 +73,8 @@ $blokAlamat = static function (string $p) use ($kolom, $label): void {
         <p class="mt-1">• <b>Import</b> — unduh template, isi di Excel, unggah, periksa di pratinjau, simpan. NIS yang sudah ada akan <b>diperbarui</b>, bukan diduplikat. <b>Sel yang dikosongkan tidak mengubah data lama</b>, jadi aman mengimpor ulang daftar yang hanya berisi NIS, nama, dan kelas.<br>
         • Kolom <b>Kelas</b> pada file impor diisi <b>nama kelas</b> persis seperti di Master Kelas (mis. <i>X TKJ 1</i>).<br>
         • <b>Penting:</b> NIS bisa berganti ke NIS asli setelah biodata disetujui. Untuk impor ulang, pakai file hasil <b>Export terbaru</b>, bukan file lama — NIS lama akan dianggap siswa baru.<br>
-        • <b>Filter</b> — memilih kelas/tingkat/status/biodata langsung menyaring tabel (tanpa klik Cari).<br>
+        • <b>Filter</b> — memilih kelas/tingkat/status/biodata langsung menyaring tabel (tanpa klik Cari). Pilihan <b>— Tanpa kelas —</b> menampilkan siswa yang belum ditempatkan di kelas.<br>
+        • <b>Data Sekolah</b> — nama orang tua versi sekolah, nomor &amp; tahun STTB (ijazah SMP) sesuai Daftar Nama Siswa resmi (Format 8355). Kolom ini ada di <b>paling kanan</b> template impor.<br>
         • <b>Export</b> — mengunduh sesuai pilihan filter (pilih satu kelas = hanya kelas itu), berisi seluruh kolom biodata. Bila isinya lebih dari satu kelas, file Excel berisi tab <b>Semua Kelas</b> + <b>satu tab per kelas</b> (klik nama kelas di bawah layar Excel).</p>
         <p class="mt-1">• Status <b>Aktif</b> yang dihitung pada grafik jumlah siswa di halaman publik. Siswa lulus/pindah/keluar tetap tersimpan sebagai arsip.</p>',
 ]) ?>
@@ -92,6 +94,8 @@ $blokAlamat = static function (string $p) use ($kolom, $label): void {
          'pekerjaan_ibu' => '', 'ortu_alamat' => '', 'ortu_rt' => '', 'ortu_rw' => '',
          'ortu_kelurahan' => '', 'ortu_kecamatan' => '', 'ortu_kota' => '', 'ortu_telepon' => '',
          'alamat_wali' => '', 'pekerjaan_wali' => '',
+         // Daftar Nama Siswa resmi sekolah (Format 8355)
+         'nama_orang_tua' => '', 'sttb_nomor' => '', 'sttb_tahun' => '',
      ]), 'attr') ?>">
 
     <?= view('admin/master/partials/toolbar', [
@@ -100,7 +104,7 @@ $blokAlamat = static function (string $p) use ($kolom, $label): void {
         'q'                 => $q,
         'per'               => $per,
         'filters'           => [
-            ['name' => 'kelas_id', 'value' => (string) ($kelasId ?: ''), 'all' => 'Semua kelas',   'options' => $kelasOpts],
+            ['name' => 'kelas_id', 'value' => (string) $nilaiKelas,      'all' => 'Semua kelas',   'options' => ['tanpa' => '— Tanpa kelas —'] + $kelasOpts],
             ['name' => 'tingkat',  'value' => $tingkat,                  'all' => 'Semua tingkat', 'options' => $opsiTingkat],
             ['name' => 'status',   'value' => $status,                   'all' => 'Semua status',  'options' => $opsiStatus],
             ['name' => 'biodata',  'value' => $biodata,                  'all' => 'Semua biodata', 'options' => $opsiBiodata],
@@ -281,6 +285,13 @@ $blokAlamat = static function (string $p) use ($kolom, $label): void {
                     <?php $kolom('no_hp_wali', 'No HP Wali', ['max' => 25, 'mode' => 'tel']) ?>
                     <?php $kolom('alamat_wali', $label['alamat_wali'], ['max' => 255, 'span' => 'sm:col-span-2']) ?>
                     <?php $kolom('pekerjaan_wali', $label['pekerjaan_wali'], ['max' => 100, 'list' => 'daftar-pekerjaan']) ?>
+                </div>
+
+                <p class="text-xs font-semibold text-slate-400 uppercase tracking-wide mt-5 mb-2">Data Sekolah <span class="normal-case font-normal">(sesuai Daftar Nama Siswa resmi — Format 8355)</span></p>
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <?php $kolom('nama_orang_tua', \App\Models\SiswaModel::LABEL_SEKOLAH['nama_orang_tua'], ['max' => 150, 'span' => 'sm:col-span-2']) ?>
+                    <?php $kolom('sttb_nomor', \App\Models\SiswaModel::LABEL_SEKOLAH['sttb_nomor'] . ' (ijazah SMP/MTs)', ['max' => 60]) ?>
+                    <?php $kolom('sttb_tahun', \App\Models\SiswaModel::LABEL_SEKOLAH['sttb_tahun'], ['max' => 4, 'mode' => 'numeric']) ?>
                 </div>
 
                 <p class="text-xs font-semibold text-slate-400 uppercase tracking-wide mt-5 mb-2">Kelas &amp; Status</p>

@@ -44,7 +44,7 @@ class Siswa extends BaseMaster
      * Kolom yang ditulis sebagai TEKS di Excel: nomor panjang / berawalan 0
      * tidak boleh berubah jadi angka (0812… → 812…, atau notasi ilmiah).
      */
-    private const KOLOM_TEKS = ['nis', 'nisn', 'no_hp', 'no_hp_wali', 'ortu_telepon', 'rt', 'rw', 'ortu_rt', 'ortu_rw'];
+    private const KOLOM_TEKS = ['nis', 'nisn', 'no_hp', 'no_hp_wali', 'ortu_telepon', 'rt', 'rw', 'ortu_rt', 'ortu_rw', 'sttb_nomor'];
 
     /** Peta nama kelas (huruf besar) => id, dibangun sekali saat impor. */
     private ?array $petaKelas = null;
@@ -59,7 +59,7 @@ class Siswa extends BaseMaster
     {
         $qs = array_filter([
             'q'        => trim((string) $this->request->getGet('q')),
-            'kelas_id' => (string) ((int) $this->request->getGet('kelas_id') ?: ''),
+            'kelas_id' => $this->request->getGet('kelas_id') === 'tanpa' ? 'tanpa' : (string) ((int) $this->request->getGet('kelas_id') ?: ''),
             'tingkat'  => trim((string) $this->request->getGet('tingkat')),
             'status'   => trim((string) $this->request->getGet('status')),
             'biodata'  => trim((string) $this->request->getGet('biodata')),
@@ -168,8 +168,18 @@ class Siswa extends BaseMaster
         }
         $data['anak_ke']          = $this->anakKe($post('anak_ke'));
         $data['diterima_tanggal'] = $this->parseTanggal($post('diterima_tanggal'));
+        // Data Format 8355 (nama orang tua versi sekolah + STTB)
+        $data['nama_orang_tua'] = $post('nama_orang_tua') ?: null;
+        $data['sttb_nomor']     = $post('sttb_nomor') ?: null;
+        $data['sttb_tahun']     = $this->tahunSttb($post('sttb_tahun'));
 
         return $data;
+    }
+
+    /** Tahun STTB: 1990–2100, selain itu NULL. */
+    private function tahunSttb(string $nilai): ?int
+    {
+        return ctype_digit($nilai) && (int) $nilai >= 1990 && (int) $nilai <= 2100 ? (int) $nilai : null;
     }
 
     /** Anak ke-: bilangan 1–99, selain itu NULL. */
@@ -220,10 +230,13 @@ class Siswa extends BaseMaster
 
     // ===================== SARINGAN =====================
 
-    /** @return array{0:int, 1:string, 2:string, 3:string} [kelas_id, tingkat, status, biodata] yang sudah disahkan */
+    /**
+     * @return array{0:int, 1:string, 2:string, 3:string} [kelas_id, tingkat, status, biodata] yang sudah disahkan.
+     *                                                    kelas_id = -1 berarti "Tanpa kelas" (?kelas_id=tanpa).
+     */
     private function saringan(): array
     {
-        $kelasId = (int) $this->request->getGet('kelas_id');
+        $kelasId = $this->request->getGet('kelas_id') === 'tanpa' ? -1 : (int) $this->request->getGet('kelas_id');
         $tingkat = trim((string) $this->request->getGet('tingkat'));
         $status  = trim((string) $this->request->getGet('status'));
         $biodata = trim((string) $this->request->getGet('biodata'));
@@ -241,6 +254,8 @@ class Siswa extends BaseMaster
     {
         if ($kelasId > 0) {
             $builder = $builder->where('siswa.kelas_id', $kelasId);
+        } elseif ($kelasId === -1) {
+            $builder = $builder->where('siswa.kelas_id', null);
         }
         if ($tingkat !== '') {
             $builder = $builder->where('kelas.tingkat', $tingkat);
@@ -295,6 +310,10 @@ class Siswa extends BaseMaster
         $kolom[] = [BiodataForm::LABEL['alamat_wali'], $lebar['alamat_wali'], 'alamat_wali'];
         $kolom[] = [BiodataForm::LABEL['no_hp_wali'], 16, 'no_hp_wali'];
         $kolom[] = [BiodataForm::LABEL['pekerjaan_wali'], $lebar['pekerjaan_wali'], 'pekerjaan_wali'];
+        // Data Format 8355 (ditambahkan di BELAKANG data orang tua/wali; kolom lain tidak bergeser urutannya)
+        $kolom[] = [SiswaModel::LABEL_SEKOLAH['nama_orang_tua'], 26, 'nama_orang_tua'];
+        $kolom[] = [SiswaModel::LABEL_SEKOLAH['sttb_nomor'], 30, 'sttb_nomor'];
+        $kolom[] = [SiswaModel::LABEL_SEKOLAH['sttb_tahun'], 11, 'sttb_tahun'];
         array_push(
             $kolom,
             ['Kelas', 14, 'nama_kelas'],
@@ -488,6 +507,11 @@ class Siswa extends BaseMaster
             $kolom[]  = $k($key, BiodataForm::LABEL[$key], $template, $contoh[$key], $x);
         }
 
+        // Data Format 8355 — paling belakang, sehingga template lama yang sudah beredar tetap terbaca.
+        $kolom[] = $k('nama_orang_tua', SiswaModel::LABEL_SEKOLAH['nama_orang_tua'], 'Nama Orang Tua (versi sekolah)', 'Mahbud', ['width' => 180]);
+        $kolom[] = $k('sttb_nomor', SiswaModel::LABEL_SEKOLAH['sttb_nomor'], 'STTB Nomor', 'DN-02/D-SMP/K13/24/0075135', ['width' => 200]);
+        $kolom[] = $k('sttb_tahun', SiswaModel::LABEL_SEKOLAH['sttb_tahun'], 'STTB Tahun', '2024', ['type' => 'number', 'width' => 90]);
+
         return $kolom;
     }
 
@@ -542,8 +566,9 @@ class Siswa extends BaseMaster
         $isi('anak_ke', $this->anakKe($teks('anak_ke')));
         $tahun = (int) $teks('tahun_masuk');
         $isi('tahun_masuk', $tahun > 0 ? $tahun : null);
+        $isi('sttb_tahun', $this->tahunSttb($teks('sttb_tahun')));
 
-        foreach (['nisn', 'tempat_lahir', 'agama', 'alamat', 'no_hp', 'nama_wali', 'no_hp_wali', 'keterangan'] as $k) {
+        foreach (['nisn', 'tempat_lahir', 'agama', 'alamat', 'no_hp', 'nama_wali', 'no_hp_wali', 'keterangan', 'nama_orang_tua', 'sttb_nomor'] as $k) {
             $isi($k, $teks($k));
         }
         foreach (self::KOLOM_BIODATA as $k) {
