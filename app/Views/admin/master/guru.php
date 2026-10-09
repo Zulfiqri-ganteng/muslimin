@@ -34,7 +34,7 @@
      data-entity="guru"
      data-all-jabatan="<?= esc(json_encode($allJabatan), 'attr') ?>"
      data-jabatan-map="<?= esc(json_encode($jabatanMap), 'attr') ?>"
-     data-defaults="<?= esc(json_encode(['kode_guru' => '', 'nip' => '', 'nama' => '', 'no_wa' => '', 'ikut_absensi' => true, 'induk_id' => '', 'jenis_kelamin' => '', 'status_guru' => '', 'max_beban' => 24, 'keterangan' => '']), 'attr') ?>">
+     data-defaults="<?= esc(json_encode(['kode_guru' => '', 'nip' => '', 'nama' => '', 'no_wa' => '', 'ikut_absensi' => true, 'bukan_pengajar' => false, 'induk_id' => '', 'jenis_kelamin' => '', 'status_guru' => '', 'max_beban' => 24, 'keterangan' => '']), 'attr') ?>">
 
     <?= view('admin/master/partials/toolbar', [
         'baseUrl'           => site_url('admin/master/guru'),
@@ -89,6 +89,9 @@
                                 <?php endif; ?>
                                 <?php if (isset($r['ikut_absensi']) && (int) $r['ikut_absensi'] === 0): ?>
                                     <div class="text-[11px] font-semibold text-slate-500">Tidak ikut absensi</div>
+                                <?php endif; ?>
+                                <?php if (! empty($r['bukan_pengajar'])): ?>
+                                    <div class="text-[11px] font-semibold text-violet-700">Bukan pengajar (staf)</div>
                                 <?php endif; ?>
                             </td>
                             <td class="px-6 py-3 text-slate-500"><?= esc($r['nip'] ?: '—') ?></td>
@@ -199,6 +202,15 @@
                             <span class="text-sm">
                                 <span class="font-medium text-slate-700">Ikut absensi &amp; laporan</span>
                                 <span class="block text-xs text-slate-500">Matikan untuk ketua yayasan / kepala sekolah yang tidak diabsen. Tidak muncul di absensi, pesan WA, maupun rekap.</span>
+                            </span>
+                        </label>
+                        <label class="flex items-start gap-2.5 cursor-pointer">
+                            <input type="hidden" name="bukan_pengajar" value="0">
+                            <input type="checkbox" name="bukan_pengajar" value="1" x-model="form.bukan_pengajar"
+                                   class="mt-0.5 rounded border-slate-300 text-brand-600 focus:ring-brand-500">
+                            <span class="text-sm">
+                                <span class="font-medium text-slate-700">Bukan pengajar (staf TU / operator)</span>
+                                <span class="block text-xs text-slate-500">Tetap tercatat di sini (dan bisa menerima honor), tetapi tidak dihitung sebagai guru di Dashboard maupun &quot;Guru Kurang Jam&quot;.</span>
                             </span>
                         </label>
                         <div>

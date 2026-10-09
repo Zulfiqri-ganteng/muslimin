@@ -9,7 +9,7 @@ class GuruModel extends Model
     protected $table          = 'guru';
     protected $primaryKey     = 'id';
     protected $returnType     = 'array';
-    protected $allowedFields  = ['nip', 'kode_guru', 'nama', 'no_wa', 'ikut_absensi', 'induk_id', 'jenis_kelamin', 'status_guru', 'max_beban', 'keterangan'];
+    protected $allowedFields  = ['nip', 'kode_guru', 'nama', 'no_wa', 'ikut_absensi', 'bukan_pengajar', 'induk_id', 'jenis_kelamin', 'status_guru', 'max_beban', 'keterangan'];
     protected $useTimestamps  = true;
     protected $createdField   = 'created_at';
     protected $updatedField   = 'updated_at';
@@ -26,6 +26,7 @@ class GuruModel extends Model
         'max_beban'     => 'permit_empty|is_natural',
         'no_wa'         => 'permit_empty|regex_match[/^62\d{7,13}$/]',
         'ikut_absensi'  => 'permit_empty|in_list[0,1]',
+        'bukan_pengajar' => 'permit_empty|in_list[0,1]',
         'induk_id'      => 'permit_empty|is_natural_no_zero',
     ];
     protected $beforeUpdate = ['cegahIndukDiriSendiri'];

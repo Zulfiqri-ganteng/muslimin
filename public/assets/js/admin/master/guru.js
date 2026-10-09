@@ -23,6 +23,7 @@ document.addEventListener('alpine:init', function () {
                     f[k] = (r[k] === null || r[k] === undefined) ? d[k] : r[k];
                 });
                 f.ikut_absensi = String(r.ikut_absensi === undefined || r.ikut_absensi === null ? '1' : r.ikut_absensi) !== '0';
+                f.bukan_pengajar = String(r.bukan_pengajar === undefined || r.bukan_pengajar === null ? '0' : r.bukan_pengajar) === '1';
                 f.induk_id = r.induk_id ? String(r.induk_id) : '';
                 f.id = r.id;
                 return f;

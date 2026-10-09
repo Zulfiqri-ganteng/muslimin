@@ -84,6 +84,8 @@
             ['admin/ujian/asas',  'ASAS',   'M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z'],
             ['admin/ujian/asts2', 'ASTS 2', 'M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z'],
             ['admin/ujian/asat',  'ASAT',   'M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z'],
+            // Khusus Admin (data gaji): Operator & Waka Hubin tidak melihat item ini — disaring HakAkses seperti menu lain.
+            ['admin/honor/pengaturan', 'Pengaturan Honor', 'M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z'],
         ]],
         ['title' => 'UJI KOMPETENSI (UKK)', 'items' => [
             ['admin/peserta-ukk',      'Peserta UKK',   'M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z'],
@@ -227,10 +229,7 @@
                     <button type="button" @click="ganti()" x-show="!collapsed || sidebar" :aria-expanded="open || cari !== ''"
                             class="flex w-full items-center justify-between rounded-md px-3.5 py-1.5 text-[10px] font-bold uppercase tracking-wider transition hover:text-white <?= $grupAktif ? 'text-white' : 'text-brand-300' ?>">
                         <span class="flex items-center gap-1.5"><?= esc($g['title']) ?><?php if ($grupAktif): ?><span class="h-1.5 w-1.5 rounded-full bg-gold-400" aria-hidden="true"></span><?php endif; ?></span>
-                        <span class="flex items-center gap-1.5">
-                            <span class="rounded-full bg-white/10 px-1.5 py-px text-[9px] font-semibold normal-case tracking-normal text-brand-200"><?= count($g['items']) ?></span>
-                            <svg class="h-3.5 w-3.5 transition-transform" :class="(open || cari !== '') ? 'rotate-180' : ''" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7"/></svg>
-                        </span>
+                        <svg class="h-3.5 w-3.5 transition-transform" :class="(open || cari !== '') ? 'rotate-180' : ''" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7"/></svg>
                     </button>
                     <!-- Saat menciut: garis pemisah tipis pengganti judul -->
                     <div x-show="collapsed && !sidebar" class="mx-3 my-1 border-t border-white/10"></div>

@@ -82,7 +82,7 @@ if (! function_exists('master_data_changed')) {
 
         // Kunci cache tunggal yang harus dihapus per modul.
         $singles = [
-            'guru'     => ['opt_guru', 'rekap_beban', 'dash_kurikulum'],
+            'guru'     => ['opt_guru', 'rekap_beban', 'dash_kurikulum', 'publik_stats_v2'],
             'mapel'    => ['opt_mapel', 'rekap_beban', 'dash_kurikulum'],
             'kelas'    => ['opt_kelas', 'rekap_beban', 'dash_kurikulum'],
             'jurusan'  => ['opt_jurusan'],

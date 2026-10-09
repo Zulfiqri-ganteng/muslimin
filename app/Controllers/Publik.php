@@ -39,7 +39,7 @@ class Publik extends BaseController
         $stats = cache('publik_stats_v2');
         if (! $stats) {
             $stats = [
-                'guru'  => (new GuruModel())->countAllResults(),
+                'guru'  => (new GuruModel())->where('bukan_pengajar', 0)->countAllResults(),
                 'kelas' => (new KelasModel())->countAllResults(),
                 'mapel' => (new MataPelajaranModel())->countAllResults(),
                 'siswa' => (new SiswaModel())->where('status', 'aktif')->countAllResults(),

@@ -93,6 +93,10 @@ $adaFilter = $filter['q'] !== '' || $filter['tingkat'] !== '' || $filter['jurusa
                 Jadwal: <?= (int) $totalJadwal ?>
             </span>
             <div class="flex-1"></div>
+            <a href="<?= $base ?>/pembuat-soal<?= $qtp ?>" title="Tugaskan guru pembuat soal per jadwal (dasar honor Pembuatan Soal)"
+               class="inline-flex items-center gap-1.5 rounded-lg border border-slate-300 text-slate-600 text-sm font-semibold px-3.5 py-2.5 hover:bg-slate-50 transition">
+                Pembuat Soal
+            </a>
             <button type="button" @click="importOpen=true"
                     class="inline-flex items-center gap-1.5 rounded-lg border border-slate-300 text-slate-600 text-sm font-semibold px-3.5 py-2.5 hover:bg-slate-50 transition">
                 <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"/></svg>
@@ -111,8 +115,52 @@ $adaFilter = $filter['q'] !== '' || $filter['tingkat'] !== '' || $filter['jurusa
         </div>
     </div>
 
-    <!-- Tabel -->
-    <div class="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+    <!-- Kartu (HP): tabel lebar tak muat di layar sempit, jadi tiap jadwal tampil sebagai kartu dengan tombol berlabel -->
+    <div class="mb-5 space-y-3 md:hidden">
+        <?php if (! $rows): ?>
+            <div class="rounded-2xl border border-slate-200 bg-white px-5 py-10 text-center text-sm text-slate-400">
+                <?= $adaFilter ? 'Tidak ada jadwal yang cocok dengan filter.' : 'Belum ada jadwal ujian. Ketuk <b>Tambah Jadwal</b> untuk mulai menyusun.' ?>
+            </div>
+        <?php else: foreach ($rows as $r): ?>
+            <?php
+            $tsK  = strtotime((string) $r['tanggal']);
+            $jmlK = (int) ($jmlPengawas[$r['id']] ?? 0);
+            $takK = (int) ($jmlTakHadir[$r['id']] ?? 0);
+            $editK = htmlspecialchars(json_encode([
+                'id' => (string) $r['id'], 'mapel_id' => (string) ($r['mapel_id'] ?? ''), 'tingkat' => $r['tingkat'], 'jurusan_id' => (string) ($r['jurusan_id'] ?? ''),
+                'shift' => $r['shift'], 'tanggal' => $r['tanggal'], 'jam_mulai' => $r['jam_mulai'] ? substr((string) $r['jam_mulai'], 0, 5) : '',
+                'jam_selesai' => $r['jam_selesai'] ? substr((string) $r['jam_selesai'], 0, 5) : '', 'ruang' => $r['ruang'] ?? '', 'keterangan' => $r['keterangan'] ?? '',
+            ]), ENT_QUOTES);
+            ?>
+            <div class="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+                <div class="flex items-start justify-between gap-3">
+                    <div class="min-w-0">
+                        <p class="font-bold text-slate-800"><?= esc($r['nama_mapel'] ?? 'Mapel sudah dihapus') ?></p>
+                        <p class="mt-0.5 text-xs text-slate-500"><?= esc($HARI[(int) date('N', $tsK)] ?? '') ?>, <?= date('d/m/Y', $tsK) ?> · <?= esc($jam($r['jam_mulai'], $r['jam_selesai'])) ?></p>
+                    </div>
+                    <span class="shrink-0 inline-flex items-center rounded-full border px-2 py-0.5 text-[11px] font-semibold <?= $warnaShift[$r['shift']] ?? $warnaShift['semua'] ?>"><?= esc($labelShift[$r['shift']] ?? $r['shift']) ?></span>
+                </div>
+                <p class="mt-2 text-sm text-slate-600">Tingkat <?= esc($r['tingkat']) ?><?= $r['jurusan_kode'] ? ' · ' . esc($r['jurusan_kode']) : '' ?> · Ruang <?= esc($r['ruang'] ?: '—') ?></p>
+                <div class="mt-2 flex flex-wrap gap-2 text-xs">
+                    <a href="<?= $base ?>/pengawas/<?= (int) $r['id'] ?>" class="inline-flex items-center rounded-full border px-2.5 py-1 font-semibold <?= $jmlK > 0 ? 'border-brand-200 bg-brand-50 text-brand-700' : 'border-slate-200 text-slate-500' ?>">Pengawas: <?= $jmlK ?></a>
+                    <a href="<?= $base ?>/pembuat-soal<?= $qtp ?>" class="inline-flex items-center rounded-full border px-2.5 py-1 font-semibold <?= (int) ($jmlPembuat[$r['id']] ?? 0) > 0 ? 'border-brand-200 bg-brand-50 text-brand-700' : 'border-slate-200 text-slate-500' ?>">Pembuat soal: <?= (int) ($jmlPembuat[$r['id']] ?? 0) ?></a>
+                    <span class="inline-flex items-center rounded-full border px-2.5 py-1 font-semibold <?= $takK > 0 ? 'border-amber-200 bg-amber-50 text-amber-800' : 'border-slate-200 text-slate-500' ?>">Tidak hadir: <?= $takK ?></span>
+                </div>
+                <div class="mt-3 grid grid-cols-2 gap-2 text-sm font-semibold">
+                    <a href="<?= $base ?>/daftar-hadir/<?= (int) $r['id'] ?><?= $qtp ?>" target="_blank" rel="noopener" class="rounded-lg border border-slate-200 px-3 py-2 text-center text-slate-600 hover:bg-slate-50">Daftar hadir</a>
+                    <a href="<?= $base ?>/berita-acara/<?= (int) $r['id'] ?><?= $qtp ?>" target="_blank" rel="noopener" class="rounded-lg border border-slate-200 px-3 py-2 text-center text-slate-600 hover:bg-slate-50">Berita acara</a>
+                    <button type="button" @click="openEdit(<?= $editK ?>)" class="rounded-lg border border-slate-200 px-3 py-2 text-slate-600 hover:bg-slate-50">Ubah</button>
+                    <form method="post" action="<?= $base ?>/jadwal/<?= (int) $r['id'] ?>/hapus">
+                        <?= csrf_field() ?><input type="hidden" name="periode_id" value="<?= (int) $periode['id'] ?>">
+                        <button data-confirm="Hapus jadwal ini?<?= $takK > 0 ? ' ' . $takK . ' catatan ketidakhadiran TETAP tersimpan, hanya dilepas dari jadwal ini.' : '' ?> Penugasan pengawasnya ikut terhapus." class="w-full rounded-lg border border-red-200 px-3 py-2 text-red-600 hover:bg-red-50">Hapus</button>
+                    </form>
+                </div>
+            </div>
+        <?php endforeach; endif; ?>
+    </div>
+
+    <!-- Tabel (laptop) -->
+    <div class="hidden bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden md:block">
         <div class="overflow-x-auto">
             <table class="w-full text-sm">
                 <thead class="bg-slate-50 text-slate-500">
@@ -123,6 +171,7 @@ $adaFilter = $filter['q'] !== '' || $filter['tingkat'] !== '' || $filter['jurusa
                         <th class="text-left font-semibold px-4 py-3">Sasaran</th>
                         <th class="text-left font-semibold px-4 py-3">Ruang</th>
                         <th class="text-center font-semibold px-4 py-3">Pengawas</th>
+                        <th class="text-center font-semibold px-4 py-3">Pembuat Soal</th>
                         <th class="text-center font-semibold px-4 py-3">Tidak Hadir</th>
                         <th class="text-right font-semibold px-6 py-3">Aksi</th>
                     </tr>
@@ -130,7 +179,7 @@ $adaFilter = $filter['q'] !== '' || $filter['tingkat'] !== '' || $filter['jurusa
                 <tbody class="divide-y divide-slate-100">
                     <?php if (! $rows): ?>
                         <tr>
-                            <td colspan="8" class="px-6 py-12 text-center text-slate-400">
+                            <td colspan="9" class="px-6 py-12 text-center text-slate-400">
                                 <?= $adaFilter
                                     ? 'Tidak ada jadwal yang cocok dengan filter.'
                                     : 'Belum ada jadwal ujian. Klik <b>Tambah Jadwal</b> untuk mulai menyusun.' ?>
@@ -162,7 +211,7 @@ $adaFilter = $filter['q'] !== '' || $filter['tingkat'] !== '' || $filter['jurusa
                             <td class="px-4 py-3 text-slate-600"><?= esc($r['ruang'] ?: '—') ?></td>
                             <td class="px-4 py-3 text-center">
                                 <?php $jml = (int) ($jmlPengawas[$r['id']] ?? 0); ?>
-                                <a href="<?= $base ?>/pengawas/<?= (int) $r['id'] ?>" title="Kelola pengawas"
+                                <a href="<?= $base ?>/pengawas/<?= (int) $r['id'] ?>" title="Kelola pengawas" aria-label="Kelola pengawas"
                                    class="inline-flex items-center gap-1 rounded-lg px-2 py-1 text-sm font-semibold transition <?= $jml > 0
                                        ? 'text-brand-700 hover:bg-brand-50'
                                        : 'text-slate-400 hover:bg-slate-100' ?>">
@@ -171,20 +220,25 @@ $adaFilter = $filter['q'] !== '' || $filter['tingkat'] !== '' || $filter['jurusa
                                 </a>
                             </td>
                             <td class="px-4 py-3 text-center">
+                                <?php $pbs = (int) ($jmlPembuat[$r['id']] ?? 0); ?>
+                                <a href="<?= $base ?>/pembuat-soal<?= $qtp ?>" title="Atur pembuat soal" aria-label="Atur pembuat soal (<?= $pbs ?> orang)"
+                                   class="inline-flex items-center rounded-lg px-2 py-1 text-sm font-semibold transition <?= $pbs > 0 ? 'text-brand-700 hover:bg-brand-50' : 'text-slate-400 hover:bg-slate-100' ?>"><?= $pbs ?></a>
+                            </td>
+                            <td class="px-4 py-3 text-center">
                                 <?php $tak = (int) ($jmlTakHadir[$r['id']] ?? 0); ?>
                                 <span class="<?= $tak > 0 ? 'font-bold text-amber-700' : 'text-slate-400' ?>"><?= $tak ?></span>
                             </td>
                             <td class="px-6 py-3">
                                 <div class="flex items-center justify-end gap-1">
-                                    <a href="<?= $base ?>/daftar-hadir/<?= (int) $r['id'] ?><?= $qtp ?>" target="_blank" title="Cetak daftar hadir"
+                                    <a href="<?= $base ?>/daftar-hadir/<?= (int) $r['id'] ?><?= $qtp ?>" target="_blank" rel="noopener" title="Cetak daftar hadir" aria-label="Cetak daftar hadir"
                                        class="inline-flex h-8 w-8 items-center justify-center rounded-lg text-slate-500 hover:bg-slate-100 transition">
                                         <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z"/></svg>
                                     </a>
-                                    <a href="<?= $base ?>/berita-acara/<?= (int) $r['id'] ?><?= $qtp ?>" target="_blank" title="Cetak berita acara"
+                                    <a href="<?= $base ?>/berita-acara/<?= (int) $r['id'] ?><?= $qtp ?>" target="_blank" rel="noopener" title="Cetak berita acara" aria-label="Cetak berita acara"
                                        class="inline-flex h-8 w-8 items-center justify-center rounded-lg text-slate-500 hover:bg-slate-100 transition">
                                         <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
                                     </a>
-                                    <button type="button" title="Ubah"
+                                    <button type="button" title="Ubah jadwal" aria-label="Ubah jadwal"
                                             @click="openEdit(<?= htmlspecialchars(json_encode([
                                                 'id'          => (string) $r['id'],
                                                 'mapel_id'    => (string) ($r['mapel_id'] ?? ''),
@@ -203,7 +257,7 @@ $adaFilter = $filter['q'] !== '' || $filter['tingkat'] !== '' || $filter['jurusa
                                     <form method="post" action="<?= $base ?>/jadwal/<?= (int) $r['id'] ?>/hapus" class="inline">
                                         <?= csrf_field() ?>
                                         <input type="hidden" name="periode_id" value="<?= (int) $periode['id'] ?>">
-                                        <button title="Hapus"
+                                        <button title="Hapus jadwal" aria-label="Hapus jadwal"
                                                 data-confirm="Hapus jadwal ini?<?= $tak > 0 ? ' ' . $tak . ' catatan ketidakhadiran TETAP tersimpan, hanya dilepas dari jadwal ini.' : '' ?> Penugasan pengawasnya ikut terhapus."
                                                 class="inline-flex h-8 w-8 items-center justify-center rounded-lg text-red-500 hover:bg-red-50 transition">
                                             <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>

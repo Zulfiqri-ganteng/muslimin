@@ -43,10 +43,10 @@ class Guru extends BaseMaster
         $per  = $this->perPage();
         $page = $this->pageNo();
 
-        // "v3" = penanda BENTUK data cache (v4: no_wa, ikut_absensi, induk_id). Wajib dinaikkan setiap struktur nilai
+        // "v3" = penanda BENTUK data cache (v5: + bukan_pengajar; v4: no_wa, ikut_absensi, induk_id). Wajib dinaikkan setiap struktur nilai
         // yang disimpan berubah (di sini: penambahan jabatanMap), supaya setelah
         // deploy kode baru tidak pernah membaca cache berbentuk lama → 500.
-        $data = $this->cachedList("list|v4|q={$q}|s={$status}|per={$per}|p={$page}", function () use ($q, $status, $per, $page) {
+        $data = $this->cachedList("list|v5|q={$q}|s={$status}|per={$per}|p={$page}", function () use ($q, $status, $per, $page) {
             $builder = $this->model;
             if ($q !== '') {
                 $builder = $builder->groupStart()
@@ -157,6 +157,7 @@ class Guru extends BaseMaster
             'nama'          => trim((string) $this->request->getPost('nama')),
             'no_wa'         => GuruModel::normalNoWa($this->request->getPost('no_wa')),
             'ikut_absensi'  => $this->request->getPost('ikut_absensi') ? 1 : 0,
+            'bukan_pengajar' => $this->request->getPost('bukan_pengajar') ? 1 : 0,
             'induk_id'      => $this->indukValid((int) $this->request->getPost('induk_id')),
             'jenis_kelamin' => in_array($this->request->getPost('jenis_kelamin'), ['L', 'P'], true) ? $this->request->getPost('jenis_kelamin') : null,
             'status_guru'   => in_array($this->request->getPost('status_guru'), self::STATUS, true) ? $this->request->getPost('status_guru') : null,
@@ -193,6 +194,9 @@ class Guru extends BaseMaster
         // Guru memakai soft delete → ON DELETE CASCADE tidak jalan, lepas manual.
         $db->table('guru_jabatan')->whereIn('guru_id', $ids)->delete();
         $db->table('ketersediaan_guru')->whereIn('guru_id', $ids)->delete();
+        if ($db->tableExists('ujian_pembuat_soal')) {
+            $db->table('ujian_pembuat_soal')->whereIn('guru_id', $ids)->delete(); // penugasan pembuat soal ujian
+        }
 
         $pengampuIds = array_map('intval', array_column(
             $db->table('pengampu')->select('id')->whereIn('guru_id', $ids)->get()->getResultArray(),

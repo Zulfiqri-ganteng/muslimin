@@ -41,7 +41,8 @@ class Kurikulum extends BaseController
                      + count($jadwal->ketViolations());
 
             $data = [
-                'guru'        => (new GuruModel())->countAllResults(),
+                // Staf yang bukan pengajar (TU, operator) tidak dihitung sebagai guru.
+                'guru'        => (new GuruModel())->where('bukan_pengajar', 0)->countAllResults(),
                 'kelas'       => (new KelasModel())->countAllResults(),
                 'mapel'       => (new MataPelajaranModel())->countAllResults(),
                 'jpTerjadwal' => $jadwal->countAllResults(),

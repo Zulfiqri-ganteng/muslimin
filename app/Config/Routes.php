@@ -492,8 +492,40 @@ $routes->group('admin', static function ($routes) {
         $routes->get('ujian/(:segment)/pengawas/(:num)', 'Admin\Ujian::pengawas/$1/$2');
         $routes->post('ujian/(:segment)/pengawas/(:num)', 'Admin\Ujian::simpanPengawas/$1/$2');
         $routes->post('ujian/(:segment)/pengawas/(:num)/hapus/(:num)', 'Admin\Ujian::hapusPengawas/$1/$2/$3');
+        // Tab Honor (KHUSUS ADMIN — data gaji). Halaman: GET ujian/{jenis}/honor (pola generik di bawah).
+        $routes->post('ujian/(:segment)/honor/buat', 'Admin\UjianHonor::buat/$1', ['filter' => 'csrf']);
+        $routes->post('ujian/(:segment)/honor/dokumen', 'Admin\UjianHonor::simpanDokumen/$1', ['filter' => 'csrf']);
+        $routes->post('ujian/(:segment)/honor/penerima', 'Admin\UjianHonor::tambahPenerima/$1', ['filter' => 'csrf']);
+        $routes->post('ujian/(:segment)/honor/penerima-semua', 'Admin\UjianHonor::tambahSemua/$1', ['filter' => 'csrf']);
+        $routes->post('ujian/(:segment)/honor/baris/(:num)/hapus', 'Admin\UjianHonor::hapusBaris/$1/$2', ['filter' => 'csrf']);
+        $routes->post('ujian/(:segment)/honor/baris/(:num)/jabatan', 'Admin\UjianHonor::ubahJabatan/$1/$2', ['filter' => 'csrf']);
+        $routes->post('ujian/(:segment)/honor/nilai', 'Admin\UjianHonor::simpanNilai/$1', ['filter' => 'csrf']);
+        $routes->post('ujian/(:segment)/honor/sinkron', 'Admin\UjianHonor::sinkron/$1', ['filter' => 'csrf']);
+        $routes->post('ujian/(:segment)/honor/hapus', 'Admin\UjianHonor::hapusDokumen/$1', ['filter' => 'csrf']);
+        $routes->post('ujian/(:segment)/honor/hitung', 'Admin\UjianHonor::hitung/$1', ['filter' => 'csrf']);
+        $routes->post('ujian/(:segment)/honor/status', 'Admin\UjianHonor::status/$1', ['filter' => 'csrf']);
+        $routes->post('ujian/(:segment)/honor/impor/unggah', 'Admin\UjianHonor::imporUnggah/$1', ['filter' => 'csrf']);
+        $routes->get('ujian/(:segment)/honor/impor', 'Admin\UjianHonor::impor/$1');
+        $routes->post('ujian/(:segment)/honor/impor/terapkan', 'Admin\UjianHonor::imporTerapkan/$1', ['filter' => 'csrf']);
+        // Cetak / unduh (GET, hanya baca; tiap unduhan dicatat di Audit Log).
+        $routes->get('ujian/(:segment)/honor/cetak/rekap-xlsx', 'Admin\UjianHonorCetak::rekapXlsx/$1');
+        $routes->get('ujian/(:segment)/honor/cetak/rekap-pdf', 'Admin\UjianHonorCetak::rekapPdf/$1');
+        $routes->get('ujian/(:segment)/honor/cetak/slip-pdf', 'Admin\UjianHonorCetak::slipPdf/$1');
+        $routes->get('ujian/(:segment)/pembuat-soal', 'Admin\UjianHonor::pembuatSoal/$1');
+        $routes->post('ujian/(:segment)/pembuat-soal', 'Admin\UjianHonor::simpanPembuatSoal/$1', ['filter' => 'csrf']);
+        $routes->post('ujian/(:segment)/pembuat-soal/(:num)/hapus', 'Admin\UjianHonor::hapusPembuatSoal/$1/$2', ['filter' => 'csrf']);
         $routes->get('ujian/(:segment)', 'Admin\Ujian::jenis/$1');
         $routes->get('ujian/(:segment)/(:segment)', 'Admin\Ujian::jenis/$1/$2');
+
+        // ===== HONOR UJIAN (KHUSUS ADMIN — data gaji) =====
+        // Tidak ada di daftar hak Operator/Waka Hubin (Config\Peran) → ditolak penjaga rute; controller memeriksa ulang.
+        // Semua aksi pengubah data memakai POST + CSRF.
+        $routes->get('honor/pengaturan', 'Admin\HonorPengaturan::index');
+        $routes->post('honor/pengaturan/komponen', 'Admin\HonorPengaturan::simpanKomponen', ['filter' => 'csrf']);
+        $routes->post('honor/pengaturan/komponen/tambah', 'Admin\HonorPengaturan::tambahKomponen', ['filter' => 'csrf']);
+        $routes->post('honor/pengaturan/komponen/(:num)/hapus', 'Admin\HonorPengaturan::hapusKomponen/$1', ['filter' => 'csrf']);
+        $routes->post('honor/pengaturan/panitia', 'Admin\HonorPengaturan::simpanPanitia', ['filter' => 'csrf']);
+        $routes->post('honor/pengaturan/tanda-tangan', 'Admin\HonorPengaturan::simpanTandaTangan', ['filter' => 'csrf']);
 
         // ===== PENJADWALAN =====
         $routes->get('jadwal', 'Admin\Jadwal::index');

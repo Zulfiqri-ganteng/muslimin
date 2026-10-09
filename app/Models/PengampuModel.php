@@ -68,6 +68,7 @@ class PengampuModel extends Model
                       COALESCE(SUM(p.jp),0) AS total_jp, COUNT(p.id) AS jml_tugas')
             ->join('pengampu p', 'p.guru_id = g.id AND p.deleted_at IS NULL', 'left')
             ->where('g.deleted_at', null)
+            ->where('g.bukan_pengajar', 0) // staf (TU/operator) tidak punya beban mengajar → bukan "kurang jam"
             ->groupBy('g.id')
             ->orderBy('total_jp', 'DESC')->orderBy('g.nama', 'ASC')
             ->get()->getResultArray();

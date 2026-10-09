@@ -33,8 +33,21 @@ $warnaStatus = [
 ];
 $labelStatus = ['draft' => 'Draft', 'berjalan' => 'Berjalan', 'selesai' => 'Selesai'];
 
+// Lencana kelengkapan di baris tab: [teks, nada]. Nada: ok (hijau) | kosong (abu) | perlu (kuning).
+$periodeTerisi = ! empty($periode['tanggal_mulai']) && ! empty($periode['tanggal_selesai']);
+$susulanBelum  = max(0, (int) ($ringkas['tidakHadir'] ?? 0) - (int) (($ringkas['statusList'] ?? [])['selesai'] ?? 0));
+$honorLabel    = ['draf' => 'Draf', 'final' => 'Final', 'dikunci' => 'Dikunci'];
+$lencana = [
+    'periode'        => $periodeTerisi ? ['✓', 'ok'] : ['atur', 'perlu'],
+    'jadwal'         => (int) $ringkas['jadwal'] > 0 ? [(string) (int) $ringkas['jadwal'], 'ok'] : ['kosong', 'perlu'],
+    'ketidakhadiran' => (int) $ringkas['tidakHadir'] > 0 ? [(string) (int) $ringkas['tidakHadir'], 'ok'] : ['0', 'kosong'],
+    'susulan'        => $susulanBelum > 0 ? [$susulanBelum . ' belum', 'perlu'] : ((int) $ringkas['tidakHadir'] > 0 ? ['✓', 'ok'] : ['0', 'kosong']),
+    'honor'          => ($ringkas['honorStatus'] ?? null) !== null ? [$honorLabel[$ringkas['honorStatus']] ?? $ringkas['honorStatus'], $ringkas['honorStatus'] === 'draf' ? 'perlu' : 'ok'] : ['belum', 'kosong'],
+];
+$warnaLencana = ['ok' => 'bg-emerald-50 text-emerald-700', 'kosong' => 'bg-slate-100 text-slate-500', 'perlu' => 'bg-amber-100 text-amber-800'];
+
 // Panel yang sudah digarap; sisanya memakai panel "belum tersedia".
-$panelSiap = ['periode', 'jadwal', 'ketidakhadiran', 'susulan', 'rekap'];
+$panelSiap = ['periode', 'jadwal', 'ketidakhadiran', 'susulan', 'rekap', 'honor'];
 $panelView = in_array($tab, $panelSiap, true) ? 'admin/ujian/tab_' . $tab : 'admin/ujian/tab_belum';
 
 $panelData = [
@@ -94,6 +107,18 @@ if ($tab === 'ketidakhadiran') {
         'jmlTakHadirSesi' => $jmlTakHadirSesi,
     ];
 }
+if ($tab === 'honor') {
+    $panelData += [
+        'honor'          => $honor,
+        'honorCalon'     => $honorCalon,
+        'honorLain'      => $honorLain,
+        'honorPratinjau' => $honorPratinjau,
+        'honorPeriksa'   => $honorPeriksa ?? [],
+        'honorUtuh'      => $honorUtuh ?? null,
+        'honorGambaran'  => $honorGambaran ?? [],
+        'honorPetunjuk'  => $honorPetunjuk ?? [],
+    ];
+}
 if ($tab === 'jadwal') {
     $panelData += [
         'rows'        => $rows,
@@ -103,6 +128,7 @@ if ($tab === 'jadwal') {
         'totalJadwal' => $totalJadwal,
         'jmlPengawas' => $jmlPengawas,
         'jmlTakHadir' => $jmlTakHadir,
+        'jmlPembuat'  => $jmlPembuat ?? [],
         'mapelOpts'   => $mapelOpts,
         'jurusanOpts' => $jurusanOpts,
         'tingkatList' => $tingkatList,
@@ -170,15 +196,18 @@ if ($tab === 'jadwal') {
 </div>
 
 <!-- ===== Tab ===== -->
-<div class="mb-5 border-b border-slate-200 overflow-x-auto">
+<div class="mb-5 overflow-x-auto overflow-y-hidden border-b border-slate-200">
     <nav class="flex gap-1 min-w-max">
         <?php foreach ($tabs as $k => $lbl): ?>
             <?php $aktif = $k === $tab; ?>
-            <a href="<?= $urlTab($k) ?>"
-               class="px-4 py-2.5 text-sm font-semibold border-b-2 -mb-px transition whitespace-nowrap <?= $aktif
+            <a href="<?= $urlTab($k) ?>"<?= $aktif ? ' aria-current="page"' : '' ?>
+               class="px-4 py-2.5 text-sm font-semibold border-b-[3px] -mb-px transition whitespace-nowrap <?= $aktif
                    ? 'border-brand-600 text-brand-700'
                    : 'border-transparent text-slate-500 hover:text-slate-700 hover:border-slate-300' ?>">
                 <?= esc($lbl) ?>
+                <?php if (isset($lencana[$k])): ?>
+                    <span class="ml-1.5 inline-flex items-center rounded-full px-1.5 py-0.5 text-[10px] font-bold leading-none <?= $warnaLencana[$lencana[$k][1]] ?>"><?= esc($lencana[$k][0]) ?></span>
+                <?php endif; ?>
             </a>
         <?php endforeach; ?>
     </nav>

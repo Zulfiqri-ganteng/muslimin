@@ -3,6 +3,10 @@
 namespace App\Controllers\Admin;
 
 use App\Controllers\BaseController;
+use App\Libraries\HonorDokumen;
+use App\Libraries\HonorHitung;
+use App\Libraries\HonorPengaturan;
+use App\Libraries\HonorPeriksa;
 use App\Libraries\UjianReport;
 use App\Models\AuditModel;
 use App\Models\GuruModel;
@@ -35,6 +39,7 @@ class Ujian extends BaseController
         'ketidakhadiran' => 'Ketidakhadiran',
         'susulan'        => 'Ujian Susulan',
         'rekap'          => 'Rekap',
+        'honor'          => 'Honor', // khusus Admin (data gaji) — disaring di jenis()
     ];
 
     protected UjianPeriodeModel $model;
@@ -67,7 +72,12 @@ class Ujian extends BaseController
         }
         $slug = UjianPeriodeModel::keSlug($jenis);
 
-        if (! isset(self::TAB[$tab])) {
+        // Tab Honor memuat data gaji → hanya Admin; peran lain tidak melihat tabnya sama sekali.
+        $tabs = self::TAB;
+        if ((string) (session('admin')['role'] ?? '') !== 'admin') {
+            unset($tabs['honor']);
+        }
+        if (! isset($tabs[$tab])) {
             return redirect()->to(site_url('admin/ujian/' . $slug));
         }
 
@@ -82,7 +92,7 @@ class Ujian extends BaseController
             'jenis'    => $jenis,
             'slug'     => $slug,
             'tab'      => $tab,
-            'tabs'     => self::TAB,
+            'tabs'     => $tabs,
             'periode'  => $periode,
             'label'    => $this->model->label($periode),
             'panjang'  => UjianPeriodeModel::JENIS_PANJANG[$jenis] ?? '',
@@ -99,6 +109,9 @@ class Ujian extends BaseController
         }
         if ($tab === 'susulan') {
             $data += $this->dataSusulan($periode);
+        }
+        if ($tab === 'honor') {
+            $data += $this->dataHonor($periode);
         }
         if ($tab === 'rekap') {
             // Agregasi dipinjam dari library yang sama dengan cetakan PDF/Excel
@@ -230,6 +243,9 @@ class Ujian extends BaseController
         $db->transStart();
 
         $pengawas->where('jadwal_id', $id)->delete();       // pivot: hapus permanen
+        if ($db->tableExists('ujian_pembuat_soal')) {
+            $db->table('ujian_pembuat_soal')->where('jadwal_id', $id)->delete(); // pivot pembuat soal (honor)
+        }
         $susulan->where('jadwal_id', $id)->set('jadwal_id', null)->update();
         $model->delete($id);                                 // soft delete
 
@@ -859,6 +875,19 @@ class Ujian extends BaseController
             'totalJadwal'  => $total,
             'jmlPengawas'  => (new UjianPengawasModel())->countForJadwal($ids),
             'jmlTakHadir'  => (new UjianSusulanModel())->countForJadwal($ids),
+            // Jumlah pembuat soal per jadwal (dasar angka "Pembuatan Soal" di Honor); kosong bila migrasi belum jalan.
+            'jmlPembuat'   => (static function (array $ids): array {
+                $db = db_connect();
+                if ($ids === [] || ! $db->tableExists('ujian_pembuat_soal')) {
+                    return [];
+                }
+                $out = [];
+                foreach ($db->table('ujian_pembuat_soal')->select('jadwal_id, COUNT(*) AS n')->whereIn('jadwal_id', $ids)->groupBy('jadwal_id')->get()->getResultArray() as $r) {
+                    $out[(int) $r['jadwal_id']] = (int) $r['n'];
+                }
+
+                return $out;
+            })($ids),
             'mapelOpts'    => (new MataPelajaranModel())->options(),
             'jurusanOpts'  => (new JurusanModel())->options(),
             'tingkatList'  => UjianJadwalModel::TINGKAT,
@@ -1027,12 +1056,46 @@ class Ujian extends BaseController
     }
 
     /** Angka ringkasan untuk kartu di tab Periode. */
+    /** Data tab Honor: dokumen + total (bila sudah dibuat), calon penerima, atau pratinjau komponen untuk honor baru. */
+    private function dataHonor(array $periode): array
+    {
+        $h   = new HonorDokumen();
+        $dok = $h->dokumenPeriode((int) $periode['id']);
+        if ($dok === null) {
+            return [
+                'honor'          => null,
+                'honorCalon'     => [],
+                'honorLain'      => $h->dokumenLain((int) $periode['id']),
+                'honorPratinjau' => (new HonorPengaturan())->komponen(true, (string) $periode['jenis']),
+            ];
+        }
+
+        $hitung = new HonorHitung();
+        $muat   = $h->muat((int) $dok['id']);
+
+        return [
+            'honorPeriksa'   => (new HonorPeriksa())->periksa($muat, $periode),
+            'honorUtuh'      => HonorDokumen::utuh($muat),
+            'honor'          => $muat,
+            'honorCalon'     => $h->calonPenerima((int) $dok['id']),
+            'honorLain'      => [],
+            'honorPratinjau' => [],
+            'honorGambaran'  => $hitung->gambaran((int) $periode['id']),
+            'honorPetunjuk'  => $hitung->pengawasPetunjuk((int) $periode['id']),
+        ];
+    }
+
     private function ringkasan(int $periodeId): array
     {
         $susulan = new UjianSusulanModel();
         $status  = $susulan->ringkasanStatus($periodeId);
 
+        $db = db_connect();
+
         return [
+            // Lencana kelengkapan di baris tab (lihat view index): pengawas terdaftar & status honor (bila ada).
+            'pengawas'    => (int) $db->table('ujian_pengawas p')->join('ujian_jadwal j', 'j.id = p.jadwal_id AND j.deleted_at IS NULL')->where('j.periode_id', $periodeId)->countAllResults(),
+            'honorStatus' => $db->tableExists('honor_dokumen') ? ($db->table('honor_dokumen')->select('status')->where('periode_id', $periodeId)->get()->getRow()->status ?? null) : null,
             'jadwal'      => (new UjianJadwalModel())->where('periode_id', $periodeId)->countAllResults(),
             'siswaAktif'  => (new SiswaModel())->where('status', 'aktif')->countAllResults(),
             'tidakHadir'  => array_sum($status),

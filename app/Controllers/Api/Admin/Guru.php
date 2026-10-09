@@ -68,6 +68,9 @@ class Guru extends BaseCrud
         if (array_key_exists('ikut_absensi', $in)) {
             $out['ikut_absensi'] = ! empty($in['ikut_absensi']) ? 1 : 0;
         }
+        if (array_key_exists('bukan_pengajar', $in)) {
+            $out['bukan_pengajar'] = ! empty($in['bukan_pengajar']) ? 1 : 0;
+        }
         if (array_key_exists('induk_id', $in)) {
             // Data utama guru ganda; bila yang dipilih juga data ganda → pakai induknya.
             $induk = (int) $in['induk_id'] > 0 ? $this->model->select('id, induk_id')->find((int) $in['induk_id']) : null;
@@ -88,6 +91,7 @@ class Guru extends BaseCrud
             'nama'          => $r['nama'],
             'no_wa'         => $r['no_wa'] ?? null,
             'ikut_absensi'  => (int) ($r['ikut_absensi'] ?? 1) === 1,
+            'bukan_pengajar' => (int) ($r['bukan_pengajar'] ?? 0) === 1,
             'induk_id'      => ((int) ($r['induk_id'] ?? 0)) ?: null,
             'jenis_kelamin' => $r['jenis_kelamin'] ?? null,
             'status_guru'   => $r['status_guru'] ?? null,
