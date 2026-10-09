@@ -114,14 +114,90 @@ final class HonorPengaturan
         return $rows;
     }
 
-    /** Semua jabatan + nominal panitia bawaan (0 = belum diisi). Urut level lalu nama. */
+    /**
+     * Semua jabatan + nominal panitia bawaan (0 = belum diisi) + urutan di rekap. Urut level lalu nama.
+     * `urutan` = angka yang diatur Admin (null = belum diatur); `urutan_bawaan` = angka yang dipakai bila belum diatur.
+     *
+     * @return list<array<string,mixed>>
+     */
     public function panitia(): array
     {
-        return $this->db->table('jabatan j')
-            ->select('j.id, j.kode, j.nama, COALESCE(hp.nominal, 0) AS nominal')
-            ->join('honor_panitia_jabatan hp', 'hp.jabatan_id = j.id', 'left')
-            ->orderBy('j.level', 'ASC')->orderBy('j.nama', 'ASC')
-            ->get()->getResultArray();
+        $adaUrutan = $this->db->tableExists('honor_jabatan_urutan');
+        $q = $this->db->table('jabatan j')
+            ->select('j.id, j.kode, j.nama, j.level, COALESCE(hp.nominal, 0) AS nominal, ' . ($adaUrutan ? 'hu.urutan AS urutan' : 'NULL AS urutan'))
+            ->join('honor_panitia_jabatan hp', 'hp.jabatan_id = j.id', 'left');
+        if ($adaUrutan) {
+            $q->join('honor_jabatan_urutan hu', 'hu.jabatan_id = j.id', 'left');
+        }
+        $rows = $q->orderBy('j.level', 'ASC')->orderBy('j.nama', 'ASC')->get()->getResultArray();
+        foreach ($rows as &$r) {
+            $r['urutan']        = $r['urutan'] === null ? null : (int) $r['urutan'];
+            $r['urutan_bawaan'] = HonorDokumen::urutanBawaan($r);
+        }
+        unset($r);
+
+        return $rows;
+    }
+
+    /**
+     * Simpan urutan jabatan di rekap honor (angka kecil tampil di atas, 1–9999). Kosong = pakai urutan bawaan.
+     * Semua isian diperiksa dulu; tak ada yang tersimpan bila ada yang salah.
+     *
+     * @param array<int|string,mixed> $urutan jabatan_id => isian
+     */
+    public function simpanUrutan(array $urutan): array
+    {
+        if (! $this->db->tableExists('honor_jabatan_urutan')) {
+            return $this->gagal('Urutan jabatan belum bisa disimpan: migrasi database belum dijalankan di server ini.');
+        }
+        $jabatan = [];
+        foreach ($this->panitia() as $j) {
+            $jabatan[(int) $j['id']] = $j;
+        }
+        $baru = [];
+        foreach ($urutan as $idKirim => $isi) {
+            $id = (int) $idKirim;
+            if (! isset($jabatan[$id])) {
+                return $this->gagal('Ada jabatan yang tidak dikenal. Muat ulang halaman lalu coba lagi.');
+            }
+            $t = trim((string) $isi);
+            if ($t === '') {
+                $baru[$id] = null;
+                continue;
+            }
+            if (! ctype_digit($t) || (int) $t < 1 || (int) $t > 9999) {
+                return $this->gagal('Urutan untuk "' . $jabatan[$id]['nama'] . '" harus bilangan bulat 1–9999 (kosongkan untuk memakai urutan bawaan).');
+            }
+            $baru[$id] = (int) $t;
+        }
+
+        $catat = [];
+        $now   = date('Y-m-d H:i:s');
+        $this->db->transStart();
+        foreach ($baru as $id => $n) {
+            $lama = $jabatan[$id]['urutan'];
+            if ($n === $lama) {
+                continue;
+            }
+            if ($n === null) {
+                $this->db->table('honor_jabatan_urutan')->where('jabatan_id', $id)->delete();
+            } elseif ($lama === null) {
+                $this->db->table('honor_jabatan_urutan')->insert(['jabatan_id' => $id, 'urutan' => $n, 'updated_at' => $now]);
+            } else {
+                $this->db->table('honor_jabatan_urutan')->where('jabatan_id', $id)->update(['urutan' => $n, 'updated_at' => $now]);
+            }
+            $catat[] = $jabatan[$id]['nama'] . ' ' . ($lama ?? 'bawaan') . '→' . ($n ?? 'bawaan');
+        }
+        $this->db->transComplete();
+        if (! $this->db->transStatus()) {
+            return $this->gagal('Gagal menyimpan urutan jabatan. Coba lagi.');
+        }
+        if ($catat === []) {
+            return ['ok' => true, 'pesan' => 'Tidak ada perubahan urutan.', 'jumlah' => 0];
+        }
+        $this->audit('update', 'honor_jabatan_urutan', null, 'Urutan jabatan di rekap: ' . implode('; ', $catat));
+
+        return ['ok' => true, 'pesan' => 'Urutan ' . count($catat) . ' jabatan disimpan.', 'jumlah' => count($catat)];
     }
 
     /** @return array{ketua_nama:?string, bendahara_nama:?string} */

@@ -31,6 +31,7 @@ $sumberLabel = ['manual' => 'Diketik', 'koreksi' => 'Otomatis dari siswa', 'rapo
         . '<li><b>Komponen</b> = jenis honor: Tunjangan Panitia, Pembuatan Soal, Transport, Pengawas, Koreksi, Rapot, dan seterusnya. Yang tidak dipakai cukup dimatikan; komponen baru bisa ditambah.</li>'
         . '<li>Honor yang <u>sudah dibuat</u> menyimpan tarif saat dibuat, jadi mengubah tarif di sini tidak mengubah honor periode lama.</li>'
         . '<li><b>Tunjangan panitia</b> diisi per jabatan sebagai nominal awal; di honor tiap orang tetap bisa diubah.</li>'
+        . '<li><b>Urutan jabatan</b> di rekap (Kepala Sekolah, Kepala TU, para Waka, …) juga diatur di bagian itu; kosongkan untuk memakai urutan bawaan.</li>'
         . '<li>Tarif ditulis angka bulat rupiah, boleh pakai titik ribuan (20.000). Tanpa koma.</li>'
         . '<li>Setiap perubahan tercatat di Audit Log.</li></ul>',
 ]) ?>
@@ -192,36 +193,50 @@ $sumberLabel = ['manual' => 'Diketik', 'koreksi' => 'Otomatis dari siswa', 'rapo
     <!-- ===== 2. Tunjangan panitia per jabatan ===== -->
     <section id="panitia" class="scroll-mt-20 overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
         <div class="border-b border-slate-100 bg-slate-50 px-5 py-3">
-            <h2 class="text-xs font-bold uppercase tracking-wide text-slate-500">Tunjangan panitia per jabatan</h2>
+            <h2 class="text-xs font-bold uppercase tracking-wide text-slate-500">Tunjangan panitia &amp; urutan per jabatan</h2>
         </div>
         <form method="post" action="<?= site_url('admin/honor/pengaturan/panitia') ?>">
             <?= csrf_field() ?>
             <p class="px-5 pt-4 text-sm leading-relaxed text-slate-600">
-                Nominal awal Tunjangan Panitia untuk pemegang jabatan ini. Kosongkan bila jabatan itu <b>tidak</b> mendapat tunjangan panitia.
+                <b>Tunjangan:</b> nominal awal Tunjangan Panitia untuk pemegang jabatan ini. Kosongkan bila jabatan itu <b>tidak</b> mendapat tunjangan panitia.
                 Di honor tiap orang, angka ini tetap bisa diubah.
+            </p>
+            <p class="px-5 pt-2 text-sm leading-relaxed text-slate-600">
+                <b>Urutan di rekap:</b> angka kecil tampil di atas (1&nbsp;=&nbsp;paling atas). Angka abu-abu di dalam kotak adalah urutan bawaan; <b>kosongkan</b> kotaknya bila ingin memakai urutan bawaan.
+                Orang yang punya beberapa jabatan ditempatkan menurut jabatannya yang paling atas. Urutan ini dipakai saat <b>menambah penerima</b> dan pada tombol <b>Atur urutan</b> di tab Honor.
             </p>
             <?php if ($panitia === []): ?>
                 <p class="px-5 py-6 text-sm text-slate-400">Belum ada jabatan. Tambahkan di menu Guru → Jabatan.</p>
             <?php else: ?>
-                <div class="grid gap-x-6 gap-y-3 px-5 py-4 sm:grid-cols-2">
-                    <?php foreach ($panitia as $j): ?>
-                        <?php
-                        $jid = (int) $j['id'];
-                        $isi = $adaOldP ? (string) old("nominal.$jid", '', false) : ((int) $j['nominal'] > 0 ? $rp($j['nominal']) : '');
-                        ?>
-                        <label class="flex items-center gap-3">
-                            <span class="min-w-0 flex-1 text-sm font-semibold text-slate-700"><?= esc($j['nama']) ?></span>
-                            <span class="flex w-40 shrink-0 items-center rounded-lg border border-slate-300 bg-white focus-within:border-brand-500">
-                                <span class="pl-3 text-xs font-semibold text-slate-400">Rp</span>
-                                <input type="text" inputmode="numeric" name="nominal[<?= $jid ?>]" value="<?= esc($isi, 'attr') ?>" placeholder="—"
-                                       class="w-full min-w-0 rounded-lg bg-transparent px-2 py-2 text-right text-sm tabular-nums outline-none" aria-label="Tunjangan panitia <?= esc($j['nama'], 'attr') ?>">
-                            </span>
-                        </label>
-                    <?php endforeach; ?>
+                <div class="px-5 py-4">
+                    <div class="mb-1 hidden items-center gap-3 px-1 text-[11px] font-bold uppercase tracking-wide text-slate-400 sm:flex">
+                        <span class="flex-1">Jabatan</span><span class="w-40 shrink-0 text-right">Tunjangan panitia</span><span class="w-24 shrink-0 text-right">Urutan</span>
+                    </div>
+                    <div class="divide-y divide-slate-100">
+                        <?php foreach ($panitia as $j): ?>
+                            <?php
+                            $jid = (int) $j['id'];
+                            $isi = $adaOldP ? (string) old("nominal.$jid", '', false) : ((int) $j['nominal'] > 0 ? $rp($j['nominal']) : '');
+                            $urt = $adaOldP ? (string) old("urutan.$jid", '', false) : ($j['urutan'] !== null ? (string) $j['urutan'] : '');
+                            ?>
+                            <div class="flex flex-wrap items-center gap-x-3 gap-y-1 py-2">
+                                <span class="min-w-0 flex-1 basis-40 text-sm font-semibold text-slate-700"><?= esc($j['nama']) ?></span>
+                                <span class="flex w-40 shrink-0 items-center rounded-lg border border-slate-300 bg-white focus-within:border-brand-500">
+                                    <span class="pl-3 text-xs font-semibold text-slate-400">Rp</span>
+                                    <input type="text" inputmode="numeric" name="nominal[<?= $jid ?>]" value="<?= esc($isi, 'attr') ?>" placeholder="—"
+                                           class="w-full min-w-0 rounded-lg bg-transparent px-2 py-2 text-right text-sm tabular-nums outline-none" aria-label="Tunjangan panitia <?= esc($j['nama'], 'attr') ?>">
+                                </span>
+                                <span class="flex w-24 shrink-0 items-center rounded-lg border border-slate-300 bg-white focus-within:border-brand-500">
+                                    <input type="text" inputmode="numeric" name="urutan[<?= $jid ?>]" value="<?= esc($urt, 'attr') ?>" placeholder="<?= (int) $j['urutan_bawaan'] ?>" maxlength="4"
+                                           class="w-full min-w-0 rounded-lg bg-transparent px-2 py-2 text-right text-sm tabular-nums outline-none placeholder:text-slate-300" aria-label="Urutan di rekap untuk <?= esc($j['nama'], 'attr') ?> (bawaan <?= (int) $j['urutan_bawaan'] ?>)">
+                                </span>
+                            </div>
+                        <?php endforeach; ?>
+                    </div>
                 </div>
             <?php endif; ?>
             <div class="flex justify-end border-t border-slate-100 bg-slate-50 px-5 py-4">
-                <button type="submit" class="rounded-xl bg-brand-700 px-8 py-3 text-sm font-bold text-white shadow-sm transition hover:bg-brand-800 active:scale-95">Simpan tunjangan panitia</button>
+                <button type="submit" class="rounded-xl bg-brand-700 px-8 py-3 text-sm font-bold text-white shadow-sm transition hover:bg-brand-800 active:scale-95">Simpan tunjangan &amp; urutan</button>
             </div>
         </form>
     </section>

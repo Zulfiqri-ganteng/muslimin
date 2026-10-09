@@ -534,6 +534,27 @@ $routes->group('admin', static function ($routes) {
         $routes->post('ujian/(:segment)/honor/impor/unggah', 'Admin\UjianHonor::imporUnggah/$1', ['filter' => 'csrf']);
         $routes->get('ujian/(:segment)/honor/impor', 'Admin\UjianHonor::impor/$1');
         $routes->post('ujian/(:segment)/honor/impor/terapkan', 'Admin\UjianHonor::imporTerapkan/$1', ['filter' => 'csrf']);
+        // Ceklis KOREKSI ("KOREKSI NILAI": pembagian lembar jawaban ke guru per rombel) — halaman, aksi, impor Excel sekolah, unduh.
+        $routes->get('ujian/(:segment)/honor/koreksi', 'Admin\UjianKoreksi::index/$1');
+        $routes->get('ujian/(:segment)/honor/koreksi/xlsx', 'Admin\UjianKoreksi::xlsx/$1');
+        $routes->post('ujian/(:segment)/honor/koreksi/sel', 'Admin\UjianKoreksi::sel/$1', ['filter' => 'csrf']);
+        $routes->post('ujian/(:segment)/honor/koreksi/peserta', 'Admin\UjianKoreksi::peserta/$1', ['filter' => 'csrf']);
+        $routes->post('ujian/(:segment)/honor/koreksi/mapel', 'Admin\UjianKoreksi::tambahMapel/$1', ['filter' => 'csrf']);
+        $routes->post('ujian/(:segment)/honor/koreksi/mapel/(:num)/ubah', 'Admin\UjianKoreksi::ubahMapel/$1/$2', ['filter' => 'csrf']);
+        $routes->post('ujian/(:segment)/honor/koreksi/mapel/(:num)/hapus', 'Admin\UjianKoreksi::hapusMapel/$1/$2', ['filter' => 'csrf']);
+        $routes->post('ujian/(:segment)/honor/koreksi/guru/(:num)/hapus', 'Admin\UjianKoreksi::hapusGuru/$1/$2', ['filter' => 'csrf']);
+        $routes->post('ujian/(:segment)/honor/koreksi/isi-pengampu', 'Admin\UjianKoreksi::isiPengampu/$1', ['filter' => 'csrf']);
+        $routes->post('ujian/(:segment)/honor/koreksi/salin', 'Admin\UjianKoreksi::salin/$1', ['filter' => 'csrf']);
+        $routes->post('ujian/(:segment)/honor/koreksi/kosongkan', 'Admin\UjianKoreksi::kosongkan/$1', ['filter' => 'csrf']);
+        $routes->post('ujian/(:segment)/honor/koreksi/segarkan-peserta', 'Admin\UjianKoreksi::segarkanPeserta/$1', ['filter' => 'csrf']);
+        $routes->post('ujian/(:segment)/honor/koreksi/terapkan', 'Admin\UjianKoreksi::terapkan/$1', ['filter' => 'csrf']);
+        $routes->post('ujian/(:segment)/honor/koreksi/impor/unggah', 'Admin\UjianKoreksi::imporUnggah/$1', ['filter' => 'csrf']);
+        $routes->get('ujian/(:segment)/honor/koreksi/impor', 'Admin\UjianKoreksi::impor/$1');
+        $routes->post('ujian/(:segment)/honor/koreksi/impor/terapkan', 'Admin\UjianKoreksi::imporTerapkan/$1', ['filter' => 'csrf']);
+        // Atur ulang urutan penerima (pratinjau dulu): menurut aturan jabatan, atau mengikuti Excel sekolah.
+        $routes->get('ujian/(:segment)/honor/urutan', 'Admin\UjianHonor::urutan/$1');
+        $routes->post('ujian/(:segment)/honor/urutan/unggah', 'Admin\UjianHonor::urutanUnggah/$1', ['filter' => 'csrf']);
+        $routes->post('ujian/(:segment)/honor/urutan/terapkan', 'Admin\UjianHonor::urutanTerapkan/$1', ['filter' => 'csrf']);
         // Cetak / unduh (GET, hanya baca; tiap unduhan dicatat di Audit Log).
         $routes->get('ujian/(:segment)/honor/cetak/rekap-xlsx', 'Admin\UjianHonorCetak::rekapXlsx/$1');
         $routes->get('ujian/(:segment)/honor/cetak/rekap-pdf', 'Admin\UjianHonorCetak::rekapPdf/$1');

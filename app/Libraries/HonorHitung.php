@@ -10,7 +10,8 @@ use CodeIgniter\Database\BaseConnection;
  * Hitung otomatis isian Honor Ujian dari data sekolah (Fase 3). Semua hasil hanya SARAN AWAL:
  * Admin tetap bisa mengubah tiap angka di grid, dan sel yang sudah diubah tidak ditimpa kecuali diminta.
  *
- *   Koreksi         = Σ siswa aktif tiap kelas yang diampu guru (satu lembar jawaban per siswa per mapel diampu)
+ *   Koreksi         = total lembar guru dari CEKLIS Koreksi honor ini (peserta ujian per kelas × kelas yang dikoreksi) bila
+ *                     honor punya ceklis (HonorKoreksi); selain itu Σ siswa aktif tiap kelas yang diampu guru
  *   Rapot           = Σ siswa aktif kelas yang diwalikan guru (kelas.wali_kelas_id)
  *   Pembuatan Soal  = jumlah penugasan pembuat soal guru pada jadwal periode ini (ujian_pembuat_soal)
  *   Pengawas        = TIDAK dihitung otomatis (keputusan: jumlah sesi diketik manual, mis. bila guru tidak masuk);
@@ -54,9 +55,26 @@ final class HonorHitung
         return $peta[$guruId] ?? $guruId;
     }
 
-    /** Koreksi: lembar jawaban = Σ siswa kelas yang diampu (tiap penugasan pengampu = satu mapel di satu kelas). */
-    public function koreksi(): array
+    /** Id honor periode ini bila honor itu punya ceklis Koreksi (lihat HonorKoreksi), selain itu null. */
+    public function dokumenCeklis(int $periodeId): ?int
     {
+        if (! $this->db->tableExists('honor_koreksi_mapel')) { // migrasi ceklis belum jalan: pakai hitungan lama
+            return null;
+        }
+        $dok = $this->db->table('honor_dokumen')->select('id')->where('periode_id', $periodeId)->get()->getRowArray();
+
+        return $dok !== null && (new HonorKoreksi($this->db))->ada((int) $dok['id']) ? (int) $dok['id'] : null;
+    }
+
+    /**
+     * Koreksi: bila honor periode ini PUNYA ceklis Koreksi → total lembar tiap guru dari ceklis (peserta ujian per kelas).
+     * Selain itu hitungan lama: Σ siswa aktif kelas yang diampu (tiap penugasan pengampu = satu mapel di satu kelas).
+     */
+    public function koreksi(?int $periodeId = null): array
+    {
+        if ($periodeId !== null && ($dokId = $this->dokumenCeklis($periodeId)) !== null) {
+            return (new HonorKoreksi($this->db))->totalPerOrang($dokId);
+        }
         $siswa = $this->siswaPerKelas();
         $peta  = GuruModel::petaOrang();
         $out   = [];
@@ -119,7 +137,7 @@ final class HonorHitung
     public function sumber(string $sumber, int $periodeId): array
     {
         return match ($sumber) {
-            'koreksi' => $this->koreksi(),
+            'koreksi' => $this->koreksi($periodeId),
             'rapot'   => $this->rapot(),
             'soal'    => $this->soal($periodeId),
             default   => [],

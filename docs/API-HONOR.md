@@ -104,3 +104,8 @@ Sudah dibuat:
 ## 7. Pengujian
 101 pemeriksaan API (token sungguhan: akses semua peran × seluruh endpoint honor, pengaturan, alur honor, isian & validasi, hitung otomatis, pembuat soal,
 unduhan, status/kunci/sidik jari, tambalan di §6) lulus; regresi web 496 (CLI) + suite HTTP honor lulus. Rencana tampilan Flutter: `flutter-muslimin/BLUEPRINT-HONOR.md`.
+
+## Catatan 2026-10-09 malam (tanpa perubahan kontrak)
+- **Urutan penerima baru** (`penerima`, `penerima/semua`) kini mengikuti aturan jabatan yang dapat diatur Admin (Pengaturan Honor → kolom Urutan) dan orang tanpa jabatan tidak lagi melompat ke atas. Bentuk respons tidak berubah.
+- **`hitung` dengan sumber `koreksi`** memakai CEKLIS Koreksi honor itu bila ada (peserta ujian per kelas), selain itu hitungan lama. Ceklis dikelola lewat web (belum ada endpoint API); lihat docs/DESAIN-HONOR.md bagian 11.
+- `GET admin/honor/pengaturan` → `panitia[]` tidak berubah (urutan jabatan hanya di web).

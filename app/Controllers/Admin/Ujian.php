@@ -5,6 +5,7 @@ namespace App\Controllers\Admin;
 use App\Controllers\BaseController;
 use App\Libraries\HonorDokumen;
 use App\Libraries\HonorHitung;
+use App\Libraries\HonorKoreksi;
 use App\Libraries\HonorPengaturan;
 use App\Libraries\HonorPeriksa;
 use App\Libraries\UjianReport;
@@ -1072,8 +1073,18 @@ class Ujian extends BaseController
 
         $hitung = new HonorHitung();
         $muat   = $h->muat((int) $dok['id']);
+        // Ringkasan ceklis Koreksi (null = honor ini belum punya ceklis; tabelnya juga belum ada bila migrasi belum jalan).
+        $kor    = null;
+        if (db_connect()->tableExists('honor_koreksi_mapel')) {
+            $lib = new HonorKoreksi();
+            if ($lib->ada((int) $dok['id'])) {
+                $r   = $lib->ringkas((int) $dok['id']);
+                $kor = ['guru' => $r['jumlah_guru'], 'mapel' => $r['jumlah_mapel'], 'total' => $r['total']];
+            }
+        }
 
         return [
+            'honorKoreksi'   => $kor,
             'honorPeriksa'   => (new HonorPeriksa())->periksa($muat, $periode),
             'honorUtuh'      => HonorDokumen::utuh($muat),
             'honor'          => $muat,

@@ -23,11 +23,14 @@ class HonorPengaturan extends BaseController
             return $tolak;
         }
         $a = new Aturan();
+        // Jabatan ditampilkan menurut urutannya di rekap (yang diatur Admin, selain itu bawaan) supaya jelas siapa di atas siapa.
+        $panitia = $a->panitia();
+        usort($panitia, static fn (array $x, array $y): int => [$x['urutan'] ?? $x['urutan_bawaan'], $x['nama']] <=> [$y['urutan'] ?? $y['urutan_bawaan'], $y['nama']]);
 
         return view('admin/honor/pengaturan', [
             'title'      => 'Pengaturan Honor Ujian',
             'komponen'   => $a->komponen(),
-            'panitia'    => $a->panitia(),
+            'panitia'    => $panitia,
             'ttd'        => $a->tandaTangan(),
             'jenisLabel' => UjianPeriodeModel::JENIS_LABEL,
             'maksKomp'   => Aturan::MAKS_KOMPONEN,
@@ -78,7 +81,22 @@ class HonorPengaturan extends BaseController
             return $tolak;
         }
 
-        $hasil = (new Aturan())->simpanPanitia((array) $this->request->getPost('nominal'));
+        // Nominal dan urutan disimpan sekaligus: salah satu ditolak = tak ada yang tersimpan.
+        $a  = new Aturan();
+        $db = db_connect();
+        $db->transBegin();
+        $hasil = $a->simpanUrutan((array) $this->request->getPost('urutan'));
+        if ($hasil['ok']) {
+            $nom = $a->simpanPanitia((array) $this->request->getPost('nominal'));
+            if (! $nom['ok']) {
+                $hasil = $nom;
+            } elseif (($hasil['jumlah'] ?? 0) > 0) {
+                $hasil['pesan'] = $nom['pesan'] === 'Tidak ada perubahan.' ? $hasil['pesan'] : $nom['pesan'] . ' ' . $hasil['pesan'];
+            } else {
+                $hasil = $nom;
+            }
+        }
+        $hasil['ok'] ? $db->transCommit() : $db->transRollback();
 
         return $this->balas($hasil, '#panitia', ! $hasil['ok']);
     }

@@ -39,12 +39,64 @@ final class HonorDokumen
     /** Urutan jabatan saat memilih label bawaan penerima (angka kecil = lebih utama). */
     private const RANK_KATEGORI = ['struktural' => 1, 'kurikulum' => 1, 'kesiswaan' => 1, 'pembina' => 2, 'lainnya' => 3, 'wali_kelas' => 4, 'mapel' => 5];
 
-    /** Urutan baku jabatan di rekap sekolah (kecil = di atas). Jabatan lain: 500 + level. */
+    /** Urutan baku jabatan di rekap sekolah (kecil = di atas). Jabatan lain: lihat urutanBawaan(). */
     private const URUTAN_KODE = ['KS' => 10, 'WK-KUR' => 30, 'WK-SIS' => 40, 'WK-HUM' => 50, 'WK-SAR' => 60, 'KAPROG' => 70, 'OP' => 130, 'GMP' => 210, 'WALI' => 220, 'GP' => 300, 'TU' => 400];
 
+    /**
+     * Urutan bawaan menurut NAMA jabatan, untuk jabatan yang kodenya tak dikenal (mis. dibuat sendiri oleh sekolah).
+     * Dicek berurutan; yang cocok pertama dipakai. Angkanya mengikuti urutan di rekap Excel sekolah (Kepala Sekolah,
+     * Kepala Tata Usaha, para Waka, Kaprog, lalu Koordinator BK, Pembina OSIS, Kepala Lab, Kepala Perpustakaan, Operator).
+     * Admin bisa menimpa angka ini per jabatan di Pengaturan Honor.
+     */
+    private const URUTAN_NAMA = [
+        '/^kepala\s+sekolah$/u'                        => 10,
+        '/kepala\s+tata\s+usaha|^ktu$|^kepala\s+tu$/u' => 20,
+        '/^wakil\s+kepala\s+sekolah/u'                 => 65,
+        '/koordinator\s+(?:bk|bimbingan)/u'            => 90,
+        '/pembina\s+osis/u'                            => 100,
+        '/kepala\s+lab/u'                              => 110,
+        '/kepala\s+perpus/u'                           => 120,
+    ];
+
+    /** Urutan bawaan sebuah jabatan (tanpa pengaturan Admin): kode baku → nama jabatan → 500 + level. */
+    public static function urutanBawaan(array $j): int
+    {
+        $kode = strtoupper(trim((string) ($j['kode'] ?? '')));
+        if (isset(self::URUTAN_KODE[$kode])) {
+            return self::URUTAN_KODE[$kode];
+        }
+        $nama = mb_strtolower(trim((string) preg_replace('/\s+/u', ' ', (string) ($j['nama'] ?? ''))));
+        foreach (self::URUTAN_NAMA as $pola => $u) {
+            if (preg_match($pola, $nama) === 1) {
+                return $u;
+            }
+        }
+
+        return 500 + (int) ($j['level'] ?? 0);
+    }
+
+    /** Urutan efektif: yang diatur Admin (urut_honor) bila ada, selain itu urutan bawaan. */
     private static function urutanJabatan(array $j): int
     {
-        return self::URUTAN_KODE[strtoupper((string) ($j['kode'] ?? ''))] ?? (500 + (int) ($j['level'] ?? 0));
+        $diatur = $j['urut_honor'] ?? null;
+
+        return $diatur !== null && $diatur !== '' ? (int) $diatur : self::urutanBawaan($j);
+    }
+
+    /**
+     * Peringkat orang yang BELUM punya jabatan apa pun: disamakan dengan Guru Mata Pelajaran (atau Staf Tata Usaha
+     * bila ditandai bukan pengajar), supaya tidak melompat ke atas daftar.
+     *
+     * @return array{label:string, rank:int, level:int, panitia:int, struktural:bool}
+     */
+    private static function tanpaJabatan(array $g): array
+    {
+        $staf = (int) ($g['bukan_pengajar'] ?? 0) === 1;
+
+        return [
+            'label' => $staf ? 'Staf Tata Usaha' : 'Guru Mata Pelajaran', 'rank' => self::URUTAN_KODE[$staf ? 'TU' : 'GMP'],
+            'level' => $staf ? 6 : 5, 'panitia' => 0, 'struktural' => false,
+        ];
     }
 
     private BaseConnection $db;
@@ -387,15 +439,13 @@ final class HonorDokumen
 
         $info     = $this->infoJabatan(array_map('intval', array_column($baru, 'id')));
         usort($baru, static function (array $a, array $b) use ($info): int {
-            $ra = $info[(int) $a['id']]['rank'] ?? 99;
-            $rb = $info[(int) $b['id']]['rank'] ?? 99;
-            if ($ra !== $rb) {
-                return $ra <=> $rb;
+            $ia = $info[(int) $a['id']] ?? self::tanpaJabatan($a);
+            $ib = $info[(int) $b['id']] ?? self::tanpaJabatan($b);
+            if ($ia['rank'] !== $ib['rank']) {
+                return $ia['rank'] <=> $ib['rank'];
             }
-            $la = $info[(int) $a['id']]['level'] ?? 99;
-            $lb = $info[(int) $b['id']]['level'] ?? 99;
 
-            return $la !== $lb ? $la <=> $lb : strcasecmp((string) $a['nama'], (string) $b['nama']);
+            return $ia['level'] !== $ib['level'] ? $ia['level'] <=> $ib['level'] : strcasecmp((string) $a['nama'], (string) $b['nama']);
         });
 
         $komponen = $this->db->table('honor_dok_komponen')->where('dokumen_id', $dokumenId)->get()->getResultArray();
@@ -406,7 +456,7 @@ final class HonorDokumen
 
         $this->db->transStart();
         foreach ($baru as $g) {
-            $gi = $info[(int) $g['id']] ?? ['label' => ((int) $g['bukan_pengajar'] === 1 ? 'Staf Tata Usaha' : 'Guru Mata Pelajaran'), 'panitia' => 0, 'struktural' => false];
+            $gi = $info[(int) $g['id']] ?? self::tanpaJabatan($g);
             $this->db->table('honor_baris')->insert([
                 'dokumen_id' => $dokumenId, 'guru_id' => (int) $g['id'], 'nama' => mb_substr((string) $g['nama'], 0, 150),
                 'jabatan' => $gi['label'], 'urut' => ++$urut, 'created_at' => $now, 'updated_at' => $now,
@@ -486,6 +536,164 @@ final class HonorDokumen
         }
 
         return ['ok' => true, 'pesan' => '"' . $nama . '" dipindah ke nomor ' . $posisi . '.', 'urutan' => $ids, 'posisi' => $posisi];
+    }
+
+    // =================================================================
+    // Atur ulang urutan: menurut aturan jabatan, atau mengikuti Excel sekolah.
+    // Hanya nomor urut (dan label jabatan bila diminta) yang berubah — angka isian TIDAK pernah disentuh.
+    // Alur aman: rencana*() hanya menghitung (pratinjau), terapkanUrutan() baru menulis.
+    // =================================================================
+
+    /** Baris dokumen + data Master Guru untuk perencanaan (urutan sekarang = urut, id). */
+    private function barisPerencanaan(int $dokumenId): array
+    {
+        return $this->db->table('honor_baris b')
+            ->select('b.id, b.guru_id, b.nama, b.jabatan, b.urut, g.id AS guru_ada, g.nama AS guru_nama, g.bukan_pengajar')
+            ->join('guru g', 'g.id = b.guru_id AND g.deleted_at IS NULL', 'left')
+            ->where('b.dokumen_id', $dokumenId)
+            ->orderBy('b.urut', 'ASC')->orderBy('b.id', 'ASC')
+            ->get()->getResultArray();
+    }
+
+    /**
+     * @param list<array<string,mixed>> $rows     baris dokumen menurut urutan sekarang
+     * @param list<int>                 $idsBaru  id baris menurut urutan baru (harus memuat semua baris)
+     * @param array<int,string>         $labelBaru id baris → label jabatan baru (hanya baris yang labelnya mau diganti)
+     *
+     * @return array{baris:list<array<string,mixed>>, pindah:int, label:int}
+     */
+    private function susunRencana(array $rows, array $idsBaru, array $labelBaru): array
+    {
+        $lama = [];
+        foreach ($rows as $i => $r) {
+            $lama[(int) $r['id']] = ['pos' => $i + 1, 'r' => $r];
+        }
+        $baris = [];
+        $pindah = $label = 0;
+        foreach ($idsBaru as $i => $id) {
+            $r       = $lama[$id]['r'];
+            $jabLama = trim((string) ($r['jabatan'] ?? ''));
+            $jabBaru = array_key_exists($id, $labelBaru) ? trim((string) $labelBaru[$id]) : $jabLama;
+            $geser   = $lama[$id]['pos'] !== $i + 1;
+            $beda    = $jabBaru !== $jabLama;
+            $pindah += $geser ? 1 : 0;
+            $label  += $beda ? 1 : 0;
+            $baris[] = [
+                'id' => $id, 'nama' => (string) $r['nama'], 'posisi_lama' => $lama[$id]['pos'], 'posisi_baru' => $i + 1, 'urut_lama' => (int) $r['urut'],
+                'jabatan_lama' => $jabLama, 'jabatan_baru' => $jabBaru, 'pindah' => $geser, 'label_beda' => $beda,
+            ];
+        }
+
+        return ['baris' => $baris, 'pindah' => $pindah, 'label' => $label];
+    }
+
+    /**
+     * Rencana urutan menurut ATURAN jabatan — hasilnya sama dengan honor yang baru dibuat: jabatan (urutan di Pengaturan
+     * Honor / bawaan), lalu level, lalu abjad. Label jabatan diambil dari Master Guru. Penerima yang tautan Master
+     * Gurunya sudah tak ada tetap di bawah dengan urutan lama dan labelnya tak diubah. Urutan manual lama DIGANTI.
+     *
+     * @return array{baris:list<array<string,mixed>>, pindah:int, label:int}
+     */
+    public function rencanaUrutanAturan(int $dokumenId): array
+    {
+        $rows  = $this->barisPerencanaan($dokumenId);
+        $ids   = [];
+        foreach ($rows as $r) {
+            if ($r['guru_ada'] !== null) {
+                $ids[] = (int) $r['guru_ada'];
+            }
+        }
+        $info  = $this->infoJabatan($ids);
+        $item  = [];
+        $label = [];
+        foreach ($rows as $i => $r) {
+            if ($r['guru_ada'] === null) {
+                $item[] = ['id' => (int) $r['id'], 'rank' => 99999, 'level' => 0, 'nama' => '', 'i' => $i];
+                continue;
+            }
+            $gi = $info[(int) $r['guru_ada']] ?? self::tanpaJabatan($r);
+            $label[(int) $r['id']] = (string) $gi['label'];
+            $item[] = ['id' => (int) $r['id'], 'rank' => (int) $gi['rank'], 'level' => (int) $gi['level'], 'nama' => (string) $r['guru_nama'], 'i' => $i];
+        }
+        usort($item, static function (array $a, array $b): int {
+            return [$a['rank'], $a['level']] <=> [$b['rank'], $b['level']] ?: (strcasecmp($a['nama'], $b['nama']) ?: $a['i'] <=> $b['i']);
+        });
+
+        return $this->susunRencana($rows, array_column($item, 'id'), $label);
+    }
+
+    /**
+     * Rencana urutan mengikuti EXCEL sekolah. Yang cocok dipindah ke nomor sesuai Excel (label jabatan = tulisan di
+     * Excel), yang tidak ada di Excel ditaruh di bawah dengan urutan lama.
+     *
+     * @param list<array<string,mixed>> $excel baris Excel dalam urutannya (kunci 'nama', 'jabatan')
+     *
+     * @return array{baris:list<array<string,mixed>>, pindah:int, label:int, tak_ada_di_dokumen:list<string>, tak_ada_di_excel:list<string>, ganda:list<string>}
+     */
+    public function rencanaUrutanExcel(int $dokumenId, array $excel): array
+    {
+        $rows  = $this->barisPerencanaan($dokumenId);
+        $m     = HonorImpor::cocokkanUrutan($excel, $rows);
+        $label = [];
+        foreach ($m['cocok'] as $iExcel => $id) {
+            $j = trim((string) ($excel[$iExcel]['jabatan'] ?? ''));
+            if ($j !== '') {
+                $label[$id] = mb_substr($j, 0, 120);
+            }
+        }
+
+        return $this->susunRencana($rows, $m['urut'], $label) + ['tak_ada_di_dokumen' => $m['tak_ada_di_dokumen'], 'tak_ada_di_excel' => $m['tak_ada_di_excel'], 'ganda' => $m['ganda']];
+    }
+
+    /**
+     * Terapkan rencana (hasil rencanaUrutan*, dihitung ulang server saat menerapkan). Semua nomor urut ditulis ulang
+     * rapat 1..n dalam satu transaksi; label jabatan hanya bila $labelJuga.
+     */
+    public function terapkanUrutan(int $dokumenId, array $rencana, bool $labelJuga, string $sumber): array
+    {
+        $dok = $this->dokumenId($dokumenId);
+        if ($dok === null) {
+            return $this->gagal('Honor tidak ditemukan.');
+        }
+        if (($tolak = $this->tolakKunci($dok)) !== null) {
+            return $tolak;
+        }
+        $ada = array_map('intval', array_column($this->db->table('honor_baris')->select('id')->where('dokumen_id', $dokumenId)->get()->getResultArray(), 'id'));
+        $ids = array_map(static fn (array $b): int => (int) $b['id'], $rencana['baris']);
+        sort($ada);
+        $cek = $ids;
+        sort($cek);
+        if ($ada !== $cek) {
+            return $this->gagal('Daftar penerima berubah sejak pratinjau. Buka pratinjau lagi.');
+        }
+        $pindah = (int) $rencana['pindah'];
+        $label  = $labelJuga ? (int) $rencana['label'] : 0;
+        if ($pindah === 0 && $label === 0) {
+            return ['ok' => true, 'pesan' => 'Tidak ada yang perlu diubah — urutan' . ($labelJuga ? ' dan jabatan' : '') . ' sudah sesuai.', 'pindah' => 0, 'label' => 0];
+        }
+
+        $now = date('Y-m-d H:i:s');
+        $this->db->transStart();
+        foreach ($rencana['baris'] as $b) {
+            $ubah = [];
+            if ((int) $b['urut_lama'] !== (int) $b['posisi_baru']) {
+                $ubah['urut'] = (int) $b['posisi_baru'];
+            }
+            if ($labelJuga && $b['label_beda']) {
+                $ubah['jabatan'] = $b['jabatan_baru'] !== '' ? mb_substr((string) $b['jabatan_baru'], 0, 120) : null;
+            }
+            if ($ubah !== []) {
+                $this->db->table('honor_baris')->where('id', (int) $b['id'])->where('dokumen_id', $dokumenId)->update($ubah + ['updated_at' => $now]);
+            }
+        }
+        $this->db->transComplete();
+        if (! $this->db->transStatus()) {
+            return $this->gagal('Gagal mengatur ulang urutan. Tidak ada yang berubah.');
+        }
+        $this->audit('update', 'honor_dokumen', $dokumenId, 'Atur ulang urutan honor ' . $this->labelDokumen($dokumenId) . ' (' . $sumber . '): ' . $pindah . ' orang berpindah nomor'
+            . ($labelJuga ? ', ' . $label . ' label jabatan diganti' : ''));
+
+        return ['ok' => true, 'pesan' => 'Urutan diperbarui: ' . $pindah . ' orang berpindah nomor' . ($labelJuga ? ', ' . $label . ' label jabatan diganti' : '') . '. Angka isian tidak diubah.', 'pindah' => $pindah, 'label' => $label];
     }
 
     /** Ubah label jabatan dan/atau catatan satu penerima. */
@@ -878,12 +1086,17 @@ final class HonorDokumen
         if ($guruIds === []) {
             return [];
         }
-        $rows = $this->db->table('guru_jabatan gj')
-            ->select('gj.guru_id, gj.is_utama, j.id AS jid, j.kode, j.nama, j.kategori, j.level, j.is_struktural, COALESCE(hp.nominal, 0) AS panitia')
+        // Tabel urutan (migrasi HonorUrutanJabatan) belum tentu sudah ada saat kode baru lebih dulu dipasang: tanpa tabelnya
+        // dipakai urutan bawaan, halaman Honor tetap jalan.
+        $adaUrutan = $this->db->tableExists('honor_jabatan_urutan');
+        $q = $this->db->table('guru_jabatan gj')
+            ->select('gj.guru_id, gj.is_utama, j.id AS jid, j.kode, j.nama, j.kategori, j.level, j.is_struktural, COALESCE(hp.nominal, 0) AS panitia, ' . ($adaUrutan ? 'hu.urutan AS urut_honor' : 'NULL AS urut_honor'))
             ->join('jabatan j', 'j.id = gj.jabatan_id')
-            ->join('honor_panitia_jabatan hp', 'hp.jabatan_id = j.id', 'left')
-            ->whereIn('gj.guru_id', $guruIds)
-            ->get()->getResultArray();
+            ->join('honor_panitia_jabatan hp', 'hp.jabatan_id = j.id', 'left');
+        if ($adaUrutan) {
+            $q->join('honor_jabatan_urutan hu', 'hu.jabatan_id = j.id', 'left');
+        }
+        $rows = $q->whereIn('gj.guru_id', $guruIds)->get()->getResultArray();
         $per = [];
         foreach ($rows as $r) {
             $per[(int) $r['guru_id']][] = $r;

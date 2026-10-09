@@ -23,7 +23,7 @@ use CodeIgniter\HTTP\ResponseInterface;
  */
 class UjianHonor extends BaseController
 {
-    private ?array $periode = null;
+    protected ?array $periode = null;
 
     /** POST ujian/(:segment)/honor/buat */
     public function buat(string $slug = '')
@@ -277,6 +277,115 @@ class UjianHonor extends BaseController
         return $p !== [] ? $r->with('honor_peringatan', array_slice($p, 0, 12)) : $r;
     }
 
+    // ----------------------------------------------------------------- atur ulang urutan
+
+    /**
+     * GET ujian/(:segment)/honor/urutan?mode=aturan|excel — PRATINJAU perubahan urutan (belum menyimpan apa pun).
+     * aturan = urutan menurut jabatan di Master Guru; excel = mengikuti berkas Excel sekolah yang diunggah.
+     */
+    public function urutan(string $slug = '')
+    {
+        if (($salah = $this->siapkanGet($slug)) !== null) {
+            return $salah;
+        }
+        $dok = $this->dokumen();
+        if ($dok === null) {
+            return redirect()->to($this->urlHonor())->with('error', 'Buat honor dulu.');
+        }
+        $lib  = new HonorDokumen();
+        $mode = (string) $this->request->getGet('mode') === 'excel' ? 'excel' : 'aturan';
+        $sesi = null;
+        if ($mode === 'excel') {
+            $sesi = $this->sesiUrutan();
+            if ($sesi === null) {
+                return redirect()->to($this->urlHonor())->with('error', 'Data Excel untuk urutan sudah kedaluwarsa atau belum ada. Unggah berkasnya lagi.');
+            }
+            $rencana = $lib->rencanaUrutanExcel((int) $dok['id'], $sesi['baris']);
+        } else {
+            $rencana = $lib->rencanaUrutanAturan((int) $dok['id']);
+        }
+
+        return view('admin/ujian/honor_urutan', [
+            'title'   => 'Atur Urutan Honor',
+            'slug'    => UjianPeriodeModel::keSlug((string) $this->periode['jenis']),
+            'periode' => $this->periode,
+            'label'   => (new UjianPeriodeModel())->label($this->periode),
+            'mode'    => $mode,
+            'rencana' => $rencana,
+            'berkas'  => $sesi['berkas'] ?? '',
+            'token'   => $sesi['token'] ?? '',
+            'status'  => (string) $dok['status'],
+            'kembali' => $this->urlHonor(),
+        ]);
+    }
+
+    /** POST ujian/(:segment)/honor/urutan/unggah — baca Excel (hanya nama & jabatan), simpan di sesi, tampilkan pratinjau. */
+    public function urutanUnggah(string $slug = '')
+    {
+        if (($salah = $this->siapkan($slug)) !== null) {
+            return $salah;
+        }
+        if ($this->dokumen() === null) {
+            return $this->balas($slug, ['ok' => false, 'pesan' => 'Buat honor dulu.']);
+        }
+        $berkas = $this->request->getFile('berkas');
+        if ($berkas === null || ! $berkas->isValid() || $berkas->hasMoved()) {
+            return $this->balas($slug, ['ok' => false, 'pesan' => 'Pilih berkas Excel (.xlsx) dulu.']);
+        }
+        if (strtolower((string) $berkas->getClientExtension()) !== 'xlsx' || $berkas->getSize() > HonorImpor::MAKS_BYTE) {
+            return $this->balas($slug, ['ok' => false, 'pesan' => 'Berkas harus berformat .xlsx dan maksimal 2 MB.']);
+        }
+        try {
+            $payload = (new HonorImpor())->baca($berkas->getTempName());
+        } catch (\RuntimeException $e) {
+            return $this->balas($slug, ['ok' => false, 'pesan' => $e->getMessage()]);
+        }
+        $baris = array_map(static fn (array $b): array => ['nama' => (string) $b['nama'], 'jabatan' => (string) $b['jabatan']], $payload['baris']);
+        $token = bin2hex(random_bytes(8));
+        session()->set('honor_urutan', ['token' => $token, 'periode_id' => (int) $this->periode['id'], 'baris' => $baris, 'berkas' => mb_substr((string) $berkas->getClientName(), 0, 120), 'at' => time()]);
+
+        return redirect()->to($this->urlHonor('/urutan') . '&mode=excel');
+    }
+
+    /** POST ujian/(:segment)/honor/urutan/terapkan — dihitung ulang di server, lalu ditulis. */
+    public function urutanTerapkan(string $slug = '')
+    {
+        if (($salah = $this->siapkan($slug)) !== null) {
+            return $salah;
+        }
+        $dok = $this->dokumen();
+        if ($dok === null) {
+            return $this->balas($slug, ['ok' => false, 'pesan' => 'Buat honor dulu.']);
+        }
+        $lib       = new HonorDokumen();
+        $labelJuga = (bool) $this->request->getPost('label');
+        if ((string) $this->request->getPost('mode') === 'excel') {
+            $sesi = $this->sesiUrutan();
+            if ($sesi === null || ! hash_equals((string) $sesi['token'], (string) $this->request->getPost('token'))) {
+                return redirect()->to($this->urlHonor())->with('error', 'Data Excel untuk urutan sudah kedaluwarsa. Unggah berkasnya lagi.');
+            }
+            $hasil = $lib->terapkanUrutan((int) $dok['id'], $lib->rencanaUrutanExcel((int) $dok['id'], $sesi['baris']), $labelJuga, 'mengikuti Excel "' . $sesi['berkas'] . '"');
+            if ($hasil['ok']) {
+                session()->remove('honor_urutan');
+            }
+        } else {
+            $hasil = $lib->terapkanUrutan((int) $dok['id'], $lib->rencanaUrutanAturan((int) $dok['id']), $labelJuga, 'menurut aturan jabatan');
+        }
+
+        return $this->balas($slug, $hasil);
+    }
+
+    /** Data Excel-urutan di sesi yang masih berlaku (periode cocok, umur ≤ 30 menit), atau null. */
+    private function sesiUrutan(): ?array
+    {
+        $s = session('honor_urutan');
+        if (! is_array($s) || (int) ($s['periode_id'] ?? 0) !== (int) $this->periode['id'] || time() - (int) ($s['at'] ?? 0) > 1800) {
+            return null;
+        }
+
+        return $s;
+    }
+
     // ----------------------------------------------------------------- pembuat soal
 
     /** GET ujian/(:segment)/pembuat-soal — tugaskan pembuat soal per jadwal ujian. */
@@ -323,7 +432,7 @@ class UjianHonor extends BaseController
 
     // -----------------------------------------------------------------
 
-    private function urlHonor(string $akhiran = ''): string
+    protected function urlHonor(string $akhiran = ''): string
     {
         return site_url('admin/ujian/' . UjianPeriodeModel::keSlug((string) $this->periode['jenis']) . '/honor' . $akhiran) . '?tp=' . rawurlencode((string) $this->periode['tahun_ajaran']);
     }
@@ -383,12 +492,12 @@ class UjianHonor extends BaseController
         return null;
     }
 
-    private function dokumen(): ?array
+    protected function dokumen(): ?array
     {
         return (new HonorDokumen())->dokumenPeriode((int) $this->periode['id']);
     }
 
-    private function balas(string $slug, array $hasil, bool $simpanIsian = false, string $jangkar = ''): RedirectResponse
+    protected function balas(string $slug, array $hasil, bool $simpanIsian = false, string $jangkar = ''): RedirectResponse
     {
         $url = site_url('admin/ujian/' . UjianPeriodeModel::keSlug((string) $this->periode['jenis']) . '/honor') . '?tp=' . rawurlencode((string) $this->periode['tahun_ajaran']) . $jangkar;
         $r   = redirect()->to($url)->with($hasil['ok'] ? 'success' : 'error', $hasil['pesan']);
@@ -397,7 +506,7 @@ class UjianHonor extends BaseController
     }
 
     /** Balasan JSON tanpa cache; token CSRF baru disertakan (token berganti tiap POST). */
-    private function json(array $isi, int $kode = 200): ResponseInterface
+    protected function json(array $isi, int $kode = 200): ResponseInterface
     {
         $isi['csrf'] = csrf_hash();
 

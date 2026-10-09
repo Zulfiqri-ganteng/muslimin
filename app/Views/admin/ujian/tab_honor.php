@@ -195,6 +195,9 @@ $statusWarna = ['draf' => 'bg-slate-100 text-slate-600 border-slate-200', 'final
                 <button type="button" @click="panel = (panel === 'surat' ? '' : 'surat')" class="inline-flex items-center gap-1.5 rounded-lg border border-slate-300 bg-white px-3.5 py-2 text-sm font-semibold text-slate-700 transition hover:bg-slate-50">Data surat &amp; tanda tangan</button>
                 <a href="<?= $urlAtur ?>" class="inline-flex items-center gap-1.5 rounded-lg border border-slate-300 bg-white px-3.5 py-2 text-sm font-semibold text-slate-700 transition hover:bg-slate-50">Pengaturan tarif</a>
                 <a href="<?= $base ?>/pembuat-soal<?= $qtp ?>" class="inline-flex items-center gap-1.5 rounded-lg border border-slate-300 bg-white px-3.5 py-2 text-sm font-semibold text-slate-700 transition hover:bg-slate-50">Pembuat soal</a>
+                <a href="<?= $base ?>/honor/koreksi<?= $qtp ?>" class="inline-flex items-center gap-1.5 rounded-lg border border-sky-500 bg-sky-50 px-3.5 py-2 text-sm font-semibold text-sky-800 transition hover:bg-sky-100" title="Ceklis pembagian lembar jawaban ke guru per rombel (Excel KOREKSI NILAI)">
+                    Koreksi<?php if (($honorKoreksi ?? null) !== null): ?> <span class="rounded-full bg-sky-600 px-2 py-0.5 text-[11px] font-bold text-white"><?= (int) $honorKoreksi['guru'] ?> guru · <?= $rp($honorKoreksi['total']) ?> lembar</span><?php else: ?> <span class="rounded-full bg-white px-2 py-0.5 text-[11px] font-semibold text-sky-700">belum diisi</span><?php endif; ?>
+                </a>
                 <?php if ($baris !== []): ?>
                     <div class="relative" @click.outside="menuCetak = false">
                         <button type="button" @click="menuCetak = !menuCetak" aria-haspopup="true" :aria-expanded="menuCetak" class="inline-flex items-center gap-1.5 rounded-lg bg-brand-700 px-3.5 py-2 text-sm font-semibold text-white transition hover:bg-brand-800">
@@ -211,6 +214,9 @@ $statusWarna = ['draf' => 'bg-slate-100 text-slate-600 border-slate-200', 'final
                 <?php if (! $terkunci): ?>
                     <button type="button" @click="panel = (panel === 'hitung' ? '' : 'hitung')" class="inline-flex items-center gap-1.5 rounded-lg border border-emerald-600 bg-emerald-50 px-3.5 py-2 text-sm font-semibold text-emerald-700 transition hover:bg-emerald-100">Hitung otomatis</button>
                     <button type="button" @click="panel = (panel === 'impor' ? '' : 'impor')" class="inline-flex items-center gap-1.5 rounded-lg border border-slate-300 bg-white px-3.5 py-2 text-sm font-semibold text-slate-700 transition hover:bg-slate-50">Impor dari Excel</button>
+                    <?php if ($baris !== []): ?>
+                        <button type="button" @click="panel = (panel === 'urutan' ? '' : 'urutan')" class="inline-flex items-center gap-1.5 rounded-lg border border-slate-300 bg-white px-3.5 py-2 text-sm font-semibold text-slate-700 transition hover:bg-slate-50">Atur urutan</button>
+                    <?php endif; ?>
                 <?php endif; ?>
                 <?php if (! $terkunci): ?>
                     <form method="post" action="<?= $base ?>/honor/sinkron" class="inline">
@@ -263,7 +269,12 @@ $statusWarna = ['draf' => 'bg-slate-100 text-slate-600 border-slate-200', 'final
             <div id="hitung" x-cloak x-show="panel === 'hitung'" x-transition class="mt-4 rounded-xl border border-slate-200 bg-slate-50 p-4">
                 <?php
                 $otoKomp = array_values(array_filter($komp, static fn (array $k): bool => in_array($k['sumber'], ['koreksi', 'rapot', 'soal'], true)));
-                $penjelasan = ['koreksi' => 'jumlah siswa dari semua kelas yang diampu guru', 'rapot' => 'jumlah siswa di kelas yang diwalikan', 'soal' => 'jumlah penugasan pembuat soal (diatur di tombol Pembuat soal)'];
+                $penjelasan = [
+                    'koreksi' => ($honorKoreksi ?? null) !== null
+                        ? 'dari ceklis Koreksi (' . (int) $honorKoreksi['guru'] . ' guru, peserta ujian per kelas) — diatur di tombol Koreksi'
+                        : 'perkiraan: jumlah siswa dari semua kelas yang diampu guru. Untuk hasil persis seperti Excel sekolah, isi dulu ceklis di tombol Koreksi',
+                    'rapot' => 'jumlah siswa di kelas yang diwalikan', 'soal' => 'jumlah penugasan pembuat soal (diatur di tombol Pembuat soal)',
+                ];
                 ?>
                 <?php if ($otoKomp === []): ?>
                     <p class="text-sm text-slate-500">Honor ini tidak memuat komponen yang bisa dihitung otomatis.</p>
@@ -301,6 +312,25 @@ $statusWarna = ['draf' => 'bg-slate-100 text-slate-600 border-slate-200', 'final
                     <input type="file" name="berkas" accept=".xlsx" required class="block w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm file:mr-3 file:rounded-md file:border-0 file:bg-brand-50 file:px-3 file:py-1.5 file:text-sm file:font-semibold file:text-brand-700">
                     <button type="submit" class="rounded-lg bg-brand-700 px-6 py-2.5 text-sm font-bold text-white transition hover:bg-brand-800 active:scale-95">Baca berkas</button>
                 </form>
+            </div>
+
+            <!-- Panel: atur urutan -->
+            <div id="urutan" x-cloak x-show="panel === 'urutan'" x-transition class="mt-4 rounded-xl border border-slate-200 bg-slate-50 p-4">
+                <p class="text-sm leading-relaxed text-slate-600">Mengatur ulang <b>nomor urut</b> penerima (dan, bila kamu mau, label jabatan). <b>Angka isian tidak berubah.</b> Kamu melihat pratinjau dulu; belum ada yang tersimpan sampai kamu menekan Terapkan.</p>
+                <div class="mt-3 grid gap-3 lg:grid-cols-2">
+                    <div class="rounded-xl border border-slate-200 bg-white p-4">
+                        <p class="text-sm font-bold text-slate-800">Menurut jabatan</p>
+                        <p class="mt-1 text-xs leading-relaxed text-slate-500">Kepala Sekolah, Kepala TU, para Waka, Kaprog, … lalu guru &amp; staf &mdash; sama seperti honor yang baru dibuat. Cocok setelah jabatan di Master Guru dirapikan. Urutan manual yang sekarang akan diganti.</p>
+                        <a href="<?= $base ?>/honor/urutan<?= $qtp ?>&amp;mode=aturan" class="mt-3 inline-flex rounded-lg border border-brand-600 bg-brand-50 px-4 py-2 text-sm font-semibold text-brand-700 transition hover:bg-brand-100">Lihat pratinjau</a>
+                    </div>
+                    <form method="post" action="<?= $base ?>/honor/urutan/unggah" enctype="multipart/form-data" class="rounded-xl border border-slate-200 bg-white p-4">
+                        <?= csrf_field() ?><input type="hidden" name="periode_id" value="<?= (int) $periode['id'] ?>">
+                        <p class="text-sm font-bold text-slate-800">Ikuti Excel sekolah</p>
+                        <p class="mt-1 text-xs leading-relaxed text-slate-500">Unggah rekap honor Excel (mis. HONOR ASTS.xlsx). Hanya <b>urutan nama dan tulisan jabatan</b> yang dipakai &mdash; angkanya diabaikan.</p>
+                        <input type="file" name="berkas" accept=".xlsx" required class="mt-3 block w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm file:mr-3 file:rounded-md file:border-0 file:bg-brand-50 file:px-3 file:py-1.5 file:text-sm file:font-semibold file:text-brand-700">
+                        <button type="submit" class="mt-3 rounded-lg bg-brand-700 px-5 py-2.5 text-sm font-bold text-white transition hover:bg-brand-800 active:scale-95">Baca &amp; lihat pratinjau</button>
+                    </form>
+                </div>
             </div>
 
             <!-- Panel: data surat -->

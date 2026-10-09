@@ -50,6 +50,88 @@ final class HonorImpor
         return trim((string) preg_replace('/\s+/u', ' ', $s));
     }
 
+    /**
+     * Cocokkan baris Excel ke baris sebuah dokumen honor untuk MENGIKUTI URUTAN Excel (angka tidak disentuh).
+     * Tiga tingkat, tiap tingkat hanya memakai baris dokumen yang belum terpakai: (1) nama persis (spasi dirapikan),
+     * (2) nama tanpa tanda baca/spasi ("S.Pd" = "S.Pd."), (3) nama tanpa gelar — hanya bila tepat SATU kandidat
+     * (lebih dari satu = ganda, dilewati). Nama dokumen dan nama Master Guru sama-sama dicoba.
+     *
+     * @param list<array<string,mixed>> $excel baris Excel dalam urutannya (kunci 'nama')
+     * @param list<array<string,mixed>> $dok   baris dokumen dalam urutan sekarang (kunci 'id', 'nama', 'guru_nama')
+     *
+     * @return array{urut:list<int>, cocok:array<int,int>, tak_ada_di_dokumen:list<string>, tak_ada_di_excel:list<string>, ganda:list<string>}
+     *               urut = id baris dokumen menurut urutan baru; cocok = indeks baris Excel → id baris dokumen
+     */
+    public static function cocokkanUrutan(array $excel, array $dok): array
+    {
+        $rapi  = static fn (string $s): string => mb_strtolower(trim((string) preg_replace('/\s+/u', ' ', $s)));
+        $padat = static fn (string $s): string => (string) preg_replace('/[^\p{L}\p{N}]+/u', '', mb_strtolower($s));
+        $kunci = [];
+        foreach ($dok as $d) {
+            foreach (['nama', 'guru_nama'] as $f) {
+                $n = (string) ($d[$f] ?? '');
+                if ($n === '') {
+                    continue;
+                }
+                $kunci[(int) $d['id']][0][$rapi($n)] = true;
+                $kunci[(int) $d['id']][1][$padat($n)] = true;
+                $nn = self::normalNama($n);
+                if ($nn !== '') {
+                    $kunci[(int) $d['id']][2][$nn] = true;
+                }
+            }
+        }
+
+        $pakai = [];
+        $cocok = [];
+        $tak   = [];
+        $ganda = [];
+        foreach ($excel as $i => $e) {
+            $nama = (string) ($e['nama'] ?? '');
+            if (trim($nama) === '') {
+                continue;
+            }
+            $cari = [0 => $rapi($nama), 1 => $padat($nama), 2 => self::normalNama($nama)];
+            $ketemu = null;
+            foreach ($cari as $tingkat => $k) {
+                if ($k === '') {
+                    continue;
+                }
+                $kand = [];
+                foreach ($kunci as $id => $per) {
+                    if (! isset($pakai[$id]) && isset($per[$tingkat][$k])) {
+                        $kand[] = $id;
+                    }
+                }
+                if (count($kand) === 1 || (count($kand) > 1 && $tingkat < 2)) {
+                    $ketemu = $kand[0];
+                    break;
+                }
+                if (count($kand) > 1) { // nama tanpa gelar sama dengan lebih dari satu orang: jangan menebak
+                    $ganda[] = $nama;
+                    continue 2;
+                }
+            }
+            if ($ketemu === null) {
+                $tak[] = $nama;
+                continue;
+            }
+            $pakai[$ketemu] = true;
+            $cocok[$i]      = $ketemu;
+        }
+
+        $urut = array_values($cocok);
+        $sisa = [];
+        foreach ($dok as $d) {
+            if (! isset($pakai[(int) $d['id']])) {
+                $urut[] = (int) $d['id'];
+                $sisa[] = (string) $d['nama'];
+            }
+        }
+
+        return ['urut' => $urut, 'cocok' => $cocok, 'tak_ada_di_dokumen' => array_merge($tak, $ganda), 'tak_ada_di_excel' => $sisa, 'ganda' => $ganda];
+    }
+
     /** Judul kolom Excel → kode komponen ('total' / 'ttd' untuk kolom khusus, 'x:TEKS' bila tak dikenal). */
     public static function kodeDariHeader(string $teks): ?string
     {
