@@ -9,10 +9,10 @@ Sumber: `formatdatasekolah/HONOR ASTS.xlsx` (folder ini di-.gitignore: berisi da
 ## 1. Latar
 Honor ujian dihitung manual di Excel (2 lembar: `REKAP HONOR` 59 orang, `SLIP` per orang). Temuan: baris JUMLAH rekap hanya menjumlah D7:D44 padahal data sampai baris 65
 → tertulis Rp 35.441.000, seharusnya **Rp 44.472.000** (kurang Rp 9.031.000); slip rusak (#REF!, kolom bergeser, label semester & tarif keliru); tarif tertulis keras di rumus; nama Kepsek tanpa titik;
-6 nama tak ada di Master Guru (3 guru: Ambarsari Dwi Sulistya Wati, Bella Aprillia, Aida Fitriah; 3 staf TU: Afriyanti, Aldy Galuh Permana, Abde Herlambang).
+6 nama tak ada di Master Guru (3 guru dan 3 staf TU).
 Angka acuan (rekap Excel): komponen Tunjangan Panitia (nominal tetap: Kepsek 2.000.000, Kepala TU 1.200.000, Waka Kurikulum 1.500.000, 8 orang × 500.000), Pembuatan Soal Rp 20.000/set,
-Transport Rp 25.000/hari (struktural 10 hari, Pembina OSIS 8, Perpus 5, sebagian guru 5), Pengawas Rp 6.500/sesi, Koreksi Rp 1.500/lembar, Rapot Rp 20.000 (0 di ASTS); tanda tangan: Ketua panitia (Elvira Safitri, S.Pd),
-Bendahara (Maya Fadhillah, S.Pd = Kepala TU), Kepala SMK (Napis Kuturupi, S.T.). Cetak: landscape, Folio (kertas khusus 10000), skala 70 %, baris judul 1–6 diulang, area A1:P86.
+Transport Rp 25.000/hari (struktural 10 hari, Pembina OSIS 8, Perpus 5, sebagian guru 5), Pengawas Rp 6.500/sesi, Koreksi Rp 1.500/lembar, Rapot Rp 20.000 (0 di ASTS); tanda tangan: Ketua panitia,
+Bendahara (= Kepala TU), Kepala SMK. Cetak: landscape, Folio (kertas khusus 10000), skala 70 %, baris judul 1–6 diulang, area A1:P86.
 
 ## 2. Keputusan user (2026-10-09)
 1. **Komponen fleksibel**: Tunjangan Struktural & Tunjangan Wali Kelas tidak ada di rekap sekarang → disediakan sebagai komponen yang bisa diaktifkan Admin (bawaan MATI), begitu pula Lembur (slip: Rp 100.000); komponen baru bisa ditambah.
@@ -88,10 +88,10 @@ Angka acuan (uji penerimaan dengan `HONOR ASTS.xlsx` asli): impor 59 penerima �
 **Pengujian:** `php spark dev:uji-honor` (471 pemeriksaan, di-rollback), regresi `dev:uji-pkl` (322) dan `dev:uji-pkl-biaya` (124); skrip HTTP/peramban ada di folder kerja sesi (tidak di repo).
 
 ## 10. Kesamaan Excel dengan rekap sekolah (2026-10-09 sore)
-Klien meminta Excel keluaran sistem **100% sama** dengan `HONOR ASTS.xlsx`. Dikerjakan dan DIBANDINGKAN OTOMATIS sel demi sel (`php spark dev:uji-honor-excel`, 25 pemeriksaan, butuh berkas asli di `formatdatasekolah/`, di-rollback): judul 3 baris, header bernomor + gabungan sel, JABATAN & jumlah Koreksi berwarna kuning, format akuntansi "Rp", nama Times New Roman, tinggi baris 30 (judul 15), garis ganda di bawah header, lebar kolom A–P, blok tanda tangan (Ketua kiri, Bendahara kanan, Kepala Sekolah bawah tengah) dengan posisi relatif yang sama, zoom 70 %, margin & rata tengah, landscape. 59 baris × 12 kolom angka, nama, jabatan, dan urutan sama dengan aslinya (Napis, Maya, Muslimin, … dst) setelah diimpor.
+Klien meminta Excel keluaran sistem **100% sama** dengan `HONOR ASTS.xlsx`. Dikerjakan dan DIBANDINGKAN OTOMATIS sel demi sel (`php spark dev:uji-honor-excel`, 25 pemeriksaan, butuh berkas asli di `formatdatasekolah/`, di-rollback): judul 3 baris, header bernomor + gabungan sel, JABATAN & jumlah Koreksi berwarna kuning, format akuntansi "Rp", nama Times New Roman, tinggi baris 30 (judul 15), garis ganda di bawah header, lebar kolom A–P, blok tanda tangan (Ketua kiri, Bendahara kanan, Kepala Sekolah bawah tengah) dengan posisi relatif yang sama, zoom 70 %, margin & rata tengah, landscape. 59 baris × 12 kolom angka, nama, jabatan, dan urutan sama dengan aslinya (Kepala Sekolah, Kepala TU, … dst) setelah diimpor.
 **Selisih yang disengaja:** (1) baris JUMLAH tepat di bawah baris terakhir dan menjumlah SEMUA baris (Excel asli: Rp 35.441.000 keliru; benar Rp 44.472.000); (2) tanggal surat mengikuti isian honor; (3) lembar SLIP berisi satu slip per orang (aslinya satu slip terpilih & rusak); (4) kertas Folio + nomor halaman (aslinya kertas khusus); (5) tanda "DRAF" di footer bila belum final.
 **Urutan baris:** bawaan menurut hierarki jabatan (Kepala Sekolah, Waka Kur/Kes/Humas/Sarpras, Kaprog, Operator, guru, piket, TU); urutan persis sekolah diatur sekali dengan **nomor urut di grid** (ketik nomor + Enter, atau ▲▼), lalu ikut tersalin ke honor berikutnya (opsi "Salin penerima") dan dipertahankan oleh impor Excel. **Judul kolom cetakan** bisa diatur per komponen di Pengaturan Honor ("Judul di cetakan", mis. "Rapot").
-Catatan data: di Master Guru lokal, Maya Fadhillah berjabatan Kepala Sekolah (di Excel: Kepala Tata Usaha) — perbaiki di Master Guru atau ubah label jabatan di honor.
+Catatan data: di Master Guru lokal, Kepala TU tercatat berjabatan Kepala Sekolah (di Excel: Kepala Tata Usaha) — perbaiki di Master Guru atau ubah label jabatan di honor.
 **PDF rekap (2026-10-09 sore):** urutan baris, nama, jabatan, semua kolom angka, total, dan judul SAMA dengan Excel (satu sumber `HonorCetak::bahan`); tampilan mengikuti Excel (JABATAN & jumlah Koreksi kuning, "Rp" akuntansi rata kiri/angka kanan/nol "-", nama bergaya Times, judul + header bernomor diulang di tiap halaman, tanda tangan 3 blok). Kertas F4 landscape SUNGGUHAN (215×330 mm) — nama kertas 'F4' tidak dikenal Dompdf dan diam-diam jadi Letter, jadi ukuran ditulis eksplisit. Lebar kolom PDF dibuat lebih longgar untuk nama/jabatan (59 baris ±4 halaman). Dibuktikan dengan membaca isi file PDF di `php spark dev:uji-honor-excel` (43 pemeriksaan; argumen opsional = folder untuk menyimpan rekap.pdf/slip.pdf/rekap.xlsx hasil uji).
 
 ## 11. Urutan penerima & ceklis Koreksi (2026-10-09 malam) — dua keluhan klien
@@ -104,3 +104,18 @@ Catatan data: di Master Guru lokal, Maya Fadhillah berjabatan Kepala Sekolah (di
 **Aman sebelum migrate:** bila kode terpasang lebih dulu daripada migrasi, tab Honor, Pengaturan Honor, Atur urutan, dan Hitung otomatis tetap jalan (tabel baru dicek `tableExists`); halaman/aksi Koreksi memberi pesan "migrasi belum dijalankan" (503 untuk JSON), bukan galat.
 **Pengujian:** `php spark dev:uji-honor-lanjut` (138; urutan jabatan, atur ulang urutan, ceklis, sambungan Hitung otomatis, salin, kunci, CASCADE), `dev:uji-koreksi-excel` (30), regresi `dev:uji-honor` (496) & `dev:uji-honor-excel` (43); skrip HTTP (55) dan peramban (19) ada di folder kerja sesi (tidak di repo).
 **Deploy:** `git pull` lalu `php spark migrate` (2 migrasi baru: `2026-10-15-000001_HonorUrutanJabatan`, `2026-10-15-000002_HonorKoreksi`; tidak ada data/nama orang di migrasi). **Langkah klien:** (1) Master Jabatan: tambah *Kepala Tata Usaha* dst. dan pasang ke orangnya (betulkan jabatan Kepala TU yang tadinya tercatat Kepala Sekolah); (2) Pengaturan Honor: isi tunjangan per jabatan (± urutan bila perlu); (3) tab Honor → **Atur urutan → Ikuti Excel sekolah** (atau Menurut jabatan); (4) tombol **Koreksi → Impor dari Excel KOREKSI** → periksa → Terapkan → **Terapkan ke kolom Koreksi honor** → **Unduh Excel KOREKSI**. Belum ada layar Android untuk Koreksi (opsional tahap berikut).
+
+## 12. Kemudahan pemakaian & API Koreksi (2026-10-10)
+
+Permintaan klien: "UI lebih mudah dipakai". Yang dikerjakan (tanpa mengubah angka/hitungan):
+- **Tab Honor → "Alur kerja honor"** (menggantikan deretan 12 tombol datar): 5 langkah bernomor, tiap langkah bertanda ✓ bila selesai dan langkah
+  berikutnya disorot ("Berikutnya: Langkah N — …"): 1 Penerima (+ Tambah penerima, Atur urutan) · 2 Data surat & tarif · 3 Isi angka honor (Pembuat soal,
+  Koreksi + ringkasan, Hitung otomatis) · 4 Periksa (membuka kartu Pemeriksaan) · 5 Final & cetak (Tandai Final / Kunci / Buka kunci + Cetak/Unduh).
+  Aksi jarang dipakai (Impor dari Excel, Perbarui tarif, Hapus honor) di bawah "Aksi lain". Semua formulir, label tombol, dan panel lama tetap sama.
+- **Halaman Koreksi → "Alur kerja" 4 langkah** (Isi ceklis · Periksa & koreksi · Terapkan ke honor · Unduh Excel). Setelah ceklis terisi (SKBM/Penugasan/Salin/Impor),
+  panel **Terapkan ke kolom Koreksi honor** terbuka otomatis; ceklis kosong + SKBM ada → panel **Isi dari SKBM** terbuka otomatis.
+- **Tampilan Per guru** (kartu + chip kelas) di Koreksi dan SKBM untuk HP; mode "Klik = angka khusus"/"Klik = isi JP" untuk layar sentuh (lihat `docs/DESAIN-SKBM.md` 3.1).
+- **API Android Koreksi** (khusus Admin): `/api/v1/admin/ujian/{slug}/honor/koreksi…` — kontrak `docs/API-SKBM-KOREKSI.md`, rencana layar
+  `flutter-muslimin/BLUEPRINT-KOREKSI.md` (tahap K0–K4), fixture `test/fixtures/koreksi/`. Impor Excel KOREKSI hanya di web.
+- Uji: regresi honor HTTP 80/71/43/23/26/14, Koreksi HTTP 55 & peramban 37, SKBM HTTP 81 & peramban 44, API 108, CLI 138/30/91/496.
+

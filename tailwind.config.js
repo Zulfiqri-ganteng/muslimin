@@ -1,7 +1,8 @@
 /** @type {import('tailwindcss').Config} */
 module.exports = {
-  // Dua berkas non-tampilan menyimpan kelas warna lencana (jenis & status Surat Sekolah) sebagai teks.
-  content: ['./app/Views/**/*.php', './app/Libraries/SuratJenis.php', './app/Models/SuratSekolahModel.php'],
+  // Dua berkas non-tampilan menyimpan kelas warna lencana (jenis & status Surat Sekolah) sebagai teks;
+  // kartu-guru.js membangun "chip" kelas lewat JavaScript (tampilan Per guru di SKBM & Koreksi).
+  content: ['./app/Views/**/*.php', './app/Libraries/SuratJenis.php', './app/Models/SuratSekolahModel.php', './public/assets/js/admin/kartu-guru.js'],
   theme: {
     extend: {
       colors: {

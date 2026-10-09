@@ -152,32 +152,156 @@ $statusWarna = ['draf' => 'bg-slate-100 text-slate-600 border-slate-200', 'final
                 <p class="mt-3 rounded-lg border border-red-300 bg-red-50 px-3 py-2 text-sm font-bold text-red-800" role="alert">PERINGATAN: isi honor ini BERUBAH sejak dikunci (tidak sama dengan sidik jari saat dikunci). Periksa Audit Log; bila perubahan tidak sah, hubungi pengelola sistem.</p>
             <?php endif; ?>
 
-            <!-- Status: Draf → Final → Dikunci -->
-            <div class="mt-4 flex flex-wrap items-center gap-x-3 gap-y-2 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm">
-                <ol class="flex items-center gap-1.5 text-xs font-semibold" aria-label="Tahap honor">
-                    <?php foreach (['draf' => 'Draf', 'final' => 'Final', 'dikunci' => 'Dikunci'] as $kS => $lS): ?>
-                        <li class="rounded-full px-2.5 py-1 <?= $dok['status'] === $kS ? 'bg-brand-700 text-white' : 'bg-white text-slate-400 border border-slate-200' ?>" <?= $dok['status'] === $kS ? 'aria-current="step"' : '' ?>><?= $lS ?></li>
-                        <?php if ($kS !== 'dikunci'): ?><li class="text-slate-300" aria-hidden="true">›</li><?php endif; ?>
-                    <?php endforeach; ?>
-                </ol>
-                <span class="text-xs text-slate-500">
-                    <?= $dok['status'] === 'draf' ? 'Masih disusun. Tandai Final setelah angka diperiksa.' : ($dok['status'] === 'final' ? 'Siap dibayar. Kunci setelah dibayar supaya tidak bisa berubah.' : 'Terkunci. Buka kunci hanya bila benar-benar perlu.') ?>
-                </span>
-                <div class="ml-auto flex flex-wrap gap-2">
-                    <?php $nPerlu = count(array_filter($honorPeriksa ?? [], static fn (array $t): bool => $t['level'] === 'peringatan')); ?>
-                    <?php if ($dok['status'] === 'draf' && $baris !== []): ?>
-                        <form method="post" action="<?= $base ?>/honor/status" class="inline"><?= csrf_field() ?><input type="hidden" name="periode_id" value="<?= (int) $periode['id'] ?>"><input type="hidden" name="ke" value="final">
-                            <button type="submit" class="rounded-lg bg-sky-600 px-4 py-2 text-xs font-bold text-white transition hover:bg-sky-700 active:scale-95">Tandai Final</button></form>
-                    <?php elseif ($dok['status'] === 'final'): ?>
-                        <form method="post" action="<?= $base ?>/honor/status" class="inline"><?= csrf_field() ?><input type="hidden" name="periode_id" value="<?= (int) $periode['id'] ?>"><input type="hidden" name="ke" value="draf">
-                            <button type="submit" class="rounded-lg border border-slate-300 bg-white px-4 py-2 text-xs font-semibold text-slate-600 transition hover:bg-slate-100">Kembalikan ke Draf</button></form>
-                        <form method="post" action="<?= $base ?>/honor/status" class="inline"><?= csrf_field() ?><input type="hidden" name="periode_id" value="<?= (int) $periode['id'] ?>"><input type="hidden" name="ke" value="dikunci">
-                            <button type="submit" onclick="return confirm('KUNCI honor ini?<?= $nPerlu > 0 ? ' Masih ada ' . $nPerlu . ' temuan yang perlu dicek (lihat kartu Pemeriksaan).' : '' ?> Setelah dikunci tidak ada yang bisa diubah; kunci bisa dibuka lagi dengan alasan yang tercatat.')"
-                                    class="rounded-lg bg-emerald-600 px-4 py-2 text-xs font-bold text-white transition hover:bg-emerald-700 active:scale-95">Kunci honor</button></form>
-                    <?php elseif ($dok['status'] === 'dikunci'): ?>
-                        <button type="button" @click="panel = (panel === 'bukakunci' ? '' : 'bukakunci')" class="rounded-lg border border-amber-400 bg-amber-50 px-4 py-2 text-xs font-bold text-amber-800 transition hover:bg-amber-100">Buka kunci…</button>
+            <?php
+            // ---- Alur kerja honor: 5 langkah, yang berikutnya disorot (menggantikan deretan tombol datar) ----
+            $nPerlu       = count(array_filter($honorPeriksa ?? [], static fn (array $t): bool => $t['level'] === 'peringatan'));
+            $adaBaris     = $baris !== [];
+            $suratLengkap = trim((string) $dok['ketua_nama']) !== '' && trim((string) $dok['bendahara_nama']) !== '' && trim((string) $dok['kepsek_nama']) !== '';
+            $selesai      = [1 => $adaBaris, 2 => $suratLengkap, 3 => (int) $honor['total'] > 0, 4 => $adaBaris && $nPerlu === 0, 5 => $dok['status'] !== 'draf'];
+            $berikut      = 0;
+            foreach ([1, 2, 3, 4, 5] as $n) {
+                if (! $selesai[$n]) {
+                    $berikut = $n;
+                    break;
+                }
+            }
+            $judulLangkah = [1 => 'Penerima', 2 => 'Data surat', 3 => 'Isi angka honor', 4 => 'Periksa', 5 => 'Final & cetak'];
+            $kartuL = static fn (int $n): string => 'rounded-xl border p-3 ' . ($berikut === $n ? 'border-brand-600 bg-brand-50/40 ring-1 ring-brand-600' : ($selesai[$n] ? 'border-emerald-200 bg-emerald-50/30' : 'border-slate-200 bg-white'));
+            $bulatL = static fn (int $n): string => 'flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-xs font-bold ' . ($selesai[$n] ? 'bg-emerald-600 text-white' : ($berikut === $n ? 'bg-brand-700 text-white' : 'bg-slate-200 text-slate-600'));
+            $btnL = 'inline-flex items-center gap-1.5 rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 transition hover:bg-slate-50';
+            ?>
+            <!-- Alur kerja honor -->
+            <div class="mt-4 border-t border-slate-100 pt-4">
+                <div class="flex flex-wrap items-baseline justify-between gap-2">
+                    <p class="text-xs font-bold uppercase tracking-wide text-slate-500">Alur kerja honor</p>
+                    <?php if ($terkunci): ?>
+                        <p class="text-xs text-slate-500">Honor dikunci &mdash; hanya bisa dilihat, dicetak, atau dibuka kuncinya.</p>
+                    <?php elseif ($berikut > 0): ?>
+                        <p class="text-xs text-slate-500">Berikutnya: <b class="text-brand-700">Langkah <?= $berikut ?> &mdash; <?= esc($judulLangkah[$berikut]) ?></b></p>
+                    <?php else: ?>
+                        <p class="text-xs font-semibold text-emerald-700">Semua langkah beres.</p>
                     <?php endif; ?>
                 </div>
+                <ol class="mt-2 grid gap-3 md:grid-cols-2 xl:grid-cols-5">
+                    <!-- 1. Penerima -->
+                    <li class="<?= $kartuL(1) ?>">
+                        <div class="flex items-start gap-2.5">
+                            <span class="<?= $bulatL(1) ?>"><?= $selesai[1] ? '&#10003;' : '1' ?></span>
+                            <div class="min-w-0"><p class="text-sm font-bold text-slate-800">Penerima</p><p class="text-xs text-slate-500"><?= $adaBaris ? count($baris) . ' orang menerima honor' : 'Belum ada penerima' ?></p></div>
+                        </div>
+                        <?php if (! $terkunci): ?>
+                            <div class="mt-3 flex flex-wrap gap-2">
+                                <button type="button" @click="panel = (panel === 'penerima' ? '' : 'penerima')" class="inline-flex items-center gap-1.5 rounded-lg border border-brand-600 bg-brand-50 px-3 py-1.5 text-xs font-semibold text-brand-700 transition hover:bg-brand-100">+ Tambah penerima<?= $honorCalon !== [] ? ' (' . count($honorCalon) . ' tersedia)' : '' ?></button>
+                                <?php if ($adaBaris): ?><button type="button" @click="panel = (panel === 'urutan' ? '' : 'urutan')" class="<?= $btnL ?>">Atur urutan</button><?php endif; ?>
+                            </div>
+                        <?php endif; ?>
+                    </li>
+                    <!-- 2. Data surat -->
+                    <li class="<?= $kartuL(2) ?>">
+                        <div class="flex items-start gap-2.5">
+                            <span class="<?= $bulatL(2) ?>"><?= $selesai[2] ? '&#10003;' : '2' ?></span>
+                            <div class="min-w-0"><p class="text-sm font-bold text-slate-800">Data surat &amp; tarif</p><p class="text-xs text-slate-500"><?= $suratLengkap ? 'Nama penanda tangan terisi' : 'Nama ketua / bendahara / kepala sekolah belum lengkap' ?></p></div>
+                        </div>
+                        <div class="mt-3 flex flex-wrap gap-2">
+                            <button type="button" @click="panel = (panel === 'surat' ? '' : 'surat')" class="<?= $btnL ?>">Data surat &amp; tanda tangan</button>
+                            <a href="<?= $urlAtur ?>" class="<?= $btnL ?>">Pengaturan tarif</a>
+                        </div>
+                    </li>
+                    <!-- 3. Isi angka honor -->
+                    <li class="<?= $kartuL(3) ?>">
+                        <div class="flex items-start gap-2.5">
+                            <span class="<?= $bulatL(3) ?>"><?= $selesai[3] ? '&#10003;' : '3' ?></span>
+                            <div class="min-w-0"><p class="text-sm font-bold text-slate-800">Isi angka honor</p><p class="text-xs text-slate-500"><?= $selesai[3] ? 'Total Rp ' . $rp($honor['total']) : 'Belum ada angka' ?></p></div>
+                        </div>
+                        <div class="mt-3 flex flex-wrap gap-2">
+                            <a href="<?= $base ?>/pembuat-soal<?= $qtp ?>" class="<?= $btnL ?>">Pembuat soal</a>
+                            <a href="<?= $base ?>/honor/koreksi<?= $qtp ?>" class="inline-flex flex-wrap items-center gap-x-1.5 gap-y-1 rounded-lg border border-sky-500 bg-sky-50 px-3 py-1.5 text-xs font-semibold text-sky-800 transition hover:bg-sky-100" title="Ceklis pembagian lembar jawaban ke guru per rombel (Excel KOREKSI NILAI)">
+                                Koreksi<?php if (($honorKoreksi ?? null) !== null): ?> <span class="whitespace-nowrap rounded-full bg-sky-600 px-2 py-0.5 text-[11px] font-bold text-white"><?= (int) $honorKoreksi['guru'] ?> guru · <?= $rp($honorKoreksi['total']) ?> lembar</span><?php else: ?> <span class="whitespace-nowrap rounded-full bg-white px-2 py-0.5 text-[11px] font-semibold text-sky-700">belum diisi</span><?php endif; ?>
+                            </a>
+                            <?php if (! $terkunci): ?>
+                                <button type="button" @click="panel = (panel === 'hitung' ? '' : 'hitung')" class="inline-flex items-center gap-1.5 rounded-lg border border-emerald-600 bg-emerald-50 px-3 py-1.5 text-xs font-semibold text-emerald-700 transition hover:bg-emerald-100">Hitung otomatis</button>
+                            <?php endif; ?>
+                        </div>
+                        <p class="mt-2 text-[11px] leading-snug text-slate-400">Pengawas &amp; transport diketik langsung di tabel di bawah.</p>
+                    </li>
+                    <!-- 4. Periksa -->
+                    <li class="<?= $kartuL(4) ?>">
+                        <div class="flex items-start gap-2.5">
+                            <span class="<?= $bulatL(4) ?>"><?= $selesai[4] ? '&#10003;' : '4' ?></span>
+                            <div class="min-w-0"><p class="text-sm font-bold text-slate-800">Periksa</p><p class="text-xs text-slate-500"><?= ! $adaBaris ? 'Menunggu penerima' : ($nPerlu > 0 ? $nPerlu . ' temuan perlu dicek' : 'Tidak ada temuan') ?></p></div>
+                        </div>
+                        <div class="mt-3 flex flex-wrap gap-2">
+                            <a href="#pemeriksaan" @click="$dispatch('buka-periksa')" class="<?= $btnL ?>">Lihat pemeriksaan</a>
+                        </div>
+                    </li>
+                    <!-- 5. Final & cetak -->
+                    <li class="<?= $kartuL(5) ?>">
+                        <div class="flex items-start gap-2.5">
+                            <span class="<?= $bulatL(5) ?>"><?= $selesai[5] ? '&#10003;' : '5' ?></span>
+                            <div class="min-w-0">
+                                <p class="text-sm font-bold text-slate-800">Final &amp; cetak</p>
+                                <ol class="mt-1 flex items-center gap-1 text-[11px] font-semibold" aria-label="Tahap honor">
+                                    <?php foreach (['draf' => 'Draf', 'final' => 'Final', 'dikunci' => 'Dikunci'] as $kS => $lS): ?>
+                                        <li class="rounded-full px-2 py-0.5 <?= $dok['status'] === $kS ? 'bg-brand-700 text-white' : 'border border-slate-200 bg-white text-slate-400' ?>" <?= $dok['status'] === $kS ? 'aria-current="step"' : '' ?>><?= $lS ?></li>
+                                        <?php if ($kS !== 'dikunci'): ?><li class="text-slate-300" aria-hidden="true">›</li><?php endif; ?>
+                                    <?php endforeach; ?>
+                                </ol>
+                            </div>
+                        </div>
+                        <p class="mt-2 text-xs text-slate-500">
+                            <?= $dok['status'] === 'draf' ? 'Masih disusun. Tandai Final setelah angka diperiksa.' : ($dok['status'] === 'final' ? 'Siap dibayar. Kunci setelah dibayar supaya tidak bisa berubah.' : 'Terkunci. Buka kunci hanya bila benar-benar perlu.') ?>
+                        </p>
+                        <div class="mt-3 flex flex-wrap gap-2">
+                            <?php if ($dok['status'] === 'draf' && $baris !== []): ?>
+                                <form method="post" action="<?= $base ?>/honor/status" class="inline"><?= csrf_field() ?><input type="hidden" name="periode_id" value="<?= (int) $periode['id'] ?>"><input type="hidden" name="ke" value="final">
+                                    <button type="submit" class="rounded-lg bg-sky-600 px-3 py-1.5 text-xs font-bold text-white transition hover:bg-sky-700 active:scale-95">Tandai Final</button></form>
+                            <?php elseif ($dok['status'] === 'final'): ?>
+                                <form method="post" action="<?= $base ?>/honor/status" class="inline"><?= csrf_field() ?><input type="hidden" name="periode_id" value="<?= (int) $periode['id'] ?>"><input type="hidden" name="ke" value="draf">
+                                    <button type="submit" class="rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-xs font-semibold text-slate-600 transition hover:bg-slate-100">Kembalikan ke Draf</button></form>
+                                <form method="post" action="<?= $base ?>/honor/status" class="inline"><?= csrf_field() ?><input type="hidden" name="periode_id" value="<?= (int) $periode['id'] ?>"><input type="hidden" name="ke" value="dikunci">
+                                    <button type="submit" onclick="return confirm('KUNCI honor ini?<?= $nPerlu > 0 ? ' Masih ada ' . $nPerlu . ' temuan yang perlu dicek (lihat kartu Pemeriksaan).' : '' ?> Setelah dikunci tidak ada yang bisa diubah; kunci bisa dibuka lagi dengan alasan yang tercatat.')"
+                                            class="rounded-lg bg-emerald-600 px-3 py-1.5 text-xs font-bold text-white transition hover:bg-emerald-700 active:scale-95">Kunci honor</button></form>
+                            <?php elseif ($dok['status'] === 'dikunci'): ?>
+                                <button type="button" @click="panel = (panel === 'bukakunci' ? '' : 'bukakunci')" class="rounded-lg border border-amber-400 bg-amber-50 px-3 py-1.5 text-xs font-bold text-amber-800 transition hover:bg-amber-100">Buka kunci…</button>
+                            <?php endif; ?>
+                            <?php if ($baris !== []): ?>
+                                <div class="relative" @click.outside="menuCetak = false">
+                                    <button type="button" @click="menuCetak = !menuCetak" aria-haspopup="true" :aria-expanded="menuCetak" class="inline-flex items-center gap-1.5 rounded-lg bg-brand-700 px-3 py-1.5 text-xs font-semibold text-white transition hover:bg-brand-800">
+                                        Cetak / Unduh
+                                        <svg class="h-4 w-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7"/></svg>
+                                    </button>
+                                    <div x-cloak x-show="menuCetak" x-transition class="absolute left-0 z-30 mt-2 w-72 overflow-hidden rounded-xl border border-slate-200 bg-white py-1 shadow-lg xl:left-auto xl:right-0">
+                                        <a href="<?= $base ?>/honor/cetak/rekap-pdf<?= $qtp ?>" target="_blank" rel="noopener" class="block px-4 py-2.5 text-sm hover:bg-slate-50"><b class="block text-slate-800">Rekap honor (PDF)</b><span class="text-xs text-slate-500">Folio landscape, siap cetak &amp; tanda tangan</span></a>
+                                        <a href="<?= $base ?>/honor/cetak/rekap-xlsx<?= $qtp ?>" class="block px-4 py-2.5 text-sm hover:bg-slate-50"><b class="block text-slate-800">Excel: Rekap + Slip</b><span class="text-xs text-slate-500">Rumus hidup, format rekap sekolah</span></a>
+                                        <a href="<?= $base ?>/honor/cetak/slip-pdf<?= $qtp ?>" target="_blank" rel="noopener" class="block px-4 py-2.5 text-sm hover:bg-slate-50"><b class="block text-slate-800">Slip semua penerima (PDF)</b><span class="text-xs text-slate-500">Dua slip per halaman A4</span></a>
+                                    </div>
+                                </div>
+                            <?php endif; ?>
+                        </div>
+                    </li>
+                </ol>
+
+                <!-- Aksi jarang dipakai -->
+                <details class="mt-3 rounded-lg border border-slate-200 bg-white">
+                    <summary class="cursor-pointer select-none px-3 py-2 text-xs font-semibold text-slate-600">Aksi lain (impor Excel, perbarui tarif, hapus honor)</summary>
+                    <div class="flex flex-wrap gap-2 border-t border-slate-100 px-3 py-3">
+                        <?php if (! $terkunci): ?>
+                            <button type="button" @click="panel = (panel === 'impor' ? '' : 'impor')" class="<?= $btnL ?>">Impor dari Excel</button>
+                            <form method="post" action="<?= $base ?>/honor/sinkron" class="inline">
+                                <?= csrf_field() ?><input type="hidden" name="periode_id" value="<?= (int) $periode['id'] ?>">
+                                <button type="submit" onclick="return confirm('Perbarui komponen & tarif honor ini dari Pengaturan Honor? Isian angka tetap aman.')"
+                                        class="<?= $btnL ?>">Perbarui tarif dari pengaturan</button>
+                            </form>
+                            <form method="post" action="<?= $base ?>/honor/hapus" class="ml-auto inline">
+                                <?= csrf_field() ?><input type="hidden" name="periode_id" value="<?= (int) $periode['id'] ?>">
+                                <button type="submit" onclick="return confirm('HAPUS seluruh honor <?= esc($label, 'js') ?> (<?= count($baris) ?> penerima)? Tidak bisa dibatalkan.')"
+                                        class="inline-flex items-center gap-1.5 rounded-lg border border-red-200 bg-white px-3 py-1.5 text-xs font-semibold text-red-600 transition hover:bg-red-50">Hapus honor ini</button>
+                            </form>
+                        <?php else: ?>
+                            <span class="text-xs text-slate-400">Tidak ada aksi lain saat honor dikunci.</span>
+                        <?php endif; ?>
+                    </div>
+                </details>
             </div>
             <div id="bukakunci" x-cloak x-show="panel === 'bukakunci'" x-transition class="mt-3 rounded-xl border border-amber-300 bg-amber-50 p-4">
                 <form method="post" action="<?= $base ?>/honor/status" class="space-y-3">
@@ -186,50 +310,6 @@ $statusWarna = ['draf' => 'bg-slate-100 text-slate-600 border-slate-200', 'final
                     <textarea id="alasan-buka" name="alasan" rows="2" required minlength="5" maxlength="200" class="w-full rounded-lg border border-amber-300 bg-white px-3 py-2 text-sm outline-none focus:border-amber-500" placeholder="Contoh: koreksi salah ketik jumlah pengawas Bu Rina"></textarea>
                     <button type="submit" class="rounded-lg bg-amber-600 px-5 py-2 text-sm font-bold text-white transition hover:bg-amber-700 active:scale-95">Buka kunci</button>
                 </form>
-            </div>
-
-            <div class="mt-4 flex flex-wrap gap-2 border-t border-slate-100 pt-4">
-                <?php if (! $terkunci): ?>
-                    <button type="button" @click="panel = (panel === 'penerima' ? '' : 'penerima')" class="inline-flex items-center gap-1.5 rounded-lg border border-brand-600 bg-brand-50 px-3.5 py-2 text-sm font-semibold text-brand-700 transition hover:bg-brand-100">+ Tambah penerima<?= $honorCalon !== [] ? ' (' . count($honorCalon) . ' tersedia)' : '' ?></button>
-                <?php endif; ?>
-                <button type="button" @click="panel = (panel === 'surat' ? '' : 'surat')" class="inline-flex items-center gap-1.5 rounded-lg border border-slate-300 bg-white px-3.5 py-2 text-sm font-semibold text-slate-700 transition hover:bg-slate-50">Data surat &amp; tanda tangan</button>
-                <a href="<?= $urlAtur ?>" class="inline-flex items-center gap-1.5 rounded-lg border border-slate-300 bg-white px-3.5 py-2 text-sm font-semibold text-slate-700 transition hover:bg-slate-50">Pengaturan tarif</a>
-                <a href="<?= $base ?>/pembuat-soal<?= $qtp ?>" class="inline-flex items-center gap-1.5 rounded-lg border border-slate-300 bg-white px-3.5 py-2 text-sm font-semibold text-slate-700 transition hover:bg-slate-50">Pembuat soal</a>
-                <a href="<?= $base ?>/honor/koreksi<?= $qtp ?>" class="inline-flex items-center gap-1.5 rounded-lg border border-sky-500 bg-sky-50 px-3.5 py-2 text-sm font-semibold text-sky-800 transition hover:bg-sky-100" title="Ceklis pembagian lembar jawaban ke guru per rombel (Excel KOREKSI NILAI)">
-                    Koreksi<?php if (($honorKoreksi ?? null) !== null): ?> <span class="rounded-full bg-sky-600 px-2 py-0.5 text-[11px] font-bold text-white"><?= (int) $honorKoreksi['guru'] ?> guru · <?= $rp($honorKoreksi['total']) ?> lembar</span><?php else: ?> <span class="rounded-full bg-white px-2 py-0.5 text-[11px] font-semibold text-sky-700">belum diisi</span><?php endif; ?>
-                </a>
-                <?php if ($baris !== []): ?>
-                    <div class="relative" @click.outside="menuCetak = false">
-                        <button type="button" @click="menuCetak = !menuCetak" aria-haspopup="true" :aria-expanded="menuCetak" class="inline-flex items-center gap-1.5 rounded-lg bg-brand-700 px-3.5 py-2 text-sm font-semibold text-white transition hover:bg-brand-800">
-                            Cetak / Unduh
-                            <svg class="h-4 w-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7"/></svg>
-                        </button>
-                        <div x-cloak x-show="menuCetak" x-transition class="absolute left-0 z-30 mt-2 w-72 overflow-hidden rounded-xl border border-slate-200 bg-white py-1 shadow-lg">
-                            <a href="<?= $base ?>/honor/cetak/rekap-pdf<?= $qtp ?>" target="_blank" rel="noopener" class="block px-4 py-2.5 text-sm hover:bg-slate-50"><b class="block text-slate-800">Rekap honor (PDF)</b><span class="text-xs text-slate-500">Folio landscape, siap cetak &amp; tanda tangan</span></a>
-                            <a href="<?= $base ?>/honor/cetak/rekap-xlsx<?= $qtp ?>" class="block px-4 py-2.5 text-sm hover:bg-slate-50"><b class="block text-slate-800">Excel: Rekap + Slip</b><span class="text-xs text-slate-500">Rumus hidup, format rekap sekolah</span></a>
-                            <a href="<?= $base ?>/honor/cetak/slip-pdf<?= $qtp ?>" target="_blank" rel="noopener" class="block px-4 py-2.5 text-sm hover:bg-slate-50"><b class="block text-slate-800">Slip semua penerima (PDF)</b><span class="text-xs text-slate-500">Dua slip per halaman A4</span></a>
-                        </div>
-                    </div>
-                <?php endif; ?>
-                <?php if (! $terkunci): ?>
-                    <button type="button" @click="panel = (panel === 'hitung' ? '' : 'hitung')" class="inline-flex items-center gap-1.5 rounded-lg border border-emerald-600 bg-emerald-50 px-3.5 py-2 text-sm font-semibold text-emerald-700 transition hover:bg-emerald-100">Hitung otomatis</button>
-                    <button type="button" @click="panel = (panel === 'impor' ? '' : 'impor')" class="inline-flex items-center gap-1.5 rounded-lg border border-slate-300 bg-white px-3.5 py-2 text-sm font-semibold text-slate-700 transition hover:bg-slate-50">Impor dari Excel</button>
-                    <?php if ($baris !== []): ?>
-                        <button type="button" @click="panel = (panel === 'urutan' ? '' : 'urutan')" class="inline-flex items-center gap-1.5 rounded-lg border border-slate-300 bg-white px-3.5 py-2 text-sm font-semibold text-slate-700 transition hover:bg-slate-50">Atur urutan</button>
-                    <?php endif; ?>
-                <?php endif; ?>
-                <?php if (! $terkunci): ?>
-                    <form method="post" action="<?= $base ?>/honor/sinkron" class="inline">
-                        <?= csrf_field() ?><input type="hidden" name="periode_id" value="<?= (int) $periode['id'] ?>">
-                        <button type="submit" onclick="return confirm('Perbarui komponen & tarif honor ini dari Pengaturan Honor? Isian angka tetap aman.')"
-                                class="inline-flex items-center gap-1.5 rounded-lg border border-slate-300 bg-white px-3.5 py-2 text-sm font-semibold text-slate-700 transition hover:bg-slate-50">Perbarui tarif dari pengaturan</button>
-                    </form>
-                    <form method="post" action="<?= $base ?>/honor/hapus" class="ml-auto inline">
-                        <?= csrf_field() ?><input type="hidden" name="periode_id" value="<?= (int) $periode['id'] ?>">
-                        <button type="submit" onclick="return confirm('HAPUS seluruh honor <?= esc($label, 'js') ?> (<?= count($baris) ?> penerima)? Tidak bisa dibatalkan.')"
-                                class="inline-flex items-center gap-1.5 rounded-lg border border-red-200 bg-white px-3.5 py-2 text-sm font-semibold text-red-600 transition hover:bg-red-50">Hapus honor ini</button>
-                    </form>
-                <?php endif; ?>
             </div>
 
             <!-- Panel: tambah penerima -->
@@ -372,7 +452,7 @@ $statusWarna = ['draf' => 'bg-slate-100 text-slate-600 border-slate-200', 'final
 
         <!-- ===== Pemeriksaan honor ===== -->
         <?php $periksa = $honorPeriksa ?? []; $nPer = count(array_filter($periksa, static fn (array $t): bool => $t['level'] === 'peringatan')); $nCat = count($periksa) - $nPer; ?>
-        <section class="rounded-2xl border bg-white shadow-sm <?= $nPer > 0 ? 'border-amber-300' : 'border-slate-200' ?>" x-data="{ buka: <?= $nPer > 0 ? 'true' : 'false' ?> }">
+        <section id="pemeriksaan" @buka-periksa.window="buka = true" class="rounded-2xl border bg-white shadow-sm <?= $nPer > 0 ? 'border-amber-300' : 'border-slate-200' ?>" x-data="{ buka: <?= $nPer > 0 ? 'true' : 'false' ?> }">
             <button type="button" @click="buka = !buka" class="flex w-full items-center justify-between gap-2 px-4 py-3 text-left" :aria-expanded="buka">
                 <span class="text-sm font-bold text-slate-800">Pemeriksaan honor</span>
                 <span class="flex flex-wrap items-center gap-1.5 text-xs font-semibold">

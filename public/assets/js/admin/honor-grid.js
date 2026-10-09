@@ -57,6 +57,14 @@ document.addEventListener('alpine:init', function () {
                 this.timer = setTimeout(function () { self.pesan = ''; }, galat ? 6000 : 1800);
             },
 
+            // Token CSRF berganti setiap POST (termasuk simpan otomatis). Semua form lain di halaman ini (Hitung otomatis, Tambah
+            // penerima, Impor, Hapus, …) dibuat dengan token saat halaman dimuat — tanpa disegarkan, form itu ditolak dengan pesan
+            // "Halaman ini sudah kedaluwarsa". Maka token baru dari balasan server dipasang ke SEMUA isian token di halaman.
+            segarkanToken: function (baru) {
+                var nama = this.cfg.csrfName;
+                document.querySelectorAll('input[name="' + nama + '"]').forEach(function (i) { i.value = baru; });
+            },
+
             // ------------------------------------------------------------------ kirim (antre, token CSRF bergilir)
             kirim: function (url, data) {
                 var self = this;
@@ -77,7 +85,7 @@ document.addEventListener('alpine:init', function () {
                         return r.json().catch(function () { return { ok: false, pesan: 'Balasan server tidak terbaca. Muat ulang halaman.' }; })
                             .then(function (j) {
                                 j._status = r.status;
-                                if (j.csrf && token) { token.value = j.csrf; }
+                                if (j.csrf) { self.segarkanToken(j.csrf); }
                                 if (r.status === 403 && !j.pesan) { j.ok = false; j.pesan = 'Sesi habis atau tidak berhak. Muat ulang halaman.'; }
                                 return j;
                             });

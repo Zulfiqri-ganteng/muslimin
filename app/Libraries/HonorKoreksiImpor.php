@@ -246,7 +246,7 @@ final class HonorKoreksiImpor
      *
      * @return array{0:?int, 1:string, 2:list<array{id:int,nama:string}>}
      */
-    private function cariBaris(string $nama, array $doc, array $pakai): array
+    public function cariBaris(string $nama, array $doc, array $pakai): array
     {
         $rapi  = static fn (string $s): string => mb_strtolower(trim((string) preg_replace('/\s+/u', ' ', $s)));
         $padat = static fn (string $s): string => (string) preg_replace('/[^\p{L}\p{N}]+/u', '', mb_strtolower($s));

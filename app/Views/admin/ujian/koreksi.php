@@ -6,6 +6,7 @@
  * @var string $slug  @var array $periode  @var string $label  @var array $m  hasil HonorKoreksi::muat()
  * @var array  $banding  hasil HonorKoreksi::bandingkanDenganHonor()  @var string $status  @var list<array> $penerima
  * @var list<string> $mapelOpsi  @var list<array> $lain  honor lain yang punya ceklis  @var string $kembali  @var string $base  @var string $qtp
+ * @var array{aktif:bool, tahun:string, guru:int, mapel:int, sel:int, url:string} $skbm  isi SKBM untuk tahun ajaran honor ini
  */
 use App\Models\UjianPeriodeModel;
 
@@ -16,6 +17,17 @@ $grup      = $m['grup'];
 $guru      = $m['guru'];
 $nKelas    = count($kelas);
 $adaCeklis = $guru !== [];
+$jmlBeda   = (int) ($banding['beda'] ?? 0);
+// Langkah berikutnya dibuka otomatis: ceklis kosong tetapi SKBM tahun ini ada → "Isi dari SKBM" (satu klik);
+// baru saja mengisi ceklis (flash 'koreksi_panel') dan masih ada beda dengan honor → panel "Terapkan ke kolom Koreksi honor".
+$panelAwal = '';
+if (! $terkunci) {
+    if ((string) session()->getFlashdata('koreksi_panel') === 'terapkan' && $adaCeklis && $banding['ada_komponen'] && $jmlBeda > 0) {
+        $panelAwal = 'terapkan';
+    } elseif (! $adaCeklis && ($skbm['guru'] ?? 0) > 0) {
+        $panelAwal = 'isi-skbm';
+    }
+}
 $cfg = [
     'urlSel'       => $base . '/sel',
     'urlPeserta'   => $base . '/peserta',
@@ -23,11 +35,16 @@ $cfg = [
     'periodeId'    => (int) $periode['id'],
     'csrfName'     => csrf_token(),
     'terkunci'     => $terkunci,
+    'panelAwal'    => $panelAwal,
+    // bahan tampilan "Per guru" (kartu-guru.js): kolom kelas menurut urutan tabel + kelompoknya
+    'kelas'        => array_map(static fn (array $k): array => ['id' => (int) $k['id'], 'label' => $k['label'], 'nama' => $k['nama']], $kelas),
+    'grup'         => $grup,
 ];
 $peringatan = session()->getFlashdata('koreksi_peringatan') ?: [];
 $statusLabel = ['draf' => 'Draf', 'final' => 'Final', 'dikunci' => 'Dikunci'];
 $tombol = 'inline-flex items-center gap-1.5 rounded-lg border border-slate-300 bg-white px-3.5 py-2 text-sm font-semibold text-slate-700 transition hover:bg-slate-50';
-$jmlBeda = (int) ($banding['beda'] ?? 0);
+// Langkah yang sebaiknya dikerjakan berikutnya: 1 = isi ceklis, 3 = terapkan ke honor, 0 = semua beres.
+$langkahBerikut = ! $adaCeklis ? 1 : (($banding['ada_komponen'] && $jmlBeda > 0) ? 3 : 0);
 ?>
 <?= $this->extend('layouts/admin') ?>
 <?= $this->section('content') ?>
@@ -67,19 +84,77 @@ $jmlBeda = (int) ($banding['beda'] ?? 0);
             </div>
         </div>
 
-        <div class="mt-4 flex flex-wrap gap-2 border-t border-slate-100 pt-4">
-            <?php if (! $terkunci): ?>
-                <button type="button" @click="panel = (panel === 'isi' ? '' : 'isi')" class="<?= $tombol ?>">Isi dari data pengampu</button>
-                <button type="button" @click="panel = (panel === 'impor' ? '' : 'impor')" class="<?= $tombol ?>">Impor dari Excel KOREKSI</button>
-                <?php if ($lain !== []): ?><button type="button" @click="panel = (panel === 'salin' ? '' : 'salin')" class="<?= $tombol ?>">Salin dari honor lain</button><?php endif; ?>
-                <button type="button" @click="panel = (panel === 'tambah' ? '' : 'tambah')" class="inline-flex items-center gap-1.5 rounded-lg border border-brand-600 bg-brand-50 px-3.5 py-2 text-sm font-semibold text-brand-700 transition hover:bg-brand-100">+ Tambah guru / mapel</button>
-            <?php endif; ?>
-            <?php if ($adaCeklis): ?>
-                <button type="button" @click="panel = (panel === 'terapkan' ? '' : 'terapkan')" class="inline-flex items-center gap-1.5 rounded-lg border border-emerald-600 bg-emerald-50 px-3.5 py-2 text-sm font-semibold text-emerald-700 transition hover:bg-emerald-100">Terapkan ke kolom Koreksi honor<?= $jmlBeda > 0 ? ' (' . $jmlBeda . ' beda)' : '' ?></button>
-                <a href="<?= $base ?>/xlsx<?= $qtp ?>" class="inline-flex items-center gap-1.5 rounded-lg bg-brand-700 px-3.5 py-2 text-sm font-semibold text-white transition hover:bg-brand-800">Unduh Excel KOREKSI</a>
-            <?php endif; ?>
+        <!-- Alur kerja: 4 langkah, yang berikutnya disorot -->
+        <div class="mt-4 border-t border-slate-100 pt-4">
+            <div class="flex flex-wrap items-baseline justify-between gap-2">
+                <p class="text-xs font-bold uppercase tracking-wide text-slate-500">Alur kerja</p>
+                <?php if ($terkunci): ?>
+                    <p class="text-xs text-slate-500">Honor dikunci &mdash; hanya bisa dilihat dan diunduh.</p>
+                <?php elseif ($langkahBerikut === 1): ?>
+                    <p class="text-xs text-slate-500">Berikutnya: <b class="text-brand-700">Langkah 1 &mdash; isi ceklis</b><?= ($skbm['guru'] ?? 0) > 0 ? ' (SKBM ' . esc($skbm['tahun']) . ' sudah siap dipakai)' : '' ?></p>
+                <?php elseif ($langkahBerikut === 3): ?>
+                    <p class="text-xs text-slate-500">Berikutnya: <b class="text-brand-700">Langkah 3 &mdash; terapkan ke honor</b> (<?= $jmlBeda ?> orang masih beda)</p>
+                <?php else: ?>
+                    <p class="text-xs font-semibold text-emerald-700">Semua langkah beres &mdash; angka Koreksi di honor sudah sama dengan ceklis.</p>
+                <?php endif; ?>
+            </div>
+            <ol class="mt-2 grid gap-3 md:grid-cols-2 xl:grid-cols-4">
+                <?php
+                $kartu = static fn (bool $selesai, bool $sorot): string => 'rounded-xl border p-3 ' . ($sorot ? 'border-brand-600 bg-brand-50/40 ring-1 ring-brand-600' : ($selesai ? 'border-emerald-200 bg-emerald-50/30' : 'border-slate-200 bg-white'));
+                $bulat = static fn (bool $selesai, bool $sorot): string => 'flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-xs font-bold ' . ($selesai ? 'bg-emerald-600 text-white' : ($sorot ? 'bg-brand-700 text-white' : 'bg-slate-200 text-slate-600'));
+                $sel3 = $adaCeklis && $banding['ada_komponen'] && $jmlBeda === 0;
+                ?>
+                <li class="<?= $kartu($adaCeklis, $langkahBerikut === 1) ?>">
+                    <div class="flex items-start gap-2.5">
+                        <span class="<?= $bulat($adaCeklis, $langkahBerikut === 1) ?>"><?= $adaCeklis ? '&#10003;' : '1' ?></span>
+                        <div class="min-w-0"><p class="text-sm font-bold text-slate-800">Isi ceklis</p><p class="text-xs text-slate-500"><?= $adaCeklis ? (int) $m['jumlah_guru'] . ' guru · ' . (int) $m['jumlah_mapel'] . ' baris mapel' : 'Belum diisi — pilih sumbernya' ?></p></div>
+                    </div>
+                    <?php if (! $terkunci): ?>
+                        <div class="mt-3 flex flex-wrap gap-2">
+                            <button type="button" @click="panel = (panel === 'isi-skbm' ? '' : 'isi-skbm')" class="inline-flex items-center gap-1.5 rounded-lg bg-brand-700 px-3 py-1.5 text-xs font-semibold text-white transition hover:bg-brand-800">Isi dari SKBM</button>
+                            <button type="button" @click="panel = (panel === 'isi' ? '' : 'isi')" class="inline-flex items-center rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 transition hover:bg-slate-50">Isi dari data pengampu</button>
+                            <button type="button" @click="panel = (panel === 'impor' ? '' : 'impor')" class="inline-flex items-center rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 transition hover:bg-slate-50">Impor dari Excel KOREKSI</button>
+                            <?php if ($lain !== []): ?><button type="button" @click="panel = (panel === 'salin' ? '' : 'salin')" class="inline-flex items-center rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 transition hover:bg-slate-50">Salin dari honor lain</button><?php endif; ?>
+                        </div>
+                    <?php endif; ?>
+                </li>
+                <li class="<?= $kartu(false, false) ?>">
+                    <div class="flex items-start gap-2.5">
+                        <span class="<?= $bulat(false, false) ?>">2</span>
+                        <div class="min-w-0"><p class="text-sm font-bold text-slate-800">Periksa &amp; koreksi</p><p class="text-xs text-slate-500"><?= $adaCeklis ? 'Ketuk sel kelas untuk mengubah; atur peserta tiap kelas' : 'Menunggu ceklis terisi' ?></p></div>
+                    </div>
+                    <div class="mt-3 flex flex-wrap gap-2">
+                        <?php if (! $terkunci): ?><button type="button" @click="panel = (panel === 'tambah' ? '' : 'tambah')" class="inline-flex items-center rounded-lg border border-brand-600 bg-brand-50 px-3 py-1.5 text-xs font-semibold text-brand-700 transition hover:bg-brand-100">+ Tambah guru / mapel</button><?php endif; ?>
+                        <a href="#peserta-kelas" class="inline-flex items-center rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 transition hover:bg-slate-50">Peserta per kelas</a>
+                    </div>
+                </li>
+                <li class="<?= $kartu($sel3, $langkahBerikut === 3) ?>">
+                    <div class="flex items-start gap-2.5">
+                        <span class="<?= $bulat($sel3, $langkahBerikut === 3) ?>"><?= $sel3 ? '&#10003;' : '3' ?></span>
+                        <div class="min-w-0"><p class="text-sm font-bold text-slate-800">Terapkan ke honor</p><p class="text-xs text-slate-500"><?php
+                            if (! $adaCeklis) { echo 'Menunggu ceklis terisi'; } elseif (! $banding['ada_komponen']) { echo 'Honor tak punya komponen Koreksi'; } elseif ($jmlBeda > 0) { echo $jmlBeda . ' orang beda dengan kolom Koreksi'; } else { echo 'Sudah sama dengan kolom Koreksi'; }
+                        ?></p></div>
+                    </div>
+                    <?php if ($adaCeklis): ?>
+                        <div class="mt-3 flex flex-wrap gap-2">
+                            <button type="button" @click="panel = (panel === 'terapkan' ? '' : 'terapkan')" class="inline-flex items-center gap-1.5 rounded-lg border border-emerald-600 bg-emerald-50 px-3 py-1.5 text-xs font-semibold text-emerald-700 transition hover:bg-emerald-100">Terapkan ke kolom Koreksi honor<?= $jmlBeda > 0 ? ' (' . $jmlBeda . ' beda)' : '' ?></button>
+                        </div>
+                    <?php endif; ?>
+                </li>
+                <li class="<?= $kartu(false, false) ?>">
+                    <div class="flex items-start gap-2.5">
+                        <span class="<?= $bulat(false, false) ?>">4</span>
+                        <div class="min-w-0"><p class="text-sm font-bold text-slate-800">Unduh Excel</p><p class="text-xs text-slate-500">Format &quot;KOREKSI NILAI&quot; sekolah</p></div>
+                    </div>
+                    <?php if ($adaCeklis): ?>
+                        <div class="mt-3 flex flex-wrap gap-2">
+                            <a href="<?= $base ?>/xlsx<?= $qtp ?>" class="inline-flex items-center gap-1.5 rounded-lg bg-brand-700 px-3 py-1.5 text-xs font-semibold text-white transition hover:bg-brand-800">Unduh Excel KOREKSI</a>
+                        </div>
+                    <?php endif; ?>
+                </li>
+            </ol>
             <?php if (! $terkunci && $adaCeklis): ?>
-                <button type="button" @click="panel = (panel === 'kosong' ? '' : 'kosong')" class="ml-auto inline-flex items-center gap-1.5 rounded-lg border border-red-200 bg-white px-3.5 py-2 text-sm font-semibold text-red-600 transition hover:bg-red-50">Kosongkan ceklis</button>
+                <p class="mt-3 text-right"><button type="button" @click="panel = (panel === 'kosong' ? '' : 'kosong')" class="inline-flex items-center gap-1.5 rounded-lg border border-red-200 bg-white px-3 py-1.5 text-xs font-semibold text-red-600 transition hover:bg-red-50">Kosongkan ceklis</button></p>
             <?php endif; ?>
         </div>
         <?php if ($terkunci): ?>
@@ -87,11 +162,34 @@ $jmlBeda = (int) ($banding['beda'] ?? 0);
         <?php endif; ?>
 
         <?php if (! $terkunci): ?>
+            <!-- Panel: isi dari SKBM -->
+            <div id="isi-skbm" x-cloak x-show="panel === 'isi-skbm'" x-transition class="mt-4 rounded-xl border border-brand-200 bg-brand-50/40 p-4">
+                <?php if (! $skbm['aktif']): ?>
+                    <p class="text-sm leading-relaxed text-slate-600">Fitur SKBM belum aktif di server ini: migrasi database belum dijalankan (<b>php spark migrate</b>).</p>
+                <?php elseif ($skbm['guru'] === 0): ?>
+                    <p class="text-sm leading-relaxed text-slate-600">SKBM tahun ajaran <b><?= esc($skbm['tahun']) ?></b> belum diisi. Isi dulu di menu <b>Guru &rarr; SKBM</b> (impor dari Excel jadwal sekolah, atau salin dari tahun lain), lalu kembali ke sini dan tekan tombol ini lagi.</p>
+                    <a href="<?= esc($skbm['url'], 'attr') ?>#impor" class="mt-3 inline-flex items-center rounded-lg bg-brand-700 px-5 py-2.5 text-sm font-bold text-white transition hover:bg-brand-800">Buka menu SKBM</a>
+                <?php else: ?>
+                    <form method="post" action="<?= $base ?>/isi-skbm">
+                        <?= csrf_field() ?><input type="hidden" name="periode_id" value="<?= (int) $periode['id'] ?>">
+                        <p class="text-sm leading-relaxed text-slate-600">Ceklis diisi dari <b>SKBM <?= esc($skbm['tahun']) ?></b> (<?= (int) $skbm['guru'] ?> guru, <?= (int) $skbm['mapel'] ?> baris mapel, <?= (int) $skbm['sel'] ?> kelas): guru &times; mapel &times; kelas persis seperti SK Pembagian Tugas Mengajar. Hanya guru yang sudah jadi <b>penerima honor</b> yang dimasukkan, satu baris per nama mapel. Lembar tiap kelas mengikuti jumlah peserta kelas itu, dan hasilnya masih bisa dikoreksi per sel.</p>
+                        <label class="mt-3 flex cursor-pointer items-start gap-2.5 text-sm text-slate-600">
+                            <input type="checkbox" name="ganti" value="1" class="mt-0.5 h-4 w-4 rounded border-slate-300">
+                            <span>Ganti seluruh ceklis yang sekarang <?= $adaCeklis ? '<b class="text-amber-700">(ceklis sekarang sudah berisi)</b>' : '' ?> (tanpa ini, guru yang sudah punya isi dilewati)</span>
+                        </label>
+                        <div class="mt-4 flex flex-wrap items-center gap-3">
+                            <button type="submit" class="rounded-lg bg-brand-700 px-6 py-2.5 text-sm font-bold text-white transition hover:bg-brand-800 active:scale-95">Isi dari SKBM</button>
+                            <a href="<?= esc($skbm['url'], 'attr') ?>" class="text-sm font-semibold text-brand-700 hover:underline">Lihat / ubah SKBM <?= esc($skbm['tahun']) ?></a>
+                        </div>
+                    </form>
+                <?php endif; ?>
+            </div>
+
             <!-- Panel: isi dari pengampu -->
             <div id="isi" x-cloak x-show="panel === 'isi'" x-transition class="mt-4 rounded-xl border border-slate-200 bg-slate-50 p-4">
                 <form method="post" action="<?= $base ?>/isi-pengampu">
                     <?= csrf_field() ?><input type="hidden" name="periode_id" value="<?= (int) $periode['id'] ?>">
-                    <p class="text-sm leading-relaxed text-slate-600">Ceklis diisi dari <b>data pengampu</b> di Master (guru &times; mapel &times; kelas). Hanya guru yang sudah jadi <b>penerima honor</b> yang dimasukkan, satu baris per nama mapel. Hasilnya masih bisa dikoreksi per sel. Pastikan data pengampu sama dengan SK Pembagian Tugas Mengajar, atau pakai <b>Impor dari Excel KOREKSI</b> bila ingin persis seperti berkas sekolah.</p>
+                    <p class="text-sm leading-relaxed text-slate-600">Ceklis diisi dari <b>data pengampu</b> di Master (guru &times; mapel &times; kelas). Hanya guru yang sudah jadi <b>penerima honor</b> yang dimasukkan, satu baris per nama mapel. Hasilnya masih bisa dikoreksi per sel. Bila data pengampu belum sama dengan SK Pembagian Tugas Mengajar, lebih tepat pakai <b>Isi dari SKBM</b>; atau <b>Impor dari Excel KOREKSI</b> bila ingin persis seperti berkas sekolah.</p>
                     <label class="mt-3 flex cursor-pointer items-start gap-2.5 text-sm text-slate-600">
                         <input type="checkbox" name="ganti" value="1" class="mt-0.5 h-4 w-4 rounded border-slate-300">
                         <span>Ganti seluruh ceklis yang sekarang (tanpa ini, guru yang sudah punya isi dilewati)</span>
@@ -197,7 +295,7 @@ $jmlBeda = (int) ($banding['beda'] ?? 0);
     </section>
 
     <!-- ===== Peserta per kelas ===== -->
-    <section class="rounded-2xl border border-slate-200 bg-white shadow-sm">
+    <section id="peserta-kelas" class="rounded-2xl border border-slate-200 bg-white shadow-sm">
         <div class="flex flex-col gap-2 border-b border-slate-100 bg-slate-50 px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
             <div>
                 <h3 class="text-xs font-bold uppercase tracking-wide text-slate-500">Jumlah peserta ujian per kelas</h3>
@@ -242,16 +340,32 @@ $jmlBeda = (int) ($banding['beda'] ?? 0);
                     <?php if (! $terkunci): ?><b>klik</b> sel = nyalakan/matikan · <b>klik kanan</b> = angka lembar khusus (bingkai kuning)<?php else: ?>honor dikunci<?php endif; ?>
                 </p>
             </div>
-            <input type="search" x-model="cari" placeholder="Cari nama guru…" class="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm outline-none focus:border-brand-500 lg:w-64" aria-label="Cari nama guru">
+            <div class="flex flex-wrap items-center gap-2">
+                <?php if ($adaCeklis): ?>
+                    <div class="inline-flex overflow-hidden rounded-lg border border-slate-300 text-xs font-semibold" role="group" aria-label="Tampilan data">
+                        <button type="button" @click="pilihTampilan('matriks')" :class="tampilan === 'matriks' ? 'bg-slate-800 text-white' : 'bg-white text-slate-600 hover:bg-slate-50'" class="px-3 py-2" title="Tabel besar: semua guru dan kelas sekaligus (nyaman di laptop)">Tabel</button>
+                        <button type="button" @click="pilihTampilan('guru')" :class="tampilan === 'guru' ? 'bg-slate-800 text-white' : 'bg-white text-slate-600 hover:bg-slate-50'" class="border-l border-slate-300 px-3 py-2" title="Satu kartu per guru (nyaman di HP)">Per guru</button>
+                    </div>
+                    <?php if (! $terkunci): ?>
+                        <div class="inline-flex overflow-hidden rounded-lg border border-slate-300 text-xs font-semibold" role="group" aria-label="Fungsi klik pada sel">
+                            <button type="button" @click="mode = 'klik'" :class="mode === 'klik' ? 'bg-brand-700 text-white' : 'bg-white text-slate-600 hover:bg-slate-50'" class="px-3 py-2">Klik = nyala/mati</button>
+                            <button type="button" @click="mode = 'khusus'" :class="mode === 'khusus' ? 'bg-brand-700 text-white' : 'bg-white text-slate-600 hover:bg-slate-50'" class="border-l border-slate-300 px-3 py-2" title="Untuk layar sentuh: ketuk sel lalu isi jumlah lembar khusus">Klik = angka khusus</button>
+                        </div>
+                    <?php endif; ?>
+                <?php endif; ?>
+                <input type="search" x-model="cari" placeholder="Cari nama guru…" class="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm outline-none focus:border-brand-500 sm:w-56" aria-label="Cari nama guru">
+            </div>
         </div>
 
         <?php if (! $adaCeklis): ?>
             <div class="px-5 py-10 text-center">
                 <p class="text-base font-bold text-slate-700">Ceklis belum diisi</p>
-                <p class="mx-auto mt-1 max-w-xl text-sm text-slate-500">Pilih salah satu: <b>Isi dari data pengampu</b> (otomatis dari Master), <b>Impor dari Excel KOREKSI</b> (persis berkas sekolah), atau <b>Salin dari honor lain</b>. Setelah itu klik sel kelas untuk mengoreksi per guru.</p>
+                <p class="mx-auto mt-1 max-w-xl text-sm text-slate-500">Pilih salah satu: <b>Isi dari SKBM</b> (disarankan &mdash; sesuai SK Pembagian Tugas Mengajar<?= $skbm['guru'] > 0 ? ', SKBM ' . esc($skbm['tahun']) . ' sudah berisi ' . (int) $skbm['guru'] . ' guru' : '' ?>), <b>Isi dari data pengampu</b> (otomatis dari Master), <b>Impor dari Excel KOREKSI</b> (persis berkas sekolah), atau <b>Salin dari honor lain</b>. Setelah itu klik sel kelas untuk mengoreksi per guru.</p>
             </div>
         <?php else: ?>
-            <div class="max-h-[78vh] overflow-auto">
+            <!-- Tampilan "Per guru": kartu dibangun dari tabel oleh kartu-guru.js (hanya saat dipilih) -->
+            <div id="kartu-guru" x-cloak x-show="tampilan === 'guru'" class="space-y-2 p-3 sm:p-4"></div>
+            <div x-show="tampilan === 'matriks'" class="max-h-[78vh] overflow-auto">
                 <table class="border-separate border-spacing-0 text-xs">
                     <thead>
                         <tr class="text-slate-700">
@@ -274,14 +388,14 @@ $jmlBeda = (int) ($banding['beda'] ?? 0);
                     <tbody @click="klikSel($event)" @contextmenu="klikKanan($event)">
                         <?php foreach ($guru as $g): $jml = count($g['mapel']); ?>
                             <?php foreach ($g['mapel'] as $i => $x): ?>
-                                <tr data-nama="<?= esc(mb_strtolower($g['nama']), 'attr') ?>" data-baris="<?= (int) $g['baris_id'] ?>" data-mapel="<?= (int) $x['id'] ?>" class="hover:bg-slate-50">
+                                <tr data-nama="<?= esc(mb_strtolower($g['nama']), 'attr') ?>" data-judul="<?= esc($g['nama'], 'attr') ?>" data-no="<?= (int) $g['no'] ?>" data-kode="<?= esc($x['kode'], 'attr') ?>" data-baris="<?= (int) $g['baris_id'] ?>" data-mapel="<?= (int) $x['id'] ?>" class="hover:bg-slate-50">
                                     <?php if ($i === 0): ?>
                                         <td rowspan="<?= $jml ?>" class="border-b border-r border-slate-200 bg-white px-2 py-1 text-center align-middle tabular-nums text-slate-500 md:sticky md:left-0 md:z-[5]"><?= (int) $g['no'] ?></td>
                                         <td rowspan="<?= $jml ?>" class="border-b border-r border-slate-200 bg-white px-2 py-1 align-middle md:sticky md:left-[2.5rem] md:z-[5]">
                                             <span class="block text-sm font-semibold text-slate-800"><?= esc($g['nama']) ?></span>
                                             <span class="block text-[11px] text-slate-400"><?= esc($g['jabatan']) ?></span>
                                             <?php if (! $terkunci): ?>
-                                                <form method="post" action="<?= $base ?>/guru/<?= (int) $g['baris_id'] ?>/hapus" class="mt-0.5">
+                                                <form data-aksi-guru method="post" action="<?= $base ?>/guru/<?= (int) $g['baris_id'] ?>/hapus" class="mt-0.5">
                                                     <?= csrf_field() ?><input type="hidden" name="periode_id" value="<?= (int) $periode['id'] ?>">
                                                     <button type="submit" onclick="return confirm('Keluarkan <?= esc($g['nama'], 'js') ?> dari ceklis? (angka Koreksi di honor tidak berubah)')" class="text-[11px] font-semibold text-red-500 hover:underline">keluarkan dari ceklis</button>
                                                 </form>
@@ -293,7 +407,7 @@ $jmlBeda = (int) ($banding['beda'] ?? 0);
                                         <div class="flex items-center justify-between gap-2">
                                             <button type="button" data-id="<?= (int) $x['id'] ?>" data-nama="<?= esc($x['nama'], 'attr') ?>" @click="ubahNama($el)" <?= $terkunci ? 'disabled' : '' ?> title="Klik untuk mengganti nama mapel" class="min-w-0 truncate text-left text-slate-700 <?= $terkunci ? '' : 'hover:text-brand-700 hover:underline' ?>"><?= esc($x['nama']) ?></button>
                                             <?php if (! $terkunci): ?>
-                                                <form method="post" action="<?= $base ?>/mapel/<?= (int) $x['id'] ?>/hapus" class="shrink-0">
+                                                <form data-aksi-mapel method="post" action="<?= $base ?>/mapel/<?= (int) $x['id'] ?>/hapus" class="shrink-0">
                                                     <?= csrf_field() ?><input type="hidden" name="periode_id" value="<?= (int) $periode['id'] ?>">
                                                     <button type="submit" onclick="return confirm('Hapus baris mapel ini beserta kelasnya?')" class="text-red-400 hover:text-red-600" aria-label="Hapus baris mapel <?= esc($x['nama'], 'attr') ?>" title="Hapus baris mapel">&times;</button>
                                                 </form>
@@ -332,5 +446,6 @@ $jmlBeda = (int) ($banding['beda'] ?? 0);
 <?= $this->endSection() ?>
 
 <?= $this->section('scripts') ?>
+<script defer src="<?= base_url('assets/js/admin/kartu-guru.js') ?>?v=<?= @filemtime(FCPATH . 'assets/js/admin/kartu-guru.js') ?>"></script>
 <script defer src="<?= base_url('assets/js/admin/koreksi-grid.js') ?>?v=<?= @filemtime(FCPATH . 'assets/js/admin/koreksi-grid.js') ?>"></script>
 <?= $this->endSection() ?>

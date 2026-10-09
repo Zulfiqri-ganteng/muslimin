@@ -544,6 +544,7 @@ $routes->group('admin', static function ($routes) {
         $routes->post('ujian/(:segment)/honor/koreksi/mapel/(:num)/hapus', 'Admin\UjianKoreksi::hapusMapel/$1/$2', ['filter' => 'csrf']);
         $routes->post('ujian/(:segment)/honor/koreksi/guru/(:num)/hapus', 'Admin\UjianKoreksi::hapusGuru/$1/$2', ['filter' => 'csrf']);
         $routes->post('ujian/(:segment)/honor/koreksi/isi-pengampu', 'Admin\UjianKoreksi::isiPengampu/$1', ['filter' => 'csrf']);
+        $routes->post('ujian/(:segment)/honor/koreksi/isi-skbm', 'Admin\UjianKoreksi::isiSkbm/$1', ['filter' => 'csrf']);
         $routes->post('ujian/(:segment)/honor/koreksi/salin', 'Admin\UjianKoreksi::salin/$1', ['filter' => 'csrf']);
         $routes->post('ujian/(:segment)/honor/koreksi/kosongkan', 'Admin\UjianKoreksi::kosongkan/$1', ['filter' => 'csrf']);
         $routes->post('ujian/(:segment)/honor/koreksi/segarkan-peserta', 'Admin\UjianKoreksi::segarkanPeserta/$1', ['filter' => 'csrf']);
@@ -574,6 +575,23 @@ $routes->group('admin', static function ($routes) {
         $routes->post('honor/pengaturan/komponen/(:num)/hapus', 'Admin\HonorPengaturan::hapusKomponen/$1', ['filter' => 'csrf']);
         $routes->post('honor/pengaturan/panitia', 'Admin\HonorPengaturan::simpanPanitia', ['filter' => 'csrf']);
         $routes->post('honor/pengaturan/tanda-tangan', 'Admin\HonorPengaturan::simpanTandaTangan', ['filter' => 'csrf']);
+
+        // ===== SKBM (SK Pembagian Tugas Mengajar per tahun ajaran) — KHUSUS ADMIN: sumber ceklis Koreksi honor =====
+        // Tidak ada di daftar hak Operator/Waka Hubin (Config\Peran) → ditolak penjaga rute; controller memeriksa ulang.
+        $routes->get('skbm', 'Admin\Skbm::index');
+        $routes->get('skbm/bandingkan', 'Admin\Skbm::bandingkan');
+        $routes->get('skbm/xlsx', 'Admin\Skbm::xlsx');
+        $routes->get('skbm/impor', 'Admin\Skbm::impor');
+        $routes->post('skbm/impor/unggah', 'Admin\Skbm::imporUnggah', ['filter' => 'csrf']);
+        $routes->post('skbm/impor/terapkan', 'Admin\Skbm::imporTerapkan', ['filter' => 'csrf']);
+        $routes->post('skbm/sel', 'Admin\Skbm::sel', ['filter' => 'csrf']);
+        $routes->post('skbm/mapel', 'Admin\Skbm::tambahMapel', ['filter' => 'csrf']);
+        $routes->post('skbm/mapel/(:num)/ubah', 'Admin\Skbm::ubahMapel/$1', ['filter' => 'csrf']);
+        $routes->post('skbm/mapel/(:num)/hapus', 'Admin\Skbm::hapusMapel/$1', ['filter' => 'csrf']);
+        $routes->post('skbm/guru/(:num)/hapus', 'Admin\Skbm::hapusGuru/$1', ['filter' => 'csrf']);
+        $routes->post('skbm/nomor', 'Admin\Skbm::nomor', ['filter' => 'csrf']);
+        $routes->post('skbm/salin', 'Admin\Skbm::salin', ['filter' => 'csrf']);
+        $routes->post('skbm/kosongkan', 'Admin\Skbm::kosongkan', ['filter' => 'csrf']);
 
         // ===== PENJADWALAN =====
         $routes->get('jadwal', 'Admin\Jadwal::index');
@@ -866,6 +884,38 @@ $routes->group('api/v1', ['namespace' => 'App\Controllers\Api', 'filter' => 'cor
         $routes->get('admin/ujian/(:segment)/pembuat-soal', 'Admin\Honor::pembuatSoal/$1');
         $routes->post('admin/ujian/(:segment)/pembuat-soal', 'Admin\Honor::pembuatSoalTambah/$1');
         $routes->delete('admin/ujian/(:segment)/pembuat-soal/(:num)', 'Admin\Honor::pembuatSoalCabut/$1/$2');
+
+        // ---------- KOREKSI HONOR (ceklis lembar jawaban per guru × mapel × kelas; KHUSUS ADMIN; kontrak: docs/API-SKBM-KOREKSI.md) ----------
+        // Di bawah honor yang sudah dibuat; `tp` seperti endpoint honor lain. Impor Excel KOREKSI hanya di web.
+        $routes->get('admin/ujian/(:segment)/honor/koreksi', 'Admin\Koreksi::show/$1');
+        $routes->get('admin/ujian/(:segment)/honor/koreksi/xlsx', 'Admin\Koreksi::xlsx/$1');
+        $routes->post('admin/ujian/(:segment)/honor/koreksi/sel', 'Admin\Koreksi::sel/$1');
+        $routes->post('admin/ujian/(:segment)/honor/koreksi/peserta', 'Admin\Koreksi::peserta/$1');
+        $routes->post('admin/ujian/(:segment)/honor/koreksi/mapel', 'Admin\Koreksi::tambahMapel/$1');
+        $routes->post('admin/ujian/(:segment)/honor/koreksi/mapel/(:num)', 'Admin\Koreksi::ubahMapel/$1/$2');
+        $routes->delete('admin/ujian/(:segment)/honor/koreksi/mapel/(:num)', 'Admin\Koreksi::hapusMapel/$1/$2');
+        $routes->delete('admin/ujian/(:segment)/honor/koreksi/guru/(:num)', 'Admin\Koreksi::hapusGuru/$1/$2');
+        $routes->post('admin/ujian/(:segment)/honor/koreksi/isi-skbm', 'Admin\Koreksi::isiSkbm/$1');
+        $routes->post('admin/ujian/(:segment)/honor/koreksi/isi-pengampu', 'Admin\Koreksi::isiPengampu/$1');
+        $routes->post('admin/ujian/(:segment)/honor/koreksi/salin', 'Admin\Koreksi::salin/$1');
+        $routes->post('admin/ujian/(:segment)/honor/koreksi/kosongkan', 'Admin\Koreksi::kosongkan/$1');
+        $routes->post('admin/ujian/(:segment)/honor/koreksi/segarkan-peserta', 'Admin\Koreksi::segarkanPeserta/$1');
+        $routes->post('admin/ujian/(:segment)/honor/koreksi/terapkan', 'Admin\Koreksi::terapkan/$1');
+
+        // ---------- SKBM (SK Pembagian Tugas Mengajar per tahun ajaran; KHUSUS ADMIN; kontrak: docs/API-SKBM-KOREKSI.md) ----------
+        // `tahun` = "2026/2027" di query (GET/DELETE) atau body (POST). Impor Excel SKBM hanya di web. Rute literal sebelum pola (:num).
+        $routes->get('admin/skbm', 'Admin\Skbm::show');
+        $routes->get('admin/skbm/opsi', 'Admin\Skbm::opsi');
+        $routes->get('admin/skbm/bandingkan', 'Admin\Skbm::bandingkan');
+        $routes->get('admin/skbm/xlsx', 'Admin\Skbm::xlsx');
+        $routes->post('admin/skbm/sel', 'Admin\Skbm::sel');
+        $routes->post('admin/skbm/mapel', 'Admin\Skbm::tambahMapel');
+        $routes->post('admin/skbm/mapel/(:num)', 'Admin\Skbm::ubahMapel/$1');
+        $routes->delete('admin/skbm/mapel/(:num)', 'Admin\Skbm::hapusMapel/$1');
+        $routes->delete('admin/skbm/guru/(:num)', 'Admin\Skbm::hapusGuru/$1');
+        $routes->post('admin/skbm/nomor', 'Admin\Skbm::nomor');
+        $routes->post('admin/skbm/salin', 'Admin\Skbm::salin');
+        $routes->post('admin/skbm/kosongkan', 'Admin\Skbm::kosongkan');
 
         $routes->get('admin/ujian/(:segment)/rekap', 'Admin\Ujian::rekap/$1');
         $routes->post('admin/ujian/(:segment)/periode', 'Admin\Ujian::simpanPeriode/$1');

@@ -1,13 +1,12 @@
 /**
- * Ceklis Koreksi honor (Ujian) — matriks guru × mapel × kelas dengan simpan otomatis (Alpine).
+ * SKBM (SK Pembagian Tugas Mengajar) — matriks guru × mapel × kelas dengan simpan otomatis (Alpine).
  *
- * Klik sel = nyalakan/matikan kelas pada baris mapel itu; klik kanan = angka lembar khusus untuk sel itu; ubah angka
- * "peserta" sebuah kelas = semua sel kelas itu ikut. Setiap perubahan dikirim ke server (POST JSON); server menyimpan lalu
- * MENGEMBALIKAN angka resmi (total tiap baris mapel, tiap guru, tiap kelas, dan keseluruhan). Layar hanya menampilkan
- * angka dari server — tidak ada hitungan sendiri di sini, jadi tak mungkin berbeda dari Excel. Pengiriman diantre satu per
- * satu karena token CSRF berganti setiap POST (token baru dibawa balasan).
+ * Klik sel = nyalakan/matikan kelas pada baris mapel itu; klik kanan (atau mode "Klik = isi JP", untuk layar sentuh) = isi JP
+ * per minggu. Setiap perubahan dikirim ke server (POST JSON); server menyimpan lalu MENGEMBALIKAN angka resmi (JP tiap baris
+ * mapel, tiap guru, tiap kelas, dan keseluruhan). Layar hanya menampilkan angka dari server — tidak ada hitungan sendiri di sini.
+ * Pengiriman diantre satu per satu; token CSRF terkini dibawa balasan dan dipasang ke semua isian token di halaman.
  *
- * Konfigurasi lewat data-config pada elemen akar (lihat views/admin/ujian/koreksi.php).
+ * Konfigurasi lewat data-config pada elemen akar (lihat views/admin/skbm/index.php).
  */
 document.addEventListener('alpine:init', function () {
     'use strict';
@@ -19,11 +18,11 @@ document.addEventListener('alpine:init', function () {
         var e = document.getElementById(id);
         if (e) { e.textContent = teks; }
     }
-    var KELAS_AKTIF = ['bg-sky-400', 'text-white', 'font-semibold'];
+    var KELAS_JP = ['bg-sky-400', 'text-white', 'font-semibold'];
+    var KELAS_TANPA_JP = ['bg-amber-300', 'text-amber-900', 'font-semibold'];
     var KELAS_MATI = ['bg-slate-200'];
-    var KELAS_KHUSUS = ['ring-2', 'ring-inset', 'ring-amber-400'];
 
-    Alpine.data('koreksiGrid', function () {
+    Alpine.data('skbmGrid', function () {
         var dasar = {
             cfg: {},
             panel: '',
@@ -42,9 +41,8 @@ document.addEventListener('alpine:init', function () {
                 window.addEventListener('beforeunload', function (e) {
                     if (self.tertunda > 0) { e.preventDefault(); e.returnValue = ''; }
                 });
-                if (this.cfg.panelAwal) { this.panel = this.cfg.panelAwal; }
                 var h = window.location.hash.replace('#', '');
-                if (['isi-skbm', 'isi', 'impor', 'salin', 'tambah', 'terapkan', 'kosong'].indexOf(h) >= 0) { this.panel = h; }
+                if (['impor', 'salin', 'tambah', 'kosong'].indexOf(h) >= 0) { this.panel = h; }
                 this.mulaiTampilan();
             },
 
@@ -56,23 +54,22 @@ document.addEventListener('alpine:init', function () {
                 this.timer = setTimeout(function () { self.pesan = ''; }, galat ? 6000 : 1500);
             },
 
-            // Token CSRF berganti setiap POST. Form lain di halaman (Isi dari pengampu, Terapkan, Salin, …) dibuat dengan token saat
-            // halaman dimuat; tanpa disegarkan, form itu ditolak ("Halaman ini sudah kedaluwarsa"). Token baru dari balasan server
-            // dipasang ke SEMUA isian token di halaman.
+            // Form lain di halaman (Impor, Salin, Tambah, Hapus, …) dibuat dengan token saat halaman dimuat; token terkini dari
+            // balasan server dipasang ke SEMUA isian token supaya form itu tidak ditolak ("Halaman ini sudah kedaluwarsa").
             segarkanToken: function (baru) {
                 var nama = this.cfg.csrfName;
                 document.querySelectorAll('input[name="' + nama + '"]').forEach(function (i) { i.value = baru; });
             },
 
-            // ------------------------------------------------------------------ kirim (antre, token CSRF bergilir)
+            // ------------------------------------------------------------------ kirim (antre)
             kirim: function (url, data) {
                 var self = this;
                 this.tertunda++;
                 var tugas = function () {
-                    var token = document.getElementById('koreksi-csrf');
+                    var token = document.getElementById('skbm-csrf');
                     var body = new URLSearchParams();
                     body.append(self.cfg.csrfName, token ? token.value : '');
-                    body.append('periode_id', self.cfg.periodeId);
+                    body.append('tahun', self.cfg.tahun);
                     Object.keys(data).forEach(function (k) { body.append(k, data[k]); });
                     return fetch(url, {
                         method: 'POST',
@@ -99,92 +96,67 @@ document.addEventListener('alpine:init', function () {
 
             // ------------------------------------------------------------------ angka resmi dari server
             pakaiRingkas: function (j) {
-                if (typeof j.total === 'number') { setTeks('tot-semua', ribuan(j.total)); }
+                if (typeof j.total === 'number') { setTeks('tot-semua', ribuan(j.total)); setTeks('ringkas-total', ribuan(j.total)); }
                 Object.keys(j.per_mapel || {}).forEach(function (id) { setTeks('mt-' + id, ribuan(j.per_mapel[id])); setTeks('cm-' + id, ribuan(j.per_mapel[id])); });
                 Object.keys(j.per_baris || {}).forEach(function (id) { setTeks('gt-' + id, ribuan(j.per_baris[id])); setTeks('ct-' + id, ribuan(j.per_baris[id])); });
-                Object.keys(j.per_kelas || {}).forEach(function (id) { setTeks('kc-' + id, String(j.per_kelas[id].jml)); });
+                Object.keys(j.per_kelas || {}).forEach(function (id) {
+                    setTeks('kc-' + id, String(j.per_kelas[id].jml));
+                    setTeks('kj-' + id, String(j.per_kelas[id].jp));
+                });
                 if (typeof j.jumlah_guru === 'number') { setTeks('ringkas-guru', String(j.jumlah_guru)); }
                 if (typeof j.jumlah_mapel === 'number') { setTeks('ringkas-mapel', String(j.jumlah_mapel)); }
-                if (typeof j.total === 'number') { setTeks('ringkas-total', ribuan(j.total)); }
+                if (typeof j.jumlah_sel === 'number') { setTeks('ringkas-sel', String(j.jumlah_sel)); }
+                if (typeof j.tanpa_jp === 'number') { setTeks('ringkas-tanpajp', String(j.tanpa_jp)); }
             },
 
-            gayaSel: function (td, aktif, nilai, khusus) {
+            gayaSel: function (td, aktif, jp) {
+                var adaJp = aktif && jp !== null && jp !== undefined;
+                var tanpaJp = aktif && !adaJp;
                 td.dataset.aktif = aktif ? '1' : '0';
-                td.dataset.khusus = aktif && khusus ? '1' : '';
-                td.textContent = aktif ? String(nilai) : '';
-                KELAS_AKTIF.forEach(function (c) { td.classList.toggle(c, aktif); });
+                td.dataset.jp = adaJp ? String(jp) : '';
+                td.textContent = !aktif ? '' : (adaJp ? String(jp) : '✓');
+                KELAS_JP.forEach(function (c) { td.classList.toggle(c, adaJp); });
+                KELAS_TANPA_JP.forEach(function (c) { td.classList.toggle(c, tanpaJp); });
                 KELAS_MATI.forEach(function (c) { td.classList.toggle(c, !aktif); });
-                KELAS_KHUSUS.forEach(function (c) { td.classList.toggle(c, aktif && khusus); });
                 this.segarkanChip(td);
             },
 
             // ------------------------------------------------------------------ klik sel
             klikSel: function (e) {
                 var td = e.target.closest('td[data-k]');
-                if (!td || this.cfg.terkunci) { return; }
-                // Mode "Klik = angka khusus" (layar sentuh, tanpa klik kanan): ketuk sel langsung menanyakan jumlah lembarnya.
-                if (this.mode === 'khusus') { this.tanyaJumlah(td); return; }
+                if (!td) { return; }
+                if (this.mode === 'jp') { this.tanyaJp(td); return; }
                 this.kirimSel(td, td.closest('tr').dataset.mapel, td.dataset.aktif !== '1', null);
             },
 
             klikKanan: function (e) {
                 var td = e.target.closest('td[data-k]');
-                if (!td || this.cfg.terkunci) { return; }
+                if (!td) { return; }
                 e.preventDefault();
-                this.tanyaJumlah(td);
+                this.tanyaJp(td);
             },
 
-            tanyaJumlah: function (td) {
-                var awal = td.dataset.khusus === '1' ? td.textContent.trim() : '';
-                var v = window.prompt('Jumlah lembar KHUSUS untuk sel ini.\nKosongkan = ikut jumlah peserta kelas.', awal);
+            tanyaJp: function (td) {
+                var maks = Number(this.cfg.maksJp) || 40;
+                var v = window.prompt('JP per minggu untuk sel ini (1–' + maks + ').\nKosongkan = JP belum diisi.', td.dataset.jp || '');
                 if (v === null) { return; }
                 v = v.trim();
-                if (!/^[0-9]*$/.test(v)) { this.tampil('Isi dengan angka bulat saja (tanpa huruf, koma, atau minus).', true); return; }
+                if (!/^[0-9]*$/.test(v) || (v !== '' && (Number(v) < 1 || Number(v) > maks))) {
+                    this.tampil('Isi JP dengan angka bulat 1–' + maks + ' (atau kosongkan).', true);
+                    return;
+                }
                 this.kirimSel(td, td.closest('tr').dataset.mapel, true, v);
             },
 
-            kirimSel: function (td, mapel, aktif, jumlah) {
+            kirimSel: function (td, mapel, aktif, jp) {
                 var self = this;
                 var data = { mapel: mapel, kelas: td.dataset.k, aktif: aktif ? '1' : '0' };
-                if (jumlah !== null) { data.jumlah = jumlah; }
+                if (jp !== null) { data.jp = jp; }
                 td.classList.add('opacity-50');
                 this.kirim(this.cfg.urlSel, data).then(function (j) {
                     td.classList.remove('opacity-50');
                     if (!j.ok) { self.tampil(j.pesan || 'Gagal menyimpan.', true); return; }
-                    var peserta = j.per_kelas && j.per_kelas[td.dataset.k] ? j.per_kelas[td.dataset.k].peserta : null;
-                    self.gayaSel(td, aktif, j.nilai, aktif && peserta !== null && Number(j.nilai) !== Number(peserta));
-                    self.pakaiRingkas(j);
-                    self.tampil('Tersimpan.');
-                });
-            },
-
-            // ------------------------------------------------------------------ peserta per kelas
-            simpanPeserta: function (el) {
-                var self = this;
-                var awal = el.dataset.awal || '';
-                var v = el.value.trim();
-                if (v === awal) { return; }
-                if (!/^[0-9]*$/.test(v)) {
-                    el.value = awal;
-                    this.tampil('Isi dengan angka bulat saja (tanpa huruf, koma, atau minus).', true);
-                    return;
-                }
-                el.classList.add('opacity-50');
-                this.kirim(this.cfg.urlPeserta, { kelas: el.dataset.kelas, nilai: v }).then(function (j) {
-                    el.classList.remove('opacity-50');
-                    if (!j.ok) { el.value = awal; self.tampil(j.pesan || 'Gagal menyimpan.', true); return; }
-                    var info = (j.per_kelas || {})[el.dataset.kelas];
-                    if (info) {
-                        el.value = String(info.peserta);
-                        el.dataset.awal = String(info.peserta);
-                        el.classList.toggle('border-amber-400', !!info.manual);
-                        el.classList.toggle('bg-amber-50', !!info.manual);
-                        // semua sel kelas ini yang memakai angka peserta ikut berubah
-                        self.$root.querySelectorAll('td[data-k="' + el.dataset.kelas + '"][data-aktif="1"]').forEach(function (td) {
-                            if (td.dataset.khusus !== '1') { td.textContent = String(info.peserta); }
-                        });
-                        self.segarkanChipKelas(el.dataset.kelas);
-                    }
+                    self.gayaSel(td, aktif, typeof j.jp === 'number' ? j.jp : null);
                     self.pakaiRingkas(j);
                     self.tampil('Tersimpan.');
                 });
@@ -193,8 +165,7 @@ document.addEventListener('alpine:init', function () {
             // ------------------------------------------------------------------ ubah nama mapel
             ubahNama: function (btn) {
                 var self = this;
-                if (this.cfg.terkunci) { return; }
-                var baru = window.prompt('Nama mata pelajaran (tulis - bila guru ini tidak mengoreksi mapel):', btn.dataset.nama);
+                var baru = window.prompt('Nama mata pelajaran (tulis - bila guru ini tidak mengampu mapel):', btn.dataset.nama);
                 if (baru === null) { return; }
                 baru = baru.trim();
                 if (baru === '' || baru === btn.dataset.nama) { return; }
@@ -209,6 +180,20 @@ document.addEventListener('alpine:init', function () {
                 });
             },
 
+            // ------------------------------------------------------------------ tambah baris mapel untuk guru yang sudah ada
+            tambahUntuk: function (guruId) {
+                var self = this;
+                this.panel = 'tambah';
+                this.$nextTick(function () {
+                    var s = self.$refs.pilihGuru;
+                    if (s) { s.value = String(guruId); }
+                    var p = document.getElementById('tambah');
+                    if (p) { p.scrollIntoView({ behavior: 'smooth', block: 'center' }); }
+                    var n = document.getElementById('s-mapel');
+                    if (n) { n.focus({ preventScroll: true }); }
+                });
+            },
+
             // ------------------------------------------------------------------ saring nama guru
             saring: function () {
                 var q = this.cari.trim().toLowerCase();
@@ -219,6 +204,6 @@ document.addEventListener('alpine:init', function () {
             }
         };
         // tampilan "Per guru" (kartu + chip kelas) dipakai bersama SKBM & Koreksi: lihat kartu-guru.js
-        return Object.assign(dasar, window.KartuGuru({ nama: 'koreksi', kunciGuru: 'baris' }));
+        return Object.assign(dasar, window.KartuGuru({ nama: 'skbm', kunciGuru: 'guru' }));
     });
 });

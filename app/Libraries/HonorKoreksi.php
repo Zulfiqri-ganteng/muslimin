@@ -466,6 +466,70 @@ final class HonorKoreksi
             return $this->gagal('Tidak ada data pengampu untuk penerima honor ini.');
         }
 
+        return $this->tulisCeklis($dokumenId, $per, $ganti, 'data pengampu', $tanpaPenerima === [] ? '' : ' ' . count($tanpaPenerima) . ' guru pengampu belum jadi penerima honor (tidak dimasukkan).');
+    }
+
+    /**
+     * Isi ceklis dari SKBM (Lampiran 3 SK Pembagian Tugas Mengajar) tahun ajaran honor ini — sumber yang disarankan, karena
+     * SKBM adalah salinan SK resmi (lihat Libraries\Skbm). Hanya penerima honor yang ditautkan ke Master Guru; satu baris
+     * per nama mapel. Penerima yang sudah punya baris mapel DILEWATI, kecuali $ganti = true (ceklis lama dibuang dulu).
+     */
+    public function isiDariSkbm(int $dokumenId, bool $ganti = false): array
+    {
+        if (($salah = $this->bolehUbah($dokumenId)) !== null) {
+            return $salah;
+        }
+        if (! $this->db->tableExists('skbm_mapel') || ! $this->db->tableExists('skbm_sel')) {
+            return $this->gagal('Fitur SKBM belum aktif di server ini: migrasi database belum dijalankan (php spark migrate).');
+        }
+        $tahun = $this->tahunHonor($dokumenId);
+        $skbm  = new Skbm($this->db);
+        if ($tahun === null || ! $skbm->ada($tahun)) {
+            return $this->gagal('SKBM tahun ajaran ' . ($tahun ?? '?') . ' belum diisi. Isi dulu di menu Guru → SKBM.');
+        }
+        $peta = GuruModel::petaOrang();
+        $orangKeBaris = [];
+        foreach ($this->db->table('honor_baris')->select('id, guru_id')->where('dokumen_id', $dokumenId)->where('guru_id IS NOT NULL')->orderBy('urut', 'ASC')->orderBy('id', 'ASC')->get()->getResultArray() as $b) {
+            $o = $peta[(int) $b['guru_id']] ?? (int) $b['guru_id'];
+            $orangKeBaris[$o] ??= (int) $b['id'];
+        }
+        if ($orangKeBaris === []) {
+            return $this->gagal('Belum ada penerima honor yang ditautkan ke Master Guru. Tambahkan penerima dulu.');
+        }
+        $per = [];
+        $tanpaPenerima = [];
+        foreach ($skbm->barisUntukHonor($tahun) as $orang => $daftar) {
+            if (! isset($orangKeBaris[$orang])) {
+                $tanpaPenerima[$orang] = true;
+                continue;
+            }
+            foreach ($daftar as $x) {
+                $per[$orangKeBaris[$orang]][mb_strtolower($x['nama'])] = ['nama' => $x['nama'], 'mapel_id' => (int) ($x['mapel_id'] ?? 0), 'kelas' => array_fill_keys($x['kelas'], true)];
+            }
+        }
+        if ($per === []) {
+            return $this->gagal('Tidak ada guru di SKBM ' . $tahun . ' yang menjadi penerima honor ini.');
+        }
+
+        return $this->tulisCeklis($dokumenId, $per, $ganti, 'SKBM ' . $tahun, $tanpaPenerima === [] ? '' : ' ' . count($tanpaPenerima) . ' guru di SKBM belum jadi penerima honor (tidak dimasukkan).');
+    }
+
+    /** Tahun ajaran honor (dari periode ujiannya), atau null. */
+    public function tahunHonor(int $dokumenId): ?string
+    {
+        $r = $this->db->table('honor_dokumen d')->select('p.tahun_ajaran')->join('ujian_periode p', 'p.id = d.periode_id')->where('d.id', $dokumenId)->get()->getRowArray();
+
+        return $r === null ? null : (string) $r['tahun_ajaran'];
+    }
+
+    /**
+     * Tulis ceklis dari bahan siap: baris_id => kunci mapel => ['nama','mapel_id','kelas'=>[kelas_id => true]]. Dipakai semua
+     * sumber isi otomatis (pengampu, SKBM). Penerima yang sudah punya isi dilewati kecuali $ganti.
+     *
+     * @param array<int, array<string, array{nama:string, mapel_id:int, kelas:array<int,bool>}>> $per
+     */
+    private function tulisCeklis(int $dokumenId, array $per, bool $ganti, string $sumber, string $catatan = ''): array
+    {
         $now = date('Y-m-d H:i:s');
         $this->db->transStart();
         if ($ganti) {
@@ -498,17 +562,15 @@ final class HonorKoreksi
         }
         $this->db->transComplete();
         if (! $this->db->transStatus()) {
-            return $this->gagal('Gagal mengisi ceklis dari data pengampu. Tidak ada yang berubah.');
+            return $this->gagal("Gagal mengisi ceklis dari $sumber. Tidak ada yang berubah.");
         }
-        $this->audit('create', 'honor_koreksi_mapel', $dokumenId, 'Isi ceklis koreksi honor ' . $this->label($dokumenId) . " dari data pengampu: $nGuru guru, $nMapel baris mapel, $nSel sel" . ($ganti ? ' (ceklis lama diganti)' : ''));
+        $this->audit('create', 'honor_koreksi_mapel', $dokumenId, 'Isi ceklis koreksi honor ' . $this->label($dokumenId) . " dari $sumber: $nGuru guru, $nMapel baris mapel, $nSel sel" . ($ganti ? ' (ceklis lama diganti)' : ''));
 
-        $pesan = "Ceklis diisi dari data pengampu: $nGuru guru, $nMapel baris mapel, $nSel kelas.";
+        $pesan = "Ceklis diisi dari $sumber: $nGuru guru, $nMapel baris mapel, $nSel kelas.";
         if ($dilewati > 0) {
             $pesan .= " $dilewati guru dilewati karena sudah punya isi.";
         }
-        if ($tanpaPenerima !== []) {
-            $pesan .= ' ' . count($tanpaPenerima) . ' guru pengampu belum jadi penerima honor (tidak dimasukkan).';
-        }
+        $pesan .= $catatan;
 
         return ['ok' => true, 'pesan' => $pesan, 'guru' => $nGuru, 'mapel' => $nMapel, 'sel' => $nSel] + $this->ringkas($dokumenId);
     }

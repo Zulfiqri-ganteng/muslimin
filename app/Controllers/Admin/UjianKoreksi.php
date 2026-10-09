@@ -71,8 +71,17 @@ class UjianKoreksi extends UjianHonor
         $k  = new HonorKoreksi();
         $db = db_connect();
         $m  = $k->muat((int) $dok['id']);
+        // SKBM tahun ajaran honor ini (kode bisa terpasang sebelum migrasinya → tabel belum ada → dianggap belum aktif).
+        $skbm = ['aktif' => $db->tableExists('skbm_mapel') && $db->tableExists('skbm_sel'), 'tahun' => (string) $this->periode['tahun_ajaran'], 'guru' => 0, 'mapel' => 0, 'sel' => 0, 'url' => site_url('admin/skbm') . '?tahun=' . rawurlencode((string) $this->periode['tahun_ajaran'])];
+        if ($skbm['aktif']) {
+            $r = $db->query('SELECT COUNT(DISTINCT m.guru_id) AS guru, COUNT(DISTINCT m.id) AS mapel, COUNT(s.id) AS sel FROM skbm_mapel m LEFT JOIN skbm_sel s ON s.skbm_mapel_id = m.id WHERE m.tahun_ajaran = ?', [$skbm['tahun']])->getRowArray();
+            $skbm['guru']  = (int) ($r['guru'] ?? 0);
+            $skbm['mapel'] = (int) ($r['mapel'] ?? 0);
+            $skbm['sel']   = (int) ($r['sel'] ?? 0);
+        }
 
         return view('admin/ujian/koreksi', [
+            'skbm'      => $skbm,
             'title'     => 'Koreksi Honor',
             'slug'      => UjianPeriodeModel::keSlug((string) $this->periode['jenis']),
             'periode'   => $this->periode,
@@ -143,13 +152,19 @@ class UjianKoreksi extends UjianHonor
     /** POST …/koreksi/isi-pengampu */
     public function isiPengampu(string $slug = '')
     {
-        return $this->aksiForm($slug, fn (HonorKoreksi $k, int $dokId): array => $k->isiDariPengampu($dokId, (bool) $this->request->getPost('ganti')));
+        return $this->aksiForm($slug, fn (HonorKoreksi $k, int $dokId): array => $k->isiDariPengampu($dokId, (bool) $this->request->getPost('ganti')), 'terapkan');
+    }
+
+    /** POST …/koreksi/isi-skbm — isi ceklis dari SKBM (SK Pembagian Tugas Mengajar) tahun ajaran honor ini. */
+    public function isiSkbm(string $slug = '')
+    {
+        return $this->aksiForm($slug, fn (HonorKoreksi $k, int $dokId): array => $k->isiDariSkbm($dokId, (bool) $this->request->getPost('ganti')), 'terapkan');
     }
 
     /** POST …/koreksi/salin */
     public function salin(string $slug = '')
     {
-        return $this->aksiForm($slug, fn (HonorKoreksi $k, int $dokId): array => $k->salinDari($dokId, (int) $this->request->getPost('sumber'), (bool) $this->request->getPost('peserta'), (bool) $this->request->getPost('ganti')));
+        return $this->aksiForm($slug, fn (HonorKoreksi $k, int $dokId): array => $k->salinDari($dokId, (int) $this->request->getPost('sumber'), (bool) $this->request->getPost('peserta'), (bool) $this->request->getPost('ganti')), 'terapkan');
     }
 
     /** POST …/koreksi/kosongkan */
@@ -255,7 +270,7 @@ class UjianKoreksi extends UjianHonor
             return redirect()->to($this->urlHonor('/koreksi/impor'))->with('error', $hasil['pesan']);
         }
         session()->remove('koreksi_impor');
-        $r = redirect()->to($this->urlHonor('/koreksi'))->with('success', $hasil['pesan']);
+        $r = redirect()->to($this->urlHonor('/koreksi'))->with('success', $hasil['pesan'])->with('koreksi_panel', 'terapkan');
         $p = array_merge($sesi['payload']['peringatan'] ?? [], $hasil['ringkas']['peringatan'] ?? []);
 
         return $p !== [] ? $r->with('koreksi_peringatan', array_slice($p, 0, 12)) : $r;
@@ -298,9 +313,12 @@ class UjianKoreksi extends UjianHonor
         return $s;
     }
 
-    private function kembaliKoreksi(array $hasil): RedirectResponse
+    /** $panelBerikut: panel yang dibuka otomatis setelah aksi berhasil (langkah berikutnya, mis. 'terapkan' sesudah ceklis terisi). */
+    private function kembaliKoreksi(array $hasil, string $panelBerikut = ''): RedirectResponse
     {
-        return redirect()->to($this->urlHonor('/koreksi'))->with($hasil['ok'] ? 'success' : 'error', $hasil['pesan']);
+        $r = redirect()->to($this->urlHonor('/koreksi'))->with($hasil['ok'] ? 'success' : 'error', $hasil['pesan']);
+
+        return $hasil['ok'] && $panelBerikut !== '' ? $r->with('koreksi_panel', $panelBerikut) : $r;
     }
 
     /** @param callable(HonorKoreksi, int): array $kerja */
@@ -319,7 +337,7 @@ class UjianKoreksi extends UjianHonor
     }
 
     /** @param callable(HonorKoreksi, int): array $kerja */
-    private function aksiForm(string $slug, callable $kerja): RedirectResponse|ResponseInterface
+    private function aksiForm(string $slug, callable $kerja, string $panelBerikut = ''): RedirectResponse|ResponseInterface
     {
         if (($salah = $this->siapkan($slug)) !== null) {
             return $salah;
@@ -329,6 +347,6 @@ class UjianKoreksi extends UjianHonor
             return redirect()->to($this->urlHonor())->with('error', 'Buat honor dulu.');
         }
 
-        return $this->kembaliKoreksi($kerja(new HonorKoreksi(), (int) $dok['id']));
+        return $this->kembaliKoreksi($kerja(new HonorKoreksi(), (int) $dok['id']), $panelBerikut);
     }
 }
