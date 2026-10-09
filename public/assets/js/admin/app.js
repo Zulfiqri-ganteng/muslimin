@@ -238,6 +238,26 @@
                         self.loading = true;
                     });
                     window.addEventListener('pageshow', function () { self.loading = false; });
+                    this.$nextTick(function () { self.aturGulirMenu(); });
+                },
+                /* Daftar menu sidebar panjang (±60 item) dan tiap halaman baru memuatnya dari atas, sehingga
+                 * menu yang sedang dibuka sering tersembunyi di bawah. Posisi gulir diingat per tab
+                 * (sessionStorage) dan menu aktif dipastikan terlihat; bila di luar layar ditaruh di tengah. */
+                aturGulirMenu: function () {
+                    var nav = document.querySelector('aside nav[aria-label="Menu utama"]');
+                    if (!nav) { return; }
+                    var kunci = 'sb_gulir';
+                    window.addEventListener('pagehide', function () {
+                        try { sessionStorage.setItem(kunci, String(nav.scrollTop)); } catch (e) {}
+                    });
+                    try { nav.scrollTop = parseInt(sessionStorage.getItem(kunci) || '0', 10) || 0; } catch (e) {}
+                    var aktif = nav.querySelector('a[aria-current="page"]');
+                    if (!aktif) { return; }
+                    var atas = aktif.getBoundingClientRect().top - nav.getBoundingClientRect().top + nav.scrollTop;
+                    var tinggi = aktif.offsetHeight;
+                    if (atas < nav.scrollTop + 8 || atas + tinggi > nav.scrollTop + nav.clientHeight - 8) {
+                        nav.scrollTop = Math.max(0, atas - (nav.clientHeight - tinggi) / 2);
+                    }
                 },
                 /* Form yang hasilnya BERKAS unduhan (halaman tidak dimuat ulang, jadi 'pageshow' tak pernah
                  * terjadi). Server menyetel cookie `unduh_selesai=<token>` pada respons berkas; layar
