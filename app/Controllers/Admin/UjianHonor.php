@@ -104,6 +104,21 @@ class UjianHonor extends BaseController
         return $this->json($hasil, $hasil['ok'] ? 200 : 422);
     }
 
+    /** POST ujian/(:segment)/honor/baris/(:num)/pindah — JSON; pindahkan penerima ke nomor urut tertentu. */
+    public function pindah(string $slug = '', $barisId = 0)
+    {
+        if (($salah = $this->siapkan($slug, true)) !== null) {
+            return $salah;
+        }
+        $dok = $this->dokumen();
+        if ($dok === null) {
+            return $this->json(['ok' => false, 'pesan' => 'Buat honor dulu.'], 422);
+        }
+        $hasil = (new HonorDokumen())->pindahKe((int) $dok['id'], (int) $barisId, (int) $this->request->getPost('posisi'));
+
+        return $this->json($hasil, $hasil['ok'] ? 200 : 422);
+    }
+
     /** POST ujian/(:segment)/honor/nilai — JSON; simpan satu isian. */
     public function simpanNilai(string $slug = '')
     {

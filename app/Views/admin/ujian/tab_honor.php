@@ -89,11 +89,12 @@ $statusWarna = ['draf' => 'bg-slate-100 text-slate-600 border-slate-200', 'final
     $terkunci = $dok['status'] === 'dikunci';
     $nKomp    = count($komp);
     // Laptop: Nama+jabatan | komponen… | Total | hapus. Lebar minimum dihitung dari jumlah komponen (kolom Nama menempel saat digulir).
-    $kolom    = 'minmax(12rem,1.6fr) repeat(' . $nKomp . ',minmax(5.75rem,1fr)) minmax(7rem,.9fr) 2.25rem';
-    $minW     = 12 + 5.75 * $nKomp + 7 + 2.25 + 0.5 * ($nKomp + 2) + 1.5;
+    $kolom    = 'minmax(12rem,1.6fr) repeat(' . $nKomp . ',minmax(5.75rem,1fr)) minmax(7rem,.9fr) 5.75rem';
+    $minW     = 12 + 5.75 * $nKomp + 7 + 5.75 + 0.5 * ($nKomp + 2) + 1.5;
     $cfg      = [
         'urlNilai'    => $base . '/honor/nilai',
         'urlJabatan'  => $base . '/honor/baris/__ID__/jabatan',
+        'urlPindah'   => $base . '/honor/baris/__ID__/pindah',
         'periodeId'   => (int) $periode['id'],
         'csrfName'    => csrf_token(),
         'terkunci'    => $terkunci,
@@ -271,9 +272,11 @@ $statusWarna = ['draf' => 'bg-slate-100 text-slate-600 border-slate-200', 'final
                         <?= csrf_field() ?><input type="hidden" name="periode_id" value="<?= (int) $periode['id'] ?>">
                         <p class="mb-3 text-sm leading-relaxed text-slate-600">Angka diisi dari data sekolah sebagai <b>saran awal</b>. Tiap angka tetap bisa kamu ubah, dan isian yang <b>sudah kamu ubah tidak ditimpa</b>. Pengawas tidak dihitung otomatis (diketik sendiri).</p>
                         <div class="space-y-2">
-                            <?php foreach ($otoKomp as $k): $g = $honorGambaran[$k['sumber']] ?? ['orang' => 0, 'total' => 0]; ?>
+                            <?php foreach ($otoKomp as $k): $g = $honorGambaran[$k['sumber']] ?? ['orang' => 0, 'total' => 0];
+                                // Rapot di ASTS biasanya 0 (kolomnya tetap ada di rekap): jangan dicentang otomatis.
+                                $centang = $k['sumber'] !== 'rapot' || in_array($periode['jenis'], ['ASAS', 'ASAT'], true); ?>
                                 <label class="flex cursor-pointer items-start gap-2.5 rounded-lg border border-slate-200 bg-white px-3 py-2.5 text-sm">
-                                    <input type="checkbox" name="sumber[]" value="<?= esc($k['sumber'], 'attr') ?>" checked class="mt-0.5 h-4 w-4 rounded border-slate-300">
+                                    <input type="checkbox" name="sumber[]" value="<?= esc($k['sumber'], 'attr') ?>" <?= $centang ? 'checked' : '' ?> class="mt-0.5 h-4 w-4 rounded border-slate-300">
                                     <span class="min-w-0">
                                         <span class="block font-semibold text-slate-700"><?= esc($k['nama']) ?></span>
                                         <span class="block text-xs text-slate-500"><?= esc($penjelasan[$k['sumber']] ?? '') ?> — saat ini <?= (int) $g['orang'] ?> orang, total <?= $rp($g['total']) ?></span>
@@ -389,13 +392,27 @@ $statusWarna = ['draf' => 'bg-slate-100 text-slate-600 border-slate-200', 'final
                         </div>
 
                         <?php foreach ($baris as $i => $b): ?>
-                            <div data-baris-row data-nama="<?= esc(mb_strtolower((string) $b['nama']), 'attr') ?>"
+                            <div data-baris-row data-baris-id="<?= (int) $b['id'] ?>" data-nama="<?= esc(mb_strtolower((string) $b['nama']), 'attr') ?>"
                                  class="group mb-3 rounded-xl border border-slate-200 bg-white p-3 md:mb-0 md:items-center md:gap-2 md:rounded-none md:border-0 md:border-b md:border-slate-100 md:px-3 md:py-2 md:hover:bg-slate-50 md:grid md:[grid-template-columns:var(--kolom)]"
                                  style="--kolom: <?= $kolom ?>">
                                 <div class="md:sticky md:left-0 md:z-10 md:bg-white md:pr-2 md:group-hover:bg-slate-50">
                                     <div class="flex items-start justify-between gap-2">
-                                        <p class="min-w-0 text-sm font-semibold leading-snug text-slate-800"><span class="mr-1 font-normal text-slate-400"><?= $i + 1 ?>.</span><?= esc($b['nama']) ?></p>
+                                        <div class="flex min-w-0 items-start gap-1.5">
+                                            <?php if (! $terkunci): ?>
+                                                <input type="text" inputmode="numeric" value="<?= $i + 1 ?>" data-no data-baris="<?= (int) $b['id'] ?>" data-awal="<?= $i + 1 ?>" maxlength="3"
+                                                       aria-label="Nomor urut <?= esc($b['nama'], 'attr') ?>" title="Ketik nomor lalu Enter untuk memindahkan baris ini"
+                                                       @focus="$el.select()" @change="pindah($el)" @keydown.enter.prevent="$el.blur()"
+                                                       class="mt-px h-6 w-9 shrink-0 rounded border border-slate-200 bg-white text-center text-xs tabular-nums text-slate-500 outline-none focus:border-brand-500">
+                                            <?php else: ?>
+                                                <span class="font-normal text-slate-400"><?= $i + 1 ?>.</span>
+                                            <?php endif; ?>
+                                            <p class="min-w-0 text-sm font-semibold leading-snug text-slate-800"><?= esc($b['nama']) ?></p>
+                                        </div>
                                         <div class="flex shrink-0 gap-1.5 md:hidden">
+                                            <?php if (! $terkunci): ?>
+                                                <button type="button" @click="geser($el, -1)" data-baris="<?= (int) $b['id'] ?>" aria-label="Naikkan <?= esc($b['nama'], 'attr') ?>" class="rounded-lg border border-slate-200 px-2 py-1 text-xs font-semibold text-slate-600 hover:bg-slate-50">▲</button>
+                                                <button type="button" @click="geser($el, 1)" data-baris="<?= (int) $b['id'] ?>" aria-label="Turunkan <?= esc($b['nama'], 'attr') ?>" class="rounded-lg border border-slate-200 px-2 py-1 text-xs font-semibold text-slate-600 hover:bg-slate-50">▼</button>
+                                            <?php endif; ?>
                                             <a href="<?= $base ?>/honor/cetak/slip-pdf<?= $qtp ?>&amp;baris=<?= (int) $b['id'] ?>" target="_blank" rel="noopener" class="rounded-lg border border-slate-200 px-2.5 py-1 text-xs font-semibold text-slate-600 hover:bg-slate-50">Slip</a>
                                             <?php if (! $terkunci): ?>
                                                 <button type="submit" form="hb-<?= (int) $b['id'] ?>" onclick="return confirm('Hapus <?= esc($b['nama'], 'js') ?> dari daftar honor?')"
@@ -441,6 +458,10 @@ $statusWarna = ['draf' => 'bg-slate-100 text-slate-600 border-slate-200', 'final
                                 </div>
 
                                 <div class="hidden items-center justify-end gap-0.5 md:flex">
+                                    <?php if (! $terkunci): ?>
+                                        <button type="button" @click="geser($el, -1)" data-baris="<?= (int) $b['id'] ?>" class="rounded-lg p-1 text-xs leading-none text-slate-300 transition hover:bg-slate-100 hover:text-slate-600" title="Naikkan satu baris" aria-label="Naikkan <?= esc($b['nama'], 'attr') ?>">▲</button>
+                                        <button type="button" @click="geser($el, 1)" data-baris="<?= (int) $b['id'] ?>" class="rounded-lg p-1 text-xs leading-none text-slate-300 transition hover:bg-slate-100 hover:text-slate-600" title="Turunkan satu baris" aria-label="Turunkan <?= esc($b['nama'], 'attr') ?>">▼</button>
+                                    <?php endif; ?>
                                     <a href="<?= $base ?>/honor/cetak/slip-pdf<?= $qtp ?>&amp;baris=<?= (int) $b['id'] ?>" target="_blank" rel="noopener" class="rounded-lg p-1.5 text-slate-300 transition hover:bg-slate-100 hover:text-slate-600" title="Cetak slip <?= esc($b['nama'], 'attr') ?>" aria-label="Cetak slip <?= esc($b['nama'], 'attr') ?>">
                                         <svg class="h-4 w-4" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z"/></svg>
                                     </a>

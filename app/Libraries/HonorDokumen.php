@@ -39,6 +39,14 @@ final class HonorDokumen
     /** Urutan jabatan saat memilih label bawaan penerima (angka kecil = lebih utama). */
     private const RANK_KATEGORI = ['struktural' => 1, 'kurikulum' => 1, 'kesiswaan' => 1, 'pembina' => 2, 'lainnya' => 3, 'wali_kelas' => 4, 'mapel' => 5];
 
+    /** Urutan baku jabatan di rekap sekolah (kecil = di atas). Jabatan lain: 500 + level. */
+    private const URUTAN_KODE = ['KS' => 10, 'WK-KUR' => 30, 'WK-SIS' => 40, 'WK-HUM' => 50, 'WK-SAR' => 60, 'KAPROG' => 70, 'OP' => 130, 'GMP' => 210, 'WALI' => 220, 'GP' => 300, 'TU' => 400];
+
+    private static function urutanJabatan(array $j): int
+    {
+        return self::URUTAN_KODE[strtoupper((string) ($j['kode'] ?? ''))] ?? (500 + (int) ($j['level'] ?? 0));
+    }
+
     private BaseConnection $db;
 
     public function __construct(?BaseConnection $db = null)
@@ -102,12 +110,16 @@ final class HonorDokumen
     public static function labelSingkat(string $nama): string
     {
         $nama = trim($nama);
+        // Singkatan seperti di rekap Excel sekolah ("Waka. Kurikulum", "Kaprog.", "Guru Mata Pelajaran" dibiarkan utuh).
         $peta = [
-            '/^Wakil Kepala Sekolah Bidang\s+/iu' => 'Waka ',
-            '/^Ketua Program Keahlian\b/iu'       => 'Kaprog',
-            '/^Guru Mata Pelajaran$/iu'           => 'Guru',
-            '/^Staf Tata Usaha$/iu'               => 'Staf TU',
-            '/^OPERATOR SEKOLAH$/iu'              => 'Operator',
+            '/^Wakil Kepala Sekolah Bidang\s+Kurikulum$/iu'                => 'Waka. Kurikulum',
+            '/^Wakil Kepala Sekolah Bidang\s+Kesiswaan$/iu'                => 'Waka. Kesiswaan',
+            '/^Wakil Kepala Sekolah Bidang\s+Sarana(?: dan)? Prasarana$/iu' => 'Waka. Sarpras',
+            '/^Wakil Kepala Sekolah Bidang\s+Hubungan Masyarakat$/iu'      => 'Waka. Humas & Hubungan Industri',
+            '/^Wakil Kepala Sekolah Bidang\s+/iu'                          => 'Waka. ',
+            '/^Ketua Program Keahlian\b/iu'                                => 'Kaprog.',
+            '/^GURU PIKET$/iu'                                             => 'Guru Piket',
+            '/^OPERATOR SEKOLAH$/iu'                                       => 'Operator Sekolah',
         ];
         foreach ($peta as $pola => $ganti) {
             $nama = (string) preg_replace($pola, $ganti, $nama);
@@ -202,7 +214,7 @@ final class HonorDokumen
         $rows = $b->orderBy('nama', 'ASC')->get()->getResultArray();
         $info = $this->infoJabatan(array_map('intval', array_column($rows, 'id')));
         foreach ($rows as &$r) {
-            $r['jabatan'] = $info[(int) $r['id']]['label'] ?? ((int) $r['bukan_pengajar'] === 1 ? 'Staf' : 'Guru');
+            $r['jabatan'] = $info[(int) $r['id']]['label'] ?? ((int) $r['bukan_pengajar'] === 1 ? 'Staf Tata Usaha' : 'Guru Mata Pelajaran');
         }
         unset($r);
 
@@ -394,7 +406,7 @@ final class HonorDokumen
 
         $this->db->transStart();
         foreach ($baru as $g) {
-            $gi = $info[(int) $g['id']] ?? ['label' => ((int) $g['bukan_pengajar'] === 1 ? 'Staf' : 'Guru'), 'panitia' => 0, 'struktural' => false];
+            $gi = $info[(int) $g['id']] ?? ['label' => ((int) $g['bukan_pengajar'] === 1 ? 'Staf Tata Usaha' : 'Guru Mata Pelajaran'), 'panitia' => 0, 'struktural' => false];
             $this->db->table('honor_baris')->insert([
                 'dokumen_id' => $dokumenId, 'guru_id' => (int) $g['id'], 'nama' => mb_substr((string) $g['nama'], 0, 150),
                 'jabatan' => $gi['label'], 'urut' => ++$urut, 'created_at' => $now, 'updated_at' => $now,
@@ -428,6 +440,52 @@ final class HonorDokumen
         $this->audit('delete', 'honor_baris', $barisId, 'Hapus penerima "' . $b['nama'] . '" dari honor ' . $this->labelDokumen($dokumenId));
 
         return ['ok' => true, 'pesan' => '"' . $b['nama'] . '" dihapus dari daftar.'];
+    }
+
+    /**
+     * Pindahkan seorang penerima ke nomor urut $posisi (1 = paling atas); penerima lain bergeser dan semua nomor
+     * dirapatkan 1..n. Urutan ini dipakai layar, Excel, dan PDF, serta ikut tersalin ke honor berikutnya.
+     *
+     * @return array{ok:bool, pesan:string, urutan?:list<int>, posisi?:int}
+     */
+    public function pindahKe(int $dokumenId, int $barisId, int $posisi): array
+    {
+        $dok = $this->dokumenId($dokumenId);
+        if ($dok === null) {
+            return $this->gagal('Honor tidak ditemukan.');
+        }
+        if (($tolak = $this->tolakKunci($dok)) !== null) {
+            return $tolak;
+        }
+        $rows = $this->db->table('honor_baris')->select('id, nama, urut')->where('dokumen_id', $dokumenId)->orderBy('urut', 'ASC')->orderBy('id', 'ASC')->get()->getResultArray();
+        $ids  = array_map(static fn (array $r): int => (int) $r['id'], $rows);
+        $idx  = array_search($barisId, $ids, true);
+        if ($idx === false) {
+            return $this->gagal('Penerima tidak ditemukan.');
+        }
+        $posisi = max(1, min(count($ids), $posisi));
+        $nama   = (string) $rows[$idx]['nama'];
+        array_splice($ids, (int) $idx, 1);
+        array_splice($ids, $posisi - 1, 0, [$barisId]);
+
+        $awal = array_map(static fn (array $r): int => (int) $r['id'], $rows);
+        if ($ids === $awal && (int) $rows[0]['urut'] === 1) {
+            return ['ok' => true, 'pesan' => 'Urutan tidak berubah.', 'urutan' => $ids, 'posisi' => $posisi];
+        }
+        $now = date('Y-m-d H:i:s');
+        $this->db->transStart();
+        foreach ($ids as $i => $id) {
+            $this->db->table('honor_baris')->where('id', $id)->update(['urut' => $i + 1, 'updated_at' => $now]);
+        }
+        $this->db->transComplete();
+        if (! $this->db->transStatus()) {
+            return $this->gagal('Gagal memindahkan. Coba lagi.');
+        }
+        if ($ids !== $awal) {
+            $this->audit('update', 'honor_baris', $barisId, 'Pindah "' . $nama . '" ke nomor ' . $posisi . ' di honor ' . $this->labelDokumen($dokumenId));
+        }
+
+        return ['ok' => true, 'pesan' => '"' . $nama . '" dipindah ke nomor ' . $posisi . '.', 'urutan' => $ids, 'posisi' => $posisi];
     }
 
     /** Ubah label jabatan dan/atau catatan satu penerima. */
@@ -554,8 +612,8 @@ final class HonorDokumen
                 }
                 continue;
             }
-            $baruIsi = ['kode' => $a['kode'], 'nama' => $a['nama'], 'tipe' => $a['tipe'], 'tarif' => (int) $a['tarif'], 'satuan' => $a['satuan'], 'sumber' => $a['sumber'], 'urut' => (int) $a['urut']];
-            $lama = ['kode' => $dk['kode'], 'nama' => $dk['nama'], 'tipe' => $dk['tipe'], 'tarif' => (int) $dk['tarif'], 'satuan' => $dk['satuan'], 'sumber' => $dk['sumber'], 'urut' => (int) $dk['urut']];
+            $baruIsi = ['kode' => $a['kode'], 'nama' => $a['nama'], 'judul_cetak' => $a['judul_cetak'] ?? null, 'tipe' => $a['tipe'], 'tarif' => (int) $a['tarif'], 'satuan' => $a['satuan'], 'sumber' => $a['sumber'], 'urut' => (int) $a['urut']];
+            $lama = ['kode' => $dk['kode'], 'nama' => $dk['nama'], 'judul_cetak' => $dk['judul_cetak'] ?? null, 'tipe' => $dk['tipe'], 'tarif' => (int) $dk['tarif'], 'satuan' => $dk['satuan'], 'sumber' => $dk['sumber'], 'urut' => (int) $dk['urut']];
             if ($baruIsi !== $lama) {
                 $this->db->table('honor_dok_komponen')->where('id', $dk['id'])->update($baruIsi);
                 $diubah++;
@@ -754,7 +812,7 @@ final class HonorDokumen
     private function salinKomponen(int $dokId, array $k): array
     {
         return [
-            'dokumen_id' => $dokId, 'komponen_id' => (int) $k['id'], 'kode' => $k['kode'], 'nama' => $k['nama'], 'tipe' => $k['tipe'],
+            'dokumen_id' => $dokId, 'komponen_id' => (int) $k['id'], 'kode' => $k['kode'], 'nama' => $k['nama'], 'judul_cetak' => $k['judul_cetak'] ?? null, 'tipe' => $k['tipe'],
             'tarif' => (int) $k['tarif'], 'satuan' => $k['satuan'], 'sumber' => $k['sumber'], 'urut' => (int) $k['urut'],
         ];
     }
@@ -821,7 +879,7 @@ final class HonorDokumen
             return [];
         }
         $rows = $this->db->table('guru_jabatan gj')
-            ->select('gj.guru_id, gj.is_utama, j.id AS jid, j.nama, j.kategori, j.level, j.is_struktural, COALESCE(hp.nominal, 0) AS panitia')
+            ->select('gj.guru_id, gj.is_utama, j.id AS jid, j.kode, j.nama, j.kategori, j.level, j.is_struktural, COALESCE(hp.nominal, 0) AS panitia')
             ->join('jabatan j', 'j.id = gj.jabatan_id')
             ->join('honor_panitia_jabatan hp', 'hp.jabatan_id = j.id', 'left')
             ->whereIn('gj.guru_id', $guruIds)
@@ -833,13 +891,10 @@ final class HonorDokumen
         $hasil = [];
         foreach ($per as $gid => $daftar) {
             usort($daftar, static function (array $a, array $b): int {
-                $ra = self::RANK_KATEGORI[$a['kategori']] ?? 9;
-                $rb = self::RANK_KATEGORI[$b['kategori']] ?? 9;
+                $ra = self::urutanJabatan($a);
+                $rb = self::urutanJabatan($b);
                 if ($ra !== $rb) {
                     return $ra <=> $rb;
-                }
-                if ((int) $a['level'] !== (int) $b['level']) {
-                    return (int) $a['level'] <=> (int) $b['level'];
                 }
 
                 return (int) $b['is_utama'] <=> (int) $a['is_utama'];
@@ -847,7 +902,7 @@ final class HonorDokumen
             $pilih = $daftar[0];
             $hasil[$gid] = [
                 'label'      => self::labelSingkat((string) $pilih['nama']),
-                'rank'       => self::RANK_KATEGORI[$pilih['kategori']] ?? 9,
+                'rank'       => self::urutanJabatan($pilih),
                 'level'      => (int) $pilih['level'],
                 'panitia'    => (int) max(array_map(static fn (array $r): int => (int) $r['panitia'], $daftar)),
                 'struktural' => (bool) array_filter($daftar, static fn (array $r): bool => (int) $r['is_struktural'] === 1),

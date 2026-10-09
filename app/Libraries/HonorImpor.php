@@ -461,6 +461,9 @@ final class HonorImpor
         foreach ($payload['baris'] as $i => $b) {
             $d = (string) ($keputusan[$i] ?? 'lewati');
             $guruId = 0;
+            // Nama di rekap = nama persis seperti ditulis di Excel sekolah (itu yang tercetak); tautan ke Master Guru
+            // hanya untuk hitung otomatis dan pemeriksaan.
+            $namaExcel = mb_substr(HonorPengaturan::rapikan((string) $b['nama']), 0, 150);
             if (preg_match('/^guru:(\d+)$/', $d, $m)) {
                 $g = $this->db->table('guru')->select('id, nama')->where('id', (int) $m[1])->where('deleted_at', null)->where('induk_id', null)->get()->getRowArray();
                 if ($g === null) {
@@ -469,7 +472,7 @@ final class HonorImpor
                     continue;
                 }
                 $guruId = (int) $g['id'];
-                $namaMaster = (string) $g['nama'];
+                $namaMaster = $namaExcel;
             } elseif ($d === 'baru:guru' || $d === 'baru:staf') {
                 $namaMaster = mb_substr(HonorPengaturan::rapikan((string) $b['nama']), 0, 150);
                 $kode = (int) ($this->db->query("SELECT MAX(CAST(kode_guru AS UNSIGNED)) AS m FROM guru WHERE kode_guru REGEXP '^[0-9]+$'")->getRow()->m ?? 0) + 1;
@@ -496,7 +499,7 @@ final class HonorImpor
             $jabatan = $b['jabatan'] !== '' ? $b['jabatan'] : null;
             if (isset($ada[$guruId])) {
                 $barisId = $ada[$guruId];
-                $this->db->table('honor_baris')->where('id', $barisId)->update(['jabatan' => $jabatan, 'urut' => $i + 1, 'updated_at' => date('Y-m-d H:i:s')]);
+                $this->db->table('honor_baris')->where('id', $barisId)->update(['nama' => $namaMaster, 'jabatan' => $jabatan, 'urut' => $i + 1, 'updated_at' => date('Y-m-d H:i:s')]);
                 $stat['diperbarui']++;
             } else {
                 $barisId = $dokLib->sisipBaris($dokId, $guruId, $namaMaster, $jabatan, $i + 1);

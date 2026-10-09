@@ -161,6 +161,52 @@ document.addEventListener('alpine:init', function () {
                 setTimeout(function () { kelas.forEach(function (c) { el.classList.remove(c); }); }, baik ? 700 : 1800);
             },
 
+            // ------------------------------------------------------------------ urutan baris (pindah nomor / naik / turun)
+            semuaBaris: function () {
+                return Array.prototype.slice.call(this.$root.querySelectorAll('[data-baris-row]'));
+            },
+            pindah: function (el) {
+                var self = this;
+                var n = parseInt(String(el.value).replace(/\D/g, ''), 10);
+                if (!n || n < 1) { el.value = el.dataset.awal; return; }
+                if (String(n) === el.dataset.awal) { el.value = el.dataset.awal; return; }
+                this.pindahKe(el.dataset.baris, n, el);
+            },
+            geser: function (btn, delta) {
+                var rows = this.semuaBaris();
+                var idx = rows.findIndex(function (r) { return r.dataset.barisId === btn.dataset.baris; });
+                if (idx < 0) { return; }
+                var tujuan = idx + 1 + delta;
+                if (tujuan < 1 || tujuan > rows.length) { return; }
+                this.pindahKe(btn.dataset.baris, tujuan, null);
+            },
+            pindahKe: function (barisId, posisi, el) {
+                var self = this;
+                this.kirim(this.cfg.urlPindah.replace('__ID__', barisId), { posisi: posisi }).then(function (j) {
+                    if (!j.ok) {
+                        if (el) { el.value = el.dataset.awal; self.kedip(el, false); }
+                        self.tampil(j.pesan || 'Gagal memindahkan.', true);
+                        return;
+                    }
+                    self.susun(j.urutan || []);
+                    self.tampil(j.pesan || 'Urutan diubah.', false);
+                });
+            },
+            // Susun ulang baris di layar sesuai urutan dari server, lalu rapikan nomor.
+            susun: function (urutan) {
+                var rows = this.semuaBaris();
+                if (rows.length === 0) { return; }
+                var induk = rows[0].parentNode;
+                var ujung = rows[rows.length - 1].nextSibling;
+                var peta = {};
+                rows.forEach(function (r) { peta[r.dataset.barisId] = r; });
+                urutan.forEach(function (id) { if (peta[id]) { induk.insertBefore(peta[id], ujung); } });
+                this.semuaBaris().forEach(function (r, i) {
+                    var inp = r.querySelector('input[data-no]');
+                    if (inp) { inp.value = String(i + 1); inp.dataset.awal = String(i + 1); }
+                });
+            },
+
             // ------------------------------------------------------------------ pakai petunjuk jadwal pengawas
             pakai: function (btn) {
                 var sel = btn.closest('div.min-w-0');

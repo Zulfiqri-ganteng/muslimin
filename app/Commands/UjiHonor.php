@@ -78,6 +78,7 @@ class UjiHonor extends BaseCommand
             $this->ujiCetak();
             $this->ujiStatus();
             $this->ujiPeriksa();
+            $this->ujiUrutan();
             $this->ujiHak();
             $kode = $this->gagal === 0 ? EXIT_SUCCESS : EXIT_ERROR;
         } catch (\Throwable $e) {
@@ -142,7 +143,8 @@ class UjiHonor extends BaseCommand
         $this->cek('tipe tetap untuk tunjangan', $per['tunj_panitia']['tipe'] === 'tetap' && $per['tunj_struktural']['tipe'] === 'tetap' && $per['tunj_walas']['tipe'] === 'tetap');
         $this->cek('semua bawaan bertanda bawaan=1', count(array_filter($per, static fn ($k) => (int) $k['bawaan'] === 1)) === 9);
         $kodeAktif = array_column($a->komponen(true, 'ASTS1'), 'kode');
-        $this->cek('ASTS1 aktif: tanpa Rapot, dengan Pembuatan Soal', ! in_array('rapot', $kodeAktif, true) && in_array('soal', $kodeAktif, true), implode(',', $kodeAktif));
+        $this->cek('ASTS1 aktif: 6 kolom seperti rekap sekolah (Rapot TETAP ada, nilainya 0)', $kodeAktif === ['tunj_panitia', 'soal', 'transport', 'pengawas', 'koreksi', 'rapot'], implode(',', $kodeAktif));
+        $this->cek('judul cetak Rapot = "Rapot" (bukan RAPOT)', HonorCetak::judulKolom($per['rapot']) === 'Rapot' && HonorCetak::judulKolom($per['soal']) === 'PEMBUATAN SOAL');
         $this->cek('ASAS aktif memuat Rapot', in_array('rapot', array_column($a->komponen(true, 'ASAS'), 'kode'), true));
         $this->cek('urutan tampil naik', array_column($a->komponen(), 'urut') === array_values(array_column($a->komponen(), 'urut')) && $this->naik(array_map('intval', array_column($a->komponen(), 'urut'))));
         $ttd = $a->tandaTangan();
@@ -166,7 +168,7 @@ class UjiHonor extends BaseCommand
         $k = [];
         foreach ($a->komponen() as $r) {
             $k[(int) $r['id']] = [
-                'nama' => $r['nama'], 'tarif' => number_format((int) $r['tarif'], 0, ',', '.'), 'satuan' => (string) $r['satuan'],
+                'nama' => $r['nama'], 'judul_cetak' => (string) ($r['judul_cetak'] ?? ''), 'tarif' => number_format((int) $r['tarif'], 0, ',', '.'), 'satuan' => (string) $r['satuan'],
                 'urut' => (int) $r['urut'], 'jenis' => HonorPengaturan::jenisBerlaku($r['berlaku_di']),
             ] + ((int) $r['aktif'] === 1 ? ['aktif' => '1'] : []);
         }
@@ -442,8 +444,9 @@ class UjiHonor extends BaseCommand
         $this->cek('hariUjian tanggal kosong/terbalik/terlalu lebar/rusak = 0', HonorDokumen::hariUjian(null, '2026-09-18') === 0 && HonorDokumen::hariUjian('2026-09-18', '2026-09-14') === 0 && HonorDokumen::hariUjian('2026-01-01', '2026-12-31') === 0 && HonorDokumen::hariUjian('bukan', 'tanggal') === 0);
 
         foreach ([
-            'Wakil Kepala Sekolah Bidang Kurikulum' => 'Waka Kurikulum', 'Wakil Kepala Sekolah Bidang Hubungan Masyarakat' => 'Waka Hubungan Masyarakat',
-            'Ketua Program Keahlian' => 'Kaprog', 'Guru Mata Pelajaran' => 'Guru', 'Staf Tata Usaha' => 'Staf TU', 'OPERATOR SEKOLAH' => 'Operator', 'Kepala Sekolah' => 'Kepala Sekolah',
+            'Wakil Kepala Sekolah Bidang Kurikulum' => 'Waka. Kurikulum', 'Wakil Kepala Sekolah Bidang Kesiswaan' => 'Waka. Kesiswaan', 'Wakil Kepala Sekolah Bidang Sarana Prasarana' => 'Waka. Sarpras',
+            'Wakil Kepala Sekolah Bidang Hubungan Masyarakat' => 'Waka. Humas & Hubungan Industri', 'Wakil Kepala Sekolah Bidang Lain' => 'Waka. Lain',
+            'Ketua Program Keahlian' => 'Kaprog.', 'Guru Mata Pelajaran' => 'Guru Mata Pelajaran', 'GURU PIKET' => 'Guru Piket', 'Staf Tata Usaha' => 'Staf Tata Usaha', 'OPERATOR SEKOLAH' => 'Operator Sekolah', 'Kepala Sekolah' => 'Kepala Sekolah',
         ] as $in => $out) {
             $this->cek('label "' . $in . '" → "' . $out . '"', HonorDokumen::labelSingkat($in) === $out, HonorDokumen::labelSingkat($in));
         }
@@ -455,7 +458,7 @@ class UjiHonor extends BaseCommand
         $this->db->table('honor_komponen')->where('bawaan', 0)->delete();
         $awal = [
             'tunj_struktural' => [0, 0, null, 10], 'tunj_walas' => [0, 0, null, 20], 'tunj_panitia' => [0, 1, null, 30], 'soal' => [20000, 1, null, 40],
-            'transport' => [25000, 1, null, 50], 'pengawas' => [6500, 1, null, 60], 'koreksi' => [1500, 1, null, 70], 'rapot' => [20000, 1, 'ASAS,ASAT', 80], 'lembur' => [100000, 0, null, 90],
+            'transport' => [25000, 1, null, 50], 'pengawas' => [6500, 1, null, 60], 'koreksi' => [1500, 1, null, 70], 'rapot' => [20000, 1, null, 80], 'lembur' => [100000, 0, null, 90],
         ];
         foreach ($awal as $kode => [$tarif, $aktif, $berlaku, $urut]) {
             $this->db->table('honor_komponen')->where('kode', $kode)->update(['tarif' => $tarif, 'aktif' => $aktif, 'berlaku_di' => $berlaku, 'urut' => $urut]);
@@ -501,7 +504,7 @@ class UjiHonor extends BaseCommand
         $this->cek('tempat & Kepala Sekolah diambil dari Pengaturan Sekolah', ($dok['tempat'] ?? null) === $set['city'] && ($dok['kepsek_nama'] ?? null) === $set['headmaster_name'], json_encode([$dok['tempat'] ?? null, $dok['kepsek_nama'] ?? null]));
         $this->cek('tanggal bawaan = hari ini', ($dok['tanggal'] ?? '') === date('Y-m-d'));
         $kode = array_column($this->db->table('honor_dok_komponen')->where('dokumen_id', $dok['id'])->orderBy('urut')->get()->getResultArray(), 'kode');
-        $this->cek('snapshot ASTS1 = 5 komponen aktif (tanpa Rapot)', $kode === ['tunj_panitia', 'soal', 'transport', 'pengawas', 'koreksi'], implode(',', $kode));
+        $this->cek('snapshot ASTS1 = 6 komponen aktif (Rapot ikut, seperti rekap sekolah)', $kode === ['tunj_panitia', 'soal', 'transport', 'pengawas', 'koreksi', 'rapot'], implode(',', $kode));
         $r = $h->buat($p1);
         $this->cek('buat dua kali ditolak (satu honor per periode)', ! $r['ok'] && (int) $this->db->table('honor_dokumen')->where('periode_id', $p1['id'])->countAllResults() === 1, $r['pesan']);
 
@@ -545,7 +548,7 @@ class UjiHonor extends BaseCommand
         foreach ($m['komponen'] as $k) {
             $dkPeta[$k['kode']] = (int) $k['id'];
         }
-        $this->cek('label jabatan ringkas ("Waka Kurikulum")', $per[$kur]['jabatan'] === 'Waka Kurikulum', (string) $per[$kur]['jabatan']);
+        $this->cek('label jabatan ringkas ("Waka. Kurikulum")', $per[$kur]['jabatan'] === 'Waka. Kurikulum', (string) $per[$kur]['jabatan']);
         $this->cek('nama disalin dari Master Guru', $per[$ks]['nama'] === $this->db->table('guru')->where('id', $ks)->get()->getRow()->nama);
         $this->cek('tunjangan panitia bawaan dari tabel jabatan (KS 2.000.000, Waka Kur 1.500.000, guru 0)',
             $per[$ks]['nilai'][$dkPeta['tunj_panitia']]['nilai'] === 2000000 && $per[$kur]['nilai'][$dkPeta['tunj_panitia']]['nilai'] === 1500000 && $per[$gmp]['nilai'][$dkPeta['tunj_panitia']]['nilai'] === 0);
@@ -554,7 +557,7 @@ class UjiHonor extends BaseCommand
         $this->cek('transport bawaan = hari ujian bagi yang berjabatan struktural, 0 bagi lainnya',
             $per[$ks]['nilai'][$dkPeta['transport']]['nilai'] === ($struktural($ks) ? $hari : 0) && $per[$gmp]['nilai'][$dkPeta['transport']]['nilai'] === ($struktural($gmp) ? $hari : 0),
             $hari . ' hari; KS=' . $per[$ks]['nilai'][$dkPeta['transport']]['nilai']);
-        $this->cek('SEMUA sel ada (3 baris × 5 komponen = 15 baris nilai)', (int) $this->db->table('honor_nilai')->whereIn('baris_id', array_column($m['baris'], 'id'))->countAllResults() === 15);
+        $this->cek('SEMUA sel ada (3 baris × 6 komponen = 18 baris nilai)', (int) $this->db->table('honor_nilai')->whereIn('baris_id', array_column($m['baris'], 'id'))->countAllResults() === 18);
         $this->cek('total KS = panitia 2.000.000 + transport hari×25.000', $per[$ks]['total'] === 2000000 + $per[$ks]['nilai'][$dkPeta['transport']]['nilai'] * 25000, (string) $per[$ks]['total']);
 
         $r = $h->tambahPenerima($id, [$gmp, $ks]);
@@ -605,7 +608,7 @@ class UjiHonor extends BaseCommand
         $nilaiSebelum = (int) $this->db->table('honor_nilai')->countAllResults();
         $r = $h->hapusBaris($id, (int) $b['id']);
         $this->cek('hapus penerima', $r['ok'] && count($h->muat($id)['baris']) === 2, $r['pesan']);
-        $this->cek('isiannya ikut terhapus (CASCADE), penerima lain utuh', (int) $this->db->table('honor_nilai')->countAllResults() === $nilaiSebelum - 5);
+        $this->cek('isiannya ikut terhapus (CASCADE), penerima lain utuh', (int) $this->db->table('honor_nilai')->countAllResults() === $nilaiSebelum - 6);
         $h->tambahPenerima($id, [$gmp]);
     }
 
@@ -955,7 +958,7 @@ class UjiHonor extends BaseCommand
         // penolakan
         $this->cek('sumber tak sah / manual (pengawas) ditolak', ! $hit->terapkan($id, ['pengawas'])['ok'] && ! $hit->terapkan($id, [])['ok'] && ! $hit->terapkan($id, ['ngawur'])['ok']);
         $r = $hit->terapkan($id, ['rapot']);
-        $this->cek('Rapot tidak ada di honor ASTS 1 → pesan jelas', ! $r['ok'] && str_contains($r['pesan'], 'tidak memuat'), $r['pesan']);
+        $this->cek('Rapot ada di ASTS 1 (kolom tetap ada) → bisa dihitung bila dipilih', $r['ok'] && $r['ringkas'][0]['nama'] === 'Rapot', $r['pesan']);
         $this->cek('dokumen tak ada ditolak', ! $hit->terapkan(999999, ['koreksi'])['ok']);
         $kosong = (int) $h->buat($this->periode('ASAT'))['id'];
         $this->cek('honor tanpa penerima ditolak', ! $hit->terapkan($kosong, ['koreksi'])['ok']);
@@ -1247,8 +1250,8 @@ class UjiHonor extends BaseCommand
         $this->cek('lembar: REKAP HONOR + SLIP', $ss->getSheetNames() === ['REKAP HONOR', 'SLIP'], implode(',', $ss->getSheetNames()));
         $this->cek('judul 3 baris persis format sekolah', $ws->getCell('A1')->getValue() === 'HONOR ASESMEN SUMATIF TENGAH SEMESTER (ASTS) GENAP' && $ws->getCell('A2')->getValue() === 'SMK BINA NUSA KABUPATEN BEKASI' && $ws->getCell('A3')->getValue() === 'TAHUN PELAJARAN 2026-2027');
         $this->cek('header: NO, NAMA, JABATAN, TUNJANGAN PANITIA, PEMBUATAN SOAL, …, TOTAL, TTD', [$ws->getCell('A5')->getValue(), $ws->getCell('B5')->getValue(), $ws->getCell('C5')->getValue(), $ws->getCell('D5')->getValue(), $ws->getCell('E5')->getValue()] === ['NO', 'NAMA', 'JABATAN', 'TUNJANGAN PANITIA', 'PEMBUATAN SOAL'] && $ws->getCell($tot . '5')->getValue() === 'TOTAL');
-        $this->cek('baris tarif: sel angka (bukan teks) = tarif sistem 20.000 / 25.000 / 6.500 / 1.500', [(int) $ws->getCell('E6')->getValue(), (int) $ws->getCell('G6')->getValue(), (int) $ws->getCell('I6')->getValue(), (int) $ws->getCell('K6')->getValue()] === [20000, 25000, 6500, 1500]);
-        $this->cek('kolom rupiah = RUMUS yang memakai sel tarif (F7 = E7*$E$6)', $ws->getCell('F7')->isFormula() && str_contains((string) $ws->getCell('F7')->getValue(), '$E$6'), (string) $ws->getCell('F7')->getValue());
+        $this->cek('baris tarif: tulisan "Rp. 20.000 / 25.000 / 6.500 / 1.500" seperti rekap sekolah', [$ws->getCell('E6')->getValue(), $ws->getCell('G6')->getValue(), $ws->getCell('I6')->getValue(), $ws->getCell('K6')->getValue()] === ['Rp. 20.000', 'Rp. 25.000', 'Rp. 6.500', 'Rp. 1.500']);
+        $this->cek('kolom rupiah = RUMUS jumlah × tarif (F7 = E7*20000)', $ws->getCell('F7')->isFormula() && (string) $ws->getCell('F7')->getValue() === '=E7*20000', (string) $ws->getCell('F7')->getValue());
         $this->cek('TOTAL baris & JUMLAH berupa rumus', $ws->getCell($tot . '7')->isFormula() && $ws->getCell($tot . $jum)->isFormula());
         $this->cek('JUMLAH menjumlah SEMUA baris (SUM(…7:…10)), bukan sebagian', str_contains((string) $ws->getCell($tot . $jum)->getValue(), '7:' . $tot . '10'), (string) $ws->getCell($tot . $jum)->getValue());
         $this->cek('JUMLAH TOTAL (dihitung ulang) = total sistem', (int) $ws->getCell($tot . $jum)->getCalculatedValue() === $m['total'], (int) $ws->getCell($tot . $jum)->getCalculatedValue() . ' vs ' . $m['total']);
@@ -1526,6 +1529,109 @@ class UjiHonor extends BaseCommand
         $tb = $pk->periksa($h->muat($bersih), $this->periode('ASAS'));
         $this->cek('honor yang lengkap & wajar: TIDAK ada temuan level "peringatan"', count(array_filter($tb, static fn ($x) => $x['level'] === 'peringatan')) === 0, json_encode($tb));
         $this->db->table('honor_dokumen')->where('id', $bersih)->delete();
+    }
+
+    private function ujiUrutan(): void
+    {
+        $this->bagian('Urutan baris, judul cetakan, urutan bawaan jabatan');
+        $h = new HonorDokumen();
+        $a = new HonorPengaturan();
+        $this->pulihkanKomponen();
+
+        // urutan bawaan menurut hierarki jabatan (honor ASAS baru)
+        $pAs = $this->periode('ASAS');
+        if (($lama = $h->dokumenPeriode((int) $pAs['id'])) !== null) {
+            $this->db->table('honor_dokumen')->where('id', $lama['id'])->update(['status' => 'draf']);
+            $h->hapusDokumen((int) $lama['id']);
+        }
+        $id  = (int) $h->buat($pAs)['id'];
+        $kode = ['KS', 'WK-KUR', 'WK-SIS', 'WK-HUM', 'WK-SAR', 'KAPROG', 'OP'];
+        $guru = [];
+        foreach ($kode as $k) {
+            $guru[$k] = $this->guruId($k);
+        }
+        $gmp = (int) $this->db->table('guru_jabatan gj')->select('gj.guru_id')->join('jabatan j', 'j.id = gj.jabatan_id')->join('guru g', 'g.id = gj.guru_id')->where('j.kode', 'GMP')->where('g.deleted_at', null)
+            ->whereNotIn('gj.guru_id', array_filter($guru))->get()->getRow()->guru_id;
+        $campur = array_filter($guru);
+        $campur['GMP'] = $gmp;
+        $ids = array_values($campur);
+        shuffle($ids);
+        $h->tambahPenerima($id, $ids);
+        $urut = array_map(static fn (array $b): int => (int) $b['guru_id'], $h->muat($id)['baris']);
+        $harap = array_values(array_filter(array_map(static fn (string $k): int => $campur[$k] ?? 0, [...$kode, 'GMP'])));
+        $harap = array_values(array_unique($harap));
+        $this->cek('urutan bawaan: Kepala Sekolah, Waka (Kur, Kes, Humas, Sarpras), Kaprog, Operator, lalu guru — walau dipilih acak', array_slice($urut, 0, count($harap)) === $harap || $urut === $harap, json_encode([$urut, $harap]));
+        $this->cek('label bawaan memakai singkatan sekolah (Waka. …, Kaprog., Operator Sekolah)', (function () use ($h, $id): bool {
+            $l = array_column($h->muat($id)['baris'], 'jabatan');
+            return in_array('Waka. Kurikulum', $l, true) && in_array('Guru Mata Pelajaran', $l, true);
+        })());
+        $this->db->table('honor_dokumen')->where('id', $id)->delete();
+
+        // pindah urutan (honor ASTS 2 dari uji cetak)
+        $p2 = $this->periode('ASTS2');
+        if (($ada = $h->dokumenPeriode((int) $p2['id'])) !== null) {
+            $this->db->table('honor_dokumen')->where('id', $ada['id'])->update(['status' => 'draf']);
+            $h->hapusDokumen((int) $ada['id']);
+        }
+        $idd = (int) $h->buat($p2)['id'];
+        $h->tambahPenerima($idd, array_map('intval', array_column($this->db->table('guru')->select('id')->where('deleted_at', null)->where('induk_id', null)->orderBy('id')->limit(5)->get()->getResultArray(), 'id')));
+        $m = $h->muat($idd);
+        $b = array_map(static fn (array $x): int => (int) $x['id'], $m['baris']);
+        $this->cek('honor ASTS 2 punya ≥ 4 penerima untuk uji', count($b) >= 4);
+        $r = $h->pindahKe($idd, $b[3], 1);
+        $baru = array_map(static fn (array $x): int => (int) $x['id'], $h->muat($idd)['baris']);
+        $this->cek('pindah baris 4 ke nomor 1: jadi paling atas, lainnya bergeser', $r['ok'] && $baru === [$b[3], $b[0], $b[1], $b[2], $b[4]] && $r['urutan'] === $baru && $r['posisi'] === 1, json_encode($baru));
+        $urutDb = array_map('intval', array_column($this->db->table('honor_baris')->select('urut')->where('dokumen_id', $idd)->orderBy('urut')->get()->getResultArray(), 'urut'));
+        $this->cek('nomor urut dirapatkan 1..n tanpa ganda', $urutDb === range(1, count($b)), json_encode($urutDb));
+        $r = $h->pindahKe($idd, $b[3], 3);
+        $this->cek('pindah ke tengah (nomor 3)', $r['ok'] && array_search($b[3], array_map(static fn (array $x): int => (int) $x['id'], $h->muat($idd)['baris']), true) === 2);
+        $r = $h->pindahKe($idd, $b[0], 99);
+        $this->cek('nomor melebihi jumlah → dipasang di paling bawah', $r['ok'] && $r['posisi'] === count($b) && (int) end($r['urutan']) === $b[0]);
+        $r = $h->pindahKe($idd, $b[1], 0);
+        $this->cek('nomor 0/minus → paling atas', $r['ok'] && $r['posisi'] === 1 && (int) $r['urutan'][0] === $b[1]);
+        $this->cek('pindah ke posisi yang sama → "Urutan tidak berubah"', ($rr = $h->pindahKe($idd, $b[1], 1))['ok'] && $rr['pesan'] === 'Urutan tidak berubah.');
+        $this->cek('baris tak dikenal ditolak', ! $h->pindahKe($idd, 999999, 1)['ok']);
+        $dokLain = $h->dokumenPeriode((int) $this->periode('ASTS1')['id']);
+        $this->cek('baris milik honor lain tak bisa dipindah lewat honor ini', ! $h->pindahKe((int) $dokLain['id'], $b[1], 1)['ok']);
+        $this->cek('pindah dicatat di audit', (int) $this->db->table('audit_log')->where('tabel', 'honor_baris')->like('deskripsi', 'Pindah')->countAllResults() >= 3);
+        $mm = $h->muat($idd);
+        $this->cek('Excel/PDF mengikuti urutan baru (baris pertama = yang dipindah ke atas)', HonorCetak::bahan($mm, $p2)['baris'][0]['nama'] === $mm['baris'][0]['nama'] && HonorCetak::bahan($mm, $p2)['baris'][0]['no'] === 1);
+        $this->db->table('honor_dokumen')->where('id', $idd)->update(['status' => 'dikunci']);
+        $this->cek('terkunci: pindah ditolak', ! $h->pindahKe($idd, $b[1], 2)['ok']);
+        $this->db->table('honor_dokumen')->where('id', $idd)->update(['status' => 'draf']);
+
+        // salin dari honor lain mempertahankan urutan
+        $this->db->table('honor_dokumen')->where('id', $idd)->update(['status' => 'draf']);
+        $salin = $h->buat($this->periode('ASAS'), $idd);
+        $this->cek('salin ke honor baru mempertahankan urutan baris', $salin['ok'] && array_column($h->muat((int) $salin['id'])['baris'], 'nama') === array_column($h->muat($idd)['baris'], 'nama'), $salin['pesan'] ?? '');
+        if (! empty($salin['id'])) {
+            $h->hapusDokumen((int) $salin['id']);
+        }
+
+        // judul cetakan
+        $semua = [];
+        foreach ($a->komponen() as $k) {
+            $semua[(int) $k['id']] = ['nama' => $k['nama'], 'judul_cetak' => (string) ($k['judul_cetak'] ?? ''), 'tarif' => (string) $k['tarif'], 'satuan' => (string) $k['satuan'], 'urut' => (int) $k['urut'], 'jenis' => HonorPengaturan::jenisBerlaku($k['berlaku_di'])] + ((int) $k['aktif'] === 1 ? ['aktif' => '1'] : []);
+        }
+        $idSoal = (int) $this->db->table('honor_komponen')->where('kode', 'soal')->get()->getRow()->id;
+        $semua[$idSoal]['judul_cetak'] = 'PEMBUATAN SOAL (SET)';
+        $r = $a->simpanKomponen($semua);
+        $this->cek('judul cetakan disimpan; header cetak memakainya', $r['ok'] && HonorCetak::judulKolom($a->komponen()[3]) === 'PEMBUATAN SOAL (SET)', $r['pesan']);
+        $semua[$idSoal]['judul_cetak'] = str_repeat('J', 81);
+        $this->cek('judul cetakan > 80 huruf ditolak', ! $a->simpanKomponen($semua)['ok']);
+        $semua[$idSoal]['judul_cetak'] = '   ';
+        $this->cek('dikosongkan → kembali ke NAMA HURUF BESAR', $a->simpanKomponen($semua)['ok'] && HonorCetak::judulKolom($a->komponen()[3]) === 'PEMBUATAN SOAL');
+        $this->cek('honor yang sudah dibuat tetap memakai judul lama sampai "Perbarui"', (function () use ($h, $a, $idd, $idSoal, $semua): bool {
+            $semua[$idSoal]['judul_cetak'] = 'JUDUL BARU';
+            $a->simpanKomponen($semua);
+            $dkSoal = array_values(array_filter($h->muat($idd)['komponen'], static fn ($k) => $k['kode'] === 'soal'))[0];
+            $sebelum = HonorCetak::judulKolom($dkSoal);
+            $h->sinkronKomponen($idd);
+            $dkSoal2 = array_values(array_filter($h->muat($idd)['komponen'], static fn ($k) => $k['kode'] === 'soal'))[0];
+
+            return $sebelum === 'PEMBUATAN SOAL' && HonorCetak::judulKolom($dkSoal2) === 'JUDUL BARU';
+        })());
+        $this->cek('kapitalNama: "SMK BINA NUSA" → "SMK Bina Nusa"', HonorCetak::kapitalNama('SMK BINA NUSA') === 'SMK Bina Nusa', HonorCetak::kapitalNama('SMK BINA NUSA'));
     }
 
     private function ujiHak(): void

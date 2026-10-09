@@ -185,6 +185,10 @@ final class HonorPengaturan
             if ($urut < 1 || $urut > 9999) {
                 return $this->gagal('Urutan "' . $nama . '" harus angka 1 sampai 9999.');
             }
+            $judulCetak = self::rapikan((string) ($f['judul_cetak'] ?? ''));
+            if (mb_strlen($judulCetak) > 80) {
+                return $this->gagal('Judul cetakan "' . $nama . '" terlalu panjang (maksimal 80 huruf).');
+            }
             $jenis = array_values(array_intersect(UjianPeriodeModel::JENIS, array_map('strval', (array) ($f['jenis'] ?? []))));
             if ($jenis === []) {
                 return $this->gagal('"' . $nama . '": pilih minimal satu jenis ujian yang memakainya (atau matikan komponennya).');
@@ -194,6 +198,7 @@ final class HonorPengaturan
 
             $baru[$id] = [
                 'nama'       => $nama,
+                'judul_cetak' => $judulCetak !== '' ? $judulCetak : null,
                 'tarif'      => $tarif,
                 'satuan'     => $satuan !== '' ? $satuan : null,
                 'urut'       => $urut,

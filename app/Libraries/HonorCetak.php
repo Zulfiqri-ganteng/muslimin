@@ -112,6 +112,9 @@ final class HonorCetak
             'judul'      => (string) ($dok['judul'] ?: 'HONOR UJIAN'),
             'sekolah'    => mb_strtoupper($sekolah . ($wilayah !== '' ? ' ' . $wilayah : '')),
             'namaSekolah' => $sekolah,
+            'namaSekolahJudul' => self::kapitalNama($sekolah),
+            // "Bekasi, 25 September 2026"; bila tanggal belum diisi: "Bekasi, Oktober 2026" (gaya rekap sekolah)
+            'tanggal_ttd' => trim($tempat . ', ' . (self::tanggalIndo($dok['tanggal'] ?? null) !== '' ? self::tanggalIndo($dok['tanggal'] ?? null) : self::BULAN[(int) date('n')] . ' ' . date('Y')), ' ,'),
             'tahun'      => 'TAHUN PELAJARAN ' . str_replace('/', '-', (string) $periode['tahun_ajaran']),
             'tempat'     => $tempat,
             'tanggal'    => self::tanggalIndo($dok['tanggal'] ?? null),
@@ -159,10 +162,93 @@ final class HonorCetak
         return Coordinate::stringFromColumnIndex($c);
     }
 
+    /** Judul kolom di cetakan: judul_cetak bila diisi, selain itu NAMA KOMPONEN huruf besar. */
+    public static function judulKolom(array $k): string
+    {
+        $j = trim((string) ($k['judul_cetak'] ?? ''));
+
+        return $j !== '' ? $j : mb_strtoupper((string) $k['nama']);
+    }
+
+    /** "SMK BINA NUSA" → "SMK Bina Nusa" (singkatan ≤ 3 huruf tetap kapital). */
+    public static function kapitalNama(string $s): string
+    {
+        $kata = preg_split('/\s+/u', trim($s), -1, PREG_SPLIT_NO_EMPTY) ?: [];
+
+        return implode(' ', array_map(static fn (string $w): string => mb_strlen($w) <= 3 ? mb_strtoupper($w) : mb_convert_case($w, MB_CASE_TITLE), $kata));
+    }
+
+    /** Format Akuntansi Excel dengan "Rp" di kiri dan "-" untuk nol (persis rekap sekolah). */
+    private const AKUNTANSI = '_("Rp"* #,##0_);_("Rp"* \(#,##0\);_("Rp"* "-"_);_(@_)';
+
+    /** Lebar kolom jumlah & rupiah menurut kode komponen (angka dari rekap Excel sekolah). */
+    private const LEBAR_QTY = ['soal' => 5.73, 'transport' => 4.73, 'pengawas' => 4.73, 'koreksi' => 6.73, 'rapot' => 5.73];
+    private const LEBAR_RP  = ['soal' => 13.73, 'transport' => 13.73, 'pengawas' => 13.73, 'koreksi' => 14.73, 'rapot' => 15.73];
+
+    /**
+     * Lebar kolom PDF dalam poin (urutan sama dengan Excel): kolom angka secukupnya, sisanya untuk NAMA dan JABATAN
+     * supaya nama panjang dan "Waka. Humas & Hubungan Industri" tidak membungkus (kolom jabatan Excel sempit dan
+     * membungkus; di PDF dibuat longgar agar rekap muat dalam jumlah halaman wajar).
+     *
+     * @param list<array<string,mixed>> $komponen
+     *
+     * @return list<float>
+     */
+    public static function lebarKolomPdf(array $komponen): array
+    {
+        $w = [20.0, 175.0, 150.0];
+        foreach ($komponen as $k) {
+            if ($k['tipe'] === 'tetap') {
+                $w[] = 62.0;
+            } else {
+                $w[] = 24.0;
+                $w[] = 56.0;
+            }
+        }
+        $w[] = 66.0;
+        $w[] = 30.0;
+
+        return $w;
+    }
+
+    /**
+     * Lebar relatif semua kolom rekap Excel (NO, NAMA, JABATAN, komponen…, TOTAL, TTD) — angka dari rekap sekolah.
+     *
+     * @param list<array<string,mixed>> $komponen
+     *
+     * @return list<float>
+     */
+    public static function lebarKolom(array $komponen): array
+    {
+        $w = [4.18, 33.45, 16.18];
+        foreach ($komponen as $k) {
+            $kode = (string) $k['kode'];
+            if ($k['tipe'] === 'tetap') {
+                $w[] = 14.73;
+            } else {
+                $w[] = self::LEBAR_QTY[$kode] ?? 6.73;
+                $w[] = self::LEBAR_RP[$kode] ?? 14.73;
+            }
+        }
+        $w[] = 15.73;
+        $w[] = 19.45;
+
+        return $w;
+    }
+
+    /**
+     * Lembar "REKAP HONOR" — meniru berkas sekolah (HONOR ASTS.xlsx): Calibri 12, nama Times New Roman, header
+     * JABATAN & kolom jumlah Koreksi berwarna kuning, format akuntansi "Rp", tinggi baris 30, garis ganda di bawah
+     * header, tanda tangan Ketua (kiri) / Bendahara (kanan) / Kepala Sekolah (bawah tengah), zoom 70, cetak landscape.
+     * Rumus: rupiah = jumlah × tarif (tarif tertulis di rumus seperti rekap sekolah), TOTAL = SUM rupiah, JUMLAH = SUM
+     * SEMUA baris data.
+     */
     private static function lembarRekap(Worksheet $ws, array $b): void
     {
         $ws->setTitle('REKAP HONOR');
-        $ws->getParent()->getDefaultStyle()->getFont()->setName('Arial')->setSize(10);
+        $ws->getParent()->getDefaultStyle()->getFont()->setName('Calibri')->setSize(12);
+        $ws->getDefaultRowDimension()->setRowHeight(30);
+        $ws->getSheetView()->setZoomScale(70);
 
         // peta kolom
         $kolom = [];
@@ -179,25 +265,34 @@ final class HonorCetak
         $cTotal = $c;
         $cTtd   = $c + 1;
         $akhir  = self::huruf($cTtd);
+        $tot    = self::huruf($cTotal);
+        $ttd    = self::huruf($cTtd);
         $n      = count($b['baris']);
-        $r0     = 7;                 // baris data pertama
-        $rLast  = $r0 + $n - 1;
+        $r0     = 7;
+        $rLast  = max($r0, $r0 + $n - 1);
         $rJum   = $rLast + 1;
+        $tipis  = ['borders' => ['allBorders' => ['borderStyle' => Border::BORDER_THIN]]];
+        $tengah = Alignment::HORIZONTAL_CENTER;
 
-        // judul 3 baris
+        // ---- judul 3 baris (tinggi 15)
         foreach ([1 => $b['judul'], 2 => $b['sekolah'], 3 => $b['tahun']] as $r => $t) {
             $ws->mergeCells("A{$r}:{$akhir}{$r}");
             $ws->setCellValue("A{$r}", $t);
-            $ws->getStyle("A{$r}")->getFont()->setBold(true)->setSize($r === 1 ? 13 : 11);
-            $ws->getStyle("A{$r}")->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER);
+            $ws->getRowDimension($r)->setRowHeight(15);
         }
-        // baris 4: nomor kolom
-        for ($i = 1; $i <= $cTtd; $i++) {
-            $ws->setCellValueExplicit(self::huruf($i) . '4', (string) $i, \PhpOffice\PhpSpreadsheet\Cell\DataType::TYPE_NUMERIC);
-        }
-        $ws->getStyle("A4:{$akhir}4")->applyFromArray(['font' => ['size' => 8, 'color' => ['rgb' => '64748B']], 'alignment' => ['horizontal' => Alignment::HORIZONTAL_CENTER]]);
+        $ws->getStyle("A1:{$akhir}3")->applyFromArray(['font' => ['bold' => true], 'alignment' => ['horizontal' => $tengah, 'vertical' => Alignment::VERTICAL_BOTTOM]]);
+        $ws->getStyle("A3:{$akhir}3")->getBorders()->getBottom()->setBorderStyle(Border::BORDER_THIN);
 
-        // baris 5–6: judul kolom + tarif
+        // ---- baris 4: nomor kolom
+        for ($i = 1; $i <= $cTtd; $i++) {
+            $ws->setCellValue(self::huruf($i) . '4', $i);
+        }
+        $ws->getRowDimension(4)->setRowHeight(15);
+        $ws->getStyle("A4:{$akhir}4")->applyFromArray($tipis + ['font' => ['bold' => true], 'alignment' => ['horizontal' => $tengah, 'vertical' => Alignment::VERTICAL_CENTER]]);
+
+        // ---- baris 5–6: judul kolom + tarif
+        $ws->getRowDimension(5)->setRowHeight(15);
+        $ws->getRowDimension(6)->setRowHeight(15);
         foreach (['A' => 'NO', 'B' => 'NAMA', 'C' => 'JABATAN'] as $col => $t) {
             $ws->mergeCells("{$col}5:{$col}6");
             $ws->setCellValue("{$col}5", $t);
@@ -207,30 +302,32 @@ final class HonorCetak
             if ($kol['qty'] === null) {
                 $col = self::huruf($kol['rp']);
                 $ws->mergeCells("{$col}5:{$col}6");
-                $ws->setCellValue("{$col}5", mb_strtoupper($k['nama']));
+                $ws->setCellValue("{$col}5", self::judulKolom($k));
             } else {
                 $a = self::huruf($kol['qty']);
                 $z = self::huruf($kol['rp']);
                 $ws->mergeCells("{$a}5:{$z}5");
-                $ws->setCellValue("{$a}5", mb_strtoupper($k['nama']));
+                $ws->setCellValue("{$a}5", self::judulKolom($k));
                 $ws->mergeCells("{$a}6:{$z}6");
-                $ws->setCellValue("{$a}6", (int) $k['tarif']);                   // sel TARIF — rumus di bawah memakainya
-                $ws->getStyle("{$a}6")->getNumberFormat()->setFormatCode('"Rp. "#,##0');
+                $ws->setCellValue("{$a}6", 'Rp. ' . number_format((int) $k['tarif'], 0, ',', '.'));   // teks, persis rekap sekolah
             }
         }
-        $tot = self::huruf($cTotal);
-        $ttd = self::huruf($cTtd);
         $ws->mergeCells("{$tot}5:{$tot}6");
         $ws->setCellValue("{$tot}5", 'TOTAL');
         $ws->mergeCells("{$ttd}5:{$ttd}6");
         $ws->setCellValue("{$ttd}5", 'TTD');
-        $ws->getStyle("A5:{$akhir}6")->applyFromArray([
+        $ws->getStyle("A5:{$akhir}6")->applyFromArray($tipis + [
             'font'      => ['bold' => true],
-            'alignment' => ['horizontal' => Alignment::HORIZONTAL_CENTER, 'vertical' => Alignment::VERTICAL_CENTER, 'wrapText' => true],
-            'fill'      => ['fillType' => Fill::FILL_SOLID, 'startColor' => ['rgb' => 'E5EAF2']],
+            'alignment' => ['horizontal' => $tengah, 'vertical' => Alignment::VERTICAL_CENTER, 'wrapText' => false],
         ]);
+        // Teks header membungkus hanya di kolom JABATAN dan kolom komponen (seperti rekap sekolah).
+        $ws->getStyle('C5:' . self::huruf($cTotal - 1) . '6')->getAlignment()->setWrapText(true);
+        $ws->getStyle("{$ttd}5:{$ttd}6")->getFont()->setBold(false);
+        $ws->getStyle('B5:B6')->getAlignment()->setHorizontal(Alignment::HORIZONTAL_LEFT);
+        $ws->getStyle('C5:C6')->getFill()->setFillType(Fill::FILL_SOLID)->getStartColor()->setRGB('FFFF00');
+        $ws->getStyle("A6:{$akhir}6")->getBorders()->getBottom()->setBorderStyle(Border::BORDER_DOUBLE);
 
-        // data
+        // ---- data
         foreach ($b['baris'] as $i => $br) {
             $r = $r0 + $i;
             $ws->setCellValue("A{$r}", $br['no']);
@@ -247,81 +344,108 @@ final class HonorCetak
                     $q = self::huruf($kol['qty']);
                     $ws->setCellValue($q . $r, $sel['n']);
                     $cell = self::huruf($kol['rp']) . $r;
-                    $ws->setCellValue($cell, "={$q}{$r}*\${$q}\$6");               // jumlah × tarif (sel tarif, bukan angka tertulis)
+                    $ws->setCellValue($cell, "={$q}{$r}*" . (int) $kol['k']['tarif']);
                 }
                 $rupiah[] = $cell;
             }
             $ws->setCellValue("{$tot}{$r}", '=SUM(' . implode(',', $rupiah) . ')');
             $ws->setCellValue("{$ttd}{$r}", $br['no']);
-            $ws->getStyle("{$ttd}{$r}")->getAlignment()->setHorizontal($br['no'] % 2 === 1 ? Alignment::HORIZONTAL_LEFT : Alignment::HORIZONTAL_CENTER);
+        }
+        $ws->getStyle("A{$r0}:{$akhir}{$rLast}")->applyFromArray($tipis + ['alignment' => ['vertical' => Alignment::VERTICAL_CENTER]]);
+        $ws->getStyle("A{$r0}:{$akhir}{$r0}")->getBorders()->getTop()->setBorderStyle(Border::BORDER_NONE); // garis ganda header tampil utuh
+        for ($r = $r0; $r <= $rLast; $r++) {
+            $ws->getRowDimension($r)->setRowHeight(30);
+        }
+        $ws->getRowDimension($rJum)->setRowHeight(30);
+        $ws->getStyle("A{$r0}:A{$rLast}")->getAlignment()->setHorizontal($tengah);
+        $ws->getStyle("B{$r0}:B{$rLast}")->getFont()->setName('Times New Roman');
+        $ws->getStyle("B{$r0}:C{$rLast}")->getAlignment()->setWrapText(true);
+        $ws->getStyle("C{$r0}:C{$rLast}")->getAlignment()->setHorizontal(Alignment::HORIZONTAL_LEFT);
+        foreach ($kolom as $kol) {
+            $rpH = self::huruf($kol['rp']);
+            $ws->getStyle("{$rpH}{$r0}:{$rpH}{$rLast}")->getNumberFormat()->setFormatCode(self::AKUNTANSI);
+            if ($kol['qty'] !== null) {
+                $qH = self::huruf($kol['qty']);
+                $ws->getStyle("{$qH}{$r0}:{$qH}{$rLast}")->getAlignment()->setHorizontal($tengah);
+                if (($kol['k']['sumber'] ?? '') === 'koreksi') {
+                    $ws->getStyle("{$qH}{$r0}:{$qH}{$rLast}")->getAlignment()->setWrapText(true);
+                    $ws->getStyle("{$qH}{$r0}:{$qH}{$rLast}")->getFill()->setFillType(Fill::FILL_SOLID)->getStartColor()->setRGB('FFFF00');
+                }
+            }
+        }
+        $ws->getStyle("{$tot}{$r0}:{$tot}{$rLast}")->getNumberFormat()->setFormatCode(self::AKUNTANSI);
+        foreach ($b['baris'] as $i => $br) {
+            $ws->getStyle("{$ttd}" . ($r0 + $i))->getAlignment()->setHorizontal($br['no'] % 2 === 1 ? Alignment::HORIZONTAL_LEFT : $tengah);
         }
 
-        // JUMLAH — menjumlah SEMUA baris data
+        // ---- JUMLAH: menjumlah SEMUA baris data
         $ws->mergeCells("A{$rJum}:C{$rJum}");
         $ws->setCellValue("A{$rJum}", 'Jumlah');
         for ($col = 4; $col <= $cTotal; $col++) {
             $h = self::huruf($col);
             $ws->setCellValue("{$h}{$rJum}", "=SUM({$h}{$r0}:{$h}{$rLast})");
         }
-        $ws->getStyle("A{$rJum}:{$akhir}{$rJum}")->applyFromArray(['font' => ['bold' => true], 'fill' => ['fillType' => Fill::FILL_SOLID, 'startColor' => ['rgb' => 'F1F5F9']]]);
-        $ws->getStyle("A{$rJum}")->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER);
-
-        // bingkai, rata, format angka
-        $ws->getStyle("A5:{$akhir}{$rJum}")->getBorders()->getAllBorders()->setBorderStyle(Border::BORDER_THIN);
-        $ws->getStyle("D{$r0}:{$tot}{$rJum}")->getNumberFormat()->setFormatCode('#,##0');
-        $ws->getStyle("D{$r0}:{$tot}{$rJum}")->getAlignment()->setHorizontal(Alignment::HORIZONTAL_RIGHT);
-        $ws->getStyle("{$tot}{$r0}:{$tot}{$rJum}")->getFont()->setBold(true);
-        $ws->getStyle("A{$r0}:A{$rLast}")->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER);
-
-        // lebar kolom
-        $ws->getColumnDimension('A')->setWidth(4.5);
-        $ws->getColumnDimension('B')->setWidth(34);
-        $ws->getColumnDimension('C')->setWidth(24);
+        $ws->getStyle("A{$rJum}:{$akhir}{$rJum}")->applyFromArray($tipis + [
+            'alignment' => ['horizontal' => $tengah, 'vertical' => Alignment::VERTICAL_CENTER, 'wrapText' => true],
+        ]);
+        $ws->getStyle("D{$rJum}:{$tot}{$rJum}")->getFill()->setFillType(Fill::FILL_SOLID)->getStartColor()->setRGB('FFFFFF');
+        $ws->getStyle("A{$rJum}")->getFont()->setName('Arial Narrow')->setBold(true);
         foreach ($kolom as $kol) {
+            $ws->getStyle(self::huruf($kol['rp']) . $rJum)->getNumberFormat()->setFormatCode(self::AKUNTANSI);
+        }
+        $ws->getStyle("{$tot}{$rJum}")->getNumberFormat()->setFormatCode(self::AKUNTANSI);
+
+        // ---- lebar kolom (angka dari rekap sekolah)
+        $ws->getColumnDimension('A')->setWidth(4.18);
+        $ws->getColumnDimension('B')->setWidth(33.45);
+        $ws->getColumnDimension('C')->setWidth(16.18);
+        foreach ($kolom as $kol) {
+            $kode = (string) $kol['k']['kode'];
             if ($kol['qty'] === null) {
-                $ws->getColumnDimension(self::huruf($kol['rp']))->setWidth(16);
+                $ws->getColumnDimension(self::huruf($kol['rp']))->setWidth(14.73);
             } else {
-                $ws->getColumnDimension(self::huruf($kol['qty']))->setWidth(9);
-                $ws->getColumnDimension(self::huruf($kol['rp']))->setWidth(14);
+                $ws->getColumnDimension(self::huruf($kol['qty']))->setWidth(self::LEBAR_QTY[$kode] ?? 6.73);
+                $ws->getColumnDimension(self::huruf($kol['rp']))->setWidth(self::LEBAR_RP[$kode] ?? 14.73);
             }
         }
-        $ws->getColumnDimension($tot)->setWidth(16);
-        $ws->getColumnDimension($ttd)->setWidth(10);
+        $ws->getColumnDimension($tot)->setWidth(15.73);
+        $ws->getColumnDimension($ttd)->setWidth(19.45);
 
-        // tanda tangan
-        $t   = $rJum + 2;
-        $kiriA = 'B';
-        $kiriZ = 'C';
-        $kananA = self::huruf(max(4, $cTotal - 3));
-        $tengahA = self::huruf(max(4, intdiv($cTotal, 2) - 1));
-        $tengahZ = self::huruf(min($cTotal, intdiv($cTotal, 2) + 2));
-        $blok = static function (string $a, string $z, int $r, string $teks, bool $tebal = false, bool $garis = false) use ($ws): void {
-            $ws->mergeCells("{$a}{$r}:{$z}{$r}");
-            $ws->setCellValue("{$a}{$r}", $teks);
-            $st = $ws->getStyle("{$a}{$r}");
-            $st->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER);
-            $st->getFont()->setBold($tebal)->setUnderline($garis ? \PhpOffice\PhpSpreadsheet\Style\Font::UNDERLINE_SINGLE : \PhpOffice\PhpSpreadsheet\Style\Font::UNDERLINE_NONE);
+        // ---- tanda tangan (posisi relatif sama dengan rekap sekolah: JUMLAH + 2 …)
+        $t = $rJum + 2;
+        for ($r = $t - 1; $r <= $t + 11; $r++) {
+            $ws->getRowDimension($r)->setRowHeight(15);
+        }
+        $kiri   = static function (string $sel, string $teks, bool $tebal = false) use ($ws): void {
+            $ws->setCellValue($sel, $teks);
+            $ws->getStyle($sel)->applyFromArray(['font' => ['bold' => $tebal], 'alignment' => ['horizontal' => Alignment::HORIZONTAL_LEFT, 'vertical' => Alignment::VERTICAL_CENTER]]);
         };
-        $blok($kiriA, $kiriZ, $t, 'Mengetahui,');
-        $blok($kiriA, $kiriZ, $t + 1, 'Ketua');
-        $blok($kiriA, $kiriZ, $t + 5, $b['ketua'] !== '' ? $b['ketua'] : '(........................)', true, true);
-        $blok($kananA, $akhir, $t, trim($b['tempat'] . ($b['tanggal'] !== '' ? ', ' . $b['tanggal'] : ', ..................')));
-        $blok($kananA, $akhir, $t + 1, 'Bendahara');
-        $blok($kananA, $akhir, $t + 5, $b['bendahara'] !== '' ? $b['bendahara'] : '(........................)', true, true);
-        $blok($tengahA, $tengahZ, $t + 7, 'Menyetujui,');
-        $blok($tengahA, $tengahZ, $t + 8, 'Kepala ' . $b['namaSekolah']);
-        $blok($tengahA, $tengahZ, $t + 12, $b['kepsek'] !== '' ? $b['kepsek'] : '(........................)', true, true);
-        $rAkhir = $t + 12;
+        $kosongNama = '(........................)';
+        $kiri("C{$t}", 'Mengetahui,');
+        $kiri('C' . ($t + 1), 'Ketua');
+        $kiri('C' . ($t + 5), $b['ketua'] !== '' ? $b['ketua'] : $kosongNama, true);
+        $aR = self::huruf(max(4, $cTotal - 3));
+        $kiri("{$aR}{$t}", $b['tanggal_ttd']);
+        $kiri($aR . ($t + 1), 'Bendahara');
+        $ws->mergeCells($aR . ($t + 5) . ':' . $tot . ($t + 5));
+        $kiri($aR . ($t + 5), $b['bendahara'] !== '' ? $b['bendahara'] : $kosongNama, true);
+        $ws->getStyle($aR . ($t + 5))->getFont()->setName('Arial')->setSize(10);
+        $cA = 'F';
+        $cZ = self::huruf(min(8, max(6, $cTotal)));
+        foreach ([[$t + 6, 'Menyetujui,', false], [$t + 7, 'Kepala ' . $b['namaSekolahJudul'], false], [$t + 11, $b['kepsek'] !== '' ? $b['kepsek'] : $kosongNama, true]] as [$r, $teks, $tebal]) {
+            $ws->mergeCells("{$cA}{$r}:{$cZ}{$r}");
+            $ws->setCellValue("{$cA}{$r}", $teks);
+            $ws->getStyle("{$cA}{$r}")->applyFromArray(['font' => ['bold' => $tebal], 'alignment' => ['horizontal' => $tengah, 'vertical' => Alignment::VERTICAL_BOTTOM]]);
+        }
 
-        // cetak: landscape Folio, 1 halaman lebar, judul 1–6 diulang
+        // ---- cetak: landscape Folio, 1 halaman lebar, judul baris 1–6 diulang, margin & rata tengah seperti aslinya
         $ps = $ws->getPageSetup();
         $ps->setOrientation(PageSetup::ORIENTATION_LANDSCAPE)->setPaperSize(PageSetup::PAPERSIZE_FOLIO)->setFitToPage(true)->setFitToWidth(1)->setFitToHeight(0);
         $ps->setRowsToRepeatAtTopByStartAndEnd(1, 6);
-        $ps->setPrintArea("A1:{$akhir}{$rAkhir}");
+        $ps->setPrintArea("A1:{$akhir}" . ($t + 11));
         $ps->setHorizontalCentered(true);
-        $ws->getPageMargins()->setTop(0.5)->setBottom(0.6)->setLeft(0.4)->setRight(0.4);
-        $ws->getHeaderFooter()->setOddFooter('&L&8' . $b['judul'] . ($b['status'] === 'draf' ? '&C&8DRAF - belum final' : '') . '&R&8Halaman &P dari &N');
-        $ws->freezePane('D7');
+        $ws->getPageMargins()->setTop(0.748)->setBottom(0.748)->setLeft(0.197)->setRight(0.236)->setHeader(0.315)->setFooter(0.315);
+        $ws->getHeaderFooter()->setOddFooter(($b['status'] === 'draf' ? '&C&8DRAF - belum final' : '') . '&R&8Halaman &P dari &N');
     }
 
     /** Daftar komponen bernilai (≠ 0) satu penerima untuk slip. @return list<array<string,mixed>> */
@@ -346,9 +470,11 @@ final class HonorCetak
             $ws->getColumnDimension($c)->setWidth($w);
         }
         $r = 1;
+        $ukuran = [];
         foreach ($b['baris'] as $i => $br) {
             $awal = $r;
             foreach ([['SLIP HONOR', true, 13], [$b['judul'], true, 10], [$b['sekolah'] . ' — ' . $b['tahun'], false, 9]] as [$t, $tebal, $uk]) {
+                $ukuran[$r] = $uk;
                 $ws->mergeCells("A{$r}:E{$r}");
                 $ws->setCellValue("A{$r}", $t);
                 $ws->getStyle("A{$r}")->getFont()->setBold($tebal)->setSize($uk);
@@ -425,6 +551,11 @@ final class HonorCetak
             }
             unset($awal);
         }
+        // Lembar slip memakai Arial 10 (bukan Calibri 12 milik lembar rekap); ukuran judul dikembalikan.
+        $ws->getStyle('A1:E' . max(1, $r))->getFont()->setName('Arial')->setSize(10);
+        foreach ($ukuran as $baris => $uk) {
+            $ws->getStyle("A{$baris}")->getFont()->setSize($uk);
+        }
         $ps = $ws->getPageSetup();
         $ps->setOrientation(PageSetup::ORIENTATION_PORTRAIT)->setPaperSize(PageSetup::PAPERSIZE_A4)->setFitToPage(true)->setFitToWidth(1)->setFitToHeight(0);
         $ps->setHorizontalCentered(true);
@@ -446,7 +577,8 @@ final class HonorCetak
         if ($kertas === 'a4-portrait') {
             $d->setPaper('A4', 'portrait');
         } else {
-            $d->setPaper('F4', 'landscape');
+            // F4/Folio = 215 × 330 mm. Nama 'F4' TIDAK dikenal Dompdf (diam-diam jadi Letter), jadi ukurannya ditulis eksplisit (pt).
+            $d->setPaper([0, 0, 609.45, 935.43], 'landscape');
         }
         $d->render();
 

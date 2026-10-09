@@ -499,6 +499,7 @@ $routes->group('admin', static function ($routes) {
         $routes->post('ujian/(:segment)/honor/penerima-semua', 'Admin\UjianHonor::tambahSemua/$1', ['filter' => 'csrf']);
         $routes->post('ujian/(:segment)/honor/baris/(:num)/hapus', 'Admin\UjianHonor::hapusBaris/$1/$2', ['filter' => 'csrf']);
         $routes->post('ujian/(:segment)/honor/baris/(:num)/jabatan', 'Admin\UjianHonor::ubahJabatan/$1/$2', ['filter' => 'csrf']);
+        $routes->post('ujian/(:segment)/honor/baris/(:num)/pindah', 'Admin\UjianHonor::pindah/$1/$2', ['filter' => 'csrf']);
         $routes->post('ujian/(:segment)/honor/nilai', 'Admin\UjianHonor::simpanNilai/$1', ['filter' => 'csrf']);
         $routes->post('ujian/(:segment)/honor/sinkron', 'Admin\UjianHonor::sinkron/$1', ['filter' => 'csrf']);
         $routes->post('ujian/(:segment)/honor/hapus', 'Admin\UjianHonor::hapusDokumen/$1', ['filter' => 'csrf']);
