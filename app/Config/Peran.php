@@ -47,10 +47,11 @@ class Peran extends BaseConfig
         ],
         self::OPERATOR => [
             'label'   => 'Operator Sekolah',
-            'ringkas' => 'Kerja harian: PKL (periksa, kembalikan, ubah, isi atas nama, unduh surat + catat biaya, laporan pembayaran, pengaturan), Isian Biodata, Master Siswa & Kelas, Arsip Dokumen. Hak PKL persisnya diatur Admin (bawaan: tidak bisa meng-ACC).',
+            'ringkas' => 'Kerja harian: PKL (periksa, kembalikan, ubah, isi atas nama, unduh surat + catat biaya, laporan pembayaran, pengaturan), Surat Sekolah (ASTS, TKA, Pernyataan Orang Tua, Balasan, Penarikan), Isian Biodata, Master Siswa & Kelas, Arsip Dokumen. Hak PKL dan Surat Sekolah persisnya diatur Admin (bawaan: tidak bisa meng-ACC).',
             'beranda' => 'admin/pkl',
             'akses'   => [
                 'admin/pkl',
+                'admin/surat',
                 'admin/biodata',
                 'admin/master/siswa',
                 'admin/master/kelas',
@@ -61,12 +62,12 @@ class Peran extends BaseConfig
         ],
         self::HUBIN => [
             'label'   => 'Waka Hubin',
-            'ringkas' => 'Hanya menu PKL. Hak persisnya diatur Admin (bawaan: periksa dan ACC ajuan, ubah data, tanda tangan digital; tidak mengunduh surat, tidak menghapus atau mengatur form).',
+            'ringkas' => 'Hanya menu PKL dan Surat Sekolah (Daftar Surat untuk ACC). Hak persisnya diatur Admin (bawaan: periksa dan ACC ajuan dan surat sekolah, ubah data, tanda tangan digital; tidak mengunduh surat, tidak menghapus atau mengatur form).',
             'beranda' => 'admin/pkl',
             // CATATAN KEPUTUSAN (2026-10-07): Hubin TIDAK BOLEH melihat Isian Biodata Siswa
             // (admin/biodata) maupun Master Data (admin/master/*). Cukup dengan tidak mendaftarkannya
             // di 'akses' (tolak-secara-bawaan); jangan menambah awalan itu ke Hubin. Dijaga dev:uji-pkl.
-            'akses'   => ['admin/pkl'],
+            'akses'   => ['admin/pkl', 'admin/surat'],
             'api'       => true,
             'api_akses' => ['pkl'],
         ],

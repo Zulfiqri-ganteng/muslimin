@@ -49,17 +49,17 @@
             ['admin/pkl/pengaturan', 'Pengaturan PKL',     'M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065zM15 12a3 3 0 11-6 0 3 3 0 016 0z'],
             ['admin/pkl/hak-akses',  'Hak Akses PKL',      'M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z'],
         ]],
-        // RANCANGAN — fitur surat dari folder formatdatasekolah, BELUM dibuat. Tampil sebagai menu redup bertanda "Segera"
-        // (tidak bisa diklik). Item [alamat-izin, label, ikon]: alamat hanya DIPAKAI SEBAGAI PENENTU SIAPA YANG MELIHAT
-        // (lewat HakAkses::boleh seperti menu lain), bukan tautan. Surat PKL → yang boleh membuka PKL; surat siswa
-        // (ASTS/TKA) → yang boleh membuka Master Siswa. Ganti jadi menu biasa (tanpa 'segera') saat fiturnya jadi.
-        ['title' => 'SURAT SEKOLAH', 'segera' => true, 'items' => [
-            ['admin/master/siswa', 'Surat Izin ASTS',                'M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z'],
-            ['admin/master/siswa', 'Surat Izin TKA',                 'M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z'],
-            ['admin/pkl',          'Pernyataan Orang Tua PKL',       'M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z'],
-            ['admin/pkl',          'Surat Balasan PKL',              'M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z'],
-            ['admin/pkl',          'Penarikan Izin PKL',             'M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z'],
-        ]],
+        // SURAT SEKOLAH (docs/DESAIN-SURAT-SEKOLAH.md): Daftar Surat + satu menu per jenis surat. Item jenis dibangun dari
+        // Libraries\SuratJenis; yang halamannya BELUM dibangun (tidak ada di SuratJenis::SIAP) tampil redup bertanda "Segera"
+        // dan tidak bisa diklik. Elemen ke-5 item = 'segera'. Alamat tiap item tetap dipakai sebagai penentu SIAPA YANG MELIHAT
+        // (HakAkses::boleh → hak 'surat_sekolah'), jadi menu "Segera" pun hanya terlihat oleh yang kelak berhak membukanya.
+        ['title' => 'SURAT SEKOLAH', 'items' => array_merge(
+            [['admin/surat', 'Daftar Surat', 'M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01', true]],
+            array_map(
+                static fn (string $k): array => [\App\Libraries\SuratJenis::alamat($k), \App\Libraries\SuratJenis::label($k), 'M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z', false, ! \App\Libraries\SuratJenis::siap($k)],
+                \App\Libraries\SuratJenis::kode()
+            )
+        )],
         ['title' => 'GURU', 'items' => [
             ['admin/master/guru',         'Guru',              'M17 20h5v-2a4 4 0 00-3-3.87M9 20H4v-2a4 4 0 013-3.87m6-1.13a4 4 0 10-4 0m6 0a4 4 0 10-2 0M7 8a4 4 0 108 0 4 4 0 00-8 0z'],
             ['admin/master/jabatan',      'Jabatan',           'M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z'],
@@ -163,7 +163,7 @@
             . '</a>';
     };
 
-    // Menu rancangan (fitur belum jadi): redup, tak bisa diklik, bertanda "Segera".
+    // Menu rancangan (fitur belum jadi; item bertanda $it[4] = true): redup, tak bisa diklik, bertanda "Segera".
     $renderSegera = static function (array $it) use ($atrCari) {
         [, $label, $icon] = $it;
         echo '<div title="' . esc($label) . ' — segera hadir" aria-disabled="true"' . $atrCari($label) . ' '
@@ -174,7 +174,7 @@
             . '<span class="shrink-0 rounded-full bg-gold-400/20 px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wide text-gold-400" x-show="!collapsed || sidebar">Segera</span>'
             . '</div>';
     };
-    $renderItem = static fn (array $g, array $it) => ($g['segera'] ?? false) ? $renderSegera($it) : $renderLink($it);
+    $renderItem = static fn (array $g, array $it) => ($it[4] ?? false) ? $renderSegera($it) : $renderLink($it);
 ?>
 
 <!-- Overlay mobile -->
@@ -216,7 +216,7 @@
                 // disimpan per peramban (localStorage). Saat mencari, semua grup yang cocok terbuka.
                 $grupAktif = false;
                 foreach ($g['items'] as $it) {
-                    $grupAktif = $grupAktif || (! ($g['segera'] ?? false) && $itemAktif($it));
+                    $grupAktif = $grupAktif || (! ($it[4] ?? false) && $itemAktif($it));
                 }
                 $labelGrup = array_map(static fn (array $it): string => mb_strtolower($it[1]), $g['items']);
                 $kunciGrup = 'sb_g_' . substr(md5((string) $g['title']), 0, 8);

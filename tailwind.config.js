@@ -1,6 +1,7 @@
 /** @type {import('tailwindcss').Config} */
 module.exports = {
-  content: ['./app/Views/**/*.php'],
+  // Dua berkas non-tampilan menyimpan kelas warna lencana (jenis & status Surat Sekolah) sebagai teks.
+  content: ['./app/Views/**/*.php', './app/Libraries/SuratJenis.php', './app/Models/SuratSekolahModel.php'],
   theme: {
     extend: {
       colors: {

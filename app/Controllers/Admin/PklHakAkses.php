@@ -3,6 +3,7 @@
 namespace App\Controllers\Admin;
 
 use App\Libraries\PklHak;
+use App\Libraries\SuratJenis;
 
 /**
  * PKL → Hak Akses: Admin menentukan siapa (Waka Hubin / Operator) boleh melakukan apa di modul PKL.
@@ -23,7 +24,19 @@ class PklHakAkses extends PklDasar
             'hakDaftar'  => PklHak::HAK,
             'peringatan' => PklHak::peringatan(),
             'bawaan'     => PklHak::BAWAAN,
+            'accSurat'   => SuratJenis::petaAcc($this->p),
         ]);
+    }
+
+    /** POST admin/pkl/hak-akses/surat-acc — jenis Surat Sekolah mana yang wajib ACC (khusus Admin). */
+    public function simpanAccSurat()
+    {
+        if ($this->peranSaya() !== 'admin') {
+            return $this->ke('admin/pkl', 'error', 'Hak Akses PKL hanya bisa diatur Admin.');
+        }
+        $hasil = SuratJenis::simpanAcc((array) $this->request->getPost('acc'), $this->konteks());
+
+        return $this->ke('admin/pkl/hak-akses', 'success', $hasil['pesan']);
     }
 
     public function simpan()

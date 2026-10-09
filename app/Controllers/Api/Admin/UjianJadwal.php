@@ -209,6 +209,9 @@ class UjianJadwal extends BaseApiController
         $db->transStart();
 
         $pengawas->where('jadwal_id', $id)->delete();
+        if ($db->tableExists('ujian_pembuat_soal')) {
+            $db->table('ujian_pembuat_soal')->where('jadwal_id', $id)->delete(); // pivot pembuat soal (honor), sama dengan web
+        }
         $susulan->where('jadwal_id', $id)->set('jadwal_id', null)->update();
         $this->model->delete($id);
 

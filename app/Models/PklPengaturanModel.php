@@ -21,6 +21,7 @@ class PklPengaturanModel extends Model
         'durasi_min_hari', 'durasi_maks_hari', 'maks_anggota',
         'waka_hubin_nama', 'waka_hubin_nip', 'waka_hubin_jabatan', 'format_nomor', 'nomor_awal', 'nomor_awal_tahun', 'template_surat',
         'kepsek_nama', 'kontak_surat_nama', 'kontak_surat_hp', 'ttd_hubin', 'format_nama_berkas', 'batas_keputusan_hari',
+        'surat_perlu_acc',
     ];
     protected $useTimestamps = true;
     protected $createdField  = '';

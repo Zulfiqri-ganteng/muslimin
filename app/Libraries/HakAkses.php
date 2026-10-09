@@ -67,7 +67,7 @@ final class HakAkses
         return self::bolehPkl($peran, 'acc');
     }
 
-    /** Hak PKL yang diatur Admin (acc, surat, laporan, ubah, ttd, pengaturan, hapus) — lihat PklHak::HAK. */
+    /** Hak PKL yang diatur Admin (acc, surat, surat_sekolah, laporan, ubah, ttd, pengaturan, hapus) — lihat PklHak::HAK. */
     public static function bolehPkl(?string $peran, string $hak): bool
     {
         return self::peran($peran) !== null && PklHak::boleh($peran, $hak);

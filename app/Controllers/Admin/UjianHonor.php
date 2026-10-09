@@ -6,10 +6,9 @@ use App\Controllers\BaseController;
 use App\Libraries\HonorDokumen;
 use App\Libraries\HonorHitung;
 use App\Libraries\HonorImpor;
+use App\Libraries\HonorPembuatSoal;
 use App\Libraries\HonorPengaturan;
-use App\Models\AuditModel;
 use App\Models\GuruModel;
-use App\Models\UjianJadwalModel;
 use App\Models\UjianPeriodeModel;
 use CodeIgniter\HTTP\RedirectResponse;
 use CodeIgniter\HTTP\ResponseInterface;
@@ -286,23 +285,15 @@ class UjianHonor extends BaseController
         if (($salah = $this->siapkanGet($slug)) !== null) {
             return $salah;
         }
-        $jadwal = (new UjianJadwalModel())->untukPeriode((int) $this->periode['id'])->findAll();
-        $db     = db_connect();
-        $tugas  = [];
-        if ($jadwal !== []) {
-            foreach ($db->table('ujian_pembuat_soal s')->select('s.id, s.jadwal_id, g.nama')->join('guru g', 'g.id = s.guru_id AND g.deleted_at IS NULL')
-                ->whereIn('s.jadwal_id', array_map('intval', array_column($jadwal, 'id')))->orderBy('g.nama')->get()->getResultArray() as $t) {
-                $tugas[(int) $t['jadwal_id']][] = $t;
-            }
-        }
+        $d = (new HonorPembuatSoal())->daftar((int) $this->periode['id']);
 
         return view('admin/ujian/pembuat_soal', [
             'title'    => 'Pembuat Soal Ujian',
             'slug'     => UjianPeriodeModel::keSlug((string) $this->periode['jenis']),
             'periode'  => $this->periode,
             'label'    => (new UjianPeriodeModel())->label($this->periode),
-            'jadwal'   => $jadwal,
-            'tugas'    => $tugas,
+            'jadwal'   => $d['jadwal'],
+            'tugas'    => $d['tugas'],
             'guruOpts' => (new GuruModel())->options(),
             'kembali'  => $this->urlHonor(),
         ]);
@@ -314,25 +305,9 @@ class UjianHonor extends BaseController
         if (($salah = $this->siapkan($slug)) !== null) {
             return $salah;
         }
-        $db       = db_connect();
-        $jadwalId = (int) $this->request->getPost('jadwal_id');
-        $guruId   = (int) $this->request->getPost('guru_id');
-        $jadwal   = $jadwalId > 0 ? (new UjianJadwalModel())->find($jadwalId) : null;
-        $guru     = $guruId > 0 ? $db->table('guru')->select('id, nama')->where('id', $guruId)->where('deleted_at', null)->get()->getRowArray() : null;
-        $url      = $this->urlPembuatSoal();
-        if ($jadwal === null || (int) $jadwal['periode_id'] !== (int) $this->periode['id']) {
-            return redirect()->to($url)->with('error', 'Jadwal ujian tidak ditemukan.');
-        }
-        if ($guru === null) {
-            return redirect()->to($url)->with('error', 'Pilih guru dulu.');
-        }
-        if ($db->table('ujian_pembuat_soal')->where('jadwal_id', $jadwalId)->where('guru_id', $guruId)->countAllResults() > 0) {
-            return redirect()->to($url)->with('error', $guru['nama'] . ' sudah menjadi pembuat soal untuk jadwal ini.');
-        }
-        $db->table('ujian_pembuat_soal')->insert(['jadwal_id' => $jadwalId, 'guru_id' => $guruId, 'created_at' => date('Y-m-d H:i:s')]);
-        (new AuditModel())->record('create', 'ujian_pembuat_soal', (int) $db->insertID(), 'Pembuat soal ' . $guru['nama'] . ' — jadwal ujian #' . $jadwalId);
+        $h = (new HonorPembuatSoal())->tambah($this->periode, (int) $this->request->getPost('jadwal_id'), (int) $this->request->getPost('guru_id'));
 
-        return redirect()->to($url)->with('success', $guru['nama'] . ' ditugaskan sebagai pembuat soal.');
+        return redirect()->to($this->urlPembuatSoal())->with($h['ok'] ? 'success' : 'error', $h['pesan']);
     }
 
     /** POST ujian/(:segment)/pembuat-soal/(:num)/hapus */
@@ -341,16 +316,9 @@ class UjianHonor extends BaseController
         if (($salah = $this->siapkan($slug)) !== null) {
             return $salah;
         }
-        $db  = db_connect();
-        $row = $db->table('ujian_pembuat_soal s')->select('s.id, g.nama')->join('ujian_jadwal j', 'j.id = s.jadwal_id')->join('guru g', 'g.id = s.guru_id', 'left')
-            ->where('s.id', (int) $id)->where('j.periode_id', (int) $this->periode['id'])->get()->getRowArray();
-        if ($row === null) {
-            return redirect()->to($this->urlPembuatSoal())->with('error', 'Penugasan tidak ditemukan.');
-        }
-        $db->table('ujian_pembuat_soal')->where('id', (int) $id)->delete();
-        (new AuditModel())->record('delete', 'ujian_pembuat_soal', (int) $id, 'Cabut pembuat soal ' . ($row['nama'] ?? '?'));
+        $h = (new HonorPembuatSoal())->cabut($this->periode, (int) $id);
 
-        return redirect()->to($this->urlPembuatSoal())->with('success', 'Penugasan dicabut.');
+        return redirect()->to($this->urlPembuatSoal())->with($h['ok'] ? 'success' : 'error', $h['pesan']);
     }
 
     // -----------------------------------------------------------------

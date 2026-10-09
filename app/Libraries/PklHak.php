@@ -27,11 +27,15 @@ final class PklHak
     public const HAK = [
         'acc' => [
             'ACC, tolak & batalkan persetujuan',
-            'Memutuskan ajuan PKL: setuju (ACC), tolak, atau cabut persetujuan. Tercatat atas nama pelakunya dan tercetak di kaki surat.',
+            'Memutuskan ajuan PKL dan surat sekolah (Izin ASTS/TKA, Balasan, Penarikan): setuju (ACC), tolak/kembalikan, atau cabut persetujuan. Tercatat atas nama pelakunya dan tercetak di kaki surat.',
         ],
         'surat' => [
             'Unduh surat + catat biaya + kabari WhatsApp',
             'Mengunduh surat permohonan PKL (satuan / massal). Saat mengunduh wajib mencatat biaya yang diterima, lalu boleh mengabari siswa lewat WhatsApp dan mengoreksi catatan biaya.',
+        ],
+        'surat_sekolah' => [
+            'Surat Sekolah: buat & unduh',
+            'Membuat dan mengunduh Surat Izin ASTS, Surat Izin TKA, Pernyataan Orang Tua PKL, Surat Balasan PKL, dan Penarikan Izin PKL (menu Surat Sekolah). Surat yang wajib ACC baru bisa diunduh setelah disetujui peran yang berhak ACC.',
         ],
         'laporan' => [
             'Laporan Pembayaran',
@@ -58,7 +62,7 @@ final class PklHak
     /** Hak bawaan = aturan sekolah sebelum hak bisa diatur. */
     public const BAWAAN = [
         'hubin'    => ['acc', 'ubah', 'ttd'],
-        'operator' => ['surat', 'laporan', 'ubah', 'pengaturan'],
+        'operator' => ['surat', 'surat_sekolah', 'laporan', 'ubah', 'pengaturan'],
     ];
 
     /** @var array<string, list<string>>|null */
@@ -108,6 +112,9 @@ final class PklHak
         $a = strtolower($alamat);
         $a = preg_split('/[?#]/', $a, 2)[0];
         $a = trim((string) preg_replace('#/{2,}#', '/', $a), '/');
+        if ($a === 'admin/surat' || str_starts_with($a, 'admin/surat/')) {
+            return self::hakSurat(ltrim(substr($a, strlen('admin/surat')), '/'));
+        }
         if ($a !== 'admin/pkl' && ! str_starts_with($a, 'admin/pkl/')) {
             return null;
         }
@@ -129,6 +136,20 @@ final class PklHak
             (bool) preg_match('~^\d+/(ubah|kembalikan)$~', $sisa)               => 'ubah',
             (bool) preg_match('~^\d+/(surat|pembayaran|wa)(/|$)~', $sisa)       => 'surat',
             default                                                             => null,
+        };
+    }
+
+    /**
+     * Hak yang dituntut sebuah alamat Surat Sekolah (bagian setelah "admin/surat/"). Daftar Surat dan detail surat terbuka
+     * bagi semua yang punya akses; ACC / kembalikan butuh hak 'acc'; halaman membuat, mengubah, membatalkan, dan mengunduh
+     * surat (asts, tka, pernyataan-ortu, balasan, penarikan, {id}/unduh …) butuh 'surat_sekolah'.
+     */
+    private static function hakSurat(string $sisa): ?string
+    {
+        return match (true) {
+            $sisa === '' || (bool) preg_match('~^\d+$~', $sisa)                       => null,
+            (bool) preg_match('~^(acc-massal|\d+/(acc|batal-acc|kembalikan))$~', $sisa) => 'acc',
+            default                                                                   => 'surat_sekolah',
         };
     }
 
@@ -259,7 +280,7 @@ final class PklHak
         $out = [];
         foreach (self::PERAN_ATUR as $peran) {
             $punya = $daftar[$peran] ?? [];
-            if (in_array('acc', $punya, true) && in_array('surat', $punya, true)) {
+            if (in_array('acc', $punya, true) && (in_array('surat', $punya, true) || in_array('surat_sekolah', $punya, true))) {
                 $out[] = HakAkses::label($peran) . ' memegang ACC sekaligus unduh surat: pemisahan tugas (siapa yang menyetujui ≠ siapa yang mencetak) hilang.';
             }
         }

@@ -7,6 +7,7 @@
  * @var array<string, array{0:string,1:string}> $hakDaftar
  * @var list<string>                       $peringatan peringatan pemisahan tugas (kondisi tersimpan)
  * @var array<string, list<string>>        $bawaan     hak bawaan
+ * @var array<string, bool>                $accSurat   jenis Surat Sekolah => wajib ACC? (Libraries\SuratJenis::petaAcc)
  */
 
 use App\Libraries\HakAkses;
@@ -105,6 +106,34 @@ $flashPeringatan = session()->getFlashdata('peringatan_hak') ?: [];
                 class="rounded-xl border border-slate-300 bg-white px-5 py-3 text-sm font-semibold text-slate-600 transition hover:bg-slate-50">Kembalikan ke bawaan sekolah</button>
         <button type="submit" class="rounded-xl bg-brand-700 px-8 py-3 text-sm font-bold text-white shadow-sm transition hover:bg-brand-800 active:scale-95">Simpan hak akses</button>
     </div>
+</form>
+
+<!-- Surat Sekolah: jenis surat yang wajib ACC -->
+<form method="post" action="<?= site_url('admin/pkl/hak-akses/surat-acc') ?>" class="mx-auto mt-5 max-w-4xl space-y-4">
+    <?= csrf_field() ?>
+    <section class="rise overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+        <h3 class="border-b border-slate-100 bg-slate-50 px-5 py-3 text-xs font-bold uppercase tracking-wide text-slate-500">Surat Sekolah: jenis yang wajib ACC</h3>
+        <div class="space-y-3 px-5 py-5">
+            <p class="text-xs leading-relaxed text-slate-500"><b>Dicentang</b> = surat jenis itu baru bisa diunduh setelah disetujui (ACC) peran yang berhak ACC, dan kaki suratnya mencatat siapa yang menyetujui. <b>Tidak dicentang</b> = begitu dibuat langsung siap unduh (tetap tercatat siapa yang mencetak). Berlaku untuk surat yang dibuat <u>sesudah</u> disimpan; surat yang sudah menunggu ACC tetap menunggu.</p>
+            <?php foreach ($accSurat as $kode => $wajib):
+                if (! \App\Libraries\SuratJenis::bernomor($kode)) {
+                    continue;
+                }
+            ?>
+                <label class="flex cursor-pointer items-start gap-3 rounded-xl border border-slate-200 px-4 py-3 transition has-[:checked]:border-brand-500 has-[:checked]:bg-brand-50">
+                    <input type="checkbox" name="acc[]" value="<?= esc($kode, 'attr') ?>" <?= $wajib ? 'checked' : '' ?> class="mt-0.5 h-5 w-5">
+                    <span>
+                        <span class="block text-sm font-semibold text-slate-800"><?= esc(\App\Libraries\SuratJenis::label($kode)) ?></span>
+                        <span class="block text-xs leading-relaxed text-slate-500"><?= esc(\App\Libraries\SuratJenis::DATA[$kode]['ringkas']) ?></span>
+                    </span>
+                </label>
+            <?php endforeach; ?>
+            <p class="text-xs text-slate-400">Pernyataan Orang Tua PKL tidak bernomor, jadi tidak memakai ACC.</p>
+        </div>
+        <div class="flex justify-end border-t border-slate-100 px-5 py-4">
+            <button type="submit" class="rounded-xl bg-brand-700 px-8 py-3 text-sm font-bold text-white shadow-sm transition hover:bg-brand-800 active:scale-95">Simpan aturan ACC surat</button>
+        </div>
+    </section>
 </form>
 
 <?= $this->endSection() ?>

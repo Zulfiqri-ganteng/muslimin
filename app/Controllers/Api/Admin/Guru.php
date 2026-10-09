@@ -156,6 +156,9 @@ class Guru extends BaseCrud
         // Guru memakai soft delete → ON DELETE CASCADE tidak jalan, lepas manual.
         $db->table('guru_jabatan')->whereIn('guru_id', $ids)->delete();
         $db->table('ketersediaan_guru')->whereIn('guru_id', $ids)->delete();
+        if ($db->tableExists('ujian_pembuat_soal')) {
+            $db->table('ujian_pembuat_soal')->whereIn('guru_id', $ids)->delete(); // penugasan pembuat soal ujian, sama dengan web
+        }
 
         $pengampuIds = array_map('intval', array_column(
             $db->table('pengampu')->select('id')->whereIn('guru_id', $ids)->get()->getResultArray(),

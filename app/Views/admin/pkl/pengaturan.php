@@ -193,7 +193,7 @@ $tinjau = [
                 <div>
                     <label class="lbl" for="f_nomor_awal">Nomor berikutnya (tahun ini)</label>
                     <input id="f_nomor_awal" type="number" min="1" max="99999" name="nomor_awal" value="<?= esc($nilai('nomor_awal', '1'), 'attr') ?>" class="inp <?= $cls('nomor_awal') ?>">
-                    <p class="mt-1 text-xs text-slate-400">Isi bila sekolah sudah memakai nomor berjalan (mis. sudah sampai 44 → isi 45). Nomor tak pernah mundur atau ganda.</p>
+                    <p class="mt-1 text-xs text-slate-400">Isi bila sekolah sudah memakai nomor berjalan (mis. sudah sampai 44 → isi 45). Nomor tak pernah mundur atau ganda. <b>Satu urutan untuk Surat Izin PKL dan semua Surat Sekolah</b> (Izin ASTS/TKA, Balasan, Penarikan), jadi tidak ada dua surat bernomor sama.</p>
                     <?= $err('nomor_awal') ?>
                 </div>
             </div>

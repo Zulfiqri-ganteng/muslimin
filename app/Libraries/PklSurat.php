@@ -24,8 +24,8 @@ final class PklSurat
     /** Template bawaan = surat resmi sekolah (relatif APPPATH). Dibuat dari contoh surat sekolah; lihat docs/DESAIN-PKL.md. */
     public const TEMPLATE_BAWAAN = 'Libraries/Surat/surat_pkl_binus.docx';
 
-    /** Id relasi gambar tanda tangan Waka Hubin di dalam berkas Word. */
-    private const REL_TTD = 'rIdTtdHubin';
+    /** Id relasi gambar tanda tangan Waka Hubin di dalam berkas Word (juga dipakai Libraries\SuratBerkas). */
+    public const REL_TTD = 'rIdTtdHubin';
 
     /** Penanda skalar yang bisa dipakai di template Word (${nama}). */
     public const SKALAR = [
@@ -327,9 +327,8 @@ final class PklSurat
 
             $p      = (new PklPengaturanModel())->ambil();
             $tahun  = (int) $tgl->format('Y');
-            $maks   = (int) ($this->db->query('SELECT COALESCE(MAX(urut), 0) m FROM pkl_surat WHERE tahun = ?', [$tahun])->getRowArray()['m'] ?? 0);
-            $lantai = ((int) ($p['nomor_awal_tahun'] ?? 0) === $tahun) ? max(1, (int) $p['nomor_awal']) : 1;
-            $urut   = max($maks + 1, $lantai);
+            // Satu urutan nomor untuk Surat Izin PKL dan Surat Sekolah (Libraries\SuratNomor), di bawah kunci yang sama.
+            $urut   = SuratNomor::urutBerikutnya($this->db, $tahun, $p);
             $pola   = (string) ($p['format_nomor'] ?? '') !== '' ? (string) $p['format_nomor'] : PklNomorSurat::BAWAAN;
             if (PklNomorSurat::periksa($pola) !== null) { // format tersimpan yang rusak (mis. "{urut}00") tak boleh menerbitkan nomor ngawur
                 log_message('error', '[PKL] format nomor surat tidak sah "' . $pola . '"; memakai format bawaan.');

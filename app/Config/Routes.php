@@ -141,6 +141,32 @@ $routes->group('admin', static function ($routes) {
         $routes->get('pkl/hak-akses', 'Admin\PklHakAkses::index', ['filter' => 'csrf']);
         $routes->post('pkl/hak-akses', 'Admin\PklHakAkses::simpan', ['filter' => 'csrf']);
         $routes->post('pkl/hak-akses/bawaan', 'Admin\PklHakAkses::bawaan', ['filter' => 'csrf']);
+        $routes->post('pkl/hak-akses/surat-acc', 'Admin\PklHakAkses::simpanAccSurat', ['filter' => 'csrf']);
+
+        // ===== Surat Sekolah (staf) — docs/DESAIN-SURAT-SEKOLAH.md =====
+        // Daftar Surat (buku agenda surat keluar), detail, keputusan (ACC / kembalikan / batalkan), unduhan Word.
+        // Halaman membuat tiap jenis surat ditambahkan per langkah. Hak per alamat: Libraries\PklHak::hakUntukAlamat
+        // (admin/surat/… → null | 'acc' | 'surat_sekolah') dan diperiksa lagi di Libraries\SuratKeputusan / controller.
+        // Aksi pengubah data = POST + CSRF; rute statis SEBELUM pola (:num).
+        $routes->get('surat', 'Admin\Surat::index', ['filter' => 'csrf']);
+        // Formulir membuat / mengubah Surat Izin ASTS dan TKA (Admin\SuratIzin)
+        $routes->get('surat/asts', 'Admin\SuratIzin::asts', ['filter' => 'csrf']);
+        $routes->post('surat/asts', 'Admin\SuratIzin::simpanAsts', ['filter' => 'csrf']);
+        $routes->get('surat/asts/(:num)/ubah', 'Admin\SuratIzin::ubahAsts/$1', ['filter' => 'csrf']);
+        $routes->post('surat/asts/(:num)/ubah', 'Admin\SuratIzin::simpanUbahAsts/$1', ['filter' => 'csrf']);
+        $routes->get('surat/tka', 'Admin\SuratIzin::tka', ['filter' => 'csrf']);
+        $routes->post('surat/tka', 'Admin\SuratIzin::simpanTka', ['filter' => 'csrf']);
+        $routes->get('surat/tka/(:num)/ubah', 'Admin\SuratIzin::ubahTka/$1', ['filter' => 'csrf']);
+        $routes->post('surat/tka/(:num)/ubah', 'Admin\SuratIzin::simpanUbahTka/$1', ['filter' => 'csrf']);
+        $routes->post('surat/acc-massal', 'Admin\Surat::accMassal', ['filter' => 'csrf']);
+        $routes->post('surat/unduh-massal', 'Admin\Surat::unduhMassal', ['filter' => 'csrf']);
+        $routes->get('surat/(:num)', 'Admin\Surat::detail/$1', ['filter' => 'csrf']);
+        $routes->post('surat/(:num)/acc', 'Admin\Surat::acc/$1', ['filter' => 'csrf']);
+        $routes->post('surat/(:num)/kembalikan', 'Admin\Surat::kembalikan/$1', ['filter' => 'csrf']);
+        $routes->post('surat/(:num)/batal-acc', 'Admin\Surat::batalAcc/$1', ['filter' => 'csrf']);
+        $routes->post('surat/(:num)/ajukan-ulang', 'Admin\Surat::ajukanUlang/$1', ['filter' => 'csrf']);
+        $routes->post('surat/(:num)/batal', 'Admin\Surat::batal/$1', ['filter' => 'csrf']);
+        $routes->post('surat/(:num)/unduh', 'Admin\Surat::unduh/$1', ['filter' => 'csrf']);
 
         // ===== Kelola Akun Staf (khusus peran admin — dijaga Config\Peran) =====
         // Semua aksi pengubah data memakai POST. Rute ini bisa menaikkan peran
@@ -787,6 +813,38 @@ $routes->group('api/v1', ['namespace' => 'App\Controllers\Api', 'filter' => 'cor
         $routes->delete('admin/biodata/isian/(:num)', 'Admin\Biodata::hapus/$1');
         $routes->get('admin/ujian/(:segment)/cetak/daftar-hadir/(:num)', 'Admin\UjianCetak::daftarHadir/$1/$2');
         $routes->get('admin/ujian/(:segment)/cetak/berita-acara/(:num)', 'Admin\UjianCetak::beritaAcara/$1/$2');
+
+        // ---------- HONOR UJIAN (KHUSUS ADMIN — data gaji; kontrak: docs/API-HONOR.md) ----------
+        // Operator & Waka Hubin sudah ditolak penyaring apiauth (hanya awalan 'pkl'); controller memeriksa ulang peran Admin.
+        // `tp` (tahun pelajaran) di query atau body; aksi mengubah data memakai POST/DELETE. Impor Excel hanya di web.
+        $routes->get('admin/honor/pengaturan', 'Admin\HonorPengaturan::show');
+        $routes->post('admin/honor/pengaturan/komponen', 'Admin\HonorPengaturan::komponen');
+        $routes->post('admin/honor/pengaturan/komponen/tambah', 'Admin\HonorPengaturan::tambah');
+        $routes->delete('admin/honor/pengaturan/komponen/(:num)', 'Admin\HonorPengaturan::hapus/$1');
+        $routes->post('admin/honor/pengaturan/panitia', 'Admin\HonorPengaturan::panitia');
+        $routes->post('admin/honor/pengaturan/tanda-tangan', 'Admin\HonorPengaturan::tandaTangan');
+
+        $routes->get('admin/ujian/(:segment)/honor', 'Admin\Honor::show/$1');
+        $routes->post('admin/ujian/(:segment)/honor', 'Admin\Honor::store/$1');
+        $routes->delete('admin/ujian/(:segment)/honor', 'Admin\Honor::destroy/$1');
+        $routes->get('admin/ujian/(:segment)/honor/calon', 'Admin\Honor::calon/$1');
+        $routes->post('admin/ujian/(:segment)/honor/dokumen', 'Admin\Honor::dokumen/$1');
+        $routes->post('admin/ujian/(:segment)/honor/penerima', 'Admin\Honor::penerima/$1');
+        $routes->post('admin/ujian/(:segment)/honor/penerima/semua', 'Admin\Honor::penerimaSemua/$1');
+        $routes->delete('admin/ujian/(:segment)/honor/baris/(:num)', 'Admin\Honor::hapusBaris/$1/$2');
+        $routes->post('admin/ujian/(:segment)/honor/baris/(:num)/jabatan', 'Admin\Honor::jabatan/$1/$2');
+        $routes->post('admin/ujian/(:segment)/honor/baris/(:num)/pindah', 'Admin\Honor::pindah/$1/$2');
+        $routes->post('admin/ujian/(:segment)/honor/nilai', 'Admin\Honor::nilai/$1');
+        $routes->post('admin/ujian/(:segment)/honor/sinkron', 'Admin\Honor::sinkron/$1');
+        $routes->post('admin/ujian/(:segment)/honor/hitung', 'Admin\Honor::hitung/$1');
+        $routes->post('admin/ujian/(:segment)/honor/status', 'Admin\Honor::status/$1');
+        $routes->get('admin/ujian/(:segment)/honor/cetak', 'Admin\HonorCetak::index/$1');
+        $routes->get('admin/ujian/(:segment)/honor/cetak/rekap-pdf', 'Admin\HonorCetak::rekapPdf/$1');
+        $routes->get('admin/ujian/(:segment)/honor/cetak/rekap-xlsx', 'Admin\HonorCetak::rekapXlsx/$1');
+        $routes->get('admin/ujian/(:segment)/honor/cetak/slip-pdf', 'Admin\HonorCetak::slipPdf/$1');
+        $routes->get('admin/ujian/(:segment)/pembuat-soal', 'Admin\Honor::pembuatSoal/$1');
+        $routes->post('admin/ujian/(:segment)/pembuat-soal', 'Admin\Honor::pembuatSoalTambah/$1');
+        $routes->delete('admin/ujian/(:segment)/pembuat-soal/(:num)', 'Admin\Honor::pembuatSoalCabut/$1/$2');
 
         $routes->get('admin/ujian/(:segment)/rekap', 'Admin\Ujian::rekap/$1');
         $routes->post('admin/ujian/(:segment)/periode', 'Admin\Ujian::simpanPeriode/$1');
