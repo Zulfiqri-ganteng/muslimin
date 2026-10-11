@@ -115,27 +115,7 @@ class SuratIzin extends SuratDasar
         return $catatan !== [] ? $redir->with('errors', $catatan) : $redir;
     }
 
-    // ----- ubah -------------------------------------------------------
-    /** @return array{0: array<string, mixed>|null, 1: RedirectResponse|null} surat termuat, atau pengalihan galat */
-    private function muatBisaDiubah(string $jenis, int $id): array
-    {
-        if (($tolak = $this->tolakHalaman('surat_sekolah', 'admin/surat/' . $id)) !== null) {
-            return [null, $tolak];
-        }
-        $m = $this->surat->muat($id);
-        if ($m === null || $m['surat']['jenis'] !== $jenis) {
-            return [null, $this->ke('admin/surat', 'error', 'Surat tidak ditemukan.')];
-        }
-        if ((string) ($m['surat']['nomor'] ?? '') !== '') {
-            return [null, $this->ke('admin/surat/' . $id, 'error', 'Surat ini sudah bernomor, jadi datanya tidak bisa diubah. Bila salah, batalkan surat lalu buat yang baru.')];
-        }
-        if (! in_array($m['surat']['status'], ['menunggu', 'dikembalikan'], true)) {
-            return [null, $this->ke('admin/surat/' . $id, 'error', 'Surat berstatus "' . (SuratSekolahModel::TAMPIL_STATUS[$m['surat']['status']][0] ?? $m['surat']['status']) . '" tidak bisa diubah. Surat yang sudah disetujui harus dibatalkan persetujuannya dulu.')];
-        }
-
-        return [$m, null];
-    }
-
+    // ----- ubah (muatBisaDiubah: SuratDasar) -----------------------
     private function ubah(string $jenis, int $id)
     {
         [$m, $alih] = $this->muatBisaDiubah($jenis, $id);

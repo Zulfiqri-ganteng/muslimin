@@ -197,6 +197,9 @@ $ikonAwas = '<svg class="w-6 h-6 shrink-0" fill="none" stroke="currentColor" str
                                 <span x-text="pilih.nama"></span> tidak perlu mengisi lagi<span x-show="pilih.status === 'menunggu'"> — ajuannya sedang menunggu keputusan Waka Hubin</span>.
                                 <b>Jangan mengajukan ulang.</b>
                             </p>
+                            <p x-show="pilih.peran === 'teman'" class="mt-2 text-sm text-slate-600">
+                                Namamu <b>didaftarkan oleh temanmu</b> yang PKL di tempat yang sama. Tidak merasa ikut? Hubungi operator sekolah atau Waka Hubin agar namamu dikeluarkan.
+                            </p>
                             <p x-show="pilih.status === 'menunggu' && pilih.batas" class="mt-2 rounded-lg border border-blue-200 bg-white/70 px-3 py-2 text-sm font-semibold text-blue-900">
                                 Keputusan Waka Hubin paling lambat <span x-text="tglIndo(pilih.batas)"></span>. Lewat tanggal itu belum ada kabar? Hubungi operator sekolah atau Waka Hubin.
                             </p>

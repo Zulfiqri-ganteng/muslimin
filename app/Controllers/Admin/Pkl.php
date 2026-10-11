@@ -158,6 +158,11 @@ class Pkl extends BaseController
             'perluUlang' => $surat !== null && PklSurat::sidik($ajuan, $anggota, $this->p) !== (string) $surat['sidik'],
             'sisaHari'   => $ajuan['status'] === 'menunggu' ? PklPengajuanModel::sisaHari($ajuan['diajukan_at'] ?? $ajuan['created_at'], PklPengaturanModel::batasHari($this->p)) : null,
             'batasKeputusan' => $ajuan['status'] === 'menunggu' ? PklPengajuanModel::batasKeputusan($ajuan['diajukan_at'] ?? $ajuan['created_at'], PklPengaturanModel::batasHari($this->p)) : null,
+            // Surat sekolah yang tertaut ke ajuan ini (Balasan, Penarikan, Pernyataan, ASTS/TKA per perusahaan) + tombol pintas.
+            'suratSekolah'      => db_connect()->tableExists('surat_sekolah')
+                ? db_connect()->table('surat_sekolah')->select('id, jenis, status, nomor')->where('pengajuan_id', (int) $id)->orderBy('id', 'DESC')->get()->getResultArray()
+                : [],
+            'bolehSuratSekolah' => HakAkses::bolehPkl($peranIni, 'surat_sekolah'),
         ]);
     }
 

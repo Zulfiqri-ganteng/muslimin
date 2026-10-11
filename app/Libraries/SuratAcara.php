@@ -345,13 +345,7 @@ final class SuratAcara
      */
     public function adaSama(string $kunci, ?int $kecuali = null): ?array
     {
-        $b = $this->db->table('surat_sekolah')->select('id, status, nomor')->where('status !=', 'dibatalkan')->like('isi', '"kunci":"' . $kunci . '"');
-        if ($kecuali !== null) {
-            $b->where('id !=', $kecuali);
-        }
-        $r = $b->orderBy('id', 'ASC')->get(1)->getRowArray();
-
-        return $r === null ? null : ['id' => (int) $r['id'], 'status' => (string) $r['status'], 'nomor' => $r['nomor'] ?? null];
+        return (new SuratSekolah($this->db))->adaKunci($kunci, $kecuali);
     }
 
     /**

@@ -479,23 +479,34 @@ final class PklDocx
         return preg_replace_callback('/\$(?:\{|[^{$]*>\{)[^}$]*\}/U', static fn (array $m) => strip_tags($m[0]), $xml) ?? $xml;
     }
 
-    /** Gandakan baris tabel yang memuat ${no} atau ${siswa_*} sebanyak siswa. */
+    /**
+     * Gandakan baris tabel yang memuat ${no} atau ${siswa_*} sebanyak siswa.
+     *
+     * Baris = dari "<w:tr" sampai "</w:tr>" pertama tanpa melewati "<w:tr" lain. Polanya sengaja TANPA runut-balik per
+     * huruf: pola lama `(?:(?!<w:tr[ >]).)*` kehabisan tumpukan JIT pada baris panjang (template Surat Balasan) → hasil
+     * NULL → baris tak tergandakan dan penanda ${…} tercetak apa adanya. Kini kegagalan apa pun jadi galat yang jelas.
+     */
     private static function gandakanBaris(string $badan, array $siswa): string
     {
-        return preg_replace_callback('/<w:tr[ >](?:(?!<w:tr[ >]).)*<\/w:tr>/s', static function (array $m) use ($siswa): string {
+        $hasil = preg_replace_callback('/<w:tr[ >][^<]*+(?:<(?!w:tr[ >]|\/w:tr>)[^<]*+)*+<\/w:tr>/', static function (array $m) use ($siswa): string {
             if (! preg_match('/\$\{(no|siswa_[a-z]+)\}/i', $m[0])) {
                 return $m[0];
             }
-            $hasil = '';
+            $baris = '';
             foreach ($siswa as $s) {
-                $hasil .= self::isiPenanda($m[0], [
+                $baris .= self::isiPenanda($m[0], [
                     'no' => $s['no'], 'siswa_nama' => $s['nama'], 'siswa_nis' => $s['nis'] ?? '', 'siswa_nisn' => $s['nisn'],
                     'siswa_kelas' => $s['kelas'], 'siswa_jurusan' => $s['jurusan'], 'siswa_hp' => $s['hp'] ?? '-',
                 ]);
             }
 
-            return $hasil;
-        }, $badan) ?? $badan;
+            return $baris;
+        }, $badan);
+        if ($hasil === null) {
+            throw new \RuntimeException('Tabel siswa di template gagal diproses (' . preg_last_error_msg() . ').');
+        }
+
+        return $hasil;
     }
 
     private static function isiPenanda(string $xml, array $v): string

@@ -40,7 +40,7 @@ $urlHal = static function (int $hal) use ($f): string {
 <?= $this->section('content') ?>
 
 <?= view('admin/partials/help', [
-    'helpKey'   => 'surat_daftar_v2',
+    'helpKey'   => 'surat_daftar_v3',
     'helpTitle' => 'Daftar Surat Sekolah',
     'helpBody'  => '<p>Di sini tercatat <b>semua surat sekolah</b> (Izin ASTS, Izin TKA, Pernyataan Orang Tua PKL, Surat Balasan PKL, Penarikan Izin PKL) &mdash; siapa yang membuat, statusnya, dan nomornya. Pilih tab status di atas, atau saring menurut jenis, tahun, dan kata kunci (nomor, judul, atau nama perusahaan).</p>'
         . '<ul class="mt-2 list-disc space-y-1 pl-5">'
@@ -48,7 +48,7 @@ $urlHal = static function (int $hal) use ($f): string {
         . '<li>Nomor surat <b>diterbitkan sekali</b>, saat surat pertama diunduh, dan satu urutan dengan Surat Izin PKL, jadi tidak ada dua surat bernomor sama. Unduh ulang memakai nomor yang sama.</li>'
         . '<li>Di tab <b>Menunggu ACC</b>, yang berhak ACC (bawaan: Waka Hubin) bisa mencentang lalu <b>ACC terpilih</b>, atau <b>ACC semua yang aman</b>. Surat yang punya peringatan (mis. nama penanda tangan belum diisi) dilewati supaya diperiksa satu per satu di halaman detailnya.</li>'
         . '<li>Di tab <b>Siap unduh</b>, saring dulu ke <b>satu jenis surat</b>; yang berhak mengelola surat (bawaan: Operator) bisa mengunduh terpilih, yang belum diunduh / perlu cetak ulang, atau semuanya sekaligus (lebih dari 60 surat dikirim sebagai ZIP).</li>'
-        . '<li>Menu jenis surat di samping yang masih bertanda <i>Segera</i> belum bisa dipakai.</li>'
+        . '<li><b>Pernyataan Orang Tua PKL</b> tanpa nomor dan tanpa ACC: langsung siap diunduh, satu halaman per siswa. <b>Surat Balasan</b> dan <b>Penarikan</b> juga bisa dibuat dari halaman detail ajuan PKL (kartu "Surat sekolah").</li>'
         . '</ul>',
 ]) ?>
 

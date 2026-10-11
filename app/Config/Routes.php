@@ -158,6 +158,16 @@ $routes->group('admin', static function ($routes) {
         $routes->post('surat/tka', 'Admin\SuratIzin::simpanTka', ['filter' => 'csrf']);
         $routes->get('surat/tka/(:num)/ubah', 'Admin\SuratIzin::ubahTka/$1', ['filter' => 'csrf']);
         $routes->post('surat/tka/(:num)/ubah', 'Admin\SuratIzin::simpanUbahTka/$1', ['filter' => 'csrf']);
+        $routes->get('surat/pernyataan-ortu', 'Admin\SuratPernyataan::index', ['filter' => 'csrf']);
+        $routes->post('surat/pernyataan-ortu', 'Admin\SuratPernyataan::simpan', ['filter' => 'csrf']);
+        $routes->get('surat/balasan', 'Admin\SuratPkl::balasan', ['filter' => 'csrf']);
+        $routes->post('surat/balasan', 'Admin\SuratPkl::simpanBalasan', ['filter' => 'csrf']);
+        $routes->get('surat/balasan/(:num)/ubah', 'Admin\SuratPkl::ubahBalasan/$1', ['filter' => 'csrf']);
+        $routes->post('surat/balasan/(:num)/ubah', 'Admin\SuratPkl::simpanUbahBalasan/$1', ['filter' => 'csrf']);
+        $routes->get('surat/penarikan', 'Admin\SuratPkl::penarikan', ['filter' => 'csrf']);
+        $routes->post('surat/penarikan', 'Admin\SuratPkl::simpanPenarikan', ['filter' => 'csrf']);
+        $routes->get('surat/penarikan/(:num)/ubah', 'Admin\SuratPkl::ubahPenarikan/$1', ['filter' => 'csrf']);
+        $routes->post('surat/penarikan/(:num)/ubah', 'Admin\SuratPkl::simpanUbahPenarikan/$1', ['filter' => 'csrf']);
         $routes->post('surat/acc-massal', 'Admin\Surat::accMassal', ['filter' => 'csrf']);
         $routes->post('surat/unduh-massal', 'Admin\Surat::unduhMassal', ['filter' => 'csrf']);
         $routes->get('surat/(:num)', 'Admin\Surat::detail/$1', ['filter' => 'csrf']);

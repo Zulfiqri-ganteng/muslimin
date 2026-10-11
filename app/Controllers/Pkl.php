@@ -450,6 +450,23 @@ class Pkl extends BaseController
     private function pesanTerkunci(array $milik): string
     {
         $kode = isset($milik['id']) ? PklPengajuanModel::kode((int) $milik['id']) : 'ajuanmu';
+
+        // Didaftarkan TEMAN (bukan mengisi sendiri) — mis. keduanya mengisi bersamaan dan temannya mengirim
+        // lebih dulu. Jangan menulis "kamu sudah mengajukan": ia merasa tidak pernah mengirim apa pun.
+        if (($milik['peran'] ?? '') === 'teman') {
+            $tidakIkut = ' Bila kamu tidak merasa ikut ajuan itu, hubungi operator sekolah atau Waka Hubin agar namamu dikeluarkan.';
+            if (($milik['status'] ?? '') === 'perbaikan') {
+                return 'Namamu sudah didaftarkan temanmu di ajuan PKL ' . $kode . ' yang sedang dikembalikan untuk diperbaiki. '
+                    . 'Hanya temanmu yang mengajukan yang bisa memperbaikinya — kamu tidak perlu mengisi lagi.' . $tidakIkut;
+            }
+            if (($milik['status'] ?? '') === 'disetujui') {
+                return 'Namamu sudah didaftarkan temanmu di ajuan PKL ' . $kode . ' dan ajuan itu sudah DISETUJUI Waka Hubin. Kamu tidak perlu mengisi lagi.' . $tidakIkut;
+            }
+
+            return 'Namamu sudah didaftarkan temanmu di ajuan PKL ' . $kode . ' yang sedang menunggu keputusan Waka Hubin. '
+                . 'Kamu tidak perlu dan tidak bisa mengajukan lagi.' . $tidakIkut;
+        }
+
         if (($milik['status'] ?? '') === 'disetujui') {
             return 'Ajuan PKL-mu (' . $kode . ') sudah DISETUJUI Waka Hubin. Jika ada perubahan, hubungi operator sekolah atau Waka Hubin.';
         }

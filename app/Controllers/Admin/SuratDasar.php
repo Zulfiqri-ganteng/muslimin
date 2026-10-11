@@ -4,6 +4,8 @@ namespace App\Controllers\Admin;
 
 use App\Libraries\HakAkses;
 use App\Libraries\SuratSekolah;
+use App\Models\SuratSekolahModel;
+use CodeIgniter\HTTP\RedirectResponse;
 
 /**
  * Dasar controller halaman staf Surat Sekolah (menu SURAT SEKOLAH): data umum tampilan dan hak peran. Pembantu respons
@@ -60,5 +62,54 @@ abstract class SuratDasar extends PklDasar
         }
 
         return $this->ke($balik, 'error', 'Akun ' . HakAkses::label($this->peranSaya()) . ' tidak punya hak untuk aksi ini. Admin bisa mengaturnya di PKL → Hak Akses.');
+    }
+
+    /**
+     * Surat jenis $jenis yang BOLEH diubah datanya (belum bernomor, status menunggu/dikembalikan, hak 'surat_sekolah').
+     *
+     * @return array{0: array<string, mixed>|null, 1: RedirectResponse|null} surat termuat (SuratSekolah::muat), atau pengalihan galat
+     */
+    protected function muatBisaDiubah(string $jenis, int $id): array
+    {
+        if (($tolak = $this->tolakHalaman('surat_sekolah', 'admin/surat/' . $id)) !== null) {
+            return [null, $tolak];
+        }
+        $m = $this->surat->muat($id);
+        if ($m === null || $m['surat']['jenis'] !== $jenis) {
+            return [null, $this->ke('admin/surat', 'error', 'Surat tidak ditemukan.')];
+        }
+        if ((string) ($m['surat']['nomor'] ?? '') !== '') {
+            return [null, $this->ke('admin/surat/' . $id, 'error', 'Surat ini sudah bernomor, jadi datanya tidak bisa diubah. Bila salah, batalkan surat lalu buat yang baru.')];
+        }
+        if (! in_array($m['surat']['status'], ['menunggu', 'dikembalikan'], true)) {
+            return [null, $this->ke('admin/surat/' . $id, 'error', 'Surat berstatus "' . (SuratSekolahModel::TAMPIL_STATUS[$m['surat']['status']][0] ?? $m['surat']['status']) . '" tidak bisa diubah. Surat yang sudah disetujui harus dibatalkan persetujuannya dulu.')];
+        }
+
+        return [$m, null];
+    }
+
+    /**
+     * Isian formulir: nilai awal, ditimpa isian lama (old()) bila formulir baru saja ditolak.
+     *
+     * @param array<string, string> $awal
+     *
+     * @return array<string, string>
+     */
+    protected function nilaiAwal(array $awal): array
+    {
+        $nilai = [];
+        foreach ($awal as $k => $v) {
+            $nilai[$k] = (string) old($k, $v);
+        }
+
+        return $nilai;
+    }
+
+    /** Daftar id (angka > 0, tanpa ganda) dari isian lama old($kunci) atau nilai bawaan. @return list<int> */
+    protected function idLama(string $kunci, array $bawaan = []): array
+    {
+        $v = old($kunci);
+
+        return array_values(array_unique(array_filter(array_map('intval', is_array($v) ? $v : $bawaan), static fn (int $x) => $x > 0)));
     }
 }

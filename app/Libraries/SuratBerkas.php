@@ -67,6 +67,14 @@ final class SuratBerkas
         }
         $jenis = (string) $jenisUnik[0];
 
+        // Pernyataan Orang Tua = satu halaman per siswa: batasi jumlah halaman sekali unduh.
+        if ($jenis === SuratJenis::PERNYATAAN) {
+            $halaman = (int) $this->db->table('surat_sekolah_siswa')->whereIn('surat_id', array_map('intval', array_column($baris, 'id')))->countAllResults();
+            if ($halaman > SuratPernyataan::MAKS_HALAMAN) {
+                return $this->gagal('terlalu_banyak', 'Terlalu banyak halaman sekaligus (' . $halaman . ' siswa; maksimal ' . SuratPernyataan::MAKS_HALAMAN . '). Pilih sebagian surat.');
+            }
+        }
+
         // Template dicek SEBELUM nomor diterbitkan (nomor tak terpakai bila template tak ada). Tiap surat memakai template
         // varian-nya (mis. ASTS/TKA per perusahaan = dengan halaman Lampiran daftar siswa).
         $path = [];
@@ -87,6 +95,7 @@ final class SuratBerkas
 
         $daftar   = [];
         $perVarian = [];
+        $perSurat = [];
         $sidik    = [];
         $nomor    = [];
         $surat1   = null;
@@ -107,9 +116,18 @@ final class SuratBerkas
                 ? $this->db->table('pkl_pengajuan')->where('id', (int) $m['surat']['pengajuan_id'])->get()->getRowArray()
                 : null;
 
-            $item       = self::isi($m['surat'], $m['siswa'], $ajuan, $setting, $p, $ekstra);
-            $daftar[]   = $item;
-            $perVarian[SuratJenis::varian($jenis, $m['surat']['isi_arr'])][] = $item;
+            // Satu butir = satu surat; Pernyataan Orang Tua = satu butir (halaman) per siswa.
+            $butir = $jenis === SuratJenis::PERNYATAAN
+                ? SuratPernyataan::halaman($m['surat'], $m['siswa'])
+                : [self::isi($m['surat'], $m['siswa'], $ajuan, $setting, $p, $ekstra)];
+            if ($butir === []) {
+                $lewat++;
+                continue;
+            }
+            $v          = SuratJenis::varian($jenis, $m['surat']['isi_arr']);
+            $daftar     = array_merge($daftar, $butir);
+            $perVarian[$v] = array_merge($perVarian[$v] ?? [], $butir);
+            $perSurat[$id] = ['surat' => $m['surat'], 'butir' => $butir, 'varian' => $v];
             $sidik[$id] = SuratSekolah::sidik($m['surat'], $m['siswa'], $p);
             $nomor[$id] = (string) ($m['surat']['nomor'] ?? '');
             $surat1   ??= $m['surat'];
@@ -129,14 +147,33 @@ final class SuratBerkas
             }
         }
 
-        $label = SuratJenis::label($jenis);
-        $zip   = false;
+        $label  = SuratJenis::label($jenis);
+        $nSurat = count($perSurat);
+        $zip    = false;
+        // Pernyataan: satu surat (mis. satu kelas) selalu satu berkas; beberapa surat digabung bila ≤ 60 halaman.
+        $satuBerkas = $jenis === SuratJenis::PERNYATAAN
+            ? ($nSurat === 1 || count($daftar) <= self::MAKS_SATU_BERKAS)
+            : (count($perVarian) === 1 && count($daftar) <= self::MAKS_SATU_BERKAS);
         try {
-            if (count($perVarian) === 1 && count($daftar) <= self::MAKS_SATU_BERKAS) {
+            if ($satuBerkas) {
                 $biner = PklDocx::dariTemplate($path[(string) array_key_first($perVarian)], $daftar, $media);
-                $nama  = count($daftar) === 1
+                $nama  = $nSurat === 1
                     ? self::namaBerkas($surat1) . '.docx'
-                    : $label . ' (' . count($daftar) . ' surat) ' . date('Y-m-d') . '.docx';
+                    : $label . ' (' . $nSurat . ' surat) ' . date('Y-m-d') . '.docx';
+            } elseif ($jenis === SuratJenis::PERNYATAAN) {
+                // Banyak surat Pernyataan (mis. beberapa kelas): ZIP berisi satu berkas Word per surat.
+                $berkas = [];
+                foreach ($perSurat as $ps) {
+                    $dasar = self::namaBerkas($ps['surat']);
+                    $n     = 1;
+                    while (isset($berkas[$dasar . ($n > 1 ? ' (' . $n . ')' : '') . '.docx'])) {
+                        $n++;
+                    }
+                    $berkas[$dasar . ($n > 1 ? ' (' . $n . ')' : '') . '.docx'] = PklDocx::dariTemplate($path[$ps['varian']], $ps['butir'], $media);
+                }
+                $biner = $this->zipkan($berkas);
+                $nama  = $label . ' (' . $nSurat . ' surat) ' . date('Y-m-d') . '.zip';
+                $zip   = true;
             } else {
                 // Lebih dari 60 surat, atau campuran varian (umum + per perusahaan): ZIP berisi satu/lebih berkas Word per varian.
                 $berkas = [];
@@ -148,7 +185,7 @@ final class SuratBerkas
                     }
                 }
                 $biner = $this->zipkan($berkas);
-                $nama  = $label . ' (' . count($daftar) . ' surat) ' . date('Y-m-d') . '.zip';
+                $nama  = $label . ' (' . $nSurat . ' surat) ' . date('Y-m-d') . '.zip';
                 $zip   = true;
             }
         } catch (\Throwable $e) {
@@ -163,9 +200,9 @@ final class SuratBerkas
             $this->svc->catat((int) $id, 'cetak', $konteks, 'Berkas diunduh' . ($nomor[$id] !== '' ? ' (nomor ' . $nomor[$id] . ')' : ''));
         }
         $pertama = (int) array_key_first($sidik);
-        (new AuditModel())->record('export', 'surat_sekolah', $pertama, SuratJenis::label($jenis) . ' diunduh: ' . count($daftar) . ' surat (' . mb_substr($nama, 0, 120) . ')');
+        (new AuditModel())->record('export', 'surat_sekolah', $pertama, SuratJenis::label($jenis) . ' diunduh: ' . $nSurat . ' surat (' . mb_substr($nama, 0, 120) . ')');
 
-        return ['ok' => true, 'biner' => $biner, 'nama' => $nama, 'jumlah' => count($daftar), 'dilewati' => $lewat, 'ids' => array_map('intval', array_keys($sidik)), 'zip' => $zip];
+        return ['ok' => true, 'biner' => $biner, 'nama' => $nama, 'jumlah' => $nSurat, 'dilewati' => $lewat, 'ids' => array_map('intval', array_keys($sidik)), 'zip' => $zip];
     }
 
     // =================================================================
@@ -239,6 +276,9 @@ final class SuratBerkas
             'acc_waktu'     => ! empty($surat['acc_at']) ? PklSurat::waktuIndo((string) $surat['acc_at']) : '', 'acc_kode' => (string) ($surat['acc_kode'] ?? ''),
         ];
         $v = array_merge($v, self::khusus((string) $surat['jenis'], $surat, $siswa, $ajuan, $setting, $p));
+        if (SuratPkl::untuk((string) $surat['jenis'])) {
+            $v['acc_footer'] = SuratPkl::kakiEmpatBaris($v['acc_footer']); // ruang kaki tetap 4 baris (lihat template)
+        }
 
         return [
             'v'     => $v,
@@ -267,8 +307,9 @@ final class SuratBerkas
     private static function khusus(string $jenis, array $surat, array $siswa, ?array $ajuan, array $setting, array $p): array
     {
         return match ($jenis) {
-            SuratJenis::ASTS, SuratJenis::TKA => SuratAcara::token($jenis, $surat, SuratSekolah::dekodeIsi((string) ($surat['isi'] ?? ''))),
-            default => [],
+            SuratJenis::ASTS, SuratJenis::TKA            => SuratAcara::token($jenis, $surat, SuratSekolah::dekodeIsi((string) ($surat['isi'] ?? ''))),
+            SuratJenis::BALASAN, SuratJenis::PENARIKAN   => SuratPkl::token($jenis, $surat, SuratSekolah::dekodeIsi((string) ($surat['isi'] ?? ''))),
+            default                                      => [], // Pernyataan Orang Tua: penanda per halaman di SuratPernyataan::halaman()
         };
     }
 

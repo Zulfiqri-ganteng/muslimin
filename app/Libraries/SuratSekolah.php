@@ -25,6 +25,11 @@ final class SuratSekolah
     public const MAKS_ISI    = 60000; // byte JSON isian khusus jenis
     public const MAKS_SISWA  = 400;   // siswa dalam satu surat (Pernyataan per kelas bisa puluhan)
 
+    /** Kolom data orang tua & alamat siswa yang ikut dibaca bersama siswa surat (dipakai Pernyataan Orang Tua). */
+    private const KOLOM_ORTU = 's.nama_orang_tua, s.nama_ayah, s.nama_ibu, s.nama_wali, s.pekerjaan_ayah, s.pekerjaan_ibu, s.pekerjaan_wali,'
+        . ' s.ortu_alamat, s.ortu_rt, s.ortu_rw, s.ortu_kelurahan, s.ortu_kecamatan, s.ortu_kota, s.ortu_telepon, s.no_hp_wali,'
+        . ' s.alamat, s.rt, s.rw, s.kelurahan, s.kecamatan, s.kota';
+
     /** aksi riwayat → kalimat tampil */
     public const AKSI = [
         'buat' => 'Surat dibuat', 'ubah' => 'Data surat diubah', 'ajukan_ulang' => 'Diajukan ulang untuk ACC', 'acc' => 'Disetujui (ACC)',
@@ -249,6 +254,7 @@ final class SuratSekolah
     {
         return $this->db->table('surat_sekolah_siswa ss')
             ->select('ss.id, ss.siswa_id, ss.kelas_id, ss.hp, ss.urut, s.nama, s.nis, s.nisn, s.no_hp AS hp_master, k.nama_kelas, j.nama AS jurusan_nama')
+            ->select(self::KOLOM_ORTU)
             ->join('siswa s', 's.id = ss.siswa_id')
             ->join('kelas k', 'k.id = ss.kelas_id', 'left')
             ->join('jurusan j', 'j.id = k.jurusan_id', 'left')
@@ -402,12 +408,31 @@ final class SuratSekolah
             $ttd !== null ? basename($ttd['path']) . '@' . (int) @filemtime($ttd['path']) : '-',
             (string) ($surat['acc_at'] ?? ''), (string) ($surat['acc_peran'] ?? ''), (string) ($surat['acc_nama'] ?? ''),
         ];
+        // Pernyataan Orang Tua yang mencetak data orang tua: data itu ikut menentukan isi surat. Jenis lain TIDAK berubah
+        // rumusnya (sidik surat yang sudah pernah diunduh tetap sama).
+        $ortu   = (string) $surat['jenis'] === SuratJenis::PERNYATAAN && ! empty(self::dekodeIsi((string) ($surat['isi'] ?? ''))['isi_ortu']);
         $daftar = array_map(static fn (array $a) => [
             (int) $a['siswa_id'], (string) $a['nama'], (string) ($a['nis'] ?? ''), (string) ($a['nisn'] ?? ''), (string) ($a['nama_kelas'] ?? ''), (string) ($a['jurusan_nama'] ?? ''),
             trim((string) ($a['hp'] ?? '')) !== '' ? (string) $a['hp'] : (string) ($a['hp_master'] ?? ''),
-        ], $siswa);
+        ] + ($ortu ? [7 => SuratPernyataan::ortu($a)] : []), $siswa);
 
         return sha1(json_encode([$dasar, $daftar], JSON_UNESCAPED_UNICODE));
+    }
+
+    /**
+     * Surat lain yang belum dibatalkan dengan kunci pencegah-ganda yang sama (isian JSON "kunci"), atau null.
+     *
+     * @return array{id: int, status: string, nomor: ?string}|null
+     */
+    public function adaKunci(string $kunci, ?int $kecuali = null): ?array
+    {
+        $b = $this->db->table('surat_sekolah')->select('id, status, nomor')->where('status !=', 'dibatalkan')->like('isi', '"kunci":"' . $kunci . '"');
+        if ($kecuali !== null) {
+            $b->where('id !=', $kecuali);
+        }
+        $r = $b->orderBy('id', 'ASC')->get(1)->getRowArray();
+
+        return $r === null ? null : ['id' => (int) $r['id'], 'status' => (string) $r['status'], 'nomor' => $r['nomor'] ?? null];
     }
 
     /**
@@ -441,6 +466,7 @@ final class SuratSekolah
         $siswa = [];
         foreach ($this->db->table('surat_sekolah_siswa ss')
             ->select('ss.surat_id, ss.siswa_id, ss.hp, ss.urut, s.nama, s.nis, s.nisn, s.no_hp AS hp_master, k.nama_kelas, j.nama AS jurusan_nama')
+            ->select(self::KOLOM_ORTU)
             ->join('siswa s', 's.id = ss.siswa_id')->join('kelas k', 'k.id = ss.kelas_id', 'left')->join('jurusan j', 'j.id = k.jurusan_id', 'left')
             ->whereIn('ss.surat_id', $ids)->orderBy('ss.urut', 'ASC')->orderBy('ss.id', 'ASC')->get()->getResultArray() as $r) {
             $siswa[(int) $r['surat_id']][] = $r;

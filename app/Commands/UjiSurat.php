@@ -4,6 +4,7 @@ namespace App\Commands;
 
 use App\Libraries\HakAkses;
 use App\Libraries\PklAjuan;
+use App\Libraries\PklDocx;
 use App\Libraries\PklForm;
 use App\Libraries\PklHak;
 use App\Libraries\PklSurat;
@@ -11,6 +12,9 @@ use App\Libraries\SuratAcara;
 use App\Libraries\SuratBerkas;
 use App\Libraries\SuratJenis;
 use App\Libraries\SuratNomor;
+use App\Libraries\SuratPeriksa;
+use App\Libraries\SuratPernyataan;
+use App\Libraries\SuratPkl;
 use App\Libraries\SuratSekolah;
 use App\Models\PklPengaturanModel;
 use App\Models\SuratSekolahModel;
@@ -96,6 +100,7 @@ class UjiSurat extends BaseCommand
             $this->ujiBerkas();
             $this->ujiTampilanKeputusan();
             $this->ujiAcara();
+            $this->ujiSuratPkl();
             $this->ujiSidikDanTabel(); // paling akhir: menghapus data uji (CASCADE / SET NULL)
         }
 
@@ -872,7 +877,8 @@ class UjiSurat extends BaseCommand
 
         // --- Penanda umum
         $ttd = ['path' => '/x.png', 'ext' => 'png', 'cx' => 1512000, 'cy' => 648000];
-        $surat = ['jenis' => 'balasan_pkl', 'perlu_acc' => 1, 'nomor' => '12/SMK-BN/PKL/III/2031', 'urut' => 12, 'tanggal_surat' => '2031-03-05', 'perusahaan_nama' => 'PT Contoh', 'isi' => '{}'] + $dasar;
+        // Jenis tiruan tanpa penanda khusus: yang diuji di sini penanda UMUM (tiap jenis bisa menimpanya lewat khusus()).
+        $surat = ['jenis' => 'jenis_uji', 'perlu_acc' => 1, 'nomor' => '12/SMK-BN/PKL/III/2031', 'urut' => 12, 'tanggal_surat' => '2031-03-05', 'perusahaan_nama' => 'PT Contoh', 'isi' => '{}'] + $dasar;
         $siswa = [
             ['siswa_id' => 1, 'nama' => 'Ani', 'nis' => '111', 'nisn' => '', 'nama_kelas' => 'XI TKJ 1', 'jurusan_nama' => null, 'hp' => null, 'hp_master' => '0811'],
             ['siswa_id' => 2, 'nama' => 'Budi', 'nis' => '222', 'nisn' => '999', 'nama_kelas' => 'XI TKJ 1', 'jurusan_nama' => 'Teknik Komputer', 'hp' => '0822', 'hp_master' => '0812'],
@@ -1438,7 +1444,8 @@ class UjiSurat extends BaseCommand
 
         // --- Template ASLI (tanpa penimpa): isi, penanda, data pribadi, kesamaan dengan contoh sekolah
         SuratJenis::$templateTimpa = [];
-        $this->cek('templateLengkap: ASTS & TKA (utama + varian perusahaan) ada; Balasan belum punya template', SuratJenis::templateLengkap(SuratJenis::ASTS) && SuratJenis::templateLengkap(SuratJenis::TKA) && ! SuratJenis::templateLengkap(SuratJenis::BALASAN));
+        $this->cek('templateLengkap: ASTS & TKA (utama + varian perusahaan), Pernyataan, Balasan, Penarikan ada', SuratJenis::templateLengkap(SuratJenis::ASTS) && SuratJenis::templateLengkap(SuratJenis::TKA)
+            && SuratJenis::templateLengkap(SuratJenis::PERNYATAAN) && SuratJenis::templateLengkap(SuratJenis::BALASAN) && SuratJenis::templateLengkap(SuratJenis::PENARIKAN));
         foreach ([SuratJenis::ASTS, SuratJenis::TKA] as $jenis) {
             foreach (['' => 'umum', 'perusahaan' => 'per perusahaan'] as $varian => $namaVarian) {
                 $path = SuratJenis::pathTemplate($jenis, $varian);
@@ -1538,6 +1545,375 @@ class UjiSurat extends BaseCommand
             && count($namaZip) === 2 && str_contains($namaZip[0], 'per perusahaan') && str_contains($namaZip[1], 'umum') && str_starts_with($pk[$namaZip[0]], 'PK') && str_starts_with($pk[$namaZip[1]], 'PK')
             && str_contains($this->isiDocx($pk[$namaZip[0]]), 'DAFTAR PESERTA DIDIK') && ! str_contains($this->isiDocx($pk[$namaZip[1]]), 'DAFTAR PESERTA DIDIK'), json_encode($namaZip));
         $this->atur(['kepsek_nama' => 'Kepsek Uji, S.T.', 'waka_hubin_nama' => 'Hubin Uji, S.Pd.', 'kontak_surat_nama' => 'Kontak Uji', 'kontak_surat_hp' => '0812000']);
+    }
+
+    // =================================================================
+    // 9. L4–L6: Pernyataan Orang Tua, Surat Balasan PKL, Surat Penarikan Izin PKL
+    // =================================================================
+
+    /** document.xml dari biner .docx. */
+    private function xmlDocx(string $biner): string
+    {
+        $tmp = tempnam(sys_get_temp_dir(), 'ujisrt');
+        file_put_contents($tmp, $biner);
+        $z   = new \ZipArchive();
+        $xml = $z->open($tmp) === true ? (string) $z->getFromName('word/document.xml') : '';
+        $z->close();
+        @unlink($tmp);
+
+        return $xml;
+    }
+
+    private function xmlBerkas(string $path): string
+    {
+        $z   = new \ZipArchive();
+        $xml = $z->open($path) === true ? (string) $z->getFromName('word/document.xml') : '';
+        $z->close();
+
+        return $xml;
+    }
+
+    private function teksXml(string $xml): string
+    {
+        return html_entity_decode(strip_tags((string) preg_replace('/<\/w:p>/', "\n", $xml)), ENT_QUOTES | ENT_XML1, 'UTF-8');
+    }
+
+    /** Tabel siswa (judul "NOMOR HANDPHONE"): [xml tabel, daftar baris data → daftar teks sel]. */
+    private function tabelSiswa(string $xml): array
+    {
+        // Tanpa pola runut-balik per huruf (lihat PklDocx::gandakanBaris): cari judul, lalu tabel yang membungkusnya.
+        $j = strpos($xml, 'NOMOR HANDPHONE');
+        $a = $j === false ? false : strrpos(substr($xml, 0, $j), '<w:tbl>');
+        $b = $j === false ? false : strpos($xml, '</w:tbl>', $j);
+        if ($a === false || $b === false) {
+            return ['', []];
+        }
+        $tabel = substr($xml, $a, $b + strlen('</w:tbl>') - $a);
+        preg_match_all('~<w:tr[ >][^<]*+(?:<(?!/w:tr>)[^<]*+)*+</w:tr>~', $tabel, $tr);
+        $baris = [];
+        foreach (array_slice($tr[0], 1) as $r) {
+            preg_match_all('~<w:tc>[^<]*+(?:<(?!/w:tc>)[^<]*+)*+</w:tc>~', $r, $tc);
+            $baris[] = array_map(fn (string $c) => trim((string) preg_replace('/\s+/u', ' ', $this->teksXml($c))), $tc[0]);
+        }
+
+        return [$tabel, $baris];
+    }
+
+    /** Badan surat ("Kepada Yth." … "terima kasih.") dengan baris data tabel siswa dibuang (judul tabel tetap). */
+    private function badanTanpaSiswa(string $xml): string
+    {
+        [$tbl] = $this->tabelSiswa($xml);
+        if ($tbl !== '') {
+            preg_match_all('~<w:tr[ >][^<]*+(?:<(?!/w:tr>)[^<]*+)*+</w:tr>~', $tbl, $tr, PREG_OFFSET_CAPTURE);
+            $akhir = end($tr[0]);
+            $xml   = str_replace($tbl, substr($tbl, 0, $tr[0][1][1]) . substr($tbl, $akhir[1] + strlen($akhir[0])), $xml);
+        }
+
+        return $this->badanSurat($this->teksXml($xml));
+    }
+
+    /**
+     * Data surat contoh sekolah, dibaca saat uji (berkas contoh di luar repo; data aslinya TIDAK ditulis di kode repo publik).
+     *
+     * @return array{perusahaan: string, sapaan: string, alamat: string, tgl_efektif: string, alasan: string, sel: list<string>}
+     */
+    private function dataContoh(string $path): array
+    {
+        $xml  = $this->xmlBerkas($path);
+        $teks = trim((string) preg_replace('/\s+/u', ' ', $this->teksXml($xml)));
+        $cari = static fn (string $pola): string => preg_match($pola, $teks, $m) === 1 ? trim($m[1]) : '';
+        $tgl  = '';
+        if (preg_match('~terhitung sejak tanggal (\d{1,2}) (\p{L}+) (\d{4})~u', $teks, $m) === 1 && ($b = array_search($m[2], \App\Libraries\IsianBantu::BULAN, true)) !== false) {
+            $tgl = sprintf('%04d-%02d-%02d', (int) $m[3], $b + 1, (int) $m[1]);
+        }
+        $sel = [];
+        foreach ($this->tabelSiswa($xml)[1] as $baris) {
+            foreach (array_slice($baris, 1) as $c) {
+                if (mb_strlen($c) >= 4) {
+                    $sel[] = $c;
+                }
+            }
+        }
+
+        return [
+            'perusahaan'  => $cari('~Dengan ini kami menyampaikan bahwa (.+?) bersedia menerima~u') ?: $cari('~peserta didik SMK Bina Nusa Kab\. Bekasi di (.+?), kami menyampaikan~u'),
+            'sapaan'      => $cari('~Kepada Yth\. Bapak/Ibu (\S+)~u'),
+            'alamat'      => $cari('~Alamat : (.+?) Selama kegiatan~u'),
+            'tgl_efektif' => $tgl,
+            'alasan'      => $cari('~dilakukan karena (.+?)\. Kami mengucapkan~u'),
+            'sel'         => array_values(array_unique($sel)),
+        ];
+    }
+
+    private function ujiSuratPkl(): void
+    {
+        $this->bagian('L4–L6: Pernyataan Orang Tua, Surat Balasan, Surat Penarikan — aturan, template asli, buat/ubah, berkas Word');
+        $this->netralkanPengaturan();
+        $this->atur(['kepsek_nama' => 'Kepsek Uji, S.T.', 'waka_hubin_nama' => 'Hubin Uji, S.Pd.', 'kontak_surat_nama' => 'Kontak Uji', 'kontak_surat_hp' => '0812000',
+            'durasi_min_hari' => 0, 'durasi_maks_hari' => 0, 'mulai_paling_awal' => null, 'selesai_paling_akhir' => null]);
+        $svc = new SuratSekolah();
+        $kep = new \App\Libraries\SuratKeputusan();
+        $bk  = new SuratBerkas();
+        $lib = new SuratPkl();
+        $per = new SuratPernyataan();
+        $p   = (new PklPengaturanModel())->ambil();
+        [$op, $hu] = [$this->ctx('operator'), $this->ctx('hubin')];
+        $keluar = (string) getenv('UJI_SURAT_KELUAR'); // folder untuk menyimpan contoh hasil Word (opsional)
+
+        // --- Murni: lama & periode PKL, sapaan, alasan, periksa
+        $kasus = [
+            ['2026-08-24', '2026-11-24', '3 (tiga) bulan', '24 Agustus s.d. 24 November 2026'],
+            ['2026-08-24', '2026-11-23', '3 (tiga) bulan', '24 Agustus s.d. 23 November 2026'],
+            ['2026-07-01', '2026-12-31', '6 (enam) bulan', '1 Juli s.d. 31 Desember 2026'],
+            ['2026-11-24', '2027-02-24', '3 (tiga) bulan', '24 November 2026 s.d. 24 Februari 2027'],
+            ['2026-09-01', '2026-09-30', '1 (satu) bulan', '1 s.d. 30 September 2026'],
+            ['2026-09-30', '2026-09-01', '', ''],
+        ];
+        $salah = [];
+        foreach ($kasus as [$a, $b, $lama, $per2]) {
+            if (SuratPkl::lamaTeks($a, $b) !== $lama || SuratPkl::periodeTeks($a, $b) !== $per2) {
+                $salah[] = "$a..$b → \"" . SuratPkl::lamaTeks($a, $b) . '" / "' . SuratPkl::periodeTeks($a, $b) . '"';
+            }
+        }
+        $this->cek('lama PKL ("3 (tiga) bulan" = hari ÷ 30,4375 dibulatkan) & teks periode (lintas tahun, sebulan, terbalik → kosong): 6 bentuk', $salah === [], implode('; ', $salah));
+        $this->cek('sapaan: kosong → Pimpinan; "Bapak/Ibu Rektorat" → Rektorat; "Yth. Bapak Direktur" → Direktur', SuratPkl::sapaan('') === 'Pimpinan' && SuratPkl::sapaan('Bapak/Ibu Rektorat') === 'Rektorat'
+            && SuratPkl::sapaan(' Yth.  Bapak Direktur ') === 'Direktur' && SuratPkl::sapaan('HRD') === 'HRD');
+        $this->cek('alasan penarikan: saran ke-1 = kalimat contoh sekolah; ketikan dirapikan ("Karena Siswa sakit." → "siswa sakit"; singkatan tetap)', SuratPkl::alasan(['alasan_pilih' => '0']) === SuratPkl::ALASAN_SARAN[0]
+            && str_starts_with(SuratPkl::ALASAN_SARAN[0], 'adanya keperluan administrasi sekolah') && SuratPkl::alasan(['alasan_pilih' => 'lain', 'alasan_lain' => 'Karena Siswa sakit keras.']) === 'siswa sakit keras'
+            && SuratPkl::alasan(['alasan_pilih' => 'lain', 'alasan_lain' => 'PT ABC tutup']) === 'PT ABC tutup' && SuratPkl::alasan(['alasan_pilih' => '99']) === '');
+        $hB = SuratPkl::periksa(SuratJenis::BALASAN, ['tanggal_surat' => date('Y-m-d'), 'periode_mulai' => '2026-11-24', 'periode_selesai' => '2026-08-24']);
+        $hP = SuratPkl::periksa(SuratJenis::PENARIKAN, ['tanggal_surat' => date('Y-m-d'), 'tgl_efektif' => date('Y-m-d'), 'alasan_pilih' => 'lain', 'alasan_lain' => ' . ']);
+        $this->cek('periksa: Balasan dengan selesai sebelum mulai ditolak; Penarikan tanpa alasan ditolak', ! $hB['ok'] && str_contains(implode(' ', $hB['galat']), 'harus setelah') && ! $hP['ok'] && str_contains(implode(' ', $hP['galat']), 'Alasan'));
+        $this->cek('peringatan periode terhadap Pengaturan PKL (minimal 120 hari, batas selesai) — tidak memblokir', SuratPkl::peringatanPeriode('2026-08-24', '2026-11-24', ['durasi_min_hari' => 120, 'selesai_paling_akhir' => '2026-11-01']) !== []
+            && count(SuratPkl::peringatanPeriode('2026-08-24', '2026-11-24', ['durasi_min_hari' => 120, 'selesai_paling_akhir' => '2026-11-01'])) === 2 && SuratPkl::peringatanPeriode('2026-08-24', '2026-11-24', ['durasi_min_hari' => 90]) === []);
+
+        $o1 = SuratPernyataan::ortu(['nama_orang_tua' => 'Budi Uji', 'nama_ayah' => 'BUDI UJI', 'pekerjaan_ayah' => 'Wiraswasta', 'nama_ibu' => 'Sri Uji', 'pekerjaan_ibu' => 'Guru',
+            'ortu_alamat' => 'Jl. Uji 7', 'ortu_rt' => '3', 'ortu_rw' => '12', 'ortu_kelurahan' => 'Ujikel', 'ortu_kecamatan' => 'Ujikec', 'ortu_kota' => 'Bekasi', 'ortu_telepon' => '', 'no_hp_wali' => '0812 9']);
+        $o2 = SuratPernyataan::ortu(['nama_orang_tua' => 'Sri Uji', 'nama_ayah' => 'Budi', 'pekerjaan_ayah' => 'Buruh', 'nama_ibu' => 'Sri Uji', 'pekerjaan_ibu' => 'Sudah Meninggal',
+            'ortu_alamat' => 'Kp. Uji rt 001 rw 002 Ujikel', 'ortu_rt' => '1', 'ortu_rw' => '2', 'ortu_kelurahan' => 'Ujikel', 'ortu_kota' => 'Kota Bekasi']);
+        $o3 = SuratPernyataan::ortu(['nama_ibu' => 'Ibu Uji', 'pekerjaan_ibu' => 'Pedagang', 'alamat' => 'Jl. Siswa 1', 'kota' => 'Bekasi']);
+        $this->cek('data orang tua: pekerjaan milik orang yang tercetak; "Sudah Meninggal" → titik-titik; alamat lengkap tanpa mengulang RT/kelurahan; cadangan ibu & alamat siswa; HP wali',
+            $o1 === ['nama' => 'Budi Uji', 'pekerjaan' => 'Wiraswasta', 'alamat' => 'Jl. Uji 7, RT 003/RW 012, Ujikel, Kec. Ujikec, Bekasi', 'hp' => '0812 9']
+            && $o2['pekerjaan'] === '' && $o2['alamat'] === 'Kp. Uji rt 001 rw 002 Ujikel, Kota Bekasi'
+            && $o3 === ['nama' => 'Ibu Uji', 'pekerjaan' => 'Pedagang', 'alamat' => 'Jl. Siswa 1, Bekasi', 'hp' => ''], json_encode([$o1, $o2, $o3], JSON_UNESCAPED_UNICODE));
+        $q1 = SuratPernyataan::periksa(['tanggal_surat' => date('Y-m-d'), 'cakupan' => 'kelas']);
+        $q2 = SuratPernyataan::periksa(['tanggal_surat' => date('Y-m-d'), 'cakupan' => 'siswa', 'siswa' => ['5', '5', 'x', '7'], 'isi_ortu' => '0']);
+        $this->cek('periksa Pernyataan: tanpa pilihan ditolak; id dirapikan (ganda/sampah dibuang); "kosongkan" dipahami', ! $q1['ok'] && $q2['ok'] && $q2['pilihan'] === [5, 7] && $q2['isi_ortu'] === false);
+
+        // --- Template asli: ada, penanda dikenal perakit, bersih dari data asli (repo publik)
+        $contoh = [
+            SuratJenis::PERNYATAAN => glob(ROOTPATH . 'formatdatasekolah/SURAT PERNYATAAN ORANG TUA PKL*.docx')[0] ?? null,
+            SuratJenis::BALASAN    => glob(ROOTPATH . 'formatdatasekolah/Surat Balasan PKL*.docx')[0] ?? null,
+            SuratJenis::PENARIKAN  => glob(ROOTPATH . 'formatdatasekolah/Surat Penarikan Izin PKL*.docx')[0] ?? null,
+        ];
+        $isiContoh = json_encode(['sapaan' => 'Pimpinan', 'alamat' => 'x', 'periode_mulai' => '2026-08-24', 'periode_selesai' => '2026-11-24', 'tgl_efektif' => '2026-09-28', 'alasan' => 'x']);
+        foreach ($contoh as $jenis => $sumber) {
+            $path = SuratJenis::pathTemplate($jenis);
+            $this->cek('template ' . $jenis . ' ada di folder Libraries/Surat', is_file($path), basename($path));
+            if (! is_file($path)) {
+                continue;
+            }
+            $token = PklDocx::penandaDi($path);
+            $boleh = $jenis === SuratJenis::PERNYATAAN
+                ? array_keys(SuratPernyataan::halaman(['tanggal_surat' => '2026-10-11', 'isi' => '{}'], [['siswa_id' => 1, 'nama' => 'X']])[0]['v'])
+                : array_merge(array_keys(SuratBerkas::isi(['jenis' => $jenis, 'perlu_acc' => 1, 'tanggal_surat' => '2026-10-11', 'isi' => $isiContoh, 'perusahaan_nama' => 'x'], [], null, [], $p, [])['v']),
+                    ['no', 'siswa_nama', 'siswa_nis', 'siswa_nisn', 'siswa_kelas', 'siswa_jurusan', 'siswa_hp']);
+            $asing = array_values(array_diff($token, $boleh));
+            $this->cek('template ' . $jenis . ': semua penanda ${…} dikenal perakit (' . count($token) . ' penanda)', $asing === [] && $token !== [], 'tak dikenal: ' . implode(', ', $asing));
+            $z = new \ZipArchive();
+            $z->open($path);
+            $mentah = $this->teksXml((string) $z->getFromName('word/document.xml')) . ' ' . (string) $z->getFromName('docProps/core.xml');
+            $z->close();
+            $data      = $sumber !== null ? $this->dataContoh($sumber) : ['perusahaan' => '', 'alamat' => '', 'sel' => []];
+            $terlarang = array_merge(['Napis', 'Kuturupi', 'Puguh', 'Wira Sakti', '0812 8584', 'abilseptian', 'Lenovo', '255/SMK-BN'], array_filter([$data['perusahaan'], $data['alamat']]), $data['sel']);
+            $bocor     = array_values(array_filter($terlarang, static fn (string $k) => $k !== '' && stripos($mentah, $k) !== false));
+            $this->cek('template ' . $jenis . ' bersih dari data asli (penanda tangan, kontak, akun penyusun, ' . count($data['sel']) . ' sel tabel siswa & perusahaan contoh)', $bocor === [], count($bocor) . ' kata bocor');
+        }
+
+        // --- Pernyataan: template + isian kosong = contoh sekolah, utuh satu halaman
+        $pathPern = SuratJenis::pathTemplate(SuratJenis::PERNYATAAN);
+        if ($contoh[SuratJenis::PERNYATAAN] !== null && is_file($pathPern)) {
+            $kosong = array_fill_keys(['ortu_nama', 'ortu_pekerjaan', 'ortu_alamat', 'ortu_hp', 'anak_nama', 'anak_kelas', 'anak_jurusan', 'anak_hp'], SuratPernyataan::titik())
+                + ['ttd_anak' => SuratPernyataan::titikTtd(), 'ttd_ortu' => SuratPernyataan::titikTtd(), 'tahun' => '2026'];
+            $rapat  = static fn (string $s): string => trim((string) preg_replace('/\s+/u', ' ', $s));
+            $hasil  = $rapat($this->isiDocx(PklDocx::dariTemplate($pathPern, [['v' => $kosong, 'siswa' => []]])));
+            $asli   = $rapat($this->teksDocxBerkas($contoh[SuratJenis::PERNYATAAN]));
+            $this->cek('Pernyataan: template diisi titik-titik = contoh sekolah SAMA PERSIS (seluruh teks halaman, ' . mb_strlen($asli) . ' huruf)', $asli !== '' && $hasil === $asli, $hasil === $asli ? '' : "\n   contoh: " . mb_substr($asli, 0, 300) . "\n   hasil : " . mb_substr($hasil, 0, 300));
+        } else {
+            $this->cek('Pernyataan: pembanding contoh sekolah — dilewati (berkas contoh tak ada di mesin ini)', true);
+        }
+
+        // --- Data uji: dua siswa dalam satu ajuan disetujui; siswa 61 punya data orang tua, siswa 62 tidak
+        $s61 = $this->buatSiswa(61);
+        $s62 = $this->buatSiswa(62);
+        $s63 = $this->buatSiswa(63);
+        $this->db->table('siswa')->where('id', $s61)->update(['nama_orang_tua' => 'ZZUJI ORTU 61', 'nama_ayah' => 'ZZUJI ORTU 61', 'pekerjaan_ayah' => 'Wiraswasta',
+            'ortu_alamat' => 'Jl. Uji Ortu 7', 'ortu_rt' => '3', 'ortu_rw' => '4', 'ortu_kelurahan' => 'Ujikel', 'ortu_kecamatan' => 'Ujikec', 'ortu_kota' => 'Bekasi', 'ortu_telepon' => '081299990061']);
+        $aid = $this->buatAjuanDisetujui($s61, 'ZZUJISS Balasan Satu', [$s62]);
+        $daf = $lib->ajuan([$aid]);
+        $this->cek('ajuan disetujui untuk formulir: 2 siswa (pengaju dulu), alamat lengkap, belum ada Balasan', count($daf) === 1 && count($daf[0]['siswa']) === 2 && $daf[0]['siswa'][0]['siswa_id'] === $s61
+            && $daf[0]['alamat'] === 'Jl. Uji Surat No. 1, Bekasi' && $daf[0]['balasan'] === null, json_encode($daf[0] ?? null));
+
+        // --- Balasan: buat, periode tersimpan di ajuan, pencegah ganda, peringatan, ubah, ACC, berkas
+        $h  = SuratPkl::periksa(SuratJenis::BALASAN, ['tanggal_surat' => date('Y-m-d'), 'sapaan' => '', 'periode_mulai' => '2027-08-24', 'periode_selesai' => '2027-11-24']);
+        $rb = $lib->buat(SuratJenis::BALASAN, $h, [$aid], [], $this->konteks(), $p);
+        $idB = (int) ($rb['dibuat'][0] ?? 0);
+        $sb  = $this->surat($idB);
+        $aj  = $this->db->table('pkl_pengajuan')->where('id', $aid)->get()->getRowArray();
+        $this->cek('Balasan dibuat: menunggu ACC, tertaut ke ajuan, 2 siswa, isi sapaan Pimpinan + alamat + periode', $rb['ok'] && ($sb['status'] ?? '') === 'menunggu' && (int) ($sb['pengajuan_id'] ?? 0) === $aid
+            && $this->jumlah('surat_sekolah_siswa', ['surat_id' => $idB]) === 2 && str_contains((string) ($sb['isi'] ?? ''), '"sapaan":"Pimpinan"') && str_contains((string) ($sb['isi'] ?? ''), '"alamat":"Jl. Uji Surat No. 1, Bekasi"'), json_encode($rb));
+        $this->cek('periode PKL ikut tersimpan di ajuan + tercatat di riwayat ajuan', ($aj['tanggal_mulai'] ?? '') === '2027-08-24' && ($aj['tanggal_selesai'] ?? '') === '2027-11-24'
+            && $this->jumlah('pkl_riwayat', ['pengajuan_id' => $aid, 'aksi' => 'periode']) === 1);
+        $rb2 = $lib->buat(SuratJenis::BALASAN, $h, [$aid], [], $this->konteks(), $p);
+        $this->cek('Balasan kedua untuk ajuan yang sama ditolak (satu ajuan = satu Balasan aktif)', ! $rb2['ok'] && count($rb2['sama']) === 1 && ($lib->ajuan([$aid])[0]['balasan']['id'] ?? 0) === $idB);
+        $mB = $svc->muat($idB);
+        $pMin = ['durasi_min_hari' => 120] + $p;
+        $this->cek('periode kurang dari minimal di Pengaturan PKL → peringatan "awas" di detail (ACC massal melewatinya)', in_array('awas', array_column(SuratPeriksa::untuk($mB['surat'], $mB['siswa'], $pMin), 'tingkat'), true)
+            && ! in_array('awas', array_column(SuratPeriksa::untuk($mB['surat'], $mB['siswa'], $p), 'tingkat'), true));
+        $hU = SuratPkl::periksa(SuratJenis::BALASAN, ['tanggal_surat' => date('Y-m-d'), 'sapaan' => 'Bapak/Ibu Direktur', 'periode_mulai' => '2027-09-01', 'periode_selesai' => '2027-12-01', 'alamat' => 'Jl. Ubah 9, Bekasi']);
+        $ru = $lib->ubahSurat($mB, $hU, [], $this->konteks());
+        $sb = $this->surat($idB);
+        $aj = $this->db->table('pkl_pengajuan')->where('id', $aid)->get()->getRowArray();
+        $this->cek('ubah Balasan: sapaan & alamat & periode berubah; periode ajuan ikut diperbarui', $ru['ok'] && str_contains((string) $sb['isi'], '"sapaan":"Direktur"') && str_contains((string) $sb['isi'], 'Jl. Ubah 9')
+            && ($aj['tanggal_mulai'] ?? '') === '2027-09-01' && $this->jumlah('pkl_riwayat', ['pengajuan_id' => $aid, 'aksi' => 'periode']) === 2, json_encode($ru));
+        $kep->putuskan($idB, 'acc', [], $hu, $p);
+        $hb  = $bk->bangun([$idB], $op);
+        $tB  = $hb['ok'] ? trim((string) preg_replace('/\s+/u', ' ', $this->isiDocx($hb['biner']))) : '';
+        $hilang = static fn (string $teks, array $harus): array => array_values(array_filter($harus, static fn (string $k) => ! str_contains($teks, $k)));
+        $kurang = $hilang($tB, ['Bapak/Ibu Direktur', 'ZZUJISS Balasan Satu Di Tempat', 'ZZUJI SS 61', 'ZZUJI SS 62', '3 (tiga) bulan, bulan 1 September s.d. 1 Desember 2027', 'Jl. Ubah 9, Bekasi', 'Bekasi, ' . \App\Libraries\IsianBantu::tanggalIndo(date('Y-m-d'))]);
+        $this->cek('berkas Balasan: nomor terbit, "Bapak/Ibu Direktur", perusahaan "Di Tempat", kedua siswa, "3 (tiga) bulan, bulan 1 September s.d. 1 Desember 2027", alamat, tanggal tanpa nol', $hb['ok'] === true
+            && (string) $this->surat($idB)['nomor'] !== '' && $kurang === [] && ! str_contains($tB, '${'), 'tak ditemukan: ' . implode(' | ', $kurang));
+        $this->cek('berkas Balasan: tanda tangan Waka Hubin + Kepala Sekolah, NB, kaki "disetujui secara elektronik"', str_contains($tB, 'Hubin Uji, S.Pd.') && str_contains($tB, 'Kepsek Uji, S.T.') && str_contains($tB, 'Kontak Uji 0812000') && str_contains($tB, 'disetujui secara elektronik'));
+
+        // --- Penarikan: siswa sebagian, pencegah ganda, riwayat ajuan, berkas (tanggal tebal)
+        $h  = SuratPkl::periksa(SuratJenis::PENARIKAN, ['tanggal_surat' => date('Y-m-d'), 'sapaan' => '', 'tgl_efektif' => '2027-09-28', 'alasan_pilih' => '0']);
+        $rx = $lib->buat(SuratJenis::PENARIKAN, $h, [$aid], [$s63], $this->konteks(), $p);
+        $this->cek('Penarikan dengan siswa yang bukan anggota ajuan ditolak', ! $rx['ok'] && $rx['gagal'] !== []);
+        $rp = $lib->buat(SuratJenis::PENARIKAN, $h, [$aid], [$s62], $this->konteks(), $p);
+        $idP = (int) ($rp['dibuat'][0] ?? 0);
+        $sp  = $this->surat($idP);
+        $this->cek('Penarikan dibuat: hanya siswa 62, menunggu ACC, judul memuat perusahaan & nama, riwayat ajuan tercatat', $rp['ok'] && $this->jumlah('surat_sekolah_siswa', ['surat_id' => $idP]) === 1
+            && $this->jumlah('surat_sekolah_siswa', ['surat_id' => $idP, 'siswa_id' => $s62]) === 1 && ($sp['status'] ?? '') === 'menunggu' && str_contains((string) ($sp['judul'] ?? ''), 'ZZUJISS Balasan Satu - ZZUJI SS 62')
+            && $this->jumlah('pkl_riwayat', ['pengajuan_id' => $aid, 'aksi' => 'surat_sekolah']) >= 1, json_encode($rp));
+        $this->cek('Penarikan sama persis (ajuan + siswa + tanggal) tidak dibuat dua kali; ajuan berbeda sekaligus ditolak', ! $lib->buat(SuratJenis::PENARIKAN, $h, [$aid], [$s62], $this->konteks(), $p)['ok']
+            && ! $lib->buat(SuratJenis::PENARIKAN, $h, [$aid, $aid + 1], [$s62], $this->konteks(), $p)['ok']);
+        $this->cek('status PKL siswa TIDAK berubah oleh surat penarikan (tetap terkunci di ajuan disetujui)', (int) ($this->db->table('pkl_anggota')->where('siswa_id', $s62)->get()->getRowArray()['siswa_aktif'] ?? 0) === $s62);
+        $kep->putuskan($idP, 'acc', [], $hu, $p);
+        $hpk = $bk->bangun([$idP], $op);
+        $xP  = $hpk['ok'] ? $this->xmlDocx($hpk['biner']) : '';
+        $tP  = trim((string) preg_replace('/\s+/u', ' ', $this->teksXml($xP)));
+        $kurang = $hilang($tP, ['terhitung sejak tanggal 28 September 2027', 'karena ' . SuratPkl::ALASAN_SARAN[0] . '.', 'ZZUJI SS 62']);
+        $this->cek('berkas Penarikan: "terhitung sejak tanggal 28 September 2027", alasan contoh, perusahaan 4×, hanya siswa 62', $hpk['ok'] === true && $kurang === []
+            && substr_count($tP, 'ZZUJISS Balasan Satu') === 4 && ! str_contains($tP, 'ZZUJI SS 61') && ! str_contains($tP, '${'),
+            'tak ditemukan: ' . implode(' | ', $kurang) . ' · perusahaan ' . substr_count($tP, 'ZZUJISS Balasan Satu') . '× · ada siswa 61: ' . (str_contains($tP, 'ZZUJI SS 61') ? 'ya' : 'tidak'));
+        $this->cek('berkas Penarikan: tanggal "terhitung sejak" tetap TEBAL seperti contoh', preg_match('~<w:r>(<w:rPr>[^<]*+(?:<(?!/w:rPr>)[^<]*+)*+</w:rPr>)<w:t[^>]*>28 September 2027</w:t>~', $xP, $mb) === 1 && str_contains($mb[1], '<w:b/>'));
+
+        // --- Badan surat = contoh sekolah (data contoh dibaca dari berkasnya; baris siswa dibandingkan terpisah)
+        $this->atur(['kepsek_nama' => 'Napis Kuturupi, S.T.', 'kontak_surat_nama' => 'Puguh Wira Sakti, S.Pd.', 'kontak_surat_hp' => '0812 8584 526']);
+        $p = (new PklPengaturanModel())->ambil();
+        foreach ([SuratJenis::BALASAN, SuratJenis::PENARIKAN] as $jenis) {
+            $sumber = $contoh[$jenis];
+            if ($sumber === null) {
+                $this->cek($jenis . ': dibandingkan dengan contoh sekolah — dilewati (berkas contoh tak ada di mesin ini)', true);
+                continue;
+            }
+            $d   = $this->dataContoh($sumber);
+            $isi = $jenis === SuratJenis::BALASAN
+                ? ['sapaan' => $d['sapaan'], 'alamat' => $d['alamat'], 'periode_mulai' => '2026-08-24', 'periode_selesai' => '2026-11-24']
+                : ['sapaan' => $d['sapaan'], 'tgl_efektif' => $d['tgl_efektif'], 'alasan' => $d['alasan']];
+            $r   = $svc->buat($jenis, $this->data('Banding ' . $jenis, '2031-08-20', $isi, [['siswa_id' => $s61], ['siswa_id' => $s62]], null, $d['perusahaan']), $this->konteks(), $p);
+            $sid = (int) ($r['id'] ?? 0);
+            $kep->putuskan($sid, 'acc', [], $hu, $p);
+            $h2  = $bk->bangun([$sid], $op);
+            $xml = $h2['ok'] ? $this->xmlDocx($h2['biner']) : '';
+            if ($keluar !== '' && $h2['ok']) {
+                file_put_contents(rtrim($keluar, '/\\') . '/hasil_' . $jenis . '.docx', $h2['biner']);
+            }
+            $bc  = $this->badanTanpaSiswa($this->xmlBerkas($sumber));
+            $bh  = $this->badanTanpaSiswa($xml);
+            $this->cek($jenis . ': BADAN SURAT sama persis dengan contoh sekolah ("Kepada Yth." … "terima kasih.", data contoh, baris siswa diganti siswa uji)', $bc !== '' && $bc === $bh && $d['perusahaan'] !== '',
+                $bc === $bh ? '' : "\n   contoh: " . mb_substr($bc, 0, 300) . "\n   hasil : " . mb_substr($bh, 0, 300));
+            $tbHasil = $this->tabelSiswa($xml)[1];
+            $tbAsli  = $this->tabelSiswa($this->xmlBerkas($sumber))[1];
+            $this->cek($jenis . ': tabel siswa berisi baris uji urut (No, Nama, Kelas, Konsentrasi, HP) — jumlah kolom sama dengan contoh', ($tbHasil[1][0] ?? '') === '2'
+                && ($tbHasil[0][1] ?? '') === 'ZZUJI SS 61' && count($tbHasil[0] ?? []) === count($tbAsli[0] ?? [0]), json_encode([$tbHasil, count($tbAsli[0] ?? [])], JSON_UNESCAPED_UNICODE));
+        }
+
+        $this->atur(['kepsek_nama' => 'Kepsek Uji, S.T.', 'kontak_surat_nama' => 'Kontak Uji', 'kontak_surat_hp' => '0812000']);
+        $p = (new PklPengaturanModel())->ambil();
+
+        // --- Pernyataan: buat per ajuan / per siswa / per kelas, langsung siap unduh, satu halaman per siswa
+        $h1 = SuratPernyataan::periksa(['tanggal_surat' => date('Y-m-d'), 'cakupan' => 'ajuan', 'ajuan' => [(string) $aid], 'isi_ortu' => '1']);
+        $r1 = $per->buat($h1, $this->konteks(), $p);
+        $id1 = (int) ($r1['dibuat'][0] ?? 0);
+        $sp1 = $this->surat($id1);
+        $this->cek('Pernyataan per ajuan: langsung "siap unduh", tanpa ACC & tanpa nomor, tertaut ke ajuan, 2 siswa', $r1['ok'] && ($sp1['status'] ?? '') === 'disetujui' && (int) ($sp1['perlu_acc'] ?? 1) === 0
+            && (string) ($sp1['nomor'] ?? '') === '' && (int) ($sp1['pengajuan_id'] ?? 0) === $aid && $this->jumlah('surat_sekolah_siswa', ['surat_id' => $id1]) === 2, json_encode($r1));
+        $this->cek('Pernyataan yang sama persis tidak dibuat dua kali (unduh ulang surat lama)', ! $per->buat($h1, $this->konteks(), $p)['ok']);
+        $r2 = $per->buat(SuratPernyataan::periksa(['tanggal_surat' => date('Y-m-d'), 'cakupan' => 'siswa', 'siswa' => [(string) $s61], 'isi_ortu' => '0']), $this->konteks(), $p);
+        $id2 = (int) ($r2['dibuat'][0] ?? 0);
+        $jmlKelas = (int) $this->db->table('siswa')->where('kelas_id', $this->kelasId)->where('status', 'aktif')->where('deleted_at', null)->countAllResults();
+        $r3 = $per->buat(SuratPernyataan::periksa(['tanggal_surat' => date('Y-m-d'), 'cakupan' => 'kelas', 'kelas' => [(string) $this->kelasId], 'isi_ortu' => '1']), $this->konteks(), $p);
+        $id3 = (int) ($r3['dibuat'][0] ?? 0);
+        $this->cek('Pernyataan siswa pilihan (kosongkan data ortu) & per kelas (' . $jmlKelas . ' siswa aktif) dibuat', $r2['ok'] && $r3['ok'] && $this->jumlah('surat_sekolah_siswa', ['surat_id' => $id3]) === $jmlKelas);
+
+        $hp1 = $bk->bangun([$id1], $op);
+        $t1  = $hp1['ok'] ? $this->isiDocx($hp1['biner']) : '';
+        if ($keluar !== '' && $hp1['ok']) {
+            file_put_contents(rtrim($keluar, '/\\') . '/hasil_pernyataan_ortu.docx', $hp1['biner']);
+        }
+        $hal = explode('SURAT PERNYATAAN DAN PERSETUJUAN ORANG TUA/WALI', $t1);
+        $th  = substr(date('Y-m-d'), 0, 4);
+        $this->cek('berkas Pernyataan: 2 halaman (satu per siswa), tanpa penanda tersisa, tahun ' . $th, $hp1['ok'] === true && count($hal) === 3 && ! str_contains($t1, '${') && substr_count($t1, 'Bekasi, ................................ ' . $th) === 2);
+        $this->cek('halaman siswa 61: data orang tua dari data sekolah (nama, pekerjaan, alamat lengkap, HP) + nama di kurung tanda tangan', str_contains($hal[1] ?? '', 'ZZUJI ORTU 61') && str_contains($hal[1] ?? '', 'Wiraswasta')
+            && str_contains($hal[1] ?? '', 'Jl. Uji Ortu 7, RT 003/RW 004, Ujikel, Kec. Ujikec, Bekasi') && str_contains($hal[1] ?? '', '081299990061') && str_contains($hal[1] ?? '', '(ZZUJI SS 61)') && str_contains($hal[1] ?? '', '(ZZUJI ORTU 61)'));
+        $this->cek('halaman siswa 62 (data orang tua kosong): titik-titik seperti contoh, kurung tanda tangan orang tua bertitik', str_contains($hal[2] ?? '', 'ZZUJI SS 62') && substr_count($hal[2] ?? '', SuratPernyataan::titik()) >= 4
+            && str_contains($hal[2] ?? '', '(' . SuratPernyataan::titikTtd() . ')'));
+        $hp2 = $bk->bangun([$id2], $op);
+        $t2  = $hp2['ok'] ? $this->isiDocx($hp2['biner']) : '';
+        $this->cek('"Kosongkan data orang tua": data orang tua TIDAK tercetak (titik-titik), data siswa tetap', $hp2['ok'] === true && ! str_contains($t2, 'ZZUJI ORTU 61') && str_contains($t2, 'ZZUJI SS 61') && substr_count($t2, SuratPernyataan::titik()) >= 4);
+        $hg = $bk->bangun([$id1, $id2], $op);
+        $this->cek('unduh 2 surat Pernyataan sekaligus (3 halaman) → satu berkas Word, dihitung 2 surat', $hg['ok'] === true && $hg['zip'] === false && $hg['jumlah'] === 2 && substr_count($this->isiDocx($hg['biner']), 'SURAT PERNYATAAN DAN PERSETUJUAN') === 3);
+        $this->db->table('siswa')->where('id', $s61)->update(['pekerjaan_ayah' => 'Pedagang']);
+        $p = (new PklPengaturanModel())->ambil();
+        $m1 = $svc->muat($id1);
+        $m2 = $svc->muat($id2);
+        $this->cek('data orang tua berubah setelah diunduh → "perlu cetak ulang" hanya pada surat yang mencetak data orang tua', SuratSekolah::perluCetakUlang($m1['surat'], $m1['siswa'], $p) && ! SuratSekolah::perluCetakUlang($m2['surat'], $m2['siswa'], $p));
+
+        // --- Controller & tampilan per peran
+        set_error_handler(static function (int $no, string $pesan, string $berkas, int $baris): bool {
+            throw new \ErrorException($pesan, 0, $no, $berkas, $baris);
+        });
+        try {
+            $fOrtu = $this->panggil(\App\Controllers\Admin\SuratPernyataan::class, 'operator', 'index', ['ajuan' => (string) $aid]);
+            $fBal  = $this->panggil(\App\Controllers\Admin\SuratPkl::class, 'operator', 'balasan', ['ajuan' => (string) $aid]);
+            $fTar  = $this->panggil(\App\Controllers\Admin\SuratPkl::class, 'operator', 'penarikan', ['ajuan' => (string) $aid]);
+            $this->cek('formulir Pernyataan / Balasan / Penarikan tampil untuk Operator (memuat ajuan uji, Balasan yang sudah ada ditandai)', is_string($fOrtu) && str_contains($fOrtu, 'suratOrtuForm') && str_contains(html_entity_decode($fOrtu), 'ZZUJISS Balasan Satu')
+                && is_string($fBal) && str_contains($fBal, 'suratPklForm') && str_contains(html_entity_decode($fBal), '"balasan":{"id":' . $idB) && is_string($fTar) && str_contains($fTar, 'Ditarik terhitung sejak tanggal'));
+            $this->cek('Waka Hubin (tanpa hak "Surat Sekolah") tidak bisa membuka formulir Balasan & Pernyataan → dialihkan', $this->panggil(\App\Controllers\Admin\SuratPkl::class, 'hubin', 'balasan') instanceof \CodeIgniter\HTTP\RedirectResponse
+                && $this->panggil(\App\Controllers\Admin\SuratPernyataan::class, 'hubin', 'index') instanceof \CodeIgniter\HTTP\RedirectResponse);
+            $res = $this->panggil(\App\Controllers\Admin\SuratPkl::class, 'operator', 'simpanPenarikan', [], ['tanggal_surat' => date('Y-m-d'), 'sapaan' => 'Pimpinan', 'ajuan' => [(string) $aid], 'siswa' => [(string) $s61],
+                'tgl_efektif' => '2027-10-05', 'alasan_pilih' => 'lain', 'alasan_lain' => 'Siswa diminta kembali ke sekolah.']);
+            $baru = $this->db->table('surat_sekolah')->where('jenis', SuratJenis::PENARIKAN)->where('pengajuan_id', $aid)->orderBy('id', 'DESC')->get()->getRowArray();
+            $this->cek('simpan Penarikan lewat controller → dialihkan ke detail surat; alasan ketikan dirapikan', $res instanceof \CodeIgniter\HTTP\RedirectResponse && str_contains((string) ($baru['isi'] ?? ''), '"alasan":"siswa diminta kembali ke sekolah"'));
+            $idBaru = (int) ($baru['id'] ?? 0);
+            $det    = (string) $this->panggil(\App\Controllers\Admin\Surat::class, 'operator', 'detail', [], [], $idBaru);
+            $fUbah  = $this->panggil(\App\Controllers\Admin\SuratPkl::class, 'operator', 'ubahPenarikan', [], [], $idBaru);
+            $this->cek('detail Penarikan (menunggu) punya tombol "Ubah data surat"; formulir ubah tampil dengan siswa tercentang', str_contains($det, 'Ubah data surat') && str_contains($det, 'Alasan penarikan')
+                && is_string($fUbah) && str_contains($fUbah, 'Simpan perubahan') && str_contains(html_entity_decode($fUbah), '"siswaDipilih":["' . $s61 . '"]'));
+            $res = $this->panggil(\App\Controllers\Admin\SuratPkl::class, 'operator', 'simpanUbahPenarikan', [], ['tanggal_surat' => date('Y-m-d'), 'sapaan' => 'Pimpinan', 'siswa' => [(string) $s61, (string) $s62],
+                'tgl_efektif' => '2027-10-06', 'alasan_pilih' => '3'], $idBaru);
+            $this->cek('ubah Penarikan lewat controller: siswa jadi 2, tanggal & alasan berganti', $res instanceof \CodeIgniter\HTTP\RedirectResponse && $this->jumlah('surat_sekolah_siswa', ['surat_id' => $idBaru]) === 2
+                && str_contains((string) $this->surat($idBaru)['isi'], '2027-10-06') && str_contains((string) $this->surat($idBaru)['isi'], 'permintaan orang tua'));
+            $dPkl = (string) $this->panggil(\App\Controllers\Admin\Pkl::class, 'operator', 'detail', [], [], $aid);
+            $this->cek('detail ajuan PKL: kartu "Surat sekolah" memuat surat terkait + tombol Balasan / Penarikan / Pernyataan; periode PKL tampil', str_contains($dPkl, 'Surat sekolah') && str_contains($dPkl, 'Buat Surat Balasan')
+                && str_contains($dPkl, 'pernyataan-ortu?ajuan=' . $aid) && str_contains($dPkl, 'Balasan PKL') && str_contains($dPkl, '1 September 2027'));
+            $this->cek('menu SURAT SEKOLAH: kelima jenis aktif (tak ada lagi yang "Segera")', array_filter(SuratJenis::kode(), static fn (string $k) => ! SuratJenis::siap($k)) === []);
+        } finally {
+            restore_error_handler();
+            session()->remove('admin');
+        }
+        $this->atur(['durasi_min_hari' => (int) ($this->pengaturanAsli['durasi_min_hari'] ?? 0), 'durasi_maks_hari' => (int) ($this->pengaturanAsli['durasi_maks_hari'] ?? 0)]);
     }
 
     // =================================================================

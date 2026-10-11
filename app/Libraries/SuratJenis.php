@@ -60,14 +60,14 @@ final class SuratJenis
      *
      * @var list<string>
      */
-    public const SIAP = [self::ASTS, self::TKA];
+    public const SIAP = [self::ASTS, self::TKA, self::PERNYATAAN, self::BALASAN, self::PENARIKAN];
 
     /** Nama kunci isian JSON (surat_sekolah.isi) → label yang ramah dibaca di halaman detail. */
     public const LABEL_ISI = [
         'kegiatan' => 'Kegiatan', 'semester' => 'Semester', 'tahun_pelajaran' => 'Tahun pelajaran', 'sesi' => 'Sesi',
         'tgl_mulai' => 'Mulai', 'tgl_selesai' => 'Selesai', 'tempat' => 'Tempat', 'mode' => 'Cakupan',
-        'sapaan' => 'Ditujukan kepada', 'periode_mulai' => 'PKL mulai', 'periode_selesai' => 'PKL selesai',
-        'tgl_efektif' => 'Berlaku sejak', 'alasan' => 'Alasan', 'kelas' => 'Kelas', 'isi_ortu' => 'Data orang tua diisi',
+        'sapaan' => 'Ditujukan kepada (Bapak/Ibu …)', 'alamat' => 'Alamat perusahaan', 'periode_mulai' => 'PKL mulai', 'periode_selesai' => 'PKL selesai',
+        'tgl_efektif' => 'Ditarik terhitung sejak', 'alasan' => 'Alasan penarikan', 'cakupan' => 'Cakupan', 'kelas' => 'Kelas', 'isi_ortu' => 'Data orang tua diisi dari data sekolah',
     ];
 
     /** Kunci isian yang untuk mesin saja (tidak ditampilkan di halaman detail). */
@@ -75,7 +75,8 @@ final class SuratJenis
 
     /** Nilai isian berkode → teks yang ramah dibaca. */
     public const NILAI_ISI = [
-        'mode' => ['umum' => 'Surat umum (satu surat, satu nomor)', 'perusahaan' => 'Per perusahaan (nama perusahaan + daftar siswa)'],
+        'mode'    => ['umum' => 'Surat umum (satu surat, satu nomor)', 'perusahaan' => 'Per perusahaan (nama perusahaan + daftar siswa)'],
+        'cakupan' => ['kelas' => 'Satu kelas (semua siswa aktif)', 'ajuan' => 'Satu ajuan PKL (semua anggotanya)', 'siswa' => 'Siswa pilihan'],
     ];
 
     /** @return list<string> */

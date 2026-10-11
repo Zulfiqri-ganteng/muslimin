@@ -402,6 +402,11 @@ class UjiPkl extends BaseCommand
         $m2 = $model->aktifMilik($s[2]);
         $this->cek('aktifMilik(teman) → ajuan itu, peran teman', ($m2['id'] ?? 0) == $a1 && ($m2['peran'] ?? '') === 'teman');
         $this->cek('aktifMilik(siswa bebas) → null', $model->aktifMilik($s[4]) === null);
+        // Pesan penolakan form siswa: teman yang mencoba mengirim sendiri TIDAK disebut "sudah mengajukan".
+        $pesan = fn (array $m): string => (fn (array $x) => $this->pesanTerkunci($x))->call(new \App\Controllers\Pkl(), $m);
+        $pTeman = $pesan($m2);
+        $this->cek('pesan terkunci (teman): "didaftarkan temanmu" + cara keluar, bukan "sudah mengajukan"', str_contains($pTeman, 'didaftarkan temanmu') && str_contains($pTeman, 'dikeluarkan') && ! str_contains($pTeman, 'Kamu sudah mengajukan'), $pTeman);
+        $this->cek('pesan terkunci (pengaju): tetap "Kamu sudah mengajukan"', str_contains($pesan($model->aktifMilik($s[1]) ?? []), 'Kamu sudah mengajukan'));
         $daftar = [];
         foreach ($model->daftarSiswaKelas($kelas['XI']) as $r) {
             $daftar[(int) $r['id']] = $r;

@@ -37,6 +37,16 @@ final class SuratPeriksa
             $out[] = ['tingkat' => 'bahaya', 'teks' => 'Nama perusahaan tujuan surat belum diisi.'];
         }
 
+        // Surat Balasan: periode PKL dibandingkan dengan Pengaturan PKL; alamat kosong = baris "Alamat" di surat kosong.
+        if ($jenis === SuratJenis::BALASAN) {
+            foreach (SuratPkl::peringatanPeriode((string) ($isi['periode_mulai'] ?? ''), (string) ($isi['periode_selesai'] ?? ''), $p) as $teks) {
+                $out[] = ['tingkat' => 'awas', 'teks' => $teks];
+            }
+            if (array_key_exists('alamat', $isi) && trim((string) $isi['alamat']) === '') {
+                $out[] = ['tingkat' => 'awas', 'teks' => 'Alamat perusahaan kosong, jadi baris "Alamat" di surat tidak berisi. Lengkapi lewat "Ubah data surat".'];
+            }
+        }
+
         // Surat bernomor memuat blok tanda tangan + "NB" yang diambil dari Pengaturan PKL.
         if (SuratJenis::bernomor($jenis)) {
             if (trim((string) ($p['kepsek_nama'] ?? '')) === '') {
