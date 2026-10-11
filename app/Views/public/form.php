@@ -44,19 +44,8 @@ $selHari     = old('hari') ?? ($d['ketersediaan_hari'] ?? []);
 
 <div class="max-w-3xl mx-auto px-4 py-6 sm:py-10" id="formTop">
 
-    <!-- HEADER -->
-    <div class="bg-gradient-to-br from-brand-700 to-brand-900 rounded-2xl shadow-xl overflow-hidden">
-        <div class="px-6 py-8 sm:px-10 sm:py-10 text-center text-white">
-            <?php if (! empty($setting['logo'])): ?>
-                <span class="mx-auto mb-4 flex h-20 w-20 items-center justify-center rounded-full bg-white shadow-lg ring-4 ring-white/15">
-                    <img src="<?= base_url('uploads/' . esc($setting['logo'])) ?>" alt="Logo" class="h-14 w-14 object-contain">
-                </span>
-            <?php endif; ?>
-            <p class="text-brand-200 text-sm font-medium tracking-wide uppercase"><?= esc($setting['school_name'] ?? '') ?></p>
-            <h1 class="mt-1 text-2xl sm:text-3xl font-extrabold leading-tight">Format Kesediaan Guru Mengajar</h1>
-            <span class="inline-block mt-3 bg-gold-400 text-brand-900 text-sm font-bold px-4 py-1.5 rounded-full">Tahun Ajaran <?= $tahun ?></span>
-        </div>
-    </div>
+    <!-- HEADER: kop formulir resmi -->
+    <?= view('partials/kop_form', ['setting' => $setting, 'judul' => 'Format Kesediaan Guru Mengajar', 'tahunLabel' => 'Tahun Ajaran']) ?>
 
     <?php if ($isEdit): ?>
         <div class="mt-5 rounded-xl bg-amber-50 border border-amber-200 px-5 py-4">
@@ -77,7 +66,7 @@ $selHari     = old('hari') ?? ($d['ketersediaan_hari'] ?? []);
     <?php endif; ?>
 
     <!-- STEPPER -->
-    <div class="mt-6 bg-white rounded-2xl shadow-sm border border-slate-200 p-4 sm:p-5">
+    <div class="mt-6 bg-white rounded-lg shadow-sm border border-slate-200 p-4 sm:p-5">
         <div class="flex items-center justify-between mb-3">
             <p class="text-sm font-semibold text-brand-700">Langkah <span id="curStep">1</span> dari <?= count($stepLabels) ?></p>
             <p class="text-xs font-medium text-slate-400" id="stepTitle"><?= esc($stepLabels[0]) ?></p>
@@ -96,7 +85,7 @@ $selHari     = old('hari') ?? ($d['ketersediaan_hari'] ?? []);
         <?= csrf_field() ?>
 
         <!-- STEP 1 — KESEDIAAN -->
-        <section class="wizard-step bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden" data-title="Kesediaan">
+        <section class="wizard-step bg-white rounded-lg shadow-sm border border-slate-200 overflow-hidden" data-title="Kesediaan">
             <div class="bg-brand-700 px-6 py-4 flex items-center gap-3">
                 <span class="flex h-8 w-8 items-center justify-center rounded-lg bg-white/15 text-white text-sm font-bold">1</span>
                 <h2 class="text-white font-bold text-lg">Kesediaan Mengisi</h2>
@@ -126,7 +115,7 @@ $selHari     = old('hari') ?? ($d['ketersediaan_hari'] ?? []);
         </section>
 
         <!-- STEP 2 — IDENTITAS -->
-        <section class="wizard-step hidden bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden" data-title="Identitas Guru">
+        <section class="wizard-step hidden bg-white rounded-lg shadow-sm border border-slate-200 overflow-hidden" data-title="Identitas Guru">
             <div class="bg-brand-700 px-6 py-4 flex items-center gap-3">
                 <span class="flex h-8 w-8 items-center justify-center rounded-lg bg-white/15 text-white text-sm font-bold">2</span>
                 <h2 class="text-white font-bold text-lg">Identitas Guru</h2>
@@ -159,7 +148,7 @@ $selHari     = old('hari') ?? ($d['ketersediaan_hari'] ?? []);
         </section>
 
         <!-- STEP 3 — MATA PELAJARAN -->
-        <section class="wizard-step hidden bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden" data-title="Mata Pelajaran yang Diampu">
+        <section class="wizard-step hidden bg-white rounded-lg shadow-sm border border-slate-200 overflow-hidden" data-title="Mata Pelajaran yang Diampu">
             <div class="bg-brand-700 px-6 py-4 flex items-center gap-3">
                 <span class="flex h-8 w-8 items-center justify-center rounded-lg bg-white/15 text-white text-sm font-bold">3</span>
                 <h2 class="text-white font-bold text-lg">Mata Pelajaran yang Diampu</h2>
@@ -191,7 +180,7 @@ $selHari     = old('hari') ?? ($d['ketersediaan_hari'] ?? []);
         </section>
 
         <!-- STEP 4 — TUGAS TAMBAHAN & JAM MENGAJAR -->
-        <section class="wizard-step hidden bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden" data-title="Tugas Tambahan & Jam Mengajar">
+        <section class="wizard-step hidden bg-white rounded-lg shadow-sm border border-slate-200 overflow-hidden" data-title="Tugas Tambahan & Jam Mengajar">
             <div class="bg-brand-700 px-6 py-4 flex items-center gap-3">
                 <span class="flex h-8 w-8 items-center justify-center rounded-lg bg-white/15 text-white text-sm font-bold">4</span>
                 <h2 class="text-white font-bold text-lg">Tugas Tambahan &amp; Jam Mengajar</h2>
@@ -221,7 +210,7 @@ $selHari     = old('hari') ?? ($d['ketersediaan_hari'] ?? []);
         </section>
 
         <!-- STEP 5 — LAMPIRAN -->
-        <section class="wizard-step hidden bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden" data-title="Lampiran Kesediaan">
+        <section class="wizard-step hidden bg-white rounded-lg shadow-sm border border-slate-200 overflow-hidden" data-title="Lampiran Kesediaan">
             <div class="bg-brand-700 px-6 py-4 flex items-center gap-3">
                 <span class="flex h-8 w-8 items-center justify-center rounded-lg bg-white/15 text-white text-sm font-bold">5</span>
                 <h2 class="text-white font-bold text-lg">Lampiran Kesediaan</h2>
@@ -255,7 +244,7 @@ $selHari     = old('hari') ?? ($d['ketersediaan_hari'] ?? []);
         </section>
 
         <!-- STEP 6 — KOMITMEN & PERNYATAAN -->
-        <section class="wizard-step hidden bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden" data-title="Komitmen &amp; Pernyataan">
+        <section class="wizard-step hidden bg-white rounded-lg shadow-sm border border-slate-200 overflow-hidden" data-title="Komitmen &amp; Pernyataan">
             <div class="bg-brand-700 px-6 py-4 flex items-center gap-3">
                 <span class="flex h-8 w-8 items-center justify-center rounded-lg bg-white/15 text-white text-sm font-bold">6</span>
                 <h2 class="text-white font-bold text-lg">Komitmen &amp; Pernyataan</h2>

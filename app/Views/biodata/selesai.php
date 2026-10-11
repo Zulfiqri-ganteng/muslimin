@@ -9,7 +9,7 @@
 <?= $this->section('content') ?>
 <div class="max-w-lg mx-auto px-4 py-6 sm:py-10">
     <?= view('biodata/_header', ['setting' => $setting]) ?>
-    <div class="mt-6 bg-white rounded-2xl shadow-sm border border-slate-200 p-7 text-center">
+    <div class="mt-6 bg-white rounded-lg shadow-sm border border-slate-200 p-7 text-center">
         <div class="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-green-100">
             <svg class="w-9 h-9 text-green-600" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/></svg>
         </div>

@@ -147,7 +147,7 @@ $kepala = static fn (int $no, string $judul): string => '<div class="bio-head"><
     <?= view('biodata/_header', ['setting' => $setting]) ?>
 
     <!-- Peringatan KK — selalu tampil -->
-    <div class="mt-4 rounded-2xl border-2 border-amber-300 bg-amber-50 px-4 py-4 sm:px-5 flex gap-3">
+    <div class="mt-4 rounded-lg border-2 border-amber-300 bg-amber-50 px-4 py-4 sm:px-5 flex gap-3">
         <svg class="w-7 h-7 shrink-0 text-amber-500" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/></svg>
         <div class="text-sm text-amber-900 leading-relaxed">
             <p class="font-extrabold">WAJIB: Siapkan Kartu Keluarga (KK) sebelum mengisi.</p>
@@ -156,7 +156,7 @@ $kepala = static fn (int $no, string $judul): string => '<div class="bio-head"><
     </div>
 
     <!-- Stepper -->
-    <div class="mt-4 bg-white rounded-2xl shadow-sm border border-slate-200 p-4 sm:p-5" id="bioTop">
+    <div class="mt-4 bg-white rounded-lg shadow-sm border border-slate-200 p-4 sm:p-5" id="bioTop">
         <div class="flex items-center justify-between mb-3">
             <p class="text-sm font-semibold text-brand-700">Langkah <span x-text="step + 1">1</span> dari <?= count($langkah) ?></p>
             <p class="text-xs font-semibold text-slate-400" x-text="judulLangkah[step]"><?= esc($langkah[0]) ?></p>
@@ -232,8 +232,8 @@ $kepala = static fn (int $no, string $judul): string => '<div class="bio-head"><
                         </div>
                     </template>
                     <template x-if="pilih && (pilih.status === 'menunggu' || pilih.status === 'disetujui')">
-                        <div class="rounded-xl border p-4" :class="pilih.status === 'disetujui' ? 'border-green-200 bg-green-50' : 'border-blue-200 bg-blue-50'">
-                            <p class="font-extrabold" :class="pilih.status === 'disetujui' ? 'text-green-800' : 'text-blue-800'" x-text="pilih.status === 'disetujui' ? '✓ Biodata sudah diverifikasi sekolah' : '✓ Kamu sudah mengisi biodata'"></p>
+                        <div class="rounded-xl border p-4" :class="pilih.status === 'disetujui' ? 'border-green-200 bg-green-50' : 'border-brand-200 bg-brand-50'">
+                            <p class="font-extrabold" :class="pilih.status === 'disetujui' ? 'text-green-800' : 'text-brand-800'" x-text="pilih.status === 'disetujui' ? '✓ Biodata sudah diverifikasi sekolah' : '✓ Kamu sudah mengisi biodata'"></p>
                             <p class="mt-1 text-sm text-slate-600">
                                 <span x-text="pilih.nama"></span> tidak perlu mengisi lagi<span x-show="pilih.status === 'menunggu'"> — isianmu sedang diperiksa sekolah</span>.
                                 Jika ada data yang salah, hubungi wali kelas atau operator sekolah.
@@ -430,7 +430,7 @@ $kepala = static fn (int $no, string $judul): string => '<div class="bio-head"><
          class="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-slate-900/60 p-3 sm:p-6"
          @keydown.escape.window="kk.buka && tutupKK()">
         <div role="dialog" aria-modal="true" aria-labelledby="kkJudul"
-             class="w-full max-w-lg max-h-[92vh] overflow-y-auto rounded-2xl bg-white shadow-2xl">
+             class="w-full max-w-lg max-h-[92vh] overflow-y-auto rounded-lg bg-white shadow-2xl">
             <div class="flex items-center gap-3 bg-amber-400 px-5 py-4">
                 <svg class="w-8 h-8 shrink-0 text-amber-900" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/></svg>
                 <div>

@@ -1,7 +1,7 @@
 <?= $this->extend('layouts/public') ?>
 <?= $this->section('content') ?>
 <div class="max-w-lg mx-auto px-4 py-16">
-    <div class="bg-white rounded-2xl shadow-xl border border-slate-200 p-8 text-center">
+    <div class="bg-white rounded-lg shadow-sm border border-slate-200 p-8 text-center">
         <div class="mx-auto flex h-20 w-20 items-center justify-center rounded-full bg-amber-100">
             <svg class="w-11 h-11 text-amber-600" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 9v2m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/></svg>
         </div>

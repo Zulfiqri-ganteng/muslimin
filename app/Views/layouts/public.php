@@ -1,10 +1,11 @@
 <!DOCTYPE html>
-<html lang="id">
+<html lang="id" class="tema-lilac">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title><?= esc($title ?? 'Kesediaan Guru Mengajar') ?> &mdash; <?= esc($setting['school_name'] ?? 'Sekolah') ?></title>
     <meta name="robots" content="noindex">
+    <meta name="theme-color" content="#4e3778">
     <?= view('partials/favicon') ?>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">

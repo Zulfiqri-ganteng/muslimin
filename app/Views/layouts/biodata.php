@@ -8,12 +8,12 @@
 $schoolName = $setting['school_name'] ?? 'Sekolah';
 ?>
 <!DOCTYPE html>
-<html lang="id">
+<html lang="id" class="tema-lilac">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="robots" content="noindex, nofollow">
-    <meta name="theme-color" content="#1a3a6b">
+    <meta name="theme-color" content="#4e3778">
     <title><?= esc($title ?? 'Isi Biodata Siswa') ?> &mdash; <?= esc($schoolName) ?></title>
     <?= view('partials/favicon') ?>
     <link rel="preconnect" href="https://fonts.googleapis.com">

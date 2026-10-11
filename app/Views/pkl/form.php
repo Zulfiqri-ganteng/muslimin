@@ -100,7 +100,7 @@ $ikonAwas = '<svg class="w-6 h-6 shrink-0" fill="none" stroke="currentColor" str
     <?= view('pkl/_header', ['setting' => $setting]) ?>
 
     <!-- Persiapan — hanya di langkah pertama -->
-    <div x-show="step === 0" class="rise rise-2 mt-4 rounded-2xl border-2 border-amber-300 bg-amber-50 px-4 py-4 sm:px-5 flex gap-3 text-amber-500">
+    <div x-show="step === 0" class="mt-4 rounded-lg border-2 border-amber-300 bg-amber-50 px-4 py-4 sm:px-5 flex gap-3 text-amber-500">
         <?= $ikonAwas ?>
         <div class="text-sm text-amber-900 leading-relaxed">
             <p class="font-extrabold">Siapkan dulu sebelum mengisi:</p>
@@ -116,7 +116,7 @@ $ikonAwas = '<svg class="w-6 h-6 shrink-0" fill="none" stroke="currentColor" str
     </div>
 
     <!-- Stepper -->
-    <div class="rise rise-3 mt-4 bg-white rounded-2xl shadow-sm border border-slate-200 p-4 sm:p-5" id="pklTop">
+    <div class="mt-4 bg-white rounded-lg shadow-sm border border-slate-200 p-4 sm:p-5" id="pklTop">
         <div class="flex items-center justify-between mb-3">
             <p class="text-sm font-semibold text-brand-700">Langkah <span x-text="step + 1">1</span> dari <?= count($langkah) ?></p>
             <p class="text-xs font-semibold text-slate-400" x-text="judulLangkah[step]"><?= esc($langkah[0]) ?></p>
@@ -191,8 +191,8 @@ $ikonAwas = '<svg class="w-6 h-6 shrink-0" fill="none" stroke="currentColor" str
 
                     <!-- Sudah punya ajuan: menunggu / disetujui -->
                     <template x-if="pilih && (pilih.status === 'menunggu' || pilih.status === 'disetujui')">
-                        <div class="rounded-xl border p-4" :class="pilih.status === 'disetujui' ? 'border-green-200 bg-green-50' : 'border-blue-200 bg-blue-50'">
-                            <p class="font-extrabold" :class="pilih.status === 'disetujui' ? 'text-green-800' : 'text-blue-800'" x-text="pilih.status === 'disetujui' ? '✓ Ajuan PKL sudah disetujui sekolah' : '✓ Ajuan PKL sudah dikirim'"></p>
+                        <div class="rounded-xl border p-4" :class="pilih.status === 'disetujui' ? 'border-green-200 bg-green-50' : 'border-brand-200 bg-brand-50'">
+                            <p class="font-extrabold" :class="pilih.status === 'disetujui' ? 'text-green-800' : 'text-brand-800'" x-text="pilih.status === 'disetujui' ? '✓ Ajuan PKL sudah disetujui sekolah' : '✓ Ajuan PKL sudah dikirim'"></p>
                             <p class="mt-1 text-sm text-slate-600">
                                 <span x-text="pilih.nama"></span> tidak perlu mengisi lagi<span x-show="pilih.status === 'menunggu'"> — ajuannya sedang menunggu keputusan Waka Hubin</span>.
                                 <b>Jangan mengajukan ulang.</b>
@@ -200,7 +200,7 @@ $ikonAwas = '<svg class="w-6 h-6 shrink-0" fill="none" stroke="currentColor" str
                             <p x-show="pilih.peran === 'teman'" class="mt-2 text-sm text-slate-600">
                                 Namamu <b>didaftarkan oleh temanmu</b> yang PKL di tempat yang sama. Tidak merasa ikut? Hubungi operator sekolah atau Waka Hubin agar namamu dikeluarkan.
                             </p>
-                            <p x-show="pilih.status === 'menunggu' && pilih.batas" class="mt-2 rounded-lg border border-blue-200 bg-white/70 px-3 py-2 text-sm font-semibold text-blue-900">
+                            <p x-show="pilih.status === 'menunggu' && pilih.batas" class="mt-2 rounded-lg border border-brand-200 bg-white/70 px-3 py-2 text-sm font-semibold text-brand-900">
                                 Keputusan Waka Hubin paling lambat <span x-text="tglIndo(pilih.batas)"></span>. Lewat tanggal itu belum ada kabar? Hubungi operator sekolah atau Waka Hubin.
                             </p>
                             <p class="mt-2 text-xs text-slate-500">Jika ada data yang salah, hubungi operator sekolah atau Waka Hubin.</p>
@@ -338,7 +338,7 @@ $ikonAwas = '<svg class="w-6 h-6 shrink-0" fill="none" stroke="currentColor" str
                         <p x-cloak x-show="!bisaTambahTeman()" class="text-center text-sm font-semibold text-slate-500">Batas jumlah siswa per perusahaan sudah tercapai.</p>
                     </div>
 
-                    <div x-cloak x-show="pick.buka && bisaTambahTeman()" class="space-y-4 rounded-2xl border-2 border-brand-200 bg-brand-50/50 p-4">
+                    <div x-cloak x-show="pick.buka && bisaTambahTeman()" class="space-y-4 rounded-lg border-2 border-brand-200 bg-brand-50/50 p-4">
                         <div>
                             <label class="lbl" for="pickKelas">Kelas temanmu</label>
                             <select id="pickKelas" class="inp inp-lg bg-white" x-model="pick.kelasId" @change="muatPemilih()">

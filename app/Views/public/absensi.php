@@ -6,8 +6,8 @@
     $badge = [
         'hadir' => 'bg-emerald-50 text-emerald-700 border-emerald-200',
         'telat' => 'bg-amber-50 text-amber-700 border-amber-200',
-        'izin'  => 'bg-sky-50 text-sky-700 border-sky-200',
-        'sakit' => 'bg-violet-50 text-violet-700 border-violet-200',
+        'izin'  => 'bg-brand-50 text-brand-700 border-brand-200',
+        'sakit' => 'bg-pink-50 text-pink-700 border-pink-200',
         'alpa'  => 'bg-red-50 text-red-700 border-red-200',
     ];
 ?>

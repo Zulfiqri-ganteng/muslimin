@@ -1,4 +1,9 @@
 <?php
+/**
+ * Tata letak halaman publik (beranda, jadwal, absensi, dokumen, tautan berbagi).
+ * Tema lilac + mint (kelas tema-lilac, variabel di resources/css/app.css) — sama dengan panel admin.
+ * Gaya sengaja tenang seperti portal sekolah resmi: tanpa gradasi, cahaya, kilau, atau animasi hiasan.
+ */
 $schoolName = $setting['school_name'] ?? 'Sistem Akademik Sekolah';
 $logo       = ! empty($setting['logo']) ? base_url('uploads/' . $setting['logo']) : null;
 $cur        = uri_string();
@@ -15,144 +20,128 @@ if ((int) ($setting['absensi_publik'] ?? 1) === 1) {
 if ((int) ($setting['dokumen_publik'] ?? 0) === 1) {
     $menu[] = ['dokumen-publik', 'Dokumen'];
 }
-// Ikon yang dipakai berulang (satu tempat, agar menu desktop & HP serasi).
-$ikonPkl   = '<svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M21 13.255A23.931 23.931 0 0112 15c-3.183 0-6.22-.62-9-1.745M16 6V4a2 2 0 00-2-2h-4a2 2 0 00-2 2v2m4 6h.01M5 20h14a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/></svg>';
-$ikonLogin = '<svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M11 16l-4-4m0 0l4-4m-4 4h14m-5 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h7a3 3 0 013 3v1"/></svg>';
+$kontak = array_filter([
+    $setting['address'] ?? '',
+    ! empty($setting['phone']) ? 'Telp. ' . $setting['phone'] : '',
+    $setting['email'] ?? '',
+]);
 ?>
 <!DOCTYPE html>
-<html lang="id">
+<html lang="id" class="tema-lilac">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta name="theme-color" content="#1a3a6b">
+    <meta name="theme-color" content="#4e3778">
     <title><?= esc($title ?? 'Beranda') ?> &mdash; <?= esc($schoolName) ?></title>
     <?php if (! empty($logo)): ?>
         <link rel="icon" href="<?= esc($logo) ?>"><link rel="apple-touch-icon" href="<?= esc($logo) ?>">
     <?php else: ?>
         <link rel="icon" href="<?= base_url('favicon.ico') ?>">
     <?php endif; ?>
-    <script>document.documentElement.classList.add('js-reveal');</script>
     <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
     <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="<?= base_url('assets/css/app.css') ?>?v=<?= @filemtime(FCPATH . 'assets/css/app.css') ?>">
 </head>
-<body class="bg-slate-50 text-slate-800 antialiased min-h-screen flex flex-col" x-data="{ open:false, scrolled:false }" @scroll.window.passive="scrolled = window.scrollY > 8" @keydown.escape.window="open = false">
+<body class="flex min-h-screen flex-col bg-slate-50 text-slate-800 antialiased" x-data="{ open: false }" @keydown.escape.window="open = false">
 
-<!-- Navbar -->
-<header class="sticky top-0 z-30 border-b backdrop-blur transition-all duration-300" :class="scrolled ? 'bg-white/95 border-slate-200 shadow-sm' : 'bg-white/80 border-transparent'">
-    <div class="max-w-6xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between gap-3">
-        <a href="<?= site_url('/') ?>" class="flex items-center gap-2.5 min-w-0 group">
+<?php if ($kontak !== []): ?>
+<!-- Baris kontak (layar lebar) -->
+<div class="hidden bg-brand-900 text-xs text-white/75 md:block">
+    <div class="mx-auto flex h-8 max-w-6xl items-center justify-between gap-6 px-4 sm:px-6">
+        <p class="truncate"><?= esc(implode('  ·  ', $kontak)) ?></p>
+        <?php if (! empty($setting['academic_year'])): ?><p class="shrink-0">Tahun Pelajaran <?= esc($setting['academic_year']) ?></p><?php endif; ?>
+    </div>
+</div>
+<?php endif; ?>
+
+<!-- Kepala -->
+<header class="sticky top-0 z-30 border-b border-slate-200 bg-white">
+    <div class="mx-auto flex h-16 max-w-6xl items-center justify-between gap-4 px-4 sm:px-6">
+        <a href="<?= site_url('/') ?>" class="flex min-w-0 items-center gap-3">
             <?php if ($logo): ?>
-                <img src="<?= esc($logo) ?>" alt="Logo" class="h-10 w-10 rounded-xl object-contain shrink-0 transition group-hover:scale-105" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'">
-                <span style="display:none" class="h-10 w-10 items-center justify-center rounded-xl bg-brand-700 text-white font-extrabold shrink-0"><?= strtoupper(substr($schoolName, 0, 1)) ?></span>
+                <img src="<?= esc($logo) ?>" alt="Logo <?= esc($schoolName, 'attr') ?>" class="h-10 w-10 shrink-0 object-contain" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'">
+                <span style="display:none" class="h-10 w-10 shrink-0 items-center justify-center rounded-md bg-brand-700 font-semibold text-white"><?= strtoupper(substr($schoolName, 0, 1)) ?></span>
             <?php else: ?>
-                <span class="flex h-10 w-10 items-center justify-center rounded-xl bg-brand-700 text-white font-extrabold shrink-0"><?= strtoupper(substr($schoolName, 0, 1)) ?></span>
+                <span class="flex h-10 w-10 shrink-0 items-center justify-center rounded-md bg-brand-700 font-semibold text-white"><?= strtoupper(substr($schoolName, 0, 1)) ?></span>
             <?php endif; ?>
             <span class="min-w-0 leading-tight">
-                <span class="block font-extrabold text-slate-800 truncate"><?= esc($schoolName) ?></span>
-                <span class="hidden sm:block text-[11px] font-medium text-slate-400 truncate">Sistem Informasi Akademik</span>
+                <span class="block truncate font-semibold text-slate-900"><?= esc($schoolName) ?></span>
+                <span class="block truncate text-xs text-slate-500">Sistem Informasi Akademik</span>
             </span>
         </a>
 
-        <!-- desktop menu -->
-        <nav class="hidden md:flex items-center gap-0.5" aria-label="Menu utama">
+        <!-- menu layar lebar -->
+        <nav class="hidden h-full items-stretch lg:flex" aria-label="Menu utama">
             <?php foreach ($menu as [$url, $label]): $active = $cur === $url; ?>
-                <a href="<?= site_url($url) ?>" class="nav-link px-3.5 py-2 text-sm font-semibold transition <?= $active ? 'is-active text-brand-700' : 'text-slate-600 hover:text-brand-700' ?>"<?= $active ? ' aria-current="page"' : '' ?>><?= $label ?></a>
+                <a href="<?= site_url($url) ?>" class="flex items-center border-b-2 px-3 text-sm font-medium transition-colors <?= $active ? 'border-brand-600 text-brand-800' : 'border-transparent text-slate-600 hover:border-slate-300 hover:text-slate-900' ?>"<?= $active ? ' aria-current="page"' : '' ?>><?= $label ?></a>
             <?php endforeach; ?>
-            <span class="mx-2 h-6 w-px bg-slate-200" aria-hidden="true"></span>
-            <a href="<?= esc($urlPkl, 'attr') ?>" class="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl border border-amber-300 bg-amber-50 text-amber-800 hover:bg-amber-100 hover:border-amber-400 text-sm font-semibold transition active:scale-95"><?= $ikonPkl ?> Ajukan PKL</a>
+            <a href="<?= esc($urlPkl, 'attr') ?>" class="flex items-center border-b-2 border-transparent px-3 text-sm font-medium text-slate-600 transition-colors hover:border-slate-300 hover:text-slate-900">Pengajuan PKL</a>
             <?php if ($formOpen): ?>
-                <a href="<?= site_url('isi') ?>" class="ml-1.5 px-3.5 py-2 rounded-xl border border-brand-200 bg-brand-50 text-brand-700 hover:bg-brand-100 text-sm font-semibold transition active:scale-95">Form Kesediaan</a>
+                <a href="<?= site_url('isi') ?>" class="flex items-center border-b-2 border-transparent px-3 text-sm font-medium text-slate-600 transition-colors hover:border-slate-300 hover:text-slate-900">Form Kesediaan</a>
             <?php endif; ?>
-            <a href="<?= site_url('admin/login') ?>" class="btn-shine ml-1.5 inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-brand-700 hover:bg-brand-800 text-white text-sm font-bold shadow-sm shadow-brand-700/25 transition active:scale-95"><?= $ikonLogin ?> Login</a>
+            <span class="flex items-center pl-3">
+                <a href="<?= site_url('admin/login') ?>" class="rounded-md bg-brand-700 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-brand-800">Masuk</a>
+            </span>
         </nav>
 
         <!-- tombol menu HP -->
-        <button type="button" @click="open = !open" class="md:hidden flex h-10 w-10 items-center justify-center rounded-xl text-slate-600 hover:bg-slate-100 transition active:scale-95" :aria-expanded="open" aria-label="Buka menu">
-            <svg x-show="!open" class="w-6 h-6" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M4 6h16M4 12h16M4 18h16"/></svg>
-            <svg x-show="open" x-cloak class="w-6 h-6" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg>
+        <button type="button" @click="open = !open" class="flex h-10 w-10 items-center justify-center rounded-md text-slate-600 hover:bg-slate-100 lg:hidden" :aria-expanded="open" aria-label="Buka menu">
+            <svg x-show="!open" class="h-6 w-6" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M4 6h16M4 12h16M4 18h16"/></svg>
+            <svg x-show="open" x-cloak class="h-6 w-6" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg>
         </button>
     </div>
 
     <!-- menu HP -->
-    <div x-show="open" x-cloak
-         x-transition:enter="transition ease-out duration-200" x-transition:enter-start="opacity-0 -translate-y-2" x-transition:enter-end="opacity-100 translate-y-0"
-         x-transition:leave="transition ease-in duration-150" x-transition:leave-start="opacity-100 translate-y-0" x-transition:leave-end="opacity-0 -translate-y-2"
-         class="md:hidden border-t border-slate-100 bg-white px-4 pb-4 pt-2 shadow-lg">
-        <nav class="space-y-0.5" aria-label="Menu utama (HP)">
+    <div x-show="open" x-cloak class="border-t border-slate-200 bg-white lg:hidden">
+        <nav class="mx-auto max-w-6xl px-4 py-2 sm:px-6" aria-label="Menu utama (HP)">
             <?php foreach ($menu as [$url, $label]): $active = $cur === $url; ?>
-                <a href="<?= site_url($url) ?>" class="flex items-center justify-between rounded-xl px-3.5 py-3 text-sm font-semibold transition <?= $active ? 'bg-brand-50 text-brand-700' : 'text-slate-700 hover:bg-slate-50' ?>"><?= $label ?><svg class="w-4 h-4 text-slate-300" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7"/></svg></a>
+                <a href="<?= site_url($url) ?>" class="block border-l-2 px-3 py-2.5 text-sm font-medium <?= $active ? 'border-brand-600 bg-brand-50 text-brand-800' : 'border-transparent text-slate-700 hover:bg-slate-50' ?>"><?= $label ?></a>
             <?php endforeach; ?>
+            <a href="<?= esc($urlPkl, 'attr') ?>" class="block border-l-2 border-transparent px-3 py-2.5 text-sm font-medium text-slate-700 hover:bg-slate-50">Pengajuan PKL</a>
+            <?php if ($formOpen): ?>
+                <a href="<?= site_url('isi') ?>" class="block border-l-2 border-transparent px-3 py-2.5 text-sm font-medium text-slate-700 hover:bg-slate-50">Form Kesediaan Guru</a>
+            <?php endif; ?>
+            <a href="<?= site_url('admin/login') ?>" class="mt-2 mb-1 block rounded-md bg-brand-700 px-3 py-2.5 text-center text-sm font-medium text-white">Masuk (staf &amp; guru)</a>
         </nav>
-        <div class="mt-3 grid grid-cols-2 gap-2">
-            <a href="<?= esc($urlPkl, 'attr') ?>" class="flex items-center justify-center gap-1.5 rounded-xl border border-amber-300 bg-amber-50 px-3 py-3 text-sm font-semibold text-amber-800 active:scale-95 transition"><?= $ikonPkl ?> Ajukan PKL</a>
-            <a href="<?= site_url('admin/login') ?>" class="flex items-center justify-center gap-1.5 rounded-xl bg-brand-700 px-3 py-3 text-sm font-bold text-white shadow-sm active:scale-95 transition"><?= $ikonLogin ?> Login</a>
-        </div>
-        <?php if ($formOpen): ?>
-            <a href="<?= site_url('isi') ?>" class="mt-2 block rounded-xl border border-brand-200 bg-brand-50 px-3 py-3 text-center text-sm font-semibold text-brand-700 active:scale-95 transition">Form Kesediaan Guru</a>
-        <?php endif; ?>
     </div>
 </header>
 
-<main class="flex-1 w-full max-w-6xl mx-auto px-4 sm:px-6 py-6 sm:py-8">
+<main class="mx-auto w-full max-w-6xl flex-1 px-4 py-6 sm:px-6 sm:py-8">
     <?= $this->renderSection('content') ?>
 </main>
 
-<footer class="mt-10 bg-brand-900 text-brand-200">
-    <div class="max-w-6xl mx-auto px-4 sm:px-6 py-8 grid gap-6 sm:grid-cols-3">
-        <div class="sm:col-span-2">
-            <div class="flex items-center gap-3">
-                <?php if ($logo): ?><img src="<?= esc($logo) ?>" alt="" class="h-10 w-10 rounded-xl bg-white/10 object-contain p-1" aria-hidden="true" onerror="this.remove()"><?php endif; ?>
-                <p class="font-extrabold text-white"><?= esc($schoolName) ?></p>
-            </div>
-            <?php if (! empty($setting['address'])): ?><p class="mt-3 text-sm text-brand-200/90 max-w-md"><?= esc($setting['address']) ?></p><?php endif; ?>
+<footer class="mt-8 bg-brand-900 text-sm text-white/75">
+    <div class="mx-auto grid max-w-6xl gap-8 px-4 py-8 sm:grid-cols-3 sm:px-6">
+        <div>
+            <p class="font-semibold text-white"><?= esc($schoolName) ?></p>
+            <?php if (! empty($setting['address'])): ?><p class="mt-2 max-w-xs leading-relaxed"><?= esc($setting['address']) ?></p><?php endif; ?>
         </div>
-        <div class="text-sm">
-            <p class="font-bold text-white">Tautan</p>
-            <ul class="mt-2 space-y-1.5">
-                <li><a href="<?= esc($urlPkl, 'attr') ?>" class="text-brand-200 hover:text-white transition">Ajukan PKL</a></li>
-                <li><a href="<?= site_url('jadwal-kelas') ?>" class="text-brand-200 hover:text-white transition">Jadwal Kelas</a></li>
-                <li><a href="<?= site_url('admin/login') ?>" class="text-brand-200 hover:text-white transition">Login Staf &amp; Guru</a></li>
+        <div>
+            <p class="font-semibold text-white">Kontak</p>
+            <ul class="mt-2 space-y-1">
+                <?php if (! empty($setting['phone'])): ?><li>Telp. <?= esc($setting['phone']) ?></li><?php endif; ?>
+                <?php if (! empty($setting['email'])): ?><li><a href="mailto:<?= esc($setting['email'], 'attr') ?>" class="hover:text-emerald-200"><?= esc($setting['email']) ?></a></li><?php endif; ?>
+                <?php if (! empty($setting['website'])): ?><li><?= esc($setting['website']) ?></li><?php endif; ?>
+                <?php if (empty($setting['phone']) && empty($setting['email']) && empty($setting['website'])): ?><li>&mdash;</li><?php endif; ?>
+            </ul>
+        </div>
+        <div>
+            <p class="font-semibold text-white">Tautan</p>
+            <ul class="mt-2 space-y-1">
+                <li><a href="<?= site_url('jadwal-kelas') ?>" class="hover:text-emerald-200">Jadwal kelas</a></li>
+                <li><a href="<?= site_url('jadwal-guru') ?>" class="hover:text-emerald-200">Jadwal guru</a></li>
+                <li><a href="<?= esc($urlPkl, 'attr') ?>" class="hover:text-emerald-200">Pengajuan PKL</a></li>
+                <li><a href="<?= site_url('admin/login') ?>" class="hover:text-emerald-200">Masuk staf &amp; guru</a></li>
             </ul>
         </div>
     </div>
     <div class="border-t border-white/10">
-        <div class="max-w-6xl mx-auto px-4 sm:px-6 py-4 text-center text-xs text-brand-300">
-            &copy; <?= date('Y') ?> <?= esc($schoolName) ?>
-            <?php if (! empty($setting['academic_year'])): ?> &middot; T.P. <?= esc($setting['academic_year']) ?><?php endif; ?>
-            <?= view('partials/kredit') ?>
+        <div class="mx-auto max-w-6xl px-4 py-4 text-xs text-white/60 sm:px-6">
+            &copy; <?= date('Y') ?> <?= esc($schoolName) ?><?php if (! empty($setting['academic_year'])): ?> &middot; Tahun Pelajaran <?= esc($setting['academic_year']) ?><?php endif; ?>
+            <?= view('partials/kredit', ['kreditKelas' => 'mt-1 text-white/50']) ?>
         </div>
     </div>
 </footer>
-
-<script>
-/* Muncul saat digulir + angka berhitung naik. Tanpa JS / dengan "kurangi gerakan" semuanya langsung tampak. */
-(function () {
-    var kurangi = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-    var els = document.querySelectorAll('.reveal');
-    function hitung(el) {
-        var n = el.querySelectorAll('[data-count]');
-        n.forEach(function (c) {
-            var akhir = parseInt(c.getAttribute('data-count'), 10) || 0, mulai = null;
-            if (kurangi || akhir < 2) { c.textContent = akhir.toLocaleString('id-ID'); return; }
-            function langkah(t) {
-                if (mulai === null) { mulai = t; }
-                var p = Math.min(1, (t - mulai) / 900), e = 1 - Math.pow(1 - p, 3);
-                c.textContent = Math.round(akhir * e).toLocaleString('id-ID');
-                if (p < 1) { requestAnimationFrame(langkah); }
-            }
-            c.textContent = '0';
-            requestAnimationFrame(langkah);
-        });
-    }
-    function tampil(el) { if (!el.classList.contains('is-in')) { el.classList.add('is-in'); hitung(el); } }
-    if (!('IntersectionObserver' in window) || kurangi) { els.forEach(function (e) { e.classList.add('is-in'); }); return; }
-    var io = new IntersectionObserver(function (items) {
-        items.forEach(function (i) { if (i.isIntersecting) { tampil(i.target); io.unobserve(i.target); } });
-    }, { threshold: 0.12 });
-    els.forEach(function (e) { io.observe(e); });
-})();
-</script>
 </body>
 </html>
