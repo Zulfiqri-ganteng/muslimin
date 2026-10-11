@@ -147,7 +147,8 @@ final class PklHak
     private static function hakSurat(string $sisa): ?string
     {
         return match (true) {
-            $sisa === '' || (bool) preg_match('~^\d+$~', $sisa)                       => null,
+            // Daftar, detail, dan Excel daftar (data yang sama dengan layar) terbuka bagi yang boleh membuka menu Surat.
+            $sisa === '' || $sisa === 'excel' || (bool) preg_match('~^\d+$~', $sisa)  => null,
             (bool) preg_match('~^(acc-massal|\d+/(acc|batal-acc|kembalikan))$~', $sisa) => 'acc',
             default                                                                   => 'surat_sekolah',
         };

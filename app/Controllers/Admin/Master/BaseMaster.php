@@ -403,6 +403,18 @@ abstract class BaseMaster extends BaseController
     }
 
     /**
+     * Tulis nomor (NIP, HP, WA) sebagai TEKS agar Excel tidak membuang angka 0
+     * di depan / mengubahnya jadi angka ilmiah. Nilai kosong dibiarkan kosong.
+     * (Dulu memakai awalan "'" — petiknya ikut tersimpan di sel.)
+     */
+    protected function tulisTeks($sheet, string $sel, $nilai): void
+    {
+        if ($nilai !== null && $nilai !== '') {
+            $sheet->setCellValueExplicit($sel, (string) $nilai, \PhpOffice\PhpSpreadsheet\Cell\DataType::TYPE_STRING);
+        }
+    }
+
+    /**
      * Stream file .xlsx ke browser sebagai unduhan.
      * Isi $kopLastCol (mis. 'H') untuk menambah KOP sekolah di baris teratas —
      * dipakai pada EXPORT; template import dibiarkan polos agar mudah diparse.

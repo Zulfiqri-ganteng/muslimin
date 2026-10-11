@@ -52,7 +52,7 @@ $adaSaringan = $f['kelas_id'] > 0 || $f['jurusan'] !== '' || $f['status'] !== ''
             ['Lunas', (int) $ringkas['lunas'], 'text-green-700'],
             ['Sebagian', (int) $ringkas['sebagian'], 'text-amber-700'],
             ['Belum', (int) $ringkas['belum'], 'text-red-600'],
-            ['Penerima beasiswa', (int) $ringkas['beasiswa'], 'text-indigo-700'],
+            ['Penerima beasiswa', (int) $ringkas['beasiswa'], 'text-brand-700'],
         ] as [$label, $nilai, $warna]): ?>
             <div class="rounded-2xl border border-slate-200 bg-white px-4 py-3.5 shadow-sm">
                 <p class="text-[11px] font-bold uppercase tracking-wide text-slate-400"><?= esc($label) ?></p>
@@ -134,7 +134,7 @@ $adaSaringan = $f['kelas_id'] > 0 || $f['jurusan'] !== '' || $f['status'] !== ''
                         <tr class="align-top hover:bg-slate-50">
                             <td class="px-5 py-3">
                                 <p class="font-semibold text-slate-800"><?= $b['ajuan_id'] ? '<a href="' . esc(site_url('admin/pkl/' . $b['ajuan_id']), 'attr') . '" class="hover:text-brand-700">' . esc($b['nama']) . '</a>' : esc($b['nama']) ?></p>
-                                <p class="text-xs text-slate-400">NIS <?= esc($b['nis'] ?: '—') ?><?= $b['beasiswa'] ? ' · <span class="font-semibold text-indigo-600">🎓 ' . esc($b['beasiswa']) . '</span>' : '' ?></p>
+                                <p class="text-xs text-slate-400">NIS <?= esc($b['nis'] ?: '—') ?><?= $b['beasiswa'] ? ' · <span class="font-semibold text-brand-600">🎓 ' . esc($b['beasiswa']) . '</span>' : '' ?></p>
                                 <?php if ($b['keringanan']): ?><p class="mt-0.5 max-w-[16rem] text-xs text-amber-700">Keringanan: <?= esc($b['keringanan']) ?></p><?php endif; ?>
                             </td>
                             <td class="px-3 py-3 text-xs text-slate-600"><b class="text-slate-700"><?= esc($b['kelas'] ?: '—') ?></b><br><?= esc($b['jurusan']) ?></td>
@@ -142,7 +142,7 @@ $adaSaringan = $f['kelas_id'] > 0 || $f['jurusan'] !== '' || $f['status'] !== ''
                             <?php foreach ($jenis as $j): $v = $b['bayar'][$j['kode']] ?? ['total' => 0, 'periode' => []]; ?>
                                 <td class="whitespace-nowrap px-3 py-3 text-right text-xs">
                                     <?php if ($v['total'] > 0): ?><b class="text-slate-800"><?= esc($rp($v['total'])) ?></b><?php if ($j['siklus'] === 'bulanan'): ?><br><span class="text-slate-400"><?= esc(implode(', ', $v['periode'])) ?></span><?php endif; ?>
-                                    <?php elseif ($j['kode'] === 'spp' && $b['beasiswa']): ?><span class="text-indigo-500">dibebaskan</span>
+                                    <?php elseif ($j['kode'] === 'spp' && $b['beasiswa']): ?><span class="text-brand-500">dibebaskan</span>
                                     <?php else: ?><span class="text-slate-300">—</span><?php endif; ?>
                                 </td>
                             <?php endforeach; ?>
@@ -173,7 +173,7 @@ $adaSaringan = $f['kelas_id'] > 0 || $f['jurusan'] !== '' || $f['status'] !== ''
                         <?php endforeach; ?>
                     </dl>
                     <p class="mt-2 flex items-center justify-between border-t border-slate-100 pt-2 text-xs"><span class="text-slate-500">Total <b class="text-slate-800"><?= esc($rp((int) $b['total_bayar'])) ?></b></span><?php if ($b['kekurangan'] > 0): ?><span class="font-semibold text-red-600">Kurang <?= esc($rp((int) $b['kekurangan'])) ?></span><?php endif; ?></p>
-                    <?php if ($b['beasiswa']): ?><p class="mt-1 text-xs font-semibold text-indigo-600">🎓 Beasiswa <?= esc($b['beasiswa']) ?></p><?php endif; ?>
+                    <?php if ($b['beasiswa']): ?><p class="mt-1 text-xs font-semibold text-brand-600">🎓 Beasiswa <?= esc($b['beasiswa']) ?></p><?php endif; ?>
                     <?php if ($b['keringanan']): ?><p class="mt-1 text-xs text-amber-700">Keringanan: <?= esc($b['keringanan']) ?></p><?php endif; ?>
                 </li>
             <?php endforeach; ?>

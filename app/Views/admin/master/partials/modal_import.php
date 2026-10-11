@@ -22,7 +22,7 @@ $importExtra = $importExtra ?? null;
             <a href="<?= $templateUrl ?>" class="inline-block mt-3 text-sm text-brand-600 hover:underline">⬇ Unduh template Excel</a>
             <div class="flex justify-end gap-2 mt-6">
                 <button type="button" @click="importOpen=false" class="rounded-lg border border-slate-300 text-slate-600 text-sm font-semibold px-4 py-2.5 hover:bg-slate-50">Batal</button>
-                <button class="rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-semibold px-5 py-2.5">Unggah &amp; Pratinjau</button>
+                <button class="rounded-lg bg-brand-600 hover:bg-brand-700 text-white text-sm font-semibold px-5 py-2.5">Unggah &amp; Pratinjau</button>
             </div>
         </form>
         <?php if ($importExtra): ?>

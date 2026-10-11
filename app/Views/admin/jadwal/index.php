@@ -32,7 +32,7 @@
                     <span class="hidden sm:inline-flex items-center gap-1.5 rounded-full bg-slate-100 text-slate-600 px-3 py-1.5 text-xs font-semibold shrink-0">
                         <?= esc($kelas['tingkat']) ?>
                         <span class="text-slate-300">·</span>
-                        <span class="<?= $shift === 'pagi' ? 'text-amber-600' : 'text-indigo-600' ?>"><?= ucfirst($shift) ?></span>
+                        <span class="<?= $shift === 'pagi' ? 'text-amber-600' : 'text-brand-600' ?>"><?= ucfirst($shift) ?></span>
                     </span>
                 <?php endif; ?>
             </form>
@@ -45,7 +45,7 @@
                         Generate
                     </button>
                 <?php endif; ?>
-                <button type="button" @click="importOpen=true" class="inline-flex items-center gap-1.5 rounded-lg bg-sky-600 hover:bg-sky-700 text-white text-sm font-semibold px-3.5 py-2.5 transition">
+                <button type="button" @click="importOpen=true" class="inline-flex items-center gap-1.5 rounded-lg bg-brand-600 hover:bg-brand-700 text-white text-sm font-semibold px-3.5 py-2.5 transition">
                     <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"/></svg>
                     Import
                 </button>
@@ -226,7 +226,7 @@
         <div class="relative bg-white rounded-2xl shadow-xl w-full max-w-lg p-6">
             <h3 class="font-bold text-lg text-slate-800 mb-2">Import Jadwal dari Excel</h3>
             <p class="text-sm text-slate-500 mb-4">Unggah file Excel berformat <b>grid</b> (Jam × Hari, sama seperti hasil cetak/Excel). Isi tiap sel dengan <b>nama/kode mapel</b> — guru diambil otomatis dari <b>Penugasan</b>. (Opsional: tulis <b>Mapel / Guru</b> untuk menentukan guru langsung.) Setelah diunggah Anda bisa <b>memeriksa & mengedit</b> sebelum disimpan.</p>
-            <div class="rounded-xl bg-sky-50 border border-sky-100 p-3 mb-4 text-sm text-sky-800">
+            <div class="rounded-xl bg-brand-50 border border-brand-100 p-3 mb-4 text-sm text-brand-800">
                 Belum punya filenya? <a href="<?= site_url('admin/jadwal/template' . ($kelasId ? '?kelas_id=' . $kelasId : '')) ?>" class="font-semibold underline">Unduh template Excel<?= $kelas ? ' (' . esc($kelas['nama_kelas']) . ')' : '' ?></a> lalu isi grid-nya sesuai jadwal asli.
             </div>
             <form method="post" action="<?= site_url('admin/jadwal/import-preview') ?>" enctype="multipart/form-data">
@@ -236,7 +236,7 @@
                        class="block w-full text-sm text-slate-600 mb-5 file:mr-3 file:rounded-lg file:border-0 file:bg-brand-700 file:text-white file:px-4 file:py-2 file:text-sm file:font-semibold hover:file:bg-brand-800 border border-slate-300 rounded-lg">
                 <div class="flex justify-end gap-2">
                     <button type="button" @click="importOpen=false" class="rounded-lg border border-slate-300 text-slate-600 text-sm font-semibold px-4 py-2.5 hover:bg-slate-50">Batal</button>
-                    <button type="submit" class="rounded-lg bg-sky-600 hover:bg-sky-700 text-white text-sm font-semibold px-5 py-2.5">Lanjut ke Pratinjau</button>
+                    <button type="submit" class="rounded-lg bg-brand-600 hover:bg-brand-700 text-white text-sm font-semibold px-5 py-2.5">Lanjut ke Pratinjau</button>
                 </div>
             </form>
         </div>

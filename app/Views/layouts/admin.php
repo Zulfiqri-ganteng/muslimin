@@ -1,10 +1,15 @@
 <!DOCTYPE html>
-<html lang="id">
+<?php // tema-lilac: warna brand akun admin = ungu lilac + aksen mint (variabel di resources/css/app.css). ?>
+<html lang="id" class="tema-lilac">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title><?= esc($title ?? 'Admin') ?> &mdash; Panel Admin</title>
     <meta name="robots" content="noindex">
+    <?php // Token CSRF untuk admin/app.js (tombol hapus via POST + header fetch). ?>
+    <meta name="csrf-name" content="<?= csrf_token() ?>">
+    <meta name="csrf-header" content="<?= csrf_header() ?>">
+    <meta name="csrf-token" content="<?= csrf_hash() ?>">
     <?= view('partials/favicon') ?>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="<?= base_url('assets/css/app.css') ?>?v=<?= @filemtime(FCPATH . 'assets/css/app.css') ?>">
@@ -158,7 +163,8 @@
     $renderLink = static function (array $it) use ($itemAktif, $atrCari) {
         [$url, $label, $icon] = $it;
         $active = $itemAktif($it);
-        $cls = $active ? 'bg-white/15 text-white' : 'text-brand-100 hover:bg-white/10';
+        // Menu aktif: latar terang + garis mint di kiri (aksen tema lilac).
+        $cls = $active ? 'bg-white/15 text-white shadow-[inset_3px_0_0_theme(colors.emerald.300)]' : 'text-brand-100 hover:bg-white/10 hover:text-white';
         echo '<a href="' . site_url($url) . '" title="' . esc($label) . '" ' . ($active ? 'aria-current="page" ' : '') . ltrim($atrCari($label)) . ' '
             . ':class="collapsed && !sidebar ? \'lg:justify-center\' : \'\'" '
             . 'class="flex items-center gap-3 rounded-lg px-3.5 py-2.5 text-sm font-medium transition ' . $cls . '">'
@@ -185,7 +191,7 @@
 <div x-show="sidebar" x-cloak @click="sidebar=false" class="fixed inset-0 bg-black/40 z-30 lg:hidden"></div>
 
 <!-- ===================== SIDEBAR ===================== -->
-<aside class="fixed inset-y-0 left-0 z-40 flex flex-col w-64 bg-brand-800 text-white transform transition-all duration-200 lg:translate-x-0"
+<aside class="fixed inset-y-0 left-0 z-40 flex flex-col w-64 bg-gradient-to-b from-brand-700 via-brand-800 to-brand-900 text-white transform transition-all duration-200 lg:translate-x-0"
        :class="{ 'translate-x-0': sidebar, '-translate-x-full': !sidebar, 'lg:w-20': collapsed, 'lg:w-64': !collapsed }">
     <!-- Brand -->
     <div class="h-16 flex items-center gap-2.5 px-5 border-b border-white/10 shrink-0"
@@ -193,7 +199,7 @@
         <?php if ($schoolLogo): ?>
             <img src="<?= esc($schoolLogo) ?>" alt="Logo" class="h-9 w-9 rounded-lg object-contain shrink-0">
         <?php else: ?>
-            <div class="flex h-9 w-9 items-center justify-center rounded-lg bg-gold-400 text-brand-900 font-extrabold shrink-0"><?= strtoupper(substr($schoolName, 0, 1)) ?></div>
+            <div class="flex h-9 w-9 items-center justify-center rounded-lg bg-emerald-300 text-brand-900 font-extrabold shrink-0"><?= strtoupper(substr($schoolName, 0, 1)) ?></div>
         <?php endif; ?>
         <div class="leading-tight overflow-hidden" x-show="!collapsed || sidebar">
             <p class="font-bold text-sm truncate" title="<?= esc($schoolName) ?>"><?= esc($schoolName) ?></p>
@@ -232,7 +238,7 @@
                     <!-- Judul grup (klik untuk buka/tutup) - hanya saat lebar -->
                     <button type="button" @click="ganti()" x-show="!collapsed || sidebar" :aria-expanded="open || cari !== ''"
                             class="flex w-full items-center justify-between rounded-md px-3.5 py-1.5 text-[10px] font-bold uppercase tracking-wider transition hover:text-white <?= $grupAktif ? 'text-white' : 'text-brand-300' ?>">
-                        <span class="flex items-center gap-1.5"><?= esc($g['title']) ?><?php if ($grupAktif): ?><span class="h-1.5 w-1.5 rounded-full bg-gold-400" aria-hidden="true"></span><?php endif; ?></span>
+                        <span class="flex items-center gap-1.5"><?= esc($g['title']) ?><?php if ($grupAktif): ?><span class="h-1.5 w-1.5 rounded-full bg-emerald-300" aria-hidden="true"></span><?php endif; ?></span>
                         <svg class="h-3.5 w-3.5 transition-transform" :class="(open || cari !== '') ? 'rotate-180' : ''" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7"/></svg>
                     </button>
                     <!-- Saat menciut: garis pemisah tipis pengganti judul -->

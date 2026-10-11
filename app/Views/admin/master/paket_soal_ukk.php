@@ -77,13 +77,13 @@ helper('ukkdoc');
                             <td class="px-4 py-3 text-xs space-y-1">
                                 <?php if (! empty($r['kisi_kisi_file'])): ?>
                                     <div><a href="<?= esc(ukkdoc_url($r['kisi_kisi_file'])) ?>" target="_blank" class="text-brand-700 hover:underline font-medium">Kisi-kisi</a>
-                                        <a href="<?= site_url('admin/master/paket-soal-ukk/hapus-berkas/' . $r['id'] . '/kisi-kisi') ?>" data-confirm="Hapus berkas kisi-kisi ini?" class="text-red-500 hover:underline ml-1">hapus</a></div>
+                                        <a href="<?= site_url('admin/master/paket-soal-ukk/hapus-berkas/' . $r['id'] . '/kisi-kisi') ?>" data-method="post" data-confirm="Hapus berkas kisi-kisi ini?" class="text-red-500 hover:underline ml-1">hapus</a></div>
                                 <?php else: ?>
                                     <div class="text-slate-300">Kisi-kisi: —</div>
                                 <?php endif; ?>
                                 <?php if (! empty($r['jobsheet_file'])): ?>
                                     <div><a href="<?= esc(ukkdoc_url($r['jobsheet_file'])) ?>" target="_blank" class="text-brand-700 hover:underline font-medium">Jobsheet</a>
-                                        <a href="<?= site_url('admin/master/paket-soal-ukk/hapus-berkas/' . $r['id'] . '/jobsheet') ?>" data-confirm="Hapus berkas jobsheet ini?" class="text-red-500 hover:underline ml-1">hapus</a></div>
+                                        <a href="<?= site_url('admin/master/paket-soal-ukk/hapus-berkas/' . $r['id'] . '/jobsheet') ?>" data-method="post" data-confirm="Hapus berkas jobsheet ini?" class="text-red-500 hover:underline ml-1">hapus</a></div>
                                 <?php else: ?>
                                     <div class="text-slate-300">Jobsheet: —</div>
                                 <?php endif; ?>

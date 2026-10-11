@@ -73,7 +73,7 @@ $tile = function (string $label, $value, string $color = 'text-slate-800') {
 <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-4">
     <?= $tile('Total Aset', (int) $asetTotal, 'text-brand-700') ?>
     <?= $tile('Tersedia', (int) $asetStatus['tersedia'], 'text-emerald-600') ?>
-    <?= $tile('Dipinjam', (int) $asetStatus['dipinjam'], 'text-sky-600') ?>
+    <?= $tile('Dipinjam', (int) $asetStatus['dipinjam'], 'text-brand-600') ?>
     <?= $tile('Perbaikan', (int) $asetStatus['perbaikan'], 'text-amber-600') ?>
 </div>
 <div class="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-8">
@@ -113,7 +113,7 @@ $tile = function (string $label, $value, string $color = 'text-slate-800') {
     <?= $tile('Total periode', (int) $pmTotal, 'text-brand-700') ?>
     <?= $tile('Dikembalikan', (int) $pmStatus['dikembalikan'], 'text-emerald-600') ?>
     <?= $tile('Hilang', (int) $pmStatus['hilang'], 'text-red-600') ?>
-    <?= $tile('Sedang dipinjam', (int) $pmSedang, 'text-sky-600') ?>
+    <?= $tile('Sedang dipinjam', (int) $pmSedang, 'text-brand-600') ?>
     <?= $tile('Terlambat (kini)', (int) $pmTerlambat, 'text-red-600') ?>
     <?= $tile('Dipinjam (periode)', (int) $pmStatus['dipinjam']) ?>
 </div>
@@ -123,7 +123,7 @@ $tile = function (string $label, $value, string $color = 'text-slate-800') {
 <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-3">
     <?= $tile('Total kerusakan', (int) $krTotal, 'text-amber-600') ?>
     <?= $tile('Selesai', (int) $krStatus['selesai'], 'text-emerald-600') ?>
-    <?= $tile('Total perbaikan', (int) $pbTotal, 'text-sky-600') ?>
+    <?= $tile('Total perbaikan', (int) $pbTotal, 'text-brand-600') ?>
     <?= $tile('Biaya perbaikan', $rp($pbBiaya), 'text-slate-800') ?>
 </div>
 <div class="bg-white rounded-2xl border border-slate-200 shadow-sm p-5 mb-8">

@@ -92,6 +92,9 @@ class Options extends BaseApiController
         if (in_array('ujian_status', $want, true)) {
             $out['ujian_status'] = $this->nilai(UjianSusulanModel::STATUS, UjianSusulanModel::STATUS_LABEL);
         }
+        if (in_array('ujian_periode_status', $want, true)) {
+            $out['ujian_periode_status'] = $this->nilai(UjianPeriodeModel::STATUS);
+        }
         if (in_array('ujian_peran_pengawas', $want, true)) {
             $out['ujian_peran_pengawas'] = $this->nilai(UjianPengawasModel::PERAN, [
                 'pengawas' => 'Pengawas', 'cadangan' => 'Cadangan',

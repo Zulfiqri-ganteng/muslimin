@@ -18,8 +18,8 @@ foreach ($peranList as $p) {
 }
 $warnaPeran = [
     'kepala_lab' => 'bg-brand-50 text-brand-700 border-brand-200',
-    'teknisi'    => 'bg-sky-50 text-sky-700 border-sky-200',
-    'laboran'    => 'bg-violet-50 text-violet-700 border-violet-200',
+    'teknisi'    => 'bg-teal-50 text-teal-700 border-teal-200',
+    'laboran'    => 'bg-pink-50 text-pink-700 border-pink-200',
     'lainnya'    => 'bg-slate-100 text-slate-500 border-slate-200',
 ];
 ?>

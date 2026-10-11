@@ -18,7 +18,7 @@ document.addEventListener('alpine:init', function () {
         var e = document.getElementById(id);
         if (e) { e.textContent = teks; }
     }
-    var KELAS_JP = ['bg-sky-400', 'text-white', 'font-semibold'];
+    var KELAS_JP = ['bg-brand-500', 'text-white', 'font-semibold'];
     var KELAS_TANPA_JP = ['bg-amber-300', 'text-amber-900', 'font-semibold'];
     var KELAS_MATI = ['bg-slate-200'];
 

@@ -220,8 +220,15 @@ Dipakai 2 tabel:
       diperbarui (endpoint + peta layar + checklist). `flutter analyze` bersih,
       `flutter test` lolos. Claude TAK commit (user sendiri).
 
-- [ ] **L9 — Uji e2e + deploy**
-      Uji tiap alur, bersihkan data uji, catat langkah deploy.
+- [x] **L9 — Uji e2e + deploy** ✅ 2026-10-12 (lokal; deploy = `git pull`, tanpa migrasi baru)
+      Uji e2e HTTP lewat server lokal **18 cek lulus** (sekaligus regresi filter CSRF admin yang
+      baru aktif): jabatan struktural ditambah → kode kembar ditolak → jabatan anak → induk melingkar
+      ditolak → atur 2 jabatan (1 utama) ke guru tanpa jadwal → guru itu MUNCUL di panel Kehadiran
+      Kerja → Rekap Absensi memuat jabatan → ekspor Excel → API daftar jabatan & jabatan guru →
+      hapus (POST) melepas relasi & menaikkan anak; siswa: tambah → NIS kembar ditolak → ubah →
+      detail → API cari → statistik publik (`/api/v1/statistik/siswa`) hanya angka → hapus (POST).
+      Semua data uji (ZZUJI/ZZ9900) + jejak audit akun uji dihapus. Langkah deploy: bagian
+      "Catatan deploy" di bawah + `docs/PANDUAN-DEPLOY-2026-10-12.md`.
 
 ---
 

@@ -69,7 +69,7 @@ $section('Guru Dijadwalkan Saat Tidak Tersedia (R3)', 'bg-amber-500', $ketViolat
     fn ($r) => [esc($r['kode_guru'] . ' · ' . $r['guru_nama']), esc($r['nama_kelas']), esc($r['nama_mapel']), esc($r['hari']), esc($r['jam_ke'])]);
 
 // R4 JP belum sesuai
-$section('Jumlah JP Belum Sesuai (R4)', 'bg-indigo-500', $jpMismatch,
+$section('Jumlah JP Belum Sesuai (R4)', 'bg-brand-500', $jpMismatch,
     ['Kelas', 'Mapel', 'Guru', 'Terjadwal', 'Seharusnya'],
     fn ($r) => [
         esc($r['nama_kelas']), esc($r['nama_mapel']), esc($r['guru_nama']),

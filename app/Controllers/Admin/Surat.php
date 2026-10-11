@@ -4,11 +4,13 @@ namespace App\Controllers\Admin;
 
 use App\Libraries\HakAkses;
 use App\Libraries\IsianBantu;
+use App\Libraries\SuratAgenda;
 use App\Libraries\SuratBerkas;
 use App\Libraries\SuratJenis;
 use App\Libraries\SuratKeputusan;
 use App\Libraries\SuratPeriksa;
 use App\Libraries\SuratSekolah;
+use App\Models\SettingModel;
 use App\Models\SuratSekolahModel;
 use CodeIgniter\HTTP\RedirectResponse;
 
@@ -25,8 +27,8 @@ class Surat extends SuratDasar
     // Daftar & detail
     // =================================================================
 
-    /** GET admin/surat */
-    public function index()
+    /** Saringan Daftar Surat dari ?status=&jenis=&tahun=&q= (nilai asing dikosongkan). */
+    private function saringan(): array
     {
         $f = [
             'status' => (string) $this->request->getGet('status'),
@@ -44,6 +46,29 @@ class Surat extends SuratDasar
             $f['tahun'] = 0;
         }
 
+        return $f;
+    }
+
+    /** GET admin/surat/excel — Buku Agenda Surat Keluar sesuai saringan yang tampil (semua halaman, maks 5.000). */
+    public function excel()
+    {
+        $f    = $this->saringan();
+        $teks = implode(' · ', array_filter([
+            $f['status'] !== '' ? 'Status: ' . SuratSekolahModel::TAMPIL_STATUS[$f['status']][0] : '',
+            $f['jenis'] !== '' ? 'Jenis: ' . SuratJenis::label($f['jenis']) : '',
+            $f['tahun'] > 0 ? 'Tahun: ' . $f['tahun'] : '',
+            $f['q'] !== '' ? 'Cari: "' . $f['q'] . '"' : '',
+        ]));
+        $biner = (new SuratAgenda())->excel($this->surat->daftar($f, 1, 5000)['rows'], $teks, (new SettingModel())->get());
+        $nama  = 'Buku Agenda Surat Keluar ' . date('Y-m-d') . '.xlsx';
+
+        return $this->response->download($nama, $biner)->setFileName($nama);
+    }
+
+    /** GET admin/surat */
+    public function index()
+    {
+        $f     = $this->saringan();
         $hasil = $this->surat->daftar($f, max(1, (int) $this->request->getGet('page')), SuratSekolah::PER_HALAMAN);
         $judul = $f['status'] !== '' ? SuratSekolahModel::TAMPIL_STATUS[$f['status']][0] : 'Daftar Surat';
         $peran = $this->peranSaya();

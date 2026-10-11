@@ -65,22 +65,8 @@ class SuratIzin extends SuratDasar
         $acara   = new Acara();
         $periode = $jenis === SuratJenis::ASTS ? $acara->periodeUjian() : [];
 
-        // Isian awal: ASTS mengambil periode Ujian terdekat yang belum lewat (atau yang terbaru); TKA mulai kosong.
-        $awal = ['tanggal_surat' => date('Y-m-d'), 'mode' => 'umum', 'tempat' => Acara::TEMPAT_BAWAAN, 'tgl_mulai' => '', 'tgl_selesai' => '',
-            'semester' => 'Ganjil', 'tahun_pelajaran' => (string) ((new \App\Models\SettingModel())->get()['academic_year'] ?? ''), 'sesi' => $jenis === SuratJenis::TKA ? 'Gelombang 1' : ''];
-        if ($periode !== []) {
-            $pilih = null;
-            foreach (array_reverse($periode) as $x) { // dari yang tertua: ambil yang pertama belum lewat
-                if ($x['selesai'] !== null && $x['selesai'] >= date('Y-m-d')) {
-                    $pilih = $x;
-                    break;
-                }
-            }
-            // Tak ada periode yang akan datang: semester & tahun mengikuti yang terbaru, tanggal dibiarkan kosong.
-            $awal = $pilih !== null
-                ? ['semester' => $pilih['semester'], 'tahun_pelajaran' => $pilih['tahun'], 'tgl_mulai' => (string) $pilih['mulai'], 'tgl_selesai' => (string) $pilih['selesai']] + $awal
-                : ['semester' => $periode[0]['semester'], 'tahun_pelajaran' => $periode[0]['tahun']] + $awal;
-        }
+        // Isian awal (sama dengan API): ASTS dari periode Ujian terdekat yang belum lewat; TKA mulai kosong.
+        $awal = Acara::nilaiAwal($jenis, $periode, (string) ((new \App\Models\SettingModel())->get()['academic_year'] ?? ''));
 
         return view('admin/surat/izin_form', $this->dasarForm($jenis) + [
             'ubah'       => false,
@@ -145,25 +131,15 @@ class SuratIzin extends SuratDasar
             return $alih;
         }
         $balik = site_url(SuratJenis::alamat($jenis) . '/' . $id . '/ubah');
-        $lama  = $m['surat']['isi_arr'];
-        $h     = Acara::periksa($jenis, (array) $this->request->getPost(), (string) ($lama['mode'] ?? 'umum'));
-        if (! $h['ok']) {
-            return redirect()->to($balik)->withInput()->with('errors', $h['galat']);
+        $hasil = (new Acara())->ubahSurat($m, (array) $this->request->getPost(), $this->konteks(['saluran' => 'web']));
+        if ($hasil['kode'] === 'galat') {
+            return redirect()->to($balik)->withInput()->with('errors', $hasil['galat']);
         }
-
-        $pkey  = (string) ($lama['pkey'] ?? '');
-        $isi   = $h['isi'] + ($pkey !== '' ? ['pkey' => $pkey] : []);
-        $isi  += ['kunci' => Acara::kunci($jenis, $h['isi'], $pkey)];
-        $acara = new Acara();
-        if (($sama = $acara->adaSama($isi['kunci'], $id)) !== null) {
-            return redirect()->to($balik)->withInput()->with('error', 'Surat yang sama sudah ada (' . SuratSekolahModel::kode($sama['id']) . ($sama['nomor'] ? ', nomor ' . $sama['nomor'] : '') . '). Tidak dibuat dobel.');
+        if ($hasil['kode'] === 'sama') {
+            return redirect()->to($balik)->withInput()->with('error', $hasil['pesan']);
         }
-
-        $hasil = $this->surat->ubah($id, [
-            'judul' => Acara::judul($jenis, $isi, (string) $m['surat']['perusahaan_nama'], count($m['siswa'])), 'tanggal_surat' => $h['tanggal_surat'], 'isi' => $isi,
-        ], $this->konteks(['saluran' => 'web']));
         if (! $hasil['ok']) {
-            return $this->ke('admin/surat/' . $id, 'error', (string) ($hasil['pesan'] ?? 'Perubahan gagal disimpan.'));
+            return $this->ke('admin/surat/' . $id, 'error', $hasil['pesan']);
         }
 
         return $this->ke('admin/surat/' . $id, 'success', 'Data surat diperbarui.' . ($m['surat']['status'] === 'dikembalikan' ? ' Surat masih berstatus Dikembalikan: tekan "Ajukan ulang untuk ACC" bila sudah siap.' : ''));

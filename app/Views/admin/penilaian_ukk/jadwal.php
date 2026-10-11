@@ -13,7 +13,7 @@ $num  = static fn ($v) => $v !== null ? number_format((float) $v, 1) : '';
 $saveUrl = site_url('admin/penilaian-ukk/jadwal/' . (int) $jadwal['id'] . '/simpan');
 $warnaStatus = [
     'terdaftar'   => 'bg-slate-100 text-slate-600 border-slate-200',
-    'hadir'       => 'bg-sky-50 text-sky-700 border-sky-200',
+    'hadir'       => 'bg-brand-50 text-brand-700 border-brand-200',
     'tidak_hadir' => 'bg-amber-50 text-amber-700 border-amber-200',
     'lulus'       => 'bg-emerald-50 text-emerald-700 border-emerald-200',
     'tidak_lulus' => 'bg-red-50 text-red-700 border-red-200',

@@ -436,6 +436,25 @@ final class SuratSekolah
     }
 
     /**
+     * Alasan data surat TIDAK boleh diubah (null = boleh): sudah bernomor, atau status bukan menunggu/dikembalikan.
+     * Satu sumber untuk formulir "Ubah data surat" di web (SuratDasar::muatBisaDiubah) dan API (Api\Surat::ubah).
+     *
+     * @param array<string, mixed> $surat baris surat_sekolah
+     */
+    public static function alasanTakBisaUbah(array $surat): ?string
+    {
+        if ((string) ($surat['nomor'] ?? '') !== '') {
+            return 'Surat ini sudah bernomor, jadi datanya tidak bisa diubah. Bila salah, batalkan surat lalu buat yang baru.';
+        }
+        $status = (string) ($surat['status'] ?? '');
+        if (! in_array($status, ['menunggu', 'dikembalikan'], true)) {
+            return 'Surat berstatus "' . (SuratSekolahModel::TAMPIL_STATUS[$status][0] ?? $status) . '" tidak bisa diubah. Surat yang sudah disetujui harus dibatalkan persetujuannya dulu.';
+        }
+
+        return null;
+    }
+
+    /**
      * "Perlu cetak ulang": surat pernah diunduh, dan data yang tampil di surat berubah sejak itu (nomor tetap sama).
      *
      * @param array<string, mixed>       $surat

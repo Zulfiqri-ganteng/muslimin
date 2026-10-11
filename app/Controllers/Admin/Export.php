@@ -7,6 +7,7 @@ use App\Models\SubmissionModel;
 use App\Models\SettingModel;
 use Dompdf\Dompdf;
 use Dompdf\Options;
+use PhpOffice\PhpSpreadsheet\Cell\DataType;
 use PhpOffice\PhpSpreadsheet\Spreadsheet;
 use PhpOffice\PhpSpreadsheet\Writer\Xlsx;
 use PhpOffice\PhpSpreadsheet\Style\Alignment;
@@ -100,10 +101,14 @@ class Export extends BaseController
 
             $sheet->fromArray([
                 $i + 1, $d['nama_lengkap'], $d['guru_mapel'], $d['status_kepegawaian'],
-                "'" . $d['nomor_hp'], $mapel, $tugas, $hariStr,
+                null, $mapel, $tugas, $hariStr,
                 empty($d['bersedia_mengajar']) ? 'TIDAK BERSEDIA' : 'Bersedia',
                 date('d-m-Y', strtotime($d['created_at'])),
             ], null, 'A' . $r, true);
+            // Nomor HP sebagai TEKS (bukan awalan "'" yang ikut tersimpan di sel).
+            if (($d['nomor_hp'] ?? '') !== '') {
+                $sheet->setCellValueExplicit('E' . $r, (string) $d['nomor_hp'], DataType::TYPE_STRING);
+            }
             $r++;
         }
 

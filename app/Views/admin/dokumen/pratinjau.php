@@ -25,7 +25,7 @@ $bolehViewerLuar = ! $tautan && in_array($d['visibilitas'], ['link', 'publik'], 
 $labelVisib = ['privat' => 'Privat', 'link' => 'Lewat tautan', 'publik' => 'Publik'];
 $warnaVisib = [
     'privat' => 'bg-slate-100 text-slate-600',
-    'link'   => 'bg-sky-50 text-sky-700',
+    'link'   => 'bg-brand-50 text-brand-700',
     'publik' => 'bg-emerald-50 text-emerald-700',
 ];
 $tgl     = static fn ($x) => $x ? date('d/m/Y H:i', strtotime((string) $x)) : '—';
@@ -271,7 +271,7 @@ $sekolah = (new \App\Models\SettingModel())->get()['school_name'] ?? 'Sekolah';
                    class="w-full px-3 py-2 rounded-xl border border-slate-300 text-sm mb-4">
 
             <?php if ($d['visibilitas'] === 'privat') { ?>
-                <p class="text-[11px] text-sky-800 bg-sky-50 border border-sky-200 rounded-lg px-3 py-2 mb-4">
+                <p class="text-[11px] text-brand-800 bg-brand-50 border border-brand-200 rounded-lg px-3 py-2 mb-4">
                     Dokumen ini masih <b>Privat</b>. Setelah tautan dibuat, aksesnya otomatis
                     diubah menjadi <b>Lewat tautan</b> agar penerima benar-benar bisa membukanya.
                 </p>

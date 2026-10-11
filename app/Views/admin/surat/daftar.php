@@ -49,6 +49,7 @@ $urlHal = static function (int $hal) use ($f): string {
         . '<li>Di tab <b>Menunggu ACC</b>, yang berhak ACC (bawaan: Waka Hubin) bisa mencentang lalu <b>ACC terpilih</b>, atau <b>ACC semua yang aman</b>. Surat yang punya peringatan (mis. nama penanda tangan belum diisi) dilewati supaya diperiksa satu per satu di halaman detailnya.</li>'
         . '<li>Di tab <b>Siap unduh</b>, saring dulu ke <b>satu jenis surat</b>; yang berhak mengelola surat (bawaan: Operator) bisa mengunduh terpilih, yang belum diunduh / perlu cetak ulang, atau semuanya sekaligus (lebih dari 60 surat dikirim sebagai ZIP).</li>'
         . '<li><b>Pernyataan Orang Tua PKL</b> tanpa nomor dan tanpa ACC: langsung siap diunduh, satu halaman per siswa. <b>Surat Balasan</b> dan <b>Penarikan</b> juga bisa dibuat dari halaman detail ajuan PKL (kartu "Surat sekolah").</li>'
+        . '<li>Tombol <b>⬇ Excel</b> mengunduh <b>buku agenda surat keluar</b>: semua surat sesuai tab &amp; saringan yang sedang tampil (semua halaman), lengkap dengan nomor, tanggal, tujuan, status, dan siapa yang meng-ACC.</li>'
         . '</ul>',
 ]) ?>
 
@@ -79,6 +80,9 @@ $urlHal = static function (int $hal) use ($f): string {
                 <?php if ($f['jenis'] !== '' || $f['tahun'] > 0 || $f['q'] !== ''): ?>
                     <a href="<?= site_url('admin/surat') . ($f['status'] !== '' ? '?status=' . urlencode($f['status']) : '') ?>" class="rounded-lg border border-slate-300 px-4 py-2.5 text-sm font-semibold text-slate-600 transition hover:bg-slate-50">Reset</a>
                 <?php endif; ?>
+                <?php // Buku agenda surat keluar: semua surat sesuai saringan yang sedang tampil (bukan hanya halaman ini). ?>
+                <a href="<?= site_url('admin/surat/excel') . '?' . http_build_query(array_filter($f)) ?>" title="Unduh daftar ini (semua halaman) sebagai Excel buku agenda surat keluar"
+                   class="whitespace-nowrap rounded-lg border border-green-300 bg-white px-4 py-2.5 text-sm font-semibold text-green-700 transition hover:bg-green-50">⬇ Excel</a>
             </div>
         </form>
     </div>

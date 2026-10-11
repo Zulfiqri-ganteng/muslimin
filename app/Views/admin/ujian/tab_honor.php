@@ -18,7 +18,7 @@ use App\Models\UjianPeriodeModel;
 $rp     = static fn ($n): string => number_format((int) $n, 0, ',', '.');
 $urlAtur = site_url('admin/honor/pengaturan');
 $statusLabel = ['draf' => 'Draf', 'final' => 'Final', 'dikunci' => 'Dikunci'];
-$statusWarna = ['draf' => 'bg-slate-100 text-slate-600 border-slate-200', 'final' => 'bg-sky-50 text-sky-700 border-sky-200', 'dikunci' => 'bg-emerald-50 text-emerald-700 border-emerald-200'];
+$statusWarna = ['draf' => 'bg-slate-100 text-slate-600 border-slate-200', 'final' => 'bg-brand-50 text-brand-700 border-brand-200', 'dikunci' => 'bg-emerald-50 text-emerald-700 border-emerald-200'];
 ?>
 
 <?php if ($honor === null): ?>
@@ -215,8 +215,8 @@ $statusWarna = ['draf' => 'bg-slate-100 text-slate-600 border-slate-200', 'final
                         </div>
                         <div class="mt-3 flex flex-wrap gap-2">
                             <a href="<?= $base ?>/pembuat-soal<?= $qtp ?>" class="<?= $btnL ?>">Pembuat soal</a>
-                            <a href="<?= $base ?>/honor/koreksi<?= $qtp ?>" class="inline-flex flex-wrap items-center gap-x-1.5 gap-y-1 rounded-lg border border-sky-500 bg-sky-50 px-3 py-1.5 text-xs font-semibold text-sky-800 transition hover:bg-sky-100" title="Ceklis pembagian lembar jawaban ke guru per rombel (Excel KOREKSI NILAI)">
-                                Koreksi<?php if (($honorKoreksi ?? null) !== null): ?> <span class="whitespace-nowrap rounded-full bg-sky-600 px-2 py-0.5 text-[11px] font-bold text-white"><?= (int) $honorKoreksi['guru'] ?> guru · <?= $rp($honorKoreksi['total']) ?> lembar</span><?php else: ?> <span class="whitespace-nowrap rounded-full bg-white px-2 py-0.5 text-[11px] font-semibold text-sky-700">belum diisi</span><?php endif; ?>
+                            <a href="<?= $base ?>/honor/koreksi<?= $qtp ?>" class="inline-flex flex-wrap items-center gap-x-1.5 gap-y-1 rounded-lg border border-brand-500 bg-brand-50 px-3 py-1.5 text-xs font-semibold text-brand-800 transition hover:bg-brand-100" title="Ceklis pembagian lembar jawaban ke guru per rombel (Excel KOREKSI NILAI)">
+                                Koreksi<?php if (($honorKoreksi ?? null) !== null): ?> <span class="whitespace-nowrap rounded-full bg-brand-600 px-2 py-0.5 text-[11px] font-bold text-white"><?= (int) $honorKoreksi['guru'] ?> guru · <?= $rp($honorKoreksi['total']) ?> lembar</span><?php else: ?> <span class="whitespace-nowrap rounded-full bg-white px-2 py-0.5 text-[11px] font-semibold text-brand-700">belum diisi</span><?php endif; ?>
                             </a>
                             <?php if (! $terkunci): ?>
                                 <button type="button" @click="panel = (panel === 'hitung' ? '' : 'hitung')" class="inline-flex items-center gap-1.5 rounded-lg border border-emerald-600 bg-emerald-50 px-3 py-1.5 text-xs font-semibold text-emerald-700 transition hover:bg-emerald-100">Hitung otomatis</button>
@@ -254,7 +254,7 @@ $statusWarna = ['draf' => 'bg-slate-100 text-slate-600 border-slate-200', 'final
                         <div class="mt-3 flex flex-wrap gap-2">
                             <?php if ($dok['status'] === 'draf' && $baris !== []): ?>
                                 <form method="post" action="<?= $base ?>/honor/status" class="inline"><?= csrf_field() ?><input type="hidden" name="periode_id" value="<?= (int) $periode['id'] ?>"><input type="hidden" name="ke" value="final">
-                                    <button type="submit" class="rounded-lg bg-sky-600 px-3 py-1.5 text-xs font-bold text-white transition hover:bg-sky-700 active:scale-95">Tandai Final</button></form>
+                                    <button type="submit" class="rounded-lg bg-brand-600 px-3 py-1.5 text-xs font-bold text-white transition hover:bg-brand-700 active:scale-95">Tandai Final</button></form>
                             <?php elseif ($dok['status'] === 'final'): ?>
                                 <form method="post" action="<?= $base ?>/honor/status" class="inline"><?= csrf_field() ?><input type="hidden" name="periode_id" value="<?= (int) $periode['id'] ?>"><input type="hidden" name="ke" value="draf">
                                     <button type="submit" class="rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-xs font-semibold text-slate-600 transition hover:bg-slate-100">Kembalikan ke Draf</button></form>
@@ -553,7 +553,7 @@ $statusWarna = ['draf' => 'bg-slate-100 text-slate-600 border-slate-200', 'final
                                                    class="w-full rounded-lg border border-slate-200 bg-white px-2 py-1.5 text-right text-sm tabular-nums text-slate-800 outline-none transition focus:border-brand-500 focus:ring-2 focus:ring-brand-100 disabled:bg-slate-50">
                                             <p class="mt-0.5 flex flex-wrap items-center justify-end gap-1 text-[11px] tabular-nums text-slate-400">
                                                 <?php if ($k['kode'] === 'pengawas' && ! $terkunci && (int) ($honorPetunjuk[(int) ($b['guru_id'] ?? 0)] ?? 0) > 0 && (int) ($honorPetunjuk[(int) $b['guru_id']]) !== (int) $isi['nilai']): ?>
-                                                    <button type="button" @click="pakai($el)" data-jumlah="<?= (int) $honorPetunjuk[(int) $b['guru_id']] ?>" class="rounded bg-sky-50 px-1 text-[10px] font-semibold text-sky-700 underline" title="Jumlah sesi menurut jadwal pengawas — klik untuk memakainya">jadwal: <?= (int) $honorPetunjuk[(int) $b['guru_id']] ?></button>
+                                                    <button type="button" @click="pakai($el)" data-jumlah="<?= (int) $honorPetunjuk[(int) $b['guru_id']] ?>" class="rounded bg-brand-50 px-1 text-[10px] font-semibold text-brand-700 underline" title="Jumlah sesi menurut jadwal pengawas — klik untuk memakainya">jadwal: <?= (int) $honorPetunjuk[(int) $b['guru_id']] ?></button>
                                                 <?php endif; ?>
                                                 <?php if (! $tetap): ?><span id="rp-<?= (int) $b['id'] ?>-<?= $kid ?>">Rp <?= $rp($b['per'][$kid] ?? 0) ?></span><?php endif; ?>
                                                 <span id="st-<?= (int) $b['id'] ?>-<?= $kid ?>" class="rounded px-1 text-[10px] font-semibold <?= $st === 'diubah' ? 'bg-amber-50 text-amber-700' : 'bg-emerald-50 text-emerald-700' ?>"><?= $st === '' ? '' : ($st === 'diubah' ? 'diubah' : 'otomatis') ?></span>

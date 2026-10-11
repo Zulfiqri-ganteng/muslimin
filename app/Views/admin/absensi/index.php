@@ -651,8 +651,8 @@
                     { k: 'hadir', l: 'Hadir', v: c.hadir, c: 'bg-emerald-50 text-emerald-700 border-emerald-200' },
                     { k: 'telat', l: 'Telat', v: c.telat, c: 'bg-amber-50 text-amber-700 border-amber-200' },
                     { k: 'belum', l: 'Belum hadir', v: this.belum[this.shift].length, c: 'bg-red-50 text-red-700 border-red-200' },
-                    { k: 'izin', l: 'Izin', v: c.izin, c: 'bg-sky-50 text-sky-700 border-sky-200' },
-                    { k: 'sakit', l: 'Sakit', v: c.sakit, c: 'bg-violet-50 text-violet-700 border-violet-200' },
+                    { k: 'izin', l: 'Izin', v: c.izin, c: 'bg-brand-50 text-brand-700 border-brand-200' },
+                    { k: 'sakit', l: 'Sakit', v: c.sakit, c: 'bg-pink-50 text-pink-700 border-pink-200' },
                     { k: 'alpa', l: 'Alpa', v: c.alpa, c: 'bg-slate-50 text-slate-600 border-slate-200' },
                 ];
             },

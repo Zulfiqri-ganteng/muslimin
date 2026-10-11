@@ -93,7 +93,7 @@
                                 <?php if ($r['shift'] === 'pagi'): ?>
                                     <span class="inline-flex rounded-full bg-amber-100 text-amber-700 px-2.5 py-0.5 text-xs font-semibold">Pagi</span>
                                 <?php else: ?>
-                                    <span class="inline-flex rounded-full bg-indigo-100 text-indigo-700 px-2.5 py-0.5 text-xs font-semibold">Siang</span>
+                                    <span class="inline-flex rounded-full bg-brand-100 text-brand-700 px-2.5 py-0.5 text-xs font-semibold">Siang</span>
                                 <?php endif; ?>
                             </td>
                             <td class="px-6 py-3 text-right whitespace-nowrap">

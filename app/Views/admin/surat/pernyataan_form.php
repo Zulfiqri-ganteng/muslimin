@@ -24,7 +24,7 @@ $cfg      = [
     ], $ajuan),
     'siswa'        => $siswa,
 ];
-$statusAjuan = ['menunggu' => ['Menunggu ACC', 'bg-blue-100 text-blue-700'], 'perbaikan' => ['Perlu perbaikan', 'bg-amber-100 text-amber-800'], 'disetujui' => ['Disetujui', 'bg-green-100 text-green-700']];
+$statusAjuan = ['menunggu' => ['Menunggu ACC', 'bg-brand-100 text-brand-700'], 'perbaikan' => ['Perlu perbaikan', 'bg-amber-100 text-amber-800'], 'disetujui' => ['Disetujui', 'bg-green-100 text-green-700']];
 ?>
 <?= $this->extend('layouts/admin') ?>
 <?= $this->section('content') ?>

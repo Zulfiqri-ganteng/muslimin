@@ -91,7 +91,6 @@ class Ujian extends BaseApiController
 
         $status = (string) ($in['status'] ?? '');
         $data   = [
-            'nama'            => $this->teks($in['nama'] ?? null, 100),
             'tanggal_mulai'   => $this->tanggal($in['tanggal_mulai'] ?? null),
             'tanggal_selesai' => $this->tanggal($in['tanggal_selesai'] ?? null),
             'susulan_mulai'   => $this->tanggal($in['susulan_mulai'] ?? null),
@@ -99,6 +98,11 @@ class Ujian extends BaseApiController
             'status'          => in_array($status, UjianPeriodeModel::STATUS, true) ? $status : $periode['status'],
             'keterangan'      => $this->teks($in['keterangan'] ?? null, 255),
         ];
+        // `nama` hanya ditimpa bila kuncinya dikirim — klien lama yang tak
+        // mengirimnya tidak boleh menghapus nama yang diisi lewat web.
+        if (array_key_exists('nama', $in)) {
+            $data['nama'] = $this->teks($in['nama'], 100);
+        }
 
         $salah = [];
         if ($data['tanggal_mulai'] && $data['tanggal_selesai'] && $data['tanggal_selesai'] < $data['tanggal_mulai']) {
@@ -148,6 +152,7 @@ class Ujian extends BaseApiController
             'jenis'           => $r['jenis'],
             'slug'            => UjianPeriodeModel::keSlug($r['jenis']),
             'label'           => $this->model->label($r),
+            'nama'            => $r['nama'],
             'nama_panjang'    => UjianPeriodeModel::JENIS_PANJANG[$r['jenis']] ?? null,
             'tahun_ajaran'    => $r['tahun_ajaran'],
             'semester'        => $r['semester'],

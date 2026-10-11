@@ -9,7 +9,7 @@ $maks = 300;
 $bagian = [
     ['hanya_skbm', 'Ada di SKBM, belum ada di Penugasan', 'SK menugaskan guru ini di kelas tersebut, tetapi menu Penugasan belum memuatnya. Periksa: apakah Penugasan perlu ditambah (Jadwal KBM & Rekap Beban memakai Penugasan)?', 'border-amber-300 bg-amber-50 text-amber-900', false],
     ['hanya_pengampu', 'Ada di Penugasan, tidak ada di SKBM', 'Penugasan memuat pasangan ini, tetapi SKBM tidak. Periksa: apakah SKBM belum lengkap, atau Penugasan yang kelebihan?', 'border-orange-300 bg-orange-50 text-orange-900', false],
-    ['jp_beda', 'JP berbeda', 'Pasangan guru–kelas sama di keduanya, tetapi jumlah JP per minggu berbeda.', 'border-sky-300 bg-sky-50 text-sky-900', true],
+    ['jp_beda', 'JP berbeda', 'Pasangan guru–kelas sama di keduanya, tetapi jumlah JP per minggu berbeda.', 'border-brand-300 bg-brand-50 text-brand-900', true],
 ];
 ?>
 <?= $this->extend('layouts/admin') ?>
@@ -34,7 +34,7 @@ $bagian = [
                 <div class="rounded-xl border border-emerald-200 bg-emerald-50 px-3 py-2"><p class="text-[11px] font-semibold uppercase tracking-wide text-emerald-700">Sama</p><p class="text-xl font-extrabold tabular-nums text-emerald-700"><?= (int) $b['sama'] ?></p></div>
                 <div class="rounded-xl border px-3 py-2 <?= $b['hanya_skbm'] !== [] ? 'border-amber-300 bg-amber-50' : 'border-slate-200' ?>"><p class="text-[11px] font-semibold uppercase tracking-wide text-slate-400">Hanya di SKBM</p><p class="text-xl font-extrabold tabular-nums text-slate-800"><?= count($b['hanya_skbm']) ?></p></div>
                 <div class="rounded-xl border px-3 py-2 <?= $b['hanya_pengampu'] !== [] ? 'border-orange-300 bg-orange-50' : 'border-slate-200' ?>"><p class="text-[11px] font-semibold uppercase tracking-wide text-slate-400">Hanya di Penugasan</p><p class="text-xl font-extrabold tabular-nums text-slate-800"><?= count($b['hanya_pengampu']) ?></p></div>
-                <div class="rounded-xl border px-3 py-2 <?= $b['jp_beda'] !== [] ? 'border-sky-300 bg-sky-50' : 'border-slate-200' ?>"><p class="text-[11px] font-semibold uppercase tracking-wide text-slate-400">JP beda</p><p class="text-xl font-extrabold tabular-nums text-slate-800"><?= count($b['jp_beda']) ?></p></div>
+                <div class="rounded-xl border px-3 py-2 <?= $b['jp_beda'] !== [] ? 'border-brand-300 bg-brand-50' : 'border-slate-200' ?>"><p class="text-[11px] font-semibold uppercase tracking-wide text-slate-400">JP beda</p><p class="text-xl font-extrabold tabular-nums text-slate-800"><?= count($b['jp_beda']) ?></p></div>
             </div>
             <?php if ($b['hanya_skbm'] === [] && $b['hanya_pengampu'] === [] && $b['jp_beda'] === []): ?>
                 <p class="mt-4 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm font-semibold text-emerald-800">Semua sama: Penugasan sesuai dengan SKBM untuk guru-guru yang ada di SKBM.</p>

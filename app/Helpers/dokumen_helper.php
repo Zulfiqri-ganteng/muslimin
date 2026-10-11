@@ -277,6 +277,22 @@ if (! function_exists('dokumen_ekstensi_bersih')) {
     }
 }
 
+if (! function_exists('dokumen_ekstensi_server')) {
+    /**
+     * Ekstensi yang bisa DIJALANKAN atau DIBACA sebagai konfigurasi oleh server web.
+     * Berkasnya tetap boleh diunggah, tetapi nama di disk diberi akhiran ".bin" (dokumen_save).
+     *
+     * @return list<string>
+     */
+    function dokumen_ekstensi_server(): array
+    {
+        return [
+            'php', 'php3', 'php4', 'php5', 'php7', 'php8', 'phtml', 'pht', 'phps', 'phar', 'inc',
+            'cgi', 'pl', 'py', 'sh', 'asp', 'aspx', 'jsp', 'shtml', 'htaccess', 'htpasswd',
+        ];
+    }
+}
+
 if (! function_exists('dokumen_nama_aman')) {
     /**
      * Bersihkan nama berkas asli untuk DISIMPAN & DITAMPILKAN.
@@ -384,8 +400,12 @@ if (! function_exists('dokumen_save')) {
             return null;
         }
 
-        // Nama di disk diacak; nama asli hidup di database.
-        $namaFile = date('Ymd') . '_' . bin2hex(random_bytes(8)) . ($ekstensi !== '' ? '.' . $ekstensi : '');
+        // Nama di disk diacak; nama asli hidup di database. Berkas skrip/konfigurasi server
+        // (.php, .phtml, .htaccess, …) disimpan berakhiran NETRAL ".bin": seandainya folder
+        // writable/ suatu saat ter-ekspos, server tetap tidak akan menjalankannya. Unduhan memakai
+        // nama asli dari database, jadi pengguna tetap menerima berkas apa adanya.
+        $extDisk  = in_array($ekstensi, dokumen_ekstensi_server(), true) ? 'bin' : $ekstensi;
+        $namaFile = date('Ymd') . '_' . bin2hex(random_bytes(8)) . ($extDisk !== '' ? '.' . $extDisk : '');
         $dir      = dokumen_dir_bulan();
         $pathRel  = date('Y') . '/' . date('m') . '/' . $namaFile;
 

@@ -40,7 +40,7 @@ $labelAksi = [
 $warnaPeringatan = [
     'bahaya' => ['border-red-300 bg-red-50 text-red-800', 'BAHAYA', 'bg-red-600'],
     'awas'   => ['border-amber-300 bg-amber-50 text-amber-900', 'PERIKSA', 'bg-amber-500'],
-    'info'   => ['border-blue-200 bg-blue-50 text-blue-900', 'INFO', 'bg-blue-500'],
+    'info'   => ['border-brand-200 bg-brand-50 text-brand-900', 'INFO', 'bg-brand-500'],
 ];
 $baris = static function (string $label, ?string $isi): string {
     $isi = trim((string) $isi);
@@ -87,7 +87,7 @@ $baris = static function (string $label, ?string $isi): string {
 
     <!-- Batas keputusan Waka Hubin -->
     <?php if ($status === 'menunggu' && ($sisaHari ?? null) !== null): ?>
-        <div class="rise mb-5 flex flex-col gap-1 rounded-xl border px-4 py-3 text-sm sm:flex-row sm:items-center sm:gap-3 <?= $sisaHari < 0 ? 'border-red-300 bg-red-50 text-red-800' : ($sisaHari <= 1 ? 'border-amber-300 bg-amber-50 text-amber-900' : 'border-blue-200 bg-blue-50 text-blue-900') ?>">
+        <div class="rise mb-5 flex flex-col gap-1 rounded-xl border px-4 py-3 text-sm sm:flex-row sm:items-center sm:gap-3 <?= $sisaHari < 0 ? 'border-red-300 bg-red-50 text-red-800' : ($sisaHari <= 1 ? 'border-amber-300 bg-amber-50 text-amber-900' : 'border-brand-200 bg-brand-50 text-brand-900') ?>">
             <span class="font-extrabold"><?= $sisaHari < 0 ? 'TERLAMBAT ' . abs($sisaHari) . ' hari' : ($sisaHari === 0 ? 'HARI INI batasnya' : 'Sisa ' . $sisaHari . ' hari') ?></span>
             <span>Batas keputusan Waka Hubin: <b><?= esc(IsianBantu::tanggalIndo(substr((string) $batasKeputusan, 0, 10))) ?></b> (<?= (int) $batasHari ?> hari sejak dikirim siswa <?= esc(date('d-m-Y H:i', strtotime((string) ($a['diajukan_at'] ?? $a['created_at'])))) ?>).</span>
         </div>
@@ -251,7 +251,7 @@ $baris = static function (string $label, ?string $isi): string {
                             <li class="px-5 py-3.5 text-sm">
                                 <p class="font-semibold text-slate-800"><?= esc($x['nama']) ?> <span class="text-xs font-normal text-slate-400"><?= esc($x['kelas']) ?></span></p>
                                 <?php if ($x['beasiswa'] !== null): ?>
-                                    <p class="mt-1 flex flex-wrap items-center gap-x-2 text-xs font-semibold <?= $x['beasiswa']['berlaku'] ? 'text-indigo-700' : 'text-slate-400 line-through' ?>">🎓 Beasiswa 3 tahun — <?= esc($x['beasiswa']['sumber_label']) ?><?= ! empty($x['beasiswa']['berakhir_at']) ? ' s.d. ' . esc(IsianBantu::tanggalIndo($x['beasiswa']['berakhir_at'])) : '' ?> (SPP dibebaskan)
+                                    <p class="mt-1 flex flex-wrap items-center gap-x-2 text-xs font-semibold <?= $x['beasiswa']['berlaku'] ? 'text-brand-700' : 'text-slate-400 line-through' ?>">🎓 Beasiswa 3 tahun — <?= esc($x['beasiswa']['sumber_label']) ?><?= ! empty($x['beasiswa']['berakhir_at']) ? ' s.d. ' . esc(IsianBantu::tanggalIndo($x['beasiswa']['berakhir_at'])) : '' ?> (SPP dibebaskan)
                                         <?php if (! empty($bolehSurat)): ?><button type="button" @click="cabutSiswa = <?= (int) $x['siswa_id'] ?>; cabutTeks = <?= esc(json_encode($x['nama']), 'attr') ?>; dlg = 'cabutbeasiswa'" class="font-semibold text-red-500 no-underline hover:underline">cabut</button><?php endif; ?></p>
                                 <?php endif; ?>
                                 <?php if ($x['pembayaran'] !== []): ?>

@@ -17,7 +17,7 @@ $statusLabel = [
     'lulus' => 'Lulus', 'tidak_lulus' => 'Tidak Lulus',
 ];
 $statusTextColor = [
-    'terdaftar' => 'text-slate-600', 'hadir' => 'text-sky-700',
+    'terdaftar' => 'text-slate-600', 'hadir' => 'text-brand-700',
     'tidak_hadir' => 'text-amber-700', 'lulus' => 'text-emerald-700',
     'tidak_lulus' => 'text-red-700',
 ];
@@ -42,7 +42,7 @@ $statusTextColor = [
         </select>
         <div class="flex-1 hidden sm:block"></div>
         <a href="<?= $base ?>/pdf?tahun_ajaran_id=<?= (int) $tahunId ?>" target="_blank"
-           class="inline-flex items-center gap-1.5 rounded-lg bg-sky-600 hover:bg-sky-700 text-white text-sm font-semibold px-3.5 py-2.5 transition shrink-0">
+           class="inline-flex items-center gap-1.5 rounded-lg bg-brand-600 hover:bg-brand-700 text-white text-sm font-semibold px-3.5 py-2.5 transition shrink-0">
             <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M6 9V2h12v7M6 18H4a2 2 0 01-2-2v-5a2 2 0 012-2h16a2 2 0 012 2v5a2 2 0 01-2 2h-2m-8 4h4v-6H8v6z"/></svg>
             PDF
         </a>

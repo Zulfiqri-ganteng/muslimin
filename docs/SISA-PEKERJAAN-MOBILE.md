@@ -67,6 +67,12 @@ perubahan lain yang dibutuhkan.
 
 ## 2. Dua celah kecil API Modul Ujian
 
+> ✅ **SUDAH DIPERBAIKI di server 2026-10-12** — `transform()` kini mengirim
+> `nama` (mentah, bisa `null`), `simpanPeriode()` hanya menimpa `nama` bila
+> kuncinya dikirim, dan `options?types=ujian_periode_status` tersedia
+> (`draft|berjalan|selesai`, label `Draft|Berjalan|Selesai`). Tebakan `label`
+> dan daftar status yang ditulis di kode klien boleh dihapus.
+
 Keduanya sudah dilaporkan ke pemilik produk dan sementara **diakali dengan cara
 yang aman di klien**, tapi perbaikan bersihnya ada di sini.
 

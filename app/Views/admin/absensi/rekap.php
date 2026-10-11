@@ -18,8 +18,8 @@
     $cols = [
         'hadir' => ['Hadir', 'text-emerald-700'],
         'telat' => ['Telat', 'text-amber-700'],
-        'izin'  => ['Izin', 'text-sky-700'],
-        'sakit' => ['Sakit', 'text-violet-700'],
+        'izin'  => ['Izin', 'text-brand-700'],
+        'sakit' => ['Sakit', 'text-pink-700'],
         'alpa'  => ['Alpa', 'text-red-700'],
     ];
 ?>

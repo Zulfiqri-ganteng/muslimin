@@ -10,12 +10,12 @@
 $s = $d['siswa'];
 $warnaStatus = [
     'aktif'  => 'bg-emerald-50 text-emerald-700 border-emerald-200',
-    'lulus'  => 'bg-blue-50 text-blue-700 border-blue-200',
+    'lulus'  => 'bg-brand-50 text-brand-700 border-brand-200',
     'pindah' => 'bg-amber-50 text-amber-700 border-amber-200',
     'keluar' => 'bg-slate-100 text-slate-500 border-slate-200',
 ];
 $statusPkl = [
-    'menunggu' => ['Menunggu keputusan Waka Hubin', 'bg-blue-50 text-blue-700 border-blue-200'],
+    'menunggu' => ['Menunggu keputusan Waka Hubin', 'bg-brand-50 text-brand-700 border-brand-200'],
     'perbaikan' => ['Perlu perbaikan', 'bg-amber-50 text-amber-700 border-amber-200'],
     'disetujui' => ['Disetujui', 'bg-emerald-50 text-emerald-700 border-emerald-200'],
 ];

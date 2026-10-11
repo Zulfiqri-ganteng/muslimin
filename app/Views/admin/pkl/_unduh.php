@@ -51,7 +51,7 @@ $cfgAttr = esc(json_encode($cfg), 'attr');
 
                 <template x-if="data">
                     <div class="space-y-4">
-                        <p class="rounded-xl border border-blue-200 bg-blue-50 px-4 py-2.5 text-xs leading-relaxed text-blue-900">
+                        <p class="rounded-xl border border-brand-200 bg-brand-50 px-4 py-2.5 text-xs leading-relaxed text-brand-900">
                             Catat biaya yang <b>sudah diterima</b> dari tiap siswa. <b>Wajib minimal satu</b> centang per siswa (atau Beasiswa / Keringanan beralasan).
                             Biaya yang sudah tercatat tidak diminta lagi dan tidak digandakan.
                         </p>
@@ -82,7 +82,7 @@ $cfgAttr = esc(json_encode($cfg), 'attr');
                                             <template x-for="j in data.jenis" :key="j.kode">
                                                 <div>
                                                     <template x-if="j.kode === 'spp' && bebasSpp(s)">
-                                                        <p class="rounded-lg bg-indigo-50 px-3 py-2 text-xs font-semibold text-indigo-800">🎓 SPP dibebaskan (beasiswa)</p>
+                                                        <p class="rounded-lg bg-brand-50 px-3 py-2 text-xs font-semibold text-brand-800">🎓 SPP dibebaskan (beasiswa)</p>
                                                     </template>
                                                     <template x-if="!(j.kode === 'spp' && bebasSpp(s)) && tercatat(s, j)">
                                                         <div class="rounded-lg bg-green-50 px-3 py-2 text-xs font-semibold text-green-800">
@@ -113,7 +113,7 @@ $cfgAttr = esc(json_encode($cfg), 'attr');
 
                                         <div class="mt-3 space-y-2 border-t border-slate-100 pt-3 text-xs">
                                             <template x-if="s.beasiswa">
-                                                <p class="font-semibold text-indigo-800">🎓 Penerima beasiswa 3 tahun (<span x-text="s.beasiswa.sumber_label"></span>)<span x-show="s.beasiswa.berakhir_at" x-text="' s.d. ' + s.beasiswa.berakhir_at"></span> — SPP dibebaskan.</p>
+                                                <p class="font-semibold text-brand-800">🎓 Penerima beasiswa 3 tahun (<span x-text="s.beasiswa.sumber_label"></span>)<span x-show="s.beasiswa.berakhir_at" x-text="' s.d. ' + s.beasiswa.berakhir_at"></span> — SPP dibebaskan.</p>
                                             </template>
                                             <template x-if="!s.beasiswa">
                                                 <div class="flex flex-wrap items-center gap-2">
@@ -172,7 +172,7 @@ $cfgAttr = esc(json_encode($cfg), 'attr');
                                     <template x-for="s in data.siswa" :key="s.siswa_id">
                                         <li class="flex items-start justify-between gap-3 px-3 py-2">
                                             <span><b class="text-slate-700" x-text="s.nama"></b> <span class="text-slate-400" x-text="s.kelas"></span>
-                                                <span x-show="s.beasiswa" class="ml-1 rounded bg-indigo-100 px-1 text-[10px] font-bold text-indigo-700">BEASISWA</span></span>
+                                                <span x-show="s.beasiswa" class="ml-1 rounded bg-brand-100 px-1 text-[10px] font-bold text-brand-700">BEASISWA</span></span>
                                             <span class="text-right" :class="memenuhi(s) ? 'text-green-700' : 'font-semibold text-amber-700'"
                                                   x-text="catatanTercatat(s).length ? catatanTercatat(s).join('; ') : (memenuhi(s) ? 'akan dicatat' : 'belum ada catatan')"></span>
                                         </li>

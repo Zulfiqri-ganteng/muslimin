@@ -58,6 +58,26 @@ $hubin = $peran === 'hubin';
     </section>
 <?php endif; ?>
 
+<?php if (! empty($suratSekolah)): // Surat Sekolah (ASTS, TKA, Pernyataan, Balasan, Penarikan) — bagi pemegang hak ACC / pembuat surat ?>
+    <section class="rise rise-1 mb-5 grid grid-cols-1 gap-3 sm:grid-cols-3">
+        <a href="<?= site_url('admin/surat?status=menunggu') ?>" class="group rounded-2xl border border-slate-200 bg-white px-5 py-4 shadow-sm transition hover:border-amber-300 hover:shadow-md">
+            <p class="text-[11px] font-bold uppercase tracking-wide text-slate-400">Surat sekolah menunggu ACC</p>
+            <p class="mt-1 text-2xl font-extrabold <?= $suratSekolah['menunggu'] > 0 ? 'text-amber-600' : 'text-slate-800' ?>"><?= (int) $suratSekolah['menunggu'] ?></p>
+            <p class="mt-0.5 text-xs text-slate-400 group-hover:text-amber-700"><?= ! empty($bolehAcc) ? 'Periksa lalu ACC →' : 'Menunggu keputusan Waka Hubin →' ?></p>
+        </a>
+        <a href="<?= site_url('admin/surat?status=disetujui') ?>" class="group rounded-2xl border border-slate-200 bg-white px-5 py-4 shadow-sm transition hover:border-green-300 hover:shadow-md">
+            <p class="text-[11px] font-bold uppercase tracking-wide text-slate-400">Surat sekolah belum diunduh</p>
+            <p class="mt-1 text-2xl font-extrabold <?= $suratSekolah['belum_unduh'] > 0 ? 'text-green-700' : 'text-slate-800' ?>"><?= (int) $suratSekolah['belum_unduh'] ?></p>
+            <p class="mt-0.5 text-xs text-slate-400 group-hover:text-green-700">Sudah di-ACC, nomor terbit saat diunduh →</p>
+        </a>
+        <a href="<?= site_url('admin/surat?status=dikembalikan') ?>" class="group rounded-2xl border border-slate-200 bg-white px-5 py-4 shadow-sm transition hover:border-orange-300 hover:shadow-md">
+            <p class="text-[11px] font-bold uppercase tracking-wide text-slate-400">Surat sekolah dikembalikan</p>
+            <p class="mt-1 text-2xl font-extrabold <?= $suratSekolah['dikembalikan'] > 0 ? 'text-orange-600' : 'text-slate-800' ?>"><?= (int) $suratSekolah['dikembalikan'] ?></p>
+            <p class="mt-0.5 text-xs text-slate-400 group-hover:text-orange-700">Perlu diperbaiki lalu diajukan ulang →</p>
+        </a>
+    </section>
+<?php endif; ?>
+
 <?php
 // Daftar persiapan: hanya untuk yang boleh membuka Pengaturan, dan hanya selama ada yang belum siap.
 $wakaOk  = trim((string) ($p['waka_hubin_nama'] ?? '')) !== '';
@@ -132,7 +152,7 @@ $siap = count(array_filter(array_column($persiapan, 0)));
 <!-- Angka status ajuan -->
 <div class="rise rise-3 mb-5 grid grid-cols-2 gap-3 lg:grid-cols-4">
     <?php foreach ([
-        ['menunggu', 'Menunggu ACC', 'text-blue-700', $hubin ? 'Menunggu keputusan Anda' : 'Menunggu keputusan Waka Hubin'],
+        ['menunggu', 'Menunggu ACC', 'text-brand-700', $hubin ? 'Menunggu keputusan Anda' : 'Menunggu keputusan Waka Hubin'],
         ['perbaikan', 'Perlu perbaikan', 'text-amber-600', 'Di tangan siswa'],
         ['disetujui', 'Disetujui', 'text-green-600', 'Siap dibuatkan surat'],
         ['ditolak', 'Ditolak', 'text-red-600', 'Siswa boleh mengajukan lagi'],
@@ -148,7 +168,7 @@ $siap = count(array_filter(array_column($persiapan, 0)));
 <!-- Dua angka utama: sudah mengisi, sudah PKL -->
 <div class="rise rise-4 mb-5 grid grid-cols-1 gap-3 lg:grid-cols-2">
     <?php foreach ([
-        ['Sudah mengisi', $siswa['sudah_isi'], $siswa['belum_isi'], $siswa['persen_isi'], 'belum mengisi', 'bg-blue-500', 'belum_mengisi'],
+        ['Sudah mengisi', $siswa['sudah_isi'], $siswa['belum_isi'], $siswa['persen_isi'], 'belum mengisi', 'bg-brand-500', 'belum_mengisi'],
         ['Sudah dapat tempat PKL (disetujui)', $siswa['sudah_pkl'], $siswa['belum_pkl'], $siswa['persen_pkl'], 'belum PKL', 'bg-green-500', 'sudah_pkl'],
     ] as [$judul, $sudah, $belum, $persen, $labelBelum, $warnaBar, $saring]): ?>
         <div class="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">

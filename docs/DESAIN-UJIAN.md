@@ -504,6 +504,9 @@ hijau di kedua mode.
       `Api\Admin\Options` diperluas: `ujian_jenis`, `ujian_tingkat`,
       `ujian_shift`, `ujian_alasan`, `ujian_status`, `ujian_peran_pengawas`
       — supaya Flutter tidak hard-code daftar nilai tetap.
+      **Tambahan 2026-10-12:** `ujian_periode_status` (status PERIODE) +
+      `periode.nama` ikut dikirim; simpan periode hanya menimpa `nama` bila
+      kuncinya dikirim (lihat `docs/SISA-PEKERJAAN-MOBILE.md` bagian 2).
       **Teruji e2e HTTP (83/83, lulus sekali jalan)** dengan token sungguhan;
       semua guard sisi web punya padanannya di API (slug ngawur → 404, tahun
       asing → 404 tanpa membuat baris, id lintas periode ditolak, siswa kelas

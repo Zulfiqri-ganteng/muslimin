@@ -63,7 +63,7 @@ $opsiFase = [
 <!-- Empat angka utama -->
 <div class="mb-4 grid grid-cols-2 gap-3 lg:grid-cols-4">
     <?php foreach ([
-        ['Sudah mengisi', $ringkas['sudah_isi'], 'text-blue-700', 'sudah_mengisi', $ringkas['persen_isi'] . '% dari ' . $ringkas['total']],
+        ['Sudah mengisi', $ringkas['sudah_isi'], 'text-brand-700', 'sudah_mengisi', $ringkas['persen_isi'] . '% dari ' . $ringkas['total']],
         ['Belum mengisi', $ringkas['belum_isi'], 'text-slate-700', 'belum_mengisi', 'belum + ditolak'],
         ['Sudah PKL', $ringkas['sudah_pkl'], 'text-green-600', 'sudah_pkl', $ringkas['persen_pkl'] . '% (sudah disetujui)'],
         ['Belum PKL', $ringkas['belum_pkl'], 'text-amber-600', '', 'belum dapat tempat'],

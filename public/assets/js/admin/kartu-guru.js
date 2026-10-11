@@ -23,7 +23,7 @@
     var KELAS = {
         dasar: 'inline-flex min-w-[3.4rem] flex-col items-center justify-center rounded-lg border px-2 py-1.5 leading-tight transition active:scale-95',
         mati: 'border-slate-200 bg-slate-50 text-slate-400',
-        aktif: 'border-sky-500 bg-sky-500 text-white',
+        aktif: 'border-brand-500 bg-brand-500 text-white',
         tanpaJp: 'border-amber-400 bg-amber-300 text-amber-900',
         khusus: 'ring-2 ring-amber-400 ring-offset-1'
     };

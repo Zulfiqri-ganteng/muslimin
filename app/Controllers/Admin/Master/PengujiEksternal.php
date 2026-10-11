@@ -118,8 +118,9 @@ class PengujiEksternal extends BaseMaster
         foreach ($rows as $i => $d) {
             $sheet->fromArray([
                 $i + 1, $d['kode'], $d['nama'], $d['instansi'], $d['jabatan'],
-                "'" . $d['no_hp'], $d['email'], $d['keterangan'],
+                null, $d['email'], $d['keterangan'],
             ], null, 'A' . $r, true);
+            $this->tulisTeks($sheet, 'F' . $r, $d['no_hp']);
             $r++;
         }
 
@@ -179,7 +180,7 @@ class PengujiEksternal extends BaseMaster
             'nama'       => $nama,
             'instansi'   => trim((string) ($row['instansi'] ?? '')) ?: null,
             'jabatan'    => trim((string) ($row['jabatan'] ?? '')) ?: null,
-            'no_hp'      => trim((string) ($row['no_hp'] ?? '')) ?: null,
+            'no_hp'      => ltrim(trim((string) ($row['no_hp'] ?? '')), "'") ?: null,
             'email'      => trim((string) ($row['email'] ?? '')) ?: null,
             'keterangan' => trim((string) ($row['keterangan'] ?? '')) ?: null,
         ];

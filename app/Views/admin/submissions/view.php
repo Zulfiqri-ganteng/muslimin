@@ -4,7 +4,7 @@
 <?php
     $hariList = ['Senin','Selasa','Rabu','Kamis','Jumat'];
     $statusBadge = [
-        'baru'         => ['Baru', 'bg-blue-100 text-blue-700'],
+        'baru'         => ['Baru', 'bg-brand-100 text-brand-700'],
         'diverifikasi' => ['Diverifikasi', 'bg-green-100 text-green-700'],
         'ditolak'      => ['Perlu Revisi', 'bg-red-100 text-red-700'],
     ];
@@ -21,7 +21,7 @@
             <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2z"/></svg>
             Cetak Surat (PDF)
         </a>
-        <a href="<?= site_url('admin/submissions/delete/' . $row['id']) ?>" onclick="return confirm('Hapus data kesediaan ini?')" class="inline-flex items-center gap-1.5 rounded-lg border border-red-200 text-red-600 hover:bg-red-50 text-sm font-semibold px-4 py-2.5 transition">Hapus</a>
+        <a href="<?= site_url('admin/submissions/delete/' . $row['id']) ?>" data-method="post" data-confirm="Hapus data kesediaan ini?" class="inline-flex items-center gap-1.5 rounded-lg border border-red-200 text-red-600 hover:bg-red-50 text-sm font-semibold px-4 py-2.5 transition">Hapus</a>
     </div>
 </div>
 

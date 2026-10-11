@@ -20,7 +20,7 @@
 $status  = $row['status'];
 $fmtTgl  = static fn (?string $s): string => $s ? date('d/m/Y H:i', strtotime($s)) : '—';
 $lencana = [
-    'menunggu'  => ['Menunggu verifikasi', 'bg-blue-50 text-blue-700 border-blue-200'],
+    'menunggu'  => ['Menunggu verifikasi', 'bg-brand-50 text-brand-700 border-brand-200'],
     'disetujui' => ['Disetujui', 'bg-emerald-50 text-emerald-700 border-emerald-200'],
     'perbaikan' => ['Perlu perbaikan', 'bg-amber-50 text-amber-800 border-amber-200'],
 ][$status] ?? [$status, 'bg-slate-100 text-slate-600 border-slate-200'];
@@ -40,8 +40,8 @@ $ikon = static fn (string $d, string $kelas = 'w-4 h-4'): string => '<svg class=
     <div class="flex flex-wrap items-center justify-between gap-2">
         <a href="<?= esc($kembali, 'attr') ?>" class="inline-flex items-center gap-1 text-sm font-semibold text-brand-600 hover:text-brand-800">&larr; Kembali ke daftar</a>
         <?php if ($status === 'menunggu' && $sisaMenunggu > 0): ?>
-            <span class="inline-flex items-center gap-1.5 rounded-full border border-blue-200 bg-blue-50 px-3 py-1 text-xs font-bold text-blue-700">
-                <span class="h-2 w-2 rounded-full bg-blue-500"></span>Antrean menunggu: <?= number_format($sisaMenunggu, 0, ',', '.') ?> isian
+            <span class="inline-flex items-center gap-1.5 rounded-full border border-brand-200 bg-brand-50 px-3 py-1 text-xs font-bold text-brand-700">
+                <span class="h-2 w-2 rounded-full bg-brand-500"></span>Antrean menunggu: <?= number_format($sisaMenunggu, 0, ',', '.') ?> isian
             </span>
         <?php endif; ?>
     </div>

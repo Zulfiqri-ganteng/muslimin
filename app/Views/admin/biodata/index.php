@@ -65,7 +65,7 @@ $lewatBatas    = $bukaDiSetelan && ! $terbuka; // dibuka, tapi batas waktunya su
 
 // Warna per status — dipakai kartu angka, tab, dan lencana supaya konsisten.
 $warna = [
-    'menunggu'  => ['titik' => 'bg-blue-500',    'teks' => 'text-blue-700',    'latar' => 'bg-blue-50',    'garis' => 'border-blue-200',    'aktif' => 'bg-blue-600', 'cincin' => 'ring-blue-300'],
+    'menunggu'  => ['titik' => 'bg-brand-500',    'teks' => 'text-brand-700',    'latar' => 'bg-brand-50',    'garis' => 'border-brand-200',    'aktif' => 'bg-brand-600', 'cincin' => 'ring-brand-300'],
     'perbaikan' => ['titik' => 'bg-amber-500',   'teks' => 'text-amber-800',   'latar' => 'bg-amber-50',   'garis' => 'border-amber-200',   'aktif' => 'bg-amber-500', 'cincin' => 'ring-amber-300'],
     'disetujui' => ['titik' => 'bg-emerald-500', 'teks' => 'text-emerald-700', 'latar' => 'bg-emerald-50', 'garis' => 'border-emerald-200', 'aktif' => 'bg-emerald-600', 'cincin' => 'ring-emerald-300'],
     'belum'     => ['titik' => 'bg-slate-400',   'teks' => 'text-slate-700',   'latar' => 'bg-slate-50',   'garis' => 'border-slate-200',   'aktif' => 'bg-slate-600', 'cincin' => 'ring-slate-300'],
@@ -147,16 +147,16 @@ $tombolSekunder = 'inline-flex items-center justify-center gap-1.5 rounded-lg bo
     <?php endif; ?>
 
     <?php if ($ringkas['menunggu'] > 0): ?>
-        <div class="flex flex-col sm:flex-row sm:items-center gap-3 rounded-2xl border border-blue-200 bg-gradient-to-r from-blue-50 to-white px-5 py-4">
+        <div class="flex flex-col sm:flex-row sm:items-center gap-3 rounded-2xl border border-brand-200 bg-gradient-to-r from-brand-50 to-white px-5 py-4">
             <div class="flex items-start gap-3 flex-1 min-w-0">
-                <span class="mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-blue-600 text-white"><?= $ikon($IKON['periksa'], 'w-5 h-5') ?></span>
+                <span class="mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-brand-600 text-white"><?= $ikon($IKON['periksa'], 'w-5 h-5') ?></span>
                 <div class="text-sm text-slate-700">
                     <p class="font-bold text-slate-900">Ada <span class="tabular-nums"><?= $fmtAngka($ringkas['menunggu']) ?></span> isian menunggu diperiksa.</p>
                     <p class="mt-0.5">Mulai dari kiriman terlama — setelah disetujui, isian berikutnya langsung terbuka.</p>
                 </div>
             </div>
             <?php if ($pertamaId > 0): ?>
-                <a href="<?= esc(site_url('admin/biodata/' . $pertamaId), 'attr') ?>" class="inline-flex items-center justify-center gap-1.5 rounded-lg bg-blue-600 hover:bg-blue-700 px-5 py-2.5 text-sm font-bold text-white shadow-sm shrink-0">Periksa Sekarang <?= $ikon($IKON['panah']) ?></a>
+                <a href="<?= esc(site_url('admin/biodata/' . $pertamaId), 'attr') ?>" class="inline-flex items-center justify-center gap-1.5 rounded-lg bg-brand-600 hover:bg-brand-700 px-5 py-2.5 text-sm font-bold text-white shadow-sm shrink-0">Periksa Sekarang <?= $ikon($IKON['panah']) ?></a>
             <?php endif; ?>
         </div>
     <?php elseif ($terbuka && $ringkas['sudah'] > 0): ?>
@@ -417,7 +417,7 @@ $tombolSekunder = 'inline-flex items-center justify-center gap-1.5 rounded-lg bo
                                 </div>
                                 <span class="hidden md:block text-sm text-slate-700"><?= esc($r['nama_kelas'] ?? '—') ?></span>
                                 <span class="hidden md:flex items-center gap-1.5 text-sm text-slate-600" title="<?= esc($fmtTgl($r['updated_at']), 'attr') ?>"><?= $ikon($IKON['jam'], 'w-3.5 h-3.5 text-slate-400') ?><?= esc($relatif($r['updated_at'])) ?></span>
-                                <a href="<?= esc($urlDetail((int) $r['id']), 'attr') ?>" class="justify-self-end inline-flex items-center gap-1 rounded-lg bg-blue-600 hover:bg-blue-700 px-3.5 py-2 text-xs font-bold text-white transition">Periksa <?= $ikon($IKON['panah'], 'w-3.5 h-3.5') ?></a>
+                                <a href="<?= esc($urlDetail((int) $r['id']), 'attr') ?>" class="justify-self-end inline-flex items-center gap-1 rounded-lg bg-brand-600 hover:bg-brand-700 px-3.5 py-2 text-xs font-bold text-white transition">Periksa <?= $ikon($IKON['panah'], 'w-3.5 h-3.5') ?></a>
                             </li>
                         <?php endforeach; ?>
                     </ul>
@@ -474,8 +474,8 @@ $tombolSekunder = 'inline-flex items-center justify-center gap-1.5 rounded-lg bo
                     </details>
                 </div>
             <?php elseif ($kelasId === 0 && $total > 0): ?>
-                <div class="flex items-start gap-2 px-4 sm:px-5 py-3 text-sm text-slate-600 bg-blue-50/60 border-b border-blue-100">
-                    <span class="text-blue-600 mt-0.5"><?= $ikon('M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z') ?></span>
+                <div class="flex items-start gap-2 px-4 sm:px-5 py-3 text-sm text-slate-600 bg-brand-50/60 border-b border-brand-100">
+                    <span class="text-brand-600 mt-0.5"><?= $ikon('M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z') ?></span>
                     <p>Pilih <b>satu kelas</b> di atas untuk mendapatkan pesan WhatsApp berisi daftar nama yang belum mengisi.</p>
                 </div>
             <?php endif; ?>
@@ -520,13 +520,13 @@ $tombolSekunder = 'inline-flex items-center justify-center gap-1.5 rounded-lg bo
                             </div>
                             <span class="hidden xl:block text-slate-600 truncate" title="<?= esc($k['wali'] ?? '', 'attr') ?>"><?= esc($k['wali'] ?? '—') ?></span>
                             <span class="hidden xl:block text-right tabular-nums text-slate-700"><?= $k['total'] ?></span>
-                            <span class="hidden xl:block text-right tabular-nums <?= $k['menunggu'] > 0 ? 'font-bold text-blue-700' : 'text-slate-400' ?>"><?= $k['menunggu'] ?></span>
+                            <span class="hidden xl:block text-right tabular-nums <?= $k['menunggu'] > 0 ? 'font-bold text-brand-700' : 'text-slate-400' ?>"><?= $k['menunggu'] ?></span>
                             <span class="hidden xl:block text-right tabular-nums <?= $k['disetujui'] > 0 ? 'text-emerald-700' : 'text-slate-400' ?>"><?= $k['disetujui'] ?></span>
                             <span class="hidden xl:block text-right tabular-nums <?= $k['perbaikan'] > 0 ? 'text-amber-700' : 'text-slate-400' ?>"><?= $k['perbaikan'] ?></span>
                             <span class="hidden xl:block text-right tabular-nums font-semibold <?= $k['belum'] > 0 ? 'text-slate-800' : 'text-slate-400' ?>"><?= $k['belum'] ?></span>
                             <!-- HP: ringkasan angka dalam satu baris -->
                             <p class="xl:hidden col-span-2 text-xs text-slate-500">
-                                <?= $k['total'] ?> siswa · <span class="<?= $k['menunggu'] > 0 ? 'font-bold text-blue-700' : '' ?>"><?= $k['menunggu'] ?> menunggu</span> · <?= $k['disetujui'] ?> disetujui · <?= $k['perbaikan'] ?> perbaikan · <b class="text-slate-700"><?= $k['belum'] ?> belum</b>
+                                <?= $k['total'] ?> siswa · <span class="<?= $k['menunggu'] > 0 ? 'font-bold text-brand-700' : '' ?>"><?= $k['menunggu'] ?> menunggu</span> · <?= $k['disetujui'] ?> disetujui · <?= $k['perbaikan'] ?> perbaikan · <b class="text-slate-700"><?= $k['belum'] ?> belum</b>
                             </p>
                             <div class="col-span-2 xl:col-span-1 flex items-center gap-2" title="<?= $k['sudah'] ?> dari <?= $k['total'] ?> siswa sudah mengisi">
                                 <div class="h-2.5 flex-1 rounded-full bg-slate-100 overflow-hidden"><div class="h-full rounded-full <?= $bar ?>" style="width: <?= $k['rasio'] ?>%"></div></div>

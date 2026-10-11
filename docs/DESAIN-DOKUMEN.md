@@ -164,6 +164,8 @@ ip, user_agent, created_at.
       uji unggah PDF OK & MIME terbaca `application/pdf` dari isi.
       **SISA: jalankan di hosting kangmuslim.com** → angkanya mengunci
       `dok_maks_mb`. Setelah itu **HAPUS `public/cek-hosting.php`**.
+      ✅ **2026-10-12: berkas DIHAPUS dari repo** (ikut terhapus di hosting
+      saat `git pull`). Bila butuh diagnostik lagi, ambil dari riwayat git.
 
 - [x] **D1 — Fondasi DB & Model** ✅ SELESAI & TERUJI 2026-09-19 (103/103 lulus)
       Migrasi `2026-09-19-000001_CreateDokumen` (4 tabel, InnoDB utf8mb4) —
@@ -426,7 +428,7 @@ ip, user_agent, created_at.
       benar-benar terbukti bisa dibangun, bukan sekadar lolos analisis.
 
 
-- [ ] **D9 — Uji e2e + uji keamanan + deploy**
+- [x] **D9 — Uji e2e + uji keamanan + deploy** ✅ 2026-10-12 (lokal; deploy = `git pull`, tanpa migrasi)
       Matriks uji per tipe berkas (docx/xlsx/pptx/pdf/jpg/png/heic/zip/
       berkas besar/nama berkas aneh & unicode). **Uji keamanan wajib:**
       berkas privat harus TERTOLAK tanpa login; tautan kedaluwarsa/dicabut
@@ -434,6 +436,21 @@ ip, user_agent, created_at.
       Bersihkan data uji, perbarui panduan, lalu deploy:
       `cd ~/kangmuslim && git pull && phpm spark migrate` + pastikan folder
       `writable/uploads/dokumen/` bisa ditulis di server.
+      **HASIL (uji HTTP lewat server lokal, semua lulus):** 14 berkas tersimpan (pdf, png, jpg, xlsx,
+      docx, zip, pptx, heic, txt, svg, html, php, nama unicode "✓", nama `../../x.php` → PHP sendiri
+      membuang direktorinya); kategori dari ekstensi benar; berkas 26 MB ditolak "melebihi batas 25 MB";
+      unggah tanpa token CSRF ditolak. **Penyajian:** PDF inline + `nosniff` + CSP; SVG/HTML/HEIC
+      DIPAKSA UNDUH + `CSP sandbox` (skrip tak jalan di domain sekolah); `.php` dikirim sebagai unduhan,
+      tidak dijalankan. **Akses:** berkas privat tanpa login → ke halaman login; API tanpa token → 401;
+      jalur dokumen-publik untuk berkas privat → 404; alamat langsung ke `writable/uploads/dokumen/` →
+      ditolak; `/d/..%2F..` dan `berkas/1%2F..` → 404. **Tautan:** sah → terbuka tanpa login; token
+      salah, dicabut, kedaluwarsa → 404; bersandi → berkas tidak terkirim sebelum sandi benar; jatah
+      unduh 1 → unduhan ke-2 ditolak. **Bersih-bersih:** hapus → hapus permanen lewat aplikasi →
+      14/14 berkas fisik hilang dari disk. Regresi `dev:uji-dokumen` 103 ✅.
+      **Pengerasan baru (temuan D9):** berkas skrip/konfigurasi server (`.php`, `.phtml`, `.phar`,
+      `.htaccess`, `.cgi`, `.asp`, `.jsp`, … — `dokumen_ekstensi_server()`) tetap boleh diunggah tetapi
+      disimpan di disk berakhiran NETRAL `.bin`; unduhan tetap memakai nama asli dari database. Jadi
+      seandainya folder `writable/` suatu saat ter-ekspos, server tidak akan menjalankannya.
 
 ---
 

@@ -58,7 +58,7 @@ class Peran extends BaseConfig
                 'admin/dokumen',
             ],
             'api'       => true,
-            'api_akses' => ['pkl'],
+            'api_akses' => ['pkl', 'surat'],
         ],
         self::HUBIN => [
             'label'   => 'Waka Hubin',
@@ -69,7 +69,7 @@ class Peran extends BaseConfig
             // di 'akses' (tolak-secara-bawaan); jangan menambah awalan itu ke Hubin. Dijaga dev:uji-pkl.
             'akses'   => ['admin/pkl', 'admin/surat'],
             'api'       => true,
-            'api_akses' => ['pkl'],
+            'api_akses' => ['pkl', 'surat'],
         ],
     ];
 

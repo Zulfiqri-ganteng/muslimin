@@ -62,7 +62,7 @@ $tombol = 'inline-flex items-center gap-1.5 rounded-lg border border-slate-300 b
                 <p class="mt-2 text-xs leading-relaxed text-slate-500">
                     <?php if ($honorTahun !== []): ?>
                         Pakai di honor <?= esc($tahun) ?>:
-                        <?php foreach ($honorTahun as $h): ?><a href="<?= esc($h['url'], 'attr') ?>" class="ml-1 inline-flex items-center rounded-full border border-sky-300 bg-sky-50 px-2.5 py-0.5 font-semibold text-sky-800 transition hover:bg-sky-100"><?= esc($h['label']) ?> &rarr; Koreksi</a><?php endforeach; ?>
+                        <?php foreach ($honorTahun as $h): ?><a href="<?= esc($h['url'], 'attr') ?>" class="ml-1 inline-flex items-center rounded-full border border-brand-300 bg-brand-50 px-2.5 py-0.5 font-semibold text-brand-800 transition hover:bg-brand-100"><?= esc($h['label']) ?> &rarr; Koreksi</a><?php endforeach; ?>
                     <?php else: ?>
                         Belum ada honor ujian untuk tahun ajaran ini &mdash; buat di menu <b>Ujian &rarr; tab Honor</b>, lalu ceklis Koreksinya bisa diisi dari SKBM ini.
                     <?php endif; ?>
@@ -175,7 +175,7 @@ $tombol = 'inline-flex items-center gap-1.5 rounded-lg border border-slate-300 b
             <div>
                 <h3 class="text-xs font-bold uppercase tracking-wide text-slate-500">Pembagian tugas mengajar &middot; <?= esc($tahun) ?></h3>
                 <p class="mt-0.5 text-xs text-slate-500">
-                    <span class="mr-1 inline-block h-3 w-3 rounded-sm bg-sky-400 align-middle"></span>biru = mengajar di kelas itu (angka = JP per minggu) ·
+                    <span class="mr-1 inline-block h-3 w-3 rounded-sm bg-brand-500 align-middle"></span>ungu = mengajar di kelas itu (angka = JP per minggu) ·
                     <span class="mx-1 inline-block h-3 w-3 rounded-sm bg-amber-300 align-middle"></span>kuning &#10003; = mengajar, JP belum diisi ·
                     <span class="mx-1 inline-block h-3 w-3 rounded-sm bg-slate-200 align-middle"></span>abu-abu = tidak ·
                     <b>klik</b> sel = nyalakan/matikan · <b>klik kanan</b> = isi JP
@@ -257,7 +257,7 @@ $tombol = 'inline-flex items-center gap-1.5 rounded-lg border border-slate-300 b
                                         $jp  = $ada ? $x['sel'][$k['id']] : null;
                                         ?>
                                         <td data-k="<?= (int) $k['id'] ?>" data-aktif="<?= $ada ? '1' : '0' ?>" data-jp="<?= $jp === null ? '' : (int) $jp ?>"
-                                            class="cursor-pointer border-b border-r border-slate-300 px-0.5 py-1 text-center tabular-nums <?= ! $ada ? 'bg-slate-200' : ($jp === null ? 'bg-amber-300 font-semibold text-amber-900' : 'bg-sky-400 font-semibold text-white') ?>"><?= ! $ada ? '' : ($jp === null ? '&#10003;' : (int) $jp) ?></td>
+                                            class="cursor-pointer border-b border-r border-slate-300 px-0.5 py-1 text-center tabular-nums <?= ! $ada ? 'bg-slate-200' : ($jp === null ? 'bg-amber-300 font-semibold text-amber-900' : 'bg-brand-500 font-semibold text-white') ?>"><?= ! $ada ? '' : ($jp === null ? '&#10003;' : (int) $jp) ?></td>
                                     <?php endforeach; ?>
                                     <td id="mt-<?= (int) $x['id'] ?>" class="border-b border-r border-slate-200 bg-white px-2 py-1 text-center tabular-nums text-slate-600"><?= $rp($x['total_jp']) ?></td>
                                     <?php if ($i === 0): ?>

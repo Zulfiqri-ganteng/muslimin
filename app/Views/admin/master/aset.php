@@ -28,7 +28,7 @@ $warnaKondisi = [
 ];
 $warnaStatus = [
     'tersedia'  => 'bg-emerald-50 text-emerald-700 border-emerald-200',
-    'dipinjam'  => 'bg-sky-50 text-sky-700 border-sky-200',
+    'dipinjam'  => 'bg-brand-50 text-brand-700 border-brand-200',
     'perbaikan' => 'bg-amber-50 text-amber-700 border-amber-200',
     'dihapus'   => 'bg-slate-100 text-slate-500 border-slate-200',
 ];
@@ -127,7 +127,7 @@ $qsExport = array_filter([
                                     </a>
                                     <?php if ($isKomputer): ?>
                                         <a href="<?= site_url('admin/master/aset/komputer/' . $r['id']) ?>" title="Detail Komputer"
-                                           class="inline-flex h-8 w-8 items-center justify-center rounded-lg text-sky-600 hover:bg-sky-50 transition">
+                                           class="inline-flex h-8 w-8 items-center justify-center rounded-lg text-brand-600 hover:bg-brand-50 transition">
                                             <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/></svg>
                                         </a>
                                     <?php endif; ?>

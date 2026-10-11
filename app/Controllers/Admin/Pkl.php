@@ -13,6 +13,7 @@ use App\Libraries\PklNomorSurat;
 use App\Libraries\PklPeringatan;
 use App\Libraries\PklStaf;
 use App\Libraries\PklSurat;
+use App\Libraries\SuratSekolah;
 use App\Models\AuditModel;
 use App\Models\PklPengajuanModel;
 use App\Models\PklPengaturanModel;
@@ -78,8 +79,17 @@ class Pkl extends BaseController
             ];
         }
 
+        // Kartu Surat Sekolah (L7): bagi pemegang hak ACC atau pembuat surat sekolah.
+        $suratSekolah = null;
+        if ((HakAkses::bolehPkl($peranIni, 'acc') || HakAkses::bolehPkl($peranIni, 'surat_sekolah')) && db_connect()->tableExists('surat_sekolah')) {
+            $suratSekolah = (new SuratSekolah())->hitungStatus() + [
+                'belum_unduh' => (int) db_connect()->query("SELECT COUNT(*) n FROM surat_sekolah WHERE status = 'disetujui' AND cetak_ke = 0")->getRowArray()['n'],
+            ];
+        }
+
         return view('admin/pkl/index', $this->dasar('Beranda PKL', 'beranda') + [
             'suratRingkas' => $suratRingkas,
+            'suratSekolah' => $suratSekolah,
             'hitung'  => $this->model->hitungStatus(),
             'siswa'   => $this->model->ringkasanSiswa($tingkat),
             'antrean' => $antrean,

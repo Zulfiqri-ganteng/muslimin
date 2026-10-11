@@ -86,7 +86,7 @@ $ikonKategori = [
 $labelVisib = ['privat' => 'Privat', 'link' => 'Lewat tautan', 'publik' => 'Publik'];
 $warnaVisib = [
     'privat' => 'bg-slate-100 text-slate-600',
-    'link'   => 'bg-sky-50 text-sky-700',
+    'link'   => 'bg-brand-50 text-brand-700',
     'publik' => 'bg-emerald-50 text-emerald-700',
 ];
 

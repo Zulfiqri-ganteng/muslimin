@@ -368,6 +368,30 @@ final class SuratAcara
         return $out;
     }
 
+    /**
+     * Isian awal formulir baru (web & API). ASTS mengambil periode Ujian terdekat yang belum lewat (atau, bila tak ada,
+     * semester & tahun dari yang terbaru dengan tanggal kosong); TKA mulai kosong dengan sesi "Gelombang 1".
+     *
+     * @param list<array{label: string, semester: string, tahun: string, mulai: ?string, selesai: ?string}> $periode periodeUjian()
+     *
+     * @return array<string, string>
+     */
+    public static function nilaiAwal(string $jenis, array $periode, string $tahunPelajaran): array
+    {
+        $awal = ['tanggal_surat' => date('Y-m-d'), 'mode' => 'umum', 'tempat' => self::TEMPAT_BAWAAN, 'tgl_mulai' => '', 'tgl_selesai' => '',
+            'semester' => 'Ganjil', 'tahun_pelajaran' => $tahunPelajaran, 'sesi' => $jenis === SuratJenis::TKA ? self::SESI_SARAN[0] : ''];
+        if ($jenis !== SuratJenis::ASTS || $periode === []) {
+            return $awal;
+        }
+        foreach (array_reverse($periode) as $x) { // dari yang tertua: ambil yang pertama belum lewat
+            if ($x['selesai'] !== null && $x['selesai'] >= date('Y-m-d')) {
+                return ['semester' => $x['semester'], 'tahun_pelajaran' => $x['tahun'], 'tgl_mulai' => (string) $x['mulai'], 'tgl_selesai' => (string) $x['selesai']] + $awal;
+            }
+        }
+
+        return ['semester' => $periode[0]['semester'], 'tahun_pelajaran' => $periode[0]['tahun']] + $awal;
+    }
+
     // =================================================================
     // Membuat surat
     // =================================================================
@@ -441,5 +465,46 @@ final class SuratAcara
         }
 
         return ['ok' => $dibuat !== [], 'dibuat' => $dibuat, 'sama' => $sama, 'gagal' => $gagal, 'pesan' => implode(' ', $pesan)];
+    }
+
+    /**
+     * Ubah data surat acara yang SUDAH dipastikan boleh diubah (SuratSekolah::alasanTakBisaUbah = null). Cakupan tidak
+     * berubah; perusahaan & daftar siswa tetap. Dipakai web (Admin\SuratIzin) dan API (Api\Surat).
+     *
+     * kode: ok | galat (isian salah, 422) | sama (surat yang sama sudah ada, 409) | gagal (penyimpanan, 409)
+     *
+     * @param array{surat: array<string, mixed>, siswa: list<array<string, mixed>>} $m hasil SuratSekolah::muat()
+     * @param array<string, mixed>                                                  $in
+     * @param array<string, mixed>                                                  $konteks
+     *
+     * @return array{ok: bool, kode: string, galat: list<string>, pesan: string}
+     */
+    public function ubahSurat(array $m, array $in, array $konteks): array
+    {
+        $s     = $m['surat'];
+        $jenis = (string) $s['jenis'];
+        $id    = (int) $s['id'];
+        $lama  = (array) ($s['isi_arr'] ?? []);
+        $h     = self::periksa($jenis, $in, (string) ($lama['mode'] ?? 'umum'));
+        if (! $h['ok']) {
+            return ['ok' => false, 'kode' => 'galat', 'galat' => $h['galat'], 'pesan' => implode(' ', $h['galat'])];
+        }
+
+        $pkey = (string) ($lama['pkey'] ?? '');
+        $isi  = $h['isi'] + ($pkey !== '' ? ['pkey' => $pkey] : []);
+        $isi += ['kunci' => self::kunci($jenis, $h['isi'], $pkey)];
+        if (($sama = $this->adaSama($isi['kunci'], $id)) !== null) {
+            $pesan = 'Surat yang sama sudah ada (' . SuratSekolahModel::kode($sama['id']) . ($sama['nomor'] ? ', nomor ' . $sama['nomor'] : '') . '). Tidak dibuat dobel.';
+
+            return ['ok' => false, 'kode' => 'sama', 'galat' => [$pesan], 'pesan' => $pesan];
+        }
+
+        $r = (new SuratSekolah($this->db))->ubah($id, [
+            'judul' => self::judul($jenis, $isi, (string) $s['perusahaan_nama'], count($m['siswa'])), 'tanggal_surat' => $h['tanggal_surat'], 'isi' => $isi,
+        ], $konteks);
+
+        return $r['ok']
+            ? ['ok' => true, 'kode' => 'ok', 'galat' => [], 'pesan' => 'Data surat diperbarui.']
+            : ['ok' => false, 'kode' => 'gagal', 'galat' => [], 'pesan' => (string) ($r['pesan'] ?? 'Perubahan gagal disimpan.')];
     }
 }

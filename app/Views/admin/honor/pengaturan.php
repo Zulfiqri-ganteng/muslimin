@@ -87,8 +87,8 @@ $sumberLabel = ['manual' => 'Diketik', 'koreksi' => 'Otomatis dari siswa', 'rapo
                                    placeholder="Judul kolom di cetakan: <?= esc(mb_strtoupper((string) $k['nama']), 'attr') ?>" aria-label="Judul di cetakan <?= esc($k['nama'], 'attr') ?>"
                                    class="mt-1.5 w-full rounded-lg border border-slate-200 px-3 py-1.5 text-xs text-slate-600 outline-none placeholder:text-slate-300 focus:border-brand-500">
                             <p class="mt-1.5 flex flex-wrap gap-1.5 text-[10px] font-semibold">
-                                <span class="rounded-full <?= (int) $k['bawaan'] === 1 ? 'bg-slate-100 text-slate-500' : 'bg-violet-50 text-violet-700' ?> px-2 py-0.5"><?= (int) $k['bawaan'] === 1 ? 'Bawaan' : 'Tambahan' ?></span>
-                                <span class="rounded-full bg-sky-50 px-2 py-0.5 text-sky-700"><?= $tetap ? 'Nominal per orang' : 'Jumlah × tarif' ?></span>
+                                <span class="rounded-full <?= (int) $k['bawaan'] === 1 ? 'bg-slate-100 text-slate-500' : 'bg-pink-50 text-pink-700' ?> px-2 py-0.5"><?= (int) $k['bawaan'] === 1 ? 'Bawaan' : 'Tambahan' ?></span>
+                                <span class="rounded-full bg-brand-50 px-2 py-0.5 text-brand-700"><?= $tetap ? 'Nominal per orang' : 'Jumlah × tarif' ?></span>
                                 <span class="rounded-full <?= $k['sumber'] === 'manual' ? 'bg-slate-100 text-slate-500' : 'bg-emerald-50 text-emerald-700' ?> px-2 py-0.5"><?= esc($sumberLabel[$k['sumber']] ?? $k['sumber']) ?></span>
                             </p>
                         </div>

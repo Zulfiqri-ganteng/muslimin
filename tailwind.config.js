@@ -1,3 +1,6 @@
+// Warna brand dibaca dari variabel CSS (resources/css/app.css): bawaan biru, admin = ungu lilac (.tema-lilac).
+const brand = (n) => `rgb(var(--brand-${n}) / <alpha-value>)`;
+
 /** @type {import('tailwindcss').Config} */
 module.exports = {
   // Dua berkas non-tampilan menyimpan kelas warna lencana (jenis & status Surat Sekolah) sebagai teks;
@@ -7,8 +10,8 @@ module.exports = {
     extend: {
       colors: {
         brand: {
-          50: '#eff6ff', 100: '#dbeafe', 200: '#bfdbfe', 300: '#93c5fd', 400: '#60a5fa',
-          500: '#1e6fd6', 600: '#1b5fb8', 700: '#1a3a6b', 800: '#15315a', 900: '#0f2545',
+          50: brand(50), 100: brand(100), 200: brand(200), 300: brand(300), 400: brand(400),
+          500: brand(500), 600: brand(600), 700: brand(700), 800: brand(800), 900: brand(900),
         },
         gold: { 400: '#fcc419', 500: '#f5a623' },
       },

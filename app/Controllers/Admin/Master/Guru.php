@@ -234,12 +234,12 @@ class Guru extends BaseMaster
             $jabatan = implode(', ', array_column($jabatanMap[(int) $d['id']] ?? [], 'nama'));
 
             $sheet->fromArray([
-                $i + 1, "'" . $d['nip'], $d['kode_guru'], $d['nama'],
+                $i + 1, null, $d['kode_guru'], $d['nama'],
                 $d['jenis_kelamin'], $d['status_guru'], $jabatan,
-                $d['max_beban'], $d['keterangan'],
-                // Diawali ' agar Excel tidak mengubah nomor jadi angka ilmiah.
-                ($d['no_wa'] ?? '') !== '' ? "'" . $d['no_wa'] : '',
+                $d['max_beban'], $d['keterangan'], null,
             ], null, 'A' . $r, true);
+            $this->tulisTeks($sheet, 'B' . $r, $d['nip']);
+            $this->tulisTeks($sheet, 'J' . $r, $d['no_wa'] ?? null);
             $r++;
         }
 
@@ -255,7 +255,8 @@ class Guru extends BaseMaster
             ['NIP', 'Kode Guru', 'Nama Guru', 'Jenis Kelamin (L/P)', 'Status (PNS/PPPK/GTY/GTT)', 'Maks Beban (JP)', 'Keterangan', 'No. WhatsApp'],
             ['A' => 22, 'B' => 12, 'C' => 30, 'D' => 20, 'E' => 26, 'F' => 16, 'G' => 25, 'H' => 18]
         );
-        $sheet->fromArray(['1987...', '27', 'Muslimin, S.Kom', 'L', 'GTY', 24, 'Produktif TKJ', "'081234567890"], null, 'A2', true);
+        $sheet->fromArray(['1987...', '27', 'Muslimin, S.Kom', 'L', 'GTY', 24, 'Produktif TKJ'], null, 'A2', true);
+        $this->tulisTeks($sheet, 'H2', '081234567890');
 
         $this->streamXlsx($ss, 'Template-Import-Guru');
     }
@@ -299,7 +300,8 @@ class Guru extends BaseMaster
         $status = strtoupper(trim((string) ($row['status_guru'] ?? '')));
 
         $out = [
-            'nip'           => trim((string) ($row['nip'] ?? '')) ?: null,
+            // ltrim "'" : berkas ekspor lama menyimpan petik di depan NIP.
+            'nip'           => ltrim(trim((string) ($row['nip'] ?? '')), "'") ?: null,
             'kode_guru'     => $kode,
             'nama'          => $nama,
             'jenis_kelamin' => in_array($jk, ['L', 'P'], true) ? $jk : null,

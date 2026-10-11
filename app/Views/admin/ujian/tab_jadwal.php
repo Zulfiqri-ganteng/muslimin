@@ -31,7 +31,7 @@ $jam = static fn ($m, $s) => $m
 $labelShift = ['pagi' => 'Pagi', 'siang' => 'Siang', 'semua' => 'Pagi & Siang'];
 $warnaShift = [
     'pagi'  => 'bg-amber-50 text-amber-700 border-amber-200',
-    'siang' => 'bg-indigo-50 text-indigo-700 border-indigo-200',
+    'siang' => 'bg-brand-50 text-brand-700 border-brand-200',
     'semua' => 'bg-slate-100 text-slate-600 border-slate-200',
 ];
 

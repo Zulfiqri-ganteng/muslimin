@@ -25,7 +25,7 @@ $kelas = ($mode ?? 'guru') === 'kelas';
      class="absen-row p-4 border-l-4 transition"
      :class="{
         'border-emerald-400': st==='hadir', 'border-amber-400': st==='telat',
-        'border-sky-400': st==='izin', 'border-violet-400': st==='sakit', 'border-red-400': st==='alpa'<?php if ($kelas): ?>,
+        'border-brand-400': st==='izin', 'border-pink-400': st==='sakit', 'border-red-400': st==='alpa'<?php if ($kelas): ?>,
         'bg-red-50': isBelum(gid)<?php endif; ?>
      }">
 

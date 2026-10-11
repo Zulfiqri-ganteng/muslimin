@@ -81,7 +81,7 @@ $defaults = ['peserta_ukk_id' => '', 'tanggal_terbit' => date('Y-m-d'), 'keteran
                             <td class="px-4 py-3 text-right whitespace-nowrap">
                                 <div class="inline-flex items-center justify-end gap-1">
                                     <a href="<?= $base ?>/pdf/<?= (int) $r['id'] ?>" target="_blank" title="Cetak PDF"
-                                       class="inline-flex items-center gap-1 rounded-lg bg-sky-600 hover:bg-sky-700 text-white text-xs font-semibold px-2.5 py-1.5">
+                                       class="inline-flex items-center gap-1 rounded-lg bg-brand-600 hover:bg-brand-700 text-white text-xs font-semibold px-2.5 py-1.5">
                                         <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M6 9V2h12v7M6 18H4a2 2 0 01-2-2v-5a2 2 0 012-2h16a2 2 0 012 2v5a2 2 0 01-2 2h-2m-8 4h4v-6H8v6z"/></svg>
                                         PDF
                                     </a>
@@ -92,7 +92,7 @@ $defaults = ['peserta_ukk_id' => '', 'tanggal_terbit' => date('Y-m-d'), 'keteran
                                             class="inline-flex h-8 w-8 items-center justify-center rounded-lg text-slate-500 hover:bg-slate-100 transition">
                                         <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/></svg>
                                     </button>
-                                    <a href="<?= $base ?>/delete/<?= (int) $r['id'] ?>" data-confirm="Hapus sertifikat ini?" title="Hapus"
+                                    <a href="<?= $base ?>/delete/<?= (int) $r['id'] ?>" data-method="post" data-confirm="Hapus sertifikat ini?" title="Hapus"
                                        class="inline-flex h-8 w-8 items-center justify-center rounded-lg text-red-500 hover:bg-red-50 transition">
                                         <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
                                     </a>

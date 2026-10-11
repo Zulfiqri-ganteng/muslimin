@@ -74,7 +74,7 @@ $routes->group('admin', static function ($routes) {
         $routes->get('submissions', 'Admin\Submissions::index');
         $routes->get('submissions/view/(:num)', 'Admin\Submissions::view/$1');
         $routes->post('submissions/status/(:num)', 'Admin\Submissions::updateStatus/$1');
-        $routes->get('submissions/delete/(:num)', 'Admin\Submissions::delete/$1');
+        $routes->post('submissions/delete/(:num)', 'Admin\Submissions::delete/$1');
 
         // ===== Isian Biodata Siswa (kotak masuk form publik) =====
         // Semua aksi pengubah data memakai POST. Rute statis sebelum (:num).
@@ -149,6 +149,7 @@ $routes->group('admin', static function ($routes) {
         // (admin/surat/… → null | 'acc' | 'surat_sekolah') dan diperiksa lagi di Libraries\SuratKeputusan / controller.
         // Aksi pengubah data = POST + CSRF; rute statis SEBELUM pola (:num).
         $routes->get('surat', 'Admin\Surat::index', ['filter' => 'csrf']);
+        $routes->get('surat/excel', 'Admin\Surat::excel');
         // Formulir membuat / mengubah Surat Izin ASTS dan TKA (Admin\SuratIzin)
         $routes->get('surat/asts', 'Admin\SuratIzin::asts', ['filter' => 'csrf']);
         $routes->post('surat/asts', 'Admin\SuratIzin::simpanAsts', ['filter' => 'csrf']);
@@ -228,26 +229,26 @@ $routes->group('admin', static function ($routes) {
         $routes->get('peminjaman', 'Admin\Peminjaman::index');
         $routes->post('peminjaman', 'Admin\Peminjaman::store');
         $routes->post('peminjaman/kembalikan/(:num)', 'Admin\Peminjaman::kembalikan/$1');
-        $routes->get('peminjaman/delete/(:num)', 'Admin\Peminjaman::delete/$1');
+        $routes->post('peminjaman/delete/(:num)', 'Admin\Peminjaman::delete/$1');
 
         // ===== Laboratorium: Kerusakan & Perbaikan =====
         $routes->get('kerusakan', 'Admin\Kerusakan::index');
         $routes->post('kerusakan', 'Admin\Kerusakan::store');
         $routes->post('kerusakan/status/(:num)', 'Admin\Kerusakan::status/$1');
-        $routes->get('kerusakan/delete/(:num)', 'Admin\Kerusakan::delete/$1');
+        $routes->post('kerusakan/delete/(:num)', 'Admin\Kerusakan::delete/$1');
 
         $routes->get('perbaikan', 'Admin\Perbaikan::index');
         $routes->post('perbaikan', 'Admin\Perbaikan::store');
-        $routes->get('perbaikan/delete/(:num)', 'Admin\Perbaikan::delete/$1');
+        $routes->post('perbaikan/delete/(:num)', 'Admin\Perbaikan::delete/$1');
 
         // ===== Laboratorium: Jadwal & Jurnal Lab =====
         $routes->get('jadwal-lab', 'Admin\JadwalLab::index');
         $routes->post('jadwal-lab', 'Admin\JadwalLab::store');
-        $routes->get('jadwal-lab/delete/(:num)', 'Admin\JadwalLab::delete/$1');
+        $routes->post('jadwal-lab/delete/(:num)', 'Admin\JadwalLab::delete/$1');
 
         $routes->get('jurnal-lab', 'Admin\JurnalLab::index');
         $routes->post('jurnal-lab', 'Admin\JurnalLab::store');
-        $routes->get('jurnal-lab/delete/(:num)', 'Admin\JurnalLab::delete/$1');
+        $routes->post('jurnal-lab/delete/(:num)', 'Admin\JurnalLab::delete/$1');
 
         // ===== Laboratorium: Laporan =====
         $routes->get('laporan-lab', 'Admin\LaporanLab::index');
@@ -255,7 +256,7 @@ $routes->group('admin', static function ($routes) {
         $routes->get('laporan-lab/excel', 'Admin\LaporanLab::excel');
 
         // ===== Laboratorium: Galeri Foto (semua entitas) =====
-        $routes->get('lab-gambar/hapus/(:num)', 'Admin\LabGambar::delete/$1');
+        $routes->post('lab-gambar/hapus/(:num)', 'Admin\LabGambar::delete/$1');
         $routes->get('lab-gambar/(:segment)/(:num)', 'Admin\LabGambar::index/$1/$2');
         $routes->post('lab-gambar/(:segment)/(:num)', 'Admin\LabGambar::upload/$1/$2');
 
@@ -265,7 +266,7 @@ $routes->group('admin', static function ($routes) {
             $routes->get('guru', 'Admin\Master\Guru::index');
             $routes->post('guru', 'Admin\Master\Guru::store');
             $routes->post('guru/(:num)', 'Admin\Master\Guru::update/$1');
-            $routes->get('guru/delete/(:num)', 'Admin\Master\Guru::delete/$1');
+            $routes->post('guru/delete/(:num)', 'Admin\Master\Guru::delete/$1');
             $routes->get('guru/export', 'Admin\Master\Guru::export');
             $routes->get('guru/template', 'Admin\Master\Guru::template');
             $routes->post('guru/import-preview', 'Admin\Master\Guru::importPreview');
@@ -278,7 +279,7 @@ $routes->group('admin', static function ($routes) {
             $routes->get('siswa', 'Admin\Master\Siswa::index');
             $routes->post('siswa', 'Admin\Master\Siswa::store');
             $routes->post('siswa/(:num)', 'Admin\Master\Siswa::update/$1');
-            $routes->get('siswa/delete/(:num)', 'Admin\Master\Siswa::delete/$1');
+            $routes->post('siswa/delete/(:num)', 'Admin\Master\Siswa::delete/$1');
             $routes->get('siswa/(:num)', 'Admin\Master\Siswa::detail/$1');
             $routes->get('siswa/export', 'Admin\Master\Siswa::export');
             $routes->get('siswa/export-resmi', 'Admin\Master\Siswa::exportResmi');
@@ -291,7 +292,7 @@ $routes->group('admin', static function ($routes) {
             $routes->get('jabatan', 'Admin\Master\Jabatan::index');
             $routes->post('jabatan', 'Admin\Master\Jabatan::store');
             $routes->post('jabatan/(:num)', 'Admin\Master\Jabatan::update/$1');
-            $routes->get('jabatan/delete/(:num)', 'Admin\Master\Jabatan::delete/$1');
+            $routes->post('jabatan/delete/(:num)', 'Admin\Master\Jabatan::delete/$1');
             $routes->get('jabatan/export', 'Admin\Master\Jabatan::export');
             $routes->get('jabatan/template', 'Admin\Master\Jabatan::template');
             $routes->post('jabatan/import-preview', 'Admin\Master\Jabatan::importPreview');
@@ -303,7 +304,7 @@ $routes->group('admin', static function ($routes) {
             $routes->get('teknisi', 'Admin\Master\Teknisi::index');
             $routes->post('teknisi', 'Admin\Master\Teknisi::store');
             $routes->post('teknisi/(:num)', 'Admin\Master\Teknisi::update/$1');
-            $routes->get('teknisi/delete/(:num)', 'Admin\Master\Teknisi::delete/$1');
+            $routes->post('teknisi/delete/(:num)', 'Admin\Master\Teknisi::delete/$1');
             $routes->get('teknisi/export', 'Admin\Master\Teknisi::export');
             $routes->get('teknisi/template', 'Admin\Master\Teknisi::template');
             $routes->post('teknisi/import-preview', 'Admin\Master\Teknisi::importPreview');
@@ -314,7 +315,7 @@ $routes->group('admin', static function ($routes) {
             $routes->get('lab', 'Admin\Master\Lab::index');
             $routes->post('lab', 'Admin\Master\Lab::store');
             $routes->post('lab/(:num)', 'Admin\Master\Lab::update/$1');
-            $routes->get('lab/delete/(:num)', 'Admin\Master\Lab::delete/$1');
+            $routes->post('lab/delete/(:num)', 'Admin\Master\Lab::delete/$1');
             $routes->get('lab/export', 'Admin\Master\Lab::export');
             $routes->get('lab/template', 'Admin\Master\Lab::template');
             $routes->post('lab/import-preview', 'Admin\Master\Lab::importPreview');
@@ -325,7 +326,7 @@ $routes->group('admin', static function ($routes) {
             $routes->get('sparepart', 'Admin\Master\Sparepart::index');
             $routes->post('sparepart', 'Admin\Master\Sparepart::store');
             $routes->post('sparepart/(:num)', 'Admin\Master\Sparepart::update/$1');
-            $routes->get('sparepart/delete/(:num)', 'Admin\Master\Sparepart::delete/$1');
+            $routes->post('sparepart/delete/(:num)', 'Admin\Master\Sparepart::delete/$1');
             $routes->get('sparepart/export', 'Admin\Master\Sparepart::export');
             $routes->get('sparepart/template', 'Admin\Master\Sparepart::template');
             $routes->post('sparepart/import-preview', 'Admin\Master\Sparepart::importPreview');
@@ -338,7 +339,7 @@ $routes->group('admin', static function ($routes) {
             $routes->get('aset/komputer/(:num)', 'Admin\Master\Aset::komputer/$1');
             $routes->post('aset/komputer/(:num)', 'Admin\Master\Aset::komputerSave/$1');
             $routes->post('aset/(:num)', 'Admin\Master\Aset::update/$1');
-            $routes->get('aset/delete/(:num)', 'Admin\Master\Aset::delete/$1');
+            $routes->post('aset/delete/(:num)', 'Admin\Master\Aset::delete/$1');
             $routes->get('aset/export', 'Admin\Master\Aset::export');
             $routes->get('aset/template', 'Admin\Master\Aset::template');
             $routes->post('aset/import-preview', 'Admin\Master\Aset::importPreview');
@@ -349,7 +350,7 @@ $routes->group('admin', static function ($routes) {
             $routes->get('mapel', 'Admin\Master\MataPelajaran::index');
             $routes->post('mapel', 'Admin\Master\MataPelajaran::store');
             $routes->post('mapel/(:num)', 'Admin\Master\MataPelajaran::update/$1');
-            $routes->get('mapel/delete/(:num)', 'Admin\Master\MataPelajaran::delete/$1');
+            $routes->post('mapel/delete/(:num)', 'Admin\Master\MataPelajaran::delete/$1');
             $routes->post('mapel/kompetensi/(:num)', 'Admin\Master\MataPelajaran::kompetensi/$1');
             $routes->get('mapel/export', 'Admin\Master\MataPelajaran::export');
             $routes->get('mapel/template', 'Admin\Master\MataPelajaran::template');
@@ -361,7 +362,7 @@ $routes->group('admin', static function ($routes) {
             $routes->get('kelas', 'Admin\Master\Kelas::index');
             $routes->post('kelas', 'Admin\Master\Kelas::store');
             $routes->post('kelas/(:num)', 'Admin\Master\Kelas::update/$1');
-            $routes->get('kelas/delete/(:num)', 'Admin\Master\Kelas::delete/$1');
+            $routes->post('kelas/delete/(:num)', 'Admin\Master\Kelas::delete/$1');
             $routes->get('kelas/export', 'Admin\Master\Kelas::export');
             $routes->get('kelas/template', 'Admin\Master\Kelas::template');
             $routes->post('kelas/import-preview', 'Admin\Master\Kelas::importPreview');
@@ -372,7 +373,7 @@ $routes->group('admin', static function ($routes) {
             $routes->get('pengampu', 'Admin\Master\Pengampu::index');
             $routes->post('pengampu', 'Admin\Master\Pengampu::store');
             $routes->post('pengampu/(:num)', 'Admin\Master\Pengampu::update/$1');
-            $routes->get('pengampu/delete/(:num)', 'Admin\Master\Pengampu::delete/$1');
+            $routes->post('pengampu/delete/(:num)', 'Admin\Master\Pengampu::delete/$1');
             $routes->get('pengampu/export', 'Admin\Master\Pengampu::export');
             $routes->post('pengampu/bulk-delete', 'Admin\Master\Pengampu::bulkDelete');
 
@@ -384,7 +385,7 @@ $routes->group('admin', static function ($routes) {
             $routes->get('jurusan', 'Admin\Master\Jurusan::index');
             $routes->post('jurusan', 'Admin\Master\Jurusan::store');
             $routes->post('jurusan/(:num)', 'Admin\Master\Jurusan::update/$1');
-            $routes->get('jurusan/delete/(:num)', 'Admin\Master\Jurusan::delete/$1');
+            $routes->post('jurusan/delete/(:num)', 'Admin\Master\Jurusan::delete/$1');
             $routes->get('jurusan/export', 'Admin\Master\Jurusan::export');
             $routes->get('jurusan/template', 'Admin\Master\Jurusan::template');
             $routes->post('jurusan/import-preview', 'Admin\Master\Jurusan::importPreview');
@@ -395,7 +396,7 @@ $routes->group('admin', static function ($routes) {
             $routes->get('hari', 'Admin\Master\Hari::index');
             $routes->post('hari', 'Admin\Master\Hari::store');
             $routes->post('hari/(:num)', 'Admin\Master\Hari::update/$1');
-            $routes->get('hari/delete/(:num)', 'Admin\Master\Hari::delete/$1');
+            $routes->post('hari/delete/(:num)', 'Admin\Master\Hari::delete/$1');
             $routes->get('hari/export', 'Admin\Master\Hari::export');
             $routes->get('hari/template', 'Admin\Master\Hari::template');
             $routes->post('hari/import-preview', 'Admin\Master\Hari::importPreview');
@@ -406,7 +407,7 @@ $routes->group('admin', static function ($routes) {
             $routes->get('fase', 'Admin\Master\Fase::index');
             $routes->post('fase', 'Admin\Master\Fase::store');
             $routes->post('fase/(:num)', 'Admin\Master\Fase::update/$1');
-            $routes->get('fase/delete/(:num)', 'Admin\Master\Fase::delete/$1');
+            $routes->post('fase/delete/(:num)', 'Admin\Master\Fase::delete/$1');
             $routes->get('fase/export', 'Admin\Master\Fase::export');
             $routes->get('fase/template', 'Admin\Master\Fase::template');
             $routes->post('fase/import-preview', 'Admin\Master\Fase::importPreview');
@@ -417,7 +418,7 @@ $routes->group('admin', static function ($routes) {
             $routes->get('tempat-uji', 'Admin\Master\TempatUji::index');
             $routes->post('tempat-uji', 'Admin\Master\TempatUji::store');
             $routes->post('tempat-uji/(:num)', 'Admin\Master\TempatUji::update/$1');
-            $routes->get('tempat-uji/delete/(:num)', 'Admin\Master\TempatUji::delete/$1');
+            $routes->post('tempat-uji/delete/(:num)', 'Admin\Master\TempatUji::delete/$1');
             $routes->get('tempat-uji/export', 'Admin\Master\TempatUji::export');
             $routes->get('tempat-uji/template', 'Admin\Master\TempatUji::template');
             $routes->post('tempat-uji/import-preview', 'Admin\Master\TempatUji::importPreview');
@@ -427,7 +428,7 @@ $routes->group('admin', static function ($routes) {
             $routes->get('penguji-eksternal', 'Admin\Master\PengujiEksternal::index');
             $routes->post('penguji-eksternal', 'Admin\Master\PengujiEksternal::store');
             $routes->post('penguji-eksternal/(:num)', 'Admin\Master\PengujiEksternal::update/$1');
-            $routes->get('penguji-eksternal/delete/(:num)', 'Admin\Master\PengujiEksternal::delete/$1');
+            $routes->post('penguji-eksternal/delete/(:num)', 'Admin\Master\PengujiEksternal::delete/$1');
             $routes->get('penguji-eksternal/export', 'Admin\Master\PengujiEksternal::export');
             $routes->get('penguji-eksternal/template', 'Admin\Master\PengujiEksternal::template');
             $routes->post('penguji-eksternal/import-preview', 'Admin\Master\PengujiEksternal::importPreview');
@@ -436,9 +437,9 @@ $routes->group('admin', static function ($routes) {
 
             $routes->get('paket-soal-ukk', 'Admin\Master\PaketSoalUkk::index');
             $routes->post('paket-soal-ukk', 'Admin\Master\PaketSoalUkk::store');
-            $routes->get('paket-soal-ukk/hapus-berkas/(:num)/(:segment)', 'Admin\Master\PaketSoalUkk::hapusBerkas/$1/$2');
+            $routes->post('paket-soal-ukk/hapus-berkas/(:num)/(:segment)', 'Admin\Master\PaketSoalUkk::hapusBerkas/$1/$2');
             $routes->post('paket-soal-ukk/(:num)', 'Admin\Master\PaketSoalUkk::update/$1');
-            $routes->get('paket-soal-ukk/delete/(:num)', 'Admin\Master\PaketSoalUkk::delete/$1');
+            $routes->post('paket-soal-ukk/delete/(:num)', 'Admin\Master\PaketSoalUkk::delete/$1');
             $routes->get('paket-soal-ukk/export', 'Admin\Master\PaketSoalUkk::export');
             $routes->get('paket-soal-ukk/template', 'Admin\Master\PaketSoalUkk::template');
             $routes->post('paket-soal-ukk/import-preview', 'Admin\Master\PaketSoalUkk::importPreview');
@@ -449,7 +450,7 @@ $routes->group('admin', static function ($routes) {
             $routes->get('tahun-ajaran', 'Admin\Master\TahunAjaran::index');
             $routes->post('tahun-ajaran', 'Admin\Master\TahunAjaran::store');
             $routes->post('tahun-ajaran/(:num)', 'Admin\Master\TahunAjaran::update/$1');
-            $routes->get('tahun-ajaran/delete/(:num)', 'Admin\Master\TahunAjaran::delete/$1');
+            $routes->post('tahun-ajaran/delete/(:num)', 'Admin\Master\TahunAjaran::delete/$1');
             $routes->get('tahun-ajaran/export', 'Admin\Master\TahunAjaran::export');
             $routes->get('tahun-ajaran/template', 'Admin\Master\TahunAjaran::template');
             $routes->post('tahun-ajaran/import-preview', 'Admin\Master\TahunAjaran::importPreview');
@@ -461,7 +462,7 @@ $routes->group('admin', static function ($routes) {
             $routes->get('jam', 'Admin\Master\JamPelajaran::index');
             $routes->post('jam', 'Admin\Master\JamPelajaran::store');
             $routes->post('jam/(:num)', 'Admin\Master\JamPelajaran::update/$1');
-            $routes->get('jam/delete/(:num)', 'Admin\Master\JamPelajaran::delete/$1');
+            $routes->post('jam/delete/(:num)', 'Admin\Master\JamPelajaran::delete/$1');
             $routes->get('jam/export', 'Admin\Master\JamPelajaran::export');
             $routes->get('jam/template', 'Admin\Master\JamPelajaran::template');
             $routes->post('jam/import-preview', 'Admin\Master\JamPelajaran::importPreview');
@@ -474,16 +475,16 @@ $routes->group('admin', static function ($routes) {
         $routes->get('peserta-ukk/daftarkan', 'Admin\PesertaUkk::daftarkanForm');
         $routes->post('peserta-ukk/daftarkan', 'Admin\PesertaUkk::daftarkanStore');
         $routes->post('peserta-ukk/status/(:num)', 'Admin\PesertaUkk::status/$1');
-        $routes->get('peserta-ukk/delete/(:num)', 'Admin\PesertaUkk::delete/$1');
+        $routes->post('peserta-ukk/delete/(:num)', 'Admin\PesertaUkk::delete/$1');
 
         // ===== UKK: Jadwal + Penugasan Penguji =====
         $routes->get('jadwal-ukk', 'Admin\JadwalUkk::index');
         $routes->post('jadwal-ukk', 'Admin\JadwalUkk::store');
         $routes->get('jadwal-ukk/penguji/(:num)', 'Admin\JadwalUkk::penguji/$1');
         $routes->post('jadwal-ukk/penguji/(:num)', 'Admin\JadwalUkk::pengujiStore/$1');
-        $routes->get('jadwal-ukk/penguji/(:num)/hapus/(:num)', 'Admin\JadwalUkk::pengujiHapus/$1/$2');
+        $routes->post('jadwal-ukk/penguji/(:num)/hapus/(:num)', 'Admin\JadwalUkk::pengujiHapus/$1/$2');
         $routes->post('jadwal-ukk/(:num)', 'Admin\JadwalUkk::update/$1');
-        $routes->get('jadwal-ukk/delete/(:num)', 'Admin\JadwalUkk::delete/$1');
+        $routes->post('jadwal-ukk/delete/(:num)', 'Admin\JadwalUkk::delete/$1');
 
         // ===== UKK: Penilaian =====
         $routes->get('penilaian-ukk', 'Admin\PenilaianUkk::index');
@@ -495,14 +496,14 @@ $routes->group('admin', static function ($routes) {
         $routes->post('berita-acara-ukk', 'Admin\BeritaAcaraUkk::store');
         $routes->get('berita-acara-ukk/pdf/(:num)', 'Admin\BeritaAcaraUkk::pdf/$1');
         $routes->post('berita-acara-ukk/(:num)', 'Admin\BeritaAcaraUkk::update/$1');
-        $routes->get('berita-acara-ukk/delete/(:num)', 'Admin\BeritaAcaraUkk::delete/$1');
+        $routes->post('berita-acara-ukk/delete/(:num)', 'Admin\BeritaAcaraUkk::delete/$1');
 
         // ===== UKK: Sertifikat =====
         $routes->get('sertifikat-ukk', 'Admin\SertifikatUkk::index');
         $routes->post('sertifikat-ukk', 'Admin\SertifikatUkk::store');
         $routes->get('sertifikat-ukk/pdf/(:num)', 'Admin\SertifikatUkk::pdf/$1');
         $routes->post('sertifikat-ukk/(:num)', 'Admin\SertifikatUkk::update/$1');
-        $routes->get('sertifikat-ukk/delete/(:num)', 'Admin\SertifikatUkk::delete/$1');
+        $routes->post('sertifikat-ukk/delete/(:num)', 'Admin\SertifikatUkk::delete/$1');
 
         // ===== MENU UJIAN (ASTS 1 / ASAS / ASTS 2 / ASAT) =====
         // Satu controller melayani keempat jenis lewat slug; sub-menu "ujian
@@ -646,11 +647,11 @@ $routes->group('admin', static function ($routes) {
         $routes->get('pengumuman', 'Admin\Pengumuman::index');
         $routes->post('pengumuman', 'Admin\Pengumuman::store');
         $routes->post('pengumuman/(:num)', 'Admin\Pengumuman::update/$1');
-        $routes->get('pengumuman/delete/(:num)', 'Admin\Pengumuman::delete/$1');
+        $routes->post('pengumuman/delete/(:num)', 'Admin\Pengumuman::delete/$1');
 
         // ===== AUDIT LOG =====
         $routes->get('audit', 'Admin\AuditLog::index');
-        $routes->get('audit/purge', 'Admin\AuditLog::purge');
+        $routes->post('audit/purge', 'Admin\AuditLog::purge');
 
         // ===== CETAK / EXPORT KURIKULUM (PDF & Excel) =====
         $routes->get('cetak/jadwal-kelas/(:num)/(:segment)', 'Admin\Cetak::jadwalKelas/$1/$2');
@@ -1035,6 +1036,25 @@ $routes->group('api/v1', ['namespace' => 'App\Controllers\Api', 'filter' => 'cor
         $routes->get('pkl/laporan/excel', 'Pkl::laporanExcel');
         $routes->get('pkl/hak-akses', 'Pkl::hakAkses');
         $routes->post('pkl/hak-akses', 'Pkl::hakAksesSimpan');
+
+        // ---------- SURAT SEKOLAH (Operator, Waka Hubin, Admin) — docs/API-SURAT.md ----------
+        // Gerbang peran: Config\Peran 'api_akses' (awalan "surat"). Hak per aksi (buat/ubah/unduh = 'surat_sekolah',
+        // ACC = 'acc', Admin wajib "mewakili") dijaga library yang sama dengan web. Rute statis SEBELUM pola (:num)/(:segment).
+        $routes->get('surat/meta', 'Surat::meta');
+        $routes->get('surat', 'Surat::daftar');
+        $routes->get('surat/form/(:segment)', 'Surat::form/$1');
+        $routes->get('surat/siswa', 'Surat::siswa');
+        $routes->post('surat/acc-massal', 'Surat::accMassal');
+        $routes->post('surat/unduh-massal', 'Surat::unduhMassal');
+        $routes->get('surat/(:num)', 'Surat::detail/$1');
+        $routes->post('surat/(:num)/acc', 'Surat::acc/$1');
+        $routes->post('surat/(:num)/kembalikan', 'Surat::kembalikan/$1');
+        $routes->post('surat/(:num)/batal-acc', 'Surat::batalAcc/$1');
+        $routes->post('surat/(:num)/ajukan-ulang', 'Surat::ajukanUlang/$1');
+        $routes->post('surat/(:num)/batal', 'Surat::batal/$1');
+        $routes->post('surat/(:num)/unduh', 'Surat::unduh/$1');
+        $routes->post('surat/(:num)/ubah', 'Surat::ubah/$1');
+        $routes->post('surat/(:segment)', 'Surat::buat/$1'); // asts | tka | pernyataan-ortu | balasan | penarikan
 
 
         // ---------- PROFIL & PENGATURAN ----------

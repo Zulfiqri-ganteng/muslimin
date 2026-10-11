@@ -4,7 +4,6 @@ namespace Config;
 
 use CodeIgniter\Config\Filters as BaseFilters;
 use CodeIgniter\Filters\Cors;
-use CodeIgniter\Filters\CSRF;
 use CodeIgniter\Filters\DebugToolbar;
 use CodeIgniter\Filters\ForceHTTPS;
 use CodeIgniter\Filters\Honeypot;
@@ -13,6 +12,7 @@ use CodeIgniter\Filters\PageCache;
 use CodeIgniter\Filters\PerformanceMetrics;
 use CodeIgniter\Filters\SecureHeaders;
 use App\Filters\AuthFilter;
+use App\Filters\CsrfFilter;
 use App\Filters\ApiAuthFilter;
 use App\Filters\SubdomainHostFilter;
 
@@ -28,7 +28,8 @@ class Filters extends BaseFilters
      * or [filter_name => [classname1, classname2, ...]]
      */
     public array $aliases = [
-        'csrf'          => CSRF::class,
+        // CSRF bawaan + pesan "berkas terlalu besar" (lihat App\Filters\CsrfFilter).
+        'csrf'          => CsrfFilter::class,
         'toolbar'       => DebugToolbar::class,
         'honeypot'      => Honeypot::class,
         'invalidchars'  => InvalidChars::class,
@@ -114,5 +115,11 @@ class Filters extends BaseFilters
      *
      * @var array<string, array<string, list<string>>>
      */
-    public array $filters = [];
+    public array $filters = [
+        // SEC1 (2026-10-12): semua POST di panel admin wajib membawa token CSRF.
+        // Form sudah memuat csrf_field(); fetch() diberi header otomatis oleh
+        // admin/app.js; tombol hapus dikirim POST (a[data-method="post"]).
+        // API (Bearer token) & form publik siswa tidak termasuk.
+        'csrf' => ['before' => ['admin', 'admin/*']],
+    ];
 }

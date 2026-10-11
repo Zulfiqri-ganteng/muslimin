@@ -4,7 +4,6 @@ namespace App\Controllers\Admin;
 
 use App\Libraries\HakAkses;
 use App\Libraries\SuratSekolah;
-use App\Models\SuratSekolahModel;
 use CodeIgniter\HTTP\RedirectResponse;
 
 /**
@@ -78,11 +77,8 @@ abstract class SuratDasar extends PklDasar
         if ($m === null || $m['surat']['jenis'] !== $jenis) {
             return [null, $this->ke('admin/surat', 'error', 'Surat tidak ditemukan.')];
         }
-        if ((string) ($m['surat']['nomor'] ?? '') !== '') {
-            return [null, $this->ke('admin/surat/' . $id, 'error', 'Surat ini sudah bernomor, jadi datanya tidak bisa diubah. Bila salah, batalkan surat lalu buat yang baru.')];
-        }
-        if (! in_array($m['surat']['status'], ['menunggu', 'dikembalikan'], true)) {
-            return [null, $this->ke('admin/surat/' . $id, 'error', 'Surat berstatus "' . (SuratSekolahModel::TAMPIL_STATUS[$m['surat']['status']][0] ?? $m['surat']['status']) . '" tidak bisa diubah. Surat yang sudah disetujui harus dibatalkan persetujuannya dulu.')];
+        if (($alasan = SuratSekolah::alasanTakBisaUbah($m['surat'])) !== null) {
+            return [null, $this->ke('admin/surat/' . $id, 'error', $alasan)];
         }
 
         return [$m, null];

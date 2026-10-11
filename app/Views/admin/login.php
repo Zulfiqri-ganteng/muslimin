@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="id">
+<html lang="id" class="tema-lilac">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -12,7 +12,7 @@
 <body class="min-h-screen bg-gradient-to-br from-brand-700 to-brand-900 flex items-center justify-center p-4">
     <div class="w-full max-w-md">
         <div class="text-center mb-6">
-            <div class="inline-flex h-14 w-14 items-center justify-center rounded-2xl bg-gold-400 text-brand-900 text-2xl font-extrabold shadow-lg">K</div>
+            <div class="inline-flex h-14 w-14 items-center justify-center rounded-2xl bg-emerald-300 text-brand-900 text-2xl font-extrabold shadow-lg">K</div>
             <h1 class="mt-4 text-white text-2xl font-bold">Panel Admin</h1>
             <p class="text-brand-200 text-sm">Sistem Informasi Akademik Sekolah (BINUS)</p>
         </div>

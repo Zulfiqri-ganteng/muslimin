@@ -335,7 +335,7 @@ $langkahBerikut = ! $adaCeklis ? 1 : (($banding['ada_komponen'] && $jmlBeda > 0)
             <div>
                 <h3 class="text-xs font-bold uppercase tracking-wide text-slate-500">Ceklis pembagian lembar jawaban</h3>
                 <p class="mt-0.5 text-xs text-slate-500">
-                    <span class="mr-1 inline-block h-3 w-3 rounded-sm bg-sky-400 align-middle"></span>biru = guru mengoreksi kelas itu (angka = lembar) ·
+                    <span class="mr-1 inline-block h-3 w-3 rounded-sm bg-brand-500 align-middle"></span>ungu = guru mengoreksi kelas itu (angka = lembar) ·
                     <span class="mx-1 inline-block h-3 w-3 rounded-sm bg-slate-200 align-middle"></span>abu-abu = tidak ·
                     <?php if (! $terkunci): ?><b>klik</b> sel = nyalakan/matikan · <b>klik kanan</b> = angka lembar khusus (bingkai kuning)<?php else: ?>honor dikunci<?php endif; ?>
                 </p>
@@ -419,7 +419,7 @@ $langkahBerikut = ! $adaCeklis ? 1 : (($banding['ada_komponen'] && $jmlBeda > 0)
                                         $khusus = $ada && ! empty($x['ubah'][$k['id']]);
                                         ?>
                                         <td data-k="<?= (int) $k['id'] ?>" data-aktif="<?= $ada ? '1' : '0' ?>" data-khusus="<?= $khusus ? '1' : '' ?>"
-                                            class="border-b border-r border-slate-300 px-0.5 py-1 text-center tabular-nums <?= $terkunci ? '' : 'cursor-pointer' ?> <?= $ada ? 'bg-sky-400 font-semibold text-white' : 'bg-slate-200' ?> <?= $khusus ? 'ring-2 ring-inset ring-amber-400' : '' ?>"><?= $ada ? (int) $x['sel'][$k['id']] : '' ?></td>
+                                            class="border-b border-r border-slate-300 px-0.5 py-1 text-center tabular-nums <?= $terkunci ? '' : 'cursor-pointer' ?> <?= $ada ? 'bg-brand-500 font-semibold text-white' : 'bg-slate-200' ?> <?= $khusus ? 'ring-2 ring-inset ring-amber-400' : '' ?>"><?= $ada ? (int) $x['sel'][$k['id']] : '' ?></td>
                                     <?php endforeach; ?>
                                     <td id="mt-<?= (int) $x['id'] ?>" class="border-b border-r border-slate-200 bg-white px-2 py-1 text-center tabular-nums text-slate-600"><?= $rp($x['total']) ?></td>
                                     <?php if ($i === 0): ?>

@@ -29,7 +29,7 @@ $tgl = static fn ($d) => $d ? date('d/m/Y', strtotime((string) $d)) : '—';
 $warnaStatus = [
     'draft'    => 'bg-slate-100 text-slate-600 border-slate-200',
     'berjalan' => 'bg-emerald-50 text-emerald-700 border-emerald-200',
-    'selesai'  => 'bg-sky-50 text-sky-700 border-sky-200',
+    'selesai'  => 'bg-brand-50 text-brand-700 border-brand-200',
 ];
 $labelStatus = ['draft' => 'Draft', 'berjalan' => 'Berjalan', 'selesai' => 'Selesai'];
 

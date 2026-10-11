@@ -33,7 +33,7 @@ $labelStatusSusulan = [
 ];
 $warnaStatusSusulan = [
     'belum'       => 'bg-amber-50 text-amber-700 border-amber-200',
-    'dijadwalkan' => 'bg-sky-50 text-sky-700 border-sky-200',
+    'dijadwalkan' => 'bg-brand-50 text-brand-700 border-brand-200',
     'selesai'     => 'bg-emerald-50 text-emerald-700 border-emerald-200',
     'batal'       => 'bg-slate-100 text-slate-500 border-slate-200',
 ];

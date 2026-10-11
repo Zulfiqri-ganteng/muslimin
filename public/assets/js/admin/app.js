@@ -28,6 +28,49 @@
         }
     }, true);
 
+    // Token CSRF dari <meta> di layout admin (filter csrf aktif di semua rute admin).
+    function meta(nama) {
+        var m = document.querySelector('meta[name="' + nama + '"]');
+        return m ? m.getAttribute('content') : '';
+    }
+
+    // <a data-method="post" href="…"> — aksi hapus dikirim sebagai POST + token, bukan
+    // GET (tautan GET bisa dipicu dari situs lain). Bila ada data-confirm, pertanyaannya
+    // sudah dijawab "ya" oleh delegasi di atas (fase capture) sebelum sampai ke sini.
+    document.addEventListener('click', function (e) {
+        var a = e.target.closest('a[data-method="post"]');
+        if (!a || e.defaultPrevented) { return; }
+        e.preventDefault();
+        var form = document.createElement('form');
+        form.method = 'post';
+        form.action = a.getAttribute('href');
+        form.style.display = 'none';
+        var token = document.createElement('input');
+        token.type = 'hidden';
+        token.name = meta('csrf-name');
+        token.value = meta('csrf-token');
+        form.appendChild(token);
+        document.body.appendChild(form);
+        form.submit();
+    });
+
+    // fetch() POST/PUT/PATCH/DELETE ke situs sendiri otomatis membawa header token.
+    if (window.fetch && meta('csrf-header')) {
+        var fetchAsli = window.fetch;
+        window.fetch = function (input, init) {
+            init = init || {};
+            var req = (typeof Request !== 'undefined' && input instanceof Request) ? input : null;
+            var metode = String(init.method || (req ? req.method : 'GET')).toUpperCase();
+            var alamat = new URL(req ? req.url : String(input), window.location.href);
+            if (metode !== 'GET' && metode !== 'HEAD' && alamat.origin === window.location.origin) {
+                var h = new Headers(init.headers || (req ? req.headers : undefined));
+                if (!h.has(meta('csrf-header'))) { h.set(meta('csrf-header'), meta('csrf-token')); }
+                init = Object.assign({}, init, { headers: h });
+            }
+            return fetchAsli.call(window, input, init);
+        };
+    }
+
     // <select data-autosubmit> — kirim form induk saat nilai berubah.
     document.addEventListener('change', function (e) {
         var el = e.target.closest('[data-autosubmit]');

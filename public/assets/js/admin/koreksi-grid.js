@@ -19,7 +19,7 @@ document.addEventListener('alpine:init', function () {
         var e = document.getElementById(id);
         if (e) { e.textContent = teks; }
     }
-    var KELAS_AKTIF = ['bg-sky-400', 'text-white', 'font-semibold'];
+    var KELAS_AKTIF = ['bg-brand-500', 'text-white', 'font-semibold'];
     var KELAS_MATI = ['bg-slate-200'];
     var KELAS_KHUSUS = ['ring-2', 'ring-inset', 'ring-amber-400'];
 
