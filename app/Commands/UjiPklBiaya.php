@@ -80,6 +80,7 @@ class UjiPklBiaya extends BaseCommand
         $this->ujiBiayaDanUnduh();
         $this->ujiWa();
         $this->ujiLaporan();
+        $this->ujiBulanSaran();
         $this->bersihkan();
 
         CLI::newLine();
@@ -594,6 +595,51 @@ class UjiPklBiaya extends BaseCommand
     // =================================================================
     // Pemulihan & pembersihan
     // =================================================================
+
+    // =================================================================
+    // 6. Saran bulan per siswa — kotak "Catat biaya" tanpa memilih bulan
+    // =================================================================
+
+    private function ujiBulanSaran(): void
+    {
+        $this->bagian('Saran bulan per siswa (bulan_saran) + cetak ulang tanpa centang');
+        $k = $this->db->table('kelas')->select('id')->where('tingkat', 'XI')->where('deleted_at', null)->orderBy('id')->get()->getRowArray();
+        if ($k === null) {
+            $this->cek('bahan uji: kelas XI tersedia', false);
+
+            return;
+        }
+        $kelas = (int) $k['id'];
+        $s11   = $this->buatSiswa(11, $kelas);
+        $s12   = $this->buatSiswa(12, $kelas);
+        $G     = $this->buatAjuan('PT ZZUJIBY Eta', [[$s11, 'pengaju', '081200000011'], [$s12, 'teman', '081200000012']], $kelas);
+        $bi    = new PklBiaya();
+        $opr   = ['oleh' => 'Operator Uji', 'admin_id' => 9, 'peran' => 'operator', 'ip' => self::IP];
+        $b0    = PklBiaya::bulanIni();
+        $b1    = PklBiaya::geserBulan($b0, 1);
+        $b3    = PklBiaya::geserBulan($b0, 3);
+        $saran = static fn (int $sid): string => (string) ((new PklBiaya())->siap([$G])['siswa'][$sid]['bulan_saran'] ?? '');
+
+        $this->cek('belum ada catatan → saran = bulan berjalan untuk kedua siswa', $G > 0 && $saran($s11) === $b0 && $saran($s12) === $b0, $saran($s11) . ' / ' . $saran($s12));
+
+        $r = $bi->rencana([$G], ['biaya' => [$s11 => ['jenis' => ['spp', 'tabungan', 'osis'], 'bulan' => $b0], $s12 => ['jenis' => ['tabungan'], 'bulan' => $b0]]]);
+        $bi->catat($r['rencana'], $opr);
+        $this->cek('s11 lunas SPP+Tabungan+OSIS bulan ini → saran BULAN DEPAN; s12 baru Tabungan → tetap bulan ini', $r['ok'] && $saran($s11) === $b1 && $saran($s12) === $b0, $saran($s11) . ' / ' . $saran($s12));
+
+        $r = $bi->rencana([$G], ['biaya' => [$s11 => ['jenis' => ['spp', 'tabungan', 'osis'], 'bulan' => $b1, 'jumlah_bulan' => 2]]]);
+        $bi->catat($r['rencana'], $opr);
+        $this->cek('s11 lunas sampai 2 bulan ke depan → saran 3 bulan ke depan (bulan sah)', $r['ok'] && $saran($s11) === $b3 && PklBiaya::bulanSah($b3) !== null, $saran($s11));
+
+        $r = $bi->rencana([$G], ['biaya' => [$s12 => ['jenis' => ['osis'], 'bulan' => $b0, 'beasiswa' => 'yayasan']]]);
+        $bi->catat($r['rencana'], $opr);
+        $this->cek('s12 beasiswa (SPP dibebaskan) + Tabungan & OSIS bulan ini → saran bulan depan walau SPP tak tercatat', $r['ok'] && $saran($s12) === $b1, $saran($s12));
+
+        $r = $bi->rencana([$G], []);
+        $this->cek('semua siswa sudah tercatat → kiriman TANPA isian lolos gerbang, 0 item baru (dasar "langsung unduh" di layar)', $r['ok'] && $r['ringkas']['item_baru'] === 0, json_encode($r['galat']));
+        $r = $bi->rencana([$G], ['biaya' => [$s11 => ['jenis' => ['spp', 'tabungan', 'osis'], 'bulan' => $saran($s11)]]]);
+        $this->cek('isian dengan bulan saran tidak pernah menggandakan bulan yang sudah lunas (3 item baru = bulan saran saja)', $r['ok'] && $r['ringkas']['item_baru'] === 3
+            && array_unique(array_column($r['rencana'][$s11]['baru'], 'periode')) === [$b3], json_encode($r['rencana'][$s11]['baru'] ?? null));
+    }
 
     private function simpanPengaturanAsli(): void
     {

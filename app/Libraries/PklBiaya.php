@@ -225,6 +225,8 @@ final class PklBiaya
      *
      * @param list<int> $ajuanIds hanya yang berstatus disetujui yang dimuat
      *
+     * Tiap siswa juga membawa 'bulan_saran' (lihat bulanSaran()): bulan yang langsung terpilih di kotak "Catat biaya".
+     *
      * @return array{surat: list<array<string,mixed>>, siswa: array<int, array<string,mixed>>, jenis: list<array<string,mixed>>, bulan_default: string}
      */
     public function siap(array $ajuanIds): array
@@ -300,8 +302,44 @@ final class PklBiaya
         foreach ($this->db->table('siswa')->select('id, tahun_masuk')->whereIn('id', array_keys($out['siswa']))->get()->getResultArray() as $r) {
             $out['siswa'][(int) $r['id']]['tahun_masuk'] = $r['tahun_masuk'] !== null ? (int) $r['tahun_masuk'] : null;
         }
+        $bulanan = array_values(array_filter($out['jenis'], static fn (array $j): bool => $j['siklus'] === 'bulanan'));
+        foreach ($out['siswa'] as $sid => $s) {
+            $out['siswa'][$sid]['bulan_saran'] = self::bulanSaran($s, $bulanan);
+        }
 
         return $out;
+    }
+
+    /**
+     * Bulan yang langsung terpilih di kotak "Catat biaya" untuk satu siswa, supaya petugas tak perlu memilih bulan:
+     * mulai bulan berjalan, maju ke bulan pertama yang biaya bulanannya (SPP, Tabungan, OSIS — SPP tak dihitung bila
+     * beasiswa) BELUM lengkap tercatat; paling jauh 12 bulan ke depan.
+     *
+     * @param array<string, mixed>       $s       satu siswa dari siap() (tercatat, beasiswa)
+     * @param list<array<string, mixed>> $bulanan jenis biaya aktif bersiklus bulanan
+     */
+    private static function bulanSaran(array $s, array $bulanan): string
+    {
+        $mulai = self::bulanIni();
+        $kode  = [];
+        foreach ($bulanan as $j) {
+            if (! ($j['kode'] === 'spp' && $s['beasiswa'] !== null)) {
+                $kode[] = (string) $j['kode'];
+            }
+        }
+        if ($kode === []) {
+            return $mulai;
+        }
+        for ($i = 0; $i <= self::MAKS_BULAN; $i++) {
+            $b = self::geserBulan($mulai, $i);
+            foreach ($kode as $k) {
+                if (! in_array($b, $s['tercatat'][$k] ?? [], true)) {
+                    return $b;
+                }
+            }
+        }
+
+        return $mulai;
     }
 
     // =================================================================

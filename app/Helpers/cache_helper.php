@@ -92,6 +92,8 @@ if (! function_exists('master_data_changed')) {
             'siswa'    => ['stat_siswa', 'siswa_per_kelas', 'publik_stats_v2'],
             'teknisi'  => ['opt_teknisi'],
             'lab'      => ['opt_lab'],
+            // Dropdown tahun ajaran di form paket soal, jadwal & laporan UKK.
+            'tahun_ajaran'      => ['opt_tahun_ajaran'],
             // Sistem UKK.
             'tempat_uji'        => ['opt_tempat_uji'],
             'penguji_eksternal' => ['opt_penguji_eksternal'],

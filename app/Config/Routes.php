@@ -747,6 +747,10 @@ $routes->group('api/v1', ['namespace' => 'App\Controllers\Api', 'filter' => 'cor
             'teknisi'      => 'Teknisi',
             'aset'         => 'Aset',
             'sparepart'    => 'Sparepart',
+            // Sistem UKK (fase Android A1)
+            'tempat-uji'        => 'TempatUji',
+            'penguji-eksternal' => 'PengujiEksternal',
+            'paket-soal-ukk'    => 'PaketSoalUkk',
         ] as $seg => $ctrl) {
             $routes->get("admin/master/{$seg}", "Admin\\{$ctrl}::index");
             $routes->post("admin/master/{$seg}", "Admin\\{$ctrl}::store");
@@ -754,6 +758,9 @@ $routes->group('api/v1', ['namespace' => 'App\Controllers\Api', 'filter' => 'cor
             $routes->post("admin/master/{$seg}/(:num)", "Admin\\{$ctrl}::update/\$1");
             $routes->delete("admin/master/{$seg}/(:num)", "Admin\\{$ctrl}::destroy/\$1");
         }
+        // Paket soal UKK — unggah/hapus PDF kisi-kisi & jobsheet (multipart, kolom "berkas")
+        $routes->post('admin/master/paket-soal-ukk/(:num)/berkas/(:segment)', 'Admin\PaketSoalUkk::unggahBerkas/$1/$2');
+        $routes->delete('admin/master/paket-soal-ukk/(:num)/berkas/(:segment)', 'Admin\PaketSoalUkk::hapusBerkas/$1/$2');
         // Aset — detail komputer 1:1 (di atas rute (:num) generik agar cocok)
         $routes->get('admin/master/aset/(:num)/komputer', 'Admin\Aset::komputerGet/$1');
         $routes->post('admin/master/aset/(:num)/komputer', 'Admin\Aset::komputerSet/$1');
@@ -818,6 +825,41 @@ $routes->group('api/v1', ['namespace' => 'App\Controllers\Api', 'filter' => 'cor
         $routes->delete('admin/jurnal-lab/(:num)', 'Admin\JurnalLab::destroy/$1');
 
         $routes->get('admin/laporan-lab', 'Admin\LaporanLab::index');
+
+        // ---------- UKK (alur kerja; fase Android A2 — PDF tetap web) ----------
+        $routes->get('admin/peserta-ukk', 'Admin\PesertaUkk::index');
+        $routes->get('admin/peserta-ukk/calon', 'Admin\PesertaUkk::calon');
+        $routes->post('admin/peserta-ukk/daftarkan', 'Admin\PesertaUkk::daftarkan');
+        $routes->get('admin/peserta-ukk/(:num)', 'Admin\PesertaUkk::show/$1');
+        $routes->post('admin/peserta-ukk/(:num)/status', 'Admin\PesertaUkk::status/$1');
+        $routes->delete('admin/peserta-ukk/(:num)', 'Admin\PesertaUkk::destroy/$1');
+
+        $routes->get('admin/jadwal-ukk', 'Admin\JadwalUkk::index');
+        $routes->post('admin/jadwal-ukk', 'Admin\JadwalUkk::store');
+        $routes->post('admin/jadwal-ukk/bulk-delete', 'Admin\JadwalUkk::bulkDestroy');
+        $routes->get('admin/jadwal-ukk/(:num)/penguji', 'Admin\JadwalUkk::penguji/$1');
+        $routes->post('admin/jadwal-ukk/(:num)/penguji', 'Admin\JadwalUkk::pengujiStore/$1');
+        $routes->delete('admin/jadwal-ukk/(:num)/penguji/(:num)', 'Admin\JadwalUkk::pengujiHapus/$1/$2');
+        $routes->post('admin/jadwal-ukk/(:num)', 'Admin\JadwalUkk::update/$1');
+        $routes->delete('admin/jadwal-ukk/(:num)', 'Admin\JadwalUkk::destroy/$1');
+
+        $routes->get('admin/penilaian-ukk', 'Admin\PenilaianUkk::index');
+        $routes->get('admin/penilaian-ukk/jadwal/(:num)', 'Admin\PenilaianUkk::jadwal/$1');
+        $routes->post('admin/penilaian-ukk/jadwal/(:num)', 'Admin\PenilaianUkk::simpan/$1');
+
+        $routes->get('admin/berita-acara-ukk', 'Admin\BeritaAcaraUkk::index');
+        $routes->post('admin/berita-acara-ukk', 'Admin\BeritaAcaraUkk::store');
+        $routes->get('admin/berita-acara-ukk/(:num)', 'Admin\BeritaAcaraUkk::show/$1');
+        $routes->post('admin/berita-acara-ukk/(:num)', 'Admin\BeritaAcaraUkk::update/$1');
+        $routes->delete('admin/berita-acara-ukk/(:num)', 'Admin\BeritaAcaraUkk::destroy/$1');
+
+        $routes->get('admin/sertifikat-ukk', 'Admin\SertifikatUkk::index');
+        $routes->get('admin/sertifikat-ukk/calon', 'Admin\SertifikatUkk::calon');
+        $routes->post('admin/sertifikat-ukk', 'Admin\SertifikatUkk::store');
+        $routes->post('admin/sertifikat-ukk/(:num)', 'Admin\SertifikatUkk::update/$1');
+        $routes->delete('admin/sertifikat-ukk/(:num)', 'Admin\SertifikatUkk::destroy/$1');
+
+        $routes->get('admin/laporan-ukk', 'Admin\LaporanUkk::index');
 
         // ---------- MENU UJIAN (ASTS 1 / ASAS / ASTS 2 / ASAT) ----------
         // {slug} = asts1|asas|asts2|asat. Semua endpoint menerima ?tp= untuk

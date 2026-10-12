@@ -6,8 +6,13 @@
  *              Dibuka lewat window.dispatchEvent(new CustomEvent('pkl-unduh', {detail: {ajuan: 12}})) atau
  *              {detail: {mode: 'terpilih'|'belum'|'semua'}}. Aturan sebenarnya dijaga server (Libraries\PklBiaya);
  *              di sini hanya kenyamanan + pesan lebih awal.
+ *              - Bulan biaya bulanan terpilih otomatis per siswa (bulan_saran dari server: bulan pertama yang belum lunas).
+ *              - Cetak ulang yang tak perlu mencatat apa pun (semua surat bernomor & tiap siswa sudah punya catatan)
+ *                LANGSUNG diunduh tanpa menampilkan kotak; {detail: {ajuan: 12, paksa: true}} tetap membuka kotak
+ *                (tombol "Catat biaya lain").
  *   pklWa    : daftar siswa + tombol WhatsApp (tautan wa.me, dikirim manual oleh staf). Terbuka otomatis setelah
- *              unduhan selesai (event 'pkl:unduh-selesai' dari app.js) atau lewat event 'pkl-wa' {detail: {ids: [..]}}.
+ *              unduhan selesai (event 'pkl:unduh-selesai' dari app.js) HANYA bila masih ada siswa ber-nomor HP yang
+ *              belum dikabari; selain itu halaman langsung dimuat ulang. Bisa juga lewat event 'pkl-wa' {detail: {ids: [..]}}.
  *
  * Konfigurasi dari atribut data-config pada elemen akar (lihat views/admin/pkl/_unduh.php).
  */
@@ -24,6 +29,11 @@
     function labelBulan(b) {
         var p = b.split('-');
         return BULAN[+p[1] - 1] + ' ' + p[0];
+    }
+    // Jarak bulan dari a ke b ("2026-10" → "2026-12" = 2).
+    function selisih(a, b) {
+        var p = a.split('-'), q = b.split('-');
+        return ((+q[0]) * 12 + (+q[1] - 1)) - ((+p[0]) * 12 + (+p[1] - 1));
     }
     function rupiah(n) {
         return 'Rp ' + String(n).replace(/\B(?=(\d{3})+(?!\d))/g, '.');
@@ -62,6 +72,7 @@
                 semua: { jenis: [], bulan: '', jumlah_bulan: 1 },
                 daftarTerbuka: false,
                 tanggalSurat: '',
+                langsung: false,       // cetak ulang tanpa perlu mencatat apa pun → kirim tanpa menampilkan kotak
 
                 init: function () {
                     var self = this;
@@ -75,7 +86,7 @@
                 tutup: function () { this.buka = false; },
 
                 reset: function () {
-                    this.galat = ''; this.data = null; this.per = {}; this.ids = []; this.daftarTerbuka = false;
+                    this.galat = ''; this.data = null; this.per = {}; this.ids = []; this.daftarTerbuka = false; this.langsung = false;
                     this.semua = { jenis: [], bulan: '', jumlah_bulan: 1 };
                     this.tanggalSurat = this.cfg.hariIni || '';
                 },
@@ -112,16 +123,19 @@
                         if (!j.ok) { self.galat = j.message || 'Gagal memuat data biaya.'; return; }
                         if (j.data.kosong) { self.galat = j.data.pesan || 'Tidak ada surat yang perlu diunduh.'; return; }
                         // Isian per siswa disiapkan SEBELUM data dipasang, supaya tampilan tak pernah membaca isian yang belum ada.
+                        // Bulan langsung terpilih: saran server per siswa (bulan pertama yang belum lunas).
                         var per = {};
                         j.data.siswa.forEach(function (s) {
-                            per[s.siswa_id] = { jenis: [], bulan: j.data.bulan_default, jumlah_bulan: 1, beasiswa: '', beasiswa_ket: '', ringan: false, keringanan: '' };
+                            per[s.siswa_id] = { jenis: [], bulan: s.bulan_saran || j.data.bulan_default, jumlah_bulan: 1, beasiswa: '', beasiswa_ket: '', ringan: false, keringanan: '' };
                         });
                         self.per = per;
                         self.semua.bulan = j.data.bulan_default;
                         self.mode = j.data.surat.length === 1 ? 'satu' : 'massal';
                         // Surat belum bernomor → boleh memilih tanggal surat (satu surat saja).
                         self.perluTanggal = j.data.surat.length === 1 && !j.data.surat[0].nomor;
+                        self.langsung = !d.paksa && self.semuaTercatat(j.data);
                         self.data = j.data;
+                        if (self.langsung) { self.unduhLangsung(); }
                     }).catch(function () {
                         self.memuat = false;
                         self.galat = 'Tidak bisa menghubungi server. Periksa koneksi lalu coba lagi.';
@@ -130,14 +144,40 @@
 
                 perluTanggal: false,
 
+                /**
+                 * Cetak ulang yang tak perlu mencatat apa pun — aturan sama dengan gerbang server (PklBiaya::rencana):
+                 * semua surat sudah bernomor (pernah diunduh) dan tiap siswa sudah punya catatan untuk ajuannya
+                 * (biaya, Biaya PKL periode ini, keringanan, atau beasiswa).
+                 */
+                semuaTercatat: function (d) {
+                    return d.surat.length > 0 && d.siswa.length > 0
+                        && d.surat.every(function (x) { return !!x.nomor; })
+                        && d.siswa.every(function (s) { return s.milik_ajuan > 0 || s.kegiatan_ada || s.ada_keringanan || !!s.beasiswa; });
+                },
+
+                // Kirim formulir tanpa isian biaya (isian tak dirender saat langsung) → layar "Menyiapkan berkas surat…".
+                unduhLangsung: function () {
+                    var self = this;
+                    this.buka = false;
+                    this.$nextTick(function () {
+                        var f = self.$refs.form;
+                        if (f.requestSubmit) { f.requestSubmit(); } else { f.submit(); }
+                    });
+                },
+
                 // ---------- bantu tampilan ----------
                 rupiah: rupiah,
                 labelBulan: labelBulan,
 
+                // 12 bulan ke belakang s/d 2 bulan ke depan — diperpanjang (maks. 12) agar saran tiap siswa selalu ada.
                 opsiBulan: function () {
                     if (!this.data) { return []; }
-                    var dasar = this.data.bulan_default, out = [];
-                    for (var i = -12; i <= 2; i++) { var b = geser(dasar, i); out.push({ v: b, t: labelBulan(b) }); }
+                    var dasar = this.data.bulan_default, maju = 2, out = [];
+                    this.data.siswa.forEach(function (s) {
+                        if (s.bulan_saran) { maju = Math.max(maju, selisih(dasar, s.bulan_saran) + 2); }
+                    });
+                    maju = Math.min(maju, 12);
+                    for (var i = -12; i <= maju; i++) { var b = geser(dasar, i); out.push({ v: b, t: labelBulan(b) }); }
                     return out.reverse();
                 },
 
@@ -260,7 +300,9 @@
                     if (!token) { return; }
                     this.berubah = true;
                     ambilJson(this.cfg.urlHasil + '/' + encodeURIComponent(token)).then(function (j) {
-                        if (j.ok && j.data && j.data.length) { self.daftar = j.data; self.galat = ''; self.buka = true; }
+                        // Kotak hanya muncul bila masih ada siswa ber-nomor HP yang belum dikabari (cetak ulang biasanya tidak).
+                        var perlu = j.ok && j.data ? j.data.filter(function (r) { return r.url && !r.dikabari_at; }) : [];
+                        if (perlu.length) { self.daftar = j.data; self.galat = ''; self.buka = true; }
                         else { window.location.reload(); }
                     }).catch(function () { window.location.reload(); });
                 },

@@ -7,12 +7,18 @@ use App\Models\AsetModel;
 use App\Models\FaseModel;
 use App\Models\GuruModel;
 use App\Models\JabatanModel;
+use App\Models\JadwalUkkModel;
 use App\Models\JurusanModel;
 use App\Models\KelasModel;
 use App\Models\LabModel;
 use App\Models\MataPelajaranModel;
+use App\Models\PaketSoalUkkModel;
+use App\Models\PengujiEksternalModel;
+use App\Models\PesertaUkkModel;
 use App\Models\SparepartModel;
+use App\Models\TahunAjaranModel;
 use App\Models\TeknisiModel;
+use App\Models\TempatUjiModel;
 use App\Models\UjianJadwalModel;
 use App\Models\UjianPengawasModel;
 use App\Models\UjianPeriodeModel;
@@ -63,6 +69,31 @@ class Options extends BaseApiController
         }
         if (in_array('sparepart', $want, true)) {
             $out['sparepart'] = $this->pairs((new SparepartModel())->options());
+        }
+        if (in_array('tahun_ajaran', $want, true)) {
+            $out['tahun_ajaran'] = $this->pairs((new TahunAjaranModel())->options());
+        }
+        // ---- Sistem UKK ----
+        if (in_array('tempat_uji', $want, true)) {
+            $out['tempat_uji'] = $this->pairs((new TempatUjiModel())->options());
+        }
+        if (in_array('penguji_eksternal', $want, true)) {
+            $out['penguji_eksternal'] = $this->pairs((new PengujiEksternalModel())->options());
+        }
+        if (in_array('paket_soal_ukk', $want, true)) {
+            $out['paket_soal_ukk'] = $this->pairs((new PaketSoalUkkModel())->options());
+        }
+        if (in_array('jadwal_ukk', $want, true)) {
+            $out['jadwal_ukk'] = $this->pairs((new JadwalUkkModel())->options());
+        }
+        if (in_array('ukk_status', $want, true)) {
+            $out['ukk_status'] = $this->nilai(PesertaUkkModel::STATUS);
+        }
+        if (in_array('ukk_tipe_penguji', $want, true)) {
+            $out['ukk_tipe_penguji'] = $this->nilai(['internal', 'eksternal'], ['internal' => 'Internal (guru)', 'eksternal' => 'Eksternal']);
+        }
+        if (in_array('ukk_peran_penguji', $want, true)) {
+            $out['ukk_peran_penguji'] = $this->nilai(['ketua', 'anggota']);
         }
         if (in_array('jabatan', $want, true)) {
             // Jabatan membawa penanda struktural agar klien bisa menandainya

@@ -46,7 +46,9 @@ Dibawa oleh `git pull` + `phpm spark migrate` yang sama (tidak ada langkah serve
 ### Cara kerja baru (menimpa bagian C di bawah bila bertentangan)
 - **Waka Hubin tidak bisa mengunduh/mencetak surat** (bawaan) — hanya ACC. **Operator** yang mengunduh surat; sebelum berkas dibuat muncul kotak **Catat biaya**: centang biaya yang sudah diterima tiap siswa
   (wajib minimal satu per siswa; atau Beasiswa 3 tahun / Keringanan beralasan). Satu surat → per siswa; banyak surat → satu set untuk semua. Salah catat? Detail ajuan → kartu **Pembayaran siswa** → hapus catatan (wajib alasan).
-- Setelah unduhan selesai muncul **Kabari via WhatsApp**: tekan tombol hijau, WhatsApp terbuka dengan pesan siap kirim, tekan Kirim. Nomor diambil dari HP yang siswa isi di form. Tombolnya juga ada di daftar Disetujui dan halaman detail.
+  **Sejak 2026-10-12:** bulan terpilih otomatis (bulan pertama yang belum lunas); **cetak ulang** yang semua siswanya sudah tercatat **langsung terunduh** tanpa kotak
+  (tombol detail kini "Unduh surat"; untuk mencatat biaya tambahan pakai "Catat biaya lain, lalu unduh").
+- Setelah unduhan selesai muncul **Kabari via WhatsApp** (hanya bila masih ada siswa yang belum dikabari): tekan tombol hijau, WhatsApp terbuka dengan pesan siap kirim, tekan Kirim. Nomor diambil dari HP yang siswa isi di form. Tombolnya juga ada di daftar Disetujui dan halaman detail.
 - **PKL → Laporan Pembayaran**: siapa, kelas, jurusan, sudah bayar berapa, Lunas/Sebagian/Belum, beasiswa; filter; **Unduh Excel** (Rincian, Rekap Kelas, Rekap Jurusan).
 - Hapus ajuan kini bawaan **Admin saja** (Admin bisa memberi hak itu ke Operator di Hak Akses).
 

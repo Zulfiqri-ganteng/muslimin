@@ -90,7 +90,7 @@ $urlHal = static function (int $hal) use ($status, $q, $kelasId): string {
             <?php endif; ?>
             <?php if (! empty($bolehSurat)): ?>
                 <form id="formMassal" onsubmit="return false"></form>
-                <span class="text-xs leading-relaxed text-slate-500 sm:mr-auto">Surat PKL: centang ajuan lalu unduh. Sebelum berkas dibuat, Anda <b>wajib mencatat biaya</b> yang diterima dari tiap siswa. Yang belum bernomor otomatis diberi nomor sesuai urutan persetujuan.</span>
+                <span class="text-xs leading-relaxed text-slate-500 sm:mr-auto">Surat PKL: centang ajuan lalu unduh. Bila ada siswa yang belum tercatat biayanya, kotak <b>Catat biaya</b> muncul dulu (bulan terpilih otomatis); bila semua sudah tercatat, surat langsung terunduh. Yang belum bernomor otomatis diberi nomor sesuai urutan persetujuan.</span>
                 <button type="button" onclick="window.dispatchEvent(new CustomEvent('pkl-unduh', {detail: {mode: 'terpilih'}}))" class="rounded-lg border border-brand-200 bg-white px-3.5 py-2 text-sm font-semibold text-brand-700 hover:bg-brand-50">⬇ Unduh surat terpilih</button>
                 <button type="button" onclick="window.dispatchEvent(new CustomEvent('pkl-unduh', {detail: {mode: 'belum'}}))" class="rounded-lg border border-brand-200 bg-white px-3.5 py-2 text-sm font-semibold text-brand-700 hover:bg-brand-50">⬇ Yang belum dicetak / perlu cetak ulang</button>
                 <button type="button" onclick="window.dispatchEvent(new CustomEvent('pkl-unduh', {detail: {mode: 'semua'}}))" class="rounded-lg bg-brand-700 px-3.5 py-2 text-sm font-semibold text-white hover:bg-brand-800">⬇ Unduh SEMUA surat</button>

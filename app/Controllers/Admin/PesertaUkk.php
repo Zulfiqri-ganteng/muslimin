@@ -3,6 +3,7 @@
 namespace App\Controllers\Admin;
 
 use App\Controllers\BaseController;
+use App\Libraries\UkkAlur;
 use App\Models\AuditModel;
 use App\Models\JadwalUkkModel;
 use App\Models\KelasModel;
@@ -122,60 +123,20 @@ class PesertaUkk extends BaseController
         ]);
     }
 
-    /** Daftarkan siswa terpilih sekaligus. */
+    /** Daftarkan siswa terpilih sekaligus (aturannya bersama API di UkkAlur::daftarkan). */
     public function daftarkanStore()
     {
         $paketId  = (int) $this->request->getPost('paket_soal_id');
         $jadwalId = (int) $this->request->getPost('jadwal_ukk_id') ?: null;
-        $siswaIds = array_values(array_filter(array_map('intval', (array) $this->request->getPost('siswa_ids'))));
 
-        $paket = $paketId ? (new PaketSoalUkkModel())->find($paketId) : null;
-        if (! $paket) {
-            return redirect()->back()->with('error', 'Paket soal tidak ditemukan.');
+        $hasil = UkkAlur::daftarkan($paketId, $jadwalId, (array) $this->request->getPost('siswa_ids'));
+        if (! $hasil['ok']) {
+            return redirect()->back()->with('error', $hasil['pesan']);
         }
-        if ($siswaIds === []) {
-            return redirect()->back()->with('error', 'Pilih minimal satu siswa untuk didaftarkan.');
-        }
+        $paket    = $hasil['paket'];
+        $inserted = $hasil['didaftarkan'];
+        $skipped  = $hasil['dilewati'];
 
-        $db = db_connect();
-        $db->transException(true);
-        $db->transStart();
-
-        $inserted = 0;
-        $skipped  = 0;
-        foreach ($siswaIds as $sid) {
-            // Cek termasuk yang soft-deleted, agar pendaftaran lama bisa dipulihkan
-            // alih-alih bentrok dengan UNIQUE(siswa_id, paket_soal_id).
-            $existing = $this->model->withDeleted()->where(['siswa_id' => $sid, 'paket_soal_id' => $paketId])->first();
-            if ($existing && $existing['deleted_at'] === null) {
-                $skipped++;
-                continue;
-            }
-
-            $noPeserta = $this->model->nomorBerikutnya($paket['kode']);
-            $data = [
-                'siswa_id'        => $sid,
-                'paket_soal_id'   => $paketId,
-                'jadwal_ukk_id'   => $jadwalId,
-                'tahun_ajaran_id' => $paket['tahun_ajaran_id'],
-                'no_peserta'      => $noPeserta,
-                'status'          => 'terdaftar',
-            ];
-
-            if ($existing) {
-                // Pulihkan pendaftaran yang dulu dihapus.
-                $this->model->protect(false);
-                $this->model->update($existing['id'], $data + ['deleted_at' => null]);
-                $this->model->protect(true);
-            } else {
-                $this->model->insert($data);
-            }
-            $inserted++;
-        }
-
-        $db->transComplete();
-
-        master_data_changed('peserta_ukk');
         $this->audit->record('create', 'peserta_ukk', null, "Daftarkan {$inserted} peserta UKK untuk paket {$paket['kode']}" . ($skipped ? " ({$skipped} sudah terdaftar, dilewati)" : ''));
 
         $msg = "{$inserted} peserta berhasil didaftarkan.";

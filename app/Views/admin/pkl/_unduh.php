@@ -1,8 +1,13 @@
 <?php
 /**
  * Dua kotak dialog PKL (perilaku: assets/js/admin/pkl-unduh.js):
- *   1. "Catat biaya" — wajib sebelum surat diunduh (Biaya PKL, SPP, Tabungan Wajib, Iuran OSIS, Beasiswa, Keringanan);
- *   2. "Kabari lewat WhatsApp" — daftar siswa + tautan wa.me, dikirim manual oleh staf.
+ *   1. "Catat biaya" — wajib sebelum surat diunduh (Biaya PKL, SPP, Tabungan Wajib, Iuran OSIS, Beasiswa, Keringanan).
+ *      Bulan terpilih otomatis per siswa (bulan_saran). Cetak ulang yang semua siswanya sudah tercatat langsung
+ *      diunduh tanpa kotak ini (kecuali dibuka lewat "Catat biaya lain" = paksa);
+ *   2. "Kabari lewat WhatsApp" — daftar siswa + tautan wa.me, dikirim manual oleh staf; muncul sendiri sesudah unduh
+ *      hanya bila masih ada siswa yang belum dikabari.
+ * PENTING: tiap <option> bulan memakai :selected — x-model pada <select> yang opsinya dibuat x-for tidak memilih opsi
+ * saat opsi baru muncul, sehingga browser menampilkan & MENGIRIM opsi pertama (dulu: 2 bulan ke depan).
  * Dibuka lewat window.dispatchEvent(new CustomEvent('pkl-unduh', …)) / ('pkl-wa', …). Hanya dimuat untuk peran berhak 'surat'.
  */
 $awal = rtrim(site_url('admin/pkl'), '/') . '/';
@@ -24,7 +29,7 @@ $cfgAttr = esc(json_encode($cfg), 'attr');
     <div x-show="buka" x-cloak x-transition.opacity.duration.150ms class="fixed inset-0 z-50 flex items-end justify-center sm:items-center sm:p-4" role="dialog" aria-modal="true" aria-labelledby="judulBiaya">
         <div class="absolute inset-0 bg-slate-900/50" @click="tutup()"></div>
 
-        <form method="post" :action="tujuan" data-unduh data-pkl-wa @submit="cek($event)"
+        <form method="post" :action="tujuan" data-unduh data-pkl-wa @submit="cek($event)" x-ref="form"
               class="relative flex max-h-[94vh] w-full flex-col overflow-hidden rounded-t-2xl bg-white shadow-2xl sm:max-w-3xl sm:rounded-2xl">
             <?= csrf_field() ?>
             <input type="hidden" name="mode" :value="modeKirim">
@@ -49,7 +54,7 @@ $cfgAttr = esc(json_encode($cfg), 'attr');
                 <p x-show="memuat" class="py-8 text-center text-slate-500">Memuat data biaya siswa…</p>
                 <p x-show="galat" x-text="galat" class="rounded-xl border border-red-300 bg-red-50 px-4 py-3 text-sm font-semibold leading-relaxed text-red-800"></p>
 
-                <template x-if="data">
+                <template x-if="data && !langsung">
                     <div class="space-y-4">
                         <p class="rounded-xl border border-brand-200 bg-brand-50 px-4 py-2.5 text-xs leading-relaxed text-brand-900">
                             Catat biaya yang <b>sudah diterima</b> dari tiap siswa. <b>Wajib minimal satu</b> centang per siswa (atau Beasiswa / Keringanan beralasan).
@@ -104,11 +109,12 @@ $cfgAttr = esc(json_encode($cfg), 'attr');
                                         <div class="mt-3 flex flex-wrap items-center gap-x-3 gap-y-2 text-xs text-slate-600" x-show="bulananAda()">
                                             <span>Biaya bulanan untuk bulan</span>
                                             <select class="inp !w-auto !py-1.5 text-xs" :name="'biaya[' + s.siswa_id + '][bulan]'" x-model="per[s.siswa_id].bulan">
-                                                <template x-for="o in opsiBulan()" :key="o.v"><option :value="o.v" x-text="o.t"></option></template>
+                                                <template x-for="o in opsiBulan()" :key="o.v"><option :value="o.v" x-text="o.t" :selected="o.v === per[s.siswa_id].bulan"></option></template>
                                             </select>
                                             <span>sebanyak</span>
                                             <input type="number" min="1" max="12" class="inp !w-16 !py-1.5 text-xs" :name="'biaya[' + s.siswa_id + '][jumlah_bulan]'" x-model.number="per[s.siswa_id].jumlah_bulan">
                                             <span>bulan</span>
+                                            <span class="w-full text-[11px] text-slate-400">Bulan terpilih otomatis: bulan pertama yang belum lunas. Ganti hanya bila siswa membayar bulan lain.</span>
                                         </div>
 
                                         <div class="mt-3 space-y-2 border-t border-slate-100 pt-3 text-xs">
@@ -157,7 +163,7 @@ $cfgAttr = esc(json_encode($cfg), 'attr');
                                 <div class="flex flex-wrap items-center gap-x-3 gap-y-2 text-xs text-slate-600" x-show="bulananAda()">
                                     <span>Biaya bulanan untuk bulan</span>
                                     <select class="inp !w-auto !py-1.5 text-xs" name="semua[bulan]" x-model="semua.bulan">
-                                        <template x-for="o in opsiBulan()" :key="o.v"><option :value="o.v" x-text="o.t"></option></template>
+                                        <template x-for="o in opsiBulan()" :key="o.v"><option :value="o.v" x-text="o.t" :selected="o.v === semua.bulan"></option></template>
                                     </select>
                                     <span>sebanyak</span>
                                     <input type="number" min="1" max="12" class="inp !w-16 !py-1.5 text-xs" name="semua[jumlah_bulan]" x-model.number="semua.jumlah_bulan">
@@ -188,7 +194,7 @@ $cfgAttr = esc(json_encode($cfg), 'attr');
                 <p class="text-xs text-slate-500" x-show="data">Akan dicatat sekarang: <b class="text-slate-800" x-text="rupiah(totalBaru())"></b></p>
                 <div class="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
                     <button type="button" @click="tutup()" class="rounded-xl border border-slate-300 bg-white px-5 py-2.5 text-sm font-semibold text-slate-600 transition hover:bg-slate-50">Batal</button>
-                    <button type="submit" :disabled="!data || memuat" class="rounded-xl bg-brand-700 px-5 py-2.5 text-sm font-bold text-white shadow-sm transition hover:bg-brand-800 active:scale-95 disabled:cursor-not-allowed disabled:opacity-50">⬇ Catat biaya &amp; unduh surat</button>
+                    <button type="submit" :disabled="!data || memuat" class="rounded-xl bg-brand-700 px-5 py-2.5 text-sm font-bold text-white shadow-sm transition hover:bg-brand-800 active:scale-95 disabled:cursor-not-allowed disabled:opacity-50">⬇ Simpan biaya &amp; unduh surat</button>
                 </div>
             </div>
         </form>

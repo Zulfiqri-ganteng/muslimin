@@ -82,6 +82,35 @@ abstract class BaseCrud extends BaseApiController
     {
     }
 
+    /**
+     * Pemeriksaan tambahan di luar aturan model (mis. total bobot, id rujukan). Kembalikan galat per kolom;
+     * kosong = lolos. Galatnya digabung dengan galat validasi model supaya klien menerima semuanya sekaligus.
+     */
+    protected function periksa(array $payload): array
+    {
+        return [];
+    }
+
+    /**
+     * Id rujukan (kolom FK) yang tak ada di tabel induknya → galat per kolom. Tanpa ini, id asal-asalan dari klien
+     * memicu galat FK basis data (HTTP 500) alih-alih 422 yang jelas.
+     *
+     * @param array<string,array{0:string,1:string}> $peta kolom => [tabel, label]
+     */
+    protected function rujukanHilang(array $payload, array $peta): array
+    {
+        $db  = db_connect();
+        $err = [];
+        foreach ($peta as $kolom => [$tabel, $label]) {
+            $id = (int) ($payload[$kolom] ?? 0);
+            if ($id > 0 && $db->table($tabel)->where('id', $id)->countAllResults() === 0) {
+                $err[$kolom] = $label . ' tidak ditemukan.';
+            }
+        }
+
+        return $err;
+    }
+
     // ===================== ENDPOINTS =====================
 
     /** GET daftar: ?q=&per=&page= (+ filter khusus entitas). */
@@ -107,6 +136,9 @@ abstract class BaseCrud extends BaseApiController
     public function store(): ResponseInterface
     {
         $payload = $this->collect($this->body());
+        if (($tolak = $this->tolakPayload($payload)) !== null) {
+            return $tolak;
+        }
 
         if (! $this->model->insert($payload)) {
             return $this->invalid($this->model->errors());
@@ -130,6 +162,9 @@ abstract class BaseCrud extends BaseApiController
 
         $payload       = $this->collect($this->body());
         $payload['id'] = $id; // untuk placeholder {id} pada rule is_unique
+        if (($tolak = $this->tolakPayload($payload)) !== null) {
+            return $tolak;
+        }
 
         if (! $this->model->update($id, $payload)) {
             return $this->invalid($this->model->errors());
@@ -172,6 +207,21 @@ abstract class BaseCrud extends BaseApiController
     }
 
     // ===================== INTERNAL =====================
+
+    /**
+     * Jalankan periksa(); bila ada galat, gabung dengan galat validasi model lalu tolak 422. Pesan periksa() menang
+     * untuk kolom yang sama (lebih spesifik & berbahasa Indonesia).
+     */
+    private function tolakPayload(array $payload): ?ResponseInterface
+    {
+        $extra = $this->periksa($payload);
+        if ($extra === []) {
+            return null;
+        }
+        $model = $this->model->validate($payload) ? [] : $this->model->errors();
+
+        return $this->invalid($extra + $model);
+    }
 
     /** Hapus + seluruh relasi dalam satu transaksi (anti-orphan). */
     protected function removeWithRelations(array $ids): void

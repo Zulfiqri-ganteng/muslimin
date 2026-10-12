@@ -3,6 +3,7 @@
 namespace App\Controllers\Admin;
 
 use App\Controllers\BaseController;
+use App\Libraries\UkkAlur;
 use App\Models\AuditModel;
 use App\Models\PesertaUkkModel;
 use App\Models\SertifikatUkkModel;
@@ -60,29 +61,20 @@ class SertifikatUkk extends BaseController
         ]);
     }
 
+    /** Terbitkan sertifikat (aturannya bersama API di UkkAlur::terbitkanSertifikat; yang dulu dihapus dipulihkan). */
     public function store()
     {
-        $pesertaId = (int) $this->request->getPost('peserta_ukk_id');
-        $peserta   = $pesertaId ? (new PesertaUkkModel())->find($pesertaId) : null;
-        if (! $peserta) {
-            return redirect()->back()->with('error', 'Peserta wajib dipilih.');
+        $hasil = UkkAlur::terbitkanSertifikat(
+            (int) $this->request->getPost('peserta_ukk_id'),
+            trim((string) $this->request->getPost('tanggal_terbit')),
+            trim((string) $this->request->getPost('keterangan'))
+        );
+        if (! $hasil['ok']) {
+            return redirect()->back()->withInput()->with('error', $hasil['pesan']);
         }
-        if ($peserta['status'] !== 'lulus') {
-            return redirect()->back()->with('error', 'Sertifikat hanya bisa diterbitkan untuk peserta berstatus lulus.');
-        }
+        $this->audit->record('create', 'sertifikat_ukk', $hasil['id'], 'Terbitkan sertifikat UKK ' . $hasil['nomor'] . ($hasil['dipulihkan'] ? ' (dipulihkan)' : ''));
 
-        $data = [
-            'peserta_ukk_id'   => $pesertaId,
-            'nomor_sertifikat' => $this->model->nomorBerikutnya(),
-            'tanggal_terbit'   => trim((string) $this->request->getPost('tanggal_terbit')) ?: date('Y-m-d'),
-            'keterangan'       => trim((string) $this->request->getPost('keterangan')) ?: null,
-        ];
-        if (! $this->model->insert($data)) {
-            return redirect()->back()->withInput()->with('errors', $this->model->errors());
-        }
-        $this->audit->record('create', 'sertifikat_ukk', $this->model->getInsertID(), 'Terbitkan sertifikat UKK ' . $data['nomor_sertifikat']);
-
-        return redirect()->to(site_url('admin/sertifikat-ukk'))->with('success', 'Sertifikat ' . $data['nomor_sertifikat'] . ' diterbitkan.');
+        return redirect()->to(site_url('admin/sertifikat-ukk'))->with('success', 'Sertifikat ' . $hasil['nomor'] . ' diterbitkan.');
     }
 
     /** @param int|string $id */

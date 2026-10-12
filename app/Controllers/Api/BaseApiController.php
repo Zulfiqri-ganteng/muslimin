@@ -74,8 +74,9 @@ abstract class BaseApiController extends Controller
      *
      * @param array $items daftar item halaman ini
      * @param array $pager ['page'=>int,'perPage'=>int,'total'=>int]
+     * @param array $meta  meta tambahan di samping 'pagination' (mis. ['ringkasan' => [...]])
      */
-    protected function collection(array $items, array $pager, string $message = 'Berhasil'): ResponseInterface
+    protected function collection(array $items, array $pager, string $message = 'Berhasil', array $meta = []): ResponseInterface
     {
         $page    = (int) ($pager['page'] ?? 1);
         $perPage = (int) ($pager['perPage'] ?? count($items));
@@ -88,7 +89,24 @@ abstract class BaseApiController extends Controller
                 'total'       => $total,
                 'total_pages' => $perPage > 0 ? (int) ceil($total / $perPage) : 1,
             ],
-        ]);
+        ] + $meta);
+    }
+
+    /**
+     * Respons gagal dari hasil Library bersama web+API (mis. App\Libraries\UkkAlur):
+     * ['ok' => false, 'kode' => 404|409|422, 'pesan' => '…', 'errors' => [kolom => pesan]].
+     */
+    protected function tolakHasil(array $hasil): ResponseInterface
+    {
+        $kode = (int) ($hasil['kode'] ?? 422);
+        if ($kode === 404) {
+            return $this->missing((string) $hasil['pesan']);
+        }
+        if ($kode === 422) {
+            return $this->invalid((array) ($hasil['errors'] ?? []), (string) $hasil['pesan']);
+        }
+
+        return $this->failure((string) $hasil['pesan'], $kode, ['errors' => (array) ($hasil['errors'] ?? [])]);
     }
 
     private function envelope(string $status, string $message, $data, int $code, array $meta = []): ResponseInterface

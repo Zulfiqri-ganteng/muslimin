@@ -118,7 +118,7 @@ Terbaca di: `auth/login`, `auth/biometric/login`, `auth/me` → `data.admin.hak_
 |---|---|---|---|
 | GET | `pkl/biaya[?semua=1]` | PKL | jenis biaya aktif (`semua=1` + hak `pengaturan`: termasuk nonaktif), `sumber_beasiswa`, `bulan_default`, `maks_jumlah_bulan`, `aturan`, `wa_templat`, `wa_penanda` |
 | POST | `pkl/biaya` | `pengaturan` | `{biaya:{kode:{nama,nominal,aktif}}, wa_pesan?}` — sebagian boleh; 422 bila nominal tak sah / semua nonaktif / penanda asing |
-| GET | `pkl/surat/siap?mode=&ids[]=` | `surat` | keadaan biaya tiap siswa sebelum unduh |
+| GET | `pkl/surat/siap?mode=&ids[]=` | `surat` | keadaan biaya tiap siswa sebelum unduh; tiap siswa membawa `bulan_saran` (YYYY-MM: bulan pertama mulai bulan berjalan yang biaya bulanannya belum lengkap — nilai awal pemilih bulan) |
 | POST | `pkl/ajuan/{id}/surat`, `pkl/surat-massal` | `surat` | kini WAJIB memuat biaya (di bawah) |
 | GET | `pkl/ajuan/{id}/pembayaran` | `surat`/`laporan` | catatan biaya per siswa (+ `data.pembayaran` pada detail ajuan) |
 | POST | `pkl/ajuan/{id}/pembayaran/hapus` | `surat` | `{pembayaran_id, alasan(5–200)}` |
@@ -135,6 +135,8 @@ Body: `{"tanggal_surat"?, "biaya": {"<siswa_id>": {"jenis":["pkl","spp"],"bulan"
 atau keringanan beralasan (≥ 5 huruf); jika tidak → **422** `data.errors` (`umum` = pesan menyebut nama siswa; atau per `siswa_id`), **tidak ada berkas, nomor surat tidak terpakai**.
 Pembayaran dicatat **setelah** berkas jadi (satu transaksi, tak digandakan: UNIQUE siswa+jenis+periode). Header balasan sukses: `X-Jumlah-Surat`, `X-Surat-Ids` (id ajuan terbit),
 `X-Biaya-Dicatat` (`item:total`). Jenis biaya: `pkl` (sekali per tahun ajaran), `spp`/`tabungan`/`osis` (bulanan; `bulan` YYYY-MM, `jumlah_bulan` 1–12).
+**Cetak ulang tanpa dialog** (web sejak 2026-10-12, Flutter wajib meniru): bila semua surat sudah bernomor dan tiap siswa sudah memenuhi gerbang
+(`milik_ajuan > 0 || kegiatan_ada || ada_keringanan || beasiswa`), kirim POST unduh tanpa `biaya`/`semua` — lolos, 0 item baru.
 Nomor surat kini berformat tiga angka secara bawaan (`001/SMK-BN/PKL/X/2026`); format diatur Admin/Operator di Pengaturan PKL (`{urut}`, `{urut3}`, `{urut4}`).
 
 ## Catatan untuk pembuat aplikasi

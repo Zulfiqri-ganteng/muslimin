@@ -330,17 +330,42 @@ JSON (bukan endpoint pdf/excel) krn dompdf/print bukan use-case mobile.
 Mobile untuk BA/Sertifikat = kelola data (index/store/update/destroy)
 saja; cetak PDF tetap lewat browser ke situs web.
 
-- [ ] **A1 — API Master** (`Api\Admin\TempatUji/PengujiEksternal/PaketSoalUkk`
+- [x] **A1 — API Master** (`Api\Admin\TempatUji/PengujiEksternal/PaketSoalUkk`
       extends `BaseCrud`, pola persis `Api\Admin\Lab`) + tambah 3 tipe baru
       ke `Api\Admin\Options` (tempat_uji, penguji_eksternal, paket_soal_ukk)
-      + daftar di foreach master API Routes.php.
-- [ ] **A2 — API Workflow**: `Api\Admin\PesertaUkk` (index+filter, daftarkan
+      + daftar di foreach master API Routes.php. **Selesai 2026-10-12:**
+      rute `admin/master/{tempat-uji|penguji-eksternal|paket-soal-ukk}`
+      (index/store/update/destroy/bulk-delete; khusus Admin, sama dengan web)
+      + `POST/DELETE admin/master/paket-soal-ukk/{id}/berkas/{kisi-kisi|jobsheet}`
+      (PDF multipart kolom `berkas`, URL publik `kisi_kisi_url`/`jobsheet_url`).
+      Options juga dapat tipe `tahun_ajaran`. `BaseCrud` dapat kait
+      `periksa()` + `rujukanHilang()`: total bobot ≠ 100 dan id lab/jurusan/
+      tahun ajaran yang tak ada → 422 (digabung dengan galat validasi model),
+      bukan galat FK 500. Sekalian perbaikan: `master_data_changed('tahun_ajaran')`
+      kini menghapus cache `opt_tahun_ajaran` (dulu dropdown basi s.d. 6 jam).
+      Uji HTTP 42 cek (41 lulus + 1 salah kunci di skrip uji, bukan API).
+- [x] **A2 — API Workflow**: `Api\Admin\PesertaUkk` (index+filter, daftarkan
       massal, status, destroy), `Api\Admin\JadwalUkk` (+ sub-resource
       penguji: index/store/destroy), `Api\Admin\PenilaianUkk` (matriks per
       jadwal + simpan), `Api\Admin\BeritaAcaraUkk`, `Api\Admin\SertifikatUkk`
       (CRUD data, TANPA pdf), `Api\Admin\LaporanUkk` (index saja, JSON).
       Ekstrak `Admin\LaporanUkk::hitung()` (web) → `App\Libraries\UkkReport::
       hitung()` (pola `LabReport`) supaya dipakai bersama web+API.
+      **Selesai 2026-10-12:** 28 rute `api/v1/admin/{peserta|jadwal|penilaian|
+      berita-acara|sertifikat|laporan}-ukk` (khusus Admin). Selain `UkkReport`,
+      aturan alur juga diekstrak ke `App\Libraries\UkkAlur` (daftarkan,
+      simpanNilai, terbitkanSertifikat) dan web memakainya → web & API tak
+      bisa beda. Tambahan API: `peserta-ukk/calon`, `peserta-ukk/{id}` (detail
+      + nilai), `sertifikat-ukk/calon`, `berita-acara-ukk/{id}` (isi PDF sbg
+      JSON), `pdf_web` di BA & sertifikat, Options `jadwal_ukk`, `ukk_status`,
+      `ukk_tipe_penguji`, `ukk_peran_penguji`; sel nilai & penguji punya
+      `kunci` "{tipe}-{id}" utk mencocokkan matriks. **Bug web lama
+      diperbaiki:** sertifikat yang dihapus tak bisa diterbitkan ulang (UNIQUE
+      peserta_ukk_id ikut baris terhapus) → kini dipulihkan dgn nomor lamanya.
+      Validasi baru (web+API): skor 0–100 & angka, tanggal TTTT-BB-HH,
+      jadwal harus milik paket, id siswa/guru/penguji asal → 422 bukan 500.
+      Uji HTTP 73/73 (API + regresi web: rekap/Excel/PDF, daftarkan, nilai,
+      sertifikat).
 - [ ] **A3 — Flutter master** (di `C:\flutter-muslimin`): tambah Tempat
       Uji/Penguji Eksternal/Paket Soal ke `MasterMenuScreen` + form (pola
       `lab_form.dart`/`teknisi_form.dart`).
