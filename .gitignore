@@ -159,3 +159,7 @@ _modules/*
 /formatdatasekolah/
 # Berkas Excel resmi siswa & laporan/cadangannya (data pribadi) — jangan di-commit. Ditambahkan 2026-10-08.
 /writable/data-sekolah/
+# Template Flowbite Admin Dashboard (MIT) — bahan contekan upgrade tampilan, bukan bagian aplikasi. Ditambahkan 2026-10-13.
+/resources/flowbite/
+# Paket npm (alat bangun admin.css & salinan pustaka). Hasil build/salinan ada di public/assets dan IKUT di-commit. Ditambahkan 2026-10-13.
+/node_modules/
