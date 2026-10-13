@@ -531,6 +531,7 @@ class Pkl extends BaseController
         return [
             'jenisBiaya'  => (new \App\Libraries\PklBiaya())->jenis(true),
             'waPesan'     => (string) ($this->p['wa_pesan'] ?? ''),
+            'waPesanBalasan' => (string) ($this->p['wa_pesan_balasan'] ?? ''),
             'sekolahNama' => (string) ((new SettingModel())->get()['school_name'] ?? ''),
         ];
     }

@@ -184,6 +184,10 @@ $routes->group('admin', static function ($routes) {
         $routes->post('surat/penarikan/(:num)/ubah', 'Admin\SuratPkl::simpanUbahPenarikan/$1', ['filter' => 'csrf']);
         $routes->post('surat/acc-massal', 'Admin\Surat::accMassal', ['filter' => 'csrf']);
         $routes->post('surat/unduh-massal', 'Admin\Surat::unduhMassal', ['filter' => 'csrf']);
+        // Kabar WhatsApp "siap diambil" (Surat Balasan; hak Unduh jenis itu) — Libraries\SuratWa.
+        $routes->get('surat/wa', 'Admin\Surat::waJenis');
+        $routes->get('surat/(:num)/wa', 'Admin\Surat::wa/$1');
+        $routes->post('surat/(:num)/wa/(:num)/tandai', 'Admin\Surat::tandaiWa/$1/$2', ['filter' => 'csrf']);
         $routes->get('surat/(:num)', 'Admin\Surat::detail/$1', ['filter' => 'csrf']);
         $routes->post('surat/(:num)/acc', 'Admin\Surat::acc/$1', ['filter' => 'csrf']);
         $routes->post('surat/(:num)/kembalikan', 'Admin\Surat::kembalikan/$1', ['filter' => 'csrf']);
@@ -1114,6 +1118,10 @@ $routes->group('api/v1', ['namespace' => 'App\Controllers\Api', 'filter' => 'cor
         $routes->post('surat/unduh-massal', 'Surat::unduhMassal');
         // Kotak "Lapor Diterima PKL" (laporan siswa → Surat Balasan); hak = Buat ATAU ACC Surat Balasan (PklLapor::hak).
         $routes->get('surat/balasan/laporan', 'Surat::laporan');
+        // Kabar WhatsApp "surat siap diambil" (Surat Balasan; hak Unduh) — Libraries\SuratWa.
+        $routes->get('surat/wa', 'Surat::waJenis');
+        $routes->get('surat/(:num)/wa', 'Surat::wa/$1');
+        $routes->post('surat/(:num)/wa/(:num)/tandai', 'Surat::waTandai/$1/$2');
         $routes->post('surat/balasan/laporan/(:num)/setujui', 'Surat::laporanSetujui/$1');
         $routes->post('surat/balasan/laporan/(:num)/buat', 'Surat::laporanBuat/$1');
         $routes->post('surat/balasan/laporan/(:num)/kembalikan', 'Surat::laporanKembalikan/$1');

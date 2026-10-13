@@ -57,6 +57,19 @@ Laporan DIKLAIM atomik: dua staf menekan bersamaan → yang kedua **409**. Ajuan
 (tertaut ke surat lama, `200`). Ajuan tak lagi disetujui / isian tak sah → **409/422** dan laporan kembali "baru". Surat Balasan
 yang dibuat lewat jalur LAIN (`POST surat/balasan`, web) ikut menandai laporan menunggu ajuan itu selesai.
 
+### Kabar WhatsApp "surat siap diambil" (2026-10-13)
+Saat ini untuk **Surat Balasan PKL** (`Libraries\SuratWa`). Tersedia setelah surat DIUNDUH; hak = **Unduh** jenis itu. Sistem hanya
+menyiapkan tautan `wa.me` + pesan — staf mengirim dari WhatsApp-nya sendiri, lalu aplikasi memanggil `tandai`.
+
+| Metode | Alamat | Isi / catatan |
+|---|---|---|
+| GET | `surat/{id}/wa` | baris: `surat_id, kode, jenis, nomor_surat, perusahaan, siswa_id, nama, kelas, hp, wa (62…\|null), url (https://wa.me/…\|null), alasan_tidak, pesan, dikabari_at, dikabari_oleh`. Belum diunduh → `[]` |
+| GET | `surat/wa?jenis=balasan_pkl` | kabar massal: siswa yang BELUM dikabari pada semua surat jenis itu yang sudah diunduh (maks 300) |
+| POST | `surat/{id}/wa/{siswa_id}/tandai` | → `{dikabari_at, dikabari_oleh}`; surat belum diunduh / siswa bukan di surat → 409 |
+
+`hak.kabari` pada detail surat = boleh menampilkan tombol. Jenis tanpa kabar → 422; tanpa hak Unduh → 403. Templat pesan:
+Pengaturan PKL (`pkl_pengaturan.wa_pesan_balasan`, penanda sama dengan Surat Izin PKL).
+
 Slug: `asts`, `tka`, `pernyataan-ortu`, `balasan`, `penarikan` (= ujung alamat menu web). Isian sama dengan formulir web
 (rinci per slug: `BLUEPRINT-SURAT.md` §5). Boolean JSON (`true/false`) disamakan jadi `'1'/'0'` sebelum dibaca library
 (mis. `isi_ortu: false` tetap berarti "tidak").

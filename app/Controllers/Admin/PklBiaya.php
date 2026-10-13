@@ -8,6 +8,7 @@ use App\Libraries\PklLaporanBiaya;
 use App\Libraries\PklNomorSurat;
 use App\Libraries\PklSurat;
 use App\Libraries\PklWa;
+use App\Libraries\SuratWa;
 use App\Models\AuditModel;
 use App\Models\SettingModel;
 use CodeIgniter\HTTP\RedirectResponse;
@@ -137,10 +138,18 @@ class PklBiaya extends PklDasar
         if ($pesan !== '' && $pesan !== PklWa::PESAN_BAWAAN) {
             $galatWa = PklWa::periksaPesan($pesan);
         }
+        // Pesan Surat Balasan siap diambil (SuratWa) — hanya bila kolomnya sudah ada (migrasi) dan isiannya dikirim.
+        $ubah     = ['wa_pesan' => ($pesan === '' || $pesan === PklWa::PESAN_BAWAAN) ? null : $pesan, 'updated_at' => date('Y-m-d H:i:s')];
+        $kirimB   = $this->request->getPost('wa_pesan_balasan');
+        if ($kirimB !== null && SuratWa::kolomAda()) {
+            $pesanB = trim((string) $kirimB);
+            if ($pesanB !== '' && $pesanB !== SuratWa::PESAN_BAWAAN) {
+                $galatWa ??= ($g = PklWa::periksaPesan($pesanB)) !== null ? 'Pesan Surat Balasan: ' . $g : null;
+            }
+            $ubah['wa_pesan_balasan'] = ($pesanB === '' || $pesanB === SuratWa::PESAN_BAWAAN) ? null : $pesanB;
+        }
         if ($hasil['ok'] && $galatWa === null) {
-            db_connect()->table('pkl_pengaturan')->where('id', 1)->update([
-                'wa_pesan' => ($pesan === '' || $pesan === PklWa::PESAN_BAWAAN) ? null : $pesan, 'updated_at' => date('Y-m-d H:i:s'),
-            ]);
+            db_connect()->table('pkl_pengaturan')->where('id', 1)->update($ubah);
             (new AuditModel())->record('update', 'pkl_pengaturan', 1, 'Pengaturan biaya / pesan WhatsApp PKL disimpan oleh ' . $this->konteks()['oleh']);
 
             return $this->ke($balik, 'success', $hasil['pesan'] . ' Pesan WhatsApp disimpan.');

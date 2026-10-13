@@ -34,7 +34,7 @@ final class SuratSekolah
     public const AKSI = [
         'buat' => 'Surat dibuat', 'ubah' => 'Data surat diubah', 'ajukan_ulang' => 'Diajukan ulang untuk ACC', 'acc' => 'Disetujui (ACC)',
         'kembalikan' => 'Dikembalikan untuk diperbaiki', 'batal_acc' => 'Persetujuan dibatalkan', 'batal' => 'Surat dibatalkan',
-        'nomor' => 'Nomor surat diterbitkan', 'cetak' => 'Berkas diunduh',
+        'nomor' => 'Nomor surat diterbitkan', 'cetak' => 'Berkas diunduh', 'kabari' => 'Siswa dikabari lewat WhatsApp',
     ];
 
     private BaseConnection $db;

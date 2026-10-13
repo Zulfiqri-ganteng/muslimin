@@ -33,6 +33,7 @@ phpm spark migrate:status
    - **`2026-10-18-000001 AturanHakSekolah`** — aturan sekolah: Surat Balasan di-ACC Operator saja (lihat bagian 4).
    - **`2026-10-18-000002 RapikanTtd`** — merapikan gambar tanda tangan yang SUDAH diunggah (tepi kosong dipotong, latar transparan);
      aslinya disimpan sebagai `*_asli.*`. Unggahan baru dirapikan otomatis saat diunggah.
+   - **`2026-10-18-000003 SuratWa`** — kabar WhatsApp "Surat Balasan siap diambil" (kolom sudah-dikabari + pesan di Pengaturan PKL).
 4. Buka situs admin, tekan **Ctrl+F5** (memuat ulang CSS/JS terbaru).
 
 ## 3. Cek cepat setelah deploy (±10 menit)

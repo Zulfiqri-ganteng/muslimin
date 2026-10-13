@@ -21,6 +21,7 @@ use App\Libraries\PklSurat;
 use App\Libraries\SuratJenis;
 use App\Libraries\SuratPkl;
 use App\Libraries\SuratSekolah;
+use App\Libraries\SuratWa;
 use App\Models\PklPengajuanModel;
 use App\Models\PklPengaturanModel;
 use CodeIgniter\CLI\BaseCommand;
@@ -37,7 +38,8 @@ use CodeIgniter\HTTP\ResponseInterface;
  *      menandai laporan selesai, Balasan lama, batal klaim saat gagal, jenis tanpa ACC;
  *   4. halaman nyata: kotak laporan, formulir "Periksa & ubah dulu", Beranda & detail PKL, form publik;
  *   5. API aplikasi (api/v1/surat/balasan/laporan…): daftar, kembalikan, setujui, tolak ganda, gerbang hak;
- *   6. tanda tangan + stempel Kepala Sekolah: unggah, penggantian gambar bawaan template (ukuran & posisi), sidik, hak.
+ *   6. tanda tangan + stempel Kepala Sekolah: unggah, penggantian gambar bawaan template (ukuran & posisi), sidik, hak;
+ *   7. kabar WhatsApp "Surat Balasan siap diambil" (SuratWa): baru setelah diunduh, nomor & pesan, tandai, massal, hak, halaman, API.
  *
  * Data uji bertanda "ZZUJI LP" (nama), NIS "ZZUJILP…", IP "10.9.7.8" — dibuat & dihapus sendiri; Pengaturan PKL dan tabel
  * peran dipulihkan ke isi semula di akhir (juga bila uji berhenti di tengah, pada jalan berikutnya).
@@ -126,6 +128,7 @@ class UjiLapor extends BaseCommand
         $this->ujiHalaman();
         $this->ujiPublik();
         $this->ujiApi();
+        $this->ujiWa();
         $this->ujiTtdKepsek();
 
         $this->bersihkan();
@@ -613,6 +616,74 @@ class UjiLapor extends BaseCommand
             ApiAuth::clear();
             $this->setelPeranBawaan();
         }
+    }
+
+    // =================================================================
+    // 5c. Kabar WhatsApp "Surat Balasan siap diambil"
+    // =================================================================
+
+    private function ujiWa(): void
+    {
+        $this->bagian('Kabar WhatsApp: Surat Balasan siap diambil');
+        if (! SuratWa::kolomAda()) {
+            $this->cek('kolom kabar WhatsApp ada (migrasi 2026-10-18-000003)', false);
+
+            return;
+        }
+        $this->setelPeranBawaan();
+        $wa  = new SuratWa();
+        $set = ['school_name' => 'SMK Uji'];
+        $sid = (int) $this->lapor('A')['surat_id'];
+        $this->cek('belum diunduh → belum ada kabar (surat siap unduh tapi belum dicetak)', $sid > 0 && $wa->daftar([$sid], [], $set) === [] && $wa->tandai($sid, $this->s[1], $this->ctx('operator'))['ok'] === false);
+
+        // Tiru "sudah diunduh" tanpa memakai nomor surat sungguhan.
+        $this->db->table('surat_sekolah')->where('id', $sid)->update(['cetak_ke' => 1, 'nomor' => 'ZZUJI/001/BALASAN', 'terakhir_cetak_at' => date('Y-m-d H:i:s')]);
+        $rows = $wa->daftar([$sid], [], $set);
+        $per  = array_column($rows, null, 'siswa_id');
+        $r1   = $per[$this->s[1]] ?? [];
+        $r2   = $per[$this->s[2]] ?? [];
+        $this->cek('sesudah diunduh: semua siswa surat tampil, nomor WA (HP di ajuan → cadangan HP data siswa), pesan "siap diambil"',
+            count($rows) === 2 && str_starts_with((string) ($r1['url'] ?? ''), 'https://wa.me/6281299990000?text=') && str_starts_with((string) ($r2['url'] ?? ''), 'https://wa.me/6281211110002?text=')
+            && str_contains((string) ($r1['pesan'] ?? ''), 'ZZUJI/001/BALASAN') && str_contains((string) ($r1['pesan'] ?? ''), 'ZZUJILP Perusahaan A') && str_contains((string) ($r1['pesan'] ?? ''), 'siap diambil')
+            && str_contains((string) ($r1['pesan'] ?? ''), 'SMK Uji'), json_encode($r1));
+        $this->cek('templat dari Pengaturan PKL dipakai (penanda diisi)', str_contains((string) ($wa->daftar([$sid], ['wa_pesan_balasan' => 'Hai {nama} ({kelas}), ambil surat {nomor_surat} ya'], $set)[0]['pesan'] ?? ''), 'ambil surat ZZUJI/001/BALASAN ya'));
+
+        $t = $wa->tandai($sid, $this->s[1], $this->ctx('operator'));
+        $h = $wa->hitung($sid);
+        $this->cek('tandai sudah dikabari: tercatat (waktu, pelaku), riwayat surat "kabari", hitungan 1 dari 2', $t['ok'] && $h === ['total' => 2, 'dikabari' => 1]
+            && $this->db->table('surat_sekolah_riwayat')->where('surat_id', $sid)->where('aksi', 'kabari')->countAllResults() === 1
+            && in_array($this->ctx('operator')['oleh'], array_column($wa->daftar([$sid], [], $set), 'dikabari_oleh'), true), json_encode($h));
+        $belum = array_column($wa->belumDikabari(SuratJenis::BALASAN, [], $set), 'siswa_id');
+        $this->cek('kabar massal: hanya siswa yang BELUM dikabari pada surat yang SUDAH diunduh', in_array($this->s[2], $belum, true) && ! in_array($this->s[1], $belum, true)
+            && ! in_array($this->s[3], $belum, true), json_encode($belum));
+        $this->cek('jenis lain (mis. Penarikan) tidak punya kabar', $wa->belumDikabari(SuratJenis::PENARIKAN, [], $set) === [] && ! SuratWa::berlaku(SuratJenis::ASTS));
+
+        // Hak: yang boleh mengabari = pemegang hak Unduh Surat Balasan (bawaan Operator).
+        $this->cek('penjaga rute: Operator (Unduh) boleh, Waka Hubin (hanya ACC) tidak', HakAkses::boleh('operator', 'admin/surat/' . $sid . '/wa') && ! HakAkses::boleh('hubin', 'admin/surat/' . $sid . '/wa')
+            && HakAkses::boleh('operator', 'admin/surat/' . $sid . '/wa/9/tandai', 'POST') && HakAkses::boleh('operator', 'admin/surat/wa'));
+        $r = $this->panggil(\App\Controllers\Admin\Surat::class, 'operator', 'wa', [], [], $sid);
+        $j = json_decode((string) $r->getBody(), true) ?: [];
+        $this->cek('controller daftar (Operator) → 200 + 2 siswa', $r->getStatusCode() === 200 && count($j['data'] ?? []) === 2);
+        $r = $this->panggil(\App\Controllers\Admin\Surat::class, 'hubin', 'wa', [], [], $sid);
+        $this->cek('controller daftar (Waka Hubin tanpa hak Unduh) → 403', $r->getStatusCode() === 403);
+        $r = $this->panggil(\App\Controllers\Admin\Surat::class, 'operator', 'tandaiWa', [], [], $sid, $this->s[2]);
+        $j = json_decode((string) $r->getBody(), true) ?: [];
+        $this->cek('controller tandai → ok + token CSRF baru, semua siswa sudah dikabari', ($j['ok'] ?? false) === true && isset($j['csrf']) && $wa->hitung($sid) === ['total' => 2, 'dikabari' => 2]);
+        $html = $this->halaman(\App\Controllers\Admin\Surat::class, 'operator', 'detail', [], [], $sid);
+        $this->cek('halaman surat: tombol "Kabari siswa via WhatsApp", kotak terbuka otomatis setelah unduh, status semua sudah dikabari',
+            str_contains($html, 'Kabari siswa via WhatsApp') && str_contains($html, 'data-surat-wa="' . $sid . '"') && str_contains($html, 'sudah dikabari surat ini siap diambil') && str_contains($html, 'x-data="suratWa"'));
+        $html = $this->halaman(\App\Controllers\Admin\Surat::class, 'hubin', 'detail', [], [], $sid);
+        $this->cek('halaman surat (Waka Hubin tanpa hak Unduh): tanpa tombol kabar', ! str_contains($html, 'x-data="suratWa"'));
+        $html = $this->halaman(\App\Controllers\Admin\Surat::class, 'operator', 'index', ['status' => 'disetujui', 'jenis' => SuratJenis::BALASAN]);
+        $this->cek('Daftar Surat (Siap unduh · Surat Balasan): tombol kabar massal + kotak otomatis setelah unduh massal', str_contains($html, 'data-surat-wa-jenis="balasan_pkl"') && str_contains($html, 'Kabari siswa via WhatsApp'));
+
+        // API aplikasi
+        [$k, $j] = $this->api('operator', 'wa', [], [], $sid);
+        [$k2]    = $this->api('hubin', 'wa', [], [], $sid);
+        [$k3, $j3] = $this->api('operator', 'waTandai', [], [], $sid, $this->s[1]);
+        ApiAuth::clear();
+        $this->cek('API: daftar (200, 2 siswa), tanpa hak 403, tandai 200', $k === 200 && count($j['data'] ?? []) === 2 && $k2 === 403 && $k3 === 200 && ! empty($j3['data']['dikabari_at']));
+        $this->db->table('surat_sekolah')->where('id', $sid)->update(['cetak_ke' => 0, 'nomor' => null, 'terakhir_cetak_at' => null]);
     }
 
     // =================================================================

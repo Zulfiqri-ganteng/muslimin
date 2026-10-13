@@ -14,6 +14,8 @@
  * @var bool                           $bolehAcc    peran saya berhak ACC
  * @var bool                           $bolehBuat   peran saya berhak membuat/mengubah/membatalkan surat JENIS ini
  * @var bool                           $bolehUnduh  peran saya berhak mengunduh surat jenis ini
+ * @var bool                           $kabarWa     tombol "Kabari siswa via WhatsApp" (Surat Balasan, hak Unduh, status siap unduh)
+ * @var array{total:int,dikabari:int}  $hitungWa    siswa pada surat & yang sudah dikabari
  * @var string                         $pemegangAcc / $pemegangUnduh  nama peran yang memegang hak itu (teks)
  * @var string                         $namaSaya
  */
@@ -159,11 +161,22 @@ $adaBahaya = SuratPeriksa::adaBahaya($periksa);
                     <?php elseif ($status === 'disetujui'): ?>
                         <?php if ($bolehUnduh): ?>
                             <?php if ($templateAda): ?>
-                                <form method="post" action="<?= site_url('admin/surat/' . $id . '/unduh') ?>" data-unduh>
+                                <form method="post" action="<?= site_url('admin/surat/' . $id . '/unduh') ?>" data-unduh<?= ! empty($kabarWa) ? ' data-surat-wa="' . $id . '"' : '' ?>>
                                     <?= csrf_field() ?>
                                     <button type="submit" class="w-full rounded-xl bg-brand-700 px-4 py-2.5 text-sm font-bold text-white transition hover:bg-brand-800 active:scale-95">⬇ <?= (int) $surat['cetak_ke'] > 0 ? 'Unduh ulang surat (Word)' : 'Unduh surat (Word)' ?></button>
                                 </form>
                                 <p class="text-xs leading-relaxed text-slate-500"><?= $bernomor || ! SuratJenis::bernomor($jenis) ? 'Unduh ulang memakai nomor yang sama.' : 'Nomor surat diterbitkan sekali, saat surat pertama diunduh.' ?></p>
+                                <?php if (! empty($kabarWa)): $hw = $hitungWa ?? ['total' => 0, 'dikabari' => 0]; ?>
+                                    <?php if ((int) $surat['cetak_ke'] > 0): ?>
+                                        <button type="button" @click="window.dispatchEvent(new CustomEvent('surat-wa', { detail: { id: <?= $id ?> } }))"
+                                                class="w-full rounded-xl border border-green-300 bg-white px-4 py-2.5 text-sm font-bold text-green-700 transition hover:bg-green-50 active:scale-95">Kabari siswa via WhatsApp</button>
+                                        <p class="text-xs leading-relaxed <?= $hw['dikabari'] >= $hw['total'] && $hw['total'] > 0 ? 'font-semibold text-green-700' : 'text-slate-500' ?>">
+                                            <?= $hw['dikabari'] >= $hw['total'] && $hw['total'] > 0 ? '✓ Semua siswa (' . $hw['total'] . ') sudah dikabari surat ini siap diambil.' : 'Sudah dikabari: ' . $hw['dikabari'] . ' dari ' . $hw['total'] . ' siswa. Pesan: surat siap diambil di Tata Usaha.' ?>
+                                        </p>
+                                    <?php else: ?>
+                                        <p class="text-xs leading-relaxed text-slate-500">Setelah surat diunduh, siswa bisa dikabari lewat WhatsApp bahwa suratnya siap diambil.</p>
+                                    <?php endif; ?>
+                                <?php endif; ?>
                             <?php else: ?>
                                 <p class="rounded-xl border border-slate-200 bg-slate-50 px-3.5 py-3 text-xs leading-relaxed text-slate-600">Template Word untuk <?= esc(SuratJenis::label($jenis)) ?> belum tersedia, jadi surat ini belum bisa diunduh.</p>
                             <?php endif; ?>
@@ -273,5 +286,7 @@ if ($bolehBuat && in_array($status, ['menunggu', 'dikembalikan', 'disetujui'], t
 ?>
 
 </div>
+
+<?php if (! empty($kabarWa)): ?><?= view('admin/surat/_wa') ?><?php endif; ?>
 
 <?= $this->endSection() ?>

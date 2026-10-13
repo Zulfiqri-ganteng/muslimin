@@ -14,6 +14,7 @@ use App\Libraries\SuratPeriksa;
 use App\Libraries\SuratPernyataan;
 use App\Libraries\SuratPkl;
 use App\Libraries\SuratSekolah;
+use App\Libraries\SuratWa;
 use App\Models\PklPengaturanModel;
 use App\Models\SettingModel;
 use App\Models\SuratSekolahModel;
@@ -44,6 +45,8 @@ use CodeIgniter\HTTP\ResponseInterface;
  *   GET  surat/balasan/laporan?status=           kotak "Lapor Diterima PKL" (laporan siswa → Surat Balasan) + hak peran ini
  *   POST surat/balasan/laporan/{id}/setujui|buat  proses laporan jadi Surat Balasan ("Setujui & buat" / masuk antrean ACC)
  *   POST surat/balasan/laporan/{id}/kembalikan    {alasan} — kembalikan laporan ke siswa
+ *   GET  surat/{id}/wa · GET surat/wa?jenis=     kabar WhatsApp "surat siap diambil" (Surat Balasan; hak Unduh; surat sudah diunduh)
+ *   POST surat/{id}/wa/{siswa_id}/tandai          catat siswa sudah dikabari
  */
 class Surat extends BaseApiController
 {
@@ -421,6 +424,57 @@ class Surat extends BaseApiController
             'Data surat diperbarui.' . ($s['status'] === 'dikembalikan' ? ' Surat masih berstatus Dikembalikan: ajukan ulang untuk ACC bila sudah siap.' : ''));
     }
 
+    // ================================================================= kabar WhatsApp "siap diambil" (Libraries\SuratWa)
+
+    /** GET surat/{id}/wa — siswa surat ini + tautan wa.me (dikirim manual dari WhatsApp staf). */
+    public function wa($id): ResponseInterface
+    {
+        $jenis = (string) ($this->svc->muat((int) $id)['surat']['jenis'] ?? '');
+        if (($tolak = $this->tolakWa($jenis)) !== null) {
+            return $tolak;
+        }
+
+        return $this->ok((new SuratWa())->daftar([(int) $id], $this->p, (new SettingModel())->get()), 'Daftar kabar WhatsApp.');
+    }
+
+    /** GET surat/wa?jenis=balasan_pkl — siswa yang belum dikabari pada semua surat jenis itu yang sudah diunduh. */
+    public function waJenis(): ResponseInterface
+    {
+        $jenis = (string) $this->request->getGet('jenis');
+        if (($tolak = $this->tolakWa($jenis)) !== null) {
+            return $tolak;
+        }
+
+        return $this->ok((new SuratWa())->belumDikabari($jenis, $this->p, (new SettingModel())->get()), 'Siswa yang belum dikabari.');
+    }
+
+    /** POST surat/{id}/wa/{siswa_id}/tandai */
+    public function waTandai($id, $siswaId): ResponseInterface
+    {
+        $jenis = (string) ($this->svc->muat((int) $id)['surat']['jenis'] ?? '');
+        if (($tolak = $this->tolakWa($jenis)) !== null) {
+            return $tolak;
+        }
+        $r = (new SuratWa())->tandai((int) $id, (int) $siswaId, $this->konteks());
+
+        return $r['ok'] ? $this->ok(['dikabari_at' => $r['waktu'], 'dikabari_oleh' => $r['oleh']], 'Tercatat sudah dikabari.') : $this->failure((string) $r['pesan'], 409);
+    }
+
+    private function tolakWa(string $jenis): ?ResponseInterface
+    {
+        if ($jenis === '' || ! SuratJenis::ada($jenis)) {
+            return $this->missing('Surat tidak ditemukan.');
+        }
+        if (! SuratWa::berlaku($jenis)) {
+            return $this->failure('Kabar WhatsApp belum tersedia untuk ' . SuratJenis::label($jenis) . '.', 422);
+        }
+        if (! SuratWa::kolomAda()) {
+            return $this->failure('Fitur kabar WhatsApp belum aktif di server ini (migrasi belum dijalankan).', 503);
+        }
+
+        return $this->tolakJenis('unduh', $jenis);
+    }
+
     // ================================================================= lapor diterima PKL (siswa → Surat Balasan)
 
     /**
@@ -619,6 +673,8 @@ class Surat extends BaseApiController
             'batal'        => $kelola && in_array($status, ['menunggu', 'dikembalikan', 'disetujui'], true),
             'ubah'         => $kelola && $jenis !== SuratJenis::PERNYATAAN && SuratJenis::siap($jenis) && SuratSekolah::alasanTakBisaUbah($s) === null,
             'unduh'        => $unduh && $status === 'disetujui',
+            // Kabar WhatsApp "siap diambil" (SuratWa): jenis berkabar, sudah diunduh, hak Unduh.
+            'kabari'       => $unduh && $status === 'disetujui' && SuratWa::berlaku($jenis) && (int) $s['cetak_ke'] > 0,
             'wajib_wakil'  => false,
         ];
     }

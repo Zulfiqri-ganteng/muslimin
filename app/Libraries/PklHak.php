@@ -344,6 +344,10 @@ final class PklHak
         if (preg_match('~^(unduh-massal|\d+/unduh)$~', $sisa) === 1) {
             return 'surat_unduh:*';
         }
+        // Kabar WhatsApp "siap diambil" (SuratWa) = yang mengunduh surat; jenis persisnya diperiksa controller.
+        if (preg_match('~^(wa|\d+/wa(/\d+/tandai)?)$~', $sisa) === 1) {
+            return 'surat_unduh:*';
+        }
         foreach (SuratJenis::kode() as $j) {
             $seg = substr(SuratJenis::alamat($j), strlen('admin/surat/'));
             if ($sisa === $seg || str_starts_with($sisa, $seg . '/')) {

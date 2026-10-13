@@ -279,10 +279,12 @@ $tinjau = [
         </div>
     </section>
 
-    <?php if (isset($jenisBiaya)): $galatBiaya = (array) (session()->getFlashdata('galat_biaya') ?? []); $waNilai = (string) (old('wa_pesan') ?? ($waPesan ?? '')); ?>
+    <?php if (isset($jenisBiaya)): $galatBiaya = (array) (session()->getFlashdata('galat_biaya') ?? []); $waNilai = (string) (old('wa_pesan') ?? ($waPesan ?? ''));
+        $waBalasanAda = \App\Libraries\SuratWa::kolomAda(); $waNilaiB = (string) (old('wa_pesan_balasan') ?? ($waPesanBalasan ?? '')); ?>
     <form id="biaya" method="post" action="<?= site_url('admin/pkl/pengaturan/biaya') ?>" class="scroll-mt-24 space-y-5"
           x-data="{ pesan: <?= esc(json_encode($waNilai !== '' ? $waNilai : \App\Libraries\PklWa::PESAN_BAWAAN), 'attr') ?>,
-                    contoh() { return (this.pesan || '').split('{nama}').join('Dewi Lestari').split('{kelas}').join('XI TKJ 1').split('{perusahaan}').join('PT Antarestar').split('{nomor_surat}').join('007/SMK-BN/PKL/X/2026').split('{tanggal_surat}').join('8 Oktober 2026').split('{sekolah}').join(<?= esc(json_encode((string) ($sekolahNama ?? 'SMK Bina Nusa')), 'attr') ?>); } }">
+                    pesanB: <?= esc(json_encode($waNilaiB !== '' ? $waNilaiB : \App\Libraries\SuratWa::PESAN_BAWAAN), 'attr') ?>,
+                    contoh(t) { return (t || '').split('{nama}').join('Dewi Lestari').split('{kelas}').join('XI TKJ 1').split('{perusahaan}').join('PT Antarestar').split('{nomor_surat}').join('007/SMK-BN/PKL/X/2026').split('{tanggal_surat}').join('8 Oktober 2026').split('{sekolah}').join(<?= esc(json_encode((string) ($sekolahNama ?? 'SMK Bina Nusa')), 'attr') ?>); } }">
         <?= csrf_field() ?>
         <section class="rise overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
             <h3 class="border-b border-slate-100 bg-slate-50 px-5 py-3 text-xs font-bold uppercase tracking-wide text-slate-500">Biaya yang dicatat saat surat diunduh</h3>
@@ -313,8 +315,16 @@ $tinjau = [
             <div class="space-y-3 p-5">
                 <p class="text-xs leading-relaxed text-slate-500">Dikirim <b>manual</b> oleh staf lewat tombol &quot;Kabari via WA&quot; setelah surat diunduh (WhatsApp terbuka dengan pesan ini; tinggal menekan Kirim). Sebaiknya tanpa rincian uang. Penanda: <?php foreach (\App\Libraries\PklWa::TOKEN as $tk): ?><code class="mr-1"><?= esc($tk) ?></code><?php endforeach; ?></p>
                 <textarea name="wa_pesan" rows="3" maxlength="<?= \App\Libraries\PklWa::MAKS_PESAN ?>" x-model="pesan" class="inp"></textarea>
-                <p class="text-xs text-slate-500">Contoh hasil: <span class="font-semibold text-slate-700" x-text="contoh()"></span></p>
+                <p class="text-xs text-slate-500">Contoh hasil: <span class="font-semibold text-slate-700" x-text="contoh(pesan)"></span></p>
                 <button type="button" @click="pesan = <?= esc(json_encode(\App\Libraries\PklWa::PESAN_BAWAAN), 'attr') ?>" class="text-xs font-semibold text-brand-700 hover:underline">Kembalikan ke pesan bawaan</button>
+                <?php if ($waBalasanAda): ?>
+                    <div class="space-y-3 border-t border-slate-100 pt-4">
+                        <p class="text-xs leading-relaxed text-slate-500"><b class="text-slate-700">Pesan Surat Balasan siap diambil</b> — dikirim manual lewat tombol &quot;Kabari siswa via WhatsApp&quot; di halaman Surat Balasan setelah suratnya diunduh. Penanda sama seperti di atas.</p>
+                        <textarea name="wa_pesan_balasan" rows="3" maxlength="<?= \App\Libraries\PklWa::MAKS_PESAN ?>" x-model="pesanB" class="inp" aria-label="Pesan WhatsApp Surat Balasan"></textarea>
+                        <p class="text-xs text-slate-500">Contoh hasil: <span class="font-semibold text-slate-700" x-text="contoh(pesanB)"></span></p>
+                        <button type="button" @click="pesanB = <?= esc(json_encode(\App\Libraries\SuratWa::PESAN_BAWAAN), 'attr') ?>" class="text-xs font-semibold text-brand-700 hover:underline">Kembalikan ke pesan bawaan</button>
+                    </div>
+                <?php endif; ?>
             </div>
         </section>
         <div class="flex justify-end">

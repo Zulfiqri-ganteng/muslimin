@@ -361,6 +361,9 @@
                     self.loading = true;
                     var batas = Date.now() + 120000;
                     var adaWa = form.hasAttribute('data-pkl-wa');
+                    /* Surat Balasan: id surat (data-surat-wa) atau jenis (unduh massal, data-surat-wa-jenis) → surat-wa.js. */
+                    var waSurat = form.getAttribute('data-surat-wa');
+                    var waJenis = form.getAttribute('data-surat-wa-jenis');
                     var timer = setInterval(function () {
                         var selesai = document.cookie.split('; ').indexOf('unduh_selesai=' + token) !== -1;
                         if (selesai || Date.now() > batas) {
@@ -370,6 +373,10 @@
                             /* Unduhan surat PKL selesai → halaman boleh menawarkan "Kabari lewat WhatsApp" (pkl-unduh.js). */
                             if (selesai && adaWa) {
                                 window.dispatchEvent(new CustomEvent('pkl:unduh-selesai', { detail: { token: token } }));
+                            }
+                            /* Surat sekolah yang punya kabar "siap diambil" → tawarkan "Kabari siswa lewat WhatsApp". */
+                            if (selesai && (waSurat || waJenis)) {
+                                window.dispatchEvent(new CustomEvent('surat:unduh-selesai', { detail: waSurat ? { id: waSurat } : { jenis: waJenis } }));
                             }
                         }
                     }, 300);

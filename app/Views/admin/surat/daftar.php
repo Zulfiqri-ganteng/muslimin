@@ -99,13 +99,17 @@ $urlHal = static function (int $hal) use ($f): string {
         </form>
     <?php endif; ?>
     <?php if ($bisaPilihUnduh && $rows !== []): ?>
-        <form id="formUnduh" method="post" action="<?= site_url('admin/surat/unduh-massal') ?>" data-unduh class="flex flex-col gap-2 border-b border-slate-100 bg-slate-50 px-5 py-3 sm:flex-row sm:flex-wrap sm:items-center">
+        <form id="formUnduh" method="post" action="<?= site_url('admin/surat/unduh-massal') ?>" data-unduh<?= ! empty($kabarWaJenis) ? ' data-surat-wa-jenis="' . esc($f['jenis'], 'attr') . '"' : '' ?> class="flex flex-col gap-2 border-b border-slate-100 bg-slate-50 px-5 py-3 sm:flex-row sm:flex-wrap sm:items-center">
             <?= csrf_field() ?>
             <input type="hidden" name="jenis" value="<?= esc($f['jenis'], 'attr') ?>">
             <span class="text-xs leading-relaxed text-slate-500 sm:mr-auto">Unduh <?= esc(SuratJenis::label($f['jenis'])) ?>: centang suratnya lalu unduh. Yang belum bernomor otomatis diberi nomor menurut urutan persetujuan. Lebih dari 60 surat dikirim sebagai ZIP.</span>
             <button type="submit" name="mode" value="terpilih" class="rounded-lg border border-brand-200 bg-white px-3.5 py-2 text-sm font-semibold text-brand-700 hover:bg-brand-50">⬇ Unduh terpilih</button>
             <button type="submit" name="mode" value="belum" class="rounded-lg border border-brand-200 bg-white px-3.5 py-2 text-sm font-semibold text-brand-700 hover:bg-brand-50">⬇ Yang belum diunduh / perlu cetak ulang</button>
             <button type="submit" name="mode" value="semua" class="rounded-lg bg-brand-700 px-3.5 py-2 text-sm font-semibold text-white hover:bg-brand-800">⬇ Unduh SEMUA</button>
+            <?php if (! empty($kabarWaJenis)): ?>
+                <button type="button" x-data @click="window.dispatchEvent(new CustomEvent('surat-wa', { detail: { jenis: <?= esc(json_encode($f['jenis']), 'attr') ?> } }))"
+                        class="rounded-lg border border-green-300 bg-white px-3.5 py-2 text-sm font-semibold text-green-700 hover:bg-green-50" title="Siswa pada surat yang sudah diunduh dan belum dikabari">Kabari siswa via WhatsApp</button>
+            <?php endif; ?>
         </form>
     <?php elseif ($f['status'] === 'disetujui' && $rows !== [] && ! empty($bolehUnduh) && $f['jenis'] === ''): ?>
         <div class="border-b border-slate-100 bg-slate-50 px-5 py-3 text-xs leading-relaxed text-slate-500">Untuk <b>mengunduh banyak surat sekaligus</b>, saring dulu menurut satu jenis surat (pilihan "Semua jenis" di atas). Unduhan satuan ada di halaman tiap surat.</div>
@@ -222,5 +226,7 @@ $urlHal = static function (int $hal) use ($f): string {
         <?php endif; ?>
     <?php endif; ?>
 </div>
+
+<?php if (! empty($kabarWaJenis)): ?><?= view('admin/surat/_wa') ?><?php endif; ?>
 
 <?= $this->endSection() ?>

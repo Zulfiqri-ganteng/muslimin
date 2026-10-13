@@ -11,6 +11,7 @@ use App\Libraries\SuratJenis;
 use App\Libraries\SuratKeputusan;
 use App\Libraries\SuratPeriksa;
 use App\Libraries\SuratSekolah;
+use App\Libraries\SuratWa;
 use App\Models\SettingModel;
 use App\Models\SuratSekolahModel;
 use CodeIgniter\HTTP\RedirectResponse;
@@ -87,6 +88,8 @@ class Surat extends SuratDasar
             'bisaUnduhMassal' => $f['status'] === 'disetujui' && $f['jenis'] !== '' && PklHak::bolehSurat($peran, 'unduh', $f['jenis']) && SuratJenis::templateLengkap($f['jenis']),
             // ACC massal: kotak centang hanya pada surat yang jenisnya boleh di-ACC peran ini.
             'jenisAcc'   => PklHak::jenisBoleh($peran, 'acc'),
+            // Kabar WhatsApp massal "siap diambil": tab Siap unduh yang disaring ke jenis berkabar (Surat Balasan), hak Unduh.
+            'kabarWaJenis' => $f['status'] === 'disetujui' && SuratWa::berlaku($f['jenis']) && SuratWa::kolomAda() && PklHak::bolehSurat($peran, 'unduh', $f['jenis']),
         ]);
     }
 
@@ -123,6 +126,9 @@ class Surat extends SuratDasar
             'bisaBatalAcc' => $status === 'disetujui' && (int) $surat['perlu_acc'] === 1 && (string) ($surat['nomor'] ?? '') === '' && (int) $surat['cetak_ke'] === 0,
             'pemegangAcc'   => PklHak::teksPemegang(PklHak::kunciSurat('acc', $jenis)),
             'pemegangUnduh' => PklHak::teksPemegang(PklHak::kunciSurat('unduh', $jenis)),
+            // Kabar WhatsApp "siap diambil" (Surat Balasan): tombol bagi pemegang hak Unduh; aktif setelah surat diunduh.
+            'kabarWa'    => SuratWa::berlaku($jenis) && SuratWa::kolomAda() && PklHak::bolehSurat($peran, 'unduh', $jenis) && $status === 'disetujui',
+            'hitungWa'   => SuratWa::berlaku($jenis) ? (new SuratWa())->hitung((int) $surat['id']) : ['total' => 0, 'dikabari' => 0],
         ]);
     }
 
@@ -207,6 +213,64 @@ class Surat extends SuratDasar
         }
 
         return $this->kirimBerkas($hasil['nama'], $hasil['biner']);
+    }
+
+    // =================================================================
+    // Kabar WhatsApp "siap diambil" (Surat Balasan) — Libraries\SuratWa
+    // =================================================================
+
+    /** GET admin/surat/(:num)/wa — siswa surat ini + tautan wa.me (hak Unduh jenis itu; surat sudah diunduh). */
+    public function wa($id)
+    {
+        $id    = (int) $id;
+        $jenis = (string) ($this->surat->muat($id)['surat']['jenis'] ?? '');
+        if (($tolak = $this->tolakWa($jenis)) !== null) {
+            return $tolak;
+        }
+
+        return $this->json(['ok' => true, 'data' => (new SuratWa())->daftar([$id], $this->p, (new SettingModel())->get())]);
+    }
+
+    /** GET admin/surat/wa?jenis= — kabar massal: siswa yang belum dikabari pada semua surat jenis itu yang sudah diunduh. */
+    public function waJenis()
+    {
+        $jenis = (string) $this->request->getGet('jenis');
+        if (($tolak = $this->tolakWa($jenis)) !== null) {
+            return $tolak;
+        }
+
+        return $this->json(['ok' => true, 'data' => (new SuratWa())->belumDikabari($jenis, $this->p, (new SettingModel())->get())]);
+    }
+
+    /** POST admin/surat/(:num)/wa/(:num)/tandai — catat "sudah dikabari" setelah tombol WhatsApp ditekan. */
+    public function tandaiWa($id, $siswaId)
+    {
+        $jenis = (string) ($this->surat->muat((int) $id)['surat']['jenis'] ?? '');
+        if (($tolak = $this->tolakWa($jenis)) !== null) {
+            return $tolak;
+        }
+        $r = (new SuratWa())->tandai((int) $id, (int) $siswaId, $this->konteks(['saluran' => 'web']));
+
+        return $this->json($r + ['oleh' => $r['oleh'] ?? null], $r['ok'] ? 200 : 409, true);
+    }
+
+    /** null bila boleh mengabari jenis ini (jenis berlaku, migrasi ada, hak Unduh); selain itu respons JSON galat. */
+    private function tolakWa(string $jenis)
+    {
+        if ($jenis === '' || ! SuratJenis::ada($jenis)) {
+            return $this->json(['ok' => false, 'message' => 'Surat tidak ditemukan.'], 404);
+        }
+        if (! SuratWa::berlaku($jenis)) {
+            return $this->json(['ok' => false, 'message' => 'Kabar WhatsApp belum tersedia untuk ' . SuratJenis::label($jenis) . '.'], 422);
+        }
+        if (! SuratWa::kolomAda()) {
+            return $this->json(['ok' => false, 'message' => 'Fitur kabar WhatsApp belum aktif di server ini: jalankan "php spark migrate".'], 503);
+        }
+        if (! PklHak::bolehSurat($this->peranSaya(), 'unduh', $jenis)) {
+            return $this->json(['ok' => false, 'message' => 'Akun ' . HakAkses::label($this->peranSaya()) . ' tidak punya hak mengunduh ' . SuratJenis::label($jenis) . ', jadi tidak bisa mengabari siswa. Admin bisa mengaturnya di Sistem → Hak Akses.'], 403);
+        }
+
+        return null;
     }
 
     /**
