@@ -26,7 +26,7 @@ $tombolFile = 'block w-full text-sm file:mr-3 file:rounded-lg file:border-0 file
         . '<ul class="mt-2 list-disc pl-5 space-y-1">'
         . '<li><b>Tanda tangan Waka Hubin</b>: dipasang di atas nama Waka Hubin. Tanpa gambar, ruangnya dikosongkan untuk tanda tangan basah.</li>'
         . '<li><b>Tanda tangan + stempel Kepala Sekolah</b>: SATU gambar berisi tanda tangan dan stempel, menggantikan tanda tangan Kepala Sekolah bawaan template (yang tanpa stempel). Ukuran dan letaknya mengikuti rapian sekolah pada contoh surat, jadi tidak perlu ditempel manual di Word lagi.</li>'
-        . '<li>Pakai foto/pindaian di <b>kertas putih</b> (PNG atau JPG). Latar putih otomatis dibuat transparan.</li>'
+        . '<li><b>Ukuran berapa pun boleh</b> (foto HP atau hasil pindai, PNG/JPG, tanda tangan di kertas putih): sistem otomatis memotong tepi kosong, membuat latar kertas transparan, lalu menyesuaikan ukurannya dengan tempat tanda tangan di surat.</li>'
         . '<li>Siapa yang boleh mengubah diatur Admin di <b>Sistem → Hak Akses</b>. Sekarang: Waka Hubin oleh <b>' . esc($pemegangHubin) . '</b>; Kepala Sekolah oleh <b>' . esc($pemegangKepsek) . '</b>.</li>'
         . '<li>Gambar disimpan di server (folder <i>writable</i>) dan <b>tidak</b> ikut tersimpan di kode program.</li>'
         . '</ul>',
@@ -43,6 +43,7 @@ $tombolFile = 'block w-full text-sm file:mr-3 file:rounded-lg file:border-0 file
                 <div class="flex min-h-[9rem] items-center justify-center rounded-xl border border-dashed border-slate-300 bg-white p-4">
                     <img src="<?= esc(site_url('admin/pkl/ttd/gambar') . '?v=' . (int) $ver, 'attr') ?>" alt="Tanda tangan Waka Hubin" class="max-h-32 max-w-full object-contain">
                 </div>
+                <p class="text-[11px] text-slate-400">Pratinjau = gambar yang tercetak di surat (sudah dirapikan).</p>
                 <p class="text-sm text-slate-600">Atas nama: <b><?= esc($p['waka_hubin_nama'] ?: '(nama Waka Hubin belum diisi di Pengaturan PKL)') ?></b><br><?= esc($p['waka_hubin_jabatan'] ?? '') ?></p>
             <?php else: ?>
                 <div class="rounded-xl border border-dashed border-slate-300 bg-slate-50 px-4 py-8 text-center">
@@ -56,7 +57,7 @@ $tombolFile = 'block w-full text-sm file:mr-3 file:rounded-lg file:border-0 file
                     <?= csrf_field() ?>
                     <p class="text-xs font-bold uppercase tracking-wide text-slate-500"><?= $ada ? 'Ganti gambar' : 'Unggah gambar' ?></p>
                     <input type="file" name="ttd" accept="image/png,image/jpeg" required class="<?= $tombolFile ?>">
-                    <p class="text-xs leading-relaxed text-slate-500">PNG atau JPG · maksimal 1 MB · lebar dan tinggi 100–4000 piksel. Gambar mendatar (sekitar 3:1) paling pas; ukurannya dikecilkan otomatis agar muat di surat.</p>
+                    <p class="text-xs leading-relaxed text-slate-500">PNG atau JPG · maksimal 5 MB · 100–4000 piksel. Ukuran &amp; tepi bebas: dirapikan otomatis, lalu dicetak paling besar 5 × 2,2 cm di tengah ruang tanda tangan.</p>
                     <button type="submit" class="rounded-xl bg-brand-700 px-5 py-2.5 text-sm font-bold text-white transition hover:bg-brand-800 active:scale-95">Simpan tanda tangan</button>
                 </form>
                 <?php if ($ada): ?>
@@ -82,6 +83,7 @@ $tombolFile = 'block w-full text-sm file:mr-3 file:rounded-lg file:border-0 file
                     <div class="flex min-h-[9rem] items-center justify-center rounded-xl border border-dashed border-slate-300 bg-white p-4">
                         <img src="<?= esc(site_url('admin/pkl/ttd-kepsek/gambar') . '?v=' . (int) $verKepsek, 'attr') ?>" alt="Tanda tangan dan stempel Kepala Sekolah" class="max-h-36 max-w-full object-contain">
                     </div>
+                    <p class="text-[11px] text-slate-400">Pratinjau = gambar yang tercetak di surat (sudah dirapikan).</p>
                     <p class="text-sm text-slate-600">Atas nama: <b><?= esc(($p['kepsek_nama'] ?? '') ?: '(nama Kepala Sekolah belum diisi di Pengaturan PKL)') ?></b><br><span class="text-xs text-slate-500">Menggantikan tanda tangan bawaan template di semua surat bernomor.</span></p>
                 <?php else: ?>
                     <div class="rounded-xl border border-dashed border-slate-300 bg-slate-50 px-4 py-8 text-center">
@@ -95,7 +97,7 @@ $tombolFile = 'block w-full text-sm file:mr-3 file:rounded-lg file:border-0 file
                         <?= csrf_field() ?>
                         <p class="text-xs font-bold uppercase tracking-wide text-slate-500"><?= $adaKepsek ? 'Ganti gambar' : 'Unggah gambar' ?></p>
                         <input type="file" name="ttd_kepsek" accept="image/png,image/jpeg" required class="<?= $tombolFile ?>">
-                        <p class="text-xs leading-relaxed text-slate-500">SATU gambar berisi tanda tangan <b>dan</b> stempel, kira-kira persegi (mis. 311 × 281 piksel) · PNG atau JPG · maksimal 2 MB · 100–4000 piksel. Dicetak di kotak 3,6 × 3,24 cm seperti rapian sekolah.</p>
+                        <p class="text-xs leading-relaxed text-slate-500">SATU gambar berisi tanda tangan <b>dan</b> stempel · PNG atau JPG · maksimal 5 MB · 100–4000 piksel. Ukuran &amp; tepi bebas: dirapikan otomatis, lalu dicetak paling besar 4 × 3,6 cm di posisi rapian sekolah.</p>
                         <button type="submit" class="rounded-xl bg-brand-700 px-5 py-2.5 text-sm font-bold text-white transition hover:bg-brand-800 active:scale-95">Simpan tanda tangan + stempel</button>
                     </form>
                     <?php if ($adaKepsek): ?>

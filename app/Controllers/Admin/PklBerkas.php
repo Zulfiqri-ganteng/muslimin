@@ -274,7 +274,7 @@ class PklBerkas extends BaseController
         }
         $berkas = $this->request->getFile('ttd_kepsek');
         if ($berkas === null || ! $berkas->isValid() || $berkas->hasMoved()) {
-            return $this->ke($balik, 'error', 'Pilih gambar tanda tangan + stempel (PNG atau JPG) dulu.');
+            return $this->ke($balik, 'error', PklSurat::pesanUnggahGagal($berkas, 'Pilih gambar tanda tangan + stempel (PNG atau JPG) dulu.'));
         }
         $hasil = PklSurat::simpanTtdKepsek($berkas->getTempName(), (int) $berkas->getSize());
         if (! $hasil['ok']) {
@@ -308,7 +308,7 @@ class PklBerkas extends BaseController
         }
         $berkas = $this->request->getFile('ttd');
         if ($berkas === null || ! $berkas->isValid() || $berkas->hasMoved()) {
-            return $this->ke($balik, 'error', 'Pilih gambar tanda tangan (PNG atau JPG) dulu.');
+            return $this->ke($balik, 'error', PklSurat::pesanUnggahGagal($berkas, 'Pilih gambar tanda tangan (PNG atau JPG) dulu.'));
         }
         $hasil = PklSurat::simpanTtd($berkas->getTempName(), (int) $berkas->getSize());
         if (! $hasil['ok']) {

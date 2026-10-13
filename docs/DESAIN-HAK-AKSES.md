@@ -127,6 +127,12 @@ di-ACC Operator saja (Operator + `surat_acc:balasan_pkl`, Waka Hubin −), keter
 mengembalikan. Dicoba pada salinan DB hosting (`database/terbaru.sql`, sesudah 2 migrasi pertama): benar. Bawaan kode (`Config\Peran`,
 `PklHak::BAWAAN`) TIDAK diubah — tombol "Kembalikan ke bawaan sekolah" tetap = aturan awal sistem.
 
+**Tanda tangan lebih besar & rapi otomatis (permintaan user, 2026-10-13 malam):** `Libraries\GambarTtd` merapikan setiap unggahan
+(EXIF, ≤ 1200 px, latar = persentil-90 kecerahan, potong ke kotak tinta + 4 %, latar transparan bertahap, PNG; latar gelap → tidak
+dipotong); asli di `{kolom}_asli.*`; batas berkas 5 MB. Kotak: Waka Hubin 5,0 × 2,2 cm di TENGAH ruang 4 baris (`gambarTtd(...,
+offsetAtas)`), Kepsek 4,0 × 3,6 cm (posisi rapian sekolah). Migrasi `2026-10-18-000002_RapikanTtd` merapikan gambar lama (waktu ubah
+dipertahankan → sidik "perlu cetak ulang" tetap). Laporan Excel/PDF tidak memuat gambar tanda tangan (hanya nama), jadi tidak berubah.
+
 **Menyimpang dari rancangan (disengaja):** kotak laporan jadi menu sendiri (bukan di dalam halaman Surat Balasan) supaya terlihat di
 sidebar; posisi stempel memakai rapian klien (tepi kanan −0,3 cm), bukan "sejajar gambar lama"; Surat Balasan yang dibuat manual ikut
 menandai laporan selesai (agar laporan tidak menggantung).

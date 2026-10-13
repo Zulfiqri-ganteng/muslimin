@@ -96,7 +96,9 @@ Admin yang ACC tercatat "Admin — mewakili Waka Hubin" dan **gambar tanda tanga
 ### Tanda tangan digital Waka Hubin (Waka Hubin / Admin)
 - `GET pkl/ttd` → `{ada, jenis, versi, atas_nama, jabatan, gambar_url}`.
 - `GET pkl/ttd/gambar` → gambar (PNG/JPG) — wajib pakai header Bearer (tidak bisa dimuat lewat `Image.network` polos; gunakan unduh biner).
-- `POST pkl/ttd` — `multipart/form-data`, berkas pada kolom **`ttd`** (PNG/JPG, ≤ 1 MB, 100–4000 px; jenis dicek dari isi berkas).
+- `POST pkl/ttd` — `multipart/form-data`, berkas pada kolom **`ttd`** (PNG/JPG, ≤ 5 MB sejak 2026-10-13 — lihat `pkl/meta → aturan.ttd_maks_byte`,
+  100–4000 px; jenis dicek dari isi berkas). Server MERAPIKAN otomatis (tepi kosong dipotong, latar kertas transparan, ≤ 1200 px, PNG);
+  `GET pkl/ttd/gambar` mengembalikan hasil rapian (yang tercetak). Foto HP langsung boleh.
 - `DELETE pkl/ttd`.
 
 ## Hak diatur Admin, biaya, WhatsApp, laporan (pembaruan 2026-10-09)

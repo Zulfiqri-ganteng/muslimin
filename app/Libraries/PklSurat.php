@@ -38,12 +38,19 @@ final class PklSurat
     public const SHA_TTD_KEPSEK_BAWAAN = '35b0c8647d3caf54ba94fa1ebebfa48ed5c981b2929981a6c710baf5490a246f';
 
     /**
-     * Kotak gambar Kepala Sekolah di surat (EMU): 3,6 × 3,24 cm, tepi kanan 0,3 cm lebih ke kiri dan titik tengah 0,08 cm lebih
-     * tinggi dari gambar bawaan — sama dengan rapian sekolah sendiri pada contoh Surat Balasan (tanda tangan + stempel).
+     * Kotak gambar Kepala Sekolah di surat (EMU): 4,0 × 3,6 cm (sedikit lebih besar dari rapian sekolah 3,6 × 3,24 cm — permintaan
+     * 2026-10-13), tepi kanan 0,3 cm lebih ke kiri dan titik tengah 0,08 cm lebih tinggi dari gambar bawaan (= posisi rapian sekolah).
      */
-    private const KEPSEK_KOTAK       = [1296000, 1166400];
+    private const KEPSEK_KOTAK       = [1440000, 1296000];
     private const KEPSEK_GESER_KANAN = 108000;
     private const KEPSEK_GESER_ATAS  = 29268;
+
+    /**
+     * Kotak gambar tanda tangan Waka Hubin (EMU): 5,0 × 2,2 cm, diletakkan di TENGAH ruang tanda tangan template (4 baris kosong
+     * ≈ 1,95 cm di atas nama) — boleh sedikit menimpa jabatan/nama karena gambar di belakang teks.
+     */
+    private const HUBIN_KOTAK = [1800000, 792000];
+    private const HUBIN_RUANG = 702000;
 
     /** Penanda skalar yang bisa dipakai di template Word (${nama}). */
     public const SKALAR = [
@@ -104,14 +111,16 @@ final class PklSurat
     }
 
     /**
-     * Gambar tanda tangan Waka Hubin yang diunggah, atau null: ['path','ext','cx','cy'] — ukuran EMU,
-     * dimuat dalam kotak 4,2 × 1,8 cm dengan perbandingan asli (ruang tanda tangan di template = 4 baris ≈ 1,95 cm).
+     * Gambar tanda tangan Waka Hubin yang diunggah, atau null: ['path','ext','cx','cy','atas'] — ukuran EMU, dimuat dalam kotak
+     * 5,0 × 2,2 cm dengan perbandingan asli; 'atas' = jarak dari puncak baris penanda supaya gambar di tengah ruang tanda tangan.
      *
-     * @return array{path: string, ext: string, cx: int, cy: int}|null
+     * @return array{path: string, ext: string, cx: int, cy: int, atas: int}|null
      */
     public static function infoTtd(array $pengaturan): ?array
     {
-        return self::infoGambar((string) ($pengaturan['ttd_hubin'] ?? ''), 1512000, 648000);
+        $i = self::infoGambar((string) ($pengaturan['ttd_hubin'] ?? ''), self::HUBIN_KOTAK[0], self::HUBIN_KOTAK[1]);
+
+        return $i === null ? null : $i + ['atas' => intdiv(self::HUBIN_RUANG - $i['cy'], 2)];
     }
 
     /**
@@ -173,11 +182,11 @@ final class PklSurat
         ];
     }
 
-    /** Batas ukuran gambar tanda tangan Waka Hubin (byte). */
-    public const MAKS_TTD = 1048576;
+    /** Batas ukuran gambar tanda tangan Waka Hubin (byte) — foto HP boleh; gambar dirapikan otomatis (GambarTtd). */
+    public const MAKS_TTD = 5242880;
 
     /**
-     * Simpan gambar tanda tangan Waka Hubin (PNG/JPG, ≤ 1 MB, 100–4000 px). Jenis ditentukan dari ISI berkas,
+     * Simpan gambar tanda tangan Waka Hubin (PNG/JPG, ≤ 5 MB, 100–4000 px), dirapikan otomatis. Jenis ditentukan dari ISI berkas,
      * bukan nama/ekstensi kiriman. Dipakai web & API.
      *
      * @return array{ok: bool, pesan: string}
@@ -188,16 +197,31 @@ final class PklSurat
             'Tanda tangan disimpan. Gambar ini tercetak di semua surat (Surat Izin PKL dan surat sekolah bernomor), siapa pun yang meng-ACC.');
     }
 
+    /**
+     * Pesan bila berkas unggahan tidak sampai: melebihi batas unggah server (php.ini) → sebutkan batasnya; selain itu $bawaan.
+     *
+     * @param \CodeIgniter\HTTP\Files\UploadedFile|null $berkas
+     */
+    public static function pesanUnggahGagal($berkas, string $bawaan): string
+    {
+        $kode = $berkas !== null && method_exists($berkas, 'getError') ? (int) $berkas->getError() : UPLOAD_ERR_NO_FILE;
+
+        return in_array($kode, [UPLOAD_ERR_INI_SIZE, UPLOAD_ERR_FORM_SIZE], true)
+            ? 'Gambar melebihi batas unggah server (' . ini_get('upload_max_filesize') . '). Kecilkan dulu ukuran berkasnya, lalu unggah lagi.'
+            : $bawaan;
+    }
+
     public static function hapusTtd(): void
     {
         self::hapusGambar('ttd_hubin');
     }
 
-    /** Batas ukuran gambar tanda tangan + stempel Kepala Sekolah (byte; hasil pindai stempel biasanya lebih besar). */
-    public const MAKS_TTD_KEPSEK = 2097152;
+    /** Batas ukuran gambar tanda tangan + stempel Kepala Sekolah (byte) — foto HP boleh; gambar dirapikan otomatis (GambarTtd). */
+    public const MAKS_TTD_KEPSEK = 5242880;
 
     /**
-     * Simpan gambar tanda tangan + stempel Kepala Sekolah (PNG/JPG, ≤ 2 MB, 100–4000 px) di writable/pkl — TIDAK masuk repo.
+     * Simpan gambar tanda tangan + stempel Kepala Sekolah (PNG/JPG, ≤ 5 MB, 100–4000 px, dirapikan otomatis) di writable/pkl —
+     * TIDAK masuk repo.
      *
      * @return array{ok: bool, pesan: string}
      */
@@ -213,8 +237,9 @@ final class PklSurat
     }
 
     /**
-     * Simpan gambar unggahan ke writable/pkl/{$kolom}.png|jpg dan catat namanya di pkl_pengaturan.{$kolom}. Jenis ditentukan dari
-     * ISI berkas, bukan nama/ekstensi kiriman.
+     * Simpan gambar unggahan: aslinya di writable/pkl/{$kolom}_asli.png|jpg, hasil RAPIAN (tepi kosong dipotong, latar transparan,
+     * ≤ 1200 px — GambarTtd) di {$kolom}.png yang dipakai surat, namanya dicatat di pkl_pengaturan.{$kolom}. Bila tak bisa
+     * dirapikan (mis. memori server), gambar asli dipakai apa adanya. Jenis ditentukan dari ISI berkas, bukan nama/ekstensi kiriman.
      *
      * @return array{ok: bool, pesan: string}
      */
@@ -232,25 +257,74 @@ final class PklSurat
         }
 
         $dir  = self::dirBerkas();
-        $nama = $kolom . '.' . ($info[2] === IMAGETYPE_PNG ? 'png' : 'jpg');
-        foreach ([$kolom . '.png', $kolom . '.jpg'] as $lama) {
+        $ext  = $info[2] === IMAGETYPE_PNG ? 'png' : 'jpg';
+        $asli = $kolom . '_asli.' . $ext;
+        foreach ([$kolom . '.png', $kolom . '.jpg', $kolom . '_asli.png', $kolom . '_asli.jpg'] as $lama) {
             if (is_file($dir . $lama)) {
                 @unlink($dir . $lama);
             }
         }
-        if (! @copy($pathSementara, $dir . $nama)) {
+        if (! @copy($pathSementara, $dir . $asli)) {
             return ['ok' => false, 'pesan' => 'Gambar gagal disimpan di server (folder writable/pkl tidak bisa ditulis).'];
+        }
+        $rapi = GambarTtd::rapikan($dir . $asli, $dir . $kolom . '.png');
+        $nama = $kolom . '.png';
+        if (! $rapi['ok']) {
+            log_message('warning', '[PKL] gambar ' . $kolom . ' tidak dirapikan: ' . $rapi['pesan']);
+            $nama = $kolom . '.' . $ext;
+            if (! @copy($dir . $asli, $dir . $nama)) {
+                return ['ok' => false, 'pesan' => 'Gambar gagal disimpan di server (folder writable/pkl tidak bisa ditulis).'];
+            }
         }
         clearstatcache(true, $dir . $nama);
         (new PklPengaturanModel())->update(1, [$kolom => $nama]);
 
-        return ['ok' => true, 'pesan' => $pesanOk];
+        return ['ok' => true, 'pesan' => $pesanOk . ($rapi['ok']
+            ? ' Gambar dirapikan otomatis' . (! empty($rapi['dipotong']) ? ' (tepi kosong dipotong, latar dibuat transparan)' : '') . ' dan ukurannya disesuaikan dengan tempat tanda tangan.'
+            : ' Gambar dipakai apa adanya (tidak bisa dirapikan otomatis di server ini).')];
+    }
+
+    /**
+     * Rapikan gambar yang SUDAH tersimpan sebelum ada perapi otomatis (dipanggil migrasi 2026-10-18-000002_RapikanTtd).
+     * Gambar yang diunggah sesudahnya (punya {$kolom}_asli.*) dilewati. Waktu ubah berkas dipertahankan, jadi tanda
+     * "perlu cetak ulang" surat lama tidak berubah — yang berubah hanya kerapian gambar. true bila ada yang dirapikan.
+     */
+    public static function rapikanTersimpan(string $kolom): bool
+    {
+        $nama = (string) ((new PklPengaturanModel())->ambil()[$kolom] ?? '');
+        $dir  = self::dirBerkas();
+        if ($nama === '' || basename($nama) !== $nama || ! is_file($dir . $nama) || is_file($dir . $kolom . '_asli.png') || is_file($dir . $kolom . '_asli.jpg')) {
+            return false;
+        }
+        $ext   = strtolower(pathinfo($nama, PATHINFO_EXTENSION)) === 'png' ? 'png' : 'jpg';
+        $asli  = $kolom . '_asli.' . $ext;
+        $waktu = (int) filemtime($dir . $nama);
+        $tmp   = $dir . $kolom . '_rapi_sementara.png';
+        if (! @copy($dir . $nama, $dir . $asli)) {
+            return false;
+        }
+        $rapi = GambarTtd::rapikan($dir . $asli, $tmp);
+        if (! $rapi['ok'] || ! @rename($tmp, $dir . $kolom . '.png')) {
+            @unlink($tmp);
+            @unlink($dir . $asli);
+            log_message('warning', '[PKL] gambar lama ' . $kolom . ' tidak dirapikan: ' . ($rapi['pesan'] ?? 'gagal mengganti berkas'));
+
+            return false;
+        }
+        if ($nama !== $kolom . '.png') {
+            @unlink($dir . $nama); // JPG lama: aslinya tetap ada sebagai {$kolom}_asli.jpg
+            (new PklPengaturanModel())->update(1, [$kolom => $kolom . '.png']);
+        }
+        @touch($dir . $kolom . '.png', $waktu);
+        clearstatcache(true, $dir . $kolom . '.png');
+
+        return true;
     }
 
     private static function hapusGambar(string $kolom): void
     {
         $p = (new PklPengaturanModel())->ambil();
-        foreach ([$kolom . '.png', $kolom . '.jpg', (string) ($p[$kolom] ?? '')] as $nama) {
+        foreach ([$kolom . '.png', $kolom . '.jpg', $kolom . '_asli.png', $kolom . '_asli.jpg', (string) ($p[$kolom] ?? '')] as $nama) {
             if ($nama !== '' && basename($nama) === $nama && is_file(self::dirBerkas() . $nama)) {
                 @unlink(self::dirBerkas() . $nama);
             }
@@ -500,7 +574,7 @@ final class PklSurat
         // Gambar tanda tangan Waka Hubin SELALU dipasang bila sudah diunggah, siapa pun yang meng-ACC (keputusan sekolah
         // 2026-10-13: tanda tangan Hubin & Kepsek tercetak seperti contoh). Siapa yang menyetujui tetap tertulis di kaki surat.
         $ttd     = $ekstra['ttd'] ?? null;
-        $ttdRaw  = $ttd !== null ? PklDocx::gambarTtd(self::REL_TTD, (int) $ttd['cx'], (int) $ttd['cy']) : '';
+        $ttdRaw  = $ttd !== null ? PklDocx::gambarTtd(self::REL_TTD, (int) $ttd['cx'], (int) $ttd['cy'], offsetAtas: (int) ($ttd['atas'] ?? 40000)) : '';
         $accWaktu = ! empty($ajuan['acc_at']) ? self::waktuIndo((string) $ajuan['acc_at']) : '';
 
         return [

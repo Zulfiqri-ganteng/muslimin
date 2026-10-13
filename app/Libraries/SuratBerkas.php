@@ -252,7 +252,7 @@ final class SuratBerkas
         // Tanda tangan digital Waka Hubin SELALU dipasang bila sudah diunggah, siapa pun yang meng-ACC dan juga untuk jenis tanpa
         // ACC (keputusan sekolah 2026-10-13: tanda tangan tercetak seperti contoh). Siapa yang menyetujui tertulis di kaki surat.
         $ttd    = $ekstra['ttd'] ?? null;
-        $ttdRaw = $ttd !== null ? PklDocx::gambarTtd(PklSurat::REL_TTD, (int) $ttd['cx'], (int) $ttd['cy']) : '';
+        $ttdRaw = $ttd !== null ? PklDocx::gambarTtd(PklSurat::REL_TTD, (int) $ttd['cx'], (int) $ttd['cy'], offsetAtas: (int) ($ttd['atas'] ?? 40000)) : '';
 
         $v = [
             'nomor'         => (string) ($surat['nomor'] ?? ''),

@@ -60,7 +60,7 @@ class UjiLapor extends BaseCommand
     private int $gagal = 0;
     private BaseConnection $db;
     private ?array $pengaturanAsli = null;
-    /** @var array<string, string>|null isi berkas writable/pkl/ttd_kepsek.* sebelum uji (dipulihkan di akhir) */
+    /** @var array<string, string>|null isi berkas gambar tanda tangan di writable/pkl sebelum uji (dipulihkan di akhir) */
     private ?array $kepsekAsli = null;
     private int $kelasId = 0;
     private int $th = 0;
@@ -662,13 +662,19 @@ class UjiLapor extends BaseCommand
         $baik  = $this->gambarUji(311, 281);
         $r1 = PklSurat::simpanTtdKepsek($teks, 12);
         $r2 = PklSurat::simpanTtdKepsek($kecil, (int) filesize($kecil));
-        $r3 = PklSurat::simpanTtdKepsek($baik, 3 * 1048576);
-        $this->cek('unggah ditolak: bukan gambar / terlalu kecil / lebih dari 2 MB', ! $r1['ok'] && ! $r2['ok'] && ! $r3['ok'] && str_contains($r3['pesan'], '2 MB'), $r1['pesan'] . ' | ' . $r2['pesan']);
+        $r3 = PklSurat::simpanTtdKepsek($baik, 6 * 1048576);
+        $this->cek('unggah ditolak: bukan gambar / terlalu kecil / lebih dari 5 MB', ! $r1['ok'] && ! $r2['ok'] && ! $r3['ok'] && str_contains($r3['pesan'], '5 MB'), $r1['pesan'] . ' | ' . $r2['pesan']);
         $r = PklSurat::simpanTtdKepsek($baik, (int) filesize($baik));
         $p = (new PklPengaturanModel())->ambil();
         $k = PklSurat::infoTtdKepsek($p);
-        $this->cek('unggah PNG 311×281 → tersimpan di writable/pkl, dimuat dalam kotak 3,6 × 3,24 cm', $r['ok'] && $k !== null && ($p['ttd_kepsek'] ?? '') === 'ttd_kepsek.png'
-            && is_file(PklSurat::dirBerkas() . 'ttd_kepsek.png') && $k['cx'] <= 1296000 && $k['cy'] <= 1166400 && ($k['cx'] === 1296000 || $k['cy'] === 1166400), json_encode($k));
+        $this->cek('unggah PNG 311×281 → tersimpan di writable/pkl, dimuat dalam kotak 4,0 × 3,6 cm', $r['ok'] && $k !== null && ($p['ttd_kepsek'] ?? '') === 'ttd_kepsek.png'
+            && is_file(PklSurat::dirBerkas() . 'ttd_kepsek.png') && $k['cx'] <= 1440000 && $k['cy'] <= 1296000 && ($k['cx'] === 1440000 || $k['cy'] === 1296000), json_encode($k));
+        $uk  = @getimagesize(PklSurat::dirBerkas() . 'ttd_kepsek.png') ?: [0, 0];
+        $img = @imagecreatefrompng(PklSurat::dirBerkas() . 'ttd_kepsek.png');
+        $sudut = $img ? (imagecolorat($img, 0, 0) >> 24 & 0x7F) : -1;
+        $tengah = $img ? (imagecolorat($img, intdiv($uk[0], 2), intdiv($uk[1], 2)) >> 24 & 0x7F) : -1;
+        $this->cek('gambar dirapikan otomatis: tepi kosong dipotong, sudut transparan, tinta utuh, gambar asli disimpan', $uk[0] > 0 && $uk[0] < 311 && $uk[1] < 281 && $sudut === 127 && $tengah === 0
+            && is_file(PklSurat::dirBerkas() . 'ttd_kepsek_asli.png') && str_contains($r['pesan'], 'dirapikan otomatis'), $uk[0] . '×' . $uk[1] . ' sudut α=' . $sudut . ' tengah α=' . $tengah);
         foreach ([$teks, $kecil, $baik] as $t) {
             @unlink($t);
         }
@@ -712,6 +718,79 @@ class UjiLapor extends BaseCommand
             SuratSekolah::sidik($bal, [], $p0) !== SuratSekolah::sidik($bal, [], $p) && SuratSekolah::sidik($prn, [], $p0) === SuratSekolah::sidik($prn, [], $p)
             && PklSurat::sidik($ajn, [], $p0) !== PklSurat::sidik($ajn, [], $p));
 
+        // --- Perapi gambar (GambarTtd): foto berlatar abu-abu, gambar gelap, PNG transparan, gambar besar ---
+        $tmp = sys_get_temp_dir() . DIRECTORY_SEPARATOR;
+        $foto = imagecreatetruecolor(1600, 1200);
+        imagefill($foto, 0, 0, imagecolorallocate($foto, 205, 203, 198)); // kertas difoto: abu-abu kekuningan
+        imagesetthickness($foto, 14);
+        imageline($foto, 500, 700, 1100, 500, imagecolorallocate($foto, 30, 40, 110));
+        imagejpeg($foto, $tmp . 'zzujilp_foto.jpg', 90);
+        $h1 = \App\Libraries\GambarTtd::rapikan($tmp . 'zzujilp_foto.jpg', $tmp . 'zzujilp_foto.png');
+        $u1 = @getimagesize($tmp . 'zzujilp_foto.png') ?: [0, 0];
+        $g1 = @imagecreatefrompng($tmp . 'zzujilp_foto.png');
+        $this->cek('perapi: foto 1600×1200 berlatar abu-abu → dipotong ke goresan, latar abu-abu jadi transparan', $h1['ok'] && ! empty($h1['dipotong']) && $u1[0] > 300 && $u1[0] < 600 && $u1[1] < 250
+            && $g1 && (imagecolorat($g1, 2, 2) >> 24 & 0x7F) === 127 && (imagecolorat($g1, intdiv($u1[0], 2), intdiv($u1[1], 2)) >> 24 & 0x7F) < 40, json_encode($h1) . ' ' . $u1[0] . '×' . $u1[1]);
+        $gelap = imagecreatetruecolor(300, 200);
+        imagefill($gelap, 0, 0, imagecolorallocate($gelap, 20, 20, 20));
+        imagepng($gelap, $tmp . 'zzujilp_gelap.png');
+        $h2 = \App\Libraries\GambarTtd::rapikan($tmp . 'zzujilp_gelap.png', $tmp . 'zzujilp_gelap2.png');
+        $this->cek('perapi: gambar berlatar gelap (bukan kertas) → tidak dipotong, ukuran tetap', $h2['ok'] && empty($h2['dipotong']) && ($h2['lebar'] ?? 0) === 300 && ($h2['tinggi'] ?? 0) === 200);
+        $bening = imagecreatetruecolor(800, 400);
+        imagealphablending($bening, false);
+        imagesavealpha($bening, true);
+        imagefill($bening, 0, 0, imagecolorallocatealpha($bening, 0, 0, 0, 127));
+        imagesetthickness($bening, 6);
+        imageline($bening, 300, 250, 500, 150, imagecolorallocatealpha($bening, 10, 10, 10, 0));
+        imagepng($bening, $tmp . 'zzujilp_bening.png');
+        $h3 = \App\Libraries\GambarTtd::rapikan($tmp . 'zzujilp_bening.png', $tmp . 'zzujilp_bening2.png');
+        $this->cek('perapi: PNG tanpa latar (transparan) → tetap dipotong ke goresannya', $h3['ok'] && ! empty($h3['dipotong']) && ($h3['lebar'] ?? 999) < 260 && ($h3['tinggi'] ?? 999) < 160, json_encode($h3));
+        $besar = imagecreatetruecolor(3000, 1000);
+        imagefill($besar, 0, 0, imagecolorallocate($besar, 255, 255, 255));
+        imagesetthickness($besar, 20);
+        imageline($besar, 50, 900, 2950, 100, imagecolorallocate($besar, 0, 0, 0));
+        imagepng($besar, $tmp . 'zzujilp_besar.png');
+        $h4 = \App\Libraries\GambarTtd::rapikan($tmp . 'zzujilp_besar.png', $tmp . 'zzujilp_besar2.png');
+        $this->cek('perapi: gambar 3000 px → diperkecil (sisi terpanjang ≤ 1200 px)', $h4['ok'] && ($h4['lebar'] ?? 9999) <= 1200 && ($h4['tinggi'] ?? 9999) <= 1200, json_encode($h4));
+        foreach (['zzujilp_foto.jpg', 'zzujilp_foto.png', 'zzujilp_gelap.png', 'zzujilp_gelap2.png', 'zzujilp_bening.png', 'zzujilp_bening2.png', 'zzujilp_besar.png', 'zzujilp_besar2.png'] as $n) {
+            @unlink($tmp . $n);
+        }
+
+        // --- Tanda tangan Waka Hubin: kotak 5,0 × 2,2 cm, di tengah ruang tanda tangan ---
+        $lebar = imagecreatetruecolor(900, 300);
+        imagefill($lebar, 0, 0, imagecolorallocate($lebar, 255, 255, 255));
+        imagesetthickness($lebar, 8);
+        imageline($lebar, 60, 220, 840, 90, imagecolorallocate($lebar, 15, 25, 120));
+        imagepng($lebar, $tmp . 'zzujilp_hubin.png');
+        $rh = PklSurat::simpanTtd($tmp . 'zzujilp_hubin.png', (int) filesize($tmp . 'zzujilp_hubin.png'));
+        @unlink($tmp . 'zzujilp_hubin.png');
+        $ih = PklSurat::infoTtd((new PklPengaturanModel())->ambil());
+        $xml = $ih !== null ? PklDocx::gambarTtd(PklSurat::REL_TTD, $ih['cx'], $ih['cy'], offsetAtas: $ih['atas']) : '';
+        $this->cek('TTD Waka Hubin: dirapikan, dimuat dalam kotak 5,0 × 2,2 cm, posisi di tengah ruang 4 baris', $rh['ok'] && $ih !== null && $ih['cx'] <= 1800000 && $ih['cy'] <= 792000
+            && ($ih['cx'] === 1800000 || $ih['cy'] === 792000) && $ih['atas'] === intdiv(702000 - $ih['cy'], 2)
+            && str_contains($xml, '<wp:positionV relativeFrom="paragraph"><wp:posOffset>' . $ih['atas'] . '</wp:posOffset>'), json_encode($ih));
+
+        // --- Gambar LAMA (diunggah sebelum ada perapi): dirapikan oleh migrasi, waktu ubah dipertahankan ---
+        foreach (['ttd_hubin.png', 'ttd_hubin.jpg', 'ttd_hubin_asli.png', 'ttd_hubin_asli.jpg'] as $n) {
+            @unlink(PklSurat::dirBerkas() . $n);
+        }
+        $lama = imagecreatetruecolor(800, 600);
+        imagefill($lama, 0, 0, imagecolorallocate($lama, 255, 255, 255));
+        imagesetthickness($lama, 6);
+        imageline($lama, 350, 320, 450, 280, imagecolorallocate($lama, 0, 0, 90));
+        imagepng($lama, PklSurat::dirBerkas() . 'ttd_hubin.png');
+        $waktu = strtotime('2026-10-01 08:00:00');
+        touch(PklSurat::dirBerkas() . 'ttd_hubin.png', $waktu);
+        $this->db->table('pkl_pengaturan')->where('id', 1)->update(['ttd_hubin' => 'ttd_hubin.png']);
+        $sidikSebelum = PklSurat::sidik(['perusahaan_nama' => 'X'], [], (new PklPengaturanModel())->ambil());
+        $ok1 = PklSurat::rapikanTersimpan('ttd_hubin');
+        clearstatcache();
+        $ul  = @getimagesize(PklSurat::dirBerkas() . 'ttd_hubin.png') ?: [0, 0];
+        $ok2 = PklSurat::rapikanTersimpan('ttd_hubin');
+        $this->cek('gambar lama dirapikan (migrasi): dipotong, asli disimpan, waktu ubah & sidik "perlu cetak ulang" tetap, tidak dua kali', $ok1 && ! $ok2 && $ul[0] > 0 && $ul[0] < 200
+            && is_file(PklSurat::dirBerkas() . 'ttd_hubin_asli.png') && filemtime(PklSurat::dirBerkas() . 'ttd_hubin.png') === $waktu
+            && PklSurat::sidik(['perusahaan_nama' => 'X'], [], (new PklPengaturanModel())->ambil()) === $sidikSebelum, $ul[0] . '×' . $ul[1]);
+        $this->cek('pesan unggah gagal: tanpa berkas → pesan bawaan', PklSurat::pesanUnggahGagal(null, 'Pilih gambar dulu.') === 'Pilih gambar dulu.');
+
         // Hak (bawaan: hanya Admin) + halaman.
         $this->setelPeranBawaan();
         $this->cek('hak bawaan: hanya Admin; Waka Hubin tetap membuka halaman Tanda Tangan & pratinjau, tapi tidak bisa mengunggah',
@@ -737,7 +816,7 @@ class UjiLapor extends BaseCommand
         $this->simpanPeranAsli();
         if ($this->kepsekAsli === null) {
             $this->kepsekAsli = [];
-            foreach (['ttd_kepsek.png', 'ttd_kepsek.jpg'] as $n) {
+            foreach (['ttd_kepsek.png', 'ttd_kepsek.jpg', 'ttd_kepsek_asli.png', 'ttd_kepsek_asli.jpg', 'ttd_hubin.png', 'ttd_hubin.jpg', 'ttd_hubin_asli.png', 'ttd_hubin_asli.jpg'] as $n) {
                 if (is_file(PklSurat::dirBerkas() . $n)) {
                     $this->kepsekAsli[$n] = (string) file_get_contents(PklSurat::dirBerkas() . $n);
                 }
@@ -784,8 +863,8 @@ class UjiLapor extends BaseCommand
         $this->db->table('audit_log')->like('deskripsi', self::OLEH)->delete();
         session()->remove(['pkl_lapor_izin', 'admin', 'error', 'success', 'errors', 'pkl_lapor_selesai']);
 
-        if ($this->kepsekAsli !== null) { // berkas gambar Kepala Sekolah dikembalikan seperti sebelum uji
-            foreach (['ttd_kepsek.png', 'ttd_kepsek.jpg'] as $n) {
+        if ($this->kepsekAsli !== null) { // berkas gambar tanda tangan dikembalikan seperti sebelum uji
+            foreach (['ttd_kepsek.png', 'ttd_kepsek.jpg', 'ttd_kepsek_asli.png', 'ttd_kepsek_asli.jpg', 'ttd_hubin.png', 'ttd_hubin.jpg', 'ttd_hubin_asli.png', 'ttd_hubin_asli.jpg'] as $n) {
                 @unlink(PklSurat::dirBerkas() . $n);
             }
             foreach ($this->kepsekAsli as $n => $isi) {
