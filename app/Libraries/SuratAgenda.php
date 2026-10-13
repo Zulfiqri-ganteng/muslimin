@@ -50,8 +50,8 @@ final class SuratAgenda
         $b = 5;
         foreach ($rows as $i => $r) {
             $acc = (string) ($r['acc_nama'] ?? '');
-            if ($acc !== '' && ($r['acc_peran'] ?? '') === 'admin') {
-                $acc .= ' (mewakili Waka Hubin)';
+            if ($acc !== '' && (string) ($r['acc_peran'] ?? '') !== '') {
+                $acc .= ' (' . HakAkses::label((string) $r['acc_peran']) . ')';
             }
             $ws->setCellValue('A' . $b, $i + 1);
             $isi = [

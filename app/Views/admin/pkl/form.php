@@ -52,7 +52,7 @@ $input = static function (string $k, string $label, string $nilai, array $o = []
     'helpTitle' => $ubah ? 'Ubah Data Ajuan' : 'Isi atas Nama Siswa',
     'helpBody'  => $ubah
         ? '<p>Perbaiki data ajuan langsung tanpa mengubah statusnya. Pengaju tidak bisa diganti; teman boleh ditambah atau dikurangi.</p><p class="mt-2">Bila ajuan sudah <b>disetujui</b> dan nama perusahaan diubah, tautan ke master ikut menyesuaikan.</p>'
-        : '<p>Dipakai bila siswa tidak bisa mengisi sendiri, atau untuk memasukkan data PKL yang sudah ada.</p><ul class="mt-2 list-disc pl-5 space-y-1"><li>Ajuan masuk antrean <b>Menunggu keputusan Waka Hubin</b>. Opsi <b>langsung disetujui</b> (data lama yang sudah pasti) hanya ada untuk Waka Hubin / Admin.</li><li>Nomor HP pengaju dan <b>setiap teman wajib diisi</b> (tercetak di surat) — sama seperti form siswa.</li><li>Waktu PKL dan tanggal lahir tidak perlu diisi.</li></ul>',
+        : '<p>Dipakai bila siswa tidak bisa mengisi sendiri, atau untuk memasukkan data PKL yang sudah ada.</p><ul class="mt-2 list-disc pl-5 space-y-1"><li>Ajuan masuk antrean <b>Menunggu keputusan ACC</b>. Opsi <b>langsung disetujui</b> (data lama yang sudah pasti) hanya ada untuk peran yang memegang hak ACC ajuan PKL.</li><li>Nomor HP pengaju dan <b>setiap teman wajib diisi</b> (tercetak di surat) — sama seperti form siswa.</li><li>Waktu PKL dan tanggal lahir tidak perlu diisi.</li></ul>',
 ]) ?>
 
 <?= view('admin/pkl/_nav', ['tab' => $tab, 'hitungTab' => $hitungTab]) ?>
@@ -175,7 +175,7 @@ $input = static function (string $k, string $label, string $nilai, array $o = []
                 <?php else: ?>
                     <div class="flex items-start gap-3 rounded-xl border border-dashed border-slate-300 bg-slate-50 p-3.5">
                         <span class="mt-1 text-slate-400" aria-hidden="true">🔒</span>
-                        <span><b class="block text-sm text-slate-600">Langsung disetujui</b><span class="text-xs text-slate-500">Hanya Waka Hubin (atau Admin) yang bisa menyetujui. Simpan sebagai menunggu, lalu minta Waka Hubin meng-ACC.</span></span>
+                        <span><b class="block text-sm text-slate-600">Langsung disetujui</b><span class="text-xs text-slate-500">Hanya peran yang memegang hak ACC ajuan PKL yang bisa menyetujui. Simpan sebagai menunggu, lalu minta pemegang hak ACC meng-ACC.</span></span>
                     </div>
                 <?php endif; ?>
             </div>

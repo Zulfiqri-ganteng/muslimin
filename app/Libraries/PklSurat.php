@@ -27,6 +27,24 @@ final class PklSurat
     /** Id relasi gambar tanda tangan Waka Hubin di dalam berkas Word (juga dipakai Libraries\SuratBerkas). */
     public const REL_TTD = 'rIdTtdHubin';
 
+    /** Id relasi gambar tanda tangan + stempel Kepala Sekolah unggahan di berkas Word hasil. */
+    public const REL_TTD_KEPSEK = 'rIdTtdKepsek';
+
+    /**
+     * Sidik (sha256) gambar tanda tangan Kepala Sekolah BAWAAN yang tertanam di template surat (Surat Izin PKL & surat sekolah
+     * bernomor). Gambar itu dikenali dari ISINYA — Id relasinya beda per template — lalu diganti gambar unggahan (tanda tangan +
+     * stempel) saat surat dirakit. Template yang tidak memuat gambar ini (mis. Pernyataan Orang Tua) tidak berubah.
+     */
+    public const SHA_TTD_KEPSEK_BAWAAN = '35b0c8647d3caf54ba94fa1ebebfa48ed5c981b2929981a6c710baf5490a246f';
+
+    /**
+     * Kotak gambar Kepala Sekolah di surat (EMU): 3,6 × 3,24 cm, tepi kanan 0,3 cm lebih ke kiri dan titik tengah 0,08 cm lebih
+     * tinggi dari gambar bawaan — sama dengan rapian sekolah sendiri pada contoh Surat Balasan (tanda tangan + stempel).
+     */
+    private const KEPSEK_KOTAK       = [1296000, 1166400];
+    private const KEPSEK_GESER_KANAN = 108000;
+    private const KEPSEK_GESER_ATAS  = 29268;
+
     /** Penanda skalar yang bisa dipakai di template Word (${nama}). */
     public const SKALAR = [
         'nomor', 'tanggal', 'kota_surat', 'penerima', 'perusahaan', 'perusahaan_alamat', 'perusahaan_kota', 'alamat_lengkap',
@@ -93,16 +111,59 @@ final class PklSurat
      */
     public static function infoTtd(array $pengaturan): ?array
     {
-        $nama = (string) ($pengaturan['ttd_hubin'] ?? '');
+        return self::infoGambar((string) ($pengaturan['ttd_hubin'] ?? ''), 1512000, 648000);
+    }
+
+    /**
+     * Gambar tanda tangan + stempel Kepala Sekolah yang diunggah, atau null: ['path','ext','cx','cy'] — dimuat dalam kotak
+     * 3,6 × 3,24 cm dengan perbandingan asli. Menggantikan tanda tangan Kepala Sekolah bawaan template (lihat gantiGambar()).
+     *
+     * @return array{path: string, ext: string, cx: int, cy: int}|null
+     */
+    public static function infoTtdKepsek(array $pengaturan): ?array
+    {
+        return self::infoGambar((string) ($pengaturan['ttd_kepsek'] ?? ''), self::KEPSEK_KOTAK[0], self::KEPSEK_KOTAK[1]);
+    }
+
+    /**
+     * Penggantian gambar untuk PklDocx::dariTemplate(): tanda tangan Kepala Sekolah bawaan → gambar unggahan (tanda tangan +
+     * stempel), dengan ukuran & posisi rapian sekolah. [] bila belum ada unggahan (template dipakai apa adanya).
+     *
+     * @return list<array<string, mixed>>
+     */
+    public static function gantiGambar(array $pengaturan): array
+    {
+        $k     = self::infoTtdKepsek($pengaturan);
+        $biner = $k !== null ? @file_get_contents($k['path']) : false;
+        if ($k === null || ! is_string($biner) || $biner === '') {
+            return [];
+        }
+
+        return [[
+            'sha256' => self::SHA_TTD_KEPSEK_BAWAAN, 'id' => self::REL_TTD_KEPSEK, 'ext' => $k['ext'], 'biner' => $biner,
+            'cx' => $k['cx'], 'cy' => $k['cy'], 'geser_kanan' => self::KEPSEK_GESER_KANAN, 'geser_atas' => self::KEPSEK_GESER_ATAS,
+            'nama' => 'Tanda tangan dan stempel Kepala Sekolah',
+        ]];
+    }
+
+    /** Penanda gambar untuk sidik surat: "-" bila belum ada, selain itu nama berkas @ waktu ubah. */
+    public static function penandaGambar(?array $info): string
+    {
+        return $info !== null ? basename($info['path']) . '@' . (int) @filemtime($info['path']) : '-';
+    }
+
+    /** @return array{path: string, ext: string, cx: int, cy: int}|null gambar $nama di writable/pkl, dimuat dalam kotak $lebar × $tinggi EMU */
+    private static function infoGambar(string $nama, int $lebar, int $tinggi): ?array
+    {
         $path = self::dirBerkas() . $nama;
-        if ($nama === '' || ! is_file($path)) {
+        if ($nama === '' || basename($nama) !== $nama || ! is_file($path)) {
             return null;
         }
         $info = @getimagesize($path);
         if ($info === false || ! in_array($info[2], [IMAGETYPE_PNG, IMAGETYPE_JPEG], true) || $info[0] < 1 || $info[1] < 1) {
             return null;
         }
-        $skala = min(1512000 / $info[0], 648000 / $info[1]);
+        $skala = min($lebar / $info[0], $tinggi / $info[1]);
 
         return [
             'path' => $path,
@@ -123,20 +184,56 @@ final class PklSurat
      */
     public static function simpanTtd(string $pathSementara, int $ukuran): array
     {
-        if ($ukuran > self::MAKS_TTD) {
-            return ['ok' => false, 'pesan' => 'Gambar terlalu besar (maksimal 1 MB). Kecilkan ukurannya dulu.'];
+        return self::simpanGambar('ttd_hubin', $pathSementara, $ukuran, self::MAKS_TTD, 40,
+            'Tanda tangan disimpan. Gambar ini tercetak di semua surat (Surat Izin PKL dan surat sekolah bernomor), siapa pun yang meng-ACC.');
+    }
+
+    public static function hapusTtd(): void
+    {
+        self::hapusGambar('ttd_hubin');
+    }
+
+    /** Batas ukuran gambar tanda tangan + stempel Kepala Sekolah (byte; hasil pindai stempel biasanya lebih besar). */
+    public const MAKS_TTD_KEPSEK = 2097152;
+
+    /**
+     * Simpan gambar tanda tangan + stempel Kepala Sekolah (PNG/JPG, ≤ 2 MB, 100–4000 px) di writable/pkl — TIDAK masuk repo.
+     *
+     * @return array{ok: bool, pesan: string}
+     */
+    public static function simpanTtdKepsek(string $pathSementara, int $ukuran): array
+    {
+        return self::simpanGambar('ttd_kepsek', $pathSementara, $ukuran, self::MAKS_TTD_KEPSEK, 100,
+            'Tanda tangan + stempel Kepala Sekolah disimpan. Gambar ini menggantikan tanda tangan Kepala Sekolah bawaan di semua surat bernomor (Surat Izin PKL, Izin ASTS/TKA, Balasan, Penarikan).');
+    }
+
+    public static function hapusTtdKepsek(): void
+    {
+        self::hapusGambar('ttd_kepsek');
+    }
+
+    /**
+     * Simpan gambar unggahan ke writable/pkl/{$kolom}.png|jpg dan catat namanya di pkl_pengaturan.{$kolom}. Jenis ditentukan dari
+     * ISI berkas, bukan nama/ekstensi kiriman.
+     *
+     * @return array{ok: bool, pesan: string}
+     */
+    private static function simpanGambar(string $kolom, string $pathSementara, int $ukuran, int $maks, int $minTinggi, string $pesanOk): array
+    {
+        if ($ukuran > $maks) {
+            return ['ok' => false, 'pesan' => 'Gambar terlalu besar (maksimal ' . intdiv($maks, 1048576) . ' MB). Kecilkan ukurannya dulu.'];
         }
         $info = @getimagesize($pathSementara);
         if ($info === false || ! in_array($info[2], [IMAGETYPE_PNG, IMAGETYPE_JPEG], true)) {
             return ['ok' => false, 'pesan' => 'Berkas bukan gambar PNG/JPG yang sah.'];
         }
-        if ($info[0] < 100 || $info[1] < 40 || $info[0] > 4000 || $info[1] > 4000) {
+        if ($info[0] < 100 || $info[1] < $minTinggi || $info[0] > 4000 || $info[1] > 4000) {
             return ['ok' => false, 'pesan' => 'Ukuran gambar harus antara 100 dan 4000 piksel (lebar & tinggi).'];
         }
 
         $dir  = self::dirBerkas();
-        $nama = 'ttd_hubin.' . ($info[2] === IMAGETYPE_PNG ? 'png' : 'jpg');
-        foreach (['ttd_hubin.png', 'ttd_hubin.jpg'] as $lama) {
+        $nama = $kolom . '.' . ($info[2] === IMAGETYPE_PNG ? 'png' : 'jpg');
+        foreach ([$kolom . '.png', $kolom . '.jpg'] as $lama) {
             if (is_file($dir . $lama)) {
                 @unlink($dir . $lama);
             }
@@ -144,20 +241,21 @@ final class PklSurat
         if (! @copy($pathSementara, $dir . $nama)) {
             return ['ok' => false, 'pesan' => 'Gambar gagal disimpan di server (folder writable/pkl tidak bisa ditulis).'];
         }
-        (new PklPengaturanModel())->update(1, ['ttd_hubin' => $nama]);
+        clearstatcache(true, $dir . $nama);
+        (new PklPengaturanModel())->update(1, [$kolom => $nama]);
 
-        return ['ok' => true, 'pesan' => 'Tanda tangan disimpan. Surat yang di-ACC akun Waka Hubin akan memakainya.'];
+        return ['ok' => true, 'pesan' => $pesanOk];
     }
 
-    public static function hapusTtd(): void
+    private static function hapusGambar(string $kolom): void
     {
         $p = (new PklPengaturanModel())->ambil();
-        foreach (['ttd_hubin.png', 'ttd_hubin.jpg', (string) ($p['ttd_hubin'] ?? '')] as $nama) {
+        foreach ([$kolom . '.png', $kolom . '.jpg', (string) ($p[$kolom] ?? '')] as $nama) {
             if ($nama !== '' && basename($nama) === $nama && is_file(self::dirBerkas() . $nama)) {
                 @unlink(self::dirBerkas() . $nama);
             }
         }
-        (new PklPengaturanModel())->update(1, ['ttd_hubin' => null]);
+        (new PklPengaturanModel())->update(1, [$kolom => null]);
     }
 
     /**
@@ -218,7 +316,7 @@ final class PklSurat
 
     /**
      * Sidik data yang tampil di surat — berubah bila perusahaan/siswa (termasuk HP), penanda tangan
-     * (Waka Hubin, Kepala Sekolah, kontak NB, gambar tanda tangan), atau catatan ACC berubah.
+     * (Waka Hubin, Kepala Sekolah, kontak NB, gambar tanda tangan Waka Hubin / Kepala Sekolah), atau catatan ACC berubah.
      * $p = pengaturan PKL (dibaca bila kosong).
      */
     public static function sidik(array $ajuan, array $anggota, ?array $p = null): string
@@ -228,11 +326,15 @@ final class PklSurat
         $dasar = [
             (string) ($p['waka_hubin_nama'] ?? ''), (string) ($p['waka_hubin_nip'] ?? ''), (string) ($p['waka_hubin_jabatan'] ?? ''),
             (string) ($p['kepsek_nama'] ?? ''), (string) ($p['kontak_surat_nama'] ?? ''), (string) ($p['kontak_surat_hp'] ?? ''),
-            $ttd !== null ? basename($ttd['path']) . '@' . (int) @filemtime($ttd['path']) : '-',
+            self::penandaGambar($ttd),
             (string) ($ajuan['acc_at'] ?? ''), (string) ($ajuan['acc_peran'] ?? ''), (string) ($ajuan['acc_nama'] ?? ''),
             (string) $ajuan['perusahaan_nama'], (string) ($ajuan['perusahaan_alamat'] ?? ''), (string) ($ajuan['perusahaan_kota'] ?? ''),
             (string) ($ajuan['perusahaan_telepon'] ?? ''), (string) ($ajuan['kontak_nama'] ?? ''), (string) ($ajuan['kontak_jabatan'] ?? ''),
         ];
+        // Gambar tanda tangan + stempel Kepala Sekolah: hanya ikut bila ada (sidik surat lama tidak berubah selama belum diunggah).
+        if (($kepsek = self::infoTtdKepsek($p)) !== null) {
+            $dasar[] = 'kepsek:' . self::penandaGambar($kepsek);
+        }
         $siswa = array_map(static fn (array $a) => [
             (int) $a['siswa_id'], (string) $a['nama'], (string) ($a['nis'] ?? ''), (string) ($a['nisn'] ?? ''), (string) ($a['nama_kelas'] ?? ''), (string) ($a['jurusan_nama'] ?? ''),
             trim((string) ($a['hp'] ?? '')) !== '' ? (string) $a['hp'] : (string) ($a['hp_master'] ?? ''),
@@ -395,12 +497,10 @@ final class PklSurat
         $wakaJabatan = trim((string) ($p['waka_hubin_jabatan'] ?? '')) !== '' ? trim((string) $p['waka_hubin_jabatan']) : 'Wakil Kepala Sekolah Bidang Hubungan Industri';
         [$jab1, $jab2] = self::bagiDuaBaris($wakaJabatan, 30);
 
-        // Gambar tanda tangan Waka Hubin HANYA bila yang meng-ACC memang akun Waka Hubin. ACC oleh Admin
-        // (cadangan) / data impor → ruang dibiarkan kosong; kaki surat menjelaskan siapa yang menyetujui.
+        // Gambar tanda tangan Waka Hubin SELALU dipasang bila sudah diunggah, siapa pun yang meng-ACC (keputusan sekolah
+        // 2026-10-13: tanda tangan Hubin & Kepsek tercetak seperti contoh). Siapa yang menyetujui tetap tertulis di kaki surat.
         $ttd     = $ekstra['ttd'] ?? null;
-        $ttdRaw  = ($ttd !== null && ($ajuan['acc_peran'] ?? '') === 'hubin')
-            ? PklDocx::gambarTtd(self::REL_TTD, (int) $ttd['cx'], (int) $ttd['cy'])
-            : '';
+        $ttdRaw  = $ttd !== null ? PklDocx::gambarTtd(self::REL_TTD, (int) $ttd['cx'], (int) $ttd['cy']) : '';
         $accWaktu = ! empty($ajuan['acc_at']) ? self::waktuIndo((string) $ajuan['acc_at']) : '';
 
         return [
@@ -480,8 +580,8 @@ final class PklSurat
     }
 
     /**
-     * Catatan ACC di kaki surat: siapa yang menyetujui, kapan, kode verifikasi, dan siapa yang mencetak.
-     * Sengaja jujur: ACC oleh Admin ditulis "mewakili Waka Hubin", data impor ditulis bukan persetujuan sistem.
+     * Catatan ACC di kaki surat: siapa yang menyetujui (nama + peran apa adanya), kapan, kode verifikasi, dan siapa yang mencetak.
+     * Data impor ditulis bukan persetujuan sistem.
      */
     public static function catatanAcc(array $ajuan, array $p, array $ekstra = []): string
     {
@@ -495,11 +595,11 @@ final class PklSurat
             $baris1 = 'Data PKL ini adalah riwayat yang diimpor ke Sistem Informasi Akademik Sekolah (BINUS) oleh ' . ($nama !== '' ? $nama : 'staf') . ($waktu !== '' ? ' pada ' . $waktu : '') . ' — bukan persetujuan elektronik Waka Hubin.';
             $baris2 = $kode !== '' ? 'Kode verifikasi: ' . $kode : '';
         } else {
-            $siapa = match ($peran) {
-                'hubin'    => $nama . ' (' . $jabatanHubin . ')',
-                'admin'    => $nama . ' (Admin Sistem, mewakili Waka Hubin karena Waka Hubin berhalangan)',
-                'operator' => $nama . ' (Operator Sekolah, diberi wewenang ACC oleh Admin sekolah)',
-                default    => $nama !== '' ? $nama : 'tidak tercatat',
+            $siapa = match (true) {
+                $peran === 'hubin' => $nama . ' (' . $jabatanHubin . ')',
+                $peran === 'admin' => $nama . ' (Admin Sistem)',
+                $peran !== ''      => ($nama !== '' ? $nama : 'tidak tercatat') . ' (' . HakAkses::label($peran) . ')',
+                default            => $nama !== '' ? $nama : 'tidak tercatat',
             };
             // Tiap keterangan satu baris pendek (tidak terpotong di tengah kode verifikasi).
             $baris1 = 'Surat ini disetujui secara elektronik melalui Sistem Informasi Akademik Sekolah (BINUS).';
@@ -574,7 +674,7 @@ final class PklSurat
         }
 
         $rakit = static fn (array $bagian): string => $path !== null
-            ? PklDocx::dariTemplate($path, $bagian, $media)
+            ? PklDocx::dariTemplate($path, $bagian, $media, self::gantiGambar($p))
             : PklDocx::dokumen(array_map(static fn (array $d) => PklDocx::suratBawaan($d['v'], $d['siswa'], $logo), $bagian), $logo);
 
         try {

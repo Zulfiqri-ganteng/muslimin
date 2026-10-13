@@ -315,8 +315,10 @@ final class PklDocx
      * @param list<array{id: string, ext: string, biner: string}>                        $media gambar tambahan
      *        (mis. tanda tangan Waka Hubin): disimpan di word/media/{id}.{ext} dan didaftarkan sebagai
      *        relasi dengan Id = $id, supaya XML mentah di nilai penanda bisa merujuknya (r:embed="$id").
+     * @param list<array<string, mixed>>                                                  $ganti gambar template yang DIGANTI
+     *        (mis. tanda tangan Kepala Sekolah bawaan → tanda tangan + stempel unggahan), lihat gantiGambar().
      */
-    public static function dariTemplate(string $pathTemplate, array $daftar, array $media = []): string
+    public static function dariTemplate(string $pathTemplate, array $daftar, array $media = [], array $ganti = []): string
     {
         $zip = new \ZipArchive();
         if ($zip->open($pathTemplate) !== true) {
@@ -368,26 +370,113 @@ final class PklDocx
 
         // Media tambahan: berkas + relasi + tipe konten.
         foreach ($media as $m) {
-            $id  = preg_replace('/[^A-Za-z0-9_]/', '', (string) $m['id']);
-            $ext = strtolower(preg_replace('/[^a-z0-9]/i', '', (string) $m['ext']));
-            $bagian['word/media/' . $id . '.' . $ext] = $m['biner'];
-
-            $rel = $bagian['word/_rels/document.xml.rels'] ?? '';
-            if ($rel !== '' && ! str_contains($rel, 'Id="' . $id . '"')) {
-                $bagian['word/_rels/document.xml.rels'] = str_replace(
-                    '</Relationships>',
-                    '<Relationship Id="' . $id . '" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/image" Target="media/' . $id . '.' . $ext . '"/></Relationships>',
-                    $rel
-                );
-            }
-            $tipe = $bagian['[Content_Types].xml'] ?? '';
-            if ($tipe !== '' && ! preg_match('/Extension="' . preg_quote($ext, '/') . '"/i', $tipe)) {
-                $mime = ['png' => 'image/png', 'jpg' => 'image/jpeg', 'jpeg' => 'image/jpeg'][$ext] ?? 'application/octet-stream';
-                $bagian['[Content_Types].xml'] = preg_replace('/(<Types[^>]*>)/', '$1<Default Extension="' . $ext . '" ContentType="' . $mime . '"/>', $tipe, 1) ?? $tipe;
-            }
+            self::tambahMedia($bagian, (string) $m['id'], (string) $m['ext'], (string) $m['biner']);
+        }
+        foreach ($ganti as $g) {
+            $bagian = self::gantiGambar($bagian, $g);
         }
 
         return self::zip($bagian);
+    }
+
+    /** Tambah satu gambar ke paket Word: word/media/{id}.{ext} + relasi Id={id} + tipe konten ekstensinya. */
+    private static function tambahMedia(array &$bagian, string $id, string $ext, string $biner): void
+    {
+        $id  = preg_replace('/[^A-Za-z0-9_]/', '', $id) ?? '';
+        $ext = strtolower(preg_replace('/[^a-z0-9]/i', '', $ext) ?? '');
+        $bagian['word/media/' . $id . '.' . $ext] = $biner;
+
+        $rel = $bagian['word/_rels/document.xml.rels'] ?? '';
+        if ($rel !== '' && ! str_contains($rel, 'Id="' . $id . '"')) {
+            $bagian['word/_rels/document.xml.rels'] = str_replace(
+                '</Relationships>',
+                '<Relationship Id="' . $id . '" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/image" Target="media/' . $id . '.' . $ext . '"/></Relationships>',
+                $rel
+            );
+        }
+        $tipe = $bagian['[Content_Types].xml'] ?? '';
+        if ($tipe !== '' && ! preg_match('/Extension="' . preg_quote($ext, '/') . '"/i', $tipe)) {
+            $mime = ['png' => 'image/png', 'jpg' => 'image/jpeg', 'jpeg' => 'image/jpeg'][$ext] ?? 'application/octet-stream';
+            $bagian['[Content_Types].xml'] = preg_replace('/(<Types[^>]*>)/', '$1<Default Extension="' . $ext . '" ContentType="' . $mime . '"/>', $tipe, 1) ?? $tipe;
+        }
+    }
+
+    /**
+     * Ganti gambar template yang ISINYA bersidik $g['sha256'] (mis. tanda tangan Kepala Sekolah bawaan; Id relasinya bisa beda
+     * per template) dengan gambar $g['biner']. Tiap gambar yang memakainya di document.xml diberi ukuran baru $g['cx'] × $g['cy']
+     * (EMU); posisinya dihitung dari gambar lama: tepi kanan bergeser $g['geser_kanan'] ke kiri, titik tengah $g['geser_atas'] ke
+     * atas. Template tanpa gambar itu dikembalikan apa adanya.
+     *
+     * @param array<string, string> $bagian isi paket Word: nama bagian => isi
+     * @param array<string, mixed>  $g      sha256, id, ext, biner, cx, cy, geser_kanan?, geser_atas?, nama?
+     *
+     * @return array<string, string>
+     */
+    public static function gantiGambar(array $bagian, array $g): array
+    {
+        $rels = $bagian['word/_rels/document.xml.rels'] ?? '';
+        $doc  = $bagian['word/document.xml'] ?? '';
+        if ($rels === '' || $doc === '' || (string) ($g['biner'] ?? '') === '') {
+            return $bagian;
+        }
+        $lama = [];
+        preg_match_all('/<Relationship\b[^>]*>/', $rels, $mm);
+        foreach ($mm[0] as $tag) {
+            if (! str_contains($tag, '/relationships/image"') || ! preg_match('/\bId="([^"]+)"/', $tag, $i) || ! preg_match('/\bTarget="([^"]+)"/', $tag, $t)) {
+                continue;
+            }
+            $nama = str_starts_with($t[1], '/') ? ltrim($t[1], '/') : 'word/' . $t[1]; // Target relatif ke word/ atau mutlak dari akar paket
+            if (isset($bagian[$nama]) && hash('sha256', $bagian[$nama]) === $g['sha256']) {
+                $lama[] = $i[1];
+            }
+        }
+        if ($lama === []) {
+            return $bagian;
+        }
+
+        $id = preg_replace('/[^A-Za-z0-9_]/', '', (string) $g['id']) ?? '';
+        self::tambahMedia($bagian, $id, (string) $g['ext'], (string) $g['biner']);
+        $cx     = max(1, (int) $g['cx']);
+        $cy     = max(1, (int) $g['cy']);
+        $kanan  = (int) ($g['geser_kanan'] ?? 0);
+        $atas   = (int) ($g['geser_atas'] ?? 0);
+        $polaId = '/r:embed="(?:' . implode('|', array_map(static fn (string $x): string => preg_quote($x, '/'), $lama)) . ')"/';
+
+        $ubah = static function (string $x) use ($polaId, $id, $cx, $cy, $kanan, $atas, $g): string {
+            if (! preg_match($polaId, $x) || ! preg_match('/<wp:extent cx="(\d+)" cy="(\d+)"\s*\/>/', $x, $e)) {
+                return $x;
+            }
+            [$cx0, $cy0] = [(int) $e[1], (int) $e[2]];
+            $x = preg_replace($polaId, 'r:embed="' . $id . '"', $x) ?? $x;
+            $x = preg_replace('/<wp:extent cx="\d+" cy="\d+"\s*\/>/', '<wp:extent cx="' . $cx . '" cy="' . $cy . '"/>', $x, 1) ?? $x;
+            $x = preg_replace('/(<a:xfrm\b[^>]*>\s*<a:off\b[^>]*\/>\s*)<a:ext cx="\d+" cy="\d+"\s*\/>/', '${1}<a:ext cx="' . $cx . '" cy="' . $cy . '"/>', $x, 1) ?? $x;
+            $x = preg_replace('/<wp:effectExtent\b[^>]*\/>/', '<wp:effectExtent l="0" t="0" r="0" b="0"/>', $x, 1) ?? $x;
+            $x = preg_replace_callback('/(<wp:positionH\b[^>]*>\s*<wp:posOffset>)(-?\d+)(<\/wp:posOffset>)/', static fn (array $m): string => $m[1] . ((int) $m[2] + $cx0 - $kanan - $cx) . $m[3], $x, 1) ?? $x;
+            $x = preg_replace_callback('/(<wp:positionV\b[^>]*>\s*<wp:posOffset>)(-?\d+)(<\/wp:posOffset>)/', static fn (array $m): string => $m[1] . ((int) $m[2] + intdiv($cy0, 2) - $atas - intdiv($cy, 2)) . $m[3], $x, 1) ?? $x;
+            if (isset($g['nama'])) { // nama & keterangan gambar (keterangan bawaan template memuat path berkas pindaian)
+                $nama = self::esc((string) $g['nama']);
+                $x    = preg_replace('/(<(?:wp:docPr|pic:cNvPr)\b[^>]*?)\sname="[^"]*"/', '$1 name="' . $nama . '"', $x) ?? $x;
+                $x    = preg_replace('/(<(?:wp:docPr|pic:cNvPr)\b[^>]*?)\sdescr="[^"]*"/', '$1 descr="' . $nama . '"', $x) ?? $x;
+            }
+
+            return $x;
+        };
+
+        // Telusuri tiap <w:drawing>…</w:drawing> (tanpa regex raksasa: dokumen gabungan bisa berisi puluhan surat).
+        $hasil = '';
+        $pos   = 0;
+        while (($a = strpos($doc, '<w:drawing>', $pos)) !== false) {
+            $b = strpos($doc, '</w:drawing>', $a);
+            if ($b === false) {
+                break;
+            }
+            $b += strlen('</w:drawing>');
+            $hasil .= substr($doc, $pos, $a - $pos) . $ubah(substr($doc, $a, $b - $a));
+            $pos = $b;
+        }
+        $bagian['word/document.xml'] = $hasil . substr($doc, $pos);
+
+        return $bagian;
     }
 
     /**

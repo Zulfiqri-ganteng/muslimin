@@ -7,8 +7,10 @@ use App\Libraries\IsianBantu;
 use App\Libraries\PklAjuan;
 use App\Libraries\PklBiaya;
 use App\Libraries\PklForm;
+use App\Libraries\HakPeran;
 use App\Libraries\PklHak;
 use App\Libraries\PklKeputusan;
+use App\Libraries\PklLapor;
 use App\Libraries\PklLaporanBiaya;
 use App\Libraries\PklPeringatan;
 use App\Libraries\PklStaf;
@@ -20,16 +22,16 @@ use App\Models\PklPengajuanModel;
 use App\Models\PklPengaturanModel;
 use App\Models\SettingModel;
 use CodeIgniter\HTTP\ResponseInterface;
-use Config\Peran;
 
 /**
  * PKL / Prakerin untuk aplikasi Android (staf: Operator, Waka Hubin, Admin) — cermin App\Controllers\Admin\Pkl
  * + PklBerkas. Seluruh aturan ada di library bersama (PklKeputusan, PklStaf, PklForm, PklAjuan, PklSurat), jadi
  * hasil web & aplikasi selalu sama. Form pengajuan SISWA tetap web (tautan subdomain).
  *
- * Gerbang: ApiAuthFilter hanya meloloskan peran ber-akses "pkl" (Config\Peran 'api_akses'); Operator/Hubin tidak
- * bisa menyentuh API lain. Hak per aksi dijaga di sini (HakAkses): ACC, tolak, batalkan persetujuan, ACC massal,
- * "langsung disetujui", ubah ajuan yang sudah disetujui → Waka Hubin / Admin saja; Admin wajib wakil=1 (mewakili).
+ * Gerbang: ApiAuthFilter hanya meloloskan peran yang memegang modul PKL (Sistem → Hak Akses); peran selain Admin tidak
+ * bisa menyentuh API lain. Hak per aksi dijaga di sini (HakAkses/PklHak, diatur Admin): ACC, tolak, batalkan persetujuan,
+ * ACC massal, "langsung disetujui", ubah ajuan yang sudah disetujui → pemegang hak "ACC ajuan PKL"; hapus ajuan disetujui →
+ * "hapus_disetujui". Tidak ada lagi pernyataan "mewakili" (kiriman wakil diabaikan; hak.wajib_wakil selalu false).
  *
  * Rute (/api/v1, Bearer):
  *   GET    pkl/meta                          label status/fase, aturan, daftar kelas, hak peran ini
@@ -50,19 +52,19 @@ use Config\Peran;
  *   GET    pkl/laporan?…  | GET pkl/laporan/excel?…   Laporan Pembayaran (hak 'laporan')
  *   GET    pkl/hak-akses  | POST pkl/hak-akses {hak:{hubin:[…],operator:[…]}}   KHUSUS ADMIN
  *   GET    pkl/siswa?kelas_id=&fase=&q=&page=&per=   Status Siswa
- *   GET    pkl/ttd | GET pkl/ttd/gambar | POST pkl/ttd (berkas "ttd") | DELETE pkl/ttd   tanda tangan Waka Hubin (Hubin/Admin)
+ *   GET    pkl/ttd | GET pkl/ttd/gambar | POST pkl/ttd (berkas "ttd") | DELETE pkl/ttd   tanda tangan Waka Hubin (hak "ttd", diatur Admin)
  */
 class Pkl extends BaseApiController
 {
     private const LABEL_STATUS = [
-        'menunggu'  => 'Menunggu keputusan Waka Hubin',
+        'menunggu'  => 'Menunggu keputusan ACC',
         'perbaikan' => 'Perlu perbaikan',
         'disetujui' => 'Disetujui',
         'ditolak'   => 'Ditolak',
     ];
 
     private const LABEL_FASE = [
-        'belum' => 'Belum mengisi', 'ditolak' => 'Ditolak (perlu ajukan ulang)', 'menunggu' => 'Menunggu keputusan Waka Hubin', 'perbaikan' => 'Perlu perbaikan',
+        'belum' => 'Belum mengisi', 'ditolak' => 'Ditolak (perlu ajukan ulang)', 'menunggu' => 'Menunggu keputusan ACC', 'perbaikan' => 'Perlu perbaikan',
         'belum_mulai' => 'Disetujui, belum mulai', 'sedang' => 'Sedang PKL', 'selesai' => 'Selesai PKL', 'disetujui' => 'Disetujui',
     ];
 
@@ -71,11 +73,20 @@ class Pkl extends BaseApiController
         'tolak' => 'Ditolak', 'batal_acc' => 'Persetujuan dibatalkan', 'ubah' => 'Data diubah staf', 'isi_atas_nama' => 'Diisi atas nama siswa',
         'tunda' => 'Dikembalikan ke antrean', 'surat' => 'Surat diterbitkan', 'cetak' => 'Surat diunduh', 'impor' => 'Diimpor dari Excel',
         'bayar' => 'Biaya dicatat', 'koreksi_bayar' => 'Catatan biaya dikoreksi', 'kabari' => 'Siswa dikabari (WhatsApp)',
+        'periode' => 'Periode PKL diisi', 'surat_sekolah' => 'Surat sekolah',
+        'lapor_diterima' => 'Siswa lapor diterima perusahaan', 'lapor_proses' => 'Laporan diterima diproses', 'lapor_kembali' => 'Laporan diterima dikembalikan',
     ];
 
-    private const LABEL_PERAN_ACC = [
-        'hubin' => 'Waka Hubin', 'admin' => 'Admin — mewakili Waka Hubin', 'operator' => 'Operator (diberi wewenang ACC oleh Admin)', 'impor' => 'Data riwayat (diimpor, bukan ACC sistem)',
-    ];
+    /** Label peran penyetuju: peran yang ada di Sistem → Hak Akses + 'impor' (data riwayat). */
+    private static function labelPeranAcc(): array
+    {
+        $out = [];
+        foreach (HakAkses::semua() as $kode => $p) {
+            $out[$kode] = (string) $p['label'];
+        }
+
+        return $out + ['impor' => 'Data riwayat (diimpor, bukan ACC sistem)'];
+    }
 
     private const MAKS_SURAT_MASSAL = 300;
 
@@ -100,7 +111,7 @@ class Pkl extends BaseApiController
             'status'        => self::LABEL_STATUS,
             'fase_siswa'    => self::LABEL_FASE,
             'aksi_riwayat'  => self::LABEL_AKSI,
-            'peran_acc'     => self::LABEL_PERAN_ACC,
+            'peran_acc'     => self::labelPeranAcc(),
             'hak_pkl'       => array_map(static fn (array $h) => ['judul' => $h[0], 'keterangan' => $h[1]], PklHak::HAK),
             'aturan'        => [
                 'maks_siswa'           => PklPengaturanModel::maksSiswa($this->p),
@@ -137,6 +148,13 @@ class Pkl extends BaseApiController
                 'tingkat'  => $tingkat,
                 'tutup_pada' => $this->p['form_tutup'] ?? null,
             ],
+            // Form "Lapor Diterima PKL" (siswa → Surat Balasan): saklar sendiri; baru = laporan menunggu (hanya bagi yang boleh
+            // memprosesnya — kotaknya ada di API surat/balasan/laporan).
+            'lapor' => [
+                'buka'   => PklLapor::terbuka($this->p),
+                'tautan' => config('Pkl')->tautanLapor(),
+                'baru'   => PklLapor::hak($this->peran(), $this->p)['lihat'] ? (new PklLapor())->hitung()['baru'] : null,
+            ],
             'hitung'     => $this->model->hitungStatus(),
             'terlambat'  => $this->model->hitungTerlambat($hari),
             'batas_hari' => $hari,
@@ -146,6 +164,7 @@ class Pkl extends BaseApiController
             'surat'      => [
                 'waka_hubin_nama' => $this->p['waka_hubin_nama'] ?? null,
                 'ttd_ada'         => PklSurat::infoTtd($this->p) !== null,
+                'ttd_kepsek_ada'  => PklSurat::infoTtdKepsek($this->p) !== null, // tanda tangan + stempel Kepala Sekolah (diunggah di web)
                 'template_unggahan' => PklSurat::pathTemplate($this->p) !== null,
             ],
             'hak' => $hak,
@@ -294,7 +313,7 @@ class Pkl extends BaseApiController
         }
         $statusAwal = ($in['status_awal'] ?? '') === 'disetujui' ? 'disetujui' : 'menunggu';
         if ($statusAwal === 'disetujui' && ! HakAkses::bolehAcc($this->peran())) {
-            return $this->failure('Menyimpan ajuan langsung berstatus DISETUJUI hanya boleh dilakukan Waka Hubin (atau Admin). Simpan sebagai menunggu, lalu minta Waka Hubin meng-ACC.', 403);
+            return $this->failure('Menyimpan ajuan langsung berstatus DISETUJUI hanya boleh dilakukan pemegang hak ACC ajuan PKL (' . PklHak::teksPemegang('acc') . '). Simpan sebagai menunggu, lalu minta pemegang hak ACC meng-ACC.', 403);
         }
         if ($galat !== []) {
             return $this->invalid($galat);
@@ -324,7 +343,7 @@ class Pkl extends BaseApiController
             return $this->forbidden('Akun ' . HakAkses::label($this->peran()) . ' tidak punya hak mengubah ajuan.');
         }
         if ($a['status'] === 'disetujui' && ! HakAkses::bolehAcc($this->peran())) {
-            return $this->failure('Ajuan yang sudah DISETUJUI hanya boleh diubah Waka Hubin (atau Admin), karena persetujuannya berlaku untuk isi yang sekarang.', 403);
+            return $this->failure('Ajuan yang sudah DISETUJUI hanya boleh diubah pemegang hak ACC ajuan PKL (' . PklHak::teksPemegang('acc') . '), karena persetujuannya berlaku untuk isi yang sekarang.', 403);
         }
         $lama = $this->model->anggotaDetail($id);
         $in   = $this->body();
@@ -363,10 +382,10 @@ class Pkl extends BaseApiController
         if (! HakAkses::boleh($peran, 'admin/pkl/hapus')) {
             return $this->forbidden('Akun ' . HakAkses::label($peran) . ' tidak boleh menghapus ajuan.');
         }
-        if ($a['status'] === 'disetujui' && $peran !== Peran::ADMIN) {
+        if ($a['status'] === 'disetujui' && ! PklHak::boleh($peran, 'hapus_disetujui')) {
             $this->audit->record('delete', 'pkl_pengajuan', $id, 'DITOLAK: ' . HakAkses::label($peran) . ' mencoba menghapus ajuan yang sudah disetujui, PKL ' . PklPengajuanModel::kode($id) . ' (via aplikasi)');
 
-            return $this->forbidden('Ajuan yang sudah DISETUJUI Waka Hubin hanya boleh dihapus Admin. Minta Waka Hubin membatalkan persetujuannya, atau hubungi Admin.');
+            return $this->forbidden('Ajuan yang sudah DISETUJUI hanya boleh dihapus peran yang diberi hak "Hapus ajuan yang sudah disetujui" (' . PklHak::teksPemegang('hapus_disetujui') . '). Minta pemegang hak ACC membatalkan persetujuannya dulu, atau hubungi Admin.');
         }
         // Konfirmasi boleh lewat body JSON {"paham": true} atau alamat ?paham=1 (DELETE di sebagian klien tak membawa body).
         $paham = $this->body()['paham'] ?? $this->request->getGet('paham');
@@ -650,24 +669,28 @@ class Pkl extends BaseApiController
 
     public function hakAkses(): ResponseInterface
     {
-        if ($this->peran() !== Peran::ADMIN) {
-            return $this->forbidden('Hak Akses PKL hanya bisa dilihat dan diatur Admin.');
+        if (! HakAkses::boleh($this->peran(), 'admin/hak-akses')) {
+            return $this->forbidden('Hak Akses hanya bisa dilihat dan diatur Admin.');
         }
 
         return $this->ok([
-            'peran_atur' => PklHak::PERAN_ATUR,
-            'hak'        => array_map(static fn (array $h) => ['judul' => $h[0], 'keterangan' => $h[1]], PklHak::HAK),
-            'matriks'    => PklHak::matriks(),
-            'bawaan'     => PklHak::BAWAAN,
-            'peringatan' => PklHak::peringatan(),
+            'peran_atur'    => HakPeran::peranAtur(),
+            'peran_label'   => array_combine(HakPeran::peranAtur(), array_map(static fn (string $k): string => HakPeran::label($k), HakPeran::peranAtur())),
+            'hak'           => array_map(static fn (array $h) => ['judul' => $h[0], 'keterangan' => $h[1]], PklHak::HAK),
+            'matriks'       => PklHak::matriks(),
+            // Hak per jenis surat sekolah (diatur di web: Sistem → Hak Akses). Hanya dibaca di aplikasi.
+            'aksi_surat'    => array_map(static fn (array $h) => ['judul' => $h[0], 'keterangan' => $h[1]], PklHak::AKSI_SURAT),
+            'matriks_surat' => PklHak::matriksSurat(),
+            'bawaan'        => PklHak::bawaanLengkap(),
+            'peringatan'    => PklHak::peringatan(),
         ], 'Hak akses PKL.');
     }
 
     /** POST pkl/hak-akses {"hak": {"hubin": ["acc","ubah","ttd"], "operator": ["surat","laporan","ubah","pengaturan"]}} */
     public function hakAksesSimpan(): ResponseInterface
     {
-        if ($this->peran() !== Peran::ADMIN) {
-            return $this->forbidden('Hak Akses PKL hanya bisa diatur Admin.');
+        if (! HakAkses::boleh($this->peran(), 'admin/hak-akses', 'POST')) {
+            return $this->forbidden('Hak Akses hanya bisa diatur Admin.');
         }
         $hasil = PklHak::simpan((array) ($this->body()['hak'] ?? []), $this->konteks());
         if (! $hasil['ok']) {
@@ -803,7 +826,7 @@ class Pkl extends BaseApiController
     {
         return HakAkses::boleh($this->peran(), 'admin/pkl/ttd')
             ? null
-            : $this->forbidden('Tanda tangan Waka Hubin hanya dikelola Waka Hubin atau Admin.');
+            : $this->forbidden('Tanda tangan Waka Hubin hanya dikelola peran yang diberi hak Tanda Tangan (' . PklHak::teksPemegang('ttd') . ').');
     }
 
     // ================================================================= pembantu
@@ -836,15 +859,15 @@ class Pkl extends BaseApiController
             'peran'           => $peran,
             'peran_label'     => HakAkses::label($peran),
             'acc'             => HakAkses::bolehAcc($peran),
-            'wajib_wakil'     => $peran === Peran::ADMIN,
+            'wajib_wakil'     => false, // tidak ada lagi pernyataan "mewakili"
             'pengaturan'      => HakAkses::boleh($peran, 'admin/pkl/pengaturan'),
             'hapus'           => HakAkses::boleh($peran, 'admin/pkl/hapus'),
             'tanda_tangan'    => HakAkses::boleh($peran, 'admin/pkl/ttd'),
-            // Hak yang diatur Admin (PKL → Hak Akses). Aplikasi menampilkan/menyembunyikan tombol menurut ini; server tetap penjaga.
+            // Hak yang diatur Admin (Sistem → Hak Akses). Aplikasi menampilkan/menyembunyikan tombol menurut ini; server tetap penjaga.
             'surat'           => HakAkses::bolehPkl($peran, 'surat'),
             'laporan'         => HakAkses::bolehPkl($peran, 'laporan'),
             'ubah'            => HakAkses::bolehPkl($peran, 'ubah'),
-            'atur_hak'        => $peran === Peran::ADMIN,
+            'atur_hak'        => HakAkses::boleh($peran, 'admin/hak-akses'),
             'hak_pkl'         => PklHak::petaUntuk($peran),
         ];
     }
@@ -862,11 +885,11 @@ class Pkl extends BaseApiController
             'batal_acc'   => $acc && $status === 'disetujui',
             'kembalikan'  => $status === 'menunggu' && HakAkses::bolehPkl($peran, 'ubah'),
             'ubah'        => HakAkses::bolehPkl($peran, 'ubah') && ($status !== 'disetujui' || $acc),
-            'hapus'       => HakAkses::boleh($peran, 'admin/pkl/hapus') && ($status !== 'disetujui' || $peran === Peran::ADMIN),
+            'hapus'       => HakAkses::boleh($peran, 'admin/pkl/hapus') && ($status !== 'disetujui' || PklHak::boleh($peran, 'hapus_disetujui')),
             'surat'       => $status === 'disetujui' && HakAkses::bolehPkl($peran, 'surat'),
             'pembayaran'  => $status === 'disetujui' && (HakAkses::bolehPkl($peran, 'surat') || HakAkses::bolehPkl($peran, 'laporan')),
             'koreksi_pembayaran' => $status === 'disetujui' && HakAkses::bolehPkl($peran, 'surat'),
-            'wajib_wakil' => $peran === Peran::ADMIN,
+            'wajib_wakil' => false,
         ];
     }
 
@@ -914,7 +937,7 @@ class Pkl extends BaseApiController
             'terlambat'       => $sisa !== null && $sisa < 0,
             'catatan_staf'    => in_array($r['status'], ['perbaikan', 'ditolak'], true) ? ($r['catatan_staf'] ?? null) : null,
             'acc'             => $r['status'] === 'disetujui' && ! empty($r['acc_at']) ? [
-                'nama'  => $r['acc_nama'] ?? null, 'peran' => $peranAcc !== '' ? $peranAcc : null, 'peran_label' => self::LABEL_PERAN_ACC[$peranAcc] ?? null,
+                'nama'  => $r['acc_nama'] ?? null, 'peran' => $peranAcc !== '' ? $peranAcc : null, 'peran_label' => self::labelPeranAcc()[$peranAcc] ?? ($peranAcc !== '' ? HakAkses::label($peranAcc) : null),
                 'waktu' => $r['acc_at'], 'kode_verifikasi' => $r['acc_kode'] ?? null,
             ] : null,
         ];

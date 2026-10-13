@@ -39,8 +39,8 @@ $tinjau = [
         . '<ul class="mt-2 list-disc pl-5 space-y-1">'
         . '<li>Form <b>tertutup</b> secara bawaan. Buka hanya saat tautan siap dibagikan; bisa diberi <b>batas waktu</b> agar menutup sendiri.</li>'
         . '<li><b>Maksimal siswa per perusahaan</b> paling banyak 5 (aturan sekolah).</li>'
-        . '<li>Siswa yang sudah mengajukan <b>tidak bisa mengajukan lagi</b> selama ajuannya menunggu keputusan Waka Hubin. <b>Batas keputusan</b> (bawaan 5 hari sejak dikirim) memberi tanda merah pada yang terlambat.</li>'
-        . '<li><b>Surat permohonan:</b> isi nama/NIP/jabatan Waka Hubin, nama Kepala Sekolah, kontak "NB" di bawah surat, format nomor surat, dan pola nama berkas. Format surat sudah <u>persis surat resmi sekolah</u>; hanya isi data yang berubah. Tanda tangan digital Waka Hubin diunggah Waka Hubin sendiri di tab <b>Tanda Tangan</b>.</li>'
+        . '<li>Siswa yang sudah mengajukan <b>tidak bisa mengajukan lagi</b> selama ajuannya menunggu keputusan (ACC). <b>Batas keputusan</b> (bawaan 5 hari sejak dikirim) memberi tanda merah pada yang terlambat.</li>'
+        . '<li><b>Surat permohonan:</b> isi nama/NIP/jabatan Waka Hubin, nama Kepala Sekolah, kontak "NB" di bawah surat, format nomor surat, dan pola nama berkas. Format surat sudah <u>persis surat resmi sekolah</u>; hanya isi data yang berubah. Tanda tangan digital Waka Hubin (dan tanda tangan + stempel Kepala Sekolah) diunggah di tab <b>Tanda Tangan</b> oleh peran yang diberi hak itu.</li>'
         . '<li><b>Format nomor surat</b>: pilih salah satu tombol siap pakai (mis. <i>Tiga angka: 001, 002</i>). Nol di depan hanya lewat <code>{urut3}</code>; menulis &quot;{urut}00&quot; menghasilkan 100, 200, 600 sehingga ditolak.</li>'
         . '<li><b>Biaya &amp; pesan WhatsApp</b> (bagian bawah): nominal tiap jenis biaya yang dicatat saat surat diunduh (catatan lama tidak berubah) dan templat pesan yang dikirim manual ke siswa.</li>'
         . '<li><b>Impor riwayat PKL lama</b> dari Excel ada di bagian bawah halaman ini.</li>'
@@ -92,6 +92,34 @@ $tinjau = [
         </div>
     </section>
 
+    <?php if (\App\Libraries\PklLapor::tabelAda()): $laporBuka = $nilai('lapor_buka', '1') === '1'; $tautanLapor = config('Pkl')->tautanLapor(); ?>
+    <!-- Form lapor diterima (bahan Surat Balasan) -->
+    <section class="rise overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+        <h3 class="border-b border-slate-100 bg-slate-50 px-5 py-3 text-xs font-bold uppercase tracking-wide text-slate-500">Form lapor diterima (bahan Surat Balasan)</h3>
+        <div class="space-y-4 p-5">
+            <p class="text-sm leading-relaxed text-slate-600">Siswa yang ajuannya sudah <b>disetujui</b> melapor bahwa perusahaan sudah menerimanya + tanggal PKL. Laporan masuk ke kotak <b>Lapor Diterima PKL</b> (menu Surat Sekolah), lalu staf membuatkan Surat Balasan. Saklar ini <u>terpisah</u> dari form pengajuan di atas, jadi siswa tetap bisa melapor walau pendaftaran PKL sudah ditutup.</p>
+            <div class="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                <label class="flex cursor-pointer items-start gap-3 rounded-xl border border-slate-200 p-4 transition has-[:checked]:border-green-500 has-[:checked]:bg-green-50 has-[:checked]:ring-2 has-[:checked]:ring-green-500/20">
+                    <input type="radio" name="lapor_buka" value="1" <?= $laporBuka ? 'checked' : '' ?> class="mt-1">
+                    <span><b class="block text-sm text-slate-800">Buka form lapor</b><span class="text-xs text-slate-500">Bawaan. Siswa bisa melapor lewat tautan di bawah.</span></span>
+                </label>
+                <label class="flex cursor-pointer items-start gap-3 rounded-xl border border-slate-200 p-4 transition has-[:checked]:border-slate-500 has-[:checked]:bg-slate-50 has-[:checked]:ring-2 has-[:checked]:ring-slate-400/20">
+                    <input type="radio" name="lapor_buka" value="0" <?= $laporBuka ? '' : 'checked' ?> class="mt-1">
+                    <span><b class="block text-sm text-slate-800">Tutup form lapor</b><span class="text-xs text-slate-500">Siswa melihat pemberitahuan "sedang ditutup".</span></span>
+                </label>
+            </div>
+            <div class="rounded-xl border border-slate-200 bg-slate-50 px-4 py-3" x-data="{ ok: false }">
+                <p class="text-xs font-bold uppercase tracking-wide text-slate-500">Tautan lapor diterima untuk dibagikan ke siswa</p>
+                <div class="mt-1.5 flex flex-wrap items-center gap-2">
+                    <code class="min-w-0 flex-1 truncate rounded-lg bg-white px-3 py-2 text-sm font-semibold text-brand-700 ring-1 ring-slate-200"><?= esc($tautanLapor) ?></code>
+                    <button type="button" @click="navigator.clipboard && navigator.clipboard.writeText(<?= esc(json_encode($tautanLapor), 'attr') ?>); ok = true" class="rounded-lg border border-slate-300 bg-white px-3.5 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50"><span x-text="ok ? '✓ Tersalin' : 'Salin'">Salin</span></button>
+                </div>
+                <p class="mt-1.5 text-xs text-slate-400">Tautan ini juga muncul sebagai tombol "Lapor" di halaman form pengajuan PKL.</p>
+            </div>
+        </div>
+    </section>
+    <?php endif; ?>
+
     <!-- Siapa -->
     <section class="rise overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
         <h3 class="border-b border-slate-100 bg-slate-50 px-5 py-3 text-xs font-bold uppercase tracking-wide text-slate-500">Siapa yang boleh mengajukan</h3>
@@ -116,12 +144,12 @@ $tinjau = [
         </div>
     </section>
 
-    <!-- Batas keputusan Waka Hubin -->
+    <!-- Batas keputusan ACC -->
     <section class="rise overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
-        <h3 class="border-b border-slate-100 bg-slate-50 px-5 py-3 text-xs font-bold uppercase tracking-wide text-slate-500">Batas keputusan Waka Hubin</h3>
+        <h3 class="border-b border-slate-100 bg-slate-50 px-5 py-3 text-xs font-bold uppercase tracking-wide text-slate-500">Batas keputusan ACC</h3>
         <div class="space-y-3 p-5">
             <div class="max-w-xs">
-                <label class="lbl" for="f_batas_hari">Waka Hubin memutuskan paling lambat (hari)</label>
+                <label class="lbl" for="f_batas_hari">Ajuan diputuskan (ACC/tolak) paling lambat (hari)</label>
                 <input id="f_batas_hari" type="number" min="1" max="30" name="batas_keputusan_hari" value="<?= esc($nilai('batas_keputusan_hari', '5'), 'attr') ?>" class="inp <?= $cls('batas_keputusan_hari') ?>">
                 <?= $err('batas_keputusan_hari') ?>
             </div>
@@ -162,7 +190,8 @@ $tinjau = [
                 </div>
                 <div>
                     <p class="lbl">Tanda tangan digital Waka Hubin</p>
-                    <p class="text-xs leading-relaxed text-slate-500">Diunggah oleh Waka Hubin sendiri di tab <b>Tanda Tangan</b> (Operator tidak bisa). Terpasang hanya pada surat yang di-ACC akun Waka Hubin. Saat ini: <b class="<?= \App\Libraries\PklSurat::infoTtd($p) !== null ? 'text-green-700' : 'text-slate-700' ?>"><?= \App\Libraries\PklSurat::infoTtd($p) !== null ? 'sudah ada' : 'belum ada (ruang dikosongkan)' ?></b>.</p>
+                    <p class="text-xs leading-relaxed text-slate-500">Diunggah di tab <b>Tanda Tangan</b> oleh peran yang diberi hak itu (diatur Admin). Tercetak di semua surat, siapa pun yang meng-ACC. Saat ini: <b class="<?= \App\Libraries\PklSurat::infoTtd($p) !== null ? 'text-green-700' : 'text-slate-700' ?>"><?= \App\Libraries\PklSurat::infoTtd($p) !== null ? 'sudah ada' : 'belum ada (ruang dikosongkan)' ?></b>.</p>
+                    <p class="mt-1 text-xs leading-relaxed text-slate-500">Tanda tangan + stempel Kepala Sekolah (tab yang sama): <b class="<?= \App\Libraries\PklSurat::infoTtdKepsek($p) !== null ? 'text-green-700' : 'text-slate-700' ?>"><?= \App\Libraries\PklSurat::infoTtdKepsek($p) !== null ? 'sudah ada — menggantikan tanda tangan bawaan template' : 'belum ada (memakai tanda tangan bawaan template, tanpa stempel)' ?></b>.</p>
                 </div>
             </div>
             <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">

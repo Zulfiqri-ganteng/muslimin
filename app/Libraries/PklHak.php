@@ -5,91 +5,253 @@ namespace App\Libraries;
 use App\Models\AuditModel;
 
 /**
- * Hak akses modul PKL yang DIATUR ADMIN (halaman PKL → Hak Akses).
+ * Hak rinci modul PKL dan Surat Sekolah yang DIATUR ADMIN (Sistem → Hak Akses, bagian "PKL & Surat").
+ * Rancangan: docs/DESAIN-HAK-AKSES.md.
  *
- * Satu-satunya sumber jawaban "siapa boleh apa" di PKL, dibaca oleh: penjaga rute (HakAkses::boleh → AuthFilter),
- * menu samping, tampilan tombol, controller web, API Android, dan pustaka keputusan (PklKeputusan).
+ * Satu-satunya sumber jawaban "siapa boleh apa" di PKL & Surat, dibaca oleh: penjaga rute (HakPeran::boleh → AuthFilter),
+ * menu samping, tampilan tombol, controller web, API Android, dan pustaka keputusan (PklKeputusan, SuratKeputusan).
+ * Penyimpanan: kolom `hak` tabel `peran` (lewat HakPeran). Admin SELALU boleh semuanya (tidak bisa dicabut).
  *
- * Tujuh hak (kolom di tabel hak): lihat HAK. Peran yang bisa diatur = Hubin & Operator. ADMIN SELALU boleh semuanya
- * (tidak bisa dicabut, jadi sistem tak mungkin terkunci) dan hanya Admin yang boleh membuka halaman pengaturannya.
- * Peran tak dikenal / kosong tidak boleh apa pun.
- *
- * Tersimpan di pkl_pengaturan.hak_peran sebagai JSON {"hubin":["acc","ubah","ttd"],"operator":[…]}.
- * Kolom kosong / rusak / belum dimigrasi → hak BAWAAN (BAWAAN) yang sama dengan aturan sekolah sebelumnya:
- * Waka Hubin menyetujui, Operator menangani surat & biaya.
+ * Kunci hak:
+ *   - PKL: lihat HAK (acc = ACC ajuan PKL, ubah, surat, laporan, ttd, ttd_kepsek, pengaturan, hapus, hapus_disetujui).
+ *   - Surat Sekolah per jenis: surat_buat:{jenis}, surat_acc:{jenis} (hanya jenis bernomor), surat_unduh:{jenis}.
+ *   - 'surat_sekolah' = kunci LAMA turunan (punya buat/unduh jenis apa pun) — tetap dikirim ke aplikasi lama.
+ * Pola pertanyaan boleh(): satu kunci, 'surat_acc:*' (jenis apa pun), atau 'a|b' (salah satu).
  */
 final class PklHak
 {
-    /** Peran yang haknya bisa diatur (Admin tidak, karena selalu penuh). */
+    /** Peran yang dulu bisa diatur (format lama pkl_pengaturan.hak_peran). Peran sekarang: HakPeran::peranAtur(). */
     public const PERAN_ATUR = ['hubin', 'operator'];
 
     /** kunci => [judul pendek, penjelasan]. Urutan = urutan tampil di halaman Hak Akses. */
     public const HAK = [
         'acc' => [
-            'ACC, tolak & batalkan persetujuan',
-            'Memutuskan ajuan PKL dan surat sekolah (Izin ASTS/TKA, Balasan, Penarikan): setuju (ACC), tolak/kembalikan, atau cabut persetujuan. Tercatat atas nama pelakunya dan tercetak di kaki surat.',
+            'ACC ajuan PKL',
+            'Memutuskan ajuan PKL siswa: setuju (ACC), tolak, atau batalkan persetujuan. Tercatat atas nama pelakunya dan tercetak di kaki Surat Izin PKL. (ACC surat sekolah diatur per jenis surat di tabel berikutnya.)',
         ],
         'surat' => [
-            'Unduh surat + catat biaya + kabari WhatsApp',
+            'Unduh Surat Izin PKL + catat biaya + kabari WhatsApp',
             'Mengunduh surat permohonan PKL (satuan / massal). Saat mengunduh wajib mencatat biaya yang diterima, lalu boleh mengabari siswa lewat WhatsApp dan mengoreksi catatan biaya.',
-        ],
-        'surat_sekolah' => [
-            'Surat Sekolah: buat & unduh',
-            'Membuat dan mengunduh Surat Izin ASTS, Surat Izin TKA, Pernyataan Orang Tua PKL, Surat Balasan PKL, dan Penarikan Izin PKL (menu Surat Sekolah). Surat yang wajib ACC baru bisa diunduh setelah disetujui peran yang berhak ACC.',
         ],
         'laporan' => [
             'Laporan Pembayaran',
             'Melihat dan mengunduh Excel laporan pembayaran siswa (siapa, kelas, jurusan, sudah bayar berapa).',
         ],
         'ubah' => [
-            'Periksa, ubah & isi atas nama',
-            'Mengembalikan ajuan untuk diperbaiki, mengubah data ajuan, dan mengisi ajuan atas nama siswa. (Ajuan yang sudah disetujui hanya boleh diubah yang berhak ACC.)',
+            'Periksa, kembalikan, ubah & isi atas nama',
+            'Mengembalikan ajuan untuk diperbaiki, mengubah data ajuan, dan mengisi ajuan atas nama siswa. (Ajuan yang sudah disetujui hanya boleh diubah peran yang juga punya hak ACC ajuan PKL.)',
         ],
         'ttd' => [
             'Tanda tangan digital Waka Hubin',
-            'Mengunggah atau menghapus gambar tanda tangan Waka Hubin yang dipasang di surat.',
+            'Mengunggah atau menghapus gambar tanda tangan Waka Hubin. Gambar ini tercetak di semua surat, siapa pun yang meng-ACC.',
+        ],
+        'ttd_kepsek' => [
+            'Tanda tangan + stempel Kepala Sekolah',
+            'Mengunggah atau menghapus gambar tanda tangan + stempel Kepala Sekolah yang menggantikan tanda tangan bawaan template di semua surat. Bawaan: hanya Admin.',
         ],
         'pengaturan' => [
             'Pengaturan PKL & impor riwayat',
-            'Membuka/menutup form siswa, mengisi data surat (nama penanda tangan, format nomor, template Word), nominal biaya, dan mengimpor riwayat PKL lama.',
+            'Membuka/menutup form siswa dan form lapor diterima, mengisi data surat (nama penanda tangan, format nomor, template Word), nominal biaya, dan mengimpor riwayat PKL lama.',
         ],
         'hapus' => [
             'Hapus ajuan',
-            'Menghapus ajuan PKL (permanen, tercatat di Audit Log). Ajuan yang sudah disetujui tetap hanya boleh dihapus Admin.',
+            'Menghapus ajuan PKL yang belum disetujui (permanen, tercatat di Audit Log).',
+        ],
+        'hapus_disetujui' => [
+            'Hapus ajuan yang sudah disetujui',
+            'Menghapus ajuan yang SUDAH disetujui (perlu hak "Hapus ajuan" juga). Bawaan: hanya Admin.',
         ],
     ];
 
-    /** Hak bawaan = aturan sekolah sebelum hak bisa diatur. */
+    /** Aksi surat sekolah per jenis: kunci => [judul, penjelasan]. */
+    public const AKSI_SURAT = [
+        'buat'  => ['Buat', 'Membuat, mengubah, mengajukan ulang, dan membatalkan surat jenis ini.'],
+        'acc'   => ['ACC', 'Menyetujui, mengembalikan, dan membatalkan persetujuan surat jenis ini. Tercatat atas nama pelakunya di kaki surat.'],
+        'unduh' => ['Unduh', 'Mengunduh (mencetak) surat jenis ini. Nomor surat terbit saat unduhan pertama.'],
+    ];
+
+    /** Hak bawaan dalam FORMAT LAMA (Waka Hubin menyetujui; Operator menangani surat & biaya). Lihat bawaanLengkap(). */
     public const BAWAAN = [
         'hubin'    => ['acc', 'ubah', 'ttd'],
         'operator' => ['surat', 'surat_sekolah', 'laporan', 'ubah', 'pengaturan'],
     ];
 
-    /** @var array<string, list<string>>|null */
-    private static ?array $cache = null;
+    /** @var array<string, list<string>>|null hak lama tersimpan di pkl_pengaturan.hak_peran (sudah diperluas) */
+    private static ?array $lama = null;
+
+    // =================================================================
+    // Kunci
+    // =================================================================
+
+    public static function kunciSurat(string $aksi, string $jenis): string
+    {
+        return 'surat_' . $aksi . ':' . $jenis;
+    }
+
+    /** Aksi yang berlaku untuk jenis surat (ACC hanya untuk jenis bernomor). @return list<string> */
+    public static function aksiUntuk(string $jenis): array
+    {
+        return SuratJenis::bernomor($jenis) ? ['buat', 'acc', 'unduh'] : ['buat', 'unduh'];
+    }
+
+    /** Semua kunci hak yang dikenal (urutan baku: PKL lalu surat per jenis). @return list<string> */
+    public static function semuaKunci(): array
+    {
+        $out = array_keys(self::HAK);
+        foreach (SuratJenis::kode() as $j) {
+            foreach (self::aksiUntuk($j) as $a) {
+                $out[] = self::kunciSurat($a, $j);
+            }
+        }
+
+        return $out;
+    }
+
+    /**
+     * Ubah daftar hak format lama ke format baru: 'acc' lama = ACC ajuan + ACC semua jenis surat; 'surat_sekolah' = buat & unduh
+     * semua jenis surat. Kunci asing dibuang.
+     *
+     * @param list<string> $daftar
+     *
+     * @return list<string>
+     */
+    public static function perluasLama(array $daftar): array
+    {
+        $daftar = array_map('strval', $daftar);
+        $out    = array_values(array_intersect(array_keys(self::HAK), $daftar));
+        foreach (SuratJenis::kode() as $j) {
+            if (in_array('acc', $daftar, true) && SuratJenis::bernomor($j)) {
+                $out[] = self::kunciSurat('acc', $j);
+            }
+            if (in_array('surat_sekolah', $daftar, true)) {
+                $out[] = self::kunciSurat('buat', $j);
+                $out[] = self::kunciSurat('unduh', $j);
+            }
+        }
+
+        return array_values(array_intersect(self::semuaKunci(), $out));
+    }
+
+    /** Hak bawaan format baru: peran => daftar kunci. @return array<string, list<string>> */
+    public static function bawaanLengkap(): array
+    {
+        $out = [];
+        foreach (self::BAWAAN as $peran => $daftar) {
+            $out[$peran] = self::perluasLama($daftar);
+        }
+
+        return $out;
+    }
+
+    /**
+     * Hak yang dulu tersimpan di pkl_pengaturan.hak_peran (sebelum tabel peran ada), sudah diperluas ke format baru.
+     * [] bila kolom kosong/rusak/tidak ada. Peran yang tak tertulis di JSON yang sah = tanpa hak (sama dengan aturan lama).
+     *
+     * @return array<string, list<string>>
+     */
+    public static function hakLamaTersimpan(): array
+    {
+        if (self::$lama !== null) {
+            return self::$lama;
+        }
+        $out = [];
+        try {
+            $baris  = db_connect()->table('pkl_pengaturan')->select('hak_peran')->where('id', 1)->get()->getRowArray();
+            $mentah = (string) ($baris['hak_peran'] ?? '');
+            $dekode = $mentah !== '' ? json_decode($mentah, true) : null;
+            if (is_array($dekode)) {
+                foreach (self::PERAN_ATUR as $peran) {
+                    $out[$peran] = self::perluasLama(is_array($dekode[$peran] ?? null) ? $dekode[$peran] : []);
+                }
+            }
+        } catch (\Throwable $e) {
+            $out = []; // kolom belum dimigrasi / DB bermasalah → hak bawaan
+        }
+
+        return self::$lama = $out;
+    }
 
     // =================================================================
     // Pertanyaan "boleh?"
     // =================================================================
 
+    /** $hak: satu kunci, 'surat_acc:*' (jenis apa pun), 'surat_sekolah' (lama), atau gabungan 'a|b'. */
     public static function boleh(?string $peran, string $hak): bool
     {
-        if (! isset(self::HAK[$hak])) {
+        if (! HakPeran::dikenal($peran)) {
             return false;
         }
-        $peran = (string) $peran;
-        if ($peran === 'admin') {
-            return true;
+        foreach (explode('|', $hak) as $satu) {
+            if (self::bolehSatu((string) $peran, trim($satu))) {
+                return true;
+            }
         }
-        if (! in_array($peran, self::PERAN_ATUR, true)) {
+
+        return false;
+    }
+
+    private static function bolehSatu(string $peran, string $hak): bool
+    {
+        if ($hak === 'surat_sekolah') {
+            return self::bolehSatu($peran, 'surat_buat:*') || self::bolehSatu($peran, 'surat_unduh:*');
+        }
+        if (str_ends_with($hak, ':*')) {
+            $awal = substr($hak, 0, -1);
+            if (! in_array($awal, ['surat_buat:', 'surat_acc:', 'surat_unduh:'], true)) {
+                return false;
+            }
+            foreach (HakPeran::hakDaftar($peran) as $k) {
+                if (str_starts_with($k, $awal)) {
+                    return true;
+                }
+            }
+
             return false;
         }
 
-        return in_array($hak, self::peranMemegang()[$peran] ?? [], true);
+        return in_array($hak, self::semuaKunci(), true) && HakPeran::punyaHak($peran, $hak);
+    }
+
+    /** Boleh melakukan $aksi (buat|acc|unduh) pada surat jenis $jenis? */
+    public static function bolehSurat(?string $peran, string $aksi, string $jenis): bool
+    {
+        return SuratJenis::ada($jenis) && in_array($aksi, self::aksiUntuk($jenis), true) && self::boleh($peran, self::kunciSurat($aksi, $jenis));
     }
 
     /**
-     * Hak yang dipegang suatu peran, sebagai peta lengkap kunci => bool (untuk tampilan & API).
+     * Nama peran (selain Admin) yang memegang hak $hak — untuk pesan seperti "menunggu ACC oleh Waka Hubin". Kosong = hanya Admin.
+     *
+     * @return list<string>
+     */
+    public static function pemegang(string $hak): array
+    {
+        $out = [];
+        foreach (HakPeran::peranAtur() as $peran) {
+            if (self::boleh($peran, $hak)) {
+                $out[] = HakPeran::label($peran);
+            }
+        }
+
+        return $out;
+    }
+
+    /** "Waka Hubin / Operator Sekolah", atau "Admin" bila tak ada peran lain yang memegang hak itu. */
+    public static function teksPemegang(string $hak): string
+    {
+        $p = self::pemegang($hak);
+
+        return $p !== [] ? implode(' / ', $p) : 'Admin';
+    }
+
+    /** Jenis surat yang boleh di-$aksi peran ini. @return list<string> */
+    public static function jenisBoleh(?string $peran, string $aksi): array
+    {
+        return array_values(array_filter(SuratJenis::kode(), static fn (string $j): bool => self::bolehSurat($peran, $aksi, $j)));
+    }
+
+    /**
+     * Hak PKL yang dipegang suatu peran sebagai peta kunci => bool (untuk tampilan & API). Ikut dikirim kunci lama turunan
+     * 'surat_sekolah' supaya aplikasi Android versi lama tetap jalan.
      *
      * @return array<string, bool>
      */
@@ -98,16 +260,38 @@ final class PklHak
         $out = [];
         foreach (array_keys(self::HAK) as $hak) {
             $out[$hak] = self::boleh($peran, $hak);
+            if ($hak === 'surat') {
+                $out['surat_sekolah'] = self::boleh($peran, 'surat_sekolah');
+            }
         }
 
         return $out;
     }
 
     /**
-     * Hak apa yang dituntut sebuah alamat web (tanpa domain)? null = tidak dibatasi hak khusus.
-     * Dipakai HakAkses::boleh() setelah peran lolos 'admin/pkl'. 'khusus_admin' = hanya Admin.
+     * Hak surat per jenis: jenis => ['buat' => bool, 'acc' => bool|null (null = jenis tanpa ACC), 'unduh' => bool].
+     *
+     * @return array<string, array{buat: bool, acc: bool|null, unduh: bool}>
      */
-    public static function hakUntukAlamat(string $alamat): ?string
+    public static function petaSurat(?string $peran): array
+    {
+        $out = [];
+        foreach (SuratJenis::kode() as $j) {
+            $out[$j] = [
+                'buat'  => self::bolehSurat($peran, 'buat', $j),
+                'acc'   => SuratJenis::bernomor($j) ? self::bolehSurat($peran, 'acc', $j) : null,
+                'unduh' => self::bolehSurat($peran, 'unduh', $j),
+            ];
+        }
+
+        return $out;
+    }
+
+    /**
+     * Hak apa yang dituntut sebuah alamat web (tanpa domain)? null = tidak dibatasi hak rinci. 'khusus_admin' = hanya Admin.
+     * Dipakai HakPeran::boleh() setelah peran lolos modul PKL / Surat Sekolah.
+     */
+    public static function hakUntukAlamat(string $alamat, string $metode = 'GET'): ?string
     {
         $a = strtolower($alamat);
         $a = preg_split('/[?#]/', $a, 2)[0];
@@ -122,11 +306,16 @@ final class PklHak
         if ($sisa === '') {
             return null;
         }
+        $baca = HakPeran::metodeBaca($metode);
 
         return match (true) {
             (bool) preg_match('~^hak-akses(/|$)~', $sisa)                       => 'khusus_admin',
             (bool) preg_match('~^(pengaturan|impor)(/|$)~', $sisa)              => 'pengaturan',
             (bool) preg_match('~^hapus(/|$)~', $sisa)                           => 'hapus',
+            // Halaman Tanda Tangan memuat dua bagian (Waka Hubin & Kepsek): membuka halaman / pratinjau gambar cukup salah satu
+            // hak; mengunggah & menghapus menuntut hak bagiannya.
+            $baca && (bool) preg_match('~^(ttd|ttd/gambar|ttd-kepsek/gambar)$~', $sisa) => 'ttd|ttd_kepsek',
+            (bool) preg_match('~^ttd-kepsek(/|$)~', $sisa)                      => 'ttd_kepsek',
             (bool) preg_match('~^ttd(/|$)~', $sisa)                             => 'ttd',
             (bool) preg_match('~^laporan(/|$)~', $sisa)                         => 'laporan',
             (bool) preg_match('~^(surat|surat-massal|wa)(/|$)~', $sisa)         => 'surat',
@@ -140,131 +329,185 @@ final class PklHak
     }
 
     /**
-     * Hak yang dituntut sebuah alamat Surat Sekolah (bagian setelah "admin/surat/"). Daftar Surat dan detail surat terbuka
-     * bagi semua yang punya akses; ACC / kembalikan butuh hak 'acc'; halaman membuat, mengubah, membatalkan, dan mengunduh
-     * surat (asts, tka, pernyataan-ortu, balasan, penarikan, {id}/unduh …) butuh 'surat_sekolah'.
+     * Hak yang dituntut alamat Surat Sekolah (bagian setelah "admin/surat/"). Daftar, detail, dan Excel daftar terbuka bagi
+     * semua yang boleh membuka modul Surat; alamat yang memakai {id} menuntut hak aksi itu untuk jenis APA PUN — jenis
+     * persisnya diperiksa lagi oleh SuratKeputusan / controller setelah surat dimuat. Halaman jenis menuntut hak Buat jenis itu.
      */
     private static function hakSurat(string $sisa): ?string
     {
-        return match (true) {
-            // Daftar, detail, dan Excel daftar (data yang sama dengan layar) terbuka bagi yang boleh membuka menu Surat.
-            $sisa === '' || $sisa === 'excel' || (bool) preg_match('~^\d+$~', $sisa)  => null,
-            (bool) preg_match('~^(acc-massal|\d+/(acc|batal-acc|kembalikan))$~', $sisa) => 'acc',
-            default                                                                   => 'surat_sekolah',
-        };
+        if ($sisa === '' || $sisa === 'excel' || preg_match('~^\d+$~', $sisa) === 1) {
+            return null;
+        }
+        if (preg_match('~^(acc-massal|\d+/(acc|batal-acc|kembalikan))$~', $sisa) === 1) {
+            return 'surat_acc:*';
+        }
+        if (preg_match('~^(unduh-massal|\d+/unduh)$~', $sisa) === 1) {
+            return 'surat_unduh:*';
+        }
+        foreach (SuratJenis::kode() as $j) {
+            $seg = substr(SuratJenis::alamat($j), strlen('admin/surat/'));
+            if ($sisa === $seg || str_starts_with($sisa, $seg . '/')) {
+                // Kotak "laporan diterima dari siswa": diproses pembuat ATAU penyetuju Surat Balasan.
+                if ($j === SuratJenis::BALASAN && preg_match('~^' . preg_quote($seg, '~') . '/laporan(/|$)~', $sisa) === 1) {
+                    return self::kunciSurat('buat', $j) . '|' . self::kunciSurat('acc', $j);
+                }
+
+                return self::kunciSurat('buat', $j);
+            }
+        }
+
+        return 'surat_buat:*';
     }
 
     // =================================================================
-    // Baca & simpan
+    // Baca & simpan (halaman Hak Akses / API)
     // =================================================================
 
     /**
-     * Matriks lengkap untuk halaman pengaturan: peran => [hak => bool].
+     * Matriks hak PKL untuk halaman pengaturan: peran (selain Admin) => [hak => bool].
      *
      * @return array<string, array<string, bool>>
      */
     public static function matriks(): array
     {
         $out = [];
-        foreach (self::PERAN_ATUR as $peran) {
-            $out[$peran] = [];
+        foreach (HakPeran::peranAtur() as $peran) {
             foreach (array_keys(self::HAK) as $hak) {
-                $out[$peran][$hak] = in_array($hak, self::peranMemegang()[$peran] ?? [], true);
+                $out[$peran][$hak] = HakPeran::punyaHak($peran, $hak);
             }
         }
 
         return $out;
     }
 
-    /** Lupakan simpanan per-permintaan (dipanggil setelah menyimpan, dan oleh uji). */
-    public static function lupakan(): void
+    /**
+     * Matriks hak surat: peran => [jenis => [aksi => bool]].
+     *
+     * @return array<string, array<string, array<string, bool>>>
+     */
+    public static function matriksSurat(): array
     {
-        self::$cache = null;
-    }
-
-    /** @return array<string, list<string>> peran => daftar kunci hak */
-    private static function peranMemegang(): array
-    {
-        if (self::$cache !== null) {
-            return self::$cache;
-        }
-
-        $dipakai = self::BAWAAN;
-        try {
-            $baris = db_connect()->table('pkl_pengaturan')->select('hak_peran')->where('id', 1)->get()->getRowArray();
-            $mentah = (string) ($baris['hak_peran'] ?? '');
-            if ($mentah !== '') {
-                $dekode = json_decode($mentah, true);
-                if (is_array($dekode)) {
-                    $dipakai = [];
-                    foreach (self::PERAN_ATUR as $peran) {
-                        $daftar = is_array($dekode[$peran] ?? null) ? $dekode[$peran] : [];
-                        $dipakai[$peran] = array_values(array_intersect(array_keys(self::HAK), array_map('strval', $daftar)));
-                    }
+        $out = [];
+        foreach (HakPeran::peranAtur() as $peran) {
+            foreach (SuratJenis::kode() as $j) {
+                foreach (self::aksiUntuk($j) as $a) {
+                    $out[$peran][$j][$a] = HakPeran::punyaHak($peran, self::kunciSurat($a, $j));
                 }
             }
-        } catch (\Throwable $e) {
-            // Kolom belum dimigrasi / DB bermasalah → hak bawaan (aman: sama dengan aturan sekolah).
-            $dipakai = self::BAWAAN;
         }
 
-        return self::$cache = $dipakai;
+        return $out;
+    }
+
+    /** Lupakan simpanan per-permintaan (setelah menyimpan, dan oleh uji). */
+    public static function lupakan(): void
+    {
+        self::$lama = null;
+        HakPeran::lupakan();
+    }
+
+    /** Hanya simpanan hak lama (dipanggil HakPeran::lupakan, tanpa memutar balik). */
+    public static function lupakanLama(): void
+    {
+        self::$lama = null;
     }
 
     /**
-     * Simpan matriks dari kiriman halaman: $kirim[peran][] = kunci hak.
-     * Aturan: ACC dan Unduh-surat wajib dipegang minimal satu peran (Hubin/Operator); kalau tidak, pekerjaan
-     * sekolah berhenti diam-diam atau terpaksa selalu lewat Admin.
+     * Simpan hak dari kiriman: $kirim[peran][] = kunci hak. Peran yang tidak dikirim / tanpa centang = tanpa hak.
+     *
+     * $formatBaru = true (halaman Hak Akses): kiriman memuat kunci PKL + kunci per jenis surat dan disimpan apa adanya.
+     * Format LAMA (aplikasi Android lama: 8 kunci PKL termasuk 'surat_sekolah'): kunci PKL disimpan; hak per jenis surat
+     * DIPERTAHANKAN, kecuali saklar lama 'acc' / 'surat_sekolah' berubah dibanding sekarang (maka semua jenis ikut berubah).
+     * Kiriman yang memuat kunci 'surat_…:…' selalu dianggap format baru.
      *
      * @param array<string, mixed> $kirim
      * @param array<string, mixed> $konteks ['oleh', 'admin_id', 'peran', 'ip']
      *
      * @return array{ok: bool, pesan: string, peringatan: list<string>}
      */
-    public static function simpan(array $kirim, array $konteks): array
+    public static function simpan(array $kirim, array $konteks, bool $formatBaru = false): array
     {
-        $baru = [];
-        foreach (self::PERAN_ATUR as $peran) {
-            $pilih = $kirim[$peran] ?? [];
-            $pilih = is_array($pilih) ? array_map('strval', $pilih) : [];
-            $baru[$peran] = array_values(array_intersect(array_keys(self::HAK), $pilih)); // urutan baku, nilai asing dibuang
+        if (! HakPeran::tabelAda()) {
+            return ['ok' => false, 'pesan' => 'Tabel peran belum ada di database. Jalankan "php spark migrate" lebih dulu, lalu ulangi.', 'peringatan' => []];
         }
-
-        foreach (['acc', 'surat'] as $wajib) {
-            $ada = false;
-            foreach ($baru as $daftar) {
-                $ada = $ada || in_array($wajib, $daftar, true);
-            }
-            if (! $ada) {
-                return ['ok' => false, 'pesan' => 'Hak "' . self::HAK[$wajib][0] . '" harus dipegang minimal satu peran (Waka Hubin atau Operator). Tanpa itu pekerjaan sekolah berhenti, atau hanya Admin yang bisa melakukannya.', 'peringatan' => []];
-            }
-        }
-
-        $lama = self::matriks();
-        $json = json_encode($baru, JSON_UNESCAPED_UNICODE);
-        $baris = db_connect()->table('pkl_pengaturan')->where('id', 1);
-        $baris->update(['hak_peran' => $json, 'updated_at' => date('Y-m-d H:i:s')]);
-        self::lupakan();
-
-        $ubahan = [];
-        foreach (self::PERAN_ATUR as $peran) {
-            foreach (array_keys(self::HAK) as $hak) {
-                $sekarang = in_array($hak, $baru[$peran], true);
-                if ($sekarang !== ($lama[$peran][$hak] ?? false)) {
-                    $ubahan[] = HakAkses::label($peran) . ($sekarang ? ' +' : ' −') . ' ' . self::HAK[$hak][0];
+        foreach ($kirim as $daftar) {
+            foreach ((array) $daftar as $k) {
+                if (is_string($k) && str_starts_with($k, 'surat_') && str_contains($k, ':')) {
+                    $formatBaru = true;
                 }
             }
         }
+
+        $lama = [];
+        foreach (HakPeran::peranAtur() as $peran) {
+            $lama[$peran] = HakPeran::hakDaftar($peran);
+        }
+        $baru = [];
+        foreach (HakPeran::peranAtur() as $peran) {
+            $pilih = array_map('strval', array_filter((array) ($kirim[$peran] ?? []), 'is_scalar'));
+            if ($formatBaru) {
+                $baru[$peran] = array_values(array_intersect(self::semuaKunci(), $pilih));
+                continue;
+            }
+            $pkl   = array_values(array_intersect(array_keys(self::HAK), $pilih));
+            $surat = array_values(array_filter($lama[$peran], static fn (string $k): bool => str_starts_with($k, 'surat_') && str_contains($k, ':')));
+            $accKini = in_array('acc', $pilih, true);
+            if (in_array('acc', $lama[$peran], true) !== $accKini) {
+                $surat = array_values(array_filter($surat, static fn (string $k): bool => ! str_starts_with($k, 'surat_acc:')));
+                if ($accKini) {
+                    $surat = array_merge($surat, array_values(array_filter(self::perluasLama(['acc']), static fn (string $k): bool => str_starts_with($k, 'surat_acc:'))));
+                }
+            }
+            $ssDulu = self::adaAwalan($lama[$peran], 'surat_buat:') || self::adaAwalan($lama[$peran], 'surat_unduh:');
+            $ssKini = in_array('surat_sekolah', $pilih, true);
+            if ($ssDulu !== $ssKini) {
+                $surat = array_values(array_filter($surat, static fn (string $k): bool => str_starts_with($k, 'surat_acc:')));
+                if ($ssKini) {
+                    $surat = array_merge($surat, self::perluasLama(['surat_sekolah']));
+                }
+            }
+            $baru[$peran] = array_values(array_intersect(self::semuaKunci(), array_merge($pkl, $surat)));
+        }
+
+        if (! HakPeran::simpanHak($baru)) {
+            return ['ok' => false, 'pesan' => 'Hak akses gagal disimpan. Coba lagi.', 'peringatan' => []];
+        }
+
+        $ubahan = [];
+        foreach ($baru as $peran => $daftar) {
+            $tambah = array_diff($daftar, $lama[$peran] ?? []);
+            $kurang = array_diff($lama[$peran] ?? [], $daftar);
+            foreach ($tambah as $k) {
+                $ubahan[] = HakPeran::label($peran) . ' + ' . self::labelKunci($k);
+            }
+            foreach ($kurang as $k) {
+                $ubahan[] = HakPeran::label($peran) . ' − ' . self::labelKunci($k);
+            }
+        }
         $peringatan = self::peringatan($baru);
-        (new AuditModel())->record('update', 'pkl_pengaturan', 1,
-            mb_substr('Hak akses PKL diubah oleh ' . ($konteks['oleh'] ?? '?') . ': ' . ($ubahan === [] ? '(tanpa perubahan)' : implode('; ', $ubahan))
+        (new AuditModel())->record('update', 'peran', null,
+            mb_substr('Hak PKL & Surat diubah oleh ' . ($konteks['oleh'] ?? '?') . ': ' . ($ubahan === [] ? '(tanpa perubahan)' : implode('; ', $ubahan))
                 . ($peringatan !== [] ? ' | PERINGATAN: ' . implode(' ', $peringatan) : ''), 0, 255));
 
-        return ['ok' => true, 'pesan' => $ubahan === [] ? 'Tidak ada perubahan hak.' : 'Hak akses PKL disimpan (' . count($ubahan) . ' perubahan). Berlaku langsung.', 'peringatan' => $peringatan];
+        return ['ok' => true, 'pesan' => $ubahan === [] ? 'Tidak ada perubahan hak.' : 'Hak PKL & Surat disimpan (' . count($ubahan) . ' perubahan). Berlaku langsung.', 'peringatan' => $peringatan];
+    }
+
+    /** Teks ramah sebuah kunci hak, mis. "ACC Surat Balasan PKL". */
+    public static function labelKunci(string $k): string
+    {
+        if (isset(self::HAK[$k])) {
+            return self::HAK[$k][0];
+        }
+        if (preg_match('/^surat_(buat|acc|unduh):(.+)$/', $k, $m) === 1) {
+            return self::AKSI_SURAT[$m[1]][0] . ' ' . SuratJenis::label($m[2]);
+        }
+
+        return $k;
     }
 
     /**
-     * Peringatan pemisahan tugas: satu peran memegang ACC sekaligus unduh surat; atau Operator boleh ACC.
+     * Peringatan atas pembagian hak (tidak memblokir — keputusan Admin dihormati): peran memegang ACC sekaligus unduh (pemisahan
+     * tugas hilang), atau suatu aksi penting tak dipegang peran mana pun selain Admin.
      *
      * @param array<string, list<string>>|null $daftar peran => hak (null = yang tersimpan sekarang)
      *
@@ -274,21 +517,61 @@ final class PklHak
     {
         if ($daftar === null) {
             $daftar = [];
-            foreach (self::matriks() as $peran => $hak) {
-                $daftar[$peran] = array_keys(array_filter($hak));
+            foreach (HakPeran::peranAtur() as $peran) {
+                $daftar[$peran] = HakPeran::hakDaftar($peran);
             }
         }
         $out = [];
-        foreach (self::PERAN_ATUR as $peran) {
-            $punya = $daftar[$peran] ?? [];
-            if (in_array('acc', $punya, true) && (in_array('surat', $punya, true) || in_array('surat_sekolah', $punya, true))) {
-                $out[] = HakAkses::label($peran) . ' memegang ACC sekaligus unduh surat: pemisahan tugas (siapa yang menyetujui ≠ siapa yang mencetak) hilang.';
+        foreach ($daftar as $peran => $punya) {
+            $acc   = in_array('acc', $punya, true) || self::adaAwalan($punya, 'surat_acc:');
+            $unduh = in_array('surat', $punya, true) || self::adaAwalan($punya, 'surat_unduh:');
+            if ($acc && $unduh) {
+                $out[] = HakPeran::label($peran) . ' memegang ACC sekaligus unduh surat: pemisahan tugas (siapa yang menyetujui ≠ siapa yang mencetak) hilang. Tidak apa-apa bila memang disengaja.';
             }
         }
-        if (in_array('acc', $daftar['operator'] ?? [], true)) {
-            $out[] = 'Operator Sekolah diberi wewenang ACC: surat yang di-ACC Operator tidak memakai tanda tangan digital Waka Hubin, dan kaki surat menuliskan hal itu.';
+        $dipegang = static function (string $k) use ($daftar): bool {
+            foreach ($daftar as $punya) {
+                if (in_array($k, $punya, true)) {
+                    return true;
+                }
+            }
+
+            return false;
+        };
+        if (! $dipegang('acc')) {
+            $out[] = 'Tidak ada peran selain Admin yang bisa ACC ajuan PKL.';
+        }
+        if (! $dipegang('surat')) {
+            $out[] = 'Tidak ada peran selain Admin yang bisa mengunduh Surat Izin PKL.';
+        }
+        $p = (new \App\Models\PklPengaturanModel())->ambil();
+        foreach (SuratJenis::kode() as $j) {
+            $kurang = [];
+            foreach (self::aksiUntuk($j) as $a) {
+                if ($a === 'acc' && ! SuratJenis::perluAcc($j, $p)) {
+                    continue;
+                }
+                if (! $dipegang(self::kunciSurat($a, $j))) {
+                    $kurang[] = mb_strtolower(self::AKSI_SURAT[$a][0]);
+                }
+            }
+            if ($kurang !== []) {
+                $out[] = SuratJenis::label($j) . ': hanya Admin yang bisa ' . implode(', ', $kurang) . '.';
+            }
         }
 
         return $out;
+    }
+
+    /** @param list<string> $daftar */
+    private static function adaAwalan(array $daftar, string $awal): bool
+    {
+        foreach ($daftar as $k) {
+            if (str_starts_with($k, $awal)) {
+                return true;
+            }
+        }
+
+        return false;
     }
 }

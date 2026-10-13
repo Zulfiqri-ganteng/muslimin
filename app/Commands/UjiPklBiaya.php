@@ -28,6 +28,8 @@ use CodeIgniter\Database\BaseConnection;
  */
 class UjiPklBiaya extends BaseCommand
 {
+    use UjiPeranAman;
+
     protected $group       = 'dev';
     protected $name        = 'dev:uji-pkl-biaya';
     protected $description = 'Uji hak akses PKL (diatur Admin), biaya saat unduh surat, WhatsApp manual, laporan pembayaran, nomor 001.';
@@ -132,7 +134,8 @@ class UjiPklBiaya extends BaseCommand
             'admin/pkl/12/wa/5/tandai' => 'surat', 'admin/pkl/12/pembayaran/hapus' => 'surat', 'admin/pkl/12/pembayaran/beasiswa-cabut' => 'surat',
             'admin/pkl/12/acc' => 'acc', 'admin/pkl/12/tolak' => 'acc', 'admin/pkl/12/batal-acc' => 'acc', 'admin/pkl/acc-massal' => 'acc',
             'admin/pkl/baru' => 'ubah', 'admin/pkl/12/ubah' => 'ubah', 'admin/pkl/12/kembalikan' => 'ubah', 'admin/pkl/siswa-kelas' => 'ubah',
-            'admin/pkl/ttd' => 'ttd', 'admin/pkl/ttd/gambar' => 'ttd', 'admin/pkl/ttd/hapus' => 'ttd',
+            // Halaman Tanda Tangan (dua bagian: Waka Hubin & Kepsek) dibuka cukup dengan salah satu hak; hapus/unggah sesuai bagiannya.
+            'admin/pkl/ttd' => 'ttd|ttd_kepsek', 'admin/pkl/ttd/gambar' => 'ttd|ttd_kepsek', 'admin/pkl/ttd/hapus' => 'ttd',
             'admin/pkl/pengaturan' => 'pengaturan', 'admin/pkl/pengaturan/template' => 'pengaturan', 'admin/pkl/pengaturan/biaya' => 'pengaturan', 'admin/pkl/impor/simpan' => 'pengaturan',
             'admin/pkl/hapus/12' => 'hapus', 'admin/pkl/laporan' => 'laporan', 'admin/pkl/laporan/excel' => 'laporan', 'admin/pkl/hak-akses' => 'khusus_admin', 'admin/pkl/hak-akses/bawaan' => 'khusus_admin',
             'admin/master/siswa' => null, 'admin/pkl-lain/surat' => null,
@@ -157,8 +160,7 @@ class UjiPklBiaya extends BaseCommand
         $H  = HakAkses::class;
         $PH = PklHak::class;
         $this->simpanPengaturanAsli();
-        $this->db->table('pkl_pengaturan')->where('id', 1)->update(['hak_peran' => null]);
-        $PH::lupakan();
+        $this->setelPeranBawaan();
         $adm = ['oleh' => 'Admin Uji', 'admin_id' => 8, 'peran' => 'admin', 'ip' => self::IP];
 
         $this->cek('bawaan: Hubin = ACC + ubah + tanda tangan; TIDAK surat, laporan, pengaturan, hapus', $PH::boleh('hubin', 'acc') && $PH::boleh('hubin', 'ubah') && $PH::boleh('hubin', 'ttd') && ! $PH::boleh('hubin', 'surat') && ! $PH::boleh('hubin', 'laporan') && ! $PH::boleh('hubin', 'pengaturan') && ! $PH::boleh('hubin', 'hapus'));
@@ -179,33 +181,33 @@ class UjiPklBiaya extends BaseCommand
         $this->cek('bolehAcc: Admin & Hubin YA; Operator TIDAK (bawaan)', $H::bolehAcc('admin') && $H::bolehAcc('hubin') && ! $H::bolehAcc('operator') && ! $H::bolehAcc(null));
 
         // ---- simpan
+        // Keputusan Admin dihormati: tak seorang pun memegang ACC / Unduh surat → tetap tersimpan, dengan peringatan (Admin tetap bisa).
         $r = $PH::simpan(['hubin' => ['ubah', 'ttd'], 'operator' => ['surat', 'ubah']], $adm);
-        $this->cek('menolak bila tak seorang pun (Hubin/Operator) memegang ACC', ! $r['ok'] && str_contains($r['pesan'], 'ACC'), $r['pesan']);
+        $this->cek('tak seorang pun memegang ACC ajuan → TETAP tersimpan (diatur Admin) dengan peringatan "hanya Admin"', $r['ok'] && ! $PH::boleh('hubin', 'acc') && count(array_filter($r['peringatan'], static fn (string $w) => str_contains($w, 'Tidak ada peran selain Admin yang bisa ACC ajuan PKL'))) === 1, json_encode($r['peringatan']));
         $r = $PH::simpan(['hubin' => ['acc', 'ubah'], 'operator' => ['laporan', 'ubah']], $adm);
-        $this->cek('menolak bila tak seorang pun memegang Unduh surat', ! $r['ok'] && str_contains($r['pesan'], 'Unduh surat'), $r['pesan']);
-        $this->cek('penolakan tidak mengubah apa pun (hak bawaan masih berlaku)', $PH::boleh('hubin', 'acc') && ! $PH::boleh('hubin', 'surat') && $PH::boleh('operator', 'surat'));
+        $this->cek('tak seorang pun memegang Unduh Surat Izin PKL → tersimpan dengan peringatan', $r['ok'] && ! $PH::boleh('operator', 'surat') && count(array_filter($r['peringatan'], static fn (string $w) => str_contains($w, 'Tidak ada peran selain Admin yang bisa mengunduh Surat Izin PKL'))) === 1, json_encode($r['peringatan']));
+        $this->setelPeranBawaan();
+        $this->cek('dikembalikan ke bawaan → hak bawaan berlaku lagi', $PH::boleh('hubin', 'acc') && ! $PH::boleh('hubin', 'surat') && $PH::boleh('operator', 'surat'));
 
         $r = $PH::simpan(['hubin' => ['acc', 'ubah', 'ttd', 'ngawur'], 'operator' => ['acc', 'surat', 'laporan', 'ubah', 'pengaturan', 'hapus'], 'admin' => ['acc']], $adm);
         $this->cek('menyimpan: kunci asing ("ngawur") dan peran "admin" dibuang', $r['ok'] && ! isset($PH::matriks()['admin']) && ! isset($PH::matriks()['hubin']['ngawur']), $r['pesan']);
         $this->cek('berlaku LANGSUNG: Operator kini boleh ACC & hapus; alamat ACC/hapus ikut terbuka', $H::bolehAcc('operator') && $H::boleh('operator', 'admin/pkl/12/acc') && $H::boleh('operator', 'admin/pkl/acc-massal') && $H::boleh('operator', 'admin/pkl/hapus/3'));
-        $this->cek('peringatan: Operator memegang ACC + Unduh surat (pemisahan tugas hilang) dan Operator ber-ACC', count(array_filter($r['peringatan'], static fn (string $w) => str_contains($w, 'pemisahan tugas'))) === 1 && count(array_filter($r['peringatan'], static fn (string $w) => str_contains($w, 'wewenang ACC'))) === 1, json_encode($r['peringatan']));
+        $this->cek('peringatan: Operator memegang ACC + Unduh surat (pemisahan tugas hilang) — tidak lagi ada catatan soal tanda tangan (TTD selalu tercetak)', count(array_filter($r['peringatan'], static fn (string $w) => str_contains($w, 'pemisahan tugas'))) === 1 && count(array_filter($r['peringatan'], static fn (string $w) => str_contains($w, 'tanda tangan'))) === 0, json_encode($r['peringatan']));
 
         $r = $PH::simpan(['hubin' => ['acc', 'surat', 'ubah', 'ttd'], 'operator' => ['laporan', 'ubah', 'pengaturan']], $adm);
         $this->cek('Hubin diberi unduh surat → boleh; Operator dicabut → alamat surat tertutup baginya', $r['ok'] && $H::boleh('hubin', 'admin/pkl/12/surat') && ! $H::boleh('operator', 'admin/pkl/12/surat') && ! $H::boleh('operator', 'admin/pkl/surat/siap'));
         $this->cek('peringatan: Hubin memegang ACC + Unduh surat', count(array_filter($r['peringatan'], static fn (string $w) => str_contains($w, 'Waka Hubin memegang ACC sekaligus unduh surat'))) === 1);
 
-        $this->db->table('pkl_pengaturan')->where('id', 1)->update(['hak_peran' => '{rusak']);
+        $this->db->table('peran')->whereIn('kode', ['hubin', 'operator'])->update(['hak' => '{rusak']);
         $PH::lupakan();
-        $this->cek('JSON hak rusak → kembali ke hak bawaan (aman, tidak galat)', $PH::boleh('hubin', 'acc') && ! $PH::boleh('hubin', 'surat') && $PH::boleh('operator', 'surat'));
-        $this->db->table('pkl_pengaturan')->where('id', 1)->update(['hak_peran' => null]);
-        $PH::lupakan();
-        $kembali = $PH::simpan($PH::BAWAAN, $adm);
+        $this->cek('isian hak peran rusak (bukan tulisan sistem) → kembali ke hak bawaan (aman, tidak galat)', $PH::boleh('hubin', 'acc') && ! $PH::boleh('hubin', 'surat') && $PH::boleh('operator', 'surat'));
+        $this->setelPeranBawaan();
+        $kembali = $PH::simpan($PH::bawaanLengkap(), $adm, true);
         $this->cek('"Kembalikan ke bawaan" (simpan BAWAAN) sah & tanpa peringatan pemisahan tugas', $kembali['ok'] && array_filter($kembali['peringatan'], static fn (string $w) => str_contains($w, 'pemisahan')) === []);
-        $audit = $this->db->table('audit_log')->like('deskripsi', 'Hak akses PKL diubah')->countAllResults();
+        $audit = $this->db->table('audit_log')->like('deskripsi', 'Hak PKL & Surat diubah')->countAllResults();
         $this->cek('setiap perubahan hak tercatat di Audit Log', $audit >= 3, 'jumlah catatan: ' . $audit);
 
-        $this->db->table('pkl_pengaturan')->where('id', 1)->update(['hak_peran' => null]);
-        $PH::lupakan();
+        $this->setelPeranBawaan();
     }
 
     // =================================================================
@@ -261,7 +263,7 @@ class UjiPklBiaya extends BaseCommand
         $this->db->table('pkl_pengaturan')->where('id', 1)->update([
             'hak_peran' => null, 'format_nomor' => '{urut3}/SMK-BN/PKL/{bln_romawi}/{thn}', 'kepsek_nama' => 'Napis Kuturupi, S.T', 'waka_hubin_nama' => 'Puguh Wira Sakti, S.Pd',
         ]);
-        PklHak::lupakan();
+        $this->setelPeranBawaan();
 
         $thn = (int) date('Y');
         $s = [];
@@ -434,7 +436,8 @@ class UjiPklBiaya extends BaseCommand
         $this->cek('dikembalikan ke bawaan: Hubin lagi-lagi DITOLAK', ! $uh['ok'] && $uh['http'] === 403);
 
         // ---------- pembuka keputusan ----------
-        $this->cek('catatan ACC: Operator yang diberi hak ACC ditulis jujur "diberi wewenang ACC oleh Admin sekolah"', str_contains(PklSurat::catatanAcc(['acc_peran' => 'operator', 'acc_nama' => 'Ani', 'acc_at' => '2026-10-07 09:41:00', 'acc_kode' => 'PKL-00001-ABC123'], [], []), 'diberi wewenang ACC oleh Admin sekolah'));
+        $kakiOp = PklSurat::catatanAcc(['acc_peran' => 'operator', 'acc_nama' => 'Ani', 'acc_at' => '2026-10-07 09:41:00', 'acc_kode' => 'PKL-00001-ABC123'], [], []);
+        $this->cek('catatan ACC: Operator yang diberi hak ACC ditulis apa adanya "Ani (Operator Sekolah)"', str_contains($kakiOp, 'Disetujui oleh: Ani (Operator Sekolah)') && ! str_contains($kakiOp, 'wewenang'), $kakiOp);
 
         $this->ids = ['A' => $A, 'B' => $B, 'C' => $C, 'D' => $D, 'E' => $E, 'F' => $F, 's' => $s];
     }
@@ -643,6 +646,7 @@ class UjiPklBiaya extends BaseCommand
 
     private function simpanPengaturanAsli(): void
     {
+        $this->simpanPeranAsli();
         $this->pengaturanAsli ??= (function () {
             $r = (new \App\Models\PklPengaturanModel())->ambil();
             unset($r['id']);
@@ -692,6 +696,7 @@ class UjiPklBiaya extends BaseCommand
             $this->db->table('pkl_pengaturan')->where('id', 1)->update($this->pengaturanAsli);
             $this->pengaturanAsli = null;
         }
+        $this->pulihkanPeran();
         PklHak::lupakan();
     }
 }

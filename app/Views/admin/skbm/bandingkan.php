@@ -19,7 +19,7 @@ $bagian = [
     <section class="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm sm:p-5">
         <div class="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
             <div class="min-w-0">
-                <p class="text-xs font-semibold uppercase tracking-wide text-slate-400">SKBM &middot; khusus Admin</p>
+                <p class="text-xs font-semibold uppercase tracking-wide text-slate-400">SKBM &middot; perbandingan dengan Penugasan</p>
                 <h2 class="mt-0.5 text-lg font-bold text-slate-800">SKBM <?= esc($tahun) ?> dibandingkan dengan Penugasan</h2>
                 <p class="mt-1 max-w-3xl text-sm leading-relaxed text-slate-500">Halaman ini hanya <b>membandingkan</b>: data Penugasan, Jadwal KBM, dan honor tidak diubah. Yang dicocokkan ialah pasangan <b>guru &times; kelas</b>, hanya untuk guru yang ada di SKBM.</p>
             </div>

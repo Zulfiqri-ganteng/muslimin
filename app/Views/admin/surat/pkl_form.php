@@ -15,14 +15,17 @@
  * @var array<string, mixed> $surat       (hanya saat ubah) baris surat_sekolah
  * @var string               $kode        (hanya saat ubah) kode surat, mis. SRT-00012
  * @var list<array>          $siswaSurat  (hanya saat ubah) siswa pada surat
+ * @var array|null           $lapor       (Balasan baru) laporan siswa dari kotak "Lapor Diterima PKL" — formulir terisi dari laporan
+ * @var int                  $laporMenunggu (Balasan baru) jumlah laporan siswa yang menunggu diproses
  */
 
 use App\Libraries\SuratJenis;
 
 $balasan = $jenis === SuratJenis::BALASAN;
+$lapor   = $ubah ? null : ($lapor ?? null);
 $alamat  = SuratJenis::alamat($jenis);
 $aksi    = $ubah ? site_url($alamat . '/' . (int) $surat['id'] . '/ubah') : site_url($alamat);
-$kembali = $ubah ? site_url('admin/surat/' . (int) $surat['id']) : site_url('admin/surat');
+$kembali = $ubah ? site_url('admin/surat/' . (int) $surat['id']) : site_url($lapor !== null ? 'admin/surat/balasan/laporan' : 'admin/surat');
 $cfg     = [
     'jenis' => $balasan ? 'balasan' : 'penarikan', 'ubah' => $ubah, 'tempat' => $ubah ? (string) $surat['perusahaan_nama'] : '',
     'dipilih' => array_map('strval', $nilai['ajuan']), 'siswaDipilih' => array_map('strval', $nilai['siswa']),
@@ -48,20 +51,33 @@ $cfg     = [
             . '<li>Centang satu atau beberapa ajuan, isi <b>periode PKL</b> (sama untuk semua yang dicentang). Lama PKL "3 (tiga) bulan" dihitung otomatis dari tanggalnya.</li>'
             . '<li>Periode ikut <b>tersimpan di ajuan PKL</b> (tampil di detail ajuan dan Status Siswa) dan tercatat di riwayatnya.</li>'
             . '<li>Satu ajuan hanya punya satu Surat Balasan. Bila salah setelah bernomor, batalkan suratnya lalu buat lagi.</li>'
-            . '<li>' . ($perluAcc ? 'Surat menunggu <b>ACC Waka Hubin</b>; setelah disetujui, Operator mengunduhnya (Word). Nomor terbit saat pertama diunduh.' : 'Jenis ini saat ini <b>tanpa ACC</b>: surat langsung siap diunduh.') . '</li>'
+            . '<li>' . ($perluAcc ? 'Surat menunggu <b>ACC</b> (' . esc($pemegangAcc ?? 'peran yang berhak') . ', diatur Admin di Sistem → Hak Akses). Setelah disetujui, surat diunduh dalam bentuk Word.' . (! empty($bisaLangsungAcc) ? ' Anda juga memegang hak ACC jenis ini, jadi bisa langsung memakai tombol <b>Simpan &amp; setujui</b>.' : '') : 'Jenis ini saat ini <b>tanpa ACC</b>: surat langsung siap diunduh.') . '</li>'
             . '</ul>'
         : '<p>Surat <b>pemberhentian dan penarikan siswa dari tempat PKL</b>, persis contoh sekolah. Pilih ajuan, centang siswa yang ditarik (boleh sebagian), isi tanggal berlakunya dan alasannya.</p>'
             . '<ul class="mt-2 list-disc space-y-1 pl-5">'
             . '<li>Status PKL siswa <b>tidak berubah</b> otomatis; surat ini tercatat di riwayat ajuan.</li>'
             . '<li>Alasan masuk ke kalimat "Penarikan tersebut dilakukan karena …". Pilih alasan yang ada atau tulis sendiri — periksa pratinjaunya.</li>'
-            . '<li>' . ($perluAcc ? 'Surat menunggu <b>ACC Waka Hubin</b>; setelah disetujui, Operator mengunduhnya (Word).' : 'Jenis ini saat ini <b>tanpa ACC</b>: surat langsung siap diunduh.') . '</li>'
+            . '<li>' . ($perluAcc ? 'Surat menunggu <b>ACC</b> (' . esc($pemegangAcc ?? 'peran yang berhak') . ', diatur Admin di Sistem → Hak Akses). Setelah disetujui, surat diunduh dalam bentuk Word.' . (! empty($bisaLangsungAcc) ? ' Anda juga memegang hak ACC jenis ini, jadi bisa langsung memakai tombol <b>Simpan &amp; setujui</b>.' : '') : 'Jenis ini saat ini <b>tanpa ACC</b>: surat langsung siap diunduh.') . '</li>'
             . '</ul>',
 ]) ?>
 
-<a href="<?= $kembali ?>" class="rise mb-4 inline-flex items-center gap-1 text-sm font-semibold text-brand-700 hover:underline">← <?= $ubah ? 'Kembali ke surat' : 'Daftar Surat' ?></a>
+<a href="<?= $kembali ?>" class="rise mb-4 inline-flex items-center gap-1 text-sm font-semibold text-brand-700 hover:underline">← <?= $ubah ? 'Kembali ke surat' : ($lapor !== null ? 'Kotak Lapor Diterima PKL' : 'Daftar Surat') ?></a>
+
+<?php if ($lapor !== null): ?>
+    <div class="rise mx-auto mb-4 max-w-4xl rounded-2xl border border-blue-200 bg-blue-50 px-5 py-4 text-sm leading-relaxed text-blue-900">
+        <b>Dari laporan siswa <?= esc((string) $lapor['pelapor_nama']) ?></b> (<?= esc(date('d-m-Y H:i', strtotime((string) $lapor['updated_at']))) ?>). Periode<?= (string) ($lapor['alamat'] ?? '') !== '' ? ' dan alamat perusahaan' : '' ?> sudah diisi dari laporan &mdash; periksa, ubah bila perlu, lalu simpan. Laporan otomatis ditandai selesai setelah surat dibuat.
+        <?php if ((string) ($lapor['catatan'] ?? '') !== ''): ?><p class="mt-1.5 text-xs"><b>Catatan siswa:</b> <?= esc((string) $lapor['catatan']) ?></p><?php endif; ?>
+    </div>
+<?php elseif ($balasan && ! $ubah && (int) ($laporMenunggu ?? 0) > 0): ?>
+    <a href="<?= site_url('admin/surat/balasan/laporan') ?>" class="rise mx-auto mb-4 flex max-w-4xl items-center justify-between gap-3 rounded-2xl border border-amber-300 bg-amber-50 px-5 py-3 text-sm font-semibold text-amber-900 transition hover:bg-amber-100">
+        <span>📥 Ada <?= (int) $laporMenunggu ?> laporan siswa "sudah diterima perusahaan" yang menunggu dibuatkan Surat Balasan.</span>
+        <span class="shrink-0">Buka kotak laporan →</span>
+    </a>
+<?php endif; ?>
 
 <form method="post" action="<?= esc($aksi, 'attr') ?>" x-data="suratPklForm" data-config="<?= esc(json_encode($cfg, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES), 'attr') ?>" class="mx-auto max-w-4xl space-y-5">
     <?= csrf_field() ?>
+    <?php if ($lapor !== null): ?><input type="hidden" name="lapor_id" value="<?= (int) $lapor['id'] ?>"><?php endif; ?>
 
     <h1 class="rise text-xl font-bold text-slate-800"><?= $ubah ? 'Ubah ' . esc($label) . ' <span class="font-mono text-sm font-semibold text-slate-400">' . esc($kode) . '</span>' : 'Buat ' . esc($label) ?></h1>
 
@@ -82,7 +98,7 @@ $cfg     = [
             <?php else: ?>
                 <div class="flex flex-col gap-2 sm:flex-row sm:items-center">
                     <input type="search" x-model="cari" placeholder="Cari perusahaan, nomor ajuan, atau nama siswa…" class="inp sm:flex-1" aria-label="Cari ajuan">
-                    <?php if ($balasan): ?>
+                    <?php if ($balasan && $lapor === null): ?>
                         <button type="button" @click="pilihSemua()" class="rounded-lg border border-brand-200 bg-white px-3.5 py-2 text-sm font-semibold text-brand-700 hover:bg-brand-50">Pilih semua yang belum punya Balasan</button>
                         <button type="button" @click="dipilih = []" class="rounded-lg border border-slate-300 bg-white px-3.5 py-2 text-sm font-semibold text-slate-600 hover:bg-slate-50">Kosongkan</button>
                     <?php endif; ?>
@@ -152,10 +168,11 @@ $cfg     = [
                     <label class="lbl" for="periode_selesai">PKL selesai <span class="text-red-500">*</span></label>
                     <input id="periode_selesai" name="periode_selesai" type="date" x-model="selesai" required class="inp">
                 </div>
-                <?php if ($ubah): ?>
+                <?php if ($ubah || $lapor !== null): ?>
                     <div class="sm:col-span-2">
                         <label class="lbl" for="alamat">Alamat perusahaan (baris "Alamat" di surat)</label>
                         <input id="alamat" name="alamat" type="text" value="<?= esc($nilai['alamat'], 'attr') ?>" maxlength="300" class="inp">
+                        <?php if ($lapor !== null): ?><p class="mt-1 text-xs text-slate-400"><?= (string) ($lapor['alamat'] ?? '') !== '' ? 'Alamat baru dari laporan siswa.' : 'Alamat dari ajuan PKL.' ?> Kosongkan = alamat di ajuan PKL.</p><?php endif; ?>
                     </div>
                 <?php endif; ?>
                 <div class="sm:col-span-2 rounded-xl border border-brand-200 bg-brand-50/60 px-4 py-3 text-sm">
@@ -190,9 +207,17 @@ $cfg     = [
 
     <div class="flex flex-col-reverse gap-2 sm:flex-row sm:items-center sm:justify-between">
         <a href="<?= $kembali ?>" class="rounded-xl border border-slate-300 bg-white px-5 py-3 text-center text-sm font-semibold text-slate-600 transition hover:bg-slate-50">Batal</a>
-        <button type="submit" class="rounded-xl bg-brand-700 px-8 py-3 text-sm font-bold text-white shadow-sm transition hover:bg-brand-800 active:scale-95">
-            <?= $ubah ? 'Simpan perubahan' : ($perluAcc ? 'Buat surat &amp; ajukan ke Waka Hubin' : 'Buat surat') ?>
-        </button>
+        <?php if (! $ubah && ! empty($bisaLangsungAcc)): ?>
+            <?php // Dua tombol: yang pertama (tombol Enter) = aman, masuk antrean ACC; yang kedua = peran ini juga memegang hak ACC jenis ini. ?>
+            <div class="flex flex-col-reverse gap-2 sm:flex-row">
+                <button type="submit" name="langsung_acc" value="0" class="rounded-xl border border-brand-300 bg-white px-6 py-3 text-sm font-bold text-brand-700 shadow-sm transition hover:bg-brand-50 active:scale-95">Buat &amp; ajukan untuk ACC</button>
+                <button type="submit" name="langsung_acc" value="1" class="rounded-xl bg-green-600 px-8 py-3 text-sm font-bold text-white shadow-sm transition hover:bg-green-700 active:scale-95">✓ Simpan &amp; setujui (ACC)</button>
+            </div>
+        <?php else: ?>
+            <button type="submit" class="rounded-xl bg-brand-700 px-8 py-3 text-sm font-bold text-white shadow-sm transition hover:bg-brand-800 active:scale-95">
+                <?= $ubah ? 'Simpan perubahan' : ($perluAcc ? 'Buat surat &amp; ajukan untuk ACC' : 'Buat surat') ?>
+            </button>
+        <?php endif; ?>
     </div>
 </form>
 

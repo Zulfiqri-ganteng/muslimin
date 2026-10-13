@@ -2,180 +2,121 @@
 
 namespace App\Libraries;
 
-use Config\Peran;
-
 /**
- * Pembaca hak akses peran (data ada di Config\Peran).
- *
- * Dipakai tiga tempat supaya selalu sepakat: penjaga rute (AuthFilter), menu
- * samping (layouts/admin), dan gerbang API (ApiAuthFilter / Api\Auth).
- * Prinsip: peran tak dikenal = TIDAK boleh apa pun.
+ * Fasad hak akses — dipakai penjaga rute (AuthFilter), menu samping (layouts/admin), gerbang API (ApiAuthFilter / Api\Auth),
+ * dan controller, supaya semuanya selalu sepakat. Keputusannya ada di Libraries\HakPeran (peran & menu yang diatur Admin di
+ * Sistem → Hak Akses) dan Libraries\PklHak (hak rinci PKL & Surat Sekolah). Rancangan: docs/DESAIN-HAK-AKSES.md.
+ * Prinsip: peran tak dikenal = TIDAK boleh apa pun; Admin selalu penuh.
  */
 final class HakAkses
 {
-    /** @return array<string, array<string, mixed>> */
+    /** @return array<string, array<string, mixed>> kode => peran (label, ringkas, beranda, api, menu, hak, …) */
     public static function semua(): array
     {
-        return config(Peran::class)->peran;
+        return HakPeran::semua();
     }
 
     /** Entri peran, atau null bila peran tak dikenal. */
     public static function peran(?string $peran): ?array
     {
-        $peran = (string) $peran;
-
-        return $peran !== '' ? (self::semua()[$peran] ?? null) : null;
+        return HakPeran::peran($peran);
     }
 
     public static function dikenal(?string $peran): bool
     {
-        return self::peran($peran) !== null;
+        return HakPeran::dikenal($peran);
     }
 
     public static function label(?string $peran): string
     {
-        $p = self::peran($peran);
-        if ($p !== null) {
-            return (string) $p['label'];
-        }
-
-        return trim((string) $peran) !== '' ? ucfirst((string) $peran) . ' (tak dikenal)' : 'Tanpa peran';
+        return HakPeran::label($peran);
     }
 
     /** Halaman pertama setelah login. Peran tak dikenal diarahkan ke Profil (aman). */
     public static function beranda(?string $peran): string
     {
-        $p = self::peran($peran);
-
-        return $p !== null ? (string) $p['beranda'] : 'admin/profile';
+        return HakPeran::beranda($peran);
     }
 
     /** Boleh memakai aplikasi Android (token API)? */
     public static function bolehApi(?string $peran): bool
     {
-        $p = self::peran($peran);
-
-        return $p !== null && ! empty($p['api']);
+        return HakPeran::bolehApi($peran);
     }
 
-    /**
-     * Boleh menyetujui (ACC) ajuan PKL? Ditentukan Admin di PKL → Hak Akses (Libraries\PklHak).
-     * Bawaan: Waka Hubin; Admin selalu boleh (cadangan, wajib menyatakan "mewakili").
-     */
+    /** Boleh menyetujui (ACC) ajuan PKL? Diatur Admin (hak 'acc'); Admin selalu boleh. */
     public static function bolehAcc(?string $peran): bool
     {
-        return self::bolehPkl($peran, 'acc');
+        return PklHak::boleh($peran, 'acc');
     }
 
-    /** Hak PKL yang diatur Admin (acc, surat, surat_sekolah, laporan, ubah, ttd, pengaturan, hapus) — lihat PklHak::HAK. */
+    /** Hak rinci PKL/Surat yang diatur Admin — lihat PklHak (satu kunci, 'surat_acc:*', atau 'a|b'). */
     public static function bolehPkl(?string $peran, string $hak): bool
     {
-        return self::peran($peran) !== null && PklHak::boleh($peran, $hak);
+        return PklHak::boleh($peran, $hak);
     }
 
     /**
      * Daftar awalan alamat API yang boleh dipakai peran ini, untuk aplikasi (menyusun menu): ['*'] = semua
-     * (Admin), ['pkl'] = hanya modul PKL (Operator, Waka Hubin), [] = tidak boleh memakai API.
+     * (Admin), ['pkl', 'surat'] = modul yang dipegang, [] = tidak boleh memakai API.
      *
      * @return list<string>
      */
     public static function aksesApi(?string $peran): array
     {
-        $p = self::peran($peran);
-        if ($p === null || empty($p['api'])) {
-            return [];
-        }
-        if (in_array('*', (array) ($p['akses'] ?? []), true)) {
-            return ['*'];
-        }
-
-        return array_values(array_map('strval', (array) ($p['api_akses'] ?? [])));
+        return HakPeran::aksesApi($peran);
     }
 
-    /**
-     * Bolehkah peran ini memakai alamat API ini? Admin: semua. Peran lain: hanya awalan di 'api_akses'
-     * (mis. 'pkl' → "pkl", "pkl/ajuan/12"). Alamat API tanpa "api/v1/".
-     */
+    /** Bolehkah peran ini memakai alamat API ini (tanpa "api/v1/")? */
     public static function bolehApiAlamat(?string $peran, string $alamat): bool
     {
-        $p = self::peran($peran);
-        if ($p === null || empty($p['api'])) {
-            return false;
-        }
-        if (in_array('*', (array) ($p['akses'] ?? []), true)) {
-            return true;
-        }
-        if (str_contains($alamat, '..')) { // jalur penyusup (pkl/../admin/…) tak pernah lolos
-            return false;
-        }
-        // Keperluan akun sendiri (profil, ganti sandi) terbuka bagi semua peran, sama seperti di web ('umum').
-        foreach (config(Peran::class)->umum as $awalan) {
-            if (self::cocokAwalan($alamat, (string) $awalan)) {
-                return true;
-            }
-        }
-        foreach ((array) ($p['api_akses'] ?? []) as $awalan) {
-            if (self::cocokAwalan($alamat, (string) $awalan)) {
-                return true;
-            }
-        }
-
-        return false;
+        return HakPeran::bolehApiAlamat($peran, $alamat);
     }
 
     /**
-     * Bolehkah peran ini membuka alamat ini?
+     * Bolehkah peran ini membuka alamat ini? Tanpa $metode = GET (membuka/melihat) — dipakai menu samping & tombol;
+     * penjaga rute mengirim metode permintaan sebenarnya (menu "Lihat saja" menolak POST).
      *
      * @param string $alamat jalur relatif tanpa domain, mis. "admin/master/siswa/12"
      */
-    public static function boleh(?string $peran, string $alamat): bool
+    public static function boleh(?string $peran, string $alamat, string $metode = 'GET'): bool
     {
-        $p = self::peran($peran);
-        if ($p === null) {
-            return false;
-        }
+        return HakPeran::boleh($peran, $alamat, $metode);
+    }
 
-        $alamat = self::rapikan($alamat);
-        if (str_contains($alamat, '..')) { // jalur penyusup (admin/pkl/../master/…) tak pernah lolos
-            return false;
-        }
-
-        foreach (config(Peran::class)->umum as $awalan) {
-            if (self::cocokAwalan($alamat, $awalan)) {
-                return true;
-            }
-        }
-        // Pengecualian didahulukan: ditolak walau induknya diizinkan.
-        foreach ($p['kecuali'] ?? [] as $awalan) {
-            if (self::cocokAwalan($alamat, $awalan)) {
-                return false;
-            }
-        }
-        foreach ($p['akses'] as $awalan) {
-            if ($awalan === '*' || self::cocokAwalan($alamat, $awalan)) {
-                return self::lolosHakPkl($peran, $alamat);
-            }
-        }
-
-        return false;
+    /** Level peran pada halaman ini: 'kelola' | 'lihat' | 'boleh' | null. */
+    public static function levelAlamat(?string $peran, string $alamat): ?string
+    {
+        return HakPeran::levelAlamat($peran, $alamat);
     }
 
     /**
-     * Lapis kedua khusus PKL: peran sudah punya akses "admin/pkl", tetapi sebagian alamatnya menuntut hak yang
-     * diatur Admin (ACC, unduh surat, laporan, tanda tangan, pengaturan, hapus, ubah) atau khusus Admin.
-     * Alamat PKL lain (beranda, daftar, detail, status siswa) terbuka bagi semua yang punya akses PKL.
+     * Penolakan baku untuk pagar kedua di controller (setelah penjaga rute). Peran yang hanya boleh MELIHAT halaman itu
+     * (menu "Lihat saja") lalu mencoba mengubah → kembali ke halamannya dengan pesan "hanya bisa melihat"; tanpa hak sama
+     * sekali → ke beranda perannya.
+     *
+     * @param string $alamat halaman yang dijaga, mis. "admin/skbm"
+     * @param string $nama   nama halaman untuk pesan, mis. "SKBM"
+     *
+     * @return array{0: string, 1: string} [alamat tujuan, pesan]
      */
-    private static function lolosHakPkl(?string $peran, string $alamat): bool
+    public static function tolak(?string $peran, string $alamat, string $nama): array
     {
-        $hak = PklHak::hakUntukAlamat($alamat);
-        if ($hak === null) {
-            return true;
-        }
-        if ($hak === 'khusus_admin') {
-            return (string) $peran === 'admin';
-        }
+        $lihat = HakPeran::boleh($peran, $alamat, 'GET');
 
-        return PklHak::boleh($peran, $hak);
+        return [
+            $lihat ? $alamat : HakPeran::beranda($peran),
+            'Akun ' . self::label($peran) . ($lihat ? ' hanya bisa melihat ' . $nama . ', tidak bisa mengubahnya' : ' tidak punya hak membuka ' . $nama)
+                . '. Admin bisa mengaturnya di Sistem → Hak Akses.',
+        ];
+    }
+
+    /** Pagar kedua di controller: akun yang sedang login boleh menjalankan permintaan ini (alamat + metode sekarang)? */
+    public static function bolehSekarang(): bool
+    {
+        $req = service('request');
+
+        return HakPeran::boleh((string) (session('admin')['role'] ?? ''), uri_string(), method_exists($req, 'getMethod') ? (string) $req->getMethod() : 'GET');
     }
 
     /**
@@ -184,19 +125,6 @@ final class HakAkses
      */
     public static function cocokAwalan(string $alamat, string $awalan): bool
     {
-        $alamat = self::rapikan($alamat);
-        $awalan = self::rapikan($awalan);
-
-        return $alamat === $awalan || str_starts_with($alamat, $awalan . '/');
-    }
-
-    /** Samakan bentuk: huruf kecil, tanpa query/fragmen, tanpa garis miring ganda/ujung. */
-    private static function rapikan(string $alamat): string
-    {
-        $alamat = strtolower($alamat);
-        $alamat = preg_split('/[?#]/', $alamat, 2)[0];
-        $alamat = preg_replace('#/{2,}#', '/', $alamat) ?? $alamat;
-
-        return trim($alamat, '/');
+        return HakPeran::cocokAwalan($alamat, $awalan);
     }
 }

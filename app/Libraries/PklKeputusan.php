@@ -4,21 +4,20 @@ namespace App\Libraries;
 
 use App\Models\AuditModel;
 use App\Models\PklPengajuanModel;
-use Config\Peran;
 
 /**
  * Keputusan staf atas ajuan PKL — SATU sumber aturan untuk web (Admin\Pkl) dan API Android (Api\Pkl),
  * supaya hasilnya selalu sama. Isinya: siapa yang berhak, status asal yang sah, alasan wajib, pemeriksaan
  * peringatan "bahaya", dan pencatatan (riwayat, catatan ACC, Audit Log).
  *
- * ATURAN SEKOLAH: ACC, tolak, dan batalkan persetujuan hanya untuk peran yang diberi hak ACC oleh Admin (PklHak, 'acc';
- * bawaan: Waka Hubin). Admin selalu boleh sebagai cadangan dan wajib menyatakan "mewakili Waka Hubin" ($in['wakil'] = '1')
- * saat ACC. Mengembalikan ajuan untuk diperbaiki menuntut hak 'ubah'.
+ * ATURAN SEKOLAH: ACC, tolak, dan batalkan persetujuan hanya untuk peran yang diberi hak "ACC ajuan PKL" oleh Admin
+ * (PklHak 'acc', Sistem → Hak Akses; bawaan: Waka Hubin). Admin selalu boleh. Siapa pun yang meng-ACC tercatat apa adanya (nama +
+ * peran) — tidak ada lagi pernyataan "mewakili". Mengembalikan ajuan untuk diperbaiki menuntut hak 'ubah'.
  *
  * $konteks = ['oleh', 'admin_id', 'peran', 'ip', 'saluran' => 'web'|'aplikasi'].
  *
  * Kembalian putuskan(): ['ok' => bool, 'kode' => string, 'pesan' => string, 'http' => int]
- *   kode: ok | tidak_ada | dilarang | wakil | status | catatan | bahaya | gagal
+ *   kode: ok | tidak_ada | dilarang | status | catatan | bahaya | gagal
  */
 final class PklKeputusan
 {
@@ -30,7 +29,7 @@ final class PklKeputusan
         'batal_acc'  => ['perbaikan', ['disetujui'], true, 'persetujuannya dibatalkan (dikembalikan untuk diperbaiki)'],
     ];
 
-    /** Aksi yang hanya boleh dilakukan Waka Hubin (Admin cadangan). */
+    /** Aksi yang menuntut hak "ACC ajuan PKL" (nama konstanta lama dipertahankan). */
     public const KHUSUS_HUBIN = ['acc', 'tolak', 'batal_acc'];
 
     /** Batas satu kali ACC massal. */
@@ -48,7 +47,8 @@ final class PklKeputusan
     }
 
     /**
-     * Satu keputusan. $in: catatan, paham ('1' = sudah periksa peringatan bahaya), perusahaan_id, wakil ('1').
+     * Satu keputusan. $in: catatan, paham ('1' = sudah periksa peringatan bahaya), perusahaan_id. Kiriman 'wakil' dari aplikasi
+     * lama diabaikan.
      *
      * @param array<string, mixed> $in
      * @param array<string, mixed> $konteks
@@ -73,16 +73,12 @@ final class PklKeputusan
         if (in_array($aksi, self::KHUSUS_HUBIN, true) && ! HakAkses::bolehAcc($peran)) {
             $this->audit->record('update', 'pkl_pengajuan', $id, 'DITOLAK: ' . HakAkses::label($peran) . ' mencoba "' . $aksi . '" pada PKL ' . $kode . $this->saluran($konteks));
 
-            return $this->gagal('dilarang', 'Keputusan ini hanya boleh dilakukan peran yang diberi hak ACC (bawaan: Waka Hubin). Akun ' . HakAkses::label($peran) . ' tidak punya hak ACC; Admin bisa mengaturnya di PKL → Hak Akses.', 403);
+            return $this->gagal('dilarang', 'Keputusan ini hanya boleh dilakukan peran yang diberi hak ACC ajuan PKL (sekarang: ' . PklHak::teksPemegang('acc') . '). Akun ' . HakAkses::label($peran) . ' tidak punya hak itu; Admin bisa mengaturnya di Sistem → Hak Akses.', 403);
         }
         if ($aksi === 'kembalikan' && ! HakAkses::bolehPkl($peran, 'ubah')) {
             $this->audit->record('update', 'pkl_pengajuan', $id, 'DITOLAK: ' . HakAkses::label($peran) . ' mencoba mengembalikan PKL ' . $kode . $this->saluran($konteks));
 
-            return $this->gagal('dilarang', 'Akun ' . HakAkses::label($peran) . ' tidak punya hak memeriksa/mengembalikan ajuan. Admin bisa mengaturnya di PKL → Hak Akses.', 403);
-        }
-        $mewakili = $peran === Peran::ADMIN && in_array($aksi, self::KHUSUS_HUBIN, true);
-        if ($aksi === 'acc' && $mewakili && ($in['wakil'] ?? '') !== '1' && ($in['wakil'] ?? false) !== true) {
-            return $this->gagal('wakil', 'ACC oleh Admin harus menyatakan bahwa Anda mewakili Waka Hubin. Centang pernyataannya, atau minta Waka Hubin yang meng-ACC.', 422);
+            return $this->gagal('dilarang', 'Akun ' . HakAkses::label($peran) . ' tidak punya hak memeriksa/mengembalikan ajuan. Admin bisa mengaturnya di Sistem → Hak Akses.', 403);
         }
 
         if (! in_array($ajuan['status'], $asal, true)) {
@@ -95,9 +91,6 @@ final class PklKeputusan
         }
         if (mb_strlen($catatan) > 255) {
             return $this->gagal('catatan', 'Alasan terlalu panjang (maksimal 255 huruf).', 422);
-        }
-        if ($aksi === 'acc' && $mewakili) {
-            $catatan = mb_substr('Mewakili Waka Hubin' . ($catatan !== '' ? ' — ' . $catatan : ''), 0, 255);
         }
 
         $opsi = [];
@@ -136,11 +129,7 @@ final class PklKeputusan
         if (! HakAkses::bolehAcc($peran)) {
             $this->audit->record('update', 'pkl_pengajuan', null, 'DITOLAK: ' . HakAkses::label($peran) . ' mencoba ACC massal PKL' . $this->saluran($konteks));
 
-            return $this->gagal('dilarang', 'ACC hanya boleh dilakukan peran yang diberi hak ACC (bawaan: Waka Hubin). Akun ' . HakAkses::label($peran) . ' tidak bisa meng-ACC.', 403);
-        }
-        $mewakili = $peran === Peran::ADMIN;
-        if ($mewakili && ($in['wakil'] ?? '') !== '1' && ($in['wakil'] ?? false) !== true) {
-            return $this->gagal('wakil', 'ACC oleh Admin harus menyatakan bahwa Anda mewakili Waka Hubin. Centang pernyataannya, atau minta Waka Hubin yang meng-ACC.', 422);
+            return $this->gagal('dilarang', 'ACC hanya boleh dilakukan peran yang diberi hak ACC ajuan PKL (sekarang: ' . PklHak::teksPemegang('acc') . '). Akun ' . HakAkses::label($peran) . ' tidak bisa meng-ACC.', 403);
         }
 
         if ((string) ($in['mode'] ?? '') === 'terpilih') {
@@ -181,7 +170,7 @@ final class PklKeputusan
                 continue;
             }
 
-            $hasil = $this->svc->ubahStatus($id, 'disetujui', $konteks + ['aksi' => 'acc'], $mewakili ? 'ACC massal — mewakili Waka Hubin' : 'ACC massal');
+            $hasil = $this->svc->ubahStatus($id, 'disetujui', $konteks + ['aksi' => 'acc'], 'ACC massal');
             if ($hasil['ok']) {
                 $ok++;
             } else {

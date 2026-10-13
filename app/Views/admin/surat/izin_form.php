@@ -38,7 +38,7 @@ $cfg    = [
         . '<li><b>Surat umum</b>: SATU surat (satu nomor) untuk semua perusahaan, persis contoh sekolah &mdash; difotokopi untuk tiap tempat PKL.</li>'
         . '<li><b>Per perusahaan</b>: satu surat untuk tiap perusahaan yang dicentang, memuat nama perusahaan dan daftar siswanya, masing-masing bernomor sendiri. Perusahaan yang periode PKL-nya sudah tercatat tetapi tidak menjangkau tanggal kegiatan diberi tanda.</li>'
         . '<li>Kegiatan, tanggal, dan cakupan yang sama <b>tidak bisa dibuat dua kali</b> (kecuali suratnya sudah dibatalkan).</li>'
-        . '<li>' . ($perluAcc ? 'Surat yang dibuat menunggu <b>ACC Waka Hubin</b>; setelah disetujui, Operator mengunduhnya dalam bentuk Word.' : 'Jenis ini saat ini <b>tanpa ACC</b>: surat langsung siap diunduh.') . '</li>'
+        . '<li>' . ($perluAcc ? 'Surat menunggu <b>ACC</b> (' . esc($pemegangAcc ?? 'peran yang berhak') . ', diatur Admin di Sistem → Hak Akses). Setelah disetujui, surat diunduh dalam bentuk Word.' . (! empty($bisaLangsungAcc) ? ' Anda juga memegang hak ACC jenis ini, jadi bisa langsung memakai tombol <b>Simpan &amp; setujui</b>.' : '') : 'Jenis ini saat ini <b>tanpa ACC</b>: surat langsung siap diunduh.') . '</li>'
         . '</ul>',
 ]) ?>
 
@@ -175,9 +175,17 @@ $cfg    = [
 
     <div class="flex flex-col-reverse gap-2 sm:flex-row sm:items-center sm:justify-between">
         <a href="<?= $ubah ? site_url('admin/surat/' . (int) $surat['id']) : site_url('admin/surat') ?>" class="rounded-xl border border-slate-300 bg-white px-5 py-3 text-center text-sm font-semibold text-slate-600 transition hover:bg-slate-50">Batal</a>
-        <button type="submit" class="rounded-xl bg-brand-700 px-8 py-3 text-sm font-bold text-white shadow-sm transition hover:bg-brand-800 active:scale-95">
-            <?= $ubah ? 'Simpan perubahan' : ($perluAcc ? 'Buat surat &amp; ajukan ke Waka Hubin' : 'Buat surat') ?>
-        </button>
+        <?php if (! $ubah && ! empty($bisaLangsungAcc)): ?>
+            <?php // Dua tombol: yang pertama (tombol Enter) = aman, masuk antrean ACC; yang kedua = peran ini juga memegang hak ACC jenis ini. ?>
+            <div class="flex flex-col-reverse gap-2 sm:flex-row">
+                <button type="submit" name="langsung_acc" value="0" class="rounded-xl border border-brand-300 bg-white px-6 py-3 text-sm font-bold text-brand-700 shadow-sm transition hover:bg-brand-50 active:scale-95">Buat &amp; ajukan untuk ACC</button>
+                <button type="submit" name="langsung_acc" value="1" class="rounded-xl bg-green-600 px-8 py-3 text-sm font-bold text-white shadow-sm transition hover:bg-green-700 active:scale-95">✓ Simpan &amp; setujui (ACC)</button>
+            </div>
+        <?php else: ?>
+            <button type="submit" class="rounded-xl bg-brand-700 px-8 py-3 text-sm font-bold text-white shadow-sm transition hover:bg-brand-800 active:scale-95">
+                <?= $ubah ? 'Simpan perubahan' : ($perluAcc ? 'Buat surat &amp; ajukan untuk ACC' : 'Buat surat') ?>
+            </button>
+        <?php endif; ?>
     </div>
 </form>
 

@@ -19,7 +19,7 @@ use CodeIgniter\HTTP\ResponseInterface;
  * Alur siswa: pilih kelas → pilih nama → data perusahaan → teman satu tempat
  * (opsional, maks 5 siswa termasuk pengaju; HP tiap siswa wajib) → HP pengaju →
  * periksa & kirim. Tanggal PKL & tanggal lahir TIDAK ditanyakan. Ajuan masuk ke
- * kotak masuk staf (pkl_pengajuan, status `menunggu`) dan diputuskan Waka Hubin
+ * kotak masuk staf (pkl_pengajuan, status `menunggu`) dan diputuskan sekolah (pemegang hak ACC)
  * paling lambat N hari (Pengaturan, bawaan 5) sejak dikirim.
  *
  * Pengaman:
@@ -61,7 +61,7 @@ class Pkl extends BaseController
 
         $alasan = PklPengaturanModel::alasanTutup($this->p);
         if ($alasan !== null) {
-            return view('pkl/tutup', ['setting' => $this->setting, 'alasan' => $alasan]);
+            return view('pkl/tutup', ['setting' => $this->setting, 'alasan' => $alasan, 'laporTerbuka' => \App\Libraries\PklLapor::terbuka($this->p)]);
         }
 
         return view('pkl/form', [
@@ -70,6 +70,7 @@ class Pkl extends BaseController
             'kelas'      => $this->daftarKelas(),
             'batasHari'  => PklPengaturanModel::batasHari($this->p),
             'maksSiswa'  => PklPengaturanModel::maksSiswa($this->p),
+            'laporTerbuka' => \App\Libraries\PklLapor::terbuka($this->p),
         ]);
     }
 
@@ -95,7 +96,7 @@ class Pkl extends BaseController
             'jk'     => $r['jenis_kelamin'],
             'status' => $r['aktif'] ?? ((int) $r['pernah_ditolak'] === 1 ? 'ditolak' : 'belum'),
             'peran'  => $r['aktif'] !== null ? $r['peran'] : null,
-            // Hanya tanggal (bukan data ajuan): kapan keputusan Waka Hubin paling lambat keluar.
+            // Hanya tanggal (bukan data ajuan): kapan keputusan sekolah paling lambat keluar.
             'batas'  => $r['aktif'] === 'menunggu' ? substr((string) PklPengajuanModel::batasKeputusan($r['diajukan_at'] ?? null, $hari), 0, 10) : null,
         ], (new PklPengajuanModel())->daftarSiswaKelas($kelasId));
 
@@ -443,7 +444,7 @@ class Pkl extends BaseController
 
     /**
      * Pesan saat siswa mencoba mengajukan padahal ajuannya masih aktif. Menyebut nomor bukti, jam kirim,
-     * dan batas keputusan Waka Hubin supaya siswa tahu harus menunggu — bukan mengajukan ulang.
+     * dan batas keputusan sekolah supaya siswa tahu harus menunggu — bukan mengajukan ulang.
      *
      * @param array<string, mixed> $milik baris ajuan aktif (PklPengajuanModel::aktifMilik)
      */
@@ -460,15 +461,15 @@ class Pkl extends BaseController
                     . 'Hanya temanmu yang mengajukan yang bisa memperbaikinya — kamu tidak perlu mengisi lagi.' . $tidakIkut;
             }
             if (($milik['status'] ?? '') === 'disetujui') {
-                return 'Namamu sudah didaftarkan temanmu di ajuan PKL ' . $kode . ' dan ajuan itu sudah DISETUJUI Waka Hubin. Kamu tidak perlu mengisi lagi.' . $tidakIkut;
+                return 'Namamu sudah didaftarkan temanmu di ajuan PKL ' . $kode . ' dan ajuan itu sudah DISETUJUI sekolah. Kamu tidak perlu mengisi lagi.' . $tidakIkut;
             }
 
-            return 'Namamu sudah didaftarkan temanmu di ajuan PKL ' . $kode . ' yang sedang menunggu keputusan Waka Hubin. '
+            return 'Namamu sudah didaftarkan temanmu di ajuan PKL ' . $kode . ' yang sedang menunggu keputusan sekolah. '
                 . 'Kamu tidak perlu dan tidak bisa mengajukan lagi.' . $tidakIkut;
         }
 
         if (($milik['status'] ?? '') === 'disetujui') {
-            return 'Ajuan PKL-mu (' . $kode . ') sudah DISETUJUI Waka Hubin. Jika ada perubahan, hubungi operator sekolah atau Waka Hubin.';
+            return 'Ajuan PKL-mu (' . $kode . ') sudah DISETUJUI sekolah. Jika ada perubahan, hubungi operator sekolah atau Waka Hubin.';
         }
         if (($milik['status'] ?? '') === 'perbaikan') {
             return 'Ajuan PKL-mu (' . $kode . ') sedang dikembalikan untuk diperbaiki. Pilih namamu di langkah 1 lalu buka ajuanmu — jangan membuat ajuan baru.';
@@ -480,7 +481,7 @@ class Pkl extends BaseController
 
         return 'Kamu sudah mengajukan PKL (' . $kode . ')'
             . ($kirim ? ' pada ' . IsianBantu::tanggalIndo(substr((string) $kirim, 0, 10)) : '')
-            . ' dan ajuanmu sedang menunggu keputusan Waka Hubin'
+            . ' dan ajuanmu sedang menunggu keputusan sekolah'
             . ($batas ? ' (paling lambat ' . IsianBantu::tanggalIndo(substr($batas, 0, 10)) . ')' : '')
             . '. Jangan mengajukan ulang — tunggu keputusannya. Bila lewat batas belum ada kabar, hubungi operator sekolah atau Waka Hubin.';
     }

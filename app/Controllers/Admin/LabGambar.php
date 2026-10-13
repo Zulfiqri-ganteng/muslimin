@@ -3,6 +3,7 @@
 namespace App\Controllers\Admin;
 
 use App\Controllers\BaseController;
+use App\Libraries\HakAkses;
 use App\Models\AuditModel;
 use App\Models\LabGambarModel;
 
@@ -97,6 +98,15 @@ class LabGambar extends BaseController
         $row = $this->model->find((int) $gid);
         if (! $row) {
             return redirect()->to(site_url('admin/dashboard'))->with('error', 'Foto tidak ditemukan.');
+        }
+        // Penjaga rute hanya tahu "admin/lab-gambar/hapus/{id}" (boleh bila memegang salah satu menu ber-foto); di sini dicek hak
+        // KELOLA menu pemilik foto ini (mis. Aset / Peminjaman), diatur Admin di Sistem → Hak Akses.
+        $peran   = (string) (session('admin')['role'] ?? '');
+        $halaman = 'admin/lab-gambar/' . $row['entitas'] . '/' . (int) $row['entitas_id'];
+        if (! HakAkses::boleh($peran, $halaman, 'POST')) {
+            [$ke, $pesan] = HakAkses::tolak($peran, $halaman, 'foto ' . (self::LABEL[$row['entitas']] ?? $row['entitas']));
+
+            return redirect()->to(site_url($ke))->with('error', $pesan);
         }
         labimage_delete($row['file']);
         $this->model->delete((int) $gid);

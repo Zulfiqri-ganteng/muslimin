@@ -8,7 +8,7 @@ use App\Models\SuratSekolahModel;
 use CodeIgniter\HTTP\RedirectResponse;
 
 /**
- * Surat Izin ASTS dan Surat Izin TKA — formulir membuat dan mengubah (hak 'surat_sekolah'). Logika isian, validasi, format
+ * Surat Izin ASTS dan Surat Izin TKA — formulir membuat dan mengubah (hak Buat jenis itu). Logika isian, validasi, format
  * tanggal, pencegah ganda, dan penanda template ada di Libraries\SuratAcara; ACC / unduh di Admin\Surat.
  *
  * Alamat: admin/surat/asts · admin/surat/tka (GET formulir, POST simpan) dan admin/surat/{asts|tka}/{id}/ubah (GET, POST).
@@ -59,7 +59,7 @@ class SuratIzin extends SuratDasar
     // ----- formulir baru ----------------------------------------------
     private function form(string $jenis)
     {
-        if (($tolak = $this->tolakHalaman('surat_sekolah')) !== null) {
+        if (($tolak = $this->tolakJenis('buat', $jenis)) !== null) {
             return $tolak;
         }
         $acara   = new Acara();
@@ -78,7 +78,7 @@ class SuratIzin extends SuratDasar
 
     private function simpan(string $jenis): RedirectResponse
     {
-        if (($tolak = $this->tolakHalaman('surat_sekolah')) !== null) {
+        if (($tolak = $this->tolakJenis('buat', $jenis)) !== null) {
             return $tolak;
         }
         $h = Acara::periksa($jenis, (array) $this->request->getPost());
@@ -91,8 +91,9 @@ class SuratIzin extends SuratDasar
             return redirect()->to(site_url(SuratJenis::alamat($jenis)))->withInput()->with('error', 'Tidak ada surat yang dibuat. ' . ($catatan !== [] ? implode(' ', $catatan) : ''));
         }
 
-        $perluAcc = SuratJenis::perluAcc($jenis, $this->p);
-        $akhir    = $perluAcc ? ' Surat menunggu ACC Waka Hubin.' : ' Surat langsung siap diunduh.';
+        $acc     = $this->langsungAcc($hasil['dibuat'], $jenis);
+        $catatan = array_merge($catatan, $acc['catatan']);
+        $akhir   = $this->akhirBuat($jenis, count($hasil['dibuat']), $acc);
         if (count($hasil['dibuat']) === 1 && $catatan === []) {
             return $this->ke('admin/surat/' . $hasil['dibuat'][0], 'success', 'Surat dibuat.' . $akhir);
         }
@@ -161,10 +162,9 @@ class SuratIzin extends SuratDasar
     /** @return array<string, mixed> */
     private function dasarForm(string $jenis): array
     {
-        return $this->dasarSurat(SuratJenis::label($jenis), 'daftar') + [
+        return $this->dasarSurat(SuratJenis::label($jenis), 'daftar') + $this->dasarJenis($jenis) + [
             'jenis'    => $jenis,
             'label'    => SuratJenis::label($jenis),
-            'perluAcc' => SuratJenis::perluAcc($jenis, $this->p),
             'sesiSaran' => Acara::SESI_SARAN,
         ];
     }

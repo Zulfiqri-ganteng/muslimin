@@ -405,9 +405,14 @@ final class SuratSekolah
             (string) $surat['jenis'], (string) $surat['tanggal_surat'], (string) ($surat['perusahaan_nama'] ?? ''), (string) ($surat['isi'] ?? ''),
             (string) ($p['kepsek_nama'] ?? ''), (string) ($p['waka_hubin_nama'] ?? ''), (string) ($p['waka_hubin_nip'] ?? ''), (string) ($p['waka_hubin_jabatan'] ?? ''),
             (string) ($p['kontak_surat_nama'] ?? ''), (string) ($p['kontak_surat_hp'] ?? ''),
-            $ttd !== null ? basename($ttd['path']) . '@' . (int) @filemtime($ttd['path']) : '-',
+            PklSurat::penandaGambar($ttd),
             (string) ($surat['acc_at'] ?? ''), (string) ($surat['acc_peran'] ?? ''), (string) ($surat['acc_nama'] ?? ''),
         ];
+        // Tanda tangan + stempel Kepala Sekolah: hanya ikut bila ada, dan hanya untuk jenis bernomor (templatenya memuat tanda tangan
+        // Kepala Sekolah) — sidik surat lama tidak berubah selama gambar belum diunggah.
+        if (SuratJenis::bernomor((string) $surat['jenis']) && ($kepsek = PklSurat::infoTtdKepsek($p)) !== null) {
+            $dasar[] = 'kepsek:' . PklSurat::penandaGambar($kepsek);
+        }
         // Pernyataan Orang Tua yang mencetak data orang tua: data itu ikut menentukan isi surat. Jenis lain TIDAK berubah
         // rumusnya (sidik surat yang sudah pernah diunduh tetap sama).
         $ortu   = (string) $surat['jenis'] === SuratJenis::PERNYATAAN && ! empty(self::dekodeIsi((string) ($surat['isi'] ?? ''))['isi_ortu']);

@@ -6,7 +6,7 @@
  * terdaftar saat event `alpine:init` berjalan.
  *
  * Isi:
- *  1. Delegasi global : [data-confirm], [data-autosubmit]
+ *  1. Delegasi global : [data-confirm], [data-autosubmit], [data-lihat-saja] (menu "Lihat saja")
  *  2. adminLayout     : sidebar, ciutkan menu, overlay loading
  *  3. helpCard        : kartu panduan halaman (default TERTUTUP)
  *  4. masterList      : pabrik komponen halaman daftar master data
@@ -18,6 +18,46 @@
     /* ---------------------------------------------------------------
      * 1. Delegasi global — pengganti inline handler.
      * ------------------------------------------------------------- */
+
+    // Halaman "Lihat saja" (<main data-lihat-saja>, menu yang diberi Admin level Lihat): formulir POST di isi halaman tidak
+    // bisa dikirim — penjaga rute pasti menolaknya. Tombol kirim diredupkan saat halaman dimuat; formulir/tautan POST yang
+    // muncul belakangan (Alpine) dicegat saat dikirim. Formulir bertanda data-lihat-boleh dikecualikan.
+    function lihatSaja(el) {
+        var m = el && el.closest ? el.closest('[data-lihat-saja]') : null;
+        return m !== null && !(el.closest && el.closest('[data-lihat-boleh]'));
+    }
+    function isPost(form) {
+        return String(form.getAttribute('method') || 'get').toLowerCase() === 'post';
+    }
+    var PESAN_LIHAT = 'Mode lihat saja: akun Anda hanya bisa melihat halaman ini, tidak bisa mengubah data. Admin bisa mengubahnya di Sistem → Hak Akses.';
+    document.addEventListener('submit', function (e) {
+        var f = e.target;
+        if (f && f.tagName === 'FORM' && isPost(f) && lihatSaja(f)) {
+            e.preventDefault();
+            e.stopImmediatePropagation();
+            window.alert(PESAN_LIHAT);
+        }
+    }, true);
+    document.addEventListener('click', function (e) {
+        var a = e.target.closest('a[data-method="post"]');
+        if (a && lihatSaja(a)) {
+            e.preventDefault();
+            e.stopImmediatePropagation();
+            window.alert(PESAN_LIHAT);
+        }
+    }, true);
+    document.addEventListener('DOMContentLoaded', function () {
+        var m = document.querySelector('[data-lihat-saja]');
+        if (!m) { return; }
+        Array.prototype.forEach.call(m.querySelectorAll('form'), function (f) {
+            if (!isPost(f) || !lihatSaja(f)) { return; }
+            Array.prototype.forEach.call(f.querySelectorAll('button[type="submit"], button:not([type]), input[type="submit"]'), function (b) {
+                b.disabled = true;
+                b.title = 'Mode lihat saja';
+                b.classList.add('opacity-50', 'cursor-not-allowed');
+            });
+        });
+    });
 
     // <a data-confirm="Yakin?"> — batalkan klik bila user menolak.
     document.addEventListener('click', function (e) {

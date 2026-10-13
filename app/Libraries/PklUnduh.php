@@ -28,7 +28,7 @@ final class PklUnduh
         $peran = (string) ($konteks['peran'] ?? '');
         if (! HakAkses::bolehPkl($peran, 'surat')) {
             return ['ok' => false, 'http' => 403, 'kode' => 'dilarang', 'galat' => [],
-                'pesan' => 'Akun ' . HakAkses::label($peran) . ' tidak punya hak mengunduh surat PKL. Hak ini diatur Admin di PKL → Hak Akses.'];
+                'pesan' => 'Akun ' . HakAkses::label($peran) . ' tidak punya hak mengunduh surat PKL. Hak ini diatur Admin di Sistem → Hak Akses.'];
         }
 
         $biaya  = new PklBiaya();

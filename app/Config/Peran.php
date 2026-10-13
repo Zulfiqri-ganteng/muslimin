@@ -5,11 +5,13 @@ namespace Config;
 use CodeIgniter\Config\BaseConfig;
 
 /**
- * Peran staf beserta hak aksesnya.
+ * Peran staf BAWAAN beserta hak aksesnya (docs/DESAIN-HAK-AKSES.md).
  *
- * Inilah SATU-SATUNYA tempat yang menentukan siapa boleh membuka apa. Dibaca
- * App\Libraries\HakAkses oleh (a) penjaga rute web (AuthFilter), (b) menu samping,
- * dan (c) gerbang API Android. Mengubah hak akses sebuah peran cukup di sini.
+ * Sejak 2026-10-17 aturan yang BERLAKU dibaca dari tabel `peran` dan diatur Admin di Sistem → Hak Akses
+ * (Libraries\HakPeran). Isi file ini hanya dipakai sebagai NILAI AWAL: mengisi tabel saat migrasi
+ * 2026-10-17-000001_HakAksesPeran, dan sebagai aturan bila tabel itu belum ada (server belum migrate).
+ * Mengubah file ini TIDAK mengubah hak peran yang sudah tersimpan di database. Awalan 'akses' dipetakan ke
+ * entri katalog menu (Libraries\MenuAdmin): menu biasa → Kelola, modul PKL/Surat → Boleh.
  *
  * 'akses'  : awalan alamat (tanpa domain) yang boleh dibuka. '*' = semua.
  *            Awalan 'admin/pkl' mencakup 'admin/pkl' dan turunannya ('admin/pkl/12'),
@@ -22,7 +24,7 @@ use CodeIgniter\Config\BaseConfig;
  * 'api_akses': (opsional) awalan alamat API (tanpa "api/v1/") yang boleh dipakai peran
  *            terbatas, mis. 'pkl'. Dibaca App\Libraries\HakAkses::bolehApiAlamat().
  * HAK PKL (ACC, unduh surat, laporan pembayaran, ubah, tanda tangan, pengaturan, hapus) TIDAK ditulis di sini:
- *            diatur Admin lewat PKL → Hak Akses dan dibaca App\Libraries\PklHak (bawaan: Hubin = ACC; Operator = surat).
+ *            diatur Admin lewat Sistem → Hak Akses dan dibaca App\Libraries\PklHak (bawaan: Hubin = ACC; Operator = surat).
  *            Penjaga rute memakainya lewat HakAkses::boleh() sebagai lapis kedua untuk alamat admin/pkl/….
  *
  * Akun lama berperan 'admin' (nilai bawaan kolom admins.role) → akses penuh,
@@ -40,7 +42,7 @@ class Peran extends BaseConfig
     public array $peran = [
         self::ADMIN => [
             'label'   => 'Admin',
-            'ringkas' => 'Akses penuh ke semua menu, termasuk Kelola Akun dan Hak Akses PKL. Untuk pengelola sistem.',
+            'ringkas' => 'Akses penuh ke semua menu, termasuk Kelola Akun dan Hak Akses. Untuk pengelola sistem.',
             'beranda' => 'admin/dashboard',
             'akses'   => ['*'],
             'api'     => true,

@@ -6,7 +6,7 @@
  *
  * @var list<array<string,mixed>> $rows
  * @var array<string,mixed>       $ringkas
- * @var array<string,array>       $peran     Config\Peran (kode => label, ringkas, ...)
+ * @var array<string,array>       $peran     HakAkses::semua() — peran yang diatur Admin di Sistem → Hak Akses (kode => label, ringkas, menu, hak, …)
  * @var int                       $saya      id akun yang sedang login
  * @var ?array                    $baru      sandi sementara (flash, sekali tampil)
  * @var ?array                    $formLama  isian yang gagal disimpan (flash)
@@ -62,7 +62,7 @@ $dataBaris = static fn (array $r, int $saya): string => esc(json_encode([
             ['Total akun', $ringkas['total'], 'text-slate-800'],
             ['Akun aktif', $ringkas['aktif'], 'text-emerald-600'],
             ['Admin', $ringkas['peran']['admin'] ?? 0, 'text-brand-700'],
-            ['Operator & Hubin', ($ringkas['peran']['operator'] ?? 0) + ($ringkas['peran']['hubin'] ?? 0), 'text-amber-600'],
+            ['Peran lain (bukan Admin)', array_sum($ringkas['peran']) - ($ringkas['peran']['admin'] ?? 0), 'text-amber-600'],
         ] as [$label, $nilai, $warna]): ?>
             <div class="rounded-2xl border border-slate-200 bg-white px-4 py-3.5 shadow-sm">
                 <p class="text-xs font-semibold text-slate-400"><?= esc($label) ?></p>
@@ -201,15 +201,25 @@ $dataBaris = static fn (array $r, int $saya): string => esc(json_encode([
         </div>
     </div>
 
-    <!-- Hak akses tiap peran (rujukan cepat) -->
+    <!-- Hak akses tiap peran (rujukan cepat; aturannya di Sistem → Hak Akses) -->
     <div class="mt-5 grid grid-cols-1 gap-3 lg:grid-cols-3">
-        <?php foreach ($peran as $kode => $p): ?>
+        <?php foreach ($peran as $kode => $p):
+            $level = array_count_values(array_map('strval', array_values((array) ($p['menu'] ?? []))));
+        ?>
             <div class="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
                 <span class="inline-flex rounded-full px-2.5 py-0.5 text-xs font-semibold ring-1 ring-inset <?= $warnaPeran[$kode] ?? $warnaNetral ?>"><?= esc($p['label']) ?></span>
-                <p class="mt-2 text-xs leading-relaxed text-slate-500"><?= esc($p['ringkas']) ?></p>
+                <?php if ((string) ($p['ringkas'] ?? '') !== ''): ?><p class="mt-2 text-xs leading-relaxed text-slate-500"><?= esc($p['ringkas']) ?></p><?php endif; ?>
+                <p class="mt-2 text-[11px] font-semibold text-slate-600">
+                    <?php if (! empty($p['penuh'])): ?>
+                        Semua menu &amp; hak — tidak bisa dibatasi.
+                    <?php else: ?>
+                        Menu: <?= (int) ($level['kelola'] ?? 0) ?> kelola · <?= (int) ($level['lihat'] ?? 0) ?> lihat saja · <?= (int) ($level['boleh'] ?? 0) ?> modul — hak PKL &amp; Surat: <?= count((array) ($p['hak'] ?? [])) ?>
+                    <?php endif; ?>
+                </p>
             </div>
         <?php endforeach; ?>
     </div>
+    <p class="mt-2 text-xs text-slate-400">Siapa boleh membuka menu apa, dan hak PKL &amp; Surat tiap peran, diatur di <a href="<?= site_url('admin/hak-akses') ?>" class="font-semibold text-brand-700 hover:underline">Sistem → Hak Akses</a> (keterangan peran juga bisa diubah di sana).</p>
 
     <!-- ============ Dialog: tambah / ubah akun ============ -->
     <div x-show="formTerbuka" x-cloak x-transition.opacity.duration.200ms

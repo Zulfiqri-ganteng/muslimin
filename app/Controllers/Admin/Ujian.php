@@ -3,6 +3,7 @@
 namespace App\Controllers\Admin;
 
 use App\Controllers\BaseController;
+use App\Libraries\HakAkses;
 use App\Libraries\HonorDokumen;
 use App\Libraries\HonorHitung;
 use App\Libraries\HonorKoreksi;
@@ -40,7 +41,7 @@ class Ujian extends BaseController
         'ketidakhadiran' => 'Ketidakhadiran',
         'susulan'        => 'Ujian Susulan',
         'rekap'          => 'Rekap',
-        'honor'          => 'Honor', // khusus Admin (data gaji) — disaring di jenis()
+        'honor'          => 'Honor', // data gaji: hak menu "Honor & Koreksi Ujian" (diatur Admin) — disaring di jenis()
     ];
 
     protected UjianPeriodeModel $model;
@@ -73,9 +74,10 @@ class Ujian extends BaseController
         }
         $slug = UjianPeriodeModel::keSlug($jenis);
 
-        // Tab Honor memuat data gaji → hanya Admin; peran lain tidak melihat tabnya sama sekali.
+        // Tab Honor memuat data gaji → hanya peran dengan hak menu "Honor & Koreksi Ujian" (diatur Admin di Sistem → Hak Akses;
+        // bawaan hanya Admin); peran lain tidak melihat tabnya sama sekali.
         $tabs = self::TAB;
-        if ((string) (session('admin')['role'] ?? '') !== 'admin') {
+        if (! HakAkses::boleh((string) (session('admin')['role'] ?? ''), 'admin/ujian/' . $slug . '/honor')) {
             unset($tabs['honor']);
         }
         if (! isset($tabs[$tab])) {

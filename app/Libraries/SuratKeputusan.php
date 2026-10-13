@@ -6,15 +6,17 @@ use App\Models\AuditModel;
 use App\Models\PklPengaturanModel;
 use App\Models\SuratSekolahModel;
 use CodeIgniter\Database\BaseConnection;
-use Config\Peran;
 
 /**
  * Keputusan atas surat sekolah — SATU sumber aturan (web sekarang, API Android kelak), pola sama dengan PklKeputusan.
  * Isinya: siapa yang berhak, status asal yang sah, alasan wajib, pemeriksaan sebelum ACC, pencatatan (riwayat,
  * catatan ACC + kode verifikasi, Audit Log). Rancangan: docs/DESAIN-SURAT-SEKOLAH.md.
  *
- * ATURAN: ACC / kembalikan / batalkan-ACC = hak 'acc' (bawaan Waka Hubin; Admin cadangan, WAJIB menyatakan
- * "mewakili Waka Hubin" saat ACC). Ajukan ulang / batalkan surat = hak 'surat_sekolah' (bawaan Operator).
+ * ATURAN (diatur Admin per jenis surat di Sistem → Hak Akses, docs/DESAIN-HAK-AKSES.md): ACC / kembalikan / batalkan-ACC =
+ * hak "ACC" jenis surat itu (surat_acc:{jenis}; bawaan Waka Hubin); ajukan ulang / batalkan surat = hak "Buat" jenis itu
+ * (surat_buat:{jenis}; bawaan Operator). Admin selalu boleh. Siapa pun yang meng-ACC tercatat apa adanya (nama + peran) — tidak
+ * ada lagi pernyataan "mewakili". Bila beberapa peran memegang ACC, yang pertama menekan tercatat; penjaga status asal di
+ * database mencegah keputusan ganda.
  *
  * Alur status:  menunggu ──ACC──▶ disetujui ──(unduh pertama: nomor terbit)
  *               menunggu ──kembalikan──▶ dikembalikan ──ajukan ulang──▶ menunggu
@@ -24,17 +26,17 @@ use Config\Peran;
  * $konteks = ['oleh', 'admin_id', 'peran', 'ip', 'saluran' => 'web'|'aplikasi'].
  *
  * Kembalian putuskan(): ['ok' => bool, 'kode' => string, 'pesan' => string, 'http' => int]
- *   kode: ok | tidak_ada | dilarang | wakil | status | terbit | catatan | bahaya | gagal
+ *   kode: ok | tidak_ada | dilarang | status | terbit | catatan | bahaya | gagal
  */
 final class SuratKeputusan
 {
-    /** aksi => [status baru, status asal yang boleh, alasan wajib?, kata kerja untuk pesan, hak yang dituntut] */
+    /** aksi => [status baru, status asal yang boleh, alasan wajib?, kata kerja untuk pesan, aksi hak per jenis (acc|buat)] */
     public const ATURAN = [
         'acc'          => ['disetujui', ['menunggu'], false, 'disetujui', 'acc'],
         'kembalikan'   => ['dikembalikan', ['menunggu'], true, 'dikembalikan untuk diperbaiki', 'acc'],
         'batal_acc'    => ['dikembalikan', ['disetujui'], true, 'persetujuannya dibatalkan (dikembalikan untuk diperbaiki)', 'acc'],
-        'ajukan_ulang' => ['menunggu', ['dikembalikan'], false, 'diajukan ulang untuk ACC', 'surat_sekolah'],
-        'batal'        => ['dibatalkan', ['menunggu', 'dikembalikan', 'disetujui'], true, 'dibatalkan', 'surat_sekolah'],
+        'ajukan_ulang' => ['menunggu', ['dikembalikan'], false, 'diajukan ulang untuk ACC', 'buat'],
+        'batal'        => ['dibatalkan', ['menunggu', 'dikembalikan', 'disetujui'], true, 'dibatalkan', 'buat'],
     ];
 
     /** Batas satu kali ACC massal. */
@@ -63,8 +65,8 @@ final class SuratKeputusan
     }
 
     /**
-     * Satu keputusan. $in: catatan (alasan), wakil ('1' = Admin menyatakan mewakili Waka Hubin), paham ('1' = sudah
-     * memeriksa peringatan BAHAYA).
+     * Satu keputusan. $in: catatan (alasan), paham ('1' = sudah memeriksa peringatan BAHAYA). Kiriman 'wakil' dari aplikasi
+     * lama diabaikan.
      *
      * @param array<string, mixed>      $in
      * @param array<string, mixed>      $konteks
@@ -82,21 +84,22 @@ final class SuratKeputusan
             return $this->gagal('tidak_ada', 'Surat tidak ditemukan (mungkin sudah dihapus).', 404);
         }
         $s = $m['surat'];
-        [, $asal, $wajibCatatan, $kata, $hak] = self::ATURAN[$aksi];
+        [, $asal, $wajibCatatan, $kata, $tipe] = self::ATURAN[$aksi];
         $kode  = SuratSekolahModel::kode($id);
         $peran = (string) ($konteks['peran'] ?? '');
+        $jenis = (string) $s['jenis'];
 
-        // Hak keputusan.
-        if (! HakAkses::bolehPkl($peran, $hak)) {
+        // Jenis tanpa nomor (Pernyataan) tidak memakai ACC sama sekali — bukan soal hak.
+        if ($tipe === 'acc' && ! SuratJenis::bernomor($jenis)) {
+            return $this->gagal('status', 'Jenis surat ini tidak memakai ACC.', 409);
+        }
+        // Hak keputusan — per jenis surat.
+        if (! PklHak::bolehSurat($peran, $tipe, $jenis)) {
             $this->audit->record('update', 'surat_sekolah', $id, 'DITOLAK: ' . HakAkses::label($peran) . ' ' . $this->pelaku($konteks) . ' mencoba "' . $aksi . '" pada ' . $kode . $this->saluran($konteks));
 
-            return $this->gagal('dilarang', $hak === 'acc'
-                ? 'Keputusan ini hanya boleh dilakukan peran yang diberi hak ACC (bawaan: Waka Hubin). Akun ' . HakAkses::label($peran) . ' tidak punya hak ACC; Admin bisa mengaturnya di PKL → Hak Akses.'
-                : 'Akun ' . HakAkses::label($peran) . ' tidak punya hak mengelola surat sekolah. Admin bisa mengaturnya di PKL → Hak Akses.', 403);
-        }
-        $mewakili = $aksi === 'acc' && $peran === Peran::ADMIN;
-        if ($mewakili && ! self::benar($in['wakil'] ?? null)) {
-            return $this->gagal('wakil', 'ACC oleh Admin harus menyatakan bahwa Anda mewakili Waka Hubin. Centang pernyataannya, atau minta Waka Hubin yang meng-ACC.', 422);
+            return $this->gagal('dilarang', $tipe === 'acc'
+                ? 'Keputusan ini hanya boleh dilakukan peran yang diberi hak ACC ' . SuratJenis::label($jenis) . ' (sekarang: ' . PklHak::teksPemegang(PklHak::kunciSurat('acc', $jenis)) . '). Akun ' . HakAkses::label($peran) . ' tidak punya hak itu; Admin bisa mengaturnya di Sistem → Hak Akses.'
+                : 'Akun ' . HakAkses::label($peran) . ' tidak punya hak membuat/mengelola ' . SuratJenis::label($jenis) . '. Admin bisa mengaturnya di Sistem → Hak Akses.', 403);
         }
 
         if (! in_array($s['status'], $asal, true)) {
@@ -127,8 +130,7 @@ final class SuratKeputusan
             }
         }
 
-        $ket   = $mewakili ? mb_substr('Mewakili Waka Hubin' . ($catatan !== '' ? ' — ' . $catatan : ''), 0, 255) : null;
-        $hasil = $this->terapkan($id, $aksi, $catatan, $konteks, $ket);
+        $hasil = $this->terapkan($id, $aksi, $catatan, $konteks);
         if (! $hasil['ok']) {
             return $this->gagal($hasil['kode'], $hasil['kode'] === 'status' ? 'Surat sudah berubah (mungkin diputuskan staf lain). Muat ulang halaman.' : 'Penyimpanan gagal. Coba lagi sebentar.', $hasil['kode'] === 'status' ? 409 : 500);
         }
@@ -144,8 +146,38 @@ final class SuratKeputusan
     }
 
     /**
+     * "Simpan & setujui": setelah peran ini membuat surat, langsung ACC atas namanya — hanya bila jenis itu wajib ACC dan peran ini
+     * memegang hak ACC jenisnya. Aturan biasa tetap berlaku lewat putuskan() (peringatan BAHAYA membuat surat tetap menunggu).
+     * Dipakai formulir web dan API.
+     *
+     * @param list<int>            $ids
+     * @param array<string, mixed> $konteks
+     *
+     * @return array{acc: int, catatan: list<string>}
+     */
+    public function accSetelahBuat(array $ids, string $jenis, array $konteks, ?array $p = null): array
+    {
+        $p ??= (new PklPengaturanModel())->ambil();
+        if (! SuratJenis::perluAcc($jenis, $p) || ! PklHak::bolehSurat((string) ($konteks['peran'] ?? ''), 'acc', $jenis)) {
+            return ['acc' => 0, 'catatan' => []];
+        }
+        $acc     = 0;
+        $catatan = [];
+        foreach ($ids as $id) {
+            $r = $this->putuskan((int) $id, 'acc', [], $konteks, $p);
+            if ($r['ok']) {
+                $acc++;
+            } else {
+                $catatan[] = SuratSekolahModel::kode((int) $id) . ' belum di-ACC: ' . $r['pesan'];
+            }
+        }
+
+        return ['acc' => $acc, 'catatan' => $catatan];
+    }
+
+    /**
      * ACC massal: mode "terpilih" ($in['ids']) atau "aman" (semua yang menunggu). Hanya surat TANPA peringatan
-     * (bahaya maupun awas) yang di-ACC; sisanya dilewati dan dilaporkan supaya diperiksa satu per satu.
+     * (bahaya maupun awas) DAN berjenis yang boleh di-ACC peran ini yang di-ACC; sisanya dilewati dan dilaporkan.
      *
      * @param array<string, mixed>      $in
      * @param array<string, mixed>      $konteks
@@ -155,15 +187,12 @@ final class SuratKeputusan
      */
     public function accMassal(array $in, array $konteks, ?array $p = null): array
     {
-        $peran = (string) ($konteks['peran'] ?? '');
-        if (! HakAkses::bolehAcc($peran)) {
+        $peran      = (string) ($konteks['peran'] ?? '');
+        $jenisBoleh = PklHak::jenisBoleh($peran, 'acc');
+        if ($jenisBoleh === []) {
             $this->audit->record('update', 'surat_sekolah', null, 'DITOLAK: ' . HakAkses::label($peran) . ' ' . $this->pelaku($konteks) . ' mencoba ACC massal surat sekolah' . $this->saluran($konteks));
 
-            return $this->gagal('dilarang', 'ACC hanya boleh dilakukan peran yang diberi hak ACC (bawaan: Waka Hubin). Akun ' . HakAkses::label($peran) . ' tidak bisa meng-ACC.', 403);
-        }
-        $mewakili = $peran === Peran::ADMIN;
-        if ($mewakili && ! self::benar($in['wakil'] ?? null)) {
-            return $this->gagal('wakil', 'ACC oleh Admin harus menyatakan bahwa Anda mewakili Waka Hubin. Centang pernyataannya, atau minta Waka Hubin yang meng-ACC.', 422);
+            return $this->gagal('dilarang', 'Akun ' . HakAkses::label($peran) . ' tidak punya hak ACC untuk jenis surat mana pun. Admin bisa mengaturnya di Sistem → Hak Akses.', 403);
         }
 
         $ids = null;
@@ -174,21 +203,27 @@ final class SuratKeputusan
             }
         }
 
-        $q = $this->db->table('surat_sekolah')->select('id')->where('status', 'menunggu')->orderBy('created_at', 'ASC')->orderBy('id', 'ASC');
+        $lewat = [];
+        if ($ids !== null) {
+            // Surat terpilih yang jenisnya tak boleh di-ACC peran ini: dilaporkan, tidak diam-diam diabaikan.
+            foreach ($this->db->table('surat_sekolah')->select('id, jenis, judul')->whereIn('id', $ids)->where('status', 'menunggu')->whereNotIn('jenis', $jenisBoleh)->get()->getResultArray() as $r) {
+                $lewat[] = SuratSekolahModel::kode((int) $r['id']) . ' ' . $r['judul'] . ' — dilewati: Anda tidak punya hak ACC ' . SuratJenis::label((string) $r['jenis']) . '.';
+            }
+        }
+        $q = $this->db->table('surat_sekolah')->select('id')->where('status', 'menunggu')->whereIn('jenis', $jenisBoleh)->orderBy('created_at', 'ASC')->orderBy('id', 'ASC');
         if ($ids !== null) {
             $q->whereIn('id', $ids);
         }
         $urut = array_map('intval', array_column($q->limit(self::MAKS_ACC_MASSAL + 1)->get()->getResultArray(), 'id'));
         if ($urut === []) {
-            return ['ok' => true, 'kode' => 'ok', 'pesan' => 'Tidak ada surat yang menunggu.', 'http' => 200, 'disetujui' => 0, 'dilewati' => []];
+            return ['ok' => $lewat === [], 'kode' => 'ok', 'pesan' => $lewat === [] ? 'Tidak ada surat yang menunggu.' : 'Tidak ada surat yang bisa Anda ACC.', 'http' => 200, 'disetujui' => 0, 'dilewati' => $lewat];
         }
         if (count($urut) > self::MAKS_ACC_MASSAL) {
             return $this->gagal('catatan', 'Terlalu banyak sekaligus (maksimal ' . self::MAKS_ACC_MASSAL . ' surat per aksi). Pilih sebagian.', 422);
         }
 
         $p ??= (new PklPengaturanModel())->ambil();
-        $ok    = 0;
-        $lewat = [];
+        $ok = 0;
         foreach ($urut as $id) {
             $m = $this->svc->muat($id);
             if ($m === null || $m['surat']['status'] !== 'menunggu') {
@@ -201,7 +236,7 @@ final class SuratKeputusan
                 continue;
             }
 
-            $hasil = $this->terapkan($id, 'acc', '', $konteks, $mewakili ? 'ACC massal — mewakili Waka Hubin' : 'ACC massal');
+            $hasil = $this->terapkan($id, 'acc', '', $konteks, 'ACC massal');
             if ($hasil['ok']) {
                 $ok++;
             } else {

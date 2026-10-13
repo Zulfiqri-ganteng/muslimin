@@ -3,14 +3,15 @@
 namespace App\Controllers\Admin;
 
 use App\Controllers\BaseController;
+use App\Libraries\HakAkses;
 use App\Libraries\HonorPengaturan as Aturan;
 use App\Models\UjianPeriodeModel;
 use CodeIgniter\HTTP\RedirectResponse;
 
 /**
  * Pengaturan Honor Ujian — komponen & tarif, tunjangan panitia per jabatan, nama tanda tangan.
- * KHUSUS ADMIN: honor adalah data gaji. Operator & Waka Hubin ditolak filter rute (tidak ada di daftar hak mereka),
- * dan setiap aksi di sini memeriksa ulang peran Admin sebagai pagar kedua.
+ * Honor adalah data gaji: hak menunya diatur Admin di Sistem → Hak Akses (bawaan HANYA Admin). Penjaga rute menolak peran tanpa hak menu "Pengaturan Honor", dan setiap aksi di sini
+ * memeriksa ulang hak itu sebagai pagar kedua (membuka = Lihat, menyimpan = Kelola).
  * Aturan & validasi: Libraries\HonorPengaturan. Perubahan tercatat di Audit Log.
  */
 class HonorPengaturan extends BaseController
@@ -19,7 +20,7 @@ class HonorPengaturan extends BaseController
 
     public function index()
     {
-        if (($tolak = $this->tolakBukanAdmin()) !== null) {
+        if (($tolak = $this->tolakTanpaHak()) !== null) {
             return $tolak;
         }
         $a = new Aturan();
@@ -40,7 +41,7 @@ class HonorPengaturan extends BaseController
     /** POST admin/honor/pengaturan/komponen — simpan semua komponen. */
     public function simpanKomponen()
     {
-        if (($tolak = $this->tolakBukanAdmin()) !== null) {
+        if (($tolak = $this->tolakTanpaHak()) !== null) {
             return $tolak;
         }
         $hasil = (new Aturan())->simpanKomponen((array) $this->request->getPost('k'));
@@ -51,7 +52,7 @@ class HonorPengaturan extends BaseController
     /** POST admin/honor/pengaturan/komponen/tambah */
     public function tambahKomponen()
     {
-        if (($tolak = $this->tolakBukanAdmin()) !== null) {
+        if (($tolak = $this->tolakTanpaHak()) !== null) {
             return $tolak;
         }
         $hasil = (new Aturan())->tambahKomponen([
@@ -67,7 +68,7 @@ class HonorPengaturan extends BaseController
     /** POST admin/honor/pengaturan/komponen/(:num)/hapus */
     public function hapusKomponen($id)
     {
-        if (($tolak = $this->tolakBukanAdmin()) !== null) {
+        if (($tolak = $this->tolakTanpaHak()) !== null) {
             return $tolak;
         }
 
@@ -77,7 +78,7 @@ class HonorPengaturan extends BaseController
     /** POST admin/honor/pengaturan/panitia */
     public function simpanPanitia()
     {
-        if (($tolak = $this->tolakBukanAdmin()) !== null) {
+        if (($tolak = $this->tolakTanpaHak()) !== null) {
             return $tolak;
         }
 
@@ -104,7 +105,7 @@ class HonorPengaturan extends BaseController
     /** POST admin/honor/pengaturan/tanda-tangan */
     public function simpanTandaTangan()
     {
-        if (($tolak = $this->tolakBukanAdmin()) !== null) {
+        if (($tolak = $this->tolakTanpaHak()) !== null) {
             return $tolak;
         }
         $hasil = (new Aturan())->simpanTandaTangan(
@@ -117,13 +118,19 @@ class HonorPengaturan extends BaseController
 
     // -----------------------------------------------------------------
 
-    private function tolakBukanAdmin(): ?RedirectResponse
+    /**
+     * Pagar kedua: menu "Pengaturan Honor" (diatur Admin di Sistem → Hak Akses; bawaan hanya Admin). Membuka = level Lihat,
+     * menyimpan = level Kelola.
+     */
+    private function tolakTanpaHak(): ?RedirectResponse
     {
-        if ((string) (session('admin')['role'] ?? '') !== 'admin') {
-            return redirect()->to(site_url('admin/dashboard'))->with('error', 'Pengaturan Honor hanya bisa dibuka Admin.');
+        $peran = (string) (session('admin')['role'] ?? '');
+        if (HakAkses::boleh($peran, self::ALAMAT, $this->request->getMethod())) {
+            return null;
         }
+        [$ke, $pesan] = HakAkses::tolak($peran, self::ALAMAT, 'Pengaturan Honor');
 
-        return null;
+        return redirect()->to(site_url($ke))->with('error', $pesan);
     }
 
     /** Kembali ke halaman pengaturan dengan pesan; $simpanIsian: bawa isian form agar tidak diketik ulang. */

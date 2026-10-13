@@ -4,6 +4,8 @@ namespace App\Controllers\Api;
 
 use App\Libraries\HakAkses;
 use App\Libraries\IsianBantu;
+use App\Libraries\PklHak;
+use App\Libraries\PklLapor;
 use App\Libraries\SuratAcara;
 use App\Libraries\SuratBerkas;
 use App\Libraries\SuratJenis;
@@ -16,29 +18,32 @@ use App\Models\PklPengaturanModel;
 use App\Models\SettingModel;
 use App\Models\SuratSekolahModel;
 use CodeIgniter\HTTP\ResponseInterface;
-use Config\Peran;
 
 /**
  * Surat Sekolah untuk aplikasi Android (Operator, Waka Hubin, Admin) — cermin Admin\Surat + SuratIzin + SuratPernyataan +
  * SuratPkl (Surat Sekolah L8). Seluruh aturan ada di library bersama (SuratSekolah, SuratKeputusan, SuratBerkas, SuratAcara,
  * SuratPernyataan, SuratPkl, SuratPeriksa), jadi hasil web & aplikasi selalu sama. Dokumentasi: docs/API-SURAT.md.
  *
- * Gerbang: ApiAuthFilter hanya meloloskan peran ber-akses "surat" (Config\Peran 'api_akses'). Hak per aksi (diatur Admin di
- * PKL → Hak Akses): buat / ubah / ajukan ulang / batalkan / unduh = 'surat_sekolah' (bawaan Operator); ACC / kembalikan /
- * batal ACC / ACC massal = 'acc' (bawaan Waka Hubin; Admin cadangan wajib wakil=1). Daftar & detail terbuka bagi ketiganya.
+ * Gerbang: ApiAuthFilter hanya meloloskan peran yang memegang modul Surat Sekolah (Sistem → Hak Akses). Hak per aksi diatur Admin
+ * PER JENIS surat (PklHak): buat / ubah / ajukan ulang / batalkan = surat_buat:{jenis} (bawaan Operator); unduh = surat_unduh:{jenis}
+ * (bawaan Operator); ACC / kembalikan / batal ACC / ACC massal = surat_acc:{jenis} (bawaan Waka Hubin). Admin selalu boleh; tidak
+ * ada lagi pernyataan "mewakili" (kiriman wakil diabaikan; hak.wajib_wakil selalu false). Daftar & detail terbuka bagi pemegang modul.
  *
  * Rute (/api/v1, Bearer):
  *   GET  surat/meta                              kamus: jenis, status, label isian, aturan, tahun, hitungan, hak peran ini
  *   GET  surat?status=&jenis=&tahun=&q=&page=&per=   Daftar Surat (+ meta.hitung per status)
  *   GET  surat/{id}                              detail: isian, siswa, peringatan, riwayat, hak atas surat ini
- *   POST surat/{id}/acc|kembalikan|batal-acc|ajukan-ulang|batal   {catatan?, wakil?, paham?}
- *   POST surat/acc-massal                        {mode: terpilih|aman, ids?, wakil?}
+ *   POST surat/{id}/acc|kembalikan|batal-acc|ajukan-ulang|batal   {catatan?, paham?}
+ *   POST surat/acc-massal                        {mode: terpilih|aman, ids?} — hanya jenis yang boleh di-ACC peran ini
  *   POST surat/{id}/unduh                        → berkas .docx (nomor terbit saat unduhan pertama)
  *   POST surat/unduh-massal                      {jenis, mode: terpilih|belum|semua, ids?} → .docx / .zip
  *   GET  surat/form/{slug}                       pilihan & isian awal formulir (slug: asts|tka|pernyataan-ortu|balasan|penarikan)
  *   GET  surat/siswa?kelas_id[]=                 siswa aktif per kelas (Pernyataan "siswa pilihan")
- *   POST surat/{slug}                            buat surat (isian sama dengan formulir web)
+ *   POST surat/{slug}                            buat surat (isian sama dengan formulir web; langsung_acc=true = "Simpan & setujui")
  *   POST surat/{id}/ubah                         ubah data surat yang belum bernomor (ASTS, TKA, Balasan, Penarikan)
+ *   GET  surat/balasan/laporan?status=           kotak "Lapor Diterima PKL" (laporan siswa → Surat Balasan) + hak peran ini
+ *   POST surat/balasan/laporan/{id}/setujui|buat  proses laporan jadi Surat Balasan ("Setujui & buat" / masuk antrean ACC)
+ *   POST surat/balasan/laporan/{id}/kembalikan    {alasan} — kembalikan laporan ke siswa
  */
 class Surat extends BaseApiController
 {
@@ -176,7 +181,7 @@ class Surat extends BaseApiController
         return $this->putuskan((int) $id, 'batal');
     }
 
-    /** Satu pintu keputusan; aturan (hak, Admin "mewakili", status asal, alasan wajib, peringatan bahaya) di SuratKeputusan. */
+    /** Satu pintu keputusan; aturan (hak per jenis, status asal, alasan wajib, peringatan bahaya) di SuratKeputusan. */
     private function putuskan(int $id, string $aksi): ResponseInterface
     {
         $hasil = (new SuratKeputusan($this->svc))->putuskan($id, $aksi, $this->body(), $this->konteks(), $this->p);
@@ -201,7 +206,11 @@ class Surat extends BaseApiController
 
     public function unduh($id)
     {
-        if (($tolak = $this->tolakKelola()) !== null) {
+        $jenis = (string) ($this->svc->muat((int) $id)['surat']['jenis'] ?? '');
+        if ($jenis === '') {
+            return $this->missing('Surat tidak ditemukan (mungkin sudah dihapus).');
+        }
+        if (($tolak = $this->tolakJenis('unduh', $jenis)) !== null) {
             return $tolak;
         }
 
@@ -210,10 +219,11 @@ class Surat extends BaseApiController
 
     public function unduhMassal()
     {
-        if (($tolak = $this->tolakKelola()) !== null) {
+        $in    = $this->body();
+        $jenis = (string) ($in['jenis'] ?? '');
+        if (SuratJenis::ada($jenis) && ($tolak = $this->tolakJenis('unduh', $jenis)) !== null) {
             return $tolak;
         }
-        $in    = $this->body();
         $pilih = $this->svc->pilihUntukUnduh((string) ($in['mode'] ?? ''), (array) ($in['ids'] ?? []), (string) ($in['jenis'] ?? ''), SuratBerkas::MAKS_UNDUH, $this->p);
         if (! $pilih['ok']) {
             return $this->invalid(['mode' => $pilih['pesan']], $pilih['pesan']);
@@ -247,10 +257,13 @@ class Surat extends BaseApiController
         if ($jenis === null) {
             return $this->missing('Jenis surat tidak dikenal (asts, tka, pernyataan-ortu, balasan, penarikan).');
         }
-        if (($tolak = $this->tolakKelola()) !== null) {
+        if (($tolak = $this->tolakJenis('buat', $jenis)) !== null) {
             return $tolak;
         }
-        $dasar = ['jenis' => $jenis, 'slug' => $slug, 'label' => SuratJenis::label($jenis), 'perlu_acc' => SuratJenis::perluAcc($jenis, $this->p)];
+        $perlu = SuratJenis::perluAcc($jenis, $this->p);
+        $dasar = ['jenis' => $jenis, 'slug' => $slug, 'label' => SuratJenis::label($jenis), 'perlu_acc' => $perlu,
+            // "Simpan & setujui": tampilkan bila peran ini juga memegang hak ACC jenis ini.
+            'bisa_langsung_acc' => $perlu && PklHak::bolehSurat($this->peran(), 'acc', $jenis), 'pemegang_acc' => PklHak::pemegang(PklHak::kunciSurat('acc', $jenis))];
 
         if (SuratAcara::acara($jenis)) {
             $acara   = new SuratAcara();
@@ -298,7 +311,7 @@ class Surat extends BaseApiController
     /** GET surat/siswa?kelas_id[]= — siswa aktif kelas-kelas itu (hanya kelas yang boleh PKL), untuk Pernyataan "siswa pilihan". */
     public function siswa(): ResponseInterface
     {
-        if (($tolak = $this->tolakKelola()) !== null) {
+        if (($tolak = $this->tolakJenis('buat', SuratJenis::PERNYATAAN)) !== null) {
             return $tolak;
         }
         $lib   = new SuratPernyataan();
@@ -319,7 +332,7 @@ class Surat extends BaseApiController
         if ($jenis === null) {
             return $this->missing('Jenis surat tidak dikenal (asts, tka, pernyataan-ortu, balasan, penarikan).');
         }
-        if (($tolak = $this->tolakKelola()) !== null) {
+        if (($tolak = $this->tolakJenis('buat', $jenis)) !== null) {
             return $tolak;
         }
         $in = $this->body();
@@ -354,16 +367,22 @@ class Surat extends BaseApiController
         if (! $hasil['ok']) {
             return $this->failure('Tidak ada surat yang dibuat. ' . implode(' ', array_merge($hasil['sama'], $hasil['gagal'])), 409, $data);
         }
+        // "Simpan & setujui" (langsung_acc): hanya bila peran ini memegang ACC jenis ini — diperiksa SuratKeputusan.
+        $acc = ['acc' => 0, 'catatan' => []];
+        if (filter_var($in['langsung_acc'] ?? false, FILTER_VALIDATE_BOOLEAN)) {
+            $acc = (new SuratKeputusan($this->svc))->accSetelahBuat(array_map('intval', $hasil['dibuat']), $jenis, $this->konteks(), $this->p);
+        }
+        $data['langsung_disetujui'] = $acc['acc'];
+        $data['catatan_acc']        = $acc['catatan'];
+        $akhir = ! $perluAcc ? ' Surat langsung siap diunduh.'
+            : ($acc['acc'] > 0 ? ' ' . $acc['acc'] . ' surat langsung disetujui atas nama Anda.' : ' Surat menunggu ACC (' . PklHak::teksPemegang(PklHak::kunciSurat('acc', $jenis)) . ').');
 
-        return $this->created($data, $hasil['pesan'] . ($perluAcc ? ' Surat menunggu ACC Waka Hubin.' : ' Surat langsung siap diunduh.'));
+        return $this->created($data, $hasil['pesan'] . $akhir);
     }
 
     /** POST surat/{id}/ubah — ubah data surat yang belum bernomor (status menunggu/dikembalikan). Pernyataan tidak diubah: batalkan lalu buat lagi. */
     public function ubah($id): ResponseInterface
     {
-        if (($tolak = $this->tolakKelola()) !== null) {
-            return $tolak;
-        }
         $id = (int) $id;
         $m  = $this->svc->muat($id);
         if ($m === null) {
@@ -371,6 +390,9 @@ class Surat extends BaseApiController
         }
         $s     = $m['surat'];
         $jenis = (string) $s['jenis'];
+        if (($tolak = $this->tolakJenis('buat', $jenis)) !== null) {
+            return $tolak;
+        }
         if ($jenis === SuratJenis::PERNYATAAN || ! SuratJenis::siap($jenis)) {
             return $this->failure('Data surat jenis ini tidak bisa diubah. Batalkan surat lalu buat yang baru.', 409, ['kode' => 'jenis']);
         }
@@ -397,6 +419,116 @@ class Surat extends BaseApiController
 
         return $this->ok(['id' => $id, 'kode' => SuratSekolahModel::kode($id), 'status' => (string) $s['status']],
             'Data surat diperbarui.' . ($s['status'] === 'dikembalikan' ? ' Surat masih berstatus Dikembalikan: ajukan ulang untuk ACC bila sudah siap.' : ''));
+    }
+
+    // ================================================================= lapor diterima PKL (siswa → Surat Balasan)
+
+    /**
+     * GET surat/balasan/laporan?status=baru|dikembalikan|diproses (bawaan baru) — laporan siswa "sudah diterima perusahaan"
+     * + hitungan per status + hak peran ini + tautan form untuk dibagikan. Terbuka bagi pemegang hak Buat ATAU ACC Surat Balasan.
+     */
+    public function laporan(): ResponseInterface
+    {
+        $hak = PklLapor::hak($this->peran(), $this->p);
+        if (! $hak['lihat']) {
+            return $this->forbidden('Akun ' . HakAkses::label($this->peran()) . ' tidak punya hak memproses laporan Surat Balasan. Admin bisa mengaturnya di Sistem → Hak Akses.');
+        }
+        if (! PklLapor::tabelAda()) {
+            return $this->failure('Fitur lapor diterima belum aktif di server ini (migrasi database belum dijalankan).', 503);
+        }
+        $status = (string) ($this->request->getGet('status') ?: 'baru');
+        if (! in_array($status, PklLapor::STATUS, true)) {
+            return $this->invalid(['status' => 'Status harus salah satu: ' . implode(', ', PklLapor::STATUS) . '.']);
+        }
+        $lib = new PklLapor();
+
+        return $this->ok(array_map(fn (array $r): array => $this->barisLapor($r), $lib->daftar($status, 200, $this->p)), 'Laporan diterima PKL.', [
+            'hitung' => $lib->hitung(),
+            'hak'    => $hak + ['pemegang_acc' => PklHak::teksPemegang(PklHak::kunciSurat('acc', SuratJenis::BALASAN))],
+            'form'   => ['buka' => PklLapor::terbuka($this->p), 'tautan' => config('Pkl')->tautanLapor()],
+        ]);
+    }
+
+    /** POST surat/balasan/laporan/{id}/setujui — "Setujui & buat" (jenis wajib ACC: perlu hak ACC; tanpa ACC: hak Buat). */
+    public function laporanSetujui($id): ResponseInterface
+    {
+        return $this->prosesLapor((int) $id, true);
+    }
+
+    /** POST surat/balasan/laporan/{id}/buat — Surat Balasan dibuat lalu menunggu ACC (hak Buat; hanya bila jenis wajib ACC). */
+    public function laporanBuat($id): ResponseInterface
+    {
+        return $this->prosesLapor((int) $id, false);
+    }
+
+    /** POST surat/balasan/laporan/{id}/kembalikan {alasan} — siswa membaca alasannya dan bisa mengirim ulang. */
+    public function laporanKembalikan($id): ResponseInterface
+    {
+        $r = (new PklLapor())->kembalikan((int) $id, (string) ($this->body()['alasan'] ?? ''), $this->konteks());
+
+        return $r['ok'] ? $this->ok(['id' => (int) $id, 'status' => 'dikembalikan'], $r['pesan']) : $this->gagalLapor($r);
+    }
+
+    private function prosesLapor(int $id, bool $setujui): ResponseInterface
+    {
+        $r = (new PklLapor())->proses($id, $setujui, $this->konteks(), $this->p);
+        if (! $r['ok']) {
+            return $this->gagalLapor($r);
+        }
+        $suratId = (int) ($r['surat_id'] ?? 0);
+
+        return $this->ok([
+            'id' => $id, 'status' => 'diproses', 'surat_id' => $suratId, 'kode_surat' => SuratSekolahModel::kode($suratId),
+            'status_surat' => (string) ($r['status_surat'] ?? ''),
+        ], $r['pesan']);
+    }
+
+    /** Hasil gagal PklLapor → respons API sesuai kode HTTP-nya. */
+    private function gagalLapor(array $r): ResponseInterface
+    {
+        $http = (int) ($r['http'] ?? 400);
+
+        return match ($http) {
+            404     => $this->missing($r['pesan']),
+            403     => $this->forbidden($r['pesan']),
+            422     => $this->invalid(['lapor' => $r['pesan']], $r['pesan']),
+            default => $this->failure($r['pesan'], $http),
+        };
+    }
+
+    /** Satu laporan (baris PklLapor::daftar) untuk aplikasi. */
+    private function barisLapor(array $r): array
+    {
+        $b = $r['balasan'];
+
+        return [
+            'id'              => (int) $r['id'],
+            'pengajuan_id'    => (int) $r['pengajuan_id'],
+            'kode_ajuan'      => (string) $r['kode'],
+            'status'          => (string) $r['status'],
+            'status_teks'     => PklLapor::TAMPIL[$r['status']][0] ?? (string) $r['status'],
+            'perusahaan'      => (string) $r['perusahaan'],
+            'alamat_ajuan'    => (string) $r['alamat_ajuan'],
+            'alamat_baru'     => (string) ($r['alamat'] ?? '') !== '' ? (string) $r['alamat'] : null, // diisi siswa bila alamat berubah
+            'tanggal_mulai'   => (string) $r['tanggal_mulai'],
+            'tanggal_selesai' => (string) $r['tanggal_selesai'],
+            'periode'         => (string) $r['periode'],
+            'lama'            => SuratPkl::lamaTeks((string) $r['tanggal_mulai'], (string) $r['tanggal_selesai']),
+            'catatan'         => $r['catatan'] ?? null,
+            'pelapor'         => (string) ($r['pelapor_nama'] ?? ''),
+            'hp_pelapor'      => $r['hp'] ?? null,
+            'kirim_ke'        => (int) $r['kirim_ke'],
+            'dilaporkan_at'   => (string) $r['updated_at'],
+            'anggota'         => array_map(static fn (array $s): array => ['siswa_id' => (int) $s['siswa_id'], 'nama' => (string) $s['nama'], 'kelas' => (string) $s['kelas']], $r['anggota']),
+            'ajuan_sah'       => (bool) $r['ajuan_sah'],  // false = ajuan tak lagi disetujui → surat tak bisa dibuat, kembalikan
+            'balasan'         => $b !== null ? ['id' => (int) $b['id'], 'kode' => SuratSekolahModel::kode((int) $b['id']), 'status' => (string) $b['status'], 'nomor' => $b['nomor'] ?? null] : null,
+            'peringatan'      => $r['peringatan'],        // periode di luar batas Pengaturan PKL (tidak memblokir)
+            'alasan'          => $r['alasan'] ?? null,    // status dikembalikan
+            'surat_id'        => ! empty($r['surat_id']) ? (int) $r['surat_id'] : null,
+            'diproses_oleh'   => $r['diproses_oleh'] ?? null,
+            'diproses_peran'  => $r['diproses_peran'] ?? null,
+            'diproses_at'     => $r['diproses_at'] ?? null,
+        ];
     }
 
     // ================================================================= pembantu
@@ -429,14 +561,15 @@ class Surat extends BaseApiController
         ];
     }
 
-    /** 403 bila peran ini tak memegang hak 'surat_sekolah' (buat, ubah, unduh); null bila boleh. */
-    private function tolakKelola(): ?ResponseInterface
+    /** 403 bila peran ini tak memegang hak $aksi (buat|acc|unduh) untuk jenis $jenis; null bila boleh. */
+    private function tolakJenis(string $aksi, string $jenis): ?ResponseInterface
     {
-        if (HakAkses::bolehPkl($this->peran(), 'surat_sekolah')) {
+        if (PklHak::bolehSurat($this->peran(), $aksi, $jenis)) {
             return null;
         }
+        $kata = ['buat' => 'membuat/mengubah', 'acc' => 'meng-ACC', 'unduh' => 'mengunduh'][$aksi] ?? $aksi;
 
-        return $this->forbidden('Akun ' . HakAkses::label($this->peran()) . ' tidak punya hak mengelola surat sekolah. Admin bisa mengaturnya di PKL → Hak Akses.');
+        return $this->forbidden('Akun ' . HakAkses::label($this->peran()) . ' tidak punya hak ' . $kata . ' ' . SuratJenis::label($jenis) . '. Admin bisa mengaturnya di Sistem → Hak Akses.');
     }
 
     /** Hasil gagal SuratKeputusan → respons API sesuai kode HTTP-nya. */
@@ -460,9 +593,10 @@ class Surat extends BaseApiController
         return [
             'peran'       => $peran,
             'peran_label' => HakAkses::label($peran),
-            'kelola'      => HakAkses::bolehPkl($peran, 'surat_sekolah'), // buat, ubah, ajukan ulang, batalkan, unduh
-            'acc'         => HakAkses::bolehPkl($peran, 'acc'),           // ACC, kembalikan, batal ACC, ACC massal
-            'wajib_wakil' => $peran === Peran::ADMIN,
+            'kelola'      => PklHak::boleh($peran, 'surat_sekolah'), // LAMA: buat/unduh jenis APA PUN (rinciannya di 'jenis')
+            'acc'         => PklHak::boleh($peran, 'surat_acc:*'),   // ACC jenis APA PUN (rinciannya di 'jenis')
+            'wajib_wakil' => false,                                    // tidak ada lagi pernyataan "mewakili"
+            'jenis'       => PklHak::petaSurat($peran),              // {kode_jenis: {buat, acc (null = tanpa ACC), unduh}}
         ];
     }
 
@@ -472,8 +606,9 @@ class Surat extends BaseApiController
         $peran   = $this->peran();
         $status  = (string) $s['status'];
         $jenis   = (string) $s['jenis'];
-        $kelola  = HakAkses::bolehPkl($peran, 'surat_sekolah');
-        $acc     = HakAkses::bolehPkl($peran, 'acc');
+        $kelola  = PklHak::bolehSurat($peran, 'buat', $jenis);
+        $acc     = PklHak::bolehSurat($peran, 'acc', $jenis);
+        $unduh   = PklHak::bolehSurat($peran, 'unduh', $jenis);
         $terbit  = (string) ($s['nomor'] ?? '') !== '' || (int) $s['cetak_ke'] > 0;
 
         return [
@@ -483,8 +618,8 @@ class Surat extends BaseApiController
             'ajukan_ulang' => $kelola && $status === 'dikembalikan',
             'batal'        => $kelola && in_array($status, ['menunggu', 'dikembalikan', 'disetujui'], true),
             'ubah'         => $kelola && $jenis !== SuratJenis::PERNYATAAN && SuratJenis::siap($jenis) && SuratSekolah::alasanTakBisaUbah($s) === null,
-            'unduh'        => $kelola && $status === 'disetujui',
-            'wajib_wakil'  => $peran === Peran::ADMIN,
+            'unduh'        => $unduh && $status === 'disetujui',
+            'wajib_wakil'  => false,
         ];
     }
 
@@ -510,7 +645,7 @@ class Surat extends BaseApiController
             'perlu_cetak_ulang' => ! empty($ulang[$id]),
             'catatan_staf'      => ($r['catatan_staf'] ?? '') !== '' ? (string) $r['catatan_staf'] : null,
             'acc'               => ! empty($r['acc_at']) ? [
-                'nama' => $r['acc_nama'], 'peran' => $r['acc_peran'], 'mewakili' => $r['acc_peran'] === Peran::ADMIN, 'waktu' => $r['acc_at'], 'kode' => $r['acc_kode'],
+                'nama' => $r['acc_nama'], 'peran' => $r['acc_peran'], 'peran_label' => HakAkses::label((string) $r['acc_peran']), 'mewakili' => false, 'waktu' => $r['acc_at'], 'kode' => $r['acc_kode'],
             ] : null,
             'dibuat_oleh'       => ($r['dibuat_nama'] ?? '') !== '' ? (string) $r['dibuat_nama'] : null,
             'dibuat_pada'       => $r['created_at'],

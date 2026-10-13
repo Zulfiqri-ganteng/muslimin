@@ -57,6 +57,12 @@ $routes->get('pkl/perusahaan', 'Pkl::perusahaan');
 $routes->post('pkl/buka', 'Pkl::buka');
 $routes->post('pkl/kirim', 'Pkl::kirim');
 $routes->get('pkl/selesai', 'Pkl::selesai');
+// Lapor diterima PKL (siswa, tanpa login) → bahan Surat Balasan. Di bawah awalan pkl/ agar terbuka di subdomain PKL. docs/DESAIN-HAK-AKSES.md
+$routes->get('pkl/lapor', 'LaporPkl::index');
+$routes->get('pkl/lapor/siswa', 'LaporPkl::siswa');
+$routes->post('pkl/lapor/cek', 'LaporPkl::cek');
+$routes->post('pkl/lapor/kirim', 'LaporPkl::kirim');
+$routes->get('pkl/lapor/selesai', 'LaporPkl::selesai');
 
 // ===================== ADMIN =====================
 $routes->group('admin', static function ($routes) {
@@ -115,6 +121,10 @@ $routes->group('admin', static function ($routes) {
         $routes->get('pkl/ttd/gambar', 'Admin\PklBerkas::ttdGambar');
         $routes->post('pkl/ttd', 'Admin\PklBerkas::unggahTtd', ['filter' => 'csrf']);
         $routes->post('pkl/ttd/hapus', 'Admin\PklBerkas::hapusTtd', ['filter' => 'csrf']);
+        // Tanda tangan + stempel Kepala Sekolah (hak 'ttd_kepsek', bawaan hanya Admin) — menggantikan tanda tangan bawaan template.
+        $routes->get('pkl/ttd-kepsek/gambar', 'Admin\PklBerkas::ttdKepsekGambar');
+        $routes->post('pkl/ttd-kepsek', 'Admin\PklBerkas::unggahTtdKepsek', ['filter' => 'csrf']);
+        $routes->post('pkl/ttd-kepsek/hapus', 'Admin\PklBerkas::hapusTtdKepsek', ['filter' => 'csrf']);
         $routes->get('pkl/impor', 'Admin\PklBerkas::impor', ['filter' => 'csrf']);
         $routes->get('pkl/impor/contoh', 'Admin\PklBerkas::imporContoh');
         $routes->post('pkl/impor/pratinjau', 'Admin\PklBerkas::imporPratinjau', ['filter' => 'csrf']);
@@ -138,10 +148,8 @@ $routes->group('admin', static function ($routes) {
         $routes->post('pkl/pengaturan/biaya', 'Admin\PklBiaya::simpanBiaya', ['filter' => 'csrf']);
         $routes->get('pkl/laporan', 'Admin\PklBiaya::laporan');
         $routes->get('pkl/laporan/excel', 'Admin\PklBiaya::laporanExcel');
-        $routes->get('pkl/hak-akses', 'Admin\PklHakAkses::index', ['filter' => 'csrf']);
-        $routes->post('pkl/hak-akses', 'Admin\PklHakAkses::simpan', ['filter' => 'csrf']);
-        $routes->post('pkl/hak-akses/bawaan', 'Admin\PklHakAkses::bawaan', ['filter' => 'csrf']);
-        $routes->post('pkl/hak-akses/surat-acc', 'Admin\PklHakAkses::simpanAccSurat', ['filter' => 'csrf']);
+        // Alamat lama Hak Akses PKL → Sistem → Hak Akses (bagian PKL & Surat). Hanya pengalihan; tidak menyimpan apa pun.
+        $routes->get('pkl/hak-akses', static fn () => redirect()->to(site_url('admin/hak-akses?bagian=pkl')));
 
         // ===== Surat Sekolah (staf) — docs/DESAIN-SURAT-SEKOLAH.md =====
         // Daftar Surat (buku agenda surat keluar), detail, keputusan (ACC / kembalikan / batalkan), unduhan Word.
@@ -161,6 +169,11 @@ $routes->group('admin', static function ($routes) {
         $routes->post('surat/tka/(:num)/ubah', 'Admin\SuratIzin::simpanUbahTka/$1', ['filter' => 'csrf']);
         $routes->get('surat/pernyataan-ortu', 'Admin\SuratPernyataan::index', ['filter' => 'csrf']);
         $routes->post('surat/pernyataan-ortu', 'Admin\SuratPernyataan::simpan', ['filter' => 'csrf']);
+        // Kotak "Lapor Diterima PKL" (laporan siswa → Surat Balasan); hak = Buat ATAU ACC Surat Balasan. Sebelum pola surat/balasan/(:num).
+        $routes->get('surat/balasan/laporan', 'Admin\SuratLapor::index', ['filter' => 'csrf']);
+        $routes->post('surat/balasan/laporan/(:num)/setujui', 'Admin\SuratLapor::setujui/$1', ['filter' => 'csrf']);
+        $routes->post('surat/balasan/laporan/(:num)/buat', 'Admin\SuratLapor::buat/$1', ['filter' => 'csrf']);
+        $routes->post('surat/balasan/laporan/(:num)/kembalikan', 'Admin\SuratLapor::kembalikan/$1', ['filter' => 'csrf']);
         $routes->get('surat/balasan', 'Admin\SuratPkl::balasan', ['filter' => 'csrf']);
         $routes->post('surat/balasan', 'Admin\SuratPkl::simpanBalasan', ['filter' => 'csrf']);
         $routes->get('surat/balasan/(:num)/ubah', 'Admin\SuratPkl::ubahBalasan/$1', ['filter' => 'csrf']);
@@ -189,6 +202,17 @@ $routes->group('admin', static function ($routes) {
         $routes->post('akun/(:num)', 'Admin\Akun::update/$1', ['filter' => 'csrf']);
         $routes->post('akun/(:num)/reset-sandi', 'Admin\Akun::resetSandi/$1', ['filter' => 'csrf']);
         $routes->post('akun/(:num)/status', 'Admin\Akun::status/$1', ['filter' => 'csrf']);
+
+        // ===== Sistem → Hak Akses (KHUSUS Admin; docs/DESAIN-HAK-AKSES.md) =====
+        // Menu per peran, hak rinci PKL & Surat, dan peran. Katalog MenuAdmin menandai 'admin/hak-akses' khusus Admin; controller
+        // memeriksa lagi. Alamat lama admin/pkl/hak-akses dialihkan ke sini.
+        $routes->get('hak-akses', 'Admin\AturHak::index', ['filter' => 'csrf']);
+        $routes->post('hak-akses/menu', 'Admin\AturHak::simpanMenu', ['filter' => 'csrf']);
+        $routes->post('hak-akses/pkl', 'Admin\AturHak::simpanPkl', ['filter' => 'csrf']);
+        $routes->post('hak-akses/bawaan', 'Admin\AturHak::bawaan', ['filter' => 'csrf']);
+        $routes->post('hak-akses/peran', 'Admin\AturHak::tambahPeran', ['filter' => 'csrf']);
+        $routes->post('hak-akses/peran/(:segment)/hapus', 'Admin\AturHak::hapusPeran/$1', ['filter' => 'csrf']);
+        $routes->post('hak-akses/peran/(:segment)', 'Admin\AturHak::ubahPeran/$1', ['filter' => 'csrf']);
 
         // ===== Manajemen Dokumen =====
         // Semua aksi yang mengubah data memakai POST (modul baru sengaja
@@ -529,7 +553,7 @@ $routes->group('admin', static function ($routes) {
         $routes->get('ujian/(:segment)/pengawas/(:num)', 'Admin\Ujian::pengawas/$1/$2');
         $routes->post('ujian/(:segment)/pengawas/(:num)', 'Admin\Ujian::simpanPengawas/$1/$2');
         $routes->post('ujian/(:segment)/pengawas/(:num)/hapus/(:num)', 'Admin\Ujian::hapusPengawas/$1/$2/$3');
-        // Tab Honor (KHUSUS ADMIN — data gaji). Halaman: GET ujian/{jenis}/honor (pola generik di bawah).
+        // Tab Honor (data gaji — hak menu "Honor & Koreksi Ujian", diatur Admin; bawaan hanya Admin). Halaman: GET ujian/{jenis}/honor (pola generik di bawah).
         $routes->post('ujian/(:segment)/honor/buat', 'Admin\UjianHonor::buat/$1', ['filter' => 'csrf']);
         $routes->post('ujian/(:segment)/honor/dokumen', 'Admin\UjianHonor::simpanDokumen/$1', ['filter' => 'csrf']);
         $routes->post('ujian/(:segment)/honor/penerima', 'Admin\UjianHonor::tambahPenerima/$1', ['filter' => 'csrf']);
@@ -577,8 +601,8 @@ $routes->group('admin', static function ($routes) {
         $routes->get('ujian/(:segment)', 'Admin\Ujian::jenis/$1');
         $routes->get('ujian/(:segment)/(:segment)', 'Admin\Ujian::jenis/$1/$2');
 
-        // ===== HONOR UJIAN (KHUSUS ADMIN — data gaji) =====
-        // Tidak ada di daftar hak Operator/Waka Hubin (Config\Peran) → ditolak penjaga rute; controller memeriksa ulang.
+        // ===== HONOR UJIAN (data gaji — hak menu diatur Admin di Sistem → Hak Akses; bawaan HANYA Admin) =====
+        // Peran tanpa hak menu itu ditolak penjaga rute; controller memeriksa ulang.
         // Semua aksi pengubah data memakai POST + CSRF.
         $routes->get('honor/pengaturan', 'Admin\HonorPengaturan::index');
         $routes->post('honor/pengaturan/komponen', 'Admin\HonorPengaturan::simpanKomponen', ['filter' => 'csrf']);
@@ -1043,7 +1067,7 @@ $routes->group('api/v1', ['namespace' => 'App\Controllers\Api', 'filter' => 'cor
 
         // ---------- PKL / PRAKERIN (Operator, Waka Hubin, Admin) ----------
         // Gerbang peran: Config\Peran 'api_akses' (awalan "pkl"). Aturan ACC (hanya Waka Hubin, Admin = cadangan
-        // "mewakili") dijaga di Libraries\PklKeputusan — sama persis dengan web. Dokumentasi: docs/API-PKL.md.
+        // diatur Admin di Sistem → Hak Akses) dijaga di Libraries\PklKeputusan — sama persis dengan web. Dokumentasi: docs/API-PKL.md.
         $routes->get('pkl/meta', 'Pkl::meta');
         $routes->get('pkl/ringkasan', 'Pkl::ringkasan');
         $routes->get('pkl/ajuan', 'Pkl::daftar');
@@ -1081,13 +1105,18 @@ $routes->group('api/v1', ['namespace' => 'App\Controllers\Api', 'filter' => 'cor
 
         // ---------- SURAT SEKOLAH (Operator, Waka Hubin, Admin) — docs/API-SURAT.md ----------
         // Gerbang peran: Config\Peran 'api_akses' (awalan "surat"). Hak per aksi (buat/ubah/unduh = 'surat_sekolah',
-        // ACC = 'acc', Admin wajib "mewakili") dijaga library yang sama dengan web. Rute statis SEBELUM pola (:num)/(:segment).
+        // ACC per jenis surat, diatur Admin) dijaga library yang sama dengan web. Rute statis SEBELUM pola (:num)/(:segment).
         $routes->get('surat/meta', 'Surat::meta');
         $routes->get('surat', 'Surat::daftar');
         $routes->get('surat/form/(:segment)', 'Surat::form/$1');
         $routes->get('surat/siswa', 'Surat::siswa');
         $routes->post('surat/acc-massal', 'Surat::accMassal');
         $routes->post('surat/unduh-massal', 'Surat::unduhMassal');
+        // Kotak "Lapor Diterima PKL" (laporan siswa → Surat Balasan); hak = Buat ATAU ACC Surat Balasan (PklLapor::hak).
+        $routes->get('surat/balasan/laporan', 'Surat::laporan');
+        $routes->post('surat/balasan/laporan/(:num)/setujui', 'Surat::laporanSetujui/$1');
+        $routes->post('surat/balasan/laporan/(:num)/buat', 'Surat::laporanBuat/$1');
+        $routes->post('surat/balasan/laporan/(:num)/kembalikan', 'Surat::laporanKembalikan/$1');
         $routes->get('surat/(:num)', 'Surat::detail/$1');
         $routes->post('surat/(:num)/acc', 'Surat::acc/$1');
         $routes->post('surat/(:num)/kembalikan', 'Surat::kembalikan/$1');

@@ -3,6 +3,7 @@
 namespace App\Controllers\Admin;
 
 use App\Controllers\BaseController;
+use App\Libraries\HakAkses;
 use App\Libraries\Skbm as DataSkbm;
 use App\Libraries\SkbmCetak;
 use App\Libraries\SkbmImpor;
@@ -13,8 +14,8 @@ use CodeIgniter\HTTP\ResponseInterface;
 
 /**
  * SKBM — SK Pembagian Tugas Mengajar per tahun ajaran: halaman matriks (guru × mapel × kelas, isi = JP), impor Excel sekolah,
- * salin antar tahun, dan perbandingan dengan Penugasan (pengampu). KHUSUS ADMIN: dipakai sebagai sumber ceklis Koreksi honor
- * (data gaji), jadi rute ini sengaja tidak masuk daftar hak Operator/Waka Hubin; tiap aksi memeriksa ulang peran Admin.
+ * salin antar tahun, dan perbandingan dengan Penugasan (pengampu). Dipakai sebagai sumber ceklis Koreksi honor (data gaji),
+ * jadi hak menu SKBM diatur Admin di Sistem → Hak Akses (bawaan HANYA Admin); tiap aksi memeriksa ulang hak itu (pagar()).
  * Aturan & hitungan: Libraries\Skbm dan Libraries\SkbmImpor. Perubahan tercatat di Audit Log.
  *
  * Aksi yang sering (nyalakan sel, isi JP, ganti nama mapel) berupa POST JSON; aksi struktural (tambah/hapus baris, impor,
@@ -26,13 +27,17 @@ class Skbm extends BaseController
 
     // ----------------------------------------------------------------- pagar
 
-    /** Admin + tabel SKBM sudah ada (kode baru bisa terpasang lebih dulu daripada migrasinya). */
+    /**
+     * Hak menu SKBM (diatur Admin di Sistem → Hak Akses; bawaan hanya Admin — membuka = Lihat, mengubah = Kelola) + tabel SKBM
+     * sudah ada (kode baru bisa terpasang lebih dulu daripada migrasinya).
+     */
     private function pagar(bool $json = false): RedirectResponse|ResponseInterface|null
     {
-        if ((string) (session('admin')['role'] ?? '') !== 'admin') {
-            return $json
-                ? $this->json(['ok' => false, 'pesan' => 'SKBM hanya bisa dikelola Admin.'], 403)
-                : redirect()->to(site_url('admin/dashboard'))->with('error', 'SKBM hanya bisa dikelola Admin.');
+        $peran = (string) (session('admin')['role'] ?? '');
+        if (! HakAkses::boleh($peran, self::ALAMAT, $this->request->getMethod())) {
+            [$ke, $pesan] = HakAkses::tolak($peran, self::ALAMAT, 'SKBM');
+
+            return $json ? $this->json(['ok' => false, 'pesan' => $pesan], 403) : redirect()->to(site_url($ke))->with('error', $pesan);
         }
         $db = db_connect();
         if (! $db->tableExists('skbm_mapel') || ! $db->tableExists('skbm_sel')) {

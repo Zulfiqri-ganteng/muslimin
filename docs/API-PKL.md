@@ -139,6 +139,27 @@ Pembayaran dicatat **setelah** berkas jadi (satu transaksi, tak digandakan: UNIQ
 (`milik_ajuan > 0 || kegiatan_ada || ada_keringanan || beasiswa`), kirim POST unduh tanpa `biaya`/`semua` — lolos, 0 item baru.
 Nomor surat kini berformat tiga angka secara bawaan (`001/SMK-BN/PKL/X/2026`); format diatur Admin/Operator di Pengaturan PKL (`{urut}`, `{urut3}`, `{urut4}`).
 
+## Pembaruan 2026-10-13 — semua hak diatur Admin, lapor diterima, TTD + stempel Kepala Sekolah
+
+Rancangan: `docs/DESAIN-HAK-AKSES.md`. Bagian ini MENGGANTIKAN tabel "Siapa boleh apa" di atas bila bertentangan.
+- **Peran & menu diatur Admin** (web: Sistem → Hak Akses). Peran baru bisa dibuat (mis. Waka Kesiswaan). `auth/login` & `auth/me` →
+  `admin.akses_api` = modul yang dipegang (`["pkl","surat"]`, `["pkl"]`, `["*"]` Admin), `admin.hak_pkl` (kunci → bool),
+  `admin.hak_surat` (per jenis surat: `{buat, acc|null, unduh}`), `admin.peran_label`. Susun menu dari sini, JANGAN dari nama peran.
+- **Kunci hak PKL** kini 9: `acc, surat, laporan, ubah, ttd, ttd_kepsek, pengaturan, hapus, hapus_disetujui` (+ `surat_sekolah`
+  turunan lama). `hapus_disetujui` (bawaan Admin) = boleh menghapus ajuan yang SUDAH disetujui (perlu `hapus` juga).
+- **Tidak ada lagi "wakil/mewakili"**: Admin ACC tanpa pernyataan; kiriman `wakil` diabaikan; `hak.wajib_wakil` selalu `false`.
+  Gambar tanda tangan Waka Hubin & Kepala Sekolah SELALU tercetak, siapa pun yang meng-ACC; kaki surat mencatat penyetuju
+  ("Nama (Admin Sistem)" / "Nama (Label Peran)").
+- `GET/POST pkl/hak-akses` tetap **khusus Admin**. Respons kini juga memuat `matriks_surat` (peran → jenis → aksi) dan
+  `peran_label`. POST format LAMA (8 kunci) tetap diterima: hak per jenis surat dipertahankan, kecuali saklar `acc` / `surat_sekolah`
+  berubah (maka semua jenis ikut berubah). Aplikasi baru sebaiknya mengarahkan Admin ke halaman web untuk pengaturan rinci.
+- `GET pkl/ringkasan` → `lapor` `{buka, tautan, baru}`: saklar & tautan form **Lapor Diterima PKL** untuk dibagikan ke siswa
+  (`https://pklbinanusa.kangmuslim.com/pkl/lapor`); `baru` = jumlah laporan menunggu (null bila peran ini tidak boleh memprosesnya).
+  Kotak laporannya ada di API Surat: `GET/POST surat/balasan/laporan…` (lihat `docs/API-SURAT.md`).
+- `GET pkl/ringkasan` → `surat.ttd_kepsek_ada`: gambar tanda tangan + stempel Kepala Sekolah sudah diunggah (menggantikan tanda tangan
+  bawaan template di semua surat bernomor). Unggah/hapus hanya lewat web (Tanda Tangan → bagian Kepala Sekolah; hak `ttd_kepsek`).
+- Riwayat ajuan punya aksi baru: `lapor_diterima`, `lapor_proses`, `lapor_kembali` (label di `pkl/meta → aksi_riwayat`).
+
 ## Catatan untuk pembuat aplikasi
 1. Setelah login, baca `admin.akses_api`: bila `["pkl"]`, tampilkan HANYA menu PKL (jangan panggil API lain → 403).
 2. Tombol per ajuan dibaca dari `data.hak` pada detail; jangan menebak dari peran.

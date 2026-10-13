@@ -9,7 +9,7 @@
  * @var array                                            $setting
  * @var array                                            $p         baris pkl_pengaturan
  * @var array<string, list<array{id:int, nama:string}>>  $kelas     per tingkat
- * @var int                                              $batasHari batas keputusan Waka Hubin (hari)
+ * @var int                                              $batasHari batas keputusan sekolah (hari)
  * @var int                                              $maksSiswa maksimal siswa per ajuan (≤ 5)
  */
 
@@ -99,6 +99,15 @@ $ikonAwas = '<svg class="w-6 h-6 shrink-0" fill="none" stroke="currentColor" str
 
     <?= view('pkl/_header', ['setting' => $setting]) ?>
 
+    <div x-show="step === 0">
+    <?php if (! empty($laporTerbuka)): ?>
+        <a href="<?= site_url('pkl/lapor') ?>" class="mt-4 flex items-center justify-between gap-3 rounded-lg border border-green-200 bg-green-50 px-4 py-3 text-sm text-green-900 transition hover:bg-green-100 sm:px-5">
+            <span><b>Sudah diterima perusahaan?</b> Ajuan PKL-mu sudah disetujui dan perusahaan menerimamu — laporkan di sini supaya sekolah membuatkan Surat Balasan.</span>
+            <span class="shrink-0 font-bold">Lapor &rarr;</span>
+        </a>
+    <?php endif; ?>
+    </div>
+
     <!-- Persiapan — hanya di langkah pertama -->
     <div x-show="step === 0" class="mt-4 rounded-lg border-2 border-amber-300 bg-amber-50 px-4 py-4 sm:px-5 flex gap-3 text-amber-500">
         <?= $ikonAwas ?>
@@ -111,7 +120,7 @@ $ikonAwas = '<svg class="w-6 h-6 shrink-0" fill="none" stroke="currentColor" str
                 <li>Nama teman yang PKL di tempat yang sama (maksimal <b><?= $maksAnggota ?></b> siswa per perusahaan, termasuk kamu)</li>
             </ul>
             <p class="mt-2 font-semibold">Satu siswa hanya boleh punya satu ajuan. Jangan mengisi atas nama orang lain.</p>
-            <p class="mt-1.5 rounded-lg bg-amber-100/70 px-3 py-2 font-semibold">Setelah dikirim, <b>jangan mengajukan ulang</b>. Tunggu keputusan Waka Hubin, paling lambat <b><?= $batasHari ?> hari</b> sejak kamu mengirim.</p>
+            <p class="mt-1.5 rounded-lg bg-amber-100/70 px-3 py-2 font-semibold">Setelah dikirim, <b>jangan mengajukan ulang</b>. Tunggu keputusan sekolah, paling lambat <b><?= $batasHari ?> hari</b> sejak kamu mengirim.</p>
         </div>
     </div>
 
@@ -194,15 +203,18 @@ $ikonAwas = '<svg class="w-6 h-6 shrink-0" fill="none" stroke="currentColor" str
                         <div class="rounded-xl border p-4" :class="pilih.status === 'disetujui' ? 'border-green-200 bg-green-50' : 'border-brand-200 bg-brand-50'">
                             <p class="font-extrabold" :class="pilih.status === 'disetujui' ? 'text-green-800' : 'text-brand-800'" x-text="pilih.status === 'disetujui' ? '✓ Ajuan PKL sudah disetujui sekolah' : '✓ Ajuan PKL sudah dikirim'"></p>
                             <p class="mt-1 text-sm text-slate-600">
-                                <span x-text="pilih.nama"></span> tidak perlu mengisi lagi<span x-show="pilih.status === 'menunggu'"> — ajuannya sedang menunggu keputusan Waka Hubin</span>.
+                                <span x-text="pilih.nama"></span> tidak perlu mengisi lagi<span x-show="pilih.status === 'menunggu'"> — ajuannya sedang menunggu keputusan sekolah</span>.
                                 <b>Jangan mengajukan ulang.</b>
                             </p>
                             <p x-show="pilih.peran === 'teman'" class="mt-2 text-sm text-slate-600">
                                 Namamu <b>didaftarkan oleh temanmu</b> yang PKL di tempat yang sama. Tidak merasa ikut? Hubungi operator sekolah atau Waka Hubin agar namamu dikeluarkan.
                             </p>
                             <p x-show="pilih.status === 'menunggu' && pilih.batas" class="mt-2 rounded-lg border border-brand-200 bg-white/70 px-3 py-2 text-sm font-semibold text-brand-900">
-                                Keputusan Waka Hubin paling lambat <span x-text="tglIndo(pilih.batas)"></span>. Lewat tanggal itu belum ada kabar? Hubungi operator sekolah atau Waka Hubin.
+                                Keputusan sekolah paling lambat <span x-text="tglIndo(pilih.batas)"></span>. Lewat tanggal itu belum ada kabar? Hubungi operator sekolah atau Waka Hubin.
                             </p>
+                            <?php if (! empty($laporTerbuka)): ?>
+                                <p x-show="pilih.status === 'disetujui'" class="mt-2 rounded-lg border border-green-200 bg-white/70 px-3 py-2 text-sm text-green-900">Sudah diterima perusahaan? <a href="<?= site_url('pkl/lapor') ?>" class="font-bold underline">Lapor diterima di sini</a> supaya sekolah membuatkan Surat Balasan.</p>
+                            <?php endif; ?>
                             <p class="mt-2 text-xs text-slate-500">Jika ada data yang salah, hubungi operator sekolah atau Waka Hubin.</p>
                         </div>
                     </template>
@@ -421,7 +433,7 @@ $ikonAwas = '<svg class="w-6 h-6 shrink-0" fill="none" stroke="currentColor" str
                 <label class="check-card !items-start" :class="err.pernyataan && '!border-red-400'">
                     <input type="checkbox" x-model="f.pernyataan" class="sr-only">
                     <span class="check-box mt-0.5"></span>
-                    <span class="text-sm text-slate-700">Saya menyatakan data di atas <b>sudah benar</b>, siap memperbaikinya bila diminta sekolah, dan <b>tidak akan mengajukan ulang</b> — saya menunggu keputusan Waka Hubin (paling lambat <?= $batasHari ?> hari).</span>
+                    <span class="text-sm text-slate-700">Saya menyatakan data di atas <b>sudah benar</b>, siap memperbaikinya bila diminta sekolah, dan <b>tidak akan mengajukan ulang</b> — saya menunggu keputusan sekolah (paling lambat <?= $batasHari ?> hari).</span>
                 </label>
                 <?= $galat('pernyataan') ?>
             </div>

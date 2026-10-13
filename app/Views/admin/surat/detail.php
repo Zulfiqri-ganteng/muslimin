@@ -12,7 +12,9 @@
  * @var bool                           $templateAda berkas template Word jenis ini sudah ada
  * @var bool                           $bisaBatalAcc persetujuan masih bisa dibatalkan (belum bernomor / diunduh)
  * @var bool                           $bolehAcc    peran saya berhak ACC
- * @var bool                           $bolehBuat   peran saya berhak mengelola surat sekolah
+ * @var bool                           $bolehBuat   peran saya berhak membuat/mengubah/membatalkan surat JENIS ini
+ * @var bool                           $bolehUnduh  peran saya berhak mengunduh surat jenis ini
+ * @var string                         $pemegangAcc / $pemegangUnduh  nama peran yang memegang hak itu (teks)
  * @var string                         $namaSaya
  */
 
@@ -40,8 +42,8 @@ $adaBahaya = SuratPeriksa::adaBahaya($periksa);
     'helpTitle' => 'Detail Surat',
     'helpBody'  => '<p>Halaman ini menampilkan <b>isi dan sejarah satu surat</b> dan tombol tindakannya.</p>'
         . '<ul class="mt-2 list-disc space-y-1 pl-5">'
-        . '<li><b>ACC / Kembalikan</b> (khusus yang berhak ACC, bawaan Waka Hubin): ACC mencatat nama, jam, dan kode verifikasi yang ikut tercetak di kaki surat. <i>Kembalikan</i> mengirim surat kembali ke pembuatnya beserta alasan.</li>'
-        . '<li><b>Unduh surat</b> (khusus yang berhak mengelola surat, bawaan Operator): nomor surat diterbitkan <b>sekali</b>, saat surat pertama diunduh, satu urutan dengan Surat Izin PKL. Unduh ulang memakai nomor yang sama.</li>'
+        . '<li><b>ACC / Kembalikan</b> (peran yang diberi hak ACC jenis surat ini oleh Admin di Sistem → Hak Akses): ACC mencatat nama, jam, dan kode verifikasi yang ikut tercetak di kaki surat. <i>Kembalikan</i> mengirim surat kembali ke pembuatnya beserta alasan.</li>'
+        . '<li><b>Unduh surat</b> (peran yang diberi hak Unduh jenis surat ini): nomor surat diterbitkan <b>sekali</b>, saat surat pertama diunduh, satu urutan dengan Surat Izin PKL. Unduh ulang memakai nomor yang sama.</li>'
         . '<li>Bila setelah diunduh data surat atau penanda tangan berubah, muncul tanda <b>perlu cetak ulang</b> &mdash; nomornya tetap sama.</li>'
         . '<li><b>Batalkan surat</b>: surat tidak jadi dipakai. Nomor yang sudah terbit tetap tercatat dan tidak dipakai lagi.</li>'
         . '</ul>',
@@ -142,7 +144,7 @@ $adaBahaya = SuratPeriksa::adaBahaya($periksa);
                             <button type="button" @click="dlg = 'acc'" class="w-full rounded-xl bg-green-600 px-4 py-2.5 text-sm font-bold text-white transition hover:bg-green-700 active:scale-95">✓ ACC surat ini</button>
                             <button type="button" @click="dlg = 'kembalikan'" class="w-full rounded-xl border border-amber-300 bg-amber-50 px-4 py-2.5 text-sm font-bold text-amber-800 transition hover:bg-amber-100 active:scale-95">↩ Kembalikan untuk diperbaiki</button>
                         <?php else: ?>
-                            <p class="rounded-xl border border-slate-200 bg-slate-50 px-3.5 py-3 text-xs leading-relaxed text-slate-600">🔒 Surat ini menunggu <b>ACC</b> dari peran yang berhak (bawaan: Waka Hubin). Akun <?= esc(HakAkses::label($peran)) ?> tidak punya hak ACC.</p>
+                            <p class="rounded-xl border border-slate-200 bg-slate-50 px-3.5 py-3 text-xs leading-relaxed text-slate-600">🔒 Surat ini menunggu <b>ACC</b> dari <?= esc($pemegangAcc ?? 'peran yang berhak') ?>. Akun <?= esc(HakAkses::label($peran)) ?> tidak punya hak ACC jenis surat ini.</p>
                         <?php endif; ?>
                     <?php elseif ($status === 'dikembalikan'): ?>
                         <?php if ($bolehBuat): ?>
@@ -155,7 +157,7 @@ $adaBahaya = SuratPeriksa::adaBahaya($periksa);
                             <p class="rounded-xl border border-slate-200 bg-slate-50 px-3.5 py-3 text-xs leading-relaxed text-slate-600">Menunggu pembuat surat memperbaiki dan mengajukan ulang.</p>
                         <?php endif; ?>
                     <?php elseif ($status === 'disetujui'): ?>
-                        <?php if ($bolehBuat): ?>
+                        <?php if ($bolehUnduh): ?>
                             <?php if ($templateAda): ?>
                                 <form method="post" action="<?= site_url('admin/surat/' . $id . '/unduh') ?>" data-unduh>
                                     <?= csrf_field() ?>
@@ -166,7 +168,7 @@ $adaBahaya = SuratPeriksa::adaBahaya($periksa);
                                 <p class="rounded-xl border border-slate-200 bg-slate-50 px-3.5 py-3 text-xs leading-relaxed text-slate-600">Template Word untuk <?= esc(SuratJenis::label($jenis)) ?> belum tersedia, jadi surat ini belum bisa diunduh.</p>
                             <?php endif; ?>
                         <?php else: ?>
-                            <p class="rounded-xl border border-slate-200 bg-slate-50 px-3.5 py-3 text-xs leading-relaxed text-slate-600">🔒 Surat diunduh oleh peran yang diberi hak itu oleh Admin (bawaan: Operator Sekolah), supaya jelas siapa yang menyetujui dan siapa yang mencetak.</p>
+                            <p class="rounded-xl border border-slate-200 bg-slate-50 px-3.5 py-3 text-xs leading-relaxed text-slate-600">🔒 Surat ini diunduh oleh <?= esc($pemegangUnduh ?? 'peran yang berhak') ?> (diatur Admin di Sistem → Hak Akses).</p>
                         <?php endif; ?>
                         <?php if ($bisaBatalAcc && $bolehAcc): ?>
                             <button type="button" @click="dlg = 'batalacc'" class="w-full rounded-xl border border-amber-300 bg-white px-4 py-2 text-xs font-bold text-amber-800 transition hover:bg-amber-50">Batalkan persetujuan</button>
@@ -194,7 +196,7 @@ $adaBahaya = SuratPeriksa::adaBahaya($periksa);
                     <div>
                         <p class="text-xs text-slate-500">Disetujui oleh</p>
                         <p class="font-semibold text-slate-800"><?= esc((string) $surat['acc_nama']) ?></p>
-                        <p class="text-xs text-slate-500"><?= esc(HakAkses::label((string) $surat['acc_peran'])) ?><?= (string) $surat['acc_peran'] === 'admin' ? ' (mewakili Waka Hubin)' : '' ?></p>
+                        <p class="text-xs text-slate-500"><?= esc(HakAkses::label((string) $surat['acc_peran'])) ?></p>
                         <p class="text-xs text-slate-400"><?= esc(PklSurat::waktuIndo((string) $surat['acc_at'])) ?></p>
                         <?php if ((string) $surat['acc_kode'] !== ''): ?><p class="mt-1 font-mono text-xs font-semibold text-slate-600"><?= esc($surat['acc_kode']) ?></p><?php endif; ?>
                     </div>
@@ -253,9 +255,6 @@ if ($status === 'menunggu' && $bolehAcc) {
         $isiAcc .= '<label class="flex cursor-pointer items-start gap-2 rounded-xl border border-red-300 bg-red-50 p-3 text-red-800"><input type="checkbox" name="paham" value="1" required class="mt-0.5"><span class="text-sm font-semibold">Ada peringatan BAHAYA di halaman ini. Saya sudah memeriksanya dan tetap ingin meng-ACC.</span></label>';
     }
     $isiAcc .= '<p class="rounded-xl border border-slate-200 bg-slate-50 px-4 py-2.5 text-xs leading-relaxed text-slate-600">Persetujuan ini akan <b>tercatat atas nama ' . esc($namaSaya) . '</b> (' . esc(HakAkses::label($peran)) . ') lengkap dengan tanggal &amp; jam, dan tercetak di kaki surat.</p>';
-    if ($peran === 'admin') {
-        $isiAcc .= '<label class="flex cursor-pointer items-start gap-2 rounded-xl border border-amber-300 bg-amber-50 p-3 text-amber-900"><input type="checkbox" name="wakil" value="1" required class="mt-0.5"><span class="text-sm font-semibold">Saya meng-ACC sebagai <b>Admin yang mewakili Waka Hubin</b> (Waka Hubin berhalangan). Ini akan tertulis jelas di surat.</span></label>';
-    }
     $dialog('acc', 'ACC surat ' . esc($kode) . '?', 'acc', $isiAcc, '✓ Ya, ACC', 'bg-green-600 hover:bg-green-700');
     $dialog('kembalikan', 'Kembalikan untuk diperbaiki', 'kembalikan',
         '<p>Surat kembali ke pembuatnya untuk diperbaiki, lalu diajukan ulang kepada Anda.</p>' . $kotakAlasan('Contoh: Tanggal pelaksanaan belum sesuai kalender ujian.', 'kembalikan'),

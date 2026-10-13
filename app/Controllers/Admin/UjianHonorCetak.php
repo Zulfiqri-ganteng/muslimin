@@ -3,6 +3,7 @@
 namespace App\Controllers\Admin;
 
 use App\Controllers\BaseController;
+use App\Libraries\HakAkses;
 use App\Libraries\HonorCetak;
 use App\Libraries\HonorDokumen;
 use App\Models\AuditModel;
@@ -12,7 +13,7 @@ use CodeIgniter\HTTP\ResponseInterface;
 
 /**
  * Cetak / unduh Honor Ujian: rekap + slip Excel, rekap PDF, slip PDF (semua atau satu orang).
- * KHUSUS ADMIN (data gaji): rute tidak ada di hak Operator/Waka Hubin dan tiap aksi memeriksa ulang peran Admin.
+ * Honor = data gaji: hak menunya diatur Admin di Sistem → Hak Akses (bawaan HANYA Admin) — menu "Honor & Koreksi Ujian" (mengunduh cukup level Lihat); tiap aksi memeriksa ulang hak itu.
  * Tiap unduhan dicatat di Audit Log. Angka berasal dari Libraries\HonorDokumen/HonorCetak (sama dengan layar).
  */
 class UjianHonorCetak extends BaseController
@@ -65,13 +66,19 @@ class UjianHonorCetak extends BaseController
 
     // -----------------------------------------------------------------
 
-    /** Pagar: Admin, jenis & periode (?tp=) dikenal, honor sudah dibuat dan punya penerima. */
+    /**
+     * Pagar: hak menu "Honor & Koreksi Ujian" (Lihat cukup — mengunduh tidak mengubah data; diatur Admin, bawaan hanya Admin),
+     * jenis & periode (?tp=) dikenal, honor sudah dibuat dan punya penerima.
+     */
     private function siapkan(string $slug): RedirectResponse|ResponseInterface|null
     {
-        if ((string) (session('admin')['role'] ?? '') !== 'admin') {
-            return redirect()->to(site_url('admin/dashboard'))->with('error', 'Honor hanya bisa dicetak Admin.');
-        }
         $jenis = UjianPeriodeModel::dariSlug($slug);
+        $peran = (string) (session('admin')['role'] ?? '');
+        if ($jenis !== null && ! HakAkses::boleh($peran, 'admin/ujian/' . UjianPeriodeModel::keSlug($jenis) . '/honor')) {
+            [$ke, $pesan] = HakAkses::tolak($peran, 'admin/ujian/' . UjianPeriodeModel::keSlug($jenis) . '/honor', 'Honor & Koreksi Ujian');
+
+            return redirect()->to(site_url($ke))->with('error', $pesan);
+        }
         $p     = $jenis !== null ? (new UjianPeriodeModel())->untukTahun($jenis, $this->request->getGet('tp')) : null;
         if ($p === null) {
             return redirect()->to(site_url('admin/ujian/asts1'))->with('error', 'Periode ujian tidak ditemukan.');

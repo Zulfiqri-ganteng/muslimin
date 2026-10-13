@@ -81,6 +81,10 @@ Vagrantfile
 /writable/debugbar/*
 !/writable/debugbar/index.html
 
+# Berkas PKL & surat milik sekolah: gambar tanda tangan Waka Hubin, tanda tangan + stempel Kepala Sekolah, template Word
+# unggahan. Repo PUBLIK — jangan pernah ikut ter-commit.
+/writable/pkl/
+
 php_errors.log
 
 #-------------------------

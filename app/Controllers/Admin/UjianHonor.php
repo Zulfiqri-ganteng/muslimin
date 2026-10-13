@@ -3,6 +3,7 @@
 namespace App\Controllers\Admin;
 
 use App\Controllers\BaseController;
+use App\Libraries\HakAkses;
 use App\Libraries\HonorDokumen;
 use App\Libraries\HonorHitung;
 use App\Libraries\HonorImpor;
@@ -15,7 +16,7 @@ use CodeIgniter\HTTP\ResponseInterface;
 
 /**
  * Honor Ujian — aksi pada tab "Honor" di halaman Ujian (buat honor, penerima, isian, data surat).
- * KHUSUS ADMIN (data gaji): rute tidak ada di hak Operator/Waka Hubin, dan tiap aksi memeriksa ulang peran Admin.
+ * Honor = data gaji: hak menunya diatur Admin di Sistem → Hak Akses (bawaan HANYA Admin) — menu "Honor & Koreksi Ujian"; tiap aksi memeriksa ulang hak itu (tolakHonor()).
  * Aturan & hitungan: Libraries\HonorDokumen. Tampilan tab: Admin\Ujian::jenis → admin/ujian/tab_honor.
  *
  * Periode ditentukan dari `periode_id` kiriman form dan DIPERIKSA cocok dengan jenis ujian di alamat (slug),
@@ -453,11 +454,30 @@ class UjianHonor extends BaseController
         return $s;
     }
 
-    /** Pagar untuk halaman GET: Admin, jenis dikenal, periode dari ?tp= (bawaan tahun berjalan). */
+    /**
+     * Hak menu "Honor & Koreksi Ujian" (diatur Admin di Sistem → Hak Akses; bawaan hanya Admin): null bila boleh, selain itu
+     * [alamat tujuan, pesan]. $metode GET = melihat/mengunduh (level Lihat), POST = mengubah (level Kelola). Jenis yang tak
+     * dikenal dilewatkan ke pemeriksaan periode berikutnya (tanpa data apa pun).
+     *
+     * @return array{0: string, 1: string}|null
+     */
+    protected function tolakHonor(string $slug, string $metode): ?array
+    {
+        $jenis = UjianPeriodeModel::dariSlug($slug);
+        if ($jenis === null) {
+            return null;
+        }
+        $peran  = (string) (session('admin')['role'] ?? '');
+        $alamat = 'admin/ujian/' . UjianPeriodeModel::keSlug($jenis) . '/honor';
+
+        return HakAkses::boleh($peran, $alamat, $metode) ? null : HakAkses::tolak($peran, $alamat, 'Honor & Koreksi Ujian');
+    }
+
+    /** Pagar untuk halaman GET: hak Honor (Lihat), jenis dikenal, periode dari ?tp= (bawaan tahun berjalan). */
     protected function siapkanGet(string $slug): RedirectResponse|ResponseInterface|null
     {
-        if ((string) (session('admin')['role'] ?? '') !== 'admin') {
-            return redirect()->to(site_url('admin/dashboard'))->with('error', 'Honor hanya bisa dikelola Admin.');
+        if (($tolak = $this->tolakHonor($slug, 'GET')) !== null) {
+            return redirect()->to(site_url($tolak[0]))->with('error', $tolak[1]);
         }
         $jenis = UjianPeriodeModel::dariSlug($slug);
         $p     = $jenis !== null ? (new UjianPeriodeModel())->untukTahun($jenis, $this->request->getGet('tp')) : null;
@@ -470,15 +490,15 @@ class UjianHonor extends BaseController
     }
 
     /**
-     * Pagar: harus Admin, jenis ujian dikenal, periode ada dan cocok dengan alamat. Mengisi $this->periode.
+     * Pagar aksi (POST): hak Honor level Kelola, jenis ujian dikenal, periode ada dan cocok dengan alamat. Mengisi $this->periode.
      * Mengembalikan balasan penolakan (JSON bila $json), atau null bila lolos.
      */
     protected function siapkan(string $slug, bool $json = false): RedirectResponse|ResponseInterface|null
     {
-        if ((string) (session('admin')['role'] ?? '') !== 'admin') {
+        if (($tolak = $this->tolakHonor($slug, 'POST')) !== null) {
             return $json
-                ? $this->json(['ok' => false, 'pesan' => 'Honor hanya bisa dikelola Admin.'], 403)
-                : redirect()->to(site_url('admin/dashboard'))->with('error', 'Honor hanya bisa dikelola Admin.');
+                ? $this->json(['ok' => false, 'pesan' => $tolak[1]], 403)
+                : redirect()->to(site_url($tolak[0]))->with('error', $tolak[1]);
         }
         $jenis = UjianPeriodeModel::dariSlug($slug);
         $p     = (int) $this->request->getPost('periode_id') > 0 ? (new UjianPeriodeModel())->find((int) $this->request->getPost('periode_id')) : null;

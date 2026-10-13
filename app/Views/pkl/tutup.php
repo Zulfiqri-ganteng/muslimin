@@ -23,5 +23,11 @@ $pesan = [
         <h2 class="mt-5 text-xl font-extrabold text-slate-800"><?= esc($judul) ?></h2>
         <p class="mt-2 text-slate-500 leading-relaxed"><?= esc($isi) ?></p>
     </div>
+    <?php if (! empty($laporTerbuka)): ?>
+        <a href="<?= site_url('pkl/lapor') ?>" class="mt-4 flex items-center justify-between gap-3 rounded-lg border border-green-200 bg-green-50 px-4 py-3 text-sm text-green-900 transition hover:bg-green-100 sm:px-5">
+            <span><b>Sudah diterima perusahaan?</b> Ajuan PKL-mu sudah disetujui dan perusahaan menerimamu — laporkan di sini supaya sekolah membuatkan Surat Balasan.</span>
+            <span class="shrink-0 font-bold">Lapor &rarr;</span>
+        </a>
+    <?php endif; ?>
 </div>
 <?= $this->endSection() ?>

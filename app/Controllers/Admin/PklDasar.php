@@ -87,6 +87,6 @@ abstract class PklDasar extends BaseController
             return null;
         }
 
-        return $this->json(['ok' => false, 'message' => 'Akun ' . HakAkses::label($this->peranSaya()) . ' tidak punya hak untuk aksi ini. Admin bisa mengaturnya di PKL → Hak Akses.'], 403);
+        return $this->json(['ok' => false, 'message' => 'Akun ' . HakAkses::label($this->peranSaya()) . ' tidak punya hak untuk aksi ini. Admin bisa mengaturnya di Sistem → Hak Akses.'], 403);
     }
 }

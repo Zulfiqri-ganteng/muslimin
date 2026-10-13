@@ -392,7 +392,8 @@ final class SuratPkl
      * @param list<int>                                                $siswaIds siswa yang ditarik (Penarikan)
      * @param array<string, mixed>                                     $konteks
      *
-     * @return array{ok: bool, dibuat: list<int>, sama: list<string>, gagal: list<string>, pesan: string}
+     * @return array{ok: bool, dibuat: list<int>, sama: list<string>, gagal: list<string>, pesan: string, lapor: int} lapor = jumlah
+     *         laporan "diterima" siswa yang ikut ditandai selesai (Balasan)
      */
     public function buat(string $jenis, array $h, array $ajuanIds, array $siswaIds, array $konteks, ?array $p = null): array
     {
@@ -401,6 +402,7 @@ final class SuratPkl
         $dibuat   = [];
         $sama     = [];
         $gagal    = [];
+        $lapor    = 0;
 
         if ($ajuanIds === []) {
             $gagal[] = $jenis === SuratJenis::BALASAN ? 'Pilih minimal satu ajuan PKL yang sudah disetujui.' : 'Pilih ajuan PKL tempat siswa ditarik.';
@@ -455,6 +457,10 @@ final class SuratPkl
             }
             $dibuat[] = (int) $r['id'];
             $this->catatAjuan($jenis, $aid, (int) $r['id'], $isi, array_column($siswa, 'nama'), $konteks, true);
+            // Laporan "diterima" siswa yang masih menunggu untuk ajuan ini → ditandai selesai, tertaut ke surat ini (PklLapor).
+            if ($jenis === SuratJenis::BALASAN && (new PklLapor($this->db))->tautkanAjuan($aid, (int) $r['id'], $konteks)) {
+                $lapor++;
+            }
         }
 
         $pesan = [];
@@ -468,7 +474,7 @@ final class SuratPkl
             $pesan[] = count($gagal) . ' tidak bisa dibuat.';
         }
 
-        return ['ok' => $dibuat !== [], 'dibuat' => $dibuat, 'sama' => $sama, 'gagal' => $gagal, 'pesan' => implode(' ', $pesan)];
+        return ['ok' => $dibuat !== [], 'dibuat' => $dibuat, 'sama' => $sama, 'gagal' => $gagal, 'pesan' => implode(' ', $pesan), 'lapor' => $lapor];
     }
 
     /**

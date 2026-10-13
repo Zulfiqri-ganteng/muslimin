@@ -12,13 +12,17 @@ Android staf. Kontrak sisi Flutter (layar, tahap kerja, contoh respons nyata): `
 - Pencatatan: riwayat surat + Audit Log memakai `saluran = 'aplikasi'`.
 - Tanpa migrasi database.
 
-## Gerbang & hak
-- `ApiAuthFilter` + `Config\Peran 'api_akses'`: Operator & Waka Hubin kini `['pkl', 'surat']` (Admin `*`). API lain tetap 403.
-- Daftar, detail, meta: terbuka bagi ketiga peran.
-- Hak **`surat_sekolah`** (bawaan Operator) — buat, ubah, ajukan ulang, batalkan, unduh, formulir: dijaga controller (`tolakKelola`)
-  dan library (`SuratKeputusan` untuk ajukan ulang/batal).
-- Hak **`acc`** (bawaan Waka Hubin) — ACC, kembalikan, batal ACC, ACC massal: dijaga `SuratKeputusan`. **Admin** cadangan wajib `wakil=1`.
-- Hak diatur Admin di web (PKL → Hak Akses); respons membawa `hak` agar aplikasi tidak menebak.
+## Gerbang & hak (diperbarui 2026-10-13 — hak akses diatur Admin, `docs/DESAIN-HAK-AKSES.md`)
+- `ApiAuthFilter`: peran boleh memakai `surat/*` bila memegang **modul Surat Sekolah** (Sistem → Hak Akses → Menu) dan saklar
+  "boleh aplikasi" perannya menyala. Admin `*`. API selain PKL & Surat tetap khusus Admin.
+- Daftar, detail, meta: terbuka bagi pemegang modul.
+- Hak **per jenis surat** (Sistem → Hak Akses → PKL & Surat): `surat_buat:{jenis}` (buat, ubah, ajukan ulang, batalkan, formulir),
+  `surat_acc:{jenis}` (ACC, kembalikan, batal ACC, ACC massal — hanya jenis bernomor), `surat_unduh:{jenis}`. Bawaan: Operator =
+  Buat + Unduh semua jenis; Waka Hubin = ACC semua jenis bernomor. Admin selalu boleh.
+- **Tidak ada lagi "wakil/mewakili"**: kiriman `wakil` diabaikan, `hak.wajib_wakil` selalu `false`, kaki surat mencatat
+  "(Admin Sistem)" / label peran penyetuju. Tanda tangan Waka Hubin & Kepala Sekolah SELALU tercetak, siapa pun yang meng-ACC.
+- Bila beberapa peran memegang ACC jenis yang sama, yang menekan lebih dulu menang; yang kedua mendapat **409** (status sudah berubah).
+- `meta.hak.jenis` / `hak` per surat membawa hak persis peran ini — aplikasi tidak perlu menebak dari nama peran.
 
 ## Endpoint
 
@@ -38,13 +42,28 @@ Android staf. Kontrak sisi Flutter (layar, tahap kerja, contoh respons nyata): `
 | POST | `surat/{slug}` | buat → 201 `{dibuat[{id,kode}], sama[], gagal[], perlu_acc}`; tak ada yang dibuat → 409 dengan data sama |
 | POST | `surat/{id}/ubah` | ASTS/TKA/Balasan/Penarikan yang belum bernomor & menunggu/dikembalikan; Pernyataan → 409 |
 
+### Lapor Diterima PKL → Surat Balasan (2026-10-13)
+Siswa melapor "sudah diterima perusahaan" + periode PKL lewat form publik `…/pkl/lapor`; staf memprosesnya jadi Surat Balasan.
+Terbuka bagi pemegang hak **Buat ATAU ACC Surat Balasan** (`PklLapor::hak`); aturan & penyimpanan sama dengan web (`Libraries\PklLapor`).
+
+| Metode | Alamat | Isi / catatan |
+|---|---|---|
+| GET | `surat/balasan/laporan?status=baru\|dikembalikan\|diproses` | baris: `id, pengajuan_id, kode_ajuan, status, status_teks, perusahaan, alamat_ajuan, alamat_baru (null = tidak berubah), tanggal_mulai, tanggal_selesai, periode, lama, catatan, pelapor, hp_pelapor, kirim_ke, dilaporkan_at, anggota[] {siswa_id,nama,kelas}, ajuan_sah, balasan {id,kode,status,nomor}\|null, peringatan[], alasan, surat_id, diproses_oleh, diproses_peran, diproses_at`. `meta.hitung` {baru, diproses, dikembalikan}, `meta.hak` {lihat, setujui, buat, kembalikan, perlu_acc, pemegang_acc}, `meta.form` {buka, tautan}. Status asing → 422; tanpa hak → 403 |
+| POST | `surat/balasan/laporan/{id}/setujui` | "Setujui & buat": jenis wajib ACC → butuh hak ACC Balasan, surat langsung **disetujui** atas nama pemroses; jenis tanpa ACC → hak Buat, surat langsung siap unduh. → `{id, status:'diproses', surat_id, kode_surat, status_surat}` |
+| POST | `surat/balasan/laporan/{id}/buat` | hak Buat (hanya bila jenis wajib ACC): surat dibuat lalu **menunggu ACC** |
+| POST | `surat/balasan/laporan/{id}/kembalikan` | `{alasan}` 5–255 huruf, dibaca siswa saat membuka form lagi |
+
+Laporan DIKLAIM atomik: dua staf menekan bersamaan → yang kedua **409**. Ajuan sudah punya Balasan → laporan hanya ditandai selesai
+(tertaut ke surat lama, `200`). Ajuan tak lagi disetujui / isian tak sah → **409/422** dan laporan kembali "baru". Surat Balasan
+yang dibuat lewat jalur LAIN (`POST surat/balasan`, web) ikut menandai laporan menunggu ajuan itu selesai.
+
 Slug: `asts`, `tka`, `pernyataan-ortu`, `balasan`, `penarikan` (= ujung alamat menu web). Isian sama dengan formulir web
 (rinci per slug: `BLUEPRINT-SURAT.md` §5). Boolean JSON (`true/false`) disamakan jadi `'1'/'0'` sebelum dibaca library
 (mis. `isi_ortu: false` tetap berarti "tidak").
 
 ## Galat
 - **422 isian** (buat/ubah): `data.errors.galat` = LIST kalimat dari library (`periksa()`); `message` = kalimat pertama.
-- **422 keputusan**: `data.errors.{wakil|catatan|bahaya|ids}`.
+- **422 keputusan**: `data.errors.{catatan|bahaya|ids}` (`wakil` tidak dipakai lagi sejak 2026-10-13).
 - **403**: tak punya hak (`data` null) — dari gerbang peran, `tolakKelola`, atau `SuratKeputusan`.
 - **404**: surat/slug tak dikenal. **409**: status sudah berubah, sudah bernomor, kembar, atau unduhan gagal dirakit (`data.kode`).
 - **401**: tanpa/salah token.
@@ -61,5 +80,10 @@ Slug: `asts`, `tka`, `pernyataan-ortu`, `balasan`, `penarikan` (= ujung alamat m
 - Regresi web: `dev:uji-surat` 309 ✅ · `dev:uji-pkl` 324 ✅.
 - 23 respons nyata (data fiktif) disimpan sebagai fixture Flutter. Semua data uji dihapus.
 
+## Uji lapor diterima (2026-10-13)
+- `dev:uji-lapor` bagian API: daftar + hitungan + hak + tautan, status asing 422, peran tanpa hak 403, kembalikan (422/200),
+  setujui → surat disetujui + Audit Log "via aplikasi", proses ulang 409, laporan tak ada 404.
+
 ## Deploy
-`git pull` saja (tanpa migrasi). Aplikasi Android baru bisa memakai menu ini setelah layar Flutter dibuat (BLUEPRINT-SURAT S0–S5).
+`git pull` saja untuk endpoint lama. Endpoint lapor butuh migrasi `2026-10-17-000002_PklLapor` (`php spark migrate`) — lihat
+`docs/PANDUAN-DEPLOY-HAK-AKSES.md`. Aplikasi Android baru bisa memakai menu ini setelah layar Flutter dibuat (BLUEPRINT-SURAT).

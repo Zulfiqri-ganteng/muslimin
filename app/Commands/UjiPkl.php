@@ -1091,7 +1091,7 @@ class UjiPkl extends BaseCommand
         $fa = $PS::catatanAcc($acc('admin', 'Admin Sistem'), [], $ekstra);
         $fi = $PS::catatanAcc($acc('impor', 'Ani Operator'), [], $ekstra);
         $this->cek('catatan ACC Hubin: nama, jabatan, waktu, kode, pencetak', str_contains($fh, 'Budi Santoso, S.Pd. (Waka Hubin)') && str_contains($fh, 'Rabu, 07 Oktober 2026 pukul 09.41 WIB') && str_contains($fh, 'PKL-00001-ABC123') && str_contains($fh, 'Dicetak oleh Ani Operator (Operator Sekolah)'), $fh);
-        $this->cek('catatan ACC Admin: jujur "mewakili Waka Hubin"; impor: "bukan persetujuan elektronik Waka Hubin"', str_contains($fa, 'mewakili Waka Hubin') && str_contains($fi, 'bukan persetujuan elektronik Waka Hubin'), $fa . ' || ' . $fi);
+        $this->cek('catatan ACC Admin: apa adanya "(Admin Sistem)", tanpa "mewakili"; impor: "bukan persetujuan elektronik Waka Hubin"', str_contains($fa, '(Admin Sistem)') && ! str_contains($fa, 'mewakili') && str_contains($fi, 'bukan persetujuan elektronik Waka Hubin'), $fa . ' || ' . $fi);
 
         // ---------- data ----------
         $k = $this->db->table('kelas')->select('id, nama_kelas')->where('tingkat', 'XI')->where('deleted_at', null)->orderBy('id')->get()->getRowArray();
@@ -1199,10 +1199,10 @@ class UjiPkl extends BaseCommand
         $this->cek('tabel: HP tiap siswa & nama perusahaan tercetak', str_contains($z, '089677424011') && str_contains($z, '085232498164') && str_contains($z, '085780554867') && str_contains($z, '082113453105') && str_contains($z, 'PT ZZUJI Surat Hubin') && str_contains($z, 'PT ZZUJI Surat Admin'));
         $this->cek('tabel: urutan kolom NO · NAMA · NIS (NAMA dulu, baru NIS); NIS tercetak untuk tiap siswa; NISN TIDAK dicetak', str_contains($z, '>NIS<') && substr_count($z, self::NIS) >= 3 && ! str_contains($z, '>NISN<') && strpos($z, '>NAMA<') > strpos($z, '>NO<') && strpos($z, '>NIS<') > strpos($z, '>NAMA<') && strpos($z, '>NIS<') < strpos($z, '>KELAS<'));
         $this->cek('font: seluruh teks surat Times New Roman (tanpa font tema/Calibri/Tahoma di isi surat)', ! str_contains($z, 'Calibri') && ! str_contains($z, 'Tahoma') && ! str_contains($z, 'asciiTheme'));
-        $this->cek('blok Waka Hubin: nama, jabatan (dua baris), kaki ACC Hubin & Admin ("mewakili"), pencetak', str_contains($z, 'Budi Santoso, S.Pd.') && str_contains($z, 'Wakil Kepala Sekolah Bidang') && str_contains($z, 'Hubungan Industri') && str_contains($z, 'Disetujui oleh: Budi Hubin') && str_contains($z, 'Admin Uji (Admin Sistem, mewakili Waka Hubin') && str_contains($z, 'Dicetak oleh Operator Uji (Operator Sekolah)'));
+        $this->cek('blok Waka Hubin: nama, jabatan (dua baris), kaki ACC Hubin & Admin (apa adanya), pencetak', str_contains($z, 'Budi Santoso, S.Pd.') && str_contains($z, 'Wakil Kepala Sekolah Bidang') && str_contains($z, 'Hubungan Industri') && str_contains($z, 'Disetujui oleh: Budi Hubin') && str_contains($z, 'Admin Uji (Admin Sistem)') && ! str_contains($z, 'mewakili') && str_contains($z, 'Dicetak oleh Operator Uji (Operator Sekolah)'));
         $this->cek('urutan surat: 2 surat, tepat SATU pageBreakBefore, tanpa paraId ganda', substr_count($z, '<w:pageBreakBefore/>') === 1 && ! str_contains($z, 'w14:paraId'));
         preg_match_all('/<wp:docPr id="(\d+)"/', $z, $idm);
-        $this->cek('gambar: id unik, jumlah = kop(2) + TTD Kepsek(2) + TTD Hubin(1, hanya yang di-ACC akun Hubin) = 5', count($idm[1]) === 5 && count(array_unique($idm[1])) === 5, json_encode($idm[1]));
+        $this->cek('gambar: id unik, jumlah = kop(2) + TTD Kepsek(2) + TTD Hubin(2 — tercetak siapa pun yang ACC) = 6', count($idm[1]) === 6 && count(array_unique($idm[1])) === 6, json_encode($idm[1]));
         $this->cek('berkas tanda tangan Hubin ikut dibungkus (media + relasi + tipe png)', in_array('word/media/rIdTtdHubin.png', $media, true) && str_contains($rels, 'Id="rIdTtdHubin"') && str_contains($tipe, 'Extension="png"') && in_array('word/media/image1.tiff', $media, true), json_encode($media));
         $this->cek('pengaturan settings.xml sekolah tetap (mode kompatibilitas modern, bukan dibuat ulang)', $zipOk && str_contains($z, 'w:body'));
 

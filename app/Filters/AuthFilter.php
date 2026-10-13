@@ -18,7 +18,8 @@ use CodeIgniter\HTTP\ResponseInterface;
  *      akun yang dinonaktifkan atau diubah perannya langsung berlaku, tanpa
  *      menunggu sesi habis)
  *   4. sandi sementara sudah diganti?       → bila belum, hanya Profil yang terbuka
- *   5. peran boleh membuka alamat ini?      → Config\Peran via Libraries\HakAkses
+ *   5. peran boleh membuka alamat ini dengan metode ini? → peran & menu yang diatur Admin (Sistem → Hak Akses),
+ *      lewat Libraries\HakAkses → HakPeran. Menu "Lihat saja" menolak POST (kembali ke halaman asal dengan pesan).
  *
  * Penolakan di langkah 4–5 TIDAK menjalankan apa pun (POST pun tak diproses).
  */
@@ -64,7 +65,18 @@ class AuthFilter implements FilterInterface
             );
         }
 
-        if (! HakAkses::boleh($peran, $alamat)) {
+        $metode = strtoupper((string) $request->getMethod());
+
+        // "admin" polos = pintu masuk: arahkan ke beranda peran tanpa pesan galat bila Dashboard tak tersedia baginya.
+        if (strtolower(trim($alamat, '/')) === 'admin' && ! HakAkses::boleh($peran, 'admin/dashboard')) {
+            return redirect()->to(site_url(HakAkses::beranda($peran)));
+        }
+
+        if (! HakAkses::boleh($peran, $alamat, $metode)) {
+            // Menu "Lihat saja": halaman boleh dibuka tetapi aksi simpan/hapus ditolak — kembali ke halaman asal dengan pesan.
+            if (! \App\Libraries\HakPeran::metodeBaca($metode) && HakAkses::boleh($peran, $alamat, 'GET')) {
+                return $this->tolak($request, 'Akun ' . HakAkses::label($peran) . ' hanya bisa MELIHAT halaman ini, tidak bisa menyimpan atau menghapus. Admin bisa mengubahnya di Sistem → Hak Akses.', previous_url() ?: HakAkses::beranda($peran), true);
+            }
             $beranda = HakAkses::beranda($peran);
 
             // Jaga dari putaran tanpa ujung: 403 hanya bila yang ditolak adalah beranda itu sendiri, atau beranda peran
@@ -100,17 +112,17 @@ class AuthFilter implements FilterInterface
         return redirect()->to(site_url('admin/login'));
     }
 
-    /** Permintaan AJAX/JSON dijawab 403; selebihnya dialihkan dengan pesan. */
-    private function tolak(RequestInterface $request, string $pesan, string $tujuan)
+    /** Permintaan AJAX/JSON dijawab 403; selebihnya dialihkan dengan pesan. $tujuanPenuh = $tujuan sudah URL lengkap. */
+    private function tolak(RequestInterface $request, string $pesan, string $tujuan, bool $tujuanPenuh = false)
     {
         $json = $request instanceof IncomingRequest
             && ($request->isAJAX() || str_contains($request->getHeaderLine('Accept'), 'application/json'));
 
         if ($json) {
             return service('response')->setStatusCode(403)
-                ->setJSON(['status' => 'error', 'ok' => false, 'message' => $pesan, 'data' => null]);
+                ->setJSON(['status' => 'error', 'ok' => false, 'pesan' => $pesan, 'message' => $pesan, 'data' => null]);
         }
 
-        return redirect()->to(site_url($tujuan))->with('error', $pesan);
+        return redirect()->to($tujuanPenuh && preg_match('~^https?://~i', $tujuan) === 1 ? $tujuan : site_url($tujuan))->with('error', $pesan);
     }
 }

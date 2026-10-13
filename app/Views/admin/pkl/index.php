@@ -14,7 +14,7 @@ $pesanTutup = [
     'sudah_ditutup' => 'Batas waktu pengisian sudah lewat — form tertutup otomatis.',
     'belum_siap'    => 'Pengaturan belum lengkap (tingkat atau pagar tanggal belum diisi), jadi form belum bisa dibuka.',
 ];
-$hubin = $peran === 'hubin';
+$hubin = ! empty($bolehAcc); // peran ini bisa memutuskan (ACC) ajuan — diatur Admin di Sistem → Hak Akses
 ?>
 <?= $this->extend('layouts/admin') ?>
 <?= $this->section('content') ?>
@@ -22,12 +22,12 @@ $hubin = $peran === 'hubin';
 <?= view('admin/partials/help', [
     'helpKey'   => 'pkl_beranda_v3',
     'helpTitle' => 'Beranda PKL',
-    'helpBody'  => '<p>Siswa mengisi ajuan PKL sendiri lewat tautan di HP. Di sini ajuan <b>diperiksa</b> lalu diputuskan. <b>ACC dan tolak hanya dilakukan Waka Hubin</b> (Admin sebagai cadangan); Operator memeriksa dan bisa <b>mengembalikan</b> ajuan agar siswa memperbaiki.</p>'
+    'helpBody'  => '<p>Siswa mengisi ajuan PKL sendiri lewat tautan di HP. Di sini ajuan <b>diperiksa</b> lalu diputuskan. <b>ACC dan tolak dilakukan peran yang diberi hak ACC ajuan PKL</b> oleh Admin (sekarang: ' . esc(\App\Libraries\PklHak::teksPemegang('acc')) . '; diatur di Sistem → Hak Akses); peran yang memegang hak periksa bisa <b>mengembalikan</b> ajuan agar siswa memperbaiki.</p>'
         . '<ul class="mt-2 list-disc pl-5 space-y-1">'
         . '<li><b>Menunggu ACC</b> — antrean ajuan baru, yang paling lama di atas.</li>'
         . '<li><b>Status Siswa</b> — melihat siapa yang <b>sudah/belum mengisi</b> dan siapa yang <b>sudah/belum PKL</b>.</li>'
         . '<li><b>Isi atas Nama</b> — bila siswa tak bisa mengisi sendiri, atau untuk memasukkan data PKL lama.</li>'
-        . '<li><b>Persiapan</b> (kotak kuning, hanya Operator/Admin) — daftar yang harus siap sebelum tautan dibagikan: tanggal &amp; tingkat, nama Waka Hubin untuk surat, dan form dibuka. Hilang sendiri bila semuanya siap.</li>'
+        . '<li><b>Persiapan</b> (kotak kuning, bagi pemegang hak Pengaturan PKL) — daftar yang harus siap sebelum tautan dibagikan: tanggal &amp; tingkat, nama Waka Hubin untuk surat, dan form dibuka. Hilang sendiri bila semuanya siap.</li>'
         . '<li>Setiap keputusan tercatat (siapa, kapan) dan terlihat di riwayat tiap ajuan.</li>'
         . '</ul>',
 ]) ?>
@@ -58,12 +58,22 @@ $hubin = $peran === 'hubin';
     </section>
 <?php endif; ?>
 
+<?php if (! empty($laporBaru)): // Laporan "sudah diterima perusahaan" dari siswa → Surat Balasan ?>
+    <a href="<?= site_url('admin/surat/balasan/laporan') ?>" class="rise rise-1 mb-5 flex items-center justify-between gap-3 rounded-2xl border border-amber-300 bg-amber-50 px-5 py-4 shadow-sm transition hover:bg-amber-100">
+        <span class="min-w-0">
+            <span class="block text-sm font-bold text-amber-900">📥 <?= (int) $laporBaru ?> laporan siswa "sudah diterima perusahaan"</span>
+            <span class="block text-xs text-amber-800">Menunggu dibuatkan Surat Balasan PKL.</span>
+        </span>
+        <span class="shrink-0 text-sm font-semibold text-amber-900">Proses →</span>
+    </a>
+<?php endif; ?>
+
 <?php if (! empty($suratSekolah)): // Surat Sekolah (ASTS, TKA, Pernyataan, Balasan, Penarikan) — bagi pemegang hak ACC / pembuat surat ?>
     <section class="rise rise-1 mb-5 grid grid-cols-1 gap-3 sm:grid-cols-3">
         <a href="<?= site_url('admin/surat?status=menunggu') ?>" class="group rounded-2xl border border-slate-200 bg-white px-5 py-4 shadow-sm transition hover:border-amber-300 hover:shadow-md">
             <p class="text-[11px] font-bold uppercase tracking-wide text-slate-400">Surat sekolah menunggu ACC</p>
             <p class="mt-1 text-2xl font-extrabold <?= $suratSekolah['menunggu'] > 0 ? 'text-amber-600' : 'text-slate-800' ?>"><?= (int) $suratSekolah['menunggu'] ?></p>
-            <p class="mt-0.5 text-xs text-slate-400 group-hover:text-amber-700"><?= ! empty($bolehAcc) ? 'Periksa lalu ACC →' : 'Menunggu keputusan Waka Hubin →' ?></p>
+            <p class="mt-0.5 text-xs text-slate-400 group-hover:text-amber-700"><?= ! empty($bolehAcc) ? 'Periksa lalu ACC →' : 'Menunggu keputusan ACC →' ?></p>
         </a>
         <a href="<?= site_url('admin/surat?status=disetujui') ?>" class="group rounded-2xl border border-slate-200 bg-white px-5 py-4 shadow-sm transition hover:border-green-300 hover:shadow-md">
             <p class="text-[11px] font-bold uppercase tracking-wide text-slate-400">Surat sekolah belum diunduh</p>
@@ -123,7 +133,7 @@ $siap = count(array_filter(array_column($persiapan, 0)));
         </p>
         <p class="mt-0.5 text-xs <?= $alasan === null ? 'text-green-700' : 'text-amber-800' ?>">
             <?php if ($alasan === null): ?>
-                Tingkat <b><?= esc(implode(' & ', $tingkat)) ?></b> · maks <b><?= (int) \App\Models\PklPengaturanModel::maksSiswa($p) ?></b> siswa per ajuan · keputusan Waka Hubin paling lambat <b><?= (int) $batasHari ?> hari</b>
+                Tingkat <b><?= esc(implode(' & ', $tingkat)) ?></b> · maks <b><?= (int) \App\Models\PklPengaturanModel::maksSiswa($p) ?></b> siswa per ajuan · keputusan ACC paling lambat <b><?= (int) $batasHari ?> hari</b>
                 <?php if (! empty($p['form_tutup'])): ?> · tutup otomatis <b><?= esc(date('d-m-Y H:i', strtotime($p['form_tutup']))) ?></b><?php endif; ?>
             <?php else: ?>
                 <?= esc($pesanTutup[$alasan] ?? '') ?>
@@ -144,7 +154,7 @@ $siap = count(array_filter(array_column($persiapan, 0)));
 <?php if (($terlambat ?? 0) > 0): ?>
     <a href="<?= site_url('admin/pkl/daftar/menunggu') ?>" class="rise mb-5 flex items-center gap-3 rounded-2xl border border-red-300 bg-red-50 px-5 py-3.5 text-sm text-red-800 shadow-sm transition hover:bg-red-100">
         <span class="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-red-600 text-base font-extrabold text-white" aria-hidden="true">!</span>
-        <span><b><?= (int) $terlambat ?> ajuan</b> sudah melewati batas keputusan Waka Hubin (<?= (int) $batasHari ?> hari sejak dikirim siswa). Segera diputuskan.</span>
+        <span><b><?= (int) $terlambat ?> ajuan</b> sudah melewati batas keputusan ACC (<?= (int) $batasHari ?> hari sejak dikirim siswa). Segera diputuskan.</span>
         <span class="ml-auto shrink-0 font-bold">Lihat →</span>
     </a>
 <?php endif; ?>
@@ -152,7 +162,7 @@ $siap = count(array_filter(array_column($persiapan, 0)));
 <!-- Angka status ajuan -->
 <div class="rise rise-3 mb-5 grid grid-cols-2 gap-3 lg:grid-cols-4">
     <?php foreach ([
-        ['menunggu', 'Menunggu ACC', 'text-brand-700', $hubin ? 'Menunggu keputusan Anda' : 'Menunggu keputusan Waka Hubin'],
+        ['menunggu', 'Menunggu ACC', 'text-brand-700', $hubin ? 'Menunggu keputusan Anda' : 'Menunggu keputusan ACC'],
         ['perbaikan', 'Perlu perbaikan', 'text-amber-600', 'Di tangan siswa'],
         ['disetujui', 'Disetujui', 'text-green-600', 'Siap dibuatkan surat'],
         ['ditolak', 'Ditolak', 'text-red-600', 'Siswa boleh mengajukan lagi'],
@@ -192,7 +202,7 @@ $siap = count(array_filter(array_column($persiapan, 0)));
 <div class="rise rise-5 overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
     <div class="flex flex-col gap-2 border-b border-slate-100 px-5 py-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
-            <h2 class="font-bold text-slate-800"><?= $hubin ? 'Menunggu keputusan Anda' : 'Antrean ajuan — menunggu keputusan Waka Hubin' ?></h2>
+            <h2 class="font-bold text-slate-800"><?= $hubin ? 'Menunggu keputusan Anda' : 'Antrean ajuan — menunggu keputusan ACC (' . \App\Libraries\PklHak::teksPemegang('acc') . ')' ?></h2>
             <p class="text-xs text-slate-400">Yang paling lama menunggu ada di atas.</p>
         </div>
         <a href="<?= site_url('admin/pkl/baru') ?>" class="inline-flex items-center justify-center rounded-lg border border-brand-200 bg-brand-50 px-3.5 py-2 text-sm font-semibold text-brand-700 transition hover:bg-brand-100">+ Isi atas Nama</a>

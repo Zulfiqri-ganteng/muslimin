@@ -15,11 +15,11 @@
 use App\Libraries\IsianBantu;
 use App\Models\PklPengajuanModel;
 
-// Kotak centang tabel: ACC massal hanya untuk yang berhak ACC (Waka Hubin / Admin); surat massal untuk semua staf.
+// Kotak centang tabel: ACC massal hanya untuk pemegang hak ACC ajuan PKL (diatur Admin); surat massal untuk semua staf.
 $bisaPilih  = ($status === 'disetujui' && ! empty($bolehSurat)) || ($status === 'menunggu' && ! empty($bolehAcc));
 $formPilih  = $status === 'menunggu' ? 'formAcc' : 'formMassal';
 $keterangan = [
-    'menunggu'  => 'Ajuan baru dari siswa, menunggu keputusan Waka Hubin (ACC hanya oleh Waka Hubin). Yang paling lama menunggu ada di atas.',
+    'menunggu'  => 'Ajuan baru dari siswa, menunggu keputusan ACC (oleh ' . \App\Libraries\PklHak::teksPemegang('acc') . '). Yang paling lama menunggu ada di atas.',
     'perbaikan' => 'Sudah dikembalikan ke siswa dan menunggu mereka memperbaiki. Bila siswa kesulitan, Anda bisa mengubah langsung.',
     'disetujui' => 'Sudah di-ACC. Siswa-siswa di sini terkunci dan tidak bisa mengajukan lagi.',
     'ditolak'   => 'Ditolak. Siswanya sudah bebas dan boleh mengajukan lagi dari awal.',
@@ -69,14 +69,11 @@ $urlHal = static function (int $hal) use ($status, $q, $kelasId): string {
     </div>
 
     <?php if ($status === 'menunggu' && $rows !== [] && empty($bolehAcc)): ?>
-        <div class="border-b border-slate-100 bg-slate-50 px-5 py-3 text-xs leading-relaxed text-slate-600">🔒 <b>ACC hanya dilakukan Waka Hubin.</b> Sebagai <?= esc($peranLabel ?? 'staf') ?> Anda bisa memeriksa ajuan, mengembalikannya untuk diperbaiki, dan mengubah datanya.</div>
+        <div class="border-b border-slate-100 bg-slate-50 px-5 py-3 text-xs leading-relaxed text-slate-600">🔒 <b>ACC dilakukan peran yang diberi hak ACC ajuan PKL</b> (<?= esc(\App\Libraries\PklHak::teksPemegang('acc')) ?>). Sebagai <?= esc($peranLabel ?? 'staf') ?> Anda bisa memeriksa ajuan, mengembalikannya untuk diperbaiki, dan mengubah datanya.</div>
     <?php endif; ?>
     <?php if ($status === 'menunggu' && $rows !== [] && ! empty($bolehAcc)): ?>
         <form id="formAcc" method="post" action="<?= site_url('admin/pkl/acc-massal') ?>" class="flex flex-col gap-2 border-b border-slate-100 bg-slate-50 px-5 py-3 sm:flex-row sm:flex-wrap sm:items-center">
             <?= csrf_field() ?>
-            <?php if (($peran ?? '') === 'admin'): ?>
-                <label class="flex w-full cursor-pointer items-start gap-2 rounded-lg border border-amber-300 bg-amber-50 px-3 py-2 text-xs font-semibold text-amber-900"><input type="checkbox" name="wakil" value="1" required class="mt-0.5"> <span>Saya meng-ACC sebagai <b>Admin yang mewakili Waka Hubin</b> (Waka Hubin berhalangan). Tercatat atas nama saya dan tertulis di surat.</span></label>
-            <?php endif; ?>
             <span class="text-xs leading-relaxed text-slate-500 sm:mr-auto"><b class="text-green-700">ACC massal:</b> hanya ajuan berlabel <b class="text-green-700">✓ Aman</b> (tanpa peringatan) yang di-ACC. Yang bertanda ⚠ dilewati agar Anda periksa satu per satu.</span>
             <button type="submit" name="mode" value="terpilih" onclick="return confirm('ACC semua ajuan yang dicentang? Yang punya peringatan akan dilewati.')" class="rounded-lg border border-green-300 bg-white px-3.5 py-2 text-sm font-semibold text-green-700 hover:bg-green-50">✓ ACC terpilih</button>
             <button type="submit" name="mode" value="aman" onclick="return confirm('ACC SEMUA ajuan yang menunggu dan berlabel Aman (maks. 200)? Yang punya peringatan akan dilewati.')" class="rounded-lg bg-green-600 px-3.5 py-2 text-sm font-semibold text-white hover:bg-green-700">✓ ACC semua yang aman</button>
@@ -96,7 +93,7 @@ $urlHal = static function (int $hal) use ($status, $q, $kelasId): string {
                 <button type="button" onclick="window.dispatchEvent(new CustomEvent('pkl-unduh', {detail: {mode: 'semua'}}))" class="rounded-lg bg-brand-700 px-3.5 py-2 text-sm font-semibold text-white hover:bg-brand-800">⬇ Unduh SEMUA surat</button>
                 <button type="button" onclick="window.dispatchEvent(new CustomEvent('pkl-wa', {detail: {ids: Array.prototype.map.call(document.querySelectorAll('input[name=&quot;ids[]&quot;]:checked'), function (c) { return c.value; })}}))" class="rounded-lg border border-green-300 bg-white px-3.5 py-2 text-sm font-semibold text-green-700 hover:bg-green-50">💬 Kabari via WhatsApp (terpilih)</button>
             <?php else: ?>
-                <p class="text-xs leading-relaxed text-slate-600">🔒 <b>Surat diunduh oleh peran yang diberi hak itu oleh Admin</b> (bawaan: Operator Sekolah), supaya jelas siapa yang menyetujui dan siapa yang mencetak. Anda tetap bisa melihat nomor dan status tiap surat di sini.</p>
+                <p class="text-xs leading-relaxed text-slate-600">🔒 <b>Surat diunduh oleh peran yang diberi hak itu oleh Admin</b> (<?= esc(\App\Libraries\PklHak::teksPemegang('surat')) ?>), supaya jelas siapa yang menyetujui dan siapa yang mencetak. Anda tetap bisa melihat nomor dan status tiap surat di sini.</p>
             <?php endif; ?>
         </div>
     <?php endif; ?>
@@ -135,7 +132,7 @@ $urlHal = static function (int $hal) use ($status, $q, $kelasId): string {
                             <td class="whitespace-nowrap px-3 py-3 text-xs text-slate-500"><?= esc(date('d-m-Y H:i', strtotime($kirimAt))) ?>
                                 <?php if ($sisa !== null): ?><br><span class="font-bold <?= $sisa < 0 ? 'text-red-600' : ($sisa <= 1 ? 'text-amber-600' : 'text-slate-400') ?>"><?= $sisa < 0 ? 'TERLAMBAT ' . abs($sisa) . ' hari' : ($sisa === 0 ? 'batas HARI INI' : 'sisa ' . $sisa . ' hari') ?></span><?php endif; ?></td>
                             <td class="whitespace-nowrap px-3 py-3 text-xs text-slate-400"><?= esc(date('d-m-Y H:i', strtotime($r['updated_at']))) ?></td>
-                            <?php if ($status === 'disetujui'): ?><td class="px-3 py-3 text-xs"><?php if (! empty($r['acc_nama'])): ?><span class="font-semibold text-slate-700"><?= esc($r['acc_nama']) ?></span><span class="block text-slate-400"><?= esc(match ((string) ($r['acc_peran'] ?? '')) { 'hubin' => 'Waka Hubin', 'admin' => 'Admin (mewakili Hubin)', 'operator' => 'Operator (data lama)', 'impor' => 'Diimpor', default => '' }) ?><?= ! empty($r['acc_at']) ? ' · ' . esc(date('d-m-Y H:i', strtotime((string) $r['acc_at']))) : '' ?></span><?php else: ?><span class="text-slate-300">—</span><?php endif; ?></td><?php endif; ?>
+                            <?php if ($status === 'disetujui'): ?><td class="px-3 py-3 text-xs"><?php if (! empty($r['acc_nama'])): ?><span class="font-semibold text-slate-700"><?= esc($r['acc_nama']) ?></span><span class="block text-slate-400"><?= esc(match ((string) ($r['acc_peran'] ?? '')) { 'impor' => 'Diimpor', '' => '', default => \App\Libraries\HakAkses::label((string) ($r['acc_peran'] ?? '')) }) ?><?= ! empty($r['acc_at']) ? ' · ' . esc(date('d-m-Y H:i', strtotime((string) $r['acc_at']))) : '' ?></span><?php else: ?><span class="text-slate-300">—</span><?php endif; ?></td><?php endif; ?>
                             <?php if ($status === 'disetujui'): $ss = $statusSurat[(int) $r['id']] ?? null; ?><td class="px-3 py-3 text-xs"><?php if ($ss): ?><span class="font-mono font-semibold text-slate-600"><?= esc($ss['nomor']) ?></span><?php if ($ss['perlu_ulang']): ?><span class="mt-0.5 block font-bold text-amber-600">⚠ perlu cetak ulang</span><?php endif; ?><?php else: ?><span class="text-slate-300">belum ada</span><?php endif; ?></td><?php endif; ?><?php if ($status === 'menunggu'): $c = $cek[(int) $r['id']] ?? null; ?><td class="px-3 py-3 text-xs"><?php if ($c && ($c['bahaya'] + $c['awas']) === 0): ?><span class="font-bold text-green-600">✓ Aman</span><?php elseif ($c): ?><span class="font-bold <?= $c['bahaya'] ? 'text-red-600' : 'text-amber-600' ?>" title="<?= esc($c['pertama'], 'attr') ?>">⚠ <?= (int) ($c['bahaya'] + $c['awas']) ?> peringatan</span><?php endif; ?></td><?php endif; ?><td class="whitespace-nowrap px-5 py-3 text-right"><?php if ($status === 'disetujui' && ! empty($bolehSurat) && ! empty($statusSurat[(int) $r['id']])): ?><button type="button" title="Kabari siswa lewat WhatsApp" onclick="window.dispatchEvent(new CustomEvent('pkl-wa', {detail: {ids: [<?= (int) $r['id'] ?>]}}))" class="mr-1.5 inline-flex rounded-lg border border-green-300 bg-white px-2.5 py-1.5 text-xs font-semibold text-green-700 transition hover:bg-green-50">💬 WA</button><?php endif; ?><a href="<?= site_url('admin/pkl/' . $r['id']) ?>" class="inline-flex rounded-lg bg-brand-700 px-3.5 py-1.5 text-xs font-semibold text-white transition hover:bg-brand-800"><?= $status === 'menunggu' ? 'Periksa' : 'Buka' ?></a></td>
                         </tr>
                         <?php if (! empty($r['catatan_staf']) && in_array($status, ['perbaikan', 'ditolak'], true)): ?>
@@ -162,7 +159,7 @@ $urlHal = static function (int $hal) use ($status, $q, $kelasId): string {
                         <p class="mt-0.5 text-xs text-slate-500"><?= esc($r['pengaju'] ?? '—') ?> (<?= esc($r['pengaju_kelas'] ?? '') ?>)<?= (int) $r['jumlah'] > 1 ? ' + ' . ((int) $r['jumlah'] - 1) . ' teman' : '' ?></p>
                         <?php $kirimHp = (string) ($r['diajukan_at'] ?? $r['created_at']); $sisaHp = $status === 'menunggu' ? PklPengajuanModel::sisaHari($kirimHp, (int) ($batasHari ?? 5)) : null; ?>
                         <p class="mt-1 text-xs text-slate-400">Dikirim <?= esc(date('d-m-Y H:i', strtotime($kirimHp))) ?><?php if ($sisaHp !== null): ?> · <b class="<?= $sisaHp < 0 ? 'text-red-600' : ($sisaHp <= 1 ? 'text-amber-600' : 'text-slate-500') ?>"><?= $sisaHp < 0 ? 'TERLAMBAT ' . abs($sisaHp) . ' hari' : ($sisaHp === 0 ? 'batas HARI INI' : 'sisa ' . $sisaHp . ' hari') ?></b><?php endif; ?></p>
-                        <?php if ($status === 'disetujui' && ! empty($r['acc_nama'])): ?><p class="mt-1 text-xs text-slate-500">Disetujui: <b><?= esc($r['acc_nama']) ?></b><?= ($r['acc_peran'] ?? '') === 'admin' ? ' (Admin, mewakili Hubin)' : '' ?></p><?php endif; ?>
+                        <?php if ($status === 'disetujui' && ! empty($r['acc_nama'])): ?><p class="mt-1 text-xs text-slate-500">Disetujui: <b><?= esc($r['acc_nama']) ?></b><?= (string) ($r['acc_peran'] ?? '') !== '' && ($r['acc_peran'] ?? '') !== 'impor' ? ' (' . esc(\App\Libraries\HakAkses::label((string) ($r['acc_peran'] ?? ''))) . ')' : '' ?></p><?php endif; ?>
                         <?php if ($status === 'menunggu' && ($cHp = $cek[(int) $r['id']] ?? null)): ?><p class="mt-1 text-xs font-bold <?= ($cHp['bahaya'] + $cHp['awas']) === 0 ? 'text-green-600' : ($cHp['bahaya'] ? 'text-red-600' : 'text-amber-600') ?>"><?= ($cHp['bahaya'] + $cHp['awas']) === 0 ? '✓ Aman' : '⚠ ' . (int) ($cHp['bahaya'] + $cHp['awas']) . ' peringatan' ?></p><?php endif; ?>
                         <?php if ($status === 'disetujui'): $ssHp = $statusSurat[(int) $r['id']] ?? null; ?><p class="mt-1 text-xs"><?= $ssHp ? '<span class="font-mono font-semibold text-slate-600">' . esc($ssHp['nomor']) . '</span>' . ($ssHp['perlu_ulang'] ? ' <b class="text-amber-600">⚠ perlu cetak ulang</b>' : '') : '<span class="text-slate-300">surat belum ada</span>' ?></p><?php endif; ?>
                         <?php if (! empty($r['catatan_staf']) && in_array($status, ['perbaikan', 'ditolak'], true)): ?>

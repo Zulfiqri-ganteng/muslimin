@@ -13,7 +13,7 @@ $tabs = [
     ['daftar_ditolak', 'Ditolak', site_url('admin/pkl/daftar/ditolak'), $hitungTab['ditolak'] ?? 0],
     ['siswa', 'Status Siswa', site_url('admin/pkl/siswa'), null],
 ];
-// Menu bersyarat: mengikuti hak yang diatur Admin (PKL → Hak Akses).
+// Menu bersyarat: mengikuti hak yang diatur Admin (Sistem → Hak Akses).
 $peranNav = (string) (session('admin')['role'] ?? '');
 if (\App\Libraries\HakAkses::bolehPkl($peranNav, 'laporan')) {
     $tabs[] = ['laporan', 'Laporan Pembayaran', site_url('admin/pkl/laporan'), null];
@@ -24,8 +24,8 @@ if (\App\Libraries\HakAkses::boleh($peranNav, 'admin/pkl/ttd')) {
 if (\App\Libraries\HakAkses::boleh($peranNav, 'admin/pkl/pengaturan')) {
     $tabs[] = ['pengaturan', 'Pengaturan', site_url('admin/pkl/pengaturan'), null];
 }
-if ($peranNav === 'admin') {
-    $tabs[] = ['hak_akses', 'Hak Akses', site_url('admin/pkl/hak-akses'), null];
+if (\App\Libraries\HakAkses::boleh($peranNav, 'admin/hak-akses')) { // khusus Admin
+    $tabs[] = ['hak_akses', 'Hak Akses', site_url('admin/hak-akses?bagian=pkl'), null];
 }
 ?>
 <nav class="rise -mx-1 mb-5 flex gap-1.5 overflow-x-auto px-1 pb-1 lg:flex-wrap lg:overflow-visible" aria-label="Menu PKL">

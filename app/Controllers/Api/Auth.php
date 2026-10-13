@@ -225,8 +225,12 @@ class Auth extends BaseApiController
             // Untuk aplikasi: menu mana yang tampil & apakah tombol ACC PKL ditampilkan (server tetap yang menjaga).
             'akses_api' => HakAkses::aksesApi($a['role'] ?? null),
             'boleh_acc' => HakAkses::bolehAcc($a['role'] ?? null),
-            // Hak PKL yang diatur Admin (acc, surat, laporan, ubah, ttd, pengaturan, hapus) — kunci => bool. Server tetap penjaga.
+            // Hak PKL yang diatur Admin (Sistem → Hak Akses): acc, surat, surat_sekolah (lama), laporan, ubah, ttd, ttd_kepsek,
+            // pengaturan, hapus, hapus_disetujui — kunci => bool. Server tetap penjaga.
             'hak_pkl'   => \App\Libraries\PklHak::petaUntuk($a['role'] ?? null),
+            // Hak surat sekolah PER JENIS: {kode_jenis: {buat, acc (null = jenis tanpa ACC), unduh}}.
+            'hak_surat' => \App\Libraries\PklHak::petaSurat($a['role'] ?? null),
+            'peran_label' => HakAkses::label($a['role'] ?? null),
             // true = sandi sementara dari admin: aplikasi wajib membuka layar ganti sandi lebih dulu.
             'wajib_ganti_sandi' => (int) ($a['wajib_ganti_sandi'] ?? 0) === 1,
         ];

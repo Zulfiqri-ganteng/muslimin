@@ -61,7 +61,7 @@ foreach ($payload['guru'] as $g) {
     <section class="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm sm:p-5">
         <div class="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
             <div class="min-w-0">
-                <p class="text-xs font-semibold uppercase tracking-wide text-slate-400">SKBM &middot; khusus Admin</p>
+                <p class="text-xs font-semibold uppercase tracking-wide text-slate-400">SKBM &middot; impor Excel</p>
                 <h2 class="mt-0.5 text-lg font-bold text-slate-800">Periksa hasil bacaan Excel SKBM</h2>
                 <p class="mt-1 text-sm text-slate-500">Berkas: <b class="text-slate-700"><?= esc($berkas) ?></b> &middot; lembar &quot;<?= esc($payload['lembar']) ?>&quot; &middot; <?= count($payload['guru']) ?> guru, <?= $jmlBaris ?> baris mapel. <b>Belum ada yang tersimpan.</b></p>
             </div>

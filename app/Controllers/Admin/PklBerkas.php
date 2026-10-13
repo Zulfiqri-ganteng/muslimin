@@ -7,6 +7,7 @@ use App\Libraries\HakAkses;
 use App\Libraries\IsianBantu;
 use App\Libraries\PklBiaya;
 use App\Libraries\PklDocx;
+use App\Libraries\PklHak;
 use App\Libraries\PklImpor;
 use App\Libraries\PklSurat;
 use App\Libraries\PklUnduh;
@@ -204,25 +205,44 @@ class PklBerkas extends BaseController
     }
 
     // =================================================================
-    // Tanda tangan Waka Hubin (Hubin & Admin; Operator ditolak oleh Config\Peran 'kecuali')
+    // Tanda tangan Waka Hubin (hak 'ttd') + tanda tangan & stempel Kepala Sekolah (hak 'ttd_kepsek') — diatur Admin
     // =================================================================
 
     public function ttd()
     {
-        $p = (new PklPengaturanModel())->ambil();
+        $p     = (new PklPengaturanModel())->ambil();
+        $peran = (string) (session('admin')['role'] ?? '');
 
-        return view('admin/pkl/ttd', $this->dasar('Tanda Tangan Waka Hubin', 'ttd') + [
-            'ada' => PklSurat::infoTtd($p) !== null,
-            'ver' => (int) @filemtime(PklSurat::dirBerkas() . (string) ($p['ttd_hubin'] ?? '')),
+        return view('admin/pkl/ttd', $this->dasar('Tanda Tangan', 'ttd') + [
+            'ada'            => PklSurat::infoTtd($p) !== null,
+            'ver'            => (int) @filemtime(PklSurat::dirBerkas() . (string) ($p['ttd_hubin'] ?? '')),
+            'adaKepsek'      => PklSurat::infoTtdKepsek($p) !== null,
+            'verKepsek'      => (int) @filemtime(PklSurat::dirBerkas() . (string) ($p['ttd_kepsek'] ?? '')),
+            'kolomKepsek'    => db_connect()->fieldExists('ttd_kepsek', 'pkl_pengaturan'),
+            'bolehHubin'     => PklHak::boleh($peran, 'ttd'),
+            'bolehKepsek'    => PklHak::boleh($peran, 'ttd_kepsek'),
+            'pemegangHubin'  => PklHak::teksPemegang('ttd'),
+            'pemegangKepsek' => PklHak::teksPemegang('ttd_kepsek'),
         ]);
     }
 
-    /** GET admin/pkl/ttd/gambar — pratinjau gambar tanda tangan (hanya yang berhak membuka halaman ttd). */
+    /** GET admin/pkl/ttd/gambar — pratinjau gambar tanda tangan Waka Hubin (hanya yang berhak membuka halaman ttd). */
     public function ttdGambar()
     {
-        $info = PklSurat::infoTtd((new PklPengaturanModel())->ambil());
+        return $this->kirimGambar(PklSurat::infoTtd((new PklPengaturanModel())->ambil()));
+    }
+
+    /** GET admin/pkl/ttd-kepsek/gambar — pratinjau gambar tanda tangan + stempel Kepala Sekolah. */
+    public function ttdKepsekGambar()
+    {
+        return $this->kirimGambar(PklSurat::infoTtdKepsek((new PklPengaturanModel())->ambil()));
+    }
+
+    /** @param array{path: string, ext: string}|null $info */
+    private function kirimGambar(?array $info)
+    {
         if ($info === null) {
-            return $this->response->setStatusCode(404, 'Belum ada tanda tangan');
+            return $this->response->setStatusCode(404, 'Belum ada gambar');
         }
 
         return $this->response
@@ -232,9 +252,60 @@ class PklBerkas extends BaseController
             ->setBody((string) file_get_contents($info['path']));
     }
 
+    /** Pagar kedua (setelah filter rute): peran saya memegang hak $hak (ttd | ttd_kepsek)? null = boleh. */
+    private function tolakTtd(string $hak): ?RedirectResponse
+    {
+        $peran = (string) (session('admin')['role'] ?? '');
+        if (PklHak::boleh($peran, $hak)) {
+            return null;
+        }
+
+        return $this->ke('admin/pkl/ttd', 'error', 'Akun ' . HakAkses::label($peran) . ' tidak punya hak mengubah ' . ($hak === 'ttd' ? 'tanda tangan Waka Hubin' : 'tanda tangan + stempel Kepala Sekolah') . '. Admin bisa mengaturnya di Sistem → Hak Akses.');
+    }
+
+    public function unggahTtdKepsek(): RedirectResponse
+    {
+        $balik = 'admin/pkl/ttd';
+        if (($tolak = $this->tolakTtd('ttd_kepsek')) !== null) {
+            return $tolak;
+        }
+        if (! db_connect()->fieldExists('ttd_kepsek', 'pkl_pengaturan')) {
+            return $this->ke($balik, 'error', 'Fitur ini belum aktif di server ini: jalankan "php spark migrate" dulu.');
+        }
+        $berkas = $this->request->getFile('ttd_kepsek');
+        if ($berkas === null || ! $berkas->isValid() || $berkas->hasMoved()) {
+            return $this->ke($balik, 'error', 'Pilih gambar tanda tangan + stempel (PNG atau JPG) dulu.');
+        }
+        $hasil = PklSurat::simpanTtdKepsek($berkas->getTempName(), (int) $berkas->getSize());
+        if (! $hasil['ok']) {
+            return $this->ke($balik, 'error', $hasil['pesan']);
+        }
+        $a = (array) session('admin');
+        $this->audit->record('update', 'pkl_pengaturan', 1, 'Tanda tangan + stempel Kepala Sekolah diunggah oleh ' . ($a['full_name'] ?? '?') . ' (' . ($a['role'] ?? '?') . ')');
+
+        return $this->ke($balik, 'success', $hasil['pesan']);
+    }
+
+    public function hapusTtdKepsek(): RedirectResponse
+    {
+        if (($tolak = $this->tolakTtd('ttd_kepsek')) !== null) {
+            return $tolak;
+        }
+        if (db_connect()->fieldExists('ttd_kepsek', 'pkl_pengaturan')) {
+            PklSurat::hapusTtdKepsek();
+        }
+        $a = (array) session('admin');
+        $this->audit->record('update', 'pkl_pengaturan', 1, 'Tanda tangan + stempel Kepala Sekolah dihapus oleh ' . ($a['full_name'] ?? '?'));
+
+        return $this->ke('admin/pkl/ttd', 'success', 'Gambar dihapus. Surat kembali memakai tanda tangan Kepala Sekolah bawaan template (tanpa stempel).');
+    }
+
     public function unggahTtd(): RedirectResponse
     {
         $balik  = 'admin/pkl/ttd';
+        if (($tolak = $this->tolakTtd('ttd')) !== null) {
+            return $tolak;
+        }
         $berkas = $this->request->getFile('ttd');
         if ($berkas === null || ! $berkas->isValid() || $berkas->hasMoved()) {
             return $this->ke($balik, 'error', 'Pilih gambar tanda tangan (PNG atau JPG) dulu.');
@@ -251,6 +322,9 @@ class PklBerkas extends BaseController
 
     public function hapusTtd(): RedirectResponse
     {
+        if (($tolak = $this->tolakTtd('ttd')) !== null) {
+            return $tolak;
+        }
         PklSurat::hapusTtd();
         $a = (array) session('admin');
         $this->audit->record('update', 'pkl_pengaturan', 1, 'Tanda tangan Waka Hubin dihapus oleh ' . ($a['full_name'] ?? '?'));

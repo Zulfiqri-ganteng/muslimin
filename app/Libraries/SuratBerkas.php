@@ -147,6 +147,9 @@ final class SuratBerkas
             }
         }
 
+        // Tanda tangan Kepala Sekolah bawaan template → tanda tangan + stempel unggahan (bila ada; hak 'ttd_kepsek').
+        $ganti = PklSurat::gantiGambar($p);
+
         $label  = SuratJenis::label($jenis);
         $nSurat = count($perSurat);
         $zip    = false;
@@ -156,7 +159,7 @@ final class SuratBerkas
             : (count($perVarian) === 1 && count($daftar) <= self::MAKS_SATU_BERKAS);
         try {
             if ($satuBerkas) {
-                $biner = PklDocx::dariTemplate($path[(string) array_key_first($perVarian)], $daftar, $media);
+                $biner = PklDocx::dariTemplate($path[(string) array_key_first($perVarian)], $daftar, $media, $ganti);
                 $nama  = $nSurat === 1
                     ? self::namaBerkas($surat1) . '.docx'
                     : $label . ' (' . $nSurat . ' surat) ' . date('Y-m-d') . '.docx';
@@ -169,7 +172,7 @@ final class SuratBerkas
                     while (isset($berkas[$dasar . ($n > 1 ? ' (' . $n . ')' : '') . '.docx'])) {
                         $n++;
                     }
-                    $berkas[$dasar . ($n > 1 ? ' (' . $n . ')' : '') . '.docx'] = PklDocx::dariTemplate($path[$ps['varian']], $ps['butir'], $media);
+                    $berkas[$dasar . ($n > 1 ? ' (' . $n . ')' : '') . '.docx'] = PklDocx::dariTemplate($path[$ps['varian']], $ps['butir'], $media, $ganti);
                 }
                 $biner = $this->zipkan($berkas);
                 $nama  = $label . ' (' . $nSurat . ' surat) ' . date('Y-m-d') . '.zip';
@@ -181,7 +184,7 @@ final class SuratBerkas
                     $akhiran = count($perVarian) > 1 ? ' ' . ($v === '' ? 'umum' : 'per ' . $v) : '';
                     $bagian  = array_chunk($isi, self::ISI_PER_BERKAS);
                     foreach ($bagian as $i => $potong) {
-                        $berkas[PklSurat::amanNama($label . $akhiran) . (count($bagian) > 1 ? ' bagian ' . ($i + 1) : '') . '.docx'] = PklDocx::dariTemplate($path[(string) $v], $potong, $media);
+                        $berkas[PklSurat::amanNama($label . $akhiran) . (count($bagian) > 1 ? ' bagian ' . ($i + 1) : '') . '.docx'] = PklDocx::dariTemplate($path[(string) $v], $potong, $media, $ganti);
                     }
                 }
                 $biner = $this->zipkan($berkas);
@@ -246,11 +249,10 @@ final class SuratBerkas
         $hubinJabatan = trim((string) ($p['waka_hubin_jabatan'] ?? '')) !== '' ? trim((string) $p['waka_hubin_jabatan']) : 'Wakil Kepala Sekolah Bidang Hubungan Industri';
         [$jab1, $jab2] = PklSurat::bagiDuaBaris($hubinJabatan, 30);
 
-        // Tanda tangan digital Waka Hubin HANYA bila yang meng-ACC memang akun Waka Hubin.
+        // Tanda tangan digital Waka Hubin SELALU dipasang bila sudah diunggah, siapa pun yang meng-ACC dan juga untuk jenis tanpa
+        // ACC (keputusan sekolah 2026-10-13: tanda tangan tercetak seperti contoh). Siapa yang menyetujui tertulis di kaki surat.
         $ttd    = $ekstra['ttd'] ?? null;
-        $ttdRaw = ($ttd !== null && (int) $surat['perlu_acc'] === 1 && ($surat['acc_peran'] ?? '') === 'hubin')
-            ? PklDocx::gambarTtd(PklSurat::REL_TTD, (int) $ttd['cx'], (int) $ttd['cy'])
-            : '';
+        $ttdRaw = $ttd !== null ? PklDocx::gambarTtd(PklSurat::REL_TTD, (int) $ttd['cx'], (int) $ttd['cy']) : '';
 
         $v = [
             'nomor'         => (string) ($surat['nomor'] ?? ''),
@@ -314,8 +316,8 @@ final class SuratBerkas
     }
 
     /**
-     * Kaki surat. Surat wajib-ACC: catatan ACC lengkap (siapa, kapan, kode verifikasi) + siapa yang mencetak, apa adanya
-     * seperti Surat Izin PKL (ACC Admin ditulis "mewakili Waka Hubin"). Surat tanpa ACC: hanya keterangan cetak.
+     * Kaki surat. Surat wajib-ACC: catatan ACC lengkap (siapa + perannya, kapan, kode verifikasi) + siapa yang mencetak, apa
+     * adanya seperti Surat Izin PKL. Surat tanpa ACC: hanya keterangan cetak.
      *
      * @param array<string, mixed> $surat
      * @param array<string, mixed> $p

@@ -48,7 +48,7 @@ $jumlah = (int) ($info['jumlah'] ?? 1);
 
         <p class="mt-5 text-sm text-slate-500">
             Kamu <b>tidak perlu mengisi lagi</b>; temanmu yang tercantum juga tidak perlu mengisi.
-            <b>Jangan mengajukan ulang</b> — tunggu keputusan Waka Hubin<?= ! empty($info['hari']) ? ' (paling lambat ' . (int) $info['hari'] . ' hari)' : '' ?>.
+            <b>Jangan mengajukan ulang</b> — tunggu keputusan sekolah<?= ! empty($info['hari']) ? ' (paling lambat ' . (int) $info['hari'] . ' hari)' : '' ?>.
             Jika ada data yang salah atau sekolah meminta perbaikan, hubungi operator sekolah atau Waka Hubin.
         </p>
         <a href="<?= esc($urlForm, 'attr') ?>" class="mt-5 inline-block text-sm font-semibold text-brand-600 hover:text-brand-800">&larr; Kembali ke halaman awal</a>

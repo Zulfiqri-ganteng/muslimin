@@ -13,8 +13,8 @@ use CodeIgniter\HTTP\ResponseInterface;
 
 /**
  * Ceklis KOREKSI honor ("KOREKSI NILAI": pembagian lembar jawaban ke guru per rombel) — halaman, aksi, impor Excel
- * sekolah, dan unduhan Excel. KHUSUS ADMIN (bagian dari data gaji): memakai pagar yang sama dengan UjianHonor, rute tidak
- * ada di hak Operator/Waka Hubin. Aturan & hitungan: Libraries\HonorKoreksi; Excel: Libraries\HonorKoreksiCetak.
+ * sekolah, dan unduhan Excel. Bagian dari data gaji: memakai pagar yang sama dengan UjianHonor (hak menu "Honor & Koreksi
+ * Ujian", diatur Admin; bawaan hanya Admin). Aturan & hitungan: Libraries\HonorKoreksi; Excel: Libraries\HonorKoreksiCetak.
  *
  * Halaman: GET ujian/{jenis}/honor/koreksi?tp=… Aksi sering (nyalakan sel, ubah peserta) berupa POST JSON; aksi
  * struktural (tambah/hapus baris, isi dari pengampu, salin, terapkan) berupa form biasa lalu kembali ke halaman.

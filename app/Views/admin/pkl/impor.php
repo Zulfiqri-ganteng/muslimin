@@ -19,7 +19,7 @@ use App\Libraries\IsianBantu;
         . '<li>Unduh <b>contoh berkas</b>, isi satu baris per siswa. Judul kolom di baris pertama jangan diubah.</li>'
         . '<li>Siswa dikenali dari <b>NIS</b>; bila NIS kosong, dari <b>Nama + Kelas</b> (harus sama dengan Master Siswa).</li>'
         . '<li>Baris dengan perusahaan (dan tanggal, bila diisi) yang sama digabung jadi <b>satu ajuan</b>. Kolom Mulai &amp; Selesai boleh kosong.</li>'
-        . '<li>Anda melihat <b>pratinjau dulu</b>; belum ada yang tersimpan sampai menekan Simpan. Hasilnya berstatus Disetujui dan ditandai <b>"diimpor"</b> — bukan persetujuan Waka Hubin lewat sistem.</li>'
+        . '<li>Anda melihat <b>pratinjau dulu</b>; belum ada yang tersimpan sampai menekan Simpan. Hasilnya berstatus Disetujui dan ditandai <b>"diimpor"</b> — bukan persetujuan (ACC) lewat sistem.</li>'
         . '</ul>',
 ]) ?>
 

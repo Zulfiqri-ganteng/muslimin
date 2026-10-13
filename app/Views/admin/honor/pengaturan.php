@@ -1,6 +1,6 @@
 <?php
 /**
- * Pengaturan Honor Ujian — KHUSUS ADMIN.
+ * Pengaturan Honor Ujian — data gaji; hak menu diatur Admin (bawaan hanya Admin).
  *
  * @var list<array<string,mixed>> $komponen   honor_komponen (urut tampil)
  * @var list<array<string,mixed>> $panitia    jabatan + nominal tunjangan panitia bawaan
@@ -26,7 +26,7 @@ $sumberLabel = ['manual' => 'Diketik', 'koreksi' => 'Otomatis dari siswa', 'rapo
 <?= view('admin/partials/help', [
     'helpKey'   => 'honor_pengaturan_v1',
     'helpTitle' => 'Pengaturan Honor Ujian',
-    'helpBody'  => '<p>Di sini <b>Admin mengatur tarif honor</b> yang dipakai semua honor ujian (ASTS 1, ASAS, ASTS 2, ASAT). Halaman ini hanya bisa dibuka Admin.</p>'
+    'helpBody'  => '<p>Di sini <b>Admin mengatur tarif honor</b> yang dipakai semua honor ujian (ASTS 1, ASAS, ASTS 2, ASAT). Siapa yang boleh membuka halaman ini diatur Admin di Sistem → Hak Akses (bawaan: hanya Admin).</p>'
         . '<ul class="mt-2 list-disc pl-5 space-y-1">'
         . '<li><b>Komponen</b> = jenis honor: Tunjangan Panitia, Pembuatan Soal, Transport, Pengawas, Koreksi, Rapot, dan seterusnya. Yang tidak dipakai cukup dimatikan; komponen baru bisa ditambah.</li>'
         . '<li>Honor yang <u>sudah dibuat</u> menyimpan tarif saat dibuat, jadi mengubah tarif di sini tidak mengubah honor periode lama.</li>'

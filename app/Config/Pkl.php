@@ -34,4 +34,16 @@ class Pkl extends BaseConfig
 
         return $lokal ? site_url('pkl') : 'https://' . $this->host . '/';
     }
+
+    /**
+     * Alamat form LAPOR DITERIMA PKL yang dibagikan ke siswa: https://{host}/pkl/lapor di hosting (subdomain hanya melayani
+     * awalan pkl/), /pkl/lapor di laptop. docs/DESAIN-HAK-AKSES.md bagian 4.
+     */
+    public function tautanLapor(): string
+    {
+        $host  = (string) (parse_url((string) config('App')->baseURL)['host'] ?? 'localhost');
+        $lokal = $host === 'localhost' || filter_var($host, FILTER_VALIDATE_IP) !== false;
+
+        return $lokal ? site_url('pkl/lapor') : 'https://' . $this->host . '/pkl/lapor';
+    }
 }

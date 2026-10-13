@@ -34,6 +34,8 @@ use CodeIgniter\Database\BaseConnection;
  */
 class UjiSurat extends BaseCommand
 {
+    use UjiPeranAman;
+
     protected $group       = 'dev';
     protected $name        = 'dev:uji-surat';
     protected $description = 'Uji Surat Sekolah: jenis, hak per alamat, register, nomor bersama dengan Surat Izin PKL, sidik, tampilan.';
@@ -160,10 +162,10 @@ class UjiSurat extends BaseCommand
         $H = PklHak::class;
         $peta = [
             'admin/surat' => null, 'admin/surat/12' => null, 'admin/surat?status=menunggu' => null,
-            'admin/surat/asts' => 'surat_sekolah', 'admin/surat/tka' => 'surat_sekolah', 'admin/surat/pernyataan-ortu' => 'surat_sekolah',
-            'admin/surat/balasan' => 'surat_sekolah', 'admin/surat/penarikan' => 'surat_sekolah', 'admin/surat/12/unduh' => 'surat_sekolah',
-            'admin/surat/12/ubah' => 'surat_sekolah', 'admin/surat/12/batal' => 'surat_sekolah', 'admin/surat/asts/simpan' => 'surat_sekolah',
-            'admin/surat/12/acc' => 'acc', 'admin/surat/12/kembalikan' => 'acc', 'admin/surat/12/batal-acc' => 'acc', 'admin/surat/acc-massal' => 'acc',
+            'admin/surat/asts' => 'surat_buat:izin_asts', 'admin/surat/tka' => 'surat_buat:izin_tka', 'admin/surat/pernyataan-ortu' => 'surat_buat:pernyataan_ortu',
+            'admin/surat/balasan' => 'surat_buat:balasan_pkl', 'admin/surat/penarikan' => 'surat_buat:penarikan_pkl', 'admin/surat/12/unduh' => 'surat_unduh:*',
+            'admin/surat/12/ubah' => 'surat_buat:*', 'admin/surat/12/batal' => 'surat_buat:*', 'admin/surat/asts/simpan' => 'surat_buat:izin_asts',
+            'admin/surat/12/acc' => 'surat_acc:*', 'admin/surat/12/kembalikan' => 'surat_acc:*', 'admin/surat/12/batal-acc' => 'surat_acc:*', 'admin/surat/acc-massal' => 'surat_acc:*',
             'admin/pkl' => null, 'admin/pkl/12/surat' => 'surat', 'admin/surat-lain' => null, 'admin/master/siswa' => null,
         ];
         $salah = [];
@@ -173,7 +175,7 @@ class UjiSurat extends BaseCommand
             }
         }
         $this->cek('alamat → hak yang dituntut (' . count($peta) . ' alamat)', $salah === [], implode(' | ', $salah));
-        $this->cek('huruf besar / garis ganda / query tetap terpetakan', $H::hakUntukAlamat('ADMIN/Surat/Asts') === 'surat_sekolah' && $H::hakUntukAlamat('admin//surat//12//acc') === 'acc' && $H::hakUntukAlamat('/admin/surat/') === null);
+        $this->cek('huruf besar / garis ganda / query tetap terpetakan', $H::hakUntukAlamat('ADMIN/Surat/Asts') === 'surat_buat:izin_asts' && $H::hakUntukAlamat('admin//surat//12//acc') === 'surat_acc:*' && $H::hakUntukAlamat('/admin/surat/') === null);
     }
 
     // =================================================================
@@ -182,14 +184,15 @@ class UjiSurat extends BaseCommand
 
     private function ujiHak(): void
     {
-        $this->bagian('Hak akses: Operator, Waka Hubin, Admin, peran asing');
+        $this->bagian('Hak akses: Operator, Waka Hubin, Admin, peran asing (hak per jenis surat, diatur Admin)');
         $this->simpanPengaturanAsli();
-        $this->db->table('pkl_pengaturan')->where('id', 1)->update(['hak_peran' => null]);
-        PklHak::lupakan();
+        $this->setelPeranBawaan();
         $H = PklHak::class;
 
-        $this->cek('hak baru terdaftar, bawaan Operator memegangnya, Hubin tidak', isset($H::HAK['surat_sekolah']) && in_array('surat_sekolah', $H::BAWAAN['operator'], true) && ! in_array('surat_sekolah', $H::BAWAAN['hubin'], true));
-        $this->cek('PklHak::boleh: Operator & Admin ya; Hubin & peran asing tidak', $H::boleh('operator', 'surat_sekolah') && $H::boleh('admin', 'surat_sekolah') && ! $H::boleh('hubin', 'surat_sekolah') && ! $H::boleh('guru', 'surat_sekolah') && ! $H::boleh('', 'surat_sekolah'));
+        $this->cek('bawaan: Operator membuat & mengunduh kelima jenis, tanpa ACC; Hubin ACC 4 jenis bernomor, tanpa buat/unduh', $H::jenisBoleh('operator', 'buat') === SuratJenis::kode()
+            && $H::jenisBoleh('operator', 'unduh') === SuratJenis::kode() && $H::jenisBoleh('operator', 'acc') === []
+            && $H::jenisBoleh('hubin', 'buat') === [] && $H::jenisBoleh('hubin', 'unduh') === [] && $H::jenisBoleh('hubin', 'acc') === ['izin_asts', 'izin_tka', 'balasan_pkl', 'penarikan_pkl']);
+        $this->cek('kunci lama surat_sekolah (aplikasi lama): Operator & Admin ya; Hubin & peran asing tidak', $H::boleh('operator', 'surat_sekolah') && $H::boleh('admin', 'surat_sekolah') && ! $H::boleh('hubin', 'surat_sekolah') && ! $H::boleh('guru', 'surat_sekolah') && ! $H::boleh('', 'surat_sekolah'));
 
         $uji = [
             // alamat => [operator, hubin, admin]
@@ -224,27 +227,26 @@ class UjiSurat extends BaseCommand
         }
         $this->cek('menu jenis surat: terlihat oleh Operator (semua), tersembunyi bagi Hubin bawaan', $menuOp && ! $menuHu);
 
-        // Admin memberi Hubin hak membuat surat: menu terbuka, peringatan pemisahan tugas muncul.
+        // Admin memberi Hubin hak membuat & mengunduh semua jenis: menu terbuka, peringatan pemisahan tugas muncul (tidak memblokir).
         $adm  = ['oleh' => self::OLEH . ' Admin', 'admin_id' => null, 'peran' => 'admin', 'ip' => self::IP];
-        $baru = $H::BAWAAN;
-        $baru['hubin'][] = 'surat_sekolah';
-        $r = $H::simpan($baru, $adm);
-        $this->cek('Admin menyimpan hak Hubin + surat_sekolah → tersimpan', $r['ok'] === true);
+        $baru = $H::bawaanLengkap();
+        $baru['hubin'] = array_merge($baru['hubin'], $H::perluasLama(['surat_sekolah']));
+        $r = $H::simpan($baru, $adm, true);
+        $this->cek('Admin menyimpan hak Hubin + buat/unduh semua jenis → tersimpan', $r['ok'] === true, $r['pesan']);
         $this->cek('Hubin kini boleh membuka halaman jenis surat, Operator tetap', HakAkses::boleh('hubin', 'admin/surat/asts') && HakAkses::boleh('operator', 'admin/surat/asts'));
         $adaPeringatan = false;
         foreach ($r['peringatan'] ?? [] as $w) {
             $adaPeringatan = $adaPeringatan || str_contains($w, 'Waka Hubin memegang ACC sekaligus unduh surat');
         }
-        $this->cek('peringatan pemisahan tugas muncul (ACC + surat_sekolah satu peran)', $adaPeringatan, json_encode($r['peringatan'] ?? []));
+        $this->cek('peringatan pemisahan tugas muncul (ACC + unduh pada satu peran)', $adaPeringatan, json_encode($r['peringatan'] ?? []));
 
-        // Hak ini boleh dikosongkan (hanya Admin yang membuat) — tidak ikut daftar wajib ACC/Unduh surat PKL.
-        $kosong = $H::BAWAAN;
-        $kosong['operator'] = array_values(array_diff($kosong['operator'], ['surat_sekolah']));
-        $r2 = $H::simpan($kosong, $adm);
-        $this->cek('hak surat_sekolah boleh tak dipegang siapa pun (Admin tetap bisa)', $r2['ok'] === true && ! HakAkses::boleh('operator', 'admin/surat/asts') && HakAkses::boleh('admin', 'admin/surat/asts'));
+        // Hak Buat satu jenis boleh tak dipegang siapa pun (Admin tetap bisa) — jenis lain tidak ikut berubah.
+        $kosong = $H::bawaanLengkap();
+        $kosong['operator'] = array_values(array_diff($kosong['operator'], ['surat_buat:izin_asts']));
+        $r2 = $H::simpan($kosong, $adm, true);
+        $this->cek('hak Buat Izin ASTS boleh tak dipegang siapa pun (Admin tetap bisa); jenis lain tetap', $r2['ok'] === true && ! HakAkses::boleh('operator', 'admin/surat/asts') && HakAkses::boleh('admin', 'admin/surat/asts') && HakAkses::boleh('operator', 'admin/surat/tka'));
 
-        $this->db->table('pkl_pengaturan')->where('id', 1)->update(['hak_peran' => null]);
-        PklHak::lupakan();
+        $this->setelPeranBawaan();
     }
 
     // =================================================================
@@ -722,10 +724,8 @@ class UjiSurat extends BaseCommand
 
         // --- Admin sebagai cadangan
         $a2 = $this->baru('izin_tka', 'Kep TKA A2');
-        $r  = $kep->putuskan($a2, 'acc', [], $ad, $p);
-        $this->cek('Admin ACC tanpa menyatakan "mewakili Waka Hubin" → wakil 422, status tetap', $r['kode'] === 'wakil' && $r['http'] === 422 && $this->surat($a2)['status'] === 'menunggu');
-        $r = $kep->putuskan($a2, 'acc', ['wakil' => '1', 'catatan' => 'Hubin sedang dinas luar'], $ad, $p);
-        $this->cek('Admin ACC dengan pernyataan → disetujui, acc_peran=admin, riwayat "Mewakili Waka Hubin — …"', $r['ok'] === true && $this->surat($a2)['acc_peran'] === 'admin' && $this->riwayatCatatan($a2, 'acc') === 'Mewakili Waka Hubin — Hubin sedang dinas luar');
+        $r  = $kep->putuskan($a2, 'acc', ['catatan' => 'Hubin sedang dinas luar'], $ad, $p);
+        $this->cek('Admin ACC tanpa pernyataan "mewakili" (sudah dihapus) → disetujui, acc_peran=admin, catatan riwayat apa adanya', $r['ok'] === true && $this->surat($a2)['acc_peran'] === 'admin' && $this->riwayatCatatan($a2, 'acc') === 'Hubin sedang dinas luar', json_encode($r));
 
         // --- Kembalikan & ajukan ulang
         $a3 = $this->baru('izin_tka', 'Kep TKA A3');
@@ -786,15 +786,15 @@ class UjiSurat extends BaseCommand
         $m1 = $this->baru('izin_asts', 'Kep Massal M1');
         $m2 = $this->baru('izin_asts', 'Kep Massal M2');
         $m3 = $this->baru('balasan_pkl', 'Kep Massal M3 tanpa siswa', '2032-05-10', [], 'ZZUJISS Perusahaan M3');
-        $this->cek('ACC massal: Operator → dilarang 403; Admin tanpa pernyataan → wakil; pilihan kosong → catatan', $kep->accMassal(['mode' => 'terpilih', 'ids' => [$m1]], $op, $p)['http'] === 403
-            && $kep->accMassal(['mode' => 'terpilih', 'ids' => [$m1]], $ad, $p)['kode'] === 'wakil' && $kep->accMassal(['mode' => 'terpilih', 'ids' => []], $hu, $p)['kode'] === 'catatan');
+        $this->cek('ACC massal: Operator (tanpa hak ACC jenis apa pun) → dilarang 403; pilihan kosong → catatan', $kep->accMassal(['mode' => 'terpilih', 'ids' => [$m1]], $op, $p)['http'] === 403
+            && $kep->accMassal(['mode' => 'terpilih', 'ids' => []], $hu, $p)['kode'] === 'catatan');
         $r = $kep->accMassal(['mode' => 'terpilih', 'ids' => [$m1, $m2, $m3]], $hu, $p);
         $this->cek('ACC massal terpilih [M1, M2, M3]: 2 disetujui, 1 dilewati (M3 tanpa siswa) dengan alasannya', $r['ok'] === true && $r['disetujui'] === 2 && count($r['dilewati']) === 1 && str_contains($r['dilewati'][0], \App\Models\SuratSekolahModel::kode($m3))
             && $this->surat($m1)['status'] === 'disetujui' && $this->surat($m2)['status'] === 'disetujui' && $this->surat($m3)['status'] === 'menunggu', json_encode($r));
         $this->cek('riwayat massal bercatatan "ACC massal"; Audit Log mencatat ringkasan + nama pelaku', $this->riwayatCatatan($m1, 'acc') === 'ACC massal' && $this->auditAda('ACC massal surat sekolah oleh ' . self::OLEH . ' hubin: 2 disetujui, 1 dilewati'));
         $m4 = $this->baru('izin_asts', 'Kep Massal M4 admin');
         $r  = $kep->accMassal(['mode' => 'terpilih', 'ids' => [$m4], 'wakil' => '1'], $ad, $p);
-        $this->cek('Admin ACC massal dengan pernyataan → disetujui; acc_peran=admin; riwayat "ACC massal — mewakili Waka Hubin"', $r['disetujui'] === 1 && $this->surat($m4)['acc_peran'] === 'admin' && $this->riwayatCatatan($m4, 'acc') === 'ACC massal — mewakili Waka Hubin');
+        $this->cek('Admin ACC massal (kiriman "wakil" lama diabaikan) → disetujui; acc_peran=admin; riwayat "ACC massal"', $r['disetujui'] === 1 && $this->surat($m4)['acc_peran'] === 'admin' && $this->riwayatCatatan($m4, 'acc') === 'ACC massal');
         $this->atur(['kontak_surat_nama' => '']);
         $p2 = (new PklPengaturanModel())->ambil();
         $m5 = $this->baru('izin_asts', 'Kep Massal M5 awas');
@@ -823,6 +823,39 @@ class UjiSurat extends BaseCommand
         $this->cek('surat TKA yang dibuat sesudahnya langsung siap unduh (tanpa ACC), perlu_acc=0', $this->surat($tka)['status'] === 'disetujui' && (int) $this->surat($tka)['perlu_acc'] === 0);
         $r2 = SuratJenis::simpanAcc(['izin_asts', 'balasan_pkl'], $adm);
         $this->cek('menyimpan hal yang sama → tidak ada perubahan; perubahan tercatat di Audit Log', $r2['ubah'] === [] && str_contains($r2['pesan'], 'Tidak ada perubahan') && $this->auditAda('Aturan ACC surat sekolah diubah oleh ' . self::OLEH . ' admin'));
+        $this->atur(['surat_perlu_acc' => null]);
+
+        // --- Hak ACC per jenis (diatur Admin): Balasan di-ACC Operator saja; dua peran sama-sama ACC → yang pertama tercatat
+        $kirim = PklHak::bawaanLengkap();
+        $kirim['operator'][] = 'surat_acc:balasan_pkl';
+        $kirim['hubin'] = array_values(array_diff($kirim['hubin'], ['surat_acc:balasan_pkl']));
+        PklHak::simpan($kirim, ['oleh' => self::OLEH . ' admin'], true);
+        $p3 = (new PklPengaturanModel())->ambil();
+        $j1 = $this->baru('balasan_pkl', 'Kep Jenis J1', '2032-05-10', [$s1], 'ZZUJISS Perusahaan J1');
+        $j2 = $this->baru('izin_asts', 'Kep Jenis J2');
+        $x  = $kep->putuskan($j1, 'acc', [], $hu, $p3);
+        $this->cek('Balasan di-ACC Operator saja: Hubin ditolak (pesan menyebut pemegangnya), Operator boleh; Operator tetap TIDAK boleh ACC Izin ASTS',
+            $x['kode'] === 'dilarang' && str_contains($x['pesan'], 'Operator Sekolah') && $kep->putuskan($j1, 'acc', [], $op, $p3)['ok'] === true
+            && $this->surat($j1)['acc_peran'] === 'operator' && $kep->putuskan($j2, 'acc', [], $op, $p3)['kode'] === 'dilarang', $x['pesan']);
+        $j3 = $this->baru('balasan_pkl', 'Kep Jenis J3', '2032-05-10', [$s2], 'ZZUJISS Perusahaan J3');
+        $j4 = $this->baru('izin_asts', 'Kep Jenis J4');
+        $r  = $kep->accMassal(['mode' => 'terpilih', 'ids' => [$j3, $j4]], $op, $p3);
+        $this->cek('ACC massal Operator: hanya Balasan yang di-ACC; Izin ASTS dilewati dengan alasan "tidak punya hak ACC"', $r['disetujui'] === 1 && $this->surat($j3)['status'] === 'disetujui' && $this->surat($j4)['status'] === 'menunggu'
+            && count($r['dilewati']) === 1 && str_contains($r['dilewati'][0], 'tidak punya hak ACC Surat Izin ASTS'), json_encode($r));
+        $kirim['hubin'][] = 'surat_acc:balasan_pkl'; // dua peran sama-sama memegang ACC Balasan
+        PklHak::simpan($kirim, ['oleh' => self::OLEH . ' admin'], true);
+        $j5 = $this->baru('balasan_pkl', 'Kep Jenis J5', '2032-05-10', [$s1], 'ZZUJISS Perusahaan J5');
+        $r1 = $kep->putuskan($j5, 'acc', [], $op, $p3);
+        $r2 = $kep->putuskan($j5, 'acc', [], $hu, $p3);
+        $this->cek('Operator & Hubin sama-sama ACC Balasan: yang pertama (Operator) tercatat; yang kedua status 409 — tidak ada ACC ganda', $r1['ok'] === true && $r2['kode'] === 'status'
+            && $this->surat($j5)['acc_peran'] === 'operator' && $this->jumlah('surat_sekolah_riwayat', ['surat_id' => $j5, 'aksi' => 'acc']) === 1);
+        $j6 = $this->baru('balasan_pkl', 'Kep Jenis J6', '2032-05-10', [$s2], 'ZZUJISS Perusahaan J6');
+        $sa = $kep->accSetelahBuat([$j6], 'balasan_pkl', $op, $p3);
+        $j7 = $this->baru('izin_asts', 'Kep Jenis J7');
+        $sb = $kep->accSetelahBuat([$j7], 'izin_asts', $op, $p3);
+        $this->cek('"Simpan & setujui": Operator (Buat + ACC Balasan) → langsung disetujui; Izin ASTS (tanpa hak ACC) → tetap menunggu tanpa galat',
+            $sa['acc'] === 1 && $this->surat($j6)['status'] === 'disetujui' && $this->surat($j6)['acc_peran'] === 'operator' && $sb['acc'] === 0 && $this->surat($j7)['status'] === 'menunggu');
+        $this->setelPeranBawaan();
         $this->atur(['surat_perlu_acc' => null]);
     }
 
@@ -871,7 +904,7 @@ class UjiSurat extends BaseCommand
         $kaki = $B::kakiSurat($dasar, $p, $ekstra);
         $this->cek('kaki surat wajib-ACC (Hubin): "disetujui secara elektronik", penyetuju + jabatan, waktu, kode, pencetak', str_contains($kaki, 'disetujui secara elektronik') && str_contains($kaki, 'Disetujui oleh: Budi Hubin (') && str_contains($kaki, 'Waktu persetujuan:')
             && str_contains($kaki, 'Kode verifikasi: SRT-00012-ABC123') && str_contains($kaki, 'Dicetak oleh Siti Operator (Operator Sekolah) pada') && str_contains($kaki, 'pukul 10.05 WIB'), $kaki);
-        $this->cek('kaki surat ACC oleh Admin menyebut "mewakili Waka Hubin"', str_contains($B::kakiSurat(['acc_peran' => 'admin'] + $dasar, $p, $ekstra), 'Admin Sistem, mewakili Waka Hubin'));
+        $this->cek('kaki surat ACC oleh Admin: "(Admin Sistem)" apa adanya, tanpa "mewakili"', str_contains($B::kakiSurat(['acc_peran' => 'admin'] + $dasar, $p, $ekstra), '(Admin Sistem)') && ! str_contains($B::kakiSurat(['acc_peran' => 'admin'] + $dasar, $p, $ekstra), 'mewakili'));
         $tanpa = $B::kakiSurat(['perlu_acc' => 0] + $dasar, $p, $ekstra);
         $this->cek('kaki surat tanpa ACC: hanya keterangan cetak (tidak mengaku "disetujui")', str_contains($tanpa, 'Dicetak melalui Sistem Informasi Akademik Sekolah (BINUS) oleh Siti Operator') && ! str_contains($tanpa, 'disetujui') && $B::kakiSurat(['perlu_acc' => 0] + $dasar, $p, []) === '');
 
@@ -889,9 +922,9 @@ class UjiSurat extends BaseCommand
         $this->cek('penanda umum: nomor, tanggal "05 Maret 2031", Kepala Sekolah bertitik, Waka Hubin, perusahaan (milik surat), alamat lengkap, penerima', $v['nomor'] === '12/SMK-BN/PKL/III/2031' && $v['tanggal_surat'] === '05 Maret 2031' && $v['kepsek_nama'] === 'Kepsek Uji, S.T.' && $v['hubin_nama'] === 'Hubin Uji, S.Pd.'
             && $v['perusahaan'] === 'PT Contoh' && $v['alamat_lengkap'] === 'Jl. Mawar 1, Bekasi' && $v['penerima'] === 'Bu Rini (HRD)' && $v['tahun_ajaran'] === '2031/2032' && $v['jumlah_siswa'] === '2');
         $this->cek('baris siswa: NISN kosong → "-", jurusan kosong → "-", HP surat > HP induk, HP kosong → "-"', $isi['siswa'][0]['nisn'] === '-' && $isi['siswa'][0]['jurusan'] === '-' && $isi['siswa'][0]['hp'] === '0811' && $isi['siswa'][1]['hp'] === '0822' && $isi['siswa'][1]['nisn'] === '999' && $isi['siswa'][1]['no'] === '2');
-        $this->cek('tanda tangan digital Waka Hubin dipasang HANYA bila yang ACC akun Hubin (dan gambar ada)', str_starts_with($v['ttd_hubin'], \App\Libraries\PklDocx::RAW) && str_contains($v['ttd_hubin'], PklSurat::REL_TTD)
-            && $B::isi(['acc_peran' => 'admin'] + $surat, $siswa, null, [], $p, ['ttd' => $ttd])['v']['ttd_hubin'] === '' && $B::isi($surat, $siswa, null, [], $p, [])['v']['ttd_hubin'] === ''
-            && $B::isi(['perlu_acc' => 0] + $surat, $siswa, null, [], $p, ['ttd' => $ttd])['v']['ttd_hubin'] === '');
+        $this->cek('tanda tangan digital Waka Hubin dipasang bila gambarnya ada, SIAPA PUN yang ACC (juga Admin & jenis tanpa ACC); tanpa gambar → kosong', str_starts_with($v['ttd_hubin'], \App\Libraries\PklDocx::RAW) && str_contains($v['ttd_hubin'], PklSurat::REL_TTD)
+            && $B::isi(['acc_peran' => 'admin'] + $surat, $siswa, null, [], $p, ['ttd' => $ttd])['v']['ttd_hubin'] !== '' && $B::isi($surat, $siswa, null, [], $p, [])['v']['ttd_hubin'] === ''
+            && $B::isi(['perlu_acc' => 0] + $surat, $siswa, null, [], $p, ['ttd' => $ttd])['v']['ttd_hubin'] !== '');
         $this->atur(['waka_hubin_nama' => '']);
         $this->cek('nama Waka Hubin kosong → titik-titik (bukan kosong)', str_starts_with($B::isi($surat, [], null, [], (new PklPengaturanModel())->ambil())['v']['hubin_nama'], '......'));
         $this->atur(['waka_hubin_nama' => 'Hubin Uji, S.Pd.']);
@@ -1070,8 +1103,8 @@ class UjiSurat extends BaseCommand
             $dHuD = html_entity_decode($dHu);
             $this->cek('detail menunggu — Hubin: tombol ACC & Kembalikan + dialog berformulir ke alamat yang benar; tanpa kolom wakil/paham', str_contains($dHu, 'ACC surat ini') && str_contains($dHu, 'Kembalikan untuk diperbaiki') && str_contains($dHuD, '/admin/surat/' . $v1 . '/acc"')
                 && str_contains($dHuD, '/admin/surat/' . $v1 . '/kembalikan"') && ! str_contains($dHu, 'name="wakil"') && ! str_contains($dHu, 'name="paham"'));
-            $this->cek('detail menunggu — Operator: TIDAK ada tombol ACC; ada keterangan menunggu ACC dan tombol Batalkan surat', ! str_contains($dOp, 'ACC surat ini') && str_contains($dOp, 'menunggu <b>ACC</b> dari peran yang berhak') && str_contains($dOp, "dlg = 'batal'"));
-            $this->cek('detail menunggu — Hubin: tidak ada tombol Batalkan surat (bukan haknya); Admin: ada kotak pernyataan "mewakili Waka Hubin"', ! str_contains($dHu, "dlg = 'batal'") && str_contains($dAd, 'name="wakil"') && str_contains($dAd, 'Admin yang mewakili Waka Hubin'));
+            $this->cek('detail menunggu — Operator: TIDAK ada tombol ACC; ada keterangan menunggu ACC dan tombol Batalkan surat', ! str_contains($dOp, 'ACC surat ini') && str_contains($dOp, 'menunggu <b>ACC</b> dari Waka Hubin') && str_contains($dOp, "dlg = 'batal'"));
+            $this->cek('detail menunggu — Hubin: tidak ada tombol Batalkan surat (bukan haknya); Admin: tombol ACC tanpa kotak "mewakili" (dihapus)', ! str_contains($dHu, "dlg = 'batal'") && ! str_contains($dAd, 'name="wakil"') && str_contains($dAd, 'ACC surat ini'));
             $dBahaya = (string) $this->panggil($S, 'hubin', 'detail', [], [], $v5);
             $this->cek('surat tanpa siswa: peringatan BAHAYA tampil dan dialog ACC meminta centang "sudah saya periksa"', str_contains($dBahaya, 'BAHAYA: Surat ini belum memuat satu pun siswa') && str_contains($dBahaya, 'name="paham"'));
             $this->atur(['kontak_surat_nama' => '']);
@@ -1083,7 +1116,7 @@ class UjiSurat extends BaseCommand
             $sOp = (string) $this->panggil($S, 'operator', 'detail', [], [], $v2);
             $sHu = (string) $this->panggil($S, 'hubin', 'detail', [], [], $v2);
             $this->cek('detail siap unduh — Operator (template ada): formulir unduh berpenanda data-unduh ke alamat yang benar + tombol "Unduh surat (Word)"', str_contains($sOp, '/admin/surat/' . $v2 . '/unduh"') && str_contains($sOp, 'data-unduh') && str_contains($sOp, 'Unduh surat (Word)'));
-            $this->cek('detail siap unduh — Hubin: pesan "diunduh oleh peran yang diberi hak", TANPA formulir unduh; tombol Batalkan persetujuan tampil', str_contains($sHu, 'Surat diunduh oleh peran yang diberi hak') && ! str_contains($sHu, '/unduh"') && str_contains($sHu, 'Batalkan persetujuan'));
+            $this->cek('detail siap unduh — Hubin: pesan "diunduh oleh peran yang diberi hak", TANPA formulir unduh; tombol Batalkan persetujuan tampil', str_contains($sHu, 'Surat ini diunduh oleh') && ! str_contains($sHu, '/unduh"') && str_contains($sHu, 'Batalkan persetujuan'));
             $this->cek('detail siap unduh — Operator tidak melihat Batalkan persetujuan; ACC tercatat: nama penyetuju + kode verifikasi tampil', ! str_contains($sOp, 'Batalkan persetujuan') && str_contains($sOp, self::OLEH . ' hubin') && str_contains($sOp, 'SRT-'));
             \App\Libraries\SuratJenis::$templateTimpa = ['izin_tka' => APPPATH . 'Libraries/Surat/__tidak_ada__.docx']; // template dianggap belum ada
             $tanpaTemplate = (string) $this->panggil($S, 'operator', 'detail', [], [], $v2);
@@ -1098,8 +1131,8 @@ class UjiSurat extends BaseCommand
             $lHu = (string) $this->panggil($S, 'hubin', 'index', ['status' => 'menunggu']);
             $lOp = (string) $this->panggil($S, 'operator', 'index', ['status' => 'menunggu']);
             $lAd = (string) $this->panggil($S, 'admin', 'index', ['status' => 'menunggu']);
-            $this->cek('tab Menunggu — Hubin: formulir ACC massal + kotak centang; Operator: keterangan terkunci, tanpa formulir; Admin: ada pernyataan "mewakili"', str_contains($lHu, 'id="formAcc"') && str_contains($lHu, 'name="ids[]"') && ! str_contains($lOp, 'id="formAcc"') && str_contains($lOp, 'ACC dilakukan peran yang diberi hak ACC')
-                && str_contains($lAd, 'id="formAcc"') && str_contains($lAd, 'name="wakil"'));
+            $this->cek('tab Menunggu — Hubin: formulir ACC massal + kotak centang; Operator: keterangan terkunci, tanpa formulir; Admin: formulir tanpa pernyataan "mewakili"', str_contains($lHu, 'id="formAcc"') && str_contains($lHu, 'name="ids[]"') && ! str_contains($lOp, 'id="formAcc"') && str_contains($lOp, 'ACC dilakukan peran yang diberi hak ACC')
+                && str_contains($lAd, 'id="formAcc"') && ! str_contains($lAd, 'name="wakil"'));
             \App\Libraries\SuratJenis::$templateTimpa = ['izin_tka' => $templateUji];
             $uOp = (string) $this->panggil($S, 'operator', 'index', ['status' => 'disetujui', 'jenis' => 'izin_tka']);
             $uHu = (string) $this->panggil($S, 'hubin', 'index', ['status' => 'disetujui', 'jenis' => 'izin_tka']);
@@ -1152,16 +1185,19 @@ class UjiSurat extends BaseCommand
             $this->cek('unduh-massal tanpa jenis → dialihkan dengan petunjuk; oleh Hubin (tanpa hak) → dialihkan', $res instanceof \CodeIgniter\HTTP\RedirectResponse && $res2 instanceof \CodeIgniter\HTTP\RedirectResponse);
             \App\Libraries\SuratJenis::$templateTimpa = [];
 
-            // --- Halaman Hak Akses: aturan ACC per jenis
-            $H   = \App\Controllers\Admin\PklHakAkses::class;
-            $hak = (string) $this->panggil($H, 'admin', 'index');
-            $this->cek('Hak Akses (Admin): bagian "Surat Sekolah: jenis yang wajib ACC" dengan 4 kotak centang jenis bernomor', str_contains($hak, 'Surat Sekolah: jenis yang wajib ACC') && substr_count($hak, 'name="acc[]"') === 4 && str_contains($hak, 'Pernyataan Orang Tua PKL tidak bernomor'));
-            $res = $this->panggil($H, 'hubin', 'simpanAccSurat', [], ['acc' => ['izin_asts']]);
-            $this->cek('simpan aturan ACC oleh Hubin → ditolak (khusus Admin); pengaturan tidak berubah', $res instanceof \CodeIgniter\HTTP\RedirectResponse && (string) (new PklPengaturanModel())->ambil()['surat_perlu_acc'] === '');
-            $res = $this->panggil($H, 'admin', 'simpanAccSurat', [], ['acc' => ['izin_asts', 'balasan_pkl']]);
+            // --- Halaman Sistem → Hak Akses (bagian PKL & Surat): hak per jenis + aturan wajib ACC
+            $H   = \App\Controllers\Admin\AturHak::class;
+            $hak = (string) $this->panggil($H, 'admin', 'index', ['bagian' => 'pkl']);
+            $this->cek('Hak Akses (Admin, PKL & Surat): tabel per jenis surat, 4 kotak "Wajib ACC" (jenis bernomor), centang Buat/ACC/Unduh per peran', str_contains($hak, 'Surat Sekolah — per jenis surat') && substr_count($hak, 'name="acc[]"') === 4
+                && str_contains(html_entity_decode($hak), 'value="surat_acc:balasan_pkl"') && str_contains($hak, 'Simpan hak PKL &amp; Surat'));
+            $res = $this->panggil($H, 'hubin', 'simpanPkl', [], ['acc' => ['izin_asts']]);
+            $this->cek('simpan oleh Hubin → ditolak (khusus Admin); pengaturan tidak berubah', $res instanceof \CodeIgniter\HTTP\RedirectResponse && (string) (new PklPengaturanModel())->ambil()['surat_perlu_acc'] === '');
+            $res = $this->panggil($H, 'admin', 'simpanPkl', [], ['acc' => ['izin_asts', 'balasan_pkl'], 'hak' => PklHak::bawaanLengkap()]);
             $peta = SuratJenis::petaAcc((new PklPengaturanModel())->ambil());
-            $this->cek('simpan aturan ACC oleh Admin → tersimpan (ASTS & Balasan wajib, TKA & Penarikan tidak)', $res instanceof \CodeIgniter\HTTP\RedirectResponse && $peta['izin_asts'] && ! $peta['izin_tka'] && $peta['balasan_pkl'] && ! $peta['penarikan_pkl']);
+            $this->cek('simpan oleh Admin → aturan ACC tersimpan (ASTS & Balasan wajib, TKA & Penarikan tidak); hak bawaan utuh', $res instanceof \CodeIgniter\HTTP\RedirectResponse && $peta['izin_asts'] && ! $peta['izin_tka'] && $peta['balasan_pkl'] && ! $peta['penarikan_pkl']
+                && PklHak::jenisBoleh('hubin', 'acc') === ['izin_asts', 'izin_tka', 'balasan_pkl', 'penarikan_pkl'] && PklHak::jenisBoleh('operator', 'buat') === SuratJenis::kode());
             $this->atur(['surat_perlu_acc' => null]);
+            $this->setelPeranBawaan();
         } finally {
             restore_error_handler();
             session()->remove('admin');
@@ -1383,8 +1419,8 @@ class UjiSurat extends BaseCommand
             $fOp = $this->panggil($I, 'operator', 'asts');
             $fTk = (string) $this->panggil($I, 'operator', 'tka');
             $fOp = (string) $fOp;
-            $this->cek('formulir ASTS (Operator): judul, pilihan periode Ujian, semester, tanggal, cakupan umum/per perusahaan, tombol "ajukan ke Waka Hubin"', str_contains($fOp, 'Buat Surat Izin ASTS') && str_contains($fOp, 'Isi otomatis dari menu Ujian') && str_contains($fOp, 'name="semester"') && str_contains($fOp, 'name="tgl_mulai"')
-                && str_contains($fOp, 'value="perusahaan"') && str_contains($fOp, 'x-data="suratIzinForm"') && str_contains($fOp, 'Buat surat &amp; ajukan ke Waka Hubin') && str_contains(html_entity_decode($fOp), 'ZZUJISS Acara Satu'));
+            $this->cek('formulir ASTS (Operator): judul, pilihan periode Ujian, semester, tanggal, cakupan umum/per perusahaan, tombol "ajukan untuk ACC" (Operator tanpa hak ACC: tanpa tombol Simpan & setujui)', str_contains($fOp, 'Buat Surat Izin ASTS') && str_contains($fOp, 'Isi otomatis dari menu Ujian') && str_contains($fOp, 'name="semester"') && str_contains($fOp, 'name="tgl_mulai"')
+                && str_contains($fOp, 'value="perusahaan"') && str_contains($fOp, 'x-data="suratIzinForm"') && str_contains($fOp, 'Buat surat &amp; ajukan untuk ACC') && ! str_contains($fOp, 'name="langsung_acc"') && str_contains(html_entity_decode($fOp), 'ZZUJISS Acara Satu'));
             $this->cek('formulir TKA: ada kolom sesi + saran gelombang; tidak ada semester / periode Ujian', str_contains($fTk, 'name="sesi"') && str_contains(html_entity_decode($fTk), 'Gelombang 2') && ! str_contains($fTk, 'name="semester"') && ! str_contains($fTk, 'Isi otomatis dari menu Ujian'));
             $this->cek('Hubin (tanpa hak membuat surat) dialihkan dari formulir; Admin dapat membukanya', $this->panggil($I, 'hubin', 'asts') instanceof \CodeIgniter\HTTP\RedirectResponse && str_contains((string) $this->panggil($I, 'admin', 'asts'), 'Buat Surat Izin ASTS'));
 
@@ -1922,6 +1958,7 @@ class UjiSurat extends BaseCommand
 
     private function simpanPengaturanAsli(): void
     {
+        $this->simpanPeranAsli();
         $this->pengaturanAsli ??= (function () {
             $r = (new PklPengaturanModel())->ambil();
             unset($r['id']);
@@ -1934,7 +1971,7 @@ class UjiSurat extends BaseCommand
     private function netralkanPengaturan(): void
     {
         $this->atur(['hak_peran' => null, 'surat_perlu_acc' => null, 'format_nomor' => self::BAKU, 'nomor_awal' => 1, 'nomor_awal_tahun' => null]);
-        PklHak::lupakan();
+        $this->setelPeranBawaan();
     }
 
     private function bersihkan(): void
@@ -1960,6 +1997,7 @@ class UjiSurat extends BaseCommand
             $this->db->table('pkl_pengaturan')->where('id', 1)->update($this->pengaturanAsli);
             $this->pengaturanAsli = null;
         }
+        $this->pulihkanPeran();
         PklHak::lupakan();
     }
 }

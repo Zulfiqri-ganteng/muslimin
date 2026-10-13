@@ -7,12 +7,15 @@ use App\Libraries\HakAkses;
 use App\Libraries\IsianBantu;
 use App\Libraries\PklAjuan;
 use App\Libraries\PklForm;
+use App\Libraries\PklHak;
 use App\Libraries\PklKeputusan;
+use App\Libraries\PklLapor;
 use App\Libraries\PklNamaBerkas;
 use App\Libraries\PklNomorSurat;
 use App\Libraries\PklPeringatan;
 use App\Libraries\PklStaf;
 use App\Libraries\PklSurat;
+use App\Libraries\SuratJenis;
 use App\Libraries\SuratSekolah;
 use App\Models\AuditModel;
 use App\Models\PklPengajuanModel;
@@ -20,18 +23,16 @@ use App\Models\PklPengaturanModel;
 use App\Models\SettingModel;
 use CodeIgniter\HTTP\RedirectResponse;
 use CodeIgniter\HTTP\ResponseInterface;
-use Config\Peran;
 
 /**
  * PKL / Prakerin — sisi staf (Operator Sekolah, Waka Hubin, Admin). Rancangan: docs/DESAIN-PKL.md.
  *
  * ATURAN SEKOLAH (2026-10-07): yang berhak MENYETUJUI (ACC), menolak, dan mencabut persetujuan
- * hanyalah Waka Hubin. Admin web boleh sebagai CADANGAN bila Hubin berhalangan (wajib mencentang
- * "mewakili Waka Hubin"; tercatat sebagai peran admin di kaki surat). Operator TIDAK boleh —
- * ia memeriksa, mengembalikan untuk diperbaiki, mengubah, mengisi atas nama, dan mencetak surat.
- * Hak ini dibaca dari Config\Peran ('acc') lewat HakAkses::bolehAcc() dan dijaga DI SINI (bukan
- * hanya disembunyikan di tampilan); percobaan yang ditolak masuk Audit Log.
- * Hanya Operator/Admin yang boleh Pengaturan dan Hapus (Config\Peran → 'kecuali').
+ * peran yang diberi hak "ACC ajuan PKL" oleh Admin (Sistem → Hak Akses; bawaan Waka Hubin). Admin selalu boleh; siapa pun
+ * yang meng-ACC tercatat apa adanya (nama + peran) di kaki surat. Peran lain memeriksa, mengembalikan untuk diperbaiki,
+ * mengubah, mengisi atas nama, dan mencetak surat sesuai hak masing-masing.
+ * Hak dibaca lewat HakAkses::bolehAcc() / PklHak dan dijaga DI SINI (bukan hanya disembunyikan di tampilan); percobaan yang
+ * ditolak masuk Audit Log. Pengaturan dan Hapus juga hak yang diatur Admin.
  *
  * Pengaman kesalahan manusia:
  *   - kembalikan / tolak / batalkan persetujuan WAJIB beralasan (alasan dibaca siswa & tercatat);
@@ -79,15 +80,19 @@ class Pkl extends BaseController
             ];
         }
 
-        // Kartu Surat Sekolah (L7): bagi pemegang hak ACC atau pembuat surat sekolah.
+        // Kartu Surat Sekolah (L7): bagi yang boleh membuka modul Surat DAN memegang hak surat sekolah apa pun (buat/ACC/unduh).
         $suratSekolah = null;
-        if ((HakAkses::bolehPkl($peranIni, 'acc') || HakAkses::bolehPkl($peranIni, 'surat_sekolah')) && db_connect()->tableExists('surat_sekolah')) {
+        if (HakAkses::boleh($peranIni, 'admin/surat') && PklHak::boleh($peranIni, 'surat_acc:*|surat_buat:*|surat_unduh:*') && db_connect()->tableExists('surat_sekolah')) {
             $suratSekolah = (new SuratSekolah())->hitungStatus() + [
                 'belum_unduh' => (int) db_connect()->query("SELECT COUNT(*) n FROM surat_sekolah WHERE status = 'disetujui' AND cetak_ke = 0")->getRowArray()['n'],
             ];
         }
 
+        // Laporan "sudah diterima perusahaan" dari siswa yang menunggu dibuatkan Surat Balasan (bagi yang boleh membuka kotaknya).
+        $laporBaru = HakAkses::boleh($peranIni, 'admin/surat/balasan/laporan') ? (new PklLapor())->hitung()['baru'] : 0;
+
         return view('admin/pkl/index', $this->dasar('Beranda PKL', 'beranda') + [
+            'laporBaru'    => $laporBaru,
             'suratRingkas' => $suratRingkas,
             'suratSekolah' => $suratSekolah,
             'hitung'  => $this->model->hitungStatus(),
@@ -172,7 +177,16 @@ class Pkl extends BaseController
             'suratSekolah'      => db_connect()->tableExists('surat_sekolah')
                 ? db_connect()->table('surat_sekolah')->select('id, jenis, status, nomor')->where('pengajuan_id', (int) $id)->orderBy('id', 'DESC')->get()->getResultArray()
                 : [],
-            'bolehSuratSekolah' => HakAkses::bolehPkl($peranIni, 'surat_sekolah'),
+            // Tombol pintas per jenis: tampil bila peran ini boleh membuka formulir jenis itu (modul Surat + hak Buat jenisnya).
+            'bolehBuatSurat'    => $bolehBuat = [
+                SuratJenis::BALASAN    => HakAkses::boleh($peranIni, SuratJenis::alamat(SuratJenis::BALASAN)),
+                SuratJenis::PENARIKAN  => HakAkses::boleh($peranIni, SuratJenis::alamat(SuratJenis::PENARIKAN)),
+                SuratJenis::PERNYATAAN => HakAkses::boleh($peranIni, SuratJenis::alamat(SuratJenis::PERNYATAAN)),
+            ],
+            'bolehSuratSekolah' => in_array(true, $bolehBuat, true),
+            // Laporan "sudah diterima perusahaan" dari siswa (bila ada) + boleh membuka kotak laporannya.
+            'lapor'             => (new PklLapor())->untukAjuan((int) $id),
+            'bolehKotakLapor'   => HakAkses::boleh($peranIni, 'admin/surat/balasan/laporan'),
         ]);
     }
 
@@ -197,7 +211,7 @@ class Pkl extends BaseController
     }
 
     /**
-     * Satu pintu untuk semua keputusan. Seluruh aturan (hak ACC, Admin "mewakili", status asal, alasan wajib,
+     * Satu pintu untuk semua keputusan. Seluruh aturan (hak ACC, status asal, alasan wajib,
      * peringatan bahaya, pencatatan) ada di Libraries\PklKeputusan — dipakai juga oleh API Android.
      */
     private function putuskan(int $id, string $aksi): RedirectResponse
@@ -228,7 +242,7 @@ class Pkl extends BaseController
         $galat += $galatAnggota;
         $statusAwal = ($post['status_awal'] ?? '') === 'disetujui' ? 'disetujui' : 'menunggu';
         if ($statusAwal === 'disetujui' && ! HakAkses::bolehAcc($this->peranSaya())) {
-            $galat['umum'] = 'Menyimpan ajuan langsung berstatus DISETUJUI hanya boleh dilakukan Waka Hubin (atau Admin). Simpan sebagai menunggu, lalu minta Waka Hubin meng-ACC.';
+            $galat['umum'] = 'Menyimpan ajuan langsung berstatus DISETUJUI hanya boleh dilakukan peran yang memegang hak ACC ajuan PKL (' . PklHak::teksPemegang('acc') . '). Simpan sebagai menunggu, lalu minta pemegang hak ACC meng-ACC.';
         }
 
         if ($galat !== []) {
@@ -258,7 +272,7 @@ class Pkl extends BaseController
             return $this->ke('admin/pkl/daftar/menunggu', 'error', 'Ajuan tidak ditemukan.');
         }
         if ($ajuan['status'] === 'disetujui' && ! HakAkses::bolehAcc($this->peranSaya())) {
-            return $this->ke('admin/pkl/' . (int) $id, 'error', 'Ajuan yang sudah DISETUJUI hanya boleh diubah Waka Hubin (atau Admin), karena persetujuannya berlaku untuk isi yang sekarang.');
+            return $this->ke('admin/pkl/' . (int) $id, 'error', 'Ajuan yang sudah DISETUJUI hanya boleh diubah peran yang memegang hak ACC ajuan PKL (' . PklHak::teksPemegang('acc') . '), karena persetujuannya berlaku untuk isi yang sekarang.');
         }
 
         return $this->tampilForm($ajuan, [], [], $this->model->anggotaDetail((int) $id));
@@ -272,7 +286,7 @@ class Pkl extends BaseController
             return $this->ke('admin/pkl/daftar/menunggu', 'error', 'Ajuan tidak ditemukan.');
         }
         if ($ajuan['status'] === 'disetujui' && ! HakAkses::bolehAcc($this->peranSaya())) {
-            return $this->ke('admin/pkl/' . $id, 'error', 'Ajuan yang sudah DISETUJUI hanya boleh diubah Waka Hubin (atau Admin), karena persetujuannya berlaku untuk isi yang sekarang.');
+            return $this->ke('admin/pkl/' . $id, 'error', 'Ajuan yang sudah DISETUJUI hanya boleh diubah peran yang memegang hak ACC ajuan PKL (' . PklHak::teksPemegang('acc') . '), karena persetujuannya berlaku untuk isi yang sekarang.');
         }
         $lama = $this->model->anggotaDetail($id);
 
@@ -396,8 +410,8 @@ class Pkl extends BaseController
     }
 
     /**
-     * POST admin/pkl/acc-massal — mode "terpilih" (ids[]) atau "aman" (semua yang menunggu). Hanya Waka Hubin
-     * (Admin cadangan, wajib "mewakili"); aturan lengkap di Libraries\PklKeputusan::accMassal.
+     * POST admin/pkl/acc-massal — mode "terpilih" (ids[]) atau "aman" (semua yang menunggu). Hanya pemegang hak ACC ajuan PKL
+     * (diatur Admin); aturan lengkap di Libraries\PklKeputusan::accMassal.
      */
     public function accMassal(): RedirectResponse
     {
@@ -407,7 +421,7 @@ class Pkl extends BaseController
         return ($hasil['dilewati'] ?? []) !== [] ? $redir->with('errors', $hasil['dilewati']) : $redir;
     }
     // =================================================================
-    // Hapus (Operator/Admin — Hubin ditolak oleh Config\Peran)
+    // Hapus (hak 'hapus'; ajuan yang sudah disetujui juga butuh 'hapus_disetujui' — diatur Admin)
     // =================================================================
 
     public function hapus($id): RedirectResponse
@@ -417,11 +431,11 @@ class Pkl extends BaseController
         if ($ajuan === null) {
             return $this->ke('admin/pkl/daftar/menunggu', 'error', 'Ajuan tidak ditemukan (mungkin sudah dihapus).');
         }
-        // Ajuan yang sudah DISETUJUI Waka Hubin hanya boleh dihapus Admin (Operator tidak boleh menghapus keputusan Hubin).
-        if ($ajuan['status'] === 'disetujui' && $this->peranSaya() !== Peran::ADMIN) {
+        // Ajuan yang sudah DISETUJUI hanya boleh dihapus pemegang hak 'hapus_disetujui' (bawaan: hanya Admin).
+        if ($ajuan['status'] === 'disetujui' && ! PklHak::boleh($this->peranSaya(), 'hapus_disetujui')) {
             $this->audit->record('delete', 'pkl_pengajuan', $id, 'DITOLAK: ' . HakAkses::label($this->peranSaya()) . ' mencoba menghapus ajuan yang sudah disetujui, PKL ' . PklPengajuanModel::kode($id));
 
-            return $this->ke('admin/pkl/' . $id, 'error', 'Ajuan yang sudah DISETUJUI Waka Hubin hanya boleh dihapus Admin. Minta Waka Hubin membatalkan persetujuannya, atau hubungi Admin.');
+            return $this->ke('admin/pkl/' . $id, 'error', 'Ajuan yang sudah DISETUJUI hanya boleh dihapus peran yang diberi hak "Hapus ajuan yang sudah disetujui" (' . PklHak::teksPemegang('hapus_disetujui') . '). Minta pemegang hak ACC membatalkan persetujuannya dulu, atau hubungi Admin.');
         }
         if ($ajuan['status'] === 'disetujui' && $this->request->getPost('paham') !== '1') {
             return $this->ke('admin/pkl/' . $id, 'error', 'Ajuan ini SUDAH DISETUJUI. Centang konfirmasi bila benar-benar ingin menghapusnya.');
@@ -504,6 +518,7 @@ class Pkl extends BaseController
 
         $this->pengModel->update(1, $data);
         $this->audit->record('update', 'pkl_pengaturan', 1, 'Pengaturan PKL: form ' . ($data['form_buka'] ? 'DIBUKA' : 'ditutup')
+            . (isset($data['lapor_buka']) ? ', form lapor ' . ($data['lapor_buka'] ? 'DIBUKA' : 'ditutup') : '')
             . ', tingkat ' . $data['tingkat'] . ', maks ' . $data['maks_anggota'] . ' siswa, batas keputusan ' . $data['batas_keputusan_hari'] . ' hari'
             . ', Waka Hubin ' . ($data['waka_hubin_nama'] ?? '(kosong)') . ', format nomor ' . $data['format_nomor']);
 
@@ -606,8 +621,14 @@ class Pkl extends BaseController
             }
         }
 
+        // Saklar form lapor diterima (kolom ada setelah migrasi 2026-10-17-000002). Tidak terkirim (halaman lama) → nilai tetap.
+        $lapor = [];
+        if (\App\Libraries\PklLapor::tabelAda() && array_key_exists('lapor_buka', $post)) {
+            $lapor['lapor_buka'] = ($post['lapor_buka'] ?? '0') === '1' ? 1 : 0;
+        }
+
         // Kolom pagar tanggal & lama PKL lama TIDAK disentuh (tak dipakai lagi; nilainya dibiarkan).
-        return [[
+        return [$lapor + [
             'form_buka'            => $buka,
             'form_tutup'           => $tutupSql,
             'tingkat'              => implode(',', $tingkat),

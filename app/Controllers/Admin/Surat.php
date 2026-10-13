@@ -4,6 +4,7 @@ namespace App\Controllers\Admin;
 
 use App\Libraries\HakAkses;
 use App\Libraries\IsianBantu;
+use App\Libraries\PklHak;
 use App\Libraries\SuratAgenda;
 use App\Libraries\SuratBerkas;
 use App\Libraries\SuratJenis;
@@ -81,8 +82,11 @@ class Surat extends SuratDasar
             'jmlHal'     => $hasil['jml_hal'],
             'tahun'      => $this->surat->tahunTersedia(),
             'perluUlang' => $this->surat->perluUlangBanyak($hasil['rows'], $this->p),
-            // Unduhan massal: hanya bagi yang berhak, pada tab "Siap unduh" yang sudah disaring ke SATU jenis yang templatenya ada.
-            'bisaUnduhMassal' => $f['status'] === 'disetujui' && $f['jenis'] !== '' && HakAkses::bolehPkl($peran, 'surat_sekolah') && SuratJenis::templateLengkap($f['jenis']),
+            // Unduhan massal: hanya bagi yang berhak mengunduh jenis itu, pada tab "Siap unduh" yang sudah disaring ke SATU jenis
+            // yang templatenya ada.
+            'bisaUnduhMassal' => $f['status'] === 'disetujui' && $f['jenis'] !== '' && PklHak::bolehSurat($peran, 'unduh', $f['jenis']) && SuratJenis::templateLengkap($f['jenis']),
+            // ACC massal: kotak centang hanya pada surat yang jenisnya boleh di-ACC peran ini.
+            'jenisAcc'   => PklHak::jenisBoleh($peran, 'acc'),
         ]);
     }
 
@@ -99,7 +103,12 @@ class Surat extends SuratDasar
         $peran  = $this->peranSaya();
         $status = (string) $surat['status'];
 
-        return view('admin/surat/detail', $this->dasarSurat(SuratJenis::label($jenis), 'daftar') + $m + [
+        // Hak per jenis ditaruh DI DEPAN (array + array: kunci kiri menang) supaya menimpa nilai "jenis apa pun" dasarSurat.
+        return view('admin/surat/detail', [
+            'bolehAcc'   => PklHak::bolehSurat($peran, 'acc', $jenis),
+            'bolehBuat'  => PklHak::bolehSurat($peran, 'buat', $jenis),
+            'bolehUnduh' => PklHak::bolehSurat($peran, 'unduh', $jenis),
+        ] + $this->dasarSurat(SuratJenis::label($jenis), 'daftar') + $m + [
             'kode'       => SuratSekolahModel::kode((int) $surat['id']),
             'perluUlang' => $status === 'disetujui' && SuratSekolah::perluCetakUlang($surat, $m['siswa'], $this->p),
             'ringkasIsi' => SuratJenis::ringkasIsi($surat['isi_arr']),
@@ -112,6 +121,8 @@ class Surat extends SuratDasar
                 ? site_url(SuratJenis::alamat($jenis) . '/' . (int) $surat['id'] . '/ubah') : '',
             // Persetujuan baru bisa dibatalkan selama surat belum bernomor dan belum pernah diunduh.
             'bisaBatalAcc' => $status === 'disetujui' && (int) $surat['perlu_acc'] === 1 && (string) ($surat['nomor'] ?? '') === '' && (int) $surat['cetak_ke'] === 0,
+            'pemegangAcc'   => PklHak::teksPemegang(PklHak::kunciSurat('acc', $jenis)),
+            'pemegangUnduh' => PklHak::teksPemegang(PklHak::kunciSurat('unduh', $jenis)),
         ]);
     }
 
@@ -150,7 +161,7 @@ class Surat extends SuratDasar
     }
 
     /**
-     * Satu pintu untuk semua keputusan. Seluruh aturan (hak, Admin "mewakili", status asal, alasan wajib, peringatan
+     * Satu pintu untuk semua keputusan. Seluruh aturan (hak per jenis, status asal, alasan wajib, peringatan
      * bahaya, pencatatan) ada di Libraries\SuratKeputusan.
      */
     private function putuskan(int $id, string $aksi): RedirectResponse
@@ -164,8 +175,8 @@ class Surat extends SuratDasar
     }
 
     /**
-     * POST admin/surat/acc-massal — mode "terpilih" (ids[]) atau "aman" (semua yang menunggu). Hanya yang berhak ACC
-     * (Admin cadangan, wajib "mewakili"); surat dengan peringatan dilewati dan dilaporkan.
+     * POST admin/surat/acc-massal — mode "terpilih" (ids[]) atau "aman" (semua yang menunggu). Hanya jenis yang boleh di-ACC
+     * peran ini; surat dengan peringatan dilewati dan dilaporkan.
      */
     public function accMassal(): RedirectResponse
     {
@@ -182,8 +193,12 @@ class Surat extends SuratDasar
     /** POST admin/surat/(:num)/unduh — terbitkan nomor (bila belum) + unduh berkas Word satu surat. */
     public function unduh($id)
     {
-        $id = (int) $id;
-        if (($tolak = $this->tolakHalaman('surat_sekolah', 'admin/surat/' . $id)) !== null) {
+        $id    = (int) $id;
+        $jenis = (string) ($this->surat->muat($id)['surat']['jenis'] ?? '');
+        if ($jenis === '') {
+            return $this->ke('admin/surat', 'error', 'Surat tidak ditemukan (mungkin sudah dihapus).');
+        }
+        if (($tolak = $this->tolakJenis('unduh', $jenis, 'admin/surat/' . $id)) !== null) {
             return $tolak;
         }
         $hasil = (new SuratBerkas($this->surat))->bangun([$id], $this->konteks());
@@ -202,7 +217,10 @@ class Surat extends SuratDasar
     {
         $jenis = (string) $this->request->getPost('jenis');
         $balik = site_url('admin/surat') . '?' . http_build_query(array_filter(['status' => 'disetujui', 'jenis' => SuratJenis::ada($jenis) ? $jenis : null]));
-        if (($tolak = $this->tolakHalaman('surat_sekolah', 'admin/surat')) !== null) {
+        if (SuratJenis::ada($jenis) && ($tolak = $this->tolakJenis('unduh', $jenis)) !== null) {
+            return $tolak;
+        }
+        if (! SuratJenis::ada($jenis) && ($tolak = $this->tolakHalaman('surat_unduh:*')) !== null) {
             return $tolak;
         }
 

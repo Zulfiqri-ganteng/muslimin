@@ -7,7 +7,7 @@ use App\Libraries\SuratPernyataan as Pernyataan;
 use CodeIgniter\HTTP\RedirectResponse;
 
 /**
- * Pernyataan Orang Tua PKL — formulir membuat (hak 'surat_sekolah'). Tanpa nomor dan tanpa ACC: surat yang dibuat langsung
+ * Pernyataan Orang Tua PKL — formulir membuat (hak Buat jenis ini). Tanpa nomor dan tanpa ACC: surat yang dibuat langsung
  * siap diunduh dari halaman detailnya (Admin\Surat::unduh). Logika cakupan, data orang tua, dan halaman di
  * Libraries\SuratPernyataan.
  *
@@ -17,7 +17,7 @@ class SuratPernyataan extends SuratDasar
 {
     public function index()
     {
-        if (($tolak = $this->tolakHalaman('surat_sekolah')) !== null) {
+        if (($tolak = $this->tolakJenis('buat', SuratJenis::PERNYATAAN)) !== null) {
             return $tolak;
         }
         $lib   = new Pernyataan();
@@ -39,7 +39,7 @@ class SuratPernyataan extends SuratDasar
 
     public function simpan(): RedirectResponse
     {
-        if (($tolak = $this->tolakHalaman('surat_sekolah')) !== null) {
+        if (($tolak = $this->tolakJenis('buat', SuratJenis::PERNYATAAN)) !== null) {
             return $tolak;
         }
         $balik = site_url(SuratJenis::alamat(SuratJenis::PERNYATAAN));

@@ -32,7 +32,10 @@ phpm spark migrate:status
    Jangan membuat surat bernomor hanya untuk uji, karena nomor yang sudah terbit tidak dipakai ulang.
 
 ## 4. Hak akses (atur sekali)
-**PKL → Hak Akses**:
+> **Diperbarui 2026-10-13:** hak kini diatur di **SISTEM → Hak Akses** per jenis surat, dan pernyataan "mewakili Waka Hubin"
+> sudah dihapus — lihat `docs/PANDUAN-DEPLOY-HAK-AKSES.md`. Isi di bawah ini hanya catatan lama.
+
+**PKL → Hak Akses** (lama):
 - Hak **Surat sekolah** (membuat, mengubah, mengunduh) bawaannya dipegang **Operator**.
 - **ACC** bawaannya dipegang **Waka Hubin**. Admin bisa meng-ACC sebagai cadangan dengan mencentang "mewakili Waka Hubin".
 - Bagian *"Surat Sekolah: jenis yang wajib ACC"*: Admin bisa mematikan ACC per jenis (Pernyataan memang tanpa ACC).
