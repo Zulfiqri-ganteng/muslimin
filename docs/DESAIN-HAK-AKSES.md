@@ -122,6 +122,11 @@ TTD Kepsek) · `dev:uji-surat` 312 · `dev:uji-pkl` 324 · `dev:uji-pkl-biaya` 1
 Semua file Word hasil (8 template + gambar pengganti) XML-nya sah. Uji HTTP lewat Apache: halaman siswa 200, staf → login, API → 401.
 Tidak diuji: `dev:uji-notif` (menolak DB utama; tidak terkait), peramban sungguhan untuk `pkl-lapor.js` (diperiksa manual).
 
+**Aturan sekolah lewat migrasi (permintaan user, 2026-10-13 malam):** `2026-10-18-000001_AturanHakSekolah` — Surat Balasan
+di-ACC Operator saja (Operator + `surat_acc:balasan_pkl`, Waka Hubin −), keterangan peran dirapikan, Audit Log; idempoten, `down()`
+mengembalikan. Dicoba pada salinan DB hosting (`database/terbaru.sql`, sesudah 2 migrasi pertama): benar. Bawaan kode (`Config\Peran`,
+`PklHak::BAWAAN`) TIDAK diubah — tombol "Kembalikan ke bawaan sekolah" tetap = aturan awal sistem.
+
 **Menyimpang dari rancangan (disengaja):** kotak laporan jadi menu sendiri (bukan di dalam halaman Surat Balasan) supaya terlihat di
 sidebar; posisi stempel memakai rapian klien (tepi kanan −0,3 cm), bukan "sejajar gambar lama"; Surat Balasan yang dibuat manual ikut
 menandai laporan selesai (agar laporan tidak menggantung).

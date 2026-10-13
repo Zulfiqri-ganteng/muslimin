@@ -49,7 +49,7 @@ class Peran extends BaseConfig
         ],
         self::OPERATOR => [
             'label'   => 'Operator Sekolah',
-            'ringkas' => 'Kerja harian: PKL (periksa, kembalikan, ubah, isi atas nama, unduh surat + catat biaya, laporan pembayaran, pengaturan), Surat Sekolah (ASTS, TKA, Pernyataan Orang Tua, Balasan, Penarikan), Isian Biodata, Master Siswa & Kelas, Arsip Dokumen. Hak PKL dan Surat Sekolah persisnya diatur Admin (bawaan: tidak bisa meng-ACC).',
+            'ringkas' => 'Kerja harian: PKL (periksa, kembalikan, ubah, isi atas nama, unduh surat + catat biaya, laporan pembayaran, pengaturan), Surat Sekolah (buat & unduh semua jenis), Isian Biodata, Master Siswa & Kelas, Arsip Dokumen. Hak persisnya diatur Admin (bawaan: tanpa ACC).', // ≤ 300 huruf (kolom peran.ringkas)
             'beranda' => 'admin/pkl',
             'akses'   => [
                 'admin/pkl',

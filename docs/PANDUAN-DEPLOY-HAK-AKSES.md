@@ -30,6 +30,7 @@ phpm spark migrate:status
 3. Pastikan dua baris ini punya tanggal di kolom "Migrated On":
    - **`2026-10-17-000001 HakAksesPeran`** — tabel `peran` (diisi otomatis dari aturan lama, jadi hak semua akun TETAP sama).
    - **`2026-10-17-000002 PklLapor`** — tabel `pkl_lapor` + saklar form lapor + kolom TTD Kepsek.
+   - **`2026-10-18-000001 AturanHakSekolah`** — aturan sekolah: Surat Balasan di-ACC Operator saja (lihat bagian 4).
 4. Buka situs admin, tekan **Ctrl+F5** (memuat ulang CSS/JS terbaru).
 
 ## 3. Cek cepat setelah deploy (±10 menit)
@@ -42,10 +43,17 @@ phpm spark migrate:status
    (satu gambar PNG/JPG, latar putih). Unduh satu Surat Balasan yang SUDAH bernomor (unduh ulang tidak membuat nomor baru) → buka
    di Word → stempel tercetak di tempat tanda tangan Kepala Sekolah.
 
-## 4. Atur sekali (sesuai permintaan sekolah)
-**Surat Balasan di-ACC Operator saja:** SISTEM → Hak Akses → tab **PKL & Surat** → tabel *Surat Sekolah per jenis* → baris
-**Surat Balasan PKL**: centang **ACC** di kolom Operator Sekolah, hapus centang ACC di kolom Waka Hubin → **Simpan**. Berlaku langsung.
-Kalau kelak Kepala Sekolah ingin Waka Hubin lagi yang ACC, cukup balik centangnya — tidak perlu koding.
+## 4. Aturan sekolah (otomatis lewat migrasi)
+**Surat Balasan di-ACC Operator saja** dipasang OTOMATIS oleh migrasi **`2026-10-18-000001 AturanHakSekolah`** (ikut `phpm spark migrate`):
+Operator Sekolah mendapat ACC Surat Balasan, Waka Hubin tidak lagi; hak lain tidak berubah. Tercatat di Audit Log.
+Sudah dicoba pada salinan database hosting 13 Okt (`database/terbaru.sql`): hasilnya benar, dijalankan dua kali pun tidak dobel.
+Kalau kelak Kepala Sekolah ingin Waka Hubin lagi yang ACC: SISTEM → Hak Akses → tab **PKL & Surat** → baris **Surat Balasan PKL** →
+centang/hapus centang **ACC** per peran → **Simpan** (tidak perlu koding). Catatan: tombol *Kembalikan ke bawaan sekolah* mengembalikan
+ACC Balasan ke Waka Hubin (aturan awal sistem).
+
+Yang tetap manual (tidak bisa lewat migrasi): **unggah TTD + stempel Kepala Sekolah** (PKL → Tanda Tangan; gambarnya tidak boleh masuk
+repo publik). Setelah unggah, unduh satu **Surat Izin PKL** juga: server memakai template Surat Izin PKL unggahan sekolah — stempel
+otomatis hanya muncul bila template itu masih memuat gambar tanda tangan Kepala Sekolah bawaan.
 
 ## 5. Bila ada masalah
 - Halaman galat / putih: kirim tangkapan layar + isi berkas log terbaru `~/kangmuslim/writable/logs/log-YYYY-MM-DD.log` ke pengembang.
