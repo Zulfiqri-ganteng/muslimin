@@ -20,3 +20,10 @@ spark   text eol=lf
 *.ttf   binary
 *.woff  binary
 *.woff2 binary
+
+# Hasil build & salinan pustaka (rombak tampilan, 2026-10-13): selalu LF persis keluaran alat, karena dibandingkan bita-per-bita
+# oleh php spark dev:cek-ui dan npm run vendor (tanpa ini autocrlf Windows mengubahnya jadi CRLF saat pindah cabang).
+public/assets/css/admin.css text eol=lf
+public/assets/js/vendor/*.js text eol=lf
+app/ThirdParty/flowbite-icons/** text eol=lf
+public/assets/fonts/**/*.txt text eol=lf

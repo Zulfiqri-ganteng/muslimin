@@ -397,7 +397,9 @@ class CekUi extends BaseCommand
 
             return;
         }
-        $sama = hash_file('sha256', $sementara) === hash_file('sha256', $hasil);
+        // Akhir baris diabaikan (CRLF/LF): isi CSS yang sama tetap dianggap sama walau git Windows menulis ulang berkasnya.
+        $isi  = static fn (string $f): string => str_replace("\r\n", "\n", (string) file_get_contents($f));
+        $sama = $isi($sementara) === $isi($hasil);
         @unlink($sementara);
         CLI::write('admin.css: ' . ($sama ? 'sudah sesuai sumber terbaru' : 'BELUM DI-BUILD ULANG — jalankan npm run build:admin sebelum commit'), $sama ? 'green' : 'red');
     }
