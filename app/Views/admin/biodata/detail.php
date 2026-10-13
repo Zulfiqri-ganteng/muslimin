@@ -23,7 +23,7 @@ $lencana = [
     'menunggu'  => ['Menunggu verifikasi', 'bg-brand-50 text-brand-700 border-brand-200'],
     'disetujui' => ['Disetujui', 'bg-emerald-50 text-emerald-700 border-emerald-200'],
     'perbaikan' => ['Perlu perbaikan', 'bg-amber-50 text-amber-800 border-amber-200'],
-][$status] ?? [$status, 'bg-slate-100 text-slate-600 border-slate-200'];
+][$status] ?? [$status, 'bg-gray-100 text-gray-600 border-gray-200'];
 $kembali  = site_url('admin/biodata') . '?' . http_build_query(array_filter(['tab' => $status, 'kelas_id' => $kelasId ?: '']));
 $aksi     = site_url('admin/biodata/' . (int) $row['id']);
 $data     = \App\Models\BiodataIsianModel::decode($row);
@@ -47,13 +47,13 @@ $ikon = static fn (string $d, string $kelas = 'w-4 h-4'): string => '<svg class=
     </div>
 
     <!-- ================= Kepala ================= -->
-    <div class="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+    <div class="bg-white rounded-2xl border border-gray-200 shadow-xs overflow-hidden">
         <div class="p-5 sm:p-6">
             <div class="flex flex-wrap items-start justify-between gap-3">
                 <div class="min-w-0">
-                    <p class="text-xs font-semibold uppercase tracking-wide text-slate-400">Isian #<?= str_pad((string) (int) $row['id'], 5, '0', STR_PAD_LEFT) ?></p>
-                    <h1 class="mt-0.5 text-xl sm:text-2xl font-extrabold text-slate-900 break-words"><?= esc($nama) ?></h1>
-                    <p class="text-sm text-slate-500">Kelas <b class="text-slate-700"><?= esc($siswa['nama_kelas'] ?? '—') ?></b> · NISN <?= esc($data['nisn'] ?? ($row['nisn'] ?? '—')) ?></p>
+                    <p class="text-xs font-semibold uppercase tracking-wide text-gray-400">Isian #<?= str_pad((string) (int) $row['id'], 5, '0', STR_PAD_LEFT) ?></p>
+                    <h1 class="mt-0.5 text-xl sm:text-2xl font-extrabold text-gray-900 break-words"><?= esc($nama) ?></h1>
+                    <p class="text-sm text-gray-500">Kelas <b class="text-gray-700"><?= esc($siswa['nama_kelas'] ?? '—') ?></b> · NISN <?= esc($data['nisn'] ?? ($row['nisn'] ?? '—')) ?></p>
                 </div>
                 <span class="rounded-full border px-3 py-1 text-xs font-bold <?= $lencana[1] ?>"><?= esc($lencana[0]) ?></span>
             </div>
@@ -68,16 +68,16 @@ $ikon = static fn (string $d, string $kelas = 'w-4 h-4'): string => '<svg class=
                     <p class="text-2xl font-extrabold text-amber-700 tabular-nums"><?= (int) $hitung['ubah'] ?></p>
                     <p class="text-xs font-semibold text-amber-800">kolom berubah</p>
                 </div>
-                <div class="rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5">
-                    <p class="text-2xl font-extrabold text-slate-700 tabular-nums"><?= (int) $row['kirim_ke'] ?></p>
-                    <p class="text-xs font-semibold text-slate-600">kali dikirim siswa</p>
+                <div class="rounded-xl border border-gray-200 bg-gray-50 px-3 py-2.5">
+                    <p class="text-2xl font-extrabold text-gray-700 tabular-nums"><?= (int) $row['kirim_ke'] ?></p>
+                    <p class="text-xs font-semibold text-gray-600">kali dikirim siswa</p>
                 </div>
             </div>
         </div>
-        <dl class="grid grid-cols-2 sm:grid-cols-3 gap-3 border-t border-slate-100 bg-slate-50/60 px-5 sm:px-6 py-3 text-sm">
-            <div><dt class="text-xs text-slate-400">Pertama dikirim</dt><dd class="font-semibold text-slate-700 tabular-nums"><?= $fmtTgl($row['created_at']) ?></dd></div>
-            <div><dt class="text-xs text-slate-400">Terakhir diperbarui</dt><dd class="font-semibold text-slate-700 tabular-nums"><?= $fmtTgl($row['updated_at']) ?></dd></div>
-            <div class="col-span-2 sm:col-span-1"><dt class="text-xs text-slate-400">Alamat IP</dt><dd class="font-semibold text-slate-700 break-all"><?= esc($row['ip_address'] ?? '—') ?></dd></div>
+        <dl class="grid grid-cols-2 sm:grid-cols-3 gap-3 border-t border-gray-100 bg-gray-50/60 px-5 sm:px-6 py-3 text-sm">
+            <div><dt class="text-xs text-gray-400">Pertama dikirim</dt><dd class="font-semibold text-gray-700 tabular-nums"><?= $fmtTgl($row['created_at']) ?></dd></div>
+            <div><dt class="text-xs text-gray-400">Terakhir diperbarui</dt><dd class="font-semibold text-gray-700 tabular-nums"><?= $fmtTgl($row['updated_at']) ?></dd></div>
+            <div class="col-span-2 sm:col-span-1"><dt class="text-xs text-gray-400">Alamat IP</dt><dd class="font-semibold text-gray-700 break-all"><?= esc($row['ip_address'] ?? '—') ?></dd></div>
         </dl>
     </div>
 
@@ -112,52 +112,52 @@ $ikon = static fn (string $d, string $kelas = 'w-4 h-4'): string => '<svg class=
     <?php endif; ?>
 
     <!-- ================= Pembanding ================= -->
-    <div class="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
-        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 px-5 py-4 border-b border-slate-100">
+    <div class="bg-white rounded-2xl border border-gray-200 shadow-xs overflow-hidden">
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 px-5 py-4 border-b border-gray-100">
             <div>
-                <h2 class="font-bold text-slate-800">Bandingkan Data</h2>
-                <p class="mt-0.5 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-slate-500">
-                    <span class="inline-flex items-center gap-1"><span class="h-3 w-3 rounded bg-emerald-100 border border-emerald-300"></span>baru terisi</span>
-                    <span class="inline-flex items-center gap-1"><span class="h-3 w-3 rounded bg-amber-100 border border-amber-300"></span>berubah (nilai lama dicoret)</span>
+                <h2 class="font-bold text-gray-800">Bandingkan Data</h2>
+                <p class="mt-0.5 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-gray-500">
+                    <span class="inline-flex items-center gap-1"><span class="h-3 w-3 rounded-sm bg-emerald-100 border border-emerald-300"></span>baru terisi</span>
+                    <span class="inline-flex items-center gap-1"><span class="h-3 w-3 rounded-sm bg-amber-100 border border-amber-300"></span>berubah (nilai lama dicoret)</span>
                 </p>
             </div>
             <?php if ($jmlBeda > 0): ?>
-                <label class="inline-flex items-center gap-2.5 cursor-pointer select-none rounded-lg border border-slate-200 px-3 py-2 hover:bg-slate-50">
+                <label class="inline-flex items-center gap-2.5 cursor-pointer select-none rounded-lg border border-gray-200 px-3 py-2 hover:bg-gray-50">
                     <input type="checkbox" x-model="hanyaBeda" class="sr-only peer">
-                    <span class="relative inline-flex h-5 w-9 shrink-0 items-center rounded-full bg-slate-300 transition peer-checked:bg-brand-600" aria-hidden="true">
-                        <span class="inline-block h-4 w-4 rounded-full bg-white shadow transition" :class="hanyaBeda ? 'translate-x-4' : 'translate-x-0.5'"></span>
+                    <span class="relative inline-flex h-5 w-9 shrink-0 items-center rounded-full bg-gray-300 transition peer-checked:bg-brand-600" aria-hidden="true">
+                        <span class="inline-block h-4 w-4 rounded-full bg-white shadow-sm transition" :class="hanyaBeda ? 'translate-x-4' : 'translate-x-0.5'"></span>
                     </span>
-                    <span class="text-sm font-semibold text-slate-700">Tampilkan yang berubah saja</span>
+                    <span class="text-sm font-semibold text-gray-700">Tampilkan yang berubah saja</span>
                 </label>
             <?php endif; ?>
         </div>
 
         <?php if ($jmlBeda === 0): ?>
-            <p class="px-5 py-3 text-sm text-slate-600 bg-slate-50 border-b border-slate-100">Tidak ada perbedaan — isian siswa sama persis dengan data di Master Siswa.</p>
+            <p class="px-5 py-3 text-sm text-gray-600 bg-gray-50 border-b border-gray-100">Tidak ada perbedaan — isian siswa sama persis dengan data di Master Siswa.</p>
         <?php endif; ?>
 
         <!-- Judul kolom (layar lebar) -->
-        <div class="hidden md:grid grid-cols-[13rem_minmax(0,1fr)_minmax(0,1fr)] gap-4 px-5 py-2.5 bg-slate-50 text-xs font-bold uppercase tracking-wide text-slate-500 border-b border-slate-100">
+        <div class="hidden md:grid grid-cols-[13rem_minmax(0,1fr)_minmax(0,1fr)] gap-4 px-5 py-2.5 bg-gray-50 text-xs font-bold uppercase tracking-wide text-gray-500 border-b border-gray-100">
             <span>Kolom</span><span><?= esc($judulLama) ?></span><span>Isian siswa</span>
         </div>
 
         <?php foreach ($bagian as $judul => $baris):
             $adaBeda = array_filter($baris, static fn ($b) => $b['jenis'] !== 'sama') !== []; ?>
             <section <?= $adaBeda ? '' : 'x-show="!hanyaBeda"' ?>>
-                <h3 class="bg-slate-100/80 px-5 py-2 text-xs font-bold uppercase tracking-wide text-slate-600"><?= esc($judul) ?></h3>
-                <ul class="divide-y divide-slate-100">
+                <h3 class="bg-gray-100/80 px-5 py-2 text-xs font-bold uppercase tracking-wide text-gray-600"><?= esc($judul) ?></h3>
+                <ul class="divide-y divide-gray-100">
                     <?php foreach ($baris as $b):
                         $beda  = $b['jenis'] !== 'sama';
                         $latar = $b['jenis'] === 'baru' ? 'bg-emerald-50/60' : ($b['jenis'] === 'ubah' ? 'bg-amber-50/80' : ''); ?>
                         <li <?= $beda ? '' : 'x-show="!hanyaBeda"' ?> class="grid grid-cols-1 md:grid-cols-[13rem_minmax(0,1fr)_minmax(0,1fr)] gap-x-4 gap-y-1 px-5 py-2.5 text-sm <?= $latar ?>">
-                            <span class="text-xs md:text-sm font-semibold md:font-normal text-slate-500"><?= esc($b['label']) ?></span>
+                            <span class="text-xs md:text-sm font-semibold md:font-normal text-gray-500"><?= esc($b['label']) ?></span>
                             <!-- Data lama -->
                             <span class="break-words">
-                                <span class="md:hidden text-[11px] font-semibold uppercase tracking-wide text-slate-400 inline-block w-16">Lama</span><span class="<?= $b['lama'] === '' ? 'text-slate-300' : ($b['jenis'] === 'ubah' ? 'text-red-700/80 line-through decoration-red-400' : 'text-slate-600') ?>"><?= $b['lama'] === '' ? '—' : esc($b['lama']) ?></span>
+                                <span class="md:hidden text-[11px] font-semibold uppercase tracking-wide text-gray-400 inline-block w-16">Lama</span><span class="<?= $b['lama'] === '' ? 'text-gray-300' : ($b['jenis'] === 'ubah' ? 'text-red-700/80 line-through decoration-red-400' : 'text-gray-600') ?>"><?= $b['lama'] === '' ? '—' : esc($b['lama']) ?></span>
                             </span>
                             <!-- Isian siswa -->
                             <span class="break-words">
-                                <span class="md:hidden text-[11px] font-semibold uppercase tracking-wide text-slate-400 inline-block w-16">Isian</span><?php if ($b['tetap']): ?><span class="text-slate-400">kosong</span> <span class="text-xs text-slate-400">— data lama dipertahankan</span><?php else: ?><span class="font-semibold <?= $b['baru'] === '' ? 'text-slate-300' : 'text-slate-900' ?>"><?= $b['baru'] === '' ? '—' : esc($b['baru']) ?></span><?php if ($b['jenis'] === 'baru'): ?> <span class="ml-1 rounded border border-emerald-300 bg-emerald-100 px-1.5 py-0.5 text-[10px] font-bold text-emerald-800">baru</span><?php endif; ?><?php if ($b['jenis'] === 'ubah'): ?> <span class="ml-1 rounded border border-amber-300 bg-amber-100 px-1.5 py-0.5 text-[10px] font-bold text-amber-800">berubah</span><?php endif; ?><?php endif; ?>
+                                <span class="md:hidden text-[11px] font-semibold uppercase tracking-wide text-gray-400 inline-block w-16">Isian</span><?php if ($b['tetap']): ?><span class="text-gray-400">kosong</span> <span class="text-xs text-gray-400">— data lama dipertahankan</span><?php else: ?><span class="font-semibold <?= $b['baru'] === '' ? 'text-gray-300' : 'text-gray-900' ?>"><?= $b['baru'] === '' ? '—' : esc($b['baru']) ?></span><?php if ($b['jenis'] === 'baru'): ?> <span class="ml-1 rounded-sm border border-emerald-300 bg-emerald-100 px-1.5 py-0.5 text-[10px] font-bold text-emerald-800">baru</span><?php endif; ?><?php if ($b['jenis'] === 'ubah'): ?> <span class="ml-1 rounded-sm border border-amber-300 bg-amber-100 px-1.5 py-0.5 text-[10px] font-bold text-amber-800">berubah</span><?php endif; ?><?php endif; ?>
                             </span>
                         </li>
                     <?php endforeach; ?>
@@ -168,14 +168,14 @@ $ikon = static fn (string $d, string $kelas = 'w-4 h-4'): string => '<svg class=
 
     <!-- ================= Keputusan — menempel di bawah layar ================= -->
     <?php if ($siswa !== null): ?>
-        <div class="sticky bottom-3 z-20 bg-white rounded-2xl border border-slate-200 shadow-xl p-4 sm:p-5">
+        <div class="sticky bottom-3 z-20 bg-white rounded-2xl border border-gray-200 shadow-xl p-4 sm:p-5">
             <div class="flex flex-wrap items-center gap-2">
                 <?php if ($bisaSetujui): ?>
                     <form method="post" action="<?= $aksi ?>/setujui" class="flex-1 sm:flex-none">
                         <?= csrf_field() ?>
                         <input type="hidden" name="kelas_id" value="<?= $kelasId ?: '' ?>">
                         <button data-confirm="Setujui biodata <?= esc($nama, 'attr') ?>? <?= $jmlBeda > 0 ? $jmlBeda . ' kolom akan diperbarui di Master Siswa.' : 'Data di Master Siswa tidak berubah.' ?>"
-                                class="w-full inline-flex items-center justify-center gap-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 px-5 py-2.5 text-sm font-bold text-white shadow-sm transition">
+                                class="w-full inline-flex items-center justify-center gap-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 px-5 py-2.5 text-sm font-bold text-white shadow-xs transition">
                             <?= $ikon('M5 13l4 4L19 7') ?>Setujui<span class="hidden sm:inline -ml-1">&nbsp;&amp; masukkan ke Master Siswa</span>
                         </button>
                     </form>
@@ -188,7 +188,7 @@ $ikon = static fn (string $d, string $kelas = 'w-4 h-4'): string => '<svg class=
                 <?php endif; ?>
                 <?php if ($status === 'menunggu' && $urlLewati !== ''): ?>
                     <a href="<?= esc($urlLewati, 'attr') ?>" title="Buka isian menunggu berikutnya tanpa memutuskan yang ini"
-                       class="inline-flex items-center justify-center gap-1 rounded-lg border border-slate-300 bg-white hover:bg-slate-50 px-4 py-2.5 text-sm font-semibold text-slate-600 transition">
+                       class="inline-flex items-center justify-center gap-1 rounded-lg border border-gray-300 bg-white hover:bg-gray-50 px-4 py-2.5 text-sm font-semibold text-gray-600 transition">
                         Lewati <?= $ikon('M13 7l5 5m0 0l-5 5m5-5H6') ?>
                     </a>
                 <?php endif; ?>
@@ -201,20 +201,20 @@ $ikon = static fn (string $d, string $kelas = 'w-4 h-4'): string => '<svg class=
                 </form>
             </div>
             <?php if ($bisaSetujui): ?>
-                <p class="mt-2 text-xs text-slate-500"><?= $berikutnyaId > 0 ? 'Setelah disetujui / dikembalikan, isian menunggu berikutnya langsung terbuka.' : 'Ini isian menunggu terakhir' . ($kelasId > 0 ? ' di kelas ini' : '') . '.' ?></p>
+                <p class="mt-2 text-xs text-gray-500"><?= $berikutnyaId > 0 ? 'Setelah disetujui / dikembalikan, isian menunggu berikutnya langsung terbuka.' : 'Ini isian menunggu terakhir' . ($kelasId > 0 ? ' di kelas ini' : '') . '.' ?></p>
             <?php endif; ?>
 
             <form x-cloak x-show="formKembali" x-transition method="post" action="<?= $aksi ?>/kembalikan" class="mt-4 rounded-xl border border-amber-200 bg-amber-50/60 p-4">
                 <?= csrf_field() ?>
                 <input type="hidden" name="kelas_id" value="<?= $kelasId ?: '' ?>">
-                <label class="block text-sm font-semibold text-slate-700" for="catatan">Apa yang harus diperbaiki siswa? <span class="text-red-500">*</span></label>
+                <label class="block text-sm font-semibold text-gray-700" for="catatan">Apa yang harus diperbaiki siswa? <span class="text-red-500">*</span></label>
                 <textarea id="catatan" name="catatan" rows="2" maxlength="255" required
-                          class="mt-1 w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm focus:border-brand-500 focus:ring-2 focus:ring-brand-500/20 outline-none"
+                          class="mt-1 w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm focus:border-brand-500 focus:ring-2 focus:ring-brand-500/20 outline-hidden"
                           placeholder="Contoh: NISN salah, cek lagi di kartu pelajar. Tanggal lahir tidak sesuai KK."></textarea>
-                <p class="mt-1 text-xs text-slate-500">Catatan ini tampil ke siswa saat membuka isiannya lagi (dengan NISN / tanggal lahir). Kabari siswa lewat wali kelas.</p>
+                <p class="mt-1 text-xs text-gray-500">Catatan ini tampil ke siswa saat membuka isiannya lagi (dengan NISN / tanggal lahir). Kabari siswa lewat wali kelas.</p>
                 <div class="mt-3 flex flex-wrap gap-2">
                     <button class="rounded-lg bg-amber-600 hover:bg-amber-700 px-5 py-2 text-sm font-bold text-white transition">Kirim ke siswa untuk diperbaiki</button>
-                    <button type="button" @click="formKembali = false" class="rounded-lg border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-slate-600 hover:bg-slate-50">Batal</button>
+                    <button type="button" @click="formKembali = false" class="rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-semibold text-gray-600 hover:bg-gray-50">Batal</button>
                 </div>
             </form>
         </div>

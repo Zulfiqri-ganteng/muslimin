@@ -58,27 +58,27 @@ foreach ($payload['guru'] as $g) {
 <?= $this->section('content') ?>
 
 <div class="mx-auto max-w-6xl space-y-4">
-    <section class="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm sm:p-5">
+    <section class="rounded-2xl border border-gray-200 bg-white p-4 shadow-xs sm:p-5">
         <div class="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
             <div class="min-w-0">
-                <p class="text-xs font-semibold uppercase tracking-wide text-slate-400">SKBM &middot; impor Excel</p>
-                <h2 class="mt-0.5 text-lg font-bold text-slate-800">Periksa hasil bacaan Excel SKBM</h2>
-                <p class="mt-1 text-sm text-slate-500">Berkas: <b class="text-slate-700"><?= esc($berkas) ?></b> &middot; lembar &quot;<?= esc($payload['lembar']) ?>&quot; &middot; <?= count($payload['guru']) ?> guru, <?= $jmlBaris ?> baris mapel. <b>Belum ada yang tersimpan.</b></p>
+                <p class="text-xs font-semibold uppercase tracking-wide text-gray-400">SKBM &middot; impor Excel</p>
+                <h2 class="mt-0.5 text-lg font-bold text-gray-800">Periksa hasil bacaan Excel SKBM</h2>
+                <p class="mt-1 text-sm text-gray-500">Berkas: <b class="text-gray-700"><?= esc($berkas) ?></b> &middot; lembar &quot;<?= esc($payload['lembar']) ?>&quot; &middot; <?= count($payload['guru']) ?> guru, <?= $jmlBaris ?> baris mapel. <b>Belum ada yang tersimpan.</b></p>
             </div>
-            <a href="<?= esc($back, 'attr') ?>" class="inline-flex shrink-0 items-center rounded-lg border border-slate-300 px-4 py-2 text-sm font-semibold text-slate-600 hover:bg-slate-50">Batal, kembali</a>
+            <a href="<?= esc($back, 'attr') ?>" class="inline-flex shrink-0 items-center rounded-lg border border-gray-300 px-4 py-2 text-sm font-semibold text-gray-600 hover:bg-gray-50">Batal, kembali</a>
         </div>
 
         <!-- Pilihan blok kolom kelas -->
         <div class="mt-4">
-            <p class="text-xs font-bold uppercase tracking-wide text-slate-500">Blok kolom kelas di lembar ini</p>
+            <p class="text-xs font-bold uppercase tracking-wide text-gray-500">Blok kolom kelas di lembar ini</p>
             <?php if (count($blok) > 1): ?>
-                <p class="mt-1 text-sm leading-relaxed text-slate-500">Lembar ini punya <b><?= count($blok) ?> blok</b> kolom kelas yang berdampingan. Yang dipilih otomatis ialah blok dengan kolom kelas paling banyak dikenal Master Kelas (seri &rarr; yang paling kanan). Bila isinya bukan penugasan SK yang benar, pilih blok lain.</p>
+                <p class="mt-1 text-sm leading-relaxed text-gray-500">Lembar ini punya <b><?= count($blok) ?> blok</b> kolom kelas yang berdampingan. Yang dipilih otomatis ialah blok dengan kolom kelas paling banyak dikenal Master Kelas (seri &rarr; yang paling kanan). Bila isinya bukan penugasan SK yang benar, pilih blok lain.</p>
             <?php endif; ?>
             <div class="mt-2 grid gap-3 <?= $kolBlok ?>">
                 <?php foreach ($blok as $b): $aktif = $b['indeks'] === $pilih; ?>
-                    <a href="<?= esc($base . '/impor?blok=' . (int) $b['indeks'], 'attr') ?>" class="block rounded-xl border px-4 py-3 transition <?= $aktif ? 'border-brand-600 bg-brand-50 ring-1 ring-brand-600' : 'border-slate-200 hover:bg-slate-50' ?>" <?= $aktif ? 'aria-current="true"' : '' ?>>
-                        <p class="flex items-center justify-between text-sm font-bold <?= $aktif ? 'text-brand-700' : 'text-slate-700' ?>">Blok <?= (int) $b['indeks'] + 1 ?> &middot; kolom <?= esc($b['dari']) ?>&ndash;<?= esc($b['sampai']) ?><?= $aktif ? '<span class="rounded-full bg-brand-700 px-2 py-0.5 text-[11px] font-semibold text-white">dipakai</span>' : '' ?></p>
-                        <p class="mt-1 text-xs text-slate-500"><?= count($b['kelas']) ?> kolom kelas (<b class="<?= $b['dikenal'] === count($b['kelas']) ? 'text-emerald-700' : 'text-amber-700' ?>"><?= (int) $b['dikenal'] ?> dikenal</b>) &middot; <?= $rp($statBlok[$b['indeks']]['sel']) ?> sel berangka &middot; <?= $rp($statBlok[$b['indeks']]['jp']) ?> JP</p>
+                    <a href="<?= esc($base . '/impor?blok=' . (int) $b['indeks'], 'attr') ?>" class="block rounded-xl border px-4 py-3 transition <?= $aktif ? 'border-brand-600 bg-brand-50 ring-1 ring-brand-600' : 'border-gray-200 hover:bg-gray-50' ?>" <?= $aktif ? 'aria-current="true"' : '' ?>>
+                        <p class="flex items-center justify-between text-sm font-bold <?= $aktif ? 'text-brand-700' : 'text-gray-700' ?>">Blok <?= (int) $b['indeks'] + 1 ?> &middot; kolom <?= esc($b['dari']) ?>&ndash;<?= esc($b['sampai']) ?><?= $aktif ? '<span class="rounded-full bg-brand-700 px-2 py-0.5 text-[11px] font-semibold text-white">dipakai</span>' : '' ?></p>
+                        <p class="mt-1 text-xs text-gray-500"><?= count($b['kelas']) ?> kolom kelas (<b class="<?= $b['dikenal'] === count($b['kelas']) ? 'text-emerald-700' : 'text-amber-700' ?>"><?= (int) $b['dikenal'] ?> dikenal</b>) &middot; <?= $rp($statBlok[$b['indeks']]['sel']) ?> sel berangka &middot; <?= $rp($statBlok[$b['indeks']]['jp']) ?> JP</p>
                     </a>
                 <?php endforeach; ?>
             </div>
@@ -86,9 +86,9 @@ foreach ($payload['guru'] as $g) {
 
         <div class="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-6">
             <?php foreach (['cocok' => 'Cocok', 'mirip' => 'Mirip', 'ganda' => 'Nama ganda', 'tidak' => 'Tidak ada'] as $k => $l): ?>
-                <div class="rounded-xl border border-slate-200 px-3 py-2"><p class="text-[11px] font-semibold uppercase tracking-wide text-slate-400"><?= $l ?></p><p class="text-xl font-extrabold tabular-nums text-slate-800"><?= $hit[$k] ?></p></div>
+                <div class="rounded-xl border border-gray-200 px-3 py-2"><p class="text-[11px] font-semibold uppercase tracking-wide text-gray-400"><?= $l ?></p><p class="text-xl font-extrabold tabular-nums text-gray-800"><?= $hit[$k] ?></p></div>
             <?php endforeach; ?>
-            <div class="rounded-xl border border-slate-200 px-3 py-2"><p class="text-[11px] font-semibold uppercase tracking-wide text-slate-400">Guru &times; kelas</p><p class="text-xl font-extrabold tabular-nums text-slate-800"><?= $rp($totalSel) ?></p></div>
+            <div class="rounded-xl border border-gray-200 px-3 py-2"><p class="text-[11px] font-semibold uppercase tracking-wide text-gray-400">Guru &times; kelas</p><p class="text-xl font-extrabold tabular-nums text-gray-800"><?= $rp($totalSel) ?></p></div>
             <div class="rounded-xl border border-brand-200 bg-brand-50 px-3 py-2"><p class="text-[11px] font-semibold uppercase tracking-wide text-brand-700">Total JP di Excel</p><p class="text-xl font-extrabold tabular-nums text-brand-700"><?= $rp($totalJp) ?></p></div>
         </div>
 
@@ -110,24 +110,24 @@ foreach ($payload['guru'] as $g) {
         <input type="hidden" name="token" value="<?= esc($token, 'attr') ?>">
         <input type="hidden" name="blok" value="<?= $pilih ?>">
 
-        <section class="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+        <section class="overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-xs">
             <div class="overflow-x-auto">
                 <table class="w-full min-w-[56rem] text-sm">
-                    <thead class="bg-slate-50 text-left text-[11px] font-bold uppercase tracking-wide text-slate-500">
+                    <thead class="bg-gray-50 text-left text-[11px] font-bold uppercase tracking-wide text-gray-500">
                         <tr><th class="px-4 py-2">No</th><th class="px-3 py-2">Nama di Excel</th><th class="px-3 py-2 text-right">Baris mapel</th><th class="px-3 py-2 text-right">Kelas</th><th class="px-3 py-2 text-right">JP</th><th class="px-3 py-2">Pencocokan</th><th class="px-3 py-2">Guru di Master Guru</th></tr>
                     </thead>
-                    <tbody class="divide-y divide-slate-100">
+                    <tbody class="divide-y divide-gray-100">
                         <?php foreach ($payload['guru'] as $i => $g): ?>
                             <?php [$teks, $kls] = $badge[$g['status']]; $kand = $g['kandidat'] ?? []; ?>
                             <tr class="<?= $g['status'] === 'tidak' || $g['status'] === 'ganda' ? 'bg-red-50/40' : '' ?>">
-                                <td class="px-4 py-2 tabular-nums text-slate-500"><?= $g['no'] !== null ? (int) $g['no'] : '' ?></td>
-                                <td class="px-3 py-2 font-semibold text-slate-800"><?= esc($g['nama']) ?></td>
-                                <td class="px-3 py-2 text-right tabular-nums text-slate-600"><?= count($g['baris']) ?></td>
-                                <td class="px-3 py-2 text-right tabular-nums text-slate-600"><?= (int) $g['kelas'] ?></td>
-                                <td class="px-3 py-2 text-right tabular-nums text-slate-600"><?= $rp($g['jp']) ?></td>
+                                <td class="px-4 py-2 tabular-nums text-gray-500"><?= $g['no'] !== null ? (int) $g['no'] : '' ?></td>
+                                <td class="px-3 py-2 font-semibold text-gray-800"><?= esc($g['nama']) ?></td>
+                                <td class="px-3 py-2 text-right tabular-nums text-gray-600"><?= count($g['baris']) ?></td>
+                                <td class="px-3 py-2 text-right tabular-nums text-gray-600"><?= (int) $g['kelas'] ?></td>
+                                <td class="px-3 py-2 text-right tabular-nums text-gray-600"><?= $rp($g['jp']) ?></td>
                                 <td class="px-3 py-2"><span class="inline-flex rounded-full border px-2.5 py-0.5 text-xs font-semibold <?= $kls ?>"><?= esc($teks) ?></span></td>
                                 <td class="px-3 py-2">
-                                    <select name="aksi[<?= $i ?>]" class="w-full rounded-lg border border-slate-300 bg-white px-2 py-1.5 text-sm" aria-label="Guru di Master Guru untuk <?= esc($g['nama'], 'attr') ?>">
+                                    <select name="aksi[<?= $i ?>]" class="w-full rounded-lg border border-gray-300 bg-white px-2 py-1.5 text-sm" aria-label="Guru di Master Guru untuk <?= esc($g['nama'], 'attr') ?>">
                                         <option value="lewati" <?= $g['guru_id'] === null ? 'selected' : '' ?>>— lewati guru ini —</option>
                                         <?php if ($kand !== []): ?>
                                             <optgroup label="Kemungkinan">
@@ -146,24 +146,24 @@ foreach ($payload['guru'] as $g) {
             </div>
         </section>
 
-        <section class="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm sm:p-5">
+        <section class="rounded-2xl border border-gray-200 bg-white p-4 shadow-xs sm:p-5">
             <div class="grid gap-4 sm:grid-cols-[minmax(0,16rem)_1fr] sm:items-start">
                 <div>
-                    <label for="tujuan" class="mb-1 block text-xs font-semibold uppercase tracking-wide text-slate-500">Simpan ke tahun ajaran</label>
-                    <input id="tujuan" name="tujuan" type="text" value="<?= esc($tujuan, 'attr') ?>" x-model="tujuan" required pattern="\d{4}/\d{4}" maxlength="9" inputmode="numeric" placeholder="2026/2027" class="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm font-semibold tabular-nums outline-none focus:border-brand-500">
-                    <p class="mt-1 text-xs text-slate-500"><?= $payload['tahun'] !== null ? 'Terbaca dari lembar: ' . esc($payload['tahun']) . '.' : 'Tahun tidak terbaca dari lembar — isi sendiri.' ?></p>
+                    <label for="tujuan" class="mb-1 block text-xs font-semibold uppercase tracking-wide text-gray-500">Simpan ke tahun ajaran</label>
+                    <input id="tujuan" name="tujuan" type="text" value="<?= esc($tujuan, 'attr') ?>" x-model="tujuan" required pattern="\d{4}/\d{4}" maxlength="9" inputmode="numeric" placeholder="2026/2027" class="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm font-semibold tabular-nums outline-hidden focus:border-brand-500">
+                    <p class="mt-1 text-xs text-gray-500"><?= $payload['tahun'] !== null ? 'Terbaca dari lembar: ' . esc($payload['tahun']) . '.' : 'Tahun tidak terbaca dari lembar — isi sendiri.' ?></p>
                 </div>
                 <div>
-                    <label class="flex cursor-pointer items-start gap-2.5 text-sm text-slate-700">
-                        <input type="checkbox" name="ganti" value="1" checked class="mt-0.5 h-4 w-4 rounded border-slate-300">
+                    <label class="flex cursor-pointer items-start gap-2.5 text-sm text-gray-700">
+                        <input type="checkbox" name="ganti" value="1" checked class="mt-0.5 h-4 w-4 rounded-sm border-gray-300">
                         <span><b>Ganti seluruh SKBM tahun itu</b>. Tanpa tanda ini, guru yang sudah ada di SKBM tahun itu dilewati.
                             <template x-if="berisi[tujuan]"><b class="block text-amber-700" x-text="'SKBM ' + tujuan + ' sekarang sudah berisi ' + berisi[tujuan] + ' guru dan akan dibuang.'"></b></template>
                         </span>
                     </label>
-                    <p class="mt-2 text-xs leading-relaxed text-slate-500">Yang disimpan hanya SKBM (data di menu Penugasan, Jadwal KBM, dan honor <b>tidak berubah</b>). Isi sel angka = JP per minggu. Ceklis Koreksi honor baru terisi saat kamu menekan &quot;Isi dari SKBM&quot; di halaman Koreksi.</p>
+                    <p class="mt-2 text-xs leading-relaxed text-gray-500">Yang disimpan hanya SKBM (data di menu Penugasan, Jadwal KBM, dan honor <b>tidak berubah</b>). Isi sel angka = JP per minggu. Ceklis Koreksi honor baru terisi saat kamu menekan &quot;Isi dari SKBM&quot; di halaman Koreksi.</p>
                 </div>
             </div>
-            <button type="submit" class="mt-4 rounded-lg bg-brand-700 px-8 py-3 text-sm font-bold text-white shadow-sm transition hover:bg-brand-800 active:scale-95">Terapkan impor</button>
+            <button type="submit" class="mt-4 rounded-lg bg-brand-700 px-8 py-3 text-sm font-bold text-white shadow-xs transition hover:bg-brand-800 active:scale-95">Terapkan impor</button>
         </section>
     </form>
 </div>

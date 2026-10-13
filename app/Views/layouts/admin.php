@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<?php // tema-lilac: warna brand akun admin = ungu lilac + aksen mint (variabel di resources/css/app.css). ?>
+<?php // tema-lilac: warna brand akun admin = ungu lilac + aksen mint (variabel di resources/css/admin.css). ?>
 <html lang="id" class="tema-lilac">
 <head>
     <meta charset="UTF-8">
@@ -11,13 +11,15 @@
     <meta name="csrf-header" content="<?= csrf_header() ?>">
     <meta name="csrf-token" content="<?= csrf_hash() ?>">
     <?= view('partials/favicon') ?>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="<?= base_url('assets/css/app.css') ?>?v=<?= @filemtime(FCPATH . 'assets/css/app.css') ?>">
+    <?php // admin.css = Tailwind v4 khusus admin (resources/css/admin.css, npm run build:admin); font Inter disimpan sendiri (tanpa Google Fonts).
+          // Penanda nonce = persiapan CSP (teks kosong selama CSP mati; lihat docs/RENCANA-UPGRADE-TAMPILAN.md §5a). ?>
+    <link rel="preload" href="<?= base_url('assets/fonts/inter/inter-latin-wght-normal.woff2') ?>" as="font" type="font/woff2" crossorigin>
+    <link rel="stylesheet" href="<?= base_url('assets/css/admin.css') ?>?v=<?= @filemtime(FCPATH . 'assets/css/admin.css') ?>" <?= csp_style_nonce() ?>>
 </head>
-<body class="bg-slate-100 text-slate-800 antialiased" x-data="adminLayout">
+<body class="bg-gray-100 text-gray-800 antialiased" x-data="adminLayout">
 
 <!-- ===================== LOADING OVERLAY (global, semua form) ===================== -->
-<div x-show="loading" x-cloak x-transition.opacity.duration.150ms class="fixed inset-0 z-[70] flex items-center justify-center bg-white/60 backdrop-blur-sm">
+<div x-show="loading" x-cloak x-transition.opacity.duration.150ms class="fixed inset-0 z-[70] flex items-center justify-center bg-white/60 backdrop-blur-xs">
     <div class="flex flex-col items-center gap-3">
         <svg class="animate-spin h-10 w-10 text-brand-600" fill="none" viewBox="0 0 24 24">
             <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
@@ -80,7 +82,7 @@
         [$url, $label, $icon] = $it;
         $active = $itemAktif($it);
         // Menu aktif: latar terang + garis mint di kiri (aksen tema lilac).
-        $cls = $active ? 'bg-white/15 text-white shadow-[inset_3px_0_0_theme(colors.emerald.300)]' : 'text-brand-100 hover:bg-white/10 hover:text-white';
+        $cls = $active ? 'bg-white/15 text-white shadow-[inset_3px_0_0_var(--color-emerald-300)]' : 'text-brand-100 hover:bg-white/10 hover:text-white';
         echo '<a href="' . site_url($url) . '" title="' . esc($label) . '" ' . ($active ? 'aria-current="page" ' : '') . ltrim($atrCari($label)) . ' '
             . ':class="collapsed && !sidebar ? \'lg:justify-center\' : \'\'" '
             . 'class="flex items-center gap-3 rounded-lg px-3.5 py-2.5 text-sm font-medium transition ' . $cls . '">'
@@ -107,7 +109,7 @@
 <div x-show="sidebar" x-cloak @click="sidebar=false" class="fixed inset-0 bg-black/40 z-30 lg:hidden"></div>
 
 <!-- ===================== SIDEBAR ===================== -->
-<aside class="fixed inset-y-0 left-0 z-40 flex flex-col w-64 bg-gradient-to-b from-brand-700 via-brand-800 to-brand-900 text-white transform transition-all duration-200 lg:translate-x-0"
+<aside class="fixed inset-y-0 left-0 z-40 flex flex-col w-64 bg-linear-to-b from-brand-700 via-brand-800 to-brand-900 text-white transform transition-all duration-200 lg:translate-x-0"
        :class="{ 'translate-x-0': sidebar, '-translate-x-full': !sidebar, 'lg:w-20': collapsed, 'lg:w-64': !collapsed }">
     <!-- Brand -->
     <div class="h-16 flex items-center gap-2.5 px-5 border-b border-white/10 shrink-0"
@@ -131,7 +133,7 @@
                 <span class="sr-only">Cari menu</span>
                 <svg class="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-brand-300" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-4.35-4.35M11 18a7 7 0 100-14 7 7 0 000 14z"/></svg>
                 <input type="search" x-model="cari" placeholder="Cari menu…" autocomplete="off"
-                       class="w-full rounded-lg border-0 bg-white/10 py-2 pl-9 pr-3 text-sm text-white placeholder-brand-300 transition focus:bg-white/15 focus:outline-none focus:ring-2 focus:ring-white/30">
+                       class="w-full rounded-lg border-0 bg-white/10 py-2 pl-9 pr-3 text-sm text-white placeholder-brand-300 transition focus:bg-white/15 focus:outline-hidden focus:ring-2 focus:ring-white/30">
             </label>
         </div>
         <?php foreach ($groups as $g): ?>
@@ -194,18 +196,18 @@
 <!-- ===================== MAIN ===================== -->
 <div class="min-h-screen flex flex-col transition-all duration-200" :class="collapsed ? 'lg:ml-20' : 'lg:ml-64'">
     <!-- Topbar -->
-    <header class="h-16 bg-white border-b border-slate-200 flex items-center justify-between px-4 sm:px-6 sticky top-0 z-20">
+    <header class="h-16 bg-white border-b border-gray-200 flex items-center justify-between px-4 sm:px-6 sticky top-0 z-20">
         <div class="flex items-center gap-3">
             <!-- Mobile: buka drawer -->
-            <button @click="sidebar=true" class="lg:hidden text-slate-500 hover:text-slate-700"><svg class="w-6 h-6" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M4 6h16M4 12h16M4 18h16"/></svg></button>
+            <button @click="sidebar=true" class="lg:hidden text-gray-500 hover:text-gray-700"><svg class="w-6 h-6" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M4 6h16M4 12h16M4 18h16"/></svg></button>
             <!-- Desktop: ciutkan/lebarkan sidebar -->
-            <button @click="collapsed=!collapsed" class="hidden lg:inline-flex text-slate-500 hover:text-slate-700" :title="collapsed ? 'Lebarkan menu' : 'Ciutkan menu'"><svg class="w-6 h-6" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M4 6h16M4 12h16M4 18h16"/></svg></button>
-            <h1 class="font-bold text-slate-800 text-lg"><?= esc($title ?? 'Dashboard') ?></h1>
+            <button @click="collapsed=!collapsed" class="hidden lg:inline-flex text-gray-500 hover:text-gray-700" :title="collapsed ? 'Lebarkan menu' : 'Ciutkan menu'"><svg class="w-6 h-6" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M4 6h16M4 12h16M4 18h16"/></svg></button>
+            <h1 class="font-bold text-gray-800 text-lg"><?= esc($title ?? 'Dashboard') ?></h1>
         </div>
         <div class="flex items-center gap-3">
             <div class="text-right hidden sm:block leading-tight">
-                <p class="text-sm font-semibold text-slate-700"><?= esc($admin['full_name'] ?? 'Admin') ?></p>
-                <p class="text-xs text-slate-400"><span class="font-semibold text-brand-600"><?= esc($labelPeranKini) ?></span> · @<?= esc($admin['username'] ?? '') ?></p>
+                <p class="text-sm font-semibold text-gray-700"><?= esc($admin['full_name'] ?? 'Admin') ?></p>
+                <p class="text-xs text-gray-400"><span class="font-semibold text-brand-600"><?= esc($labelPeranKini) ?></span> · @<?= esc($admin['username'] ?? '') ?></p>
             </div>
             <a href="<?= site_url('admin/profile') ?>" class="block h-9 w-9 rounded-full overflow-hidden bg-brand-100 ring-2 ring-brand-200">
                 <?php if (! empty($admin['photo'])): ?>
@@ -242,16 +244,18 @@
         <?= $this->renderSection('content') ?>
     </main>
 
-    <footer class="px-4 sm:px-6 pb-5 text-center text-xs text-slate-400">
+    <footer class="px-4 sm:px-6 pb-5 text-center text-xs text-gray-400">
         <p>&copy; <?= date('Y') ?> &middot; Sistem Informasi Akademik Sekolah (BINUS)</p>
         <?= view('partials/kredit', ['kreditKelas' => '']) ?>
     </footer>
 </div>
 
-<?php // Skrip halaman dimuat lebih dulu (defer = urut dokumen), lalu util global, terakhir Alpine. ?>
+<?php // Skrip halaman dimuat lebih dulu (defer = urut dokumen), lalu util global, terakhir Alpine.
+      // Masa transisi rombak tampilan: grup yang sudah selesai (Config\Tampilan::$alpineCsp) memakai Alpine versi CSP (tanpa eval).
+      $alpineJs = \App\Libraries\Tampilan::alpineCsp(uri_string()) ? 'assets/js/vendor/alpine-csp.min.js' : 'assets/js/vendor/alpine.min.js'; ?>
 <?= $this->renderSection('scripts') ?>
-<script defer src="<?= base_url('assets/js/admin/app.js') ?>?v=<?= @filemtime(FCPATH . 'assets/js/admin/app.js') ?>"></script>
-<script defer src="<?= base_url('assets/js/vendor/alpine-collapse.min.js') ?>?v=<?= @filemtime(FCPATH . 'assets/js/vendor/alpine-collapse.min.js') ?>"></script>
-<script defer src="<?= base_url('assets/js/vendor/alpine.min.js') ?>?v=<?= @filemtime(FCPATH . 'assets/js/vendor/alpine.min.js') ?>"></script>
+<script defer src="<?= base_url('assets/js/admin/app.js') ?>?v=<?= @filemtime(FCPATH . 'assets/js/admin/app.js') ?>" <?= csp_script_nonce() ?>></script>
+<script defer src="<?= base_url('assets/js/vendor/alpine-collapse.min.js') ?>?v=<?= @filemtime(FCPATH . 'assets/js/vendor/alpine-collapse.min.js') ?>" <?= csp_script_nonce() ?>></script>
+<script defer src="<?= base_url($alpineJs) ?>?v=<?= @filemtime(FCPATH . $alpineJs) ?>" <?= csp_script_nonce() ?>></script>
 </body>
 </html>

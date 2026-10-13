@@ -24,20 +24,20 @@ $totalBentrok = count($bentrokGuru) + count($bentrokKelas) + count($ketViolation
 <?php
 $section = static function (string $title, string $color, array $rows, array $cols, callable $rowCb) {
     ?>
-    <div class="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden mb-5">
-        <div class="px-5 py-3.5 border-b border-slate-100 flex items-center gap-2">
+    <div class="bg-white rounded-2xl border border-gray-200 shadow-xs overflow-hidden mb-5">
+        <div class="px-5 py-3.5 border-b border-gray-100 flex items-center gap-2">
             <span class="h-2.5 w-2.5 rounded-full <?= $color ?>"></span>
-            <h2 class="font-bold text-slate-800"><?= esc($title) ?> <span class="text-slate-400 font-normal">(<?= count($rows) ?>)</span></h2>
+            <h2 class="font-bold text-gray-800"><?= esc($title) ?> <span class="text-gray-400 font-normal">(<?= count($rows) ?>)</span></h2>
         </div>
         <?php if (empty($rows)): ?>
-            <p class="px-5 py-6 text-sm text-slate-400">Tidak ada.</p>
+            <p class="px-5 py-6 text-sm text-gray-400">Tidak ada.</p>
         <?php else: ?>
             <div class="overflow-x-auto">
                 <table class="w-full text-sm">
-                    <thead class="bg-slate-50 text-slate-500 text-left"><tr>
+                    <thead class="bg-gray-50 text-gray-500 text-left"><tr>
                         <?php foreach ($cols as $c): ?><th class="px-5 py-2 font-semibold"><?= esc($c) ?></th><?php endforeach; ?>
                     </tr></thead>
-                    <tbody class="divide-y divide-slate-100">
+                    <tbody class="divide-y divide-gray-100">
                         <?php foreach ($rows as $r) {
                             echo '<tr>';
                             foreach ($rowCb($r) as $cell) {

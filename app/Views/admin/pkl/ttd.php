@@ -36,28 +36,28 @@ $tombolFile = 'block w-full text-sm file:mr-3 file:rounded-lg file:border-0 file
 
 <div class="mx-auto grid max-w-5xl grid-cols-1 gap-5 lg:grid-cols-2">
     <!-- ================= Waka Hubin ================= -->
-    <section class="rise overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
-        <h3 class="border-b border-slate-100 bg-slate-50 px-5 py-3 text-xs font-bold uppercase tracking-wide text-slate-500">Tanda tangan Waka Hubin</h3>
+    <section class="rise overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-xs">
+        <h3 class="border-b border-gray-100 bg-gray-50 px-5 py-3 text-xs font-bold uppercase tracking-wide text-gray-500">Tanda tangan Waka Hubin</h3>
         <div class="space-y-4 p-5">
             <?php if ($ada): ?>
-                <div class="flex min-h-[9rem] items-center justify-center rounded-xl border border-dashed border-slate-300 bg-white p-4">
+                <div class="flex min-h-[9rem] items-center justify-center rounded-xl border border-dashed border-gray-300 bg-white p-4">
                     <img src="<?= esc(site_url('admin/pkl/ttd/gambar') . '?v=' . (int) $ver, 'attr') ?>" alt="Tanda tangan Waka Hubin" class="max-h-32 max-w-full object-contain">
                 </div>
-                <p class="text-[11px] text-slate-400">Pratinjau = gambar yang tercetak di surat (sudah dirapikan).</p>
-                <p class="text-sm text-slate-600">Atas nama: <b><?= esc($p['waka_hubin_nama'] ?: '(nama Waka Hubin belum diisi di Pengaturan PKL)') ?></b><br><?= esc($p['waka_hubin_jabatan'] ?? '') ?></p>
+                <p class="text-[11px] text-gray-400">Pratinjau = gambar yang tercetak di surat (sudah dirapikan).</p>
+                <p class="text-sm text-gray-600">Atas nama: <b><?= esc($p['waka_hubin_nama'] ?: '(nama Waka Hubin belum diisi di Pengaturan PKL)') ?></b><br><?= esc($p['waka_hubin_jabatan'] ?? '') ?></p>
             <?php else: ?>
-                <div class="rounded-xl border border-dashed border-slate-300 bg-slate-50 px-4 py-8 text-center">
-                    <p class="font-semibold text-slate-700">Belum ada gambar tanda tangan</p>
-                    <p class="mt-1 text-sm text-slate-500">Surat tetap bisa dicetak: ruang tanda tangan Waka Hubin dikosongkan untuk tanda tangan basah.</p>
+                <div class="rounded-xl border border-dashed border-gray-300 bg-gray-50 px-4 py-8 text-center">
+                    <p class="font-semibold text-gray-700">Belum ada gambar tanda tangan</p>
+                    <p class="mt-1 text-sm text-gray-500">Surat tetap bisa dicetak: ruang tanda tangan Waka Hubin dikosongkan untuk tanda tangan basah.</p>
                 </div>
             <?php endif; ?>
 
             <?php if ($bolehHubin): ?>
-                <form method="post" action="<?= site_url('admin/pkl/ttd') ?>" enctype="multipart/form-data" class="space-y-3 border-t border-slate-100 pt-4">
+                <form method="post" action="<?= site_url('admin/pkl/ttd') ?>" enctype="multipart/form-data" class="space-y-3 border-t border-gray-100 pt-4">
                     <?= csrf_field() ?>
-                    <p class="text-xs font-bold uppercase tracking-wide text-slate-500"><?= $ada ? 'Ganti gambar' : 'Unggah gambar' ?></p>
+                    <p class="text-xs font-bold uppercase tracking-wide text-gray-500"><?= $ada ? 'Ganti gambar' : 'Unggah gambar' ?></p>
                     <input type="file" name="ttd" accept="image/png,image/jpeg" required class="<?= $tombolFile ?>">
-                    <p class="text-xs leading-relaxed text-slate-500">PNG atau JPG · maksimal 5 MB · 100–4000 piksel. Ukuran &amp; tepi bebas: dirapikan otomatis, lalu dicetak paling besar 5 × 2,2 cm di tengah ruang tanda tangan.</p>
+                    <p class="text-xs leading-relaxed text-gray-500">PNG atau JPG · maksimal 5 MB · 100–4000 piksel. Ukuran &amp; tepi bebas: dirapikan otomatis, lalu dicetak paling besar 5 × 2,2 cm di tengah ruang tanda tangan.</p>
                     <button type="submit" class="rounded-xl bg-brand-700 px-5 py-2.5 text-sm font-bold text-white transition hover:bg-brand-800 active:scale-95">Simpan tanda tangan</button>
                 </form>
                 <?php if ($ada): ?>
@@ -67,37 +67,37 @@ $tombolFile = 'block w-full text-sm file:mr-3 file:rounded-lg file:border-0 file
                     </form>
                 <?php endif; ?>
             <?php else: ?>
-                <p class="rounded-lg bg-slate-50 px-3 py-2 text-xs text-slate-500">🔒 Diubah oleh <?= esc($pemegangHubin) ?> (diatur Admin di Sistem → Hak Akses).</p>
+                <p class="rounded-lg bg-gray-50 px-3 py-2 text-xs text-gray-500">🔒 Diubah oleh <?= esc($pemegangHubin) ?> (diatur Admin di Sistem → Hak Akses).</p>
             <?php endif; ?>
         </div>
     </section>
 
     <!-- ================= Kepala Sekolah ================= -->
-    <section class="rise overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
-        <h3 class="border-b border-slate-100 bg-slate-50 px-5 py-3 text-xs font-bold uppercase tracking-wide text-slate-500">Tanda tangan + stempel Kepala Sekolah</h3>
+    <section class="rise overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-xs">
+        <h3 class="border-b border-gray-100 bg-gray-50 px-5 py-3 text-xs font-bold uppercase tracking-wide text-gray-500">Tanda tangan + stempel Kepala Sekolah</h3>
         <div class="space-y-4 p-5">
             <?php if (! $kolomKepsek): ?>
                 <p class="rounded-xl border border-amber-300 bg-amber-50 px-4 py-3 text-sm text-amber-900">Fitur ini belum aktif di server ini. Jalankan <code>php spark migrate</code> dulu.</p>
             <?php else: ?>
                 <?php if ($adaKepsek): ?>
-                    <div class="flex min-h-[9rem] items-center justify-center rounded-xl border border-dashed border-slate-300 bg-white p-4">
+                    <div class="flex min-h-[9rem] items-center justify-center rounded-xl border border-dashed border-gray-300 bg-white p-4">
                         <img src="<?= esc(site_url('admin/pkl/ttd-kepsek/gambar') . '?v=' . (int) $verKepsek, 'attr') ?>" alt="Tanda tangan dan stempel Kepala Sekolah" class="max-h-36 max-w-full object-contain">
                     </div>
-                    <p class="text-[11px] text-slate-400">Pratinjau = gambar yang tercetak di surat (sudah dirapikan).</p>
-                    <p class="text-sm text-slate-600">Atas nama: <b><?= esc(($p['kepsek_nama'] ?? '') ?: '(nama Kepala Sekolah belum diisi di Pengaturan PKL)') ?></b><br><span class="text-xs text-slate-500">Menggantikan tanda tangan bawaan template di semua surat bernomor.</span></p>
+                    <p class="text-[11px] text-gray-400">Pratinjau = gambar yang tercetak di surat (sudah dirapikan).</p>
+                    <p class="text-sm text-gray-600">Atas nama: <b><?= esc(($p['kepsek_nama'] ?? '') ?: '(nama Kepala Sekolah belum diisi di Pengaturan PKL)') ?></b><br><span class="text-xs text-gray-500">Menggantikan tanda tangan bawaan template di semua surat bernomor.</span></p>
                 <?php else: ?>
-                    <div class="rounded-xl border border-dashed border-slate-300 bg-slate-50 px-4 py-8 text-center">
-                        <p class="font-semibold text-slate-700">Belum ada gambar</p>
-                        <p class="mt-1 text-sm text-slate-500">Surat memakai tanda tangan Kepala Sekolah bawaan template (tanpa stempel).</p>
+                    <div class="rounded-xl border border-dashed border-gray-300 bg-gray-50 px-4 py-8 text-center">
+                        <p class="font-semibold text-gray-700">Belum ada gambar</p>
+                        <p class="mt-1 text-sm text-gray-500">Surat memakai tanda tangan Kepala Sekolah bawaan template (tanpa stempel).</p>
                     </div>
                 <?php endif; ?>
 
                 <?php if ($bolehKepsek): ?>
-                    <form method="post" action="<?= site_url('admin/pkl/ttd-kepsek') ?>" enctype="multipart/form-data" class="space-y-3 border-t border-slate-100 pt-4">
+                    <form method="post" action="<?= site_url('admin/pkl/ttd-kepsek') ?>" enctype="multipart/form-data" class="space-y-3 border-t border-gray-100 pt-4">
                         <?= csrf_field() ?>
-                        <p class="text-xs font-bold uppercase tracking-wide text-slate-500"><?= $adaKepsek ? 'Ganti gambar' : 'Unggah gambar' ?></p>
+                        <p class="text-xs font-bold uppercase tracking-wide text-gray-500"><?= $adaKepsek ? 'Ganti gambar' : 'Unggah gambar' ?></p>
                         <input type="file" name="ttd_kepsek" accept="image/png,image/jpeg" required class="<?= $tombolFile ?>">
-                        <p class="text-xs leading-relaxed text-slate-500">SATU gambar berisi tanda tangan <b>dan</b> stempel · PNG atau JPG · maksimal 5 MB · 100–4000 piksel. Ukuran &amp; tepi bebas: dirapikan otomatis, lalu dicetak paling besar 4 × 3,6 cm di posisi rapian sekolah.</p>
+                        <p class="text-xs leading-relaxed text-gray-500">SATU gambar berisi tanda tangan <b>dan</b> stempel · PNG atau JPG · maksimal 5 MB · 100–4000 piksel. Ukuran &amp; tepi bebas: dirapikan otomatis, lalu dicetak paling besar 4 × 3,6 cm di posisi rapian sekolah.</p>
                         <button type="submit" class="rounded-xl bg-brand-700 px-5 py-2.5 text-sm font-bold text-white transition hover:bg-brand-800 active:scale-95">Simpan tanda tangan + stempel</button>
                     </form>
                     <?php if ($adaKepsek): ?>
@@ -107,7 +107,7 @@ $tombolFile = 'block w-full text-sm file:mr-3 file:rounded-lg file:border-0 file
                         </form>
                     <?php endif; ?>
                 <?php else: ?>
-                    <p class="rounded-lg bg-slate-50 px-3 py-2 text-xs text-slate-500">🔒 Diubah oleh <?= esc($pemegangKepsek) ?> (diatur Admin di Sistem → Hak Akses).</p>
+                    <p class="rounded-lg bg-gray-50 px-3 py-2 text-xs text-gray-500">🔒 Diubah oleh <?= esc($pemegangKepsek) ?> (diatur Admin di Sistem → Hak Akses).</p>
                 <?php endif; ?>
             <?php endif; ?>
         </div>

@@ -22,16 +22,16 @@ $fields = [
 <?= $this->section('content') ?>
 
 <div class="mb-4">
-    <a href="<?= site_url('admin/master/aset') ?>" class="inline-flex items-center gap-1.5 text-sm font-semibold text-slate-500 hover:text-brand-700">
+    <a href="<?= site_url('admin/master/aset') ?>" class="inline-flex items-center gap-1.5 text-sm font-semibold text-gray-500 hover:text-brand-700">
         <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7"/></svg>
         Kembali ke Master Aset
     </a>
 </div>
 
-<div class="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden max-w-3xl">
-    <div class="px-6 py-4 border-b border-slate-100 bg-slate-50">
-        <h2 class="font-bold text-slate-800">Detail Komputer</h2>
-        <p class="text-sm text-slate-500 mt-0.5">
+<div class="bg-white rounded-2xl border border-gray-200 shadow-xs overflow-hidden max-w-3xl">
+    <div class="px-6 py-4 border-b border-gray-100 bg-gray-50">
+        <h2 class="font-bold text-gray-800">Detail Komputer</h2>
+        <p class="text-sm text-gray-500 mt-0.5">
             <span class="font-mono font-semibold text-brand-700"><?= esc($aset['nomor_aset']) ?></span>
             &middot; <?= esc($aset['nama']) ?>
         </p>
@@ -50,19 +50,19 @@ $fields = [
         <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <?php foreach ($fields as [$name, $label, $ph]): ?>
                 <div>
-                    <label class="block text-sm font-medium text-slate-600 mb-1"><?= esc($label) ?></label>
+                    <label class="block text-sm font-medium text-gray-600 mb-1"><?= esc($label) ?></label>
                     <input type="text" name="<?= $name ?>" value="<?= $v($name) ?>" maxlength="100" placeholder="<?= esc($ph, 'attr') ?>"
-                           class="w-full rounded-lg border border-slate-300 px-3 py-2.5 text-sm focus:border-brand-500 focus:ring-2 focus:ring-brand-500/20 outline-none">
+                           class="w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm focus:border-brand-500 focus:ring-2 focus:ring-brand-500/20 outline-hidden">
                 </div>
             <?php endforeach; ?>
             <div class="sm:col-span-2">
-                <label class="block text-sm font-medium text-slate-600 mb-1">Keterangan</label>
+                <label class="block text-sm font-medium text-gray-600 mb-1">Keterangan</label>
                 <input type="text" name="keterangan" value="<?= $v('keterangan') ?>" maxlength="255"
-                       class="w-full rounded-lg border border-slate-300 px-3 py-2.5 text-sm focus:border-brand-500 outline-none">
+                       class="w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm focus:border-brand-500 outline-hidden">
             </div>
         </div>
         <div class="flex justify-end gap-2 mt-6">
-            <a href="<?= site_url('admin/master/aset') ?>" class="rounded-lg border border-slate-300 text-slate-600 text-sm font-semibold px-4 py-2.5 hover:bg-slate-50">Batal</a>
+            <a href="<?= site_url('admin/master/aset') ?>" class="rounded-lg border border-gray-300 text-gray-600 text-sm font-semibold px-4 py-2.5 hover:bg-gray-50">Batal</a>
             <button class="rounded-lg bg-brand-700 hover:bg-brand-800 text-white text-sm font-semibold px-5 py-2.5">Simpan Detail</button>
         </div>
     </form>

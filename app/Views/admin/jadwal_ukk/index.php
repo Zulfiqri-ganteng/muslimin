@@ -36,27 +36,27 @@ $defaults = [
       openEdit(r){ this.mode='edit'; this.form=Object.assign({}, this.defaults, r); this.actionUrl='<?= $base ?>/'+r.id; this.open=true; } }">
 
     <!-- Toolbar -->
-    <div class="bg-white rounded-2xl border border-slate-200 shadow-sm p-4 mb-5">
+    <div class="bg-white rounded-2xl border border-gray-200 shadow-xs p-4 mb-5">
         <form method="get" class="flex flex-col sm:flex-row sm:flex-wrap sm:items-center gap-2">
             <div class="relative flex-1 min-w-[200px]">
-                <svg class="w-5 h-5 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
+                <svg class="w-5 h-5 text-gray-400 absolute left-3 top-1/2 -translate-y-1/2" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
                 <input type="text" name="q" value="<?= esc($q) ?>" placeholder="Cari paket soal atau tempat uji..."
-                       class="w-full rounded-lg border border-slate-300 pl-10 pr-3 py-2.5 text-sm focus:border-brand-500 focus:ring-2 focus:ring-brand-500/20 outline-none">
+                       class="w-full rounded-lg border border-gray-300 pl-10 pr-3 py-2.5 text-sm focus:border-brand-500 focus:ring-2 focus:ring-brand-500/20 outline-hidden">
             </div>
-            <select name="paket_soal_id" data-autosubmit class="rounded-lg border border-slate-300 px-3 py-2.5 text-sm focus:border-brand-500 outline-none shrink-0">
+            <select name="paket_soal_id" data-autosubmit class="rounded-lg border border-gray-300 px-3 py-2.5 text-sm focus:border-brand-500 outline-hidden shrink-0">
                 <option value="">Semua paket soal</option>
                 <?php foreach ($paketOpts as $id => $lbl): ?>
                     <option value="<?= (int) $id ?>" <?= $paketId === (int) $id ? 'selected' : '' ?>><?= esc($lbl) ?></option>
                 <?php endforeach; ?>
             </select>
-            <select name="per" data-autosubmit title="Jumlah per halaman" class="rounded-lg border border-slate-300 px-3 py-2.5 text-sm focus:border-brand-500 outline-none shrink-0">
+            <select name="per" data-autosubmit title="Jumlah per halaman" class="rounded-lg border border-gray-300 px-3 py-2.5 text-sm focus:border-brand-500 outline-hidden shrink-0">
                 <?php foreach ([10, 20, 30, 40, 50] as $n): ?>
                     <option value="<?= $n ?>" <?= $per === $n ? 'selected' : '' ?>>Tampilkan <?= $n ?></option>
                 <?php endforeach; ?>
             </select>
             <button class="rounded-lg bg-brand-700 hover:bg-brand-800 text-white text-sm font-semibold px-5 py-2.5 shrink-0">Cari</button>
             <?php if ($q !== '' || $paketId > 0): ?>
-                <a href="<?= $base ?>" class="rounded-lg border border-slate-300 text-slate-600 text-sm font-semibold px-4 py-2.5 hover:bg-slate-50 text-center shrink-0">Reset</a>
+                <a href="<?= $base ?>" class="rounded-lg border border-gray-300 text-gray-600 text-sm font-semibold px-4 py-2.5 hover:bg-gray-50 text-center shrink-0">Reset</a>
             <?php endif; ?>
             <div class="flex-1 hidden sm:block"></div>
             <button type="button" @click="openAdd()" class="inline-flex items-center gap-1.5 rounded-lg bg-brand-700 hover:bg-brand-800 text-white text-sm font-semibold px-3.5 py-2.5 transition shrink-0">
@@ -67,13 +67,13 @@ $defaults = [
     </div>
 
     <!-- Tabel -->
-    <div class="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
-        <div class="px-6 py-4 border-b border-slate-100">
-            <h2 class="font-bold text-slate-800">Daftar Jadwal UKK</h2>
+    <div class="bg-white rounded-2xl border border-gray-200 shadow-xs overflow-hidden">
+        <div class="px-6 py-4 border-b border-gray-100">
+            <h2 class="font-bold text-gray-800">Daftar Jadwal UKK</h2>
         </div>
         <div class="overflow-x-auto">
             <table class="w-full text-sm">
-                <thead class="bg-slate-50 text-slate-500 text-left">
+                <thead class="bg-gray-50 text-gray-500 text-left">
                     <tr>
                         <th class="px-6 py-3 font-semibold">Paket Soal</th>
                         <th class="px-4 py-3 font-semibold">Tempat Uji</th>
@@ -83,27 +83,27 @@ $defaults = [
                         <th class="px-4 py-3 font-semibold w-48 text-right">Aksi</th>
                     </tr>
                 </thead>
-                <tbody class="divide-y divide-slate-100">
+                <tbody class="divide-y divide-gray-100">
                     <?php if (empty($rows)): ?>
-                        <tr><td colspan="6" class="px-6 py-10 text-center text-slate-400">
+                        <tr><td colspan="6" class="px-6 py-10 text-center text-gray-400">
                             <?= $q !== '' || $paketId > 0 ? 'Tidak ada jadwal yang cocok.' : 'Belum ada jadwal UKK. Klik "Tambah Jadwal" untuk memulai.' ?>
                         </td></tr>
                     <?php else: foreach ($rows as $r): ?>
-                        <tr class="hover:bg-slate-50">
+                        <tr class="hover:bg-gray-50">
                             <td class="px-6 py-3">
-                                <div class="font-medium text-slate-800"><?= esc($r['paket_kode'] ?? '—') ?></div>
-                                <div class="text-xs text-slate-400"><?= esc($r['paket_nama'] ?? '—') ?></div>
+                                <div class="font-medium text-gray-800"><?= esc($r['paket_kode'] ?? '—') ?></div>
+                                <div class="text-xs text-gray-400"><?= esc($r['paket_nama'] ?? '—') ?></div>
                             </td>
-                            <td class="px-4 py-3 text-slate-600"><?= esc($r['tempat_nama'] ?? '—') ?></td>
-                            <td class="px-4 py-3 text-slate-600">
+                            <td class="px-4 py-3 text-gray-600"><?= esc($r['tempat_nama'] ?? '—') ?></td>
+                            <td class="px-4 py-3 text-gray-600">
                                 <?= $tgl($r['tanggal_mulai']) ?>
                                 <?php if (! empty($r['tanggal_selesai']) && $r['tanggal_selesai'] !== $r['tanggal_mulai']): ?>
-                                    <div class="text-xs text-slate-400">s/d <?= $tgl($r['tanggal_selesai']) ?></div>
+                                    <div class="text-xs text-gray-400">s/d <?= $tgl($r['tanggal_selesai']) ?></div>
                                 <?php endif; ?>
                             </td>
-                            <td class="px-4 py-3 text-slate-600"><?= esc($r['sesi'] ?? '—') ?></td>
+                            <td class="px-4 py-3 text-gray-600"><?= esc($r['sesi'] ?? '—') ?></td>
                             <td class="px-4 py-3 text-center">
-                                <span class="inline-flex items-center justify-center rounded-full bg-slate-100 text-slate-600 text-xs font-semibold w-7 h-7"><?= (int) ($jumlahPenguji[$r['id']] ?? 0) ?></span>
+                                <span class="inline-flex items-center justify-center rounded-full bg-gray-100 text-gray-600 text-xs font-semibold w-7 h-7"><?= (int) ($jumlahPenguji[$r['id']] ?? 0) ?></span>
                             </td>
                             <td class="px-4 py-3 text-right whitespace-nowrap">
                                 <div class="inline-flex items-center justify-end gap-1">
@@ -124,7 +124,7 @@ $defaults = [
                                                 'tanggal_mulai' => $r['tanggal_mulai'], 'tanggal_selesai' => $r['tanggal_selesai'],
                                                 'sesi' => $r['sesi'], 'keterangan' => $r['keterangan'],
                                             ]), ENT_QUOTES) ?>)"
-                                            class="inline-flex h-8 w-8 items-center justify-center rounded-lg text-slate-500 hover:bg-slate-100 transition">
+                                            class="inline-flex h-8 w-8 items-center justify-center rounded-lg text-gray-500 hover:bg-gray-100 transition">
                                         <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/></svg>
                                     </button>
                                     <a href="<?= $base ?>/delete/<?= (int) $r['id'] ?>" data-method="post" data-confirm="Hapus jadwal UKK ini? Penugasan penguji ikut terhapus; peserta yang sudah terdaftar TIDAK terhapus (hanya lepas dari jadwal ini)." title="Hapus"
@@ -139,7 +139,7 @@ $defaults = [
             </table>
         </div>
         <?php if ($pager): ?>
-            <div class="px-6 py-4 border-t border-slate-100">
+            <div class="px-6 py-4 border-t border-gray-100">
                 <?= $pager->only(['q', 'paket_soal_id', 'per'])->links('default', 'admin') ?>
             </div>
         <?php endif; ?>
@@ -149,13 +149,13 @@ $defaults = [
     <div x-show="open" x-cloak x-transition.opacity.duration.200ms class="fixed inset-0 z-50 flex items-center justify-center p-4">
         <div class="absolute inset-0 bg-black/40" @click="open=false"></div>
         <div class="relative bg-white rounded-2xl shadow-xl w-full max-w-lg p-6 max-h-[90vh] overflow-y-auto">
-            <h3 class="font-bold text-lg text-slate-800 mb-4" x-text="mode==='add' ? 'Tambah Jadwal UKK' : 'Ubah Jadwal UKK'"></h3>
+            <h3 class="font-bold text-lg text-gray-800 mb-4" x-text="mode==='add' ? 'Tambah Jadwal UKK' : 'Ubah Jadwal UKK'"></h3>
             <form method="post" :action="actionUrl">
                 <?= csrf_field() ?>
                 <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div class="sm:col-span-2">
-                        <label class="block text-sm font-medium text-slate-600 mb-1">Paket Soal *</label>
-                        <select name="paket_soal_id" x-model="form.paket_soal_id" required class="w-full rounded-lg border border-slate-300 px-3 py-2.5 text-sm focus:border-brand-500 outline-none">
+                        <label class="block text-sm font-medium text-gray-600 mb-1">Paket Soal *</label>
+                        <select name="paket_soal_id" x-model="form.paket_soal_id" required class="w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm focus:border-brand-500 outline-hidden">
                             <option value="">— Pilih paket soal —</option>
                             <?php foreach ($paketOpts as $id => $lbl): ?>
                                 <option value="<?= (int) $id ?>"><?= esc($lbl) ?></option>
@@ -163,8 +163,8 @@ $defaults = [
                         </select>
                     </div>
                     <div>
-                        <label class="block text-sm font-medium text-slate-600 mb-1">Tempat Uji</label>
-                        <select name="tempat_uji_id" x-model="form.tempat_uji_id" class="w-full rounded-lg border border-slate-300 px-3 py-2.5 text-sm focus:border-brand-500 outline-none">
+                        <label class="block text-sm font-medium text-gray-600 mb-1">Tempat Uji</label>
+                        <select name="tempat_uji_id" x-model="form.tempat_uji_id" class="w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm focus:border-brand-500 outline-hidden">
                             <option value="">— Tidak ditentukan —</option>
                             <?php foreach ($tempatOpts as $id => $lbl): ?>
                                 <option value="<?= (int) $id ?>"><?= esc($lbl) ?></option>
@@ -172,8 +172,8 @@ $defaults = [
                         </select>
                     </div>
                     <div>
-                        <label class="block text-sm font-medium text-slate-600 mb-1">Tahun Ajaran</label>
-                        <select name="tahun_ajaran_id" x-model="form.tahun_ajaran_id" class="w-full rounded-lg border border-slate-300 px-3 py-2.5 text-sm focus:border-brand-500 outline-none">
+                        <label class="block text-sm font-medium text-gray-600 mb-1">Tahun Ajaran</label>
+                        <select name="tahun_ajaran_id" x-model="form.tahun_ajaran_id" class="w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm focus:border-brand-500 outline-hidden">
                             <option value="">— Tidak ditentukan —</option>
                             <?php foreach ($tahunOpts as $id => $lbl): ?>
                                 <option value="<?= (int) $id ?>"><?= esc($lbl) ?></option>
@@ -181,24 +181,24 @@ $defaults = [
                         </select>
                     </div>
                     <div>
-                        <label class="block text-sm font-medium text-slate-600 mb-1">Tanggal Mulai *</label>
-                        <input type="date" name="tanggal_mulai" x-model="form.tanggal_mulai" required class="w-full rounded-lg border border-slate-300 px-3 py-2.5 text-sm focus:border-brand-500 outline-none">
+                        <label class="block text-sm font-medium text-gray-600 mb-1">Tanggal Mulai *</label>
+                        <input type="date" name="tanggal_mulai" x-model="form.tanggal_mulai" required class="w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm focus:border-brand-500 outline-hidden">
                     </div>
                     <div>
-                        <label class="block text-sm font-medium text-slate-600 mb-1">Tanggal Selesai</label>
-                        <input type="date" name="tanggal_selesai" x-model="form.tanggal_selesai" class="w-full rounded-lg border border-slate-300 px-3 py-2.5 text-sm focus:border-brand-500 outline-none">
+                        <label class="block text-sm font-medium text-gray-600 mb-1">Tanggal Selesai</label>
+                        <input type="date" name="tanggal_selesai" x-model="form.tanggal_selesai" class="w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm focus:border-brand-500 outline-hidden">
                     </div>
                     <div class="sm:col-span-2">
-                        <label class="block text-sm font-medium text-slate-600 mb-1">Sesi</label>
-                        <input type="text" name="sesi" x-model="form.sesi" maxlength="50" placeholder="mis. Sesi 1 (08.00-12.00)" class="w-full rounded-lg border border-slate-300 px-3 py-2.5 text-sm focus:border-brand-500 outline-none">
+                        <label class="block text-sm font-medium text-gray-600 mb-1">Sesi</label>
+                        <input type="text" name="sesi" x-model="form.sesi" maxlength="50" placeholder="mis. Sesi 1 (08.00-12.00)" class="w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm focus:border-brand-500 outline-hidden">
                     </div>
                     <div class="sm:col-span-2">
-                        <label class="block text-sm font-medium text-slate-600 mb-1">Keterangan</label>
-                        <input type="text" name="keterangan" x-model="form.keterangan" maxlength="255" class="w-full rounded-lg border border-slate-300 px-3 py-2.5 text-sm focus:border-brand-500 outline-none">
+                        <label class="block text-sm font-medium text-gray-600 mb-1">Keterangan</label>
+                        <input type="text" name="keterangan" x-model="form.keterangan" maxlength="255" class="w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm focus:border-brand-500 outline-hidden">
                     </div>
                 </div>
                 <div class="flex justify-end gap-2 mt-6">
-                    <button type="button" @click="open=false" class="rounded-lg border border-slate-300 text-slate-600 text-sm font-semibold px-4 py-2.5 hover:bg-slate-50">Batal</button>
+                    <button type="button" @click="open=false" class="rounded-lg border border-gray-300 text-gray-600 text-sm font-semibold px-4 py-2.5 hover:bg-gray-50">Batal</button>
                     <button class="rounded-lg bg-brand-700 hover:bg-brand-800 text-white text-sm font-semibold px-5 py-2.5">Simpan</button>
                 </div>
             </form>

@@ -12,7 +12,7 @@ $warnaStatus = [
     'aktif'  => 'bg-emerald-50 text-emerald-700 border-emerald-200',
     'lulus'  => 'bg-brand-50 text-brand-700 border-brand-200',
     'pindah' => 'bg-amber-50 text-amber-700 border-amber-200',
-    'keluar' => 'bg-slate-100 text-slate-500 border-slate-200',
+    'keluar' => 'bg-gray-100 text-gray-500 border-gray-200',
 ];
 $statusPkl = [
     'menunggu' => ['Menunggu keputusan Waka Hubin', 'bg-brand-50 text-brand-700 border-brand-200'],
@@ -20,7 +20,7 @@ $statusPkl = [
     'disetujui' => ['Disetujui', 'bg-emerald-50 text-emerald-700 border-emerald-200'],
 ];
 $urlEdit = site_url('admin/master/siswa') . '?' . http_build_query(['q' => (string) $s['nis'], 'edit' => (int) $s['id']]);
-$kosong  = '<span class="text-slate-300">—</span>';
+$kosong  = '<span class="text-gray-300">—</span>';
 $bio     = $d['biodata'];
 ?>
 <?= $this->extend('layouts/admin') ?>
@@ -29,18 +29,18 @@ $bio     = $d['biodata'];
 <div class="mx-auto max-w-5xl space-y-5">
 
     <!-- Kepala -->
-    <div class="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm sm:p-6">
+    <div class="rounded-2xl border border-gray-200 bg-white p-5 shadow-xs sm:p-6">
         <a href="<?= esc($urlDaftar, 'attr') ?>" class="text-sm font-semibold text-brand-700 hover:underline">&larr; Daftar Siswa</a>
         <div class="mt-3 flex flex-wrap items-start justify-between gap-4">
             <div class="min-w-0">
-                <h1 class="break-words text-xl font-extrabold text-slate-900 sm:text-2xl"><?= esc($s['nama']) ?></h1>
-                <p class="mt-1 text-sm text-slate-500">
-                    NIS <b class="text-slate-700"><?= esc($s['nis']) ?></b>
-                    <?php if (! empty($s['nisn'])): ?> &middot; NISN <b class="text-slate-700"><?= esc($s['nisn']) ?></b><?php endif; ?>
+                <h1 class="break-words text-xl font-extrabold text-gray-900 sm:text-2xl"><?= esc($s['nama']) ?></h1>
+                <p class="mt-1 text-sm text-gray-500">
+                    NIS <b class="text-gray-700"><?= esc($s['nis']) ?></b>
+                    <?php if (! empty($s['nisn'])): ?> &middot; NISN <b class="text-gray-700"><?= esc($s['nisn']) ?></b><?php endif; ?>
                 </p>
                 <div class="mt-3 flex flex-wrap items-center gap-2 text-xs font-semibold">
-                    <span class="rounded-full border border-slate-200 bg-slate-50 px-2.5 py-1 text-slate-700"><?= ! empty($s['nama_kelas']) ? esc($s['nama_kelas']) : 'Belum ada kelas' ?></span>
-                    <span class="rounded-full border px-2.5 py-1 <?= $warnaStatus[$s['status']] ?? 'bg-slate-100 text-slate-500 border-slate-200' ?>"><?= esc(ucfirst((string) $s['status'])) ?></span>
+                    <span class="rounded-full border border-gray-200 bg-gray-50 px-2.5 py-1 text-gray-700"><?= ! empty($s['nama_kelas']) ? esc($s['nama_kelas']) : 'Belum ada kelas' ?></span>
+                    <span class="rounded-full border px-2.5 py-1 <?= $warnaStatus[$s['status']] ?? 'bg-gray-100 text-gray-500 border-gray-200' ?>"><?= esc(ucfirst((string) $s['status'])) ?></span>
                     <?php if (! empty($s['biodata_at'])): ?><span class="rounded-full border border-emerald-200 bg-emerald-50 px-2.5 py-1 text-emerald-700">Biodata &#10003;</span><?php endif; ?>
                 </div>
             </div>
@@ -54,13 +54,13 @@ $bio     = $d['biodata'];
     <!-- Data per bagian -->
     <div class="grid gap-5 md:grid-cols-2">
         <?php foreach ($d['bagian'] as [$judul, $baris]): ?>
-            <section class="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
-                <h2 class="border-b border-slate-100 bg-slate-50 px-5 py-3 text-xs font-bold uppercase tracking-wide text-slate-500"><?= esc($judul) ?></h2>
-                <dl class="divide-y divide-slate-100">
+            <section class="overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-xs">
+                <h2 class="border-b border-gray-100 bg-gray-50 px-5 py-3 text-xs font-bold uppercase tracking-wide text-gray-500"><?= esc($judul) ?></h2>
+                <dl class="divide-y divide-gray-100">
                     <?php foreach ($baris as [$kunci, $label, $nilai]): ?>
                         <div class="grid grid-cols-5 gap-3 px-5 py-2.5 text-sm" data-kunci="<?= esc($kunci, 'attr') ?>">
-                            <dt class="col-span-2 text-slate-500"><?= esc($label) ?></dt>
-                            <dd class="col-span-3 break-words font-medium text-slate-800"><?= $nilai !== null && $nilai !== '' ? esc($nilai) : $kosong ?></dd>
+                            <dt class="col-span-2 text-gray-500"><?= esc($label) ?></dt>
+                            <dd class="col-span-3 break-words font-medium text-gray-800"><?= $nilai !== null && $nilai !== '' ? esc($nilai) : $kosong ?></dd>
                         </div>
                     <?php endforeach; ?>
                 </dl>
@@ -68,28 +68,28 @@ $bio     = $d['biodata'];
         <?php endforeach; ?>
 
         <!-- Biodata -->
-        <section class="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
-            <h2 class="border-b border-slate-100 bg-slate-50 px-5 py-3 text-xs font-bold uppercase tracking-wide text-slate-500">Isian Biodata</h2>
-            <dl class="divide-y divide-slate-100">
+        <section class="overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-xs">
+            <h2 class="border-b border-gray-100 bg-gray-50 px-5 py-3 text-xs font-bold uppercase tracking-wide text-gray-500">Isian Biodata</h2>
+            <dl class="divide-y divide-gray-100">
                 <div class="grid grid-cols-5 gap-3 px-5 py-2.5 text-sm">
-                    <dt class="col-span-2 text-slate-500">Disahkan</dt>
-                    <dd class="col-span-3 font-medium text-slate-800"><?= $bio['disahkan_pada'] !== null ? esc($bio['disahkan_pada']) : 'Belum disahkan' ?></dd>
+                    <dt class="col-span-2 text-gray-500">Disahkan</dt>
+                    <dd class="col-span-3 font-medium text-gray-800"><?= $bio['disahkan_pada'] !== null ? esc($bio['disahkan_pada']) : 'Belum disahkan' ?></dd>
                 </div>
                 <div class="grid grid-cols-5 gap-3 px-5 py-2.5 text-sm">
-                    <dt class="col-span-2 text-slate-500">Kelengkapan</dt>
-                    <dd class="col-span-3 font-medium text-slate-800">
+                    <dt class="col-span-2 text-gray-500">Kelengkapan</dt>
+                    <dd class="col-span-3 font-medium text-gray-800">
                         <?php if ($bio['kurang'] === []): ?>
                             <span class="text-emerald-700">Lengkap</span>
                         <?php else: ?>
                             <?= count($bio['kurang']) ?> kolom wajib belum terisi
-                            <span class="mt-1 block text-xs font-normal text-slate-500"><?= esc(implode(', ', $bio['kurang'])) ?></span>
+                            <span class="mt-1 block text-xs font-normal text-gray-500"><?= esc(implode(', ', $bio['kurang'])) ?></span>
                         <?php endif; ?>
                     </dd>
                 </div>
                 <?php if ($bio['isian'] !== null): ?>
                     <div class="grid grid-cols-5 gap-3 px-5 py-2.5 text-sm">
-                        <dt class="col-span-2 text-slate-500">Isian siswa</dt>
-                        <dd class="col-span-3 font-medium text-slate-800">
+                        <dt class="col-span-2 text-gray-500">Isian siswa</dt>
+                        <dd class="col-span-3 font-medium text-gray-800">
                             <?= esc($bio['isian']['status_label']) ?>
                             <?php if ($bolehBio): ?><a href="<?= site_url('admin/biodata/' . (int) $bio['isian']['id']) ?>" class="ml-1 font-semibold text-brand-700 hover:underline">Buka &rarr;</a><?php endif; ?>
                         </dd>
@@ -99,31 +99,31 @@ $bio     = $d['biodata'];
         </section>
 
         <!-- PKL -->
-        <section class="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
-            <h2 class="border-b border-slate-100 bg-slate-50 px-5 py-3 text-xs font-bold uppercase tracking-wide text-slate-500">PKL / Prakerin</h2>
+        <section class="overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-xs">
+            <h2 class="border-b border-gray-100 bg-gray-50 px-5 py-3 text-xs font-bold uppercase tracking-wide text-gray-500">PKL / Prakerin</h2>
             <?php if ($d['pkl'] === null): ?>
-                <p class="px-5 py-4 text-sm text-slate-500">Belum punya ajuan PKL yang aktif.</p>
-            <?php else: $p = $d['pkl']; [$labelPkl, $warnaPkl] = $statusPkl[$p['status']] ?? [ucfirst($p['status']), 'bg-slate-100 text-slate-600 border-slate-200']; ?>
-                <dl class="divide-y divide-slate-100">
+                <p class="px-5 py-4 text-sm text-gray-500">Belum punya ajuan PKL yang aktif.</p>
+            <?php else: $p = $d['pkl']; [$labelPkl, $warnaPkl] = $statusPkl[$p['status']] ?? [ucfirst($p['status']), 'bg-gray-100 text-gray-600 border-gray-200']; ?>
+                <dl class="divide-y divide-gray-100">
                     <div class="grid grid-cols-5 gap-3 px-5 py-2.5 text-sm">
-                        <dt class="col-span-2 text-slate-500">Status</dt>
+                        <dt class="col-span-2 text-gray-500">Status</dt>
                         <dd class="col-span-3"><span class="rounded-full border px-2.5 py-1 text-xs font-semibold <?= $warnaPkl ?>"><?= esc($labelPkl) ?></span></dd>
                     </div>
                     <div class="grid grid-cols-5 gap-3 px-5 py-2.5 text-sm">
-                        <dt class="col-span-2 text-slate-500">Perusahaan</dt>
-                        <dd class="col-span-3 break-words font-medium text-slate-800"><?= esc($p['perusahaan']) ?><?= ! empty($p['kota']) ? ' &middot; ' . esc($p['kota']) : '' ?></dd>
+                        <dt class="col-span-2 text-gray-500">Perusahaan</dt>
+                        <dd class="col-span-3 break-words font-medium text-gray-800"><?= esc($p['perusahaan']) ?><?= ! empty($p['kota']) ? ' &middot; ' . esc($p['kota']) : '' ?></dd>
                     </div>
                     <div class="grid grid-cols-5 gap-3 px-5 py-2.5 text-sm">
-                        <dt class="col-span-2 text-slate-500">Peran di ajuan</dt>
-                        <dd class="col-span-3 font-medium text-slate-800"><?= $p['peran'] === 'pengaju' ? 'Pengaju' : 'Teman satu tempat' ?></dd>
+                        <dt class="col-span-2 text-gray-500">Peran di ajuan</dt>
+                        <dd class="col-span-3 font-medium text-gray-800"><?= $p['peran'] === 'pengaju' ? 'Pengaju' : 'Teman satu tempat' ?></dd>
                     </div>
                     <div class="grid grid-cols-5 gap-3 px-5 py-2.5 text-sm">
-                        <dt class="col-span-2 text-slate-500">Nomor surat</dt>
-                        <dd class="col-span-3 font-medium text-slate-800"><?= $p['nomor_surat'] !== null ? esc($p['nomor_surat']) : $kosong ?></dd>
+                        <dt class="col-span-2 text-gray-500">Nomor surat</dt>
+                        <dd class="col-span-3 font-medium text-gray-800"><?= $p['nomor_surat'] !== null ? esc($p['nomor_surat']) : $kosong ?></dd>
                     </div>
                     <div class="grid grid-cols-5 gap-3 px-5 py-2.5 text-sm">
-                        <dt class="col-span-2 text-slate-500">Nomor bukti</dt>
-                        <dd class="col-span-3 font-medium text-slate-800"><?= esc($p['kode']) ?>
+                        <dt class="col-span-2 text-gray-500">Nomor bukti</dt>
+                        <dd class="col-span-3 font-medium text-gray-800"><?= esc($p['kode']) ?>
                             <?php if ($bolehPkl): ?><a href="<?= site_url('admin/pkl/' . (int) $p['ajuan_id']) ?>" class="ml-1 font-semibold text-brand-700 hover:underline">Buka ajuan &rarr;</a><?php endif; ?>
                         </dd>
                     </div>
@@ -132,7 +132,7 @@ $bio     = $d['biodata'];
         </section>
     </div>
 
-    <p class="px-1 text-xs text-slate-400">
+    <p class="px-1 text-xs text-gray-400">
         Dibuat <?= esc($d['jejak']['dibuat'] ?? '—') ?> &middot; terakhir diubah <?= esc($d['jejak']['diubah'] ?? '—') ?>
     </p>
 </div>

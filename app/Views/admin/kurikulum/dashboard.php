@@ -19,10 +19,10 @@ $cards = [
 <!-- Kartu utama -->
 <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-5">
     <?php foreach ($cards as [$label, $val, $bg, $icon]): ?>
-        <div class="bg-white rounded-2xl border border-slate-200 shadow-sm p-5 flex items-center justify-between">
+        <div class="bg-white rounded-2xl border border-gray-200 shadow-xs p-5 flex items-center justify-between">
             <div>
-                <p class="text-sm text-slate-500"><?= $label ?></p>
-                <p class="text-3xl font-extrabold text-slate-800 mt-1"><?= (int) $val ?></p>
+                <p class="text-sm text-gray-500"><?= $label ?></p>
+                <p class="text-3xl font-extrabold text-gray-800 mt-1"><?= (int) $val ?></p>
             </div>
             <span class="flex h-12 w-12 items-center justify-center rounded-xl <?= $bg ?> text-white">
                 <svg class="w-6 h-6" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="<?= $icon ?>"/></svg>
@@ -33,7 +33,7 @@ $cards = [
 
 <!-- Kartu status -->
 <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-5">
-    <a href="<?= site_url('admin/kurikulum/bentrok') ?>" class="rounded-2xl border p-5 transition hover:shadow <?= $bentrok > 0 ? 'bg-red-50 border-red-200' : 'bg-emerald-50 border-emerald-200' ?>">
+    <a href="<?= site_url('admin/kurikulum/bentrok') ?>" class="rounded-2xl border p-5 transition hover:shadow-sm <?= $bentrok > 0 ? 'bg-red-50 border-red-200' : 'bg-emerald-50 border-emerald-200' ?>">
         <p class="text-sm <?= $bentrok > 0 ? 'text-red-600' : 'text-emerald-700' ?>">Total Bentrok / Masalah</p>
         <p class="text-3xl font-extrabold mt-1 <?= $bentrok > 0 ? 'text-red-700' : 'text-emerald-700' ?>"><?= (int) $bentrok ?></p>
         <p class="text-xs mt-1 <?= $bentrok > 0 ? 'text-red-500' : 'text-emerald-600' ?>"><?= $bentrok > 0 ? 'Klik untuk periksa →' : 'Tidak ada bentrok 🎉' ?></p>
@@ -51,10 +51,10 @@ $cards = [
 </div>
 
 <!-- Grafik beban guru -->
-<div class="bg-white rounded-2xl border border-slate-200 shadow-sm p-5">
-    <h2 class="font-bold text-slate-800 mb-4">Beban Mengajar per Guru <span class="text-slate-400 font-normal text-sm">(12 terbanyak)</span></h2>
+<div class="bg-white rounded-2xl border border-gray-200 shadow-xs p-5">
+    <h2 class="font-bold text-gray-800 mb-4">Beban Mengajar per Guru <span class="text-gray-400 font-normal text-sm">(12 terbanyak)</span></h2>
     <?php if (empty($chart)): ?>
-        <p class="text-slate-400 text-sm py-8 text-center">Belum ada data beban. Atur Penugasan terlebih dahulu.</p>
+        <p class="text-gray-400 text-sm py-8 text-center">Belum ada data beban. Atur Penugasan terlebih dahulu.</p>
     <?php else: ?>
         <div class="relative" style="height:340px"><canvas id="chartBeban"></canvas></div>
     <?php endif; ?>

@@ -6,10 +6,11 @@
     <title>Login Admin &mdash; Kesediaan Guru</title>
     <meta name="robots" content="noindex">
     <?= view('partials/favicon') ?>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="<?= base_url('assets/css/app.css') ?>?v=<?= @filemtime(FCPATH . 'assets/css/app.css') ?>">
+    <?php // Sama dengan layouts/admin.php: admin.css (Tailwind v4) + font Inter lokal + penanda nonce (persiapan CSP). ?>
+    <link rel="preload" href="<?= base_url('assets/fonts/inter/inter-latin-wght-normal.woff2') ?>" as="font" type="font/woff2" crossorigin>
+    <link rel="stylesheet" href="<?= base_url('assets/css/admin.css') ?>?v=<?= @filemtime(FCPATH . 'assets/css/admin.css') ?>" <?= csp_style_nonce() ?>>
 </head>
-<body class="min-h-screen bg-gradient-to-br from-brand-700 to-brand-900 flex items-center justify-center p-4">
+<body class="min-h-screen bg-linear-to-br from-brand-700 to-brand-900 flex items-center justify-center p-4">
     <div class="w-full max-w-md">
         <div class="text-center mb-6">
             <div class="inline-flex h-14 w-14 items-center justify-center rounded-2xl bg-emerald-300 text-brand-900 text-2xl font-extrabold shadow-lg">K</div>
@@ -28,15 +29,15 @@
             <form action="<?= site_url('admin/login') ?>" method="post" class="space-y-4">
                 <?= csrf_field() ?>
                 <div>
-                    <label class="block text-sm font-medium text-slate-600 mb-1.5">Username atau Email</label>
+                    <label class="block text-sm font-medium text-gray-600 mb-1.5">Username atau Email</label>
                     <input type="text" name="login" value="<?= old('login') ?>" required autofocus
-                           class="w-full rounded-lg border border-slate-300 px-3.5 py-2.5 text-sm focus:border-brand-500 focus:ring-2 focus:ring-brand-500/20 outline-none"
+                           class="w-full rounded-lg border border-gray-300 px-3.5 py-2.5 text-sm focus:border-brand-500 focus:ring-2 focus:ring-brand-500/20 outline-hidden"
                            placeholder="admin">
                 </div>
                 <div x-data="{show:false}">
-                    <label class="block text-sm font-medium text-slate-600 mb-1.5">Password</label>
+                    <label class="block text-sm font-medium text-gray-600 mb-1.5">Password</label>
                     <input type="password" name="password" required
-                           class="w-full rounded-lg border border-slate-300 px-3.5 py-2.5 text-sm focus:border-brand-500 focus:ring-2 focus:ring-brand-500/20 outline-none"
+                           class="w-full rounded-lg border border-gray-300 px-3.5 py-2.5 text-sm focus:border-brand-500 focus:ring-2 focus:ring-brand-500/20 outline-hidden"
                            placeholder="••••••••">
                 </div>
                 <button type="submit" class="w-full bg-brand-700 hover:bg-brand-800 text-white font-semibold py-3 rounded-lg transition active:scale-95">

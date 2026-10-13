@@ -32,7 +32,7 @@ $labelShift = ['pagi' => 'Pagi', 'siang' => 'Siang', 'semua' => 'Pagi & Siang'];
 $warnaShift = [
     'pagi'  => 'bg-amber-50 text-amber-700 border-amber-200',
     'siang' => 'bg-brand-50 text-brand-700 border-brand-200',
-    'semua' => 'bg-slate-100 text-slate-600 border-slate-200',
+    'semua' => 'bg-gray-100 text-gray-600 border-gray-200',
 ];
 
 // Nilai awal form tambah: tanggal ikut tanggal mulai periode bila sudah diisi.
@@ -58,52 +58,52 @@ $adaFilter = $filter['q'] !== '' || $filter['tingkat'] !== '' || $filter['jurusa
       openEdit(r){ this.mode='edit'; this.form=Object.assign({}, this.defaults, r); this.open=true; } }">
 
     <!-- Toolbar -->
-    <div class="bg-white rounded-2xl border border-slate-200 shadow-sm p-4 mb-5">
+    <div class="bg-white rounded-2xl border border-gray-200 shadow-xs p-4 mb-5">
         <form method="get" class="flex flex-col sm:flex-row sm:flex-wrap sm:items-center gap-2">
             <input type="hidden" name="tp" value="<?= esc($tp, 'attr') ?>">
             <div class="relative flex-1 min-w-[200px]">
-                <svg class="w-5 h-5 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
+                <svg class="w-5 h-5 text-gray-400 absolute left-3 top-1/2 -translate-y-1/2" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
                 <input type="text" name="q" value="<?= esc($filter['q']) ?>" placeholder="Cari mata pelajaran atau ruang..."
-                       class="w-full rounded-lg border border-slate-300 pl-10 pr-3 py-2.5 text-sm focus:border-brand-500 focus:ring-2 focus:ring-brand-500/20 outline-none">
+                       class="w-full rounded-lg border border-gray-300 pl-10 pr-3 py-2.5 text-sm focus:border-brand-500 focus:ring-2 focus:ring-brand-500/20 outline-hidden">
             </div>
-            <select name="tingkat" data-autosubmit class="rounded-lg border border-slate-300 px-3 py-2.5 text-sm focus:border-brand-500 outline-none shrink-0">
+            <select name="tingkat" data-autosubmit class="rounded-lg border border-gray-300 px-3 py-2.5 text-sm focus:border-brand-500 outline-hidden shrink-0">
                 <option value="">Semua tingkat</option>
                 <?php foreach ($tingkatList as $t): ?>
                     <option value="<?= esc($t, 'attr') ?>" <?= $filter['tingkat'] === $t ? 'selected' : '' ?>>Tingkat <?= esc($t) ?></option>
                 <?php endforeach; ?>
             </select>
-            <select name="jurusan_id" data-autosubmit class="rounded-lg border border-slate-300 px-3 py-2.5 text-sm focus:border-brand-500 outline-none shrink-0">
+            <select name="jurusan_id" data-autosubmit class="rounded-lg border border-gray-300 px-3 py-2.5 text-sm focus:border-brand-500 outline-hidden shrink-0">
                 <option value="">Semua jurusan</option>
                 <?php foreach ($jurusanOpts as $id => $lbl): ?>
                     <option value="<?= (int) $id ?>" <?= $filter['jurusan_id'] === (int) $id ? 'selected' : '' ?>><?= esc($lbl) ?></option>
                 <?php endforeach; ?>
             </select>
-            <select name="per" data-autosubmit title="Jumlah per halaman" class="rounded-lg border border-slate-300 px-3 py-2.5 text-sm focus:border-brand-500 outline-none shrink-0">
+            <select name="per" data-autosubmit title="Jumlah per halaman" class="rounded-lg border border-gray-300 px-3 py-2.5 text-sm focus:border-brand-500 outline-hidden shrink-0">
                 <?php foreach ([10, 20, 30, 40, 50] as $n): ?>
                     <option value="<?= $n ?>" <?= $per === $n ? 'selected' : '' ?>>Tampilkan <?= $n ?></option>
                 <?php endforeach; ?>
             </select>
             <button class="rounded-lg bg-brand-700 hover:bg-brand-800 text-white text-sm font-semibold px-5 py-2.5 shrink-0">Cari</button>
             <?php if ($adaFilter): ?>
-                <a href="<?= $base ?>/jadwal<?= $qtp ?>" class="rounded-lg border border-slate-300 text-slate-600 text-sm font-semibold px-4 py-2.5 hover:bg-slate-50 text-center shrink-0">Reset</a>
+                <a href="<?= $base ?>/jadwal<?= $qtp ?>" class="rounded-lg border border-gray-300 text-gray-600 text-sm font-semibold px-4 py-2.5 hover:bg-gray-50 text-center shrink-0">Reset</a>
             <?php endif; ?>
         </form>
-        <div class="flex flex-wrap items-center gap-2 border-t border-slate-100 mt-3 pt-3">
-            <span class="inline-flex items-center gap-1.5 rounded-full bg-slate-100 text-slate-600 text-xs font-semibold px-3 py-1.5">
+        <div class="flex flex-wrap items-center gap-2 border-t border-gray-100 mt-3 pt-3">
+            <span class="inline-flex items-center gap-1.5 rounded-full bg-gray-100 text-gray-600 text-xs font-semibold px-3 py-1.5">
                 Jadwal: <?= (int) $totalJadwal ?>
             </span>
             <div class="flex-1"></div>
             <a href="<?= $base ?>/pembuat-soal<?= $qtp ?>" title="Tugaskan guru pembuat soal per jadwal (dasar honor Pembuatan Soal)"
-               class="inline-flex items-center gap-1.5 rounded-lg border border-slate-300 text-slate-600 text-sm font-semibold px-3.5 py-2.5 hover:bg-slate-50 transition">
+               class="inline-flex items-center gap-1.5 rounded-lg border border-gray-300 text-gray-600 text-sm font-semibold px-3.5 py-2.5 hover:bg-gray-50 transition">
                 Pembuat Soal
             </a>
             <button type="button" @click="importOpen=true"
-                    class="inline-flex items-center gap-1.5 rounded-lg border border-slate-300 text-slate-600 text-sm font-semibold px-3.5 py-2.5 hover:bg-slate-50 transition">
+                    class="inline-flex items-center gap-1.5 rounded-lg border border-gray-300 text-gray-600 text-sm font-semibold px-3.5 py-2.5 hover:bg-gray-50 transition">
                 <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"/></svg>
                 Import
             </button>
             <a href="<?= $base ?>/jadwal/export<?= $qtp ?>"
-               class="inline-flex items-center gap-1.5 rounded-lg border border-slate-300 text-slate-600 text-sm font-semibold px-3.5 py-2.5 hover:bg-slate-50 transition">
+               class="inline-flex items-center gap-1.5 rounded-lg border border-gray-300 text-gray-600 text-sm font-semibold px-3.5 py-2.5 hover:bg-gray-50 transition">
                 <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg>
                 Export
             </a>
@@ -118,7 +118,7 @@ $adaFilter = $filter['q'] !== '' || $filter['tingkat'] !== '' || $filter['jurusa
     <!-- Kartu (HP): tabel lebar tak muat di layar sempit, jadi tiap jadwal tampil sebagai kartu dengan tombol berlabel -->
     <div class="mb-5 space-y-3 md:hidden">
         <?php if (! $rows): ?>
-            <div class="rounded-2xl border border-slate-200 bg-white px-5 py-10 text-center text-sm text-slate-400">
+            <div class="rounded-2xl border border-gray-200 bg-white px-5 py-10 text-center text-sm text-gray-400">
                 <?= $adaFilter ? 'Tidak ada jadwal yang cocok dengan filter.' : 'Belum ada jadwal ujian. Ketuk <b>Tambah Jadwal</b> untuk mulai menyusun.' ?>
             </div>
         <?php else: foreach ($rows as $r): ?>
@@ -132,24 +132,24 @@ $adaFilter = $filter['q'] !== '' || $filter['tingkat'] !== '' || $filter['jurusa
                 'jam_selesai' => $r['jam_selesai'] ? substr((string) $r['jam_selesai'], 0, 5) : '', 'ruang' => $r['ruang'] ?? '', 'keterangan' => $r['keterangan'] ?? '',
             ]), ENT_QUOTES);
             ?>
-            <div class="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+            <div class="rounded-2xl border border-gray-200 bg-white p-4 shadow-xs">
                 <div class="flex items-start justify-between gap-3">
                     <div class="min-w-0">
-                        <p class="font-bold text-slate-800"><?= esc($r['nama_mapel'] ?? 'Mapel sudah dihapus') ?></p>
-                        <p class="mt-0.5 text-xs text-slate-500"><?= esc($HARI[(int) date('N', $tsK)] ?? '') ?>, <?= date('d/m/Y', $tsK) ?> · <?= esc($jam($r['jam_mulai'], $r['jam_selesai'])) ?></p>
+                        <p class="font-bold text-gray-800"><?= esc($r['nama_mapel'] ?? 'Mapel sudah dihapus') ?></p>
+                        <p class="mt-0.5 text-xs text-gray-500"><?= esc($HARI[(int) date('N', $tsK)] ?? '') ?>, <?= date('d/m/Y', $tsK) ?> · <?= esc($jam($r['jam_mulai'], $r['jam_selesai'])) ?></p>
                     </div>
                     <span class="shrink-0 inline-flex items-center rounded-full border px-2 py-0.5 text-[11px] font-semibold <?= $warnaShift[$r['shift']] ?? $warnaShift['semua'] ?>"><?= esc($labelShift[$r['shift']] ?? $r['shift']) ?></span>
                 </div>
-                <p class="mt-2 text-sm text-slate-600">Tingkat <?= esc($r['tingkat']) ?><?= $r['jurusan_kode'] ? ' · ' . esc($r['jurusan_kode']) : '' ?> · Ruang <?= esc($r['ruang'] ?: '—') ?></p>
+                <p class="mt-2 text-sm text-gray-600">Tingkat <?= esc($r['tingkat']) ?><?= $r['jurusan_kode'] ? ' · ' . esc($r['jurusan_kode']) : '' ?> · Ruang <?= esc($r['ruang'] ?: '—') ?></p>
                 <div class="mt-2 flex flex-wrap gap-2 text-xs">
-                    <a href="<?= $base ?>/pengawas/<?= (int) $r['id'] ?>" class="inline-flex items-center rounded-full border px-2.5 py-1 font-semibold <?= $jmlK > 0 ? 'border-brand-200 bg-brand-50 text-brand-700' : 'border-slate-200 text-slate-500' ?>">Pengawas: <?= $jmlK ?></a>
-                    <a href="<?= $base ?>/pembuat-soal<?= $qtp ?>" class="inline-flex items-center rounded-full border px-2.5 py-1 font-semibold <?= (int) ($jmlPembuat[$r['id']] ?? 0) > 0 ? 'border-brand-200 bg-brand-50 text-brand-700' : 'border-slate-200 text-slate-500' ?>">Pembuat soal: <?= (int) ($jmlPembuat[$r['id']] ?? 0) ?></a>
-                    <span class="inline-flex items-center rounded-full border px-2.5 py-1 font-semibold <?= $takK > 0 ? 'border-amber-200 bg-amber-50 text-amber-800' : 'border-slate-200 text-slate-500' ?>">Tidak hadir: <?= $takK ?></span>
+                    <a href="<?= $base ?>/pengawas/<?= (int) $r['id'] ?>" class="inline-flex items-center rounded-full border px-2.5 py-1 font-semibold <?= $jmlK > 0 ? 'border-brand-200 bg-brand-50 text-brand-700' : 'border-gray-200 text-gray-500' ?>">Pengawas: <?= $jmlK ?></a>
+                    <a href="<?= $base ?>/pembuat-soal<?= $qtp ?>" class="inline-flex items-center rounded-full border px-2.5 py-1 font-semibold <?= (int) ($jmlPembuat[$r['id']] ?? 0) > 0 ? 'border-brand-200 bg-brand-50 text-brand-700' : 'border-gray-200 text-gray-500' ?>">Pembuat soal: <?= (int) ($jmlPembuat[$r['id']] ?? 0) ?></a>
+                    <span class="inline-flex items-center rounded-full border px-2.5 py-1 font-semibold <?= $takK > 0 ? 'border-amber-200 bg-amber-50 text-amber-800' : 'border-gray-200 text-gray-500' ?>">Tidak hadir: <?= $takK ?></span>
                 </div>
                 <div class="mt-3 grid grid-cols-2 gap-2 text-sm font-semibold">
-                    <a href="<?= $base ?>/daftar-hadir/<?= (int) $r['id'] ?><?= $qtp ?>" target="_blank" rel="noopener" class="rounded-lg border border-slate-200 px-3 py-2 text-center text-slate-600 hover:bg-slate-50">Daftar hadir</a>
-                    <a href="<?= $base ?>/berita-acara/<?= (int) $r['id'] ?><?= $qtp ?>" target="_blank" rel="noopener" class="rounded-lg border border-slate-200 px-3 py-2 text-center text-slate-600 hover:bg-slate-50">Berita acara</a>
-                    <button type="button" @click="openEdit(<?= $editK ?>)" class="rounded-lg border border-slate-200 px-3 py-2 text-slate-600 hover:bg-slate-50">Ubah</button>
+                    <a href="<?= $base ?>/daftar-hadir/<?= (int) $r['id'] ?><?= $qtp ?>" target="_blank" rel="noopener" class="rounded-lg border border-gray-200 px-3 py-2 text-center text-gray-600 hover:bg-gray-50">Daftar hadir</a>
+                    <a href="<?= $base ?>/berita-acara/<?= (int) $r['id'] ?><?= $qtp ?>" target="_blank" rel="noopener" class="rounded-lg border border-gray-200 px-3 py-2 text-center text-gray-600 hover:bg-gray-50">Berita acara</a>
+                    <button type="button" @click="openEdit(<?= $editK ?>)" class="rounded-lg border border-gray-200 px-3 py-2 text-gray-600 hover:bg-gray-50">Ubah</button>
                     <form method="post" action="<?= $base ?>/jadwal/<?= (int) $r['id'] ?>/hapus">
                         <?= csrf_field() ?><input type="hidden" name="periode_id" value="<?= (int) $periode['id'] ?>">
                         <button data-confirm="Hapus jadwal ini?<?= $takK > 0 ? ' ' . $takK . ' catatan ketidakhadiran TETAP tersimpan, hanya dilepas dari jadwal ini.' : '' ?> Penugasan pengawasnya ikut terhapus." class="w-full rounded-lg border border-red-200 px-3 py-2 text-red-600 hover:bg-red-50">Hapus</button>
@@ -160,10 +160,10 @@ $adaFilter = $filter['q'] !== '' || $filter['tingkat'] !== '' || $filter['jurusa
     </div>
 
     <!-- Tabel (laptop) -->
-    <div class="hidden bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden md:block">
+    <div class="hidden bg-white rounded-2xl border border-gray-200 shadow-xs overflow-hidden md:block">
         <div class="overflow-x-auto">
             <table class="w-full text-sm">
-                <thead class="bg-slate-50 text-slate-500">
+                <thead class="bg-gray-50 text-gray-500">
                     <tr>
                         <th class="text-left font-semibold px-6 py-3">Hari / Tanggal</th>
                         <th class="text-left font-semibold px-4 py-3">Jam</th>
@@ -176,10 +176,10 @@ $adaFilter = $filter['q'] !== '' || $filter['tingkat'] !== '' || $filter['jurusa
                         <th class="text-right font-semibold px-6 py-3">Aksi</th>
                     </tr>
                 </thead>
-                <tbody class="divide-y divide-slate-100">
+                <tbody class="divide-y divide-gray-100">
                     <?php if (! $rows): ?>
                         <tr>
-                            <td colspan="9" class="px-6 py-12 text-center text-slate-400">
+                            <td colspan="9" class="px-6 py-12 text-center text-gray-400">
                                 <?= $adaFilter
                                     ? 'Tidak ada jadwal yang cocok dengan filter.'
                                     : 'Belum ada jadwal ujian. Klik <b>Tambah Jadwal</b> untuk mulai menyusun.' ?>
@@ -187,34 +187,34 @@ $adaFilter = $filter['q'] !== '' || $filter['tingkat'] !== '' || $filter['jurusa
                         </tr>
                     <?php else: foreach ($rows as $r): ?>
                         <?php $ts = strtotime((string) $r['tanggal']); ?>
-                        <tr class="hover:bg-slate-50/60">
+                        <tr class="hover:bg-gray-50/60">
                             <td class="px-6 py-3">
-                                <p class="font-semibold text-slate-700"><?= esc($HARI[(int) date('N', $ts)] ?? '') ?></p>
-                                <p class="text-xs text-slate-500"><?= date('d/m/Y', $ts) ?></p>
+                                <p class="font-semibold text-gray-700"><?= esc($HARI[(int) date('N', $ts)] ?? '') ?></p>
+                                <p class="text-xs text-gray-500"><?= date('d/m/Y', $ts) ?></p>
                             </td>
-                            <td class="px-4 py-3 text-slate-600 whitespace-nowrap"><?= esc($jam($r['jam_mulai'], $r['jam_selesai'])) ?></td>
+                            <td class="px-4 py-3 text-gray-600 whitespace-nowrap"><?= esc($jam($r['jam_mulai'], $r['jam_selesai'])) ?></td>
                             <td class="px-4 py-3">
-                                <p class="font-semibold text-slate-700"><?= esc($r['nama_mapel'] ?? 'Mapel sudah dihapus') ?></p>
+                                <p class="font-semibold text-gray-700"><?= esc($r['nama_mapel'] ?? 'Mapel sudah dihapus') ?></p>
                                 <?php if ($r['kode_mapel']): ?>
-                                    <p class="text-xs text-slate-400"><?= esc($r['kode_mapel']) ?></p>
+                                    <p class="text-xs text-gray-400"><?= esc($r['kode_mapel']) ?></p>
                                 <?php endif; ?>
                             </td>
                             <td class="px-4 py-3">
-                                <span class="font-semibold text-slate-700">Tingkat <?= esc($r['tingkat']) ?></span>
+                                <span class="font-semibold text-gray-700">Tingkat <?= esc($r['tingkat']) ?></span>
                                 <?php if ($r['jurusan_kode']): ?>
-                                    <span class="text-slate-500"> · <?= esc($r['jurusan_kode']) ?></span>
+                                    <span class="text-gray-500"> · <?= esc($r['jurusan_kode']) ?></span>
                                 <?php endif; ?>
                                 <span class="ml-1 inline-flex items-center rounded-full border px-2 py-0.5 text-[11px] font-semibold <?= $warnaShift[$r['shift']] ?? $warnaShift['semua'] ?>">
                                     <?= esc($labelShift[$r['shift']] ?? $r['shift']) ?>
                                 </span>
                             </td>
-                            <td class="px-4 py-3 text-slate-600"><?= esc($r['ruang'] ?: '—') ?></td>
+                            <td class="px-4 py-3 text-gray-600"><?= esc($r['ruang'] ?: '—') ?></td>
                             <td class="px-4 py-3 text-center">
                                 <?php $jml = (int) ($jmlPengawas[$r['id']] ?? 0); ?>
                                 <a href="<?= $base ?>/pengawas/<?= (int) $r['id'] ?>" title="Kelola pengawas" aria-label="Kelola pengawas"
                                    class="inline-flex items-center gap-1 rounded-lg px-2 py-1 text-sm font-semibold transition <?= $jml > 0
                                        ? 'text-brand-700 hover:bg-brand-50'
-                                       : 'text-slate-400 hover:bg-slate-100' ?>">
+                                       : 'text-gray-400 hover:bg-gray-100' ?>">
                                     <?= $jml ?>
                                     <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/></svg>
                                 </a>
@@ -222,20 +222,20 @@ $adaFilter = $filter['q'] !== '' || $filter['tingkat'] !== '' || $filter['jurusa
                             <td class="px-4 py-3 text-center">
                                 <?php $pbs = (int) ($jmlPembuat[$r['id']] ?? 0); ?>
                                 <a href="<?= $base ?>/pembuat-soal<?= $qtp ?>" title="Atur pembuat soal" aria-label="Atur pembuat soal (<?= $pbs ?> orang)"
-                                   class="inline-flex items-center rounded-lg px-2 py-1 text-sm font-semibold transition <?= $pbs > 0 ? 'text-brand-700 hover:bg-brand-50' : 'text-slate-400 hover:bg-slate-100' ?>"><?= $pbs ?></a>
+                                   class="inline-flex items-center rounded-lg px-2 py-1 text-sm font-semibold transition <?= $pbs > 0 ? 'text-brand-700 hover:bg-brand-50' : 'text-gray-400 hover:bg-gray-100' ?>"><?= $pbs ?></a>
                             </td>
                             <td class="px-4 py-3 text-center">
                                 <?php $tak = (int) ($jmlTakHadir[$r['id']] ?? 0); ?>
-                                <span class="<?= $tak > 0 ? 'font-bold text-amber-700' : 'text-slate-400' ?>"><?= $tak ?></span>
+                                <span class="<?= $tak > 0 ? 'font-bold text-amber-700' : 'text-gray-400' ?>"><?= $tak ?></span>
                             </td>
                             <td class="px-6 py-3">
                                 <div class="flex items-center justify-end gap-1">
                                     <a href="<?= $base ?>/daftar-hadir/<?= (int) $r['id'] ?><?= $qtp ?>" target="_blank" rel="noopener" title="Cetak daftar hadir" aria-label="Cetak daftar hadir"
-                                       class="inline-flex h-8 w-8 items-center justify-center rounded-lg text-slate-500 hover:bg-slate-100 transition">
+                                       class="inline-flex h-8 w-8 items-center justify-center rounded-lg text-gray-500 hover:bg-gray-100 transition">
                                         <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z"/></svg>
                                     </a>
                                     <a href="<?= $base ?>/berita-acara/<?= (int) $r['id'] ?><?= $qtp ?>" target="_blank" rel="noopener" title="Cetak berita acara" aria-label="Cetak berita acara"
-                                       class="inline-flex h-8 w-8 items-center justify-center rounded-lg text-slate-500 hover:bg-slate-100 transition">
+                                       class="inline-flex h-8 w-8 items-center justify-center rounded-lg text-gray-500 hover:bg-gray-100 transition">
                                         <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
                                     </a>
                                     <button type="button" title="Ubah jadwal" aria-label="Ubah jadwal"
@@ -251,7 +251,7 @@ $adaFilter = $filter['q'] !== '' || $filter['tingkat'] !== '' || $filter['jurusa
                                                 'ruang'       => $r['ruang'] ?? '',
                                                 'keterangan'  => $r['keterangan'] ?? '',
                                             ]), ENT_QUOTES) ?>)"
-                                            class="inline-flex h-8 w-8 items-center justify-center rounded-lg text-slate-500 hover:bg-slate-100 transition">
+                                            class="inline-flex h-8 w-8 items-center justify-center rounded-lg text-gray-500 hover:bg-gray-100 transition">
                                         <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/></svg>
                                     </button>
                                     <form method="post" action="<?= $base ?>/jadwal/<?= (int) $r['id'] ?>/hapus" class="inline">
@@ -271,7 +271,7 @@ $adaFilter = $filter['q'] !== '' || $filter['tingkat'] !== '' || $filter['jurusa
             </table>
         </div>
         <?php if ($pager): ?>
-            <div class="px-6 py-4 border-t border-slate-100">
+            <div class="px-6 py-4 border-t border-gray-100">
                 <?= $pager->only(['q', 'tingkat', 'jurusan_id', 'per', 'tp'])->links('default', 'admin') ?>
             </div>
         <?php endif; ?>
@@ -281,7 +281,7 @@ $adaFilter = $filter['q'] !== '' || $filter['tingkat'] !== '' || $filter['jurusa
     <div x-show="open" x-cloak x-transition.opacity.duration.200ms class="fixed inset-0 z-50 flex items-center justify-center p-4">
         <div class="absolute inset-0 bg-black/40" @click="open=false"></div>
         <div class="relative bg-white rounded-2xl shadow-xl w-full max-w-lg p-6 max-h-[90vh] overflow-y-auto">
-            <h3 class="font-bold text-lg text-slate-800 mb-4" x-text="mode==='add' ? 'Tambah Jadwal Ujian' : 'Ubah Jadwal Ujian'"></h3>
+            <h3 class="font-bold text-lg text-gray-800 mb-4" x-text="mode==='add' ? 'Tambah Jadwal Ujian' : 'Ubah Jadwal Ujian'"></h3>
             <form method="post" action="<?= $base ?>/jadwal">
                 <?= csrf_field() ?>
                 <input type="hidden" name="periode_id" value="<?= (int) $periode['id'] ?>">
@@ -289,8 +289,8 @@ $adaFilter = $filter['q'] !== '' || $filter['tingkat'] !== '' || $filter['jurusa
 
                 <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div class="sm:col-span-2">
-                        <label class="block text-sm font-medium text-slate-600 mb-1">Mata Pelajaran *</label>
-                        <select name="mapel_id" x-model="form.mapel_id" required class="w-full rounded-lg border border-slate-300 px-3 py-2.5 text-sm focus:border-brand-500 outline-none">
+                        <label class="block text-sm font-medium text-gray-600 mb-1">Mata Pelajaran *</label>
+                        <select name="mapel_id" x-model="form.mapel_id" required class="w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm focus:border-brand-500 outline-hidden">
                             <option value="">— Pilih mata pelajaran —</option>
                             <?php foreach ($mapelOpts as $id => $lbl): ?>
                                 <option value="<?= (int) $id ?>"><?= esc($lbl) ?></option>
@@ -298,8 +298,8 @@ $adaFilter = $filter['q'] !== '' || $filter['tingkat'] !== '' || $filter['jurusa
                         </select>
                     </div>
                     <div>
-                        <label class="block text-sm font-medium text-slate-600 mb-1">Tingkat *</label>
-                        <select name="tingkat" x-model="form.tingkat" required class="w-full rounded-lg border border-slate-300 px-3 py-2.5 text-sm focus:border-brand-500 outline-none">
+                        <label class="block text-sm font-medium text-gray-600 mb-1">Tingkat *</label>
+                        <select name="tingkat" x-model="form.tingkat" required class="w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm focus:border-brand-500 outline-hidden">
                             <option value="">— Pilih tingkat —</option>
                             <?php foreach ($tingkatList as $t): ?>
                                 <option value="<?= esc($t, 'attr') ?>"><?= esc($t) ?></option>
@@ -307,18 +307,18 @@ $adaFilter = $filter['q'] !== '' || $filter['tingkat'] !== '' || $filter['jurusa
                         </select>
                     </div>
                     <div>
-                        <label class="block text-sm font-medium text-slate-600 mb-1">Shift</label>
-                        <select name="shift" x-model="form.shift" class="w-full rounded-lg border border-slate-300 px-3 py-2.5 text-sm focus:border-brand-500 outline-none">
+                        <label class="block text-sm font-medium text-gray-600 mb-1">Shift</label>
+                        <select name="shift" x-model="form.shift" class="w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm focus:border-brand-500 outline-hidden">
                             <?php foreach ($shiftList as $s): ?>
                                 <option value="<?= esc($s, 'attr') ?>"><?= esc($labelShift[$s] ?? $s) ?></option>
                             <?php endforeach; ?>
                         </select>
                     </div>
                     <div class="sm:col-span-2">
-                        <label class="block text-sm font-medium text-slate-600 mb-1">
-                            Jurusan <span class="text-slate-400 font-normal">(kosongkan bila semua jurusan)</span>
+                        <label class="block text-sm font-medium text-gray-600 mb-1">
+                            Jurusan <span class="text-gray-400 font-normal">(kosongkan bila semua jurusan)</span>
                         </label>
-                        <select name="jurusan_id" x-model="form.jurusan_id" class="w-full rounded-lg border border-slate-300 px-3 py-2.5 text-sm focus:border-brand-500 outline-none">
+                        <select name="jurusan_id" x-model="form.jurusan_id" class="w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm focus:border-brand-500 outline-hidden">
                             <option value="">— Semua jurusan —</option>
                             <?php foreach ($jurusanOpts as $id => $lbl): ?>
                                 <option value="<?= (int) $id ?>"><?= esc($lbl) ?></option>
@@ -326,36 +326,36 @@ $adaFilter = $filter['q'] !== '' || $filter['tingkat'] !== '' || $filter['jurusa
                         </select>
                     </div>
                     <div class="sm:col-span-2">
-                        <label class="block text-sm font-medium text-slate-600 mb-1">Tanggal *</label>
-                        <input type="date" name="tanggal" x-model="form.tanggal" required class="w-full rounded-lg border border-slate-300 px-3 py-2.5 text-sm focus:border-brand-500 outline-none">
+                        <label class="block text-sm font-medium text-gray-600 mb-1">Tanggal *</label>
+                        <input type="date" name="tanggal" x-model="form.tanggal" required class="w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm focus:border-brand-500 outline-hidden">
                     </div>
                     <div>
-                        <label class="block text-sm font-medium text-slate-600 mb-1">Jam Mulai</label>
-                        <input type="time" name="jam_mulai" x-model="form.jam_mulai" class="w-full rounded-lg border border-slate-300 px-3 py-2.5 text-sm focus:border-brand-500 outline-none">
+                        <label class="block text-sm font-medium text-gray-600 mb-1">Jam Mulai</label>
+                        <input type="time" name="jam_mulai" x-model="form.jam_mulai" class="w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm focus:border-brand-500 outline-hidden">
                     </div>
                     <div>
-                        <label class="block text-sm font-medium text-slate-600 mb-1">Jam Selesai</label>
-                        <input type="time" name="jam_selesai" x-model="form.jam_selesai" class="w-full rounded-lg border border-slate-300 px-3 py-2.5 text-sm focus:border-brand-500 outline-none">
+                        <label class="block text-sm font-medium text-gray-600 mb-1">Jam Selesai</label>
+                        <input type="time" name="jam_selesai" x-model="form.jam_selesai" class="w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm focus:border-brand-500 outline-hidden">
                     </div>
                     <div class="sm:col-span-2">
-                        <label class="block text-sm font-medium text-slate-600 mb-1">Ruang</label>
+                        <label class="block text-sm font-medium text-gray-600 mb-1">Ruang</label>
                         <input type="text" name="ruang" x-model="form.ruang" maxlength="100" placeholder="mis. R1–R8 atau Aula"
-                               class="w-full rounded-lg border border-slate-300 px-3 py-2.5 text-sm focus:border-brand-500 outline-none">
+                               class="w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm focus:border-brand-500 outline-hidden">
                     </div>
                     <div class="sm:col-span-2">
-                        <label class="block text-sm font-medium text-slate-600 mb-1">Keterangan</label>
+                        <label class="block text-sm font-medium text-gray-600 mb-1">Keterangan</label>
                         <input type="text" name="keterangan" x-model="form.keterangan" maxlength="255"
-                               class="w-full rounded-lg border border-slate-300 px-3 py-2.5 text-sm focus:border-brand-500 outline-none">
+                               class="w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm focus:border-brand-500 outline-hidden">
                     </div>
                 </div>
 
-                <p class="text-xs text-slate-500 mt-4">
+                <p class="text-xs text-gray-500 mt-4">
                     Mapel yang sama di jam sama boleh dibuat lebih dari satu baris (ujian paralel beda ruang).
                     Yang ditolak hanya dua <b>mapel berbeda</b> pada tingkat, shift, dan jam yang beririsan.
                 </p>
 
                 <div class="flex justify-end gap-2 mt-4">
-                    <button type="button" @click="open=false" class="rounded-lg border border-slate-300 text-slate-600 text-sm font-semibold px-4 py-2.5 hover:bg-slate-50">Batal</button>
+                    <button type="button" @click="open=false" class="rounded-lg border border-gray-300 text-gray-600 text-sm font-semibold px-4 py-2.5 hover:bg-gray-50">Batal</button>
                     <button class="rounded-lg bg-brand-700 hover:bg-brand-800 text-white text-sm font-semibold px-5 py-2.5">Simpan</button>
                 </div>
             </form>

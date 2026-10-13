@@ -20,24 +20,24 @@
     <input type="hidden" name="grid_json" x-ref="json">
 
     <?php if (empty($hari)): ?>
-        <div class="bg-white rounded-2xl border border-slate-200 shadow-sm p-10 text-center text-slate-400">
+        <div class="bg-white rounded-2xl border border-gray-200 shadow-xs p-10 text-center text-gray-400">
             Belum ada hari aktif. Atur dulu di <b>Master Data ▸ Hari</b>.
         </div>
     <?php else: ?>
-        <div class="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+        <div class="bg-white rounded-2xl border border-gray-200 shadow-xs overflow-hidden">
             <div class="overflow-x-auto">
                 <table class="w-full text-sm">
-                    <thead class="bg-slate-50 text-slate-500 text-left">
+                    <thead class="bg-gray-50 text-gray-500 text-left">
                         <tr>
                             <th class="px-4 py-3 font-semibold w-32">Hari</th>
                             <th class="px-4 py-3 font-semibold">Piket KBM Pagi</th>
                             <th class="px-4 py-3 font-semibold">Piket KBM Siang</th>
                         </tr>
                     </thead>
-                    <tbody class="divide-y divide-slate-100">
+                    <tbody class="divide-y divide-gray-100">
                         <template x-for="h in hari" :key="h.id">
                             <tr class="align-top">
-                                <td class="px-4 py-3 font-bold text-slate-700" x-text="h.nama"></td>
+                                <td class="px-4 py-3 font-bold text-gray-700" x-text="h.nama"></td>
                                 <template x-for="sh in ['pagi', 'siang']" :key="sh">
                                     <td class="px-4 py-3">
                                         <div class="flex flex-wrap gap-1.5 mb-2">
@@ -49,10 +49,10 @@
                                                     </button>
                                                 </span>
                                             </template>
-                                            <span x-show="daftar(h.id, sh).length === 0" class="text-xs text-slate-300">— belum ada —</span>
+                                            <span x-show="daftar(h.id, sh).length === 0" class="text-xs text-gray-300">— belum ada —</span>
                                         </div>
                                         <select @change="tambah(h.id, sh, $event.target.value); $event.target.selectedIndex = 0"
-                                                class="w-full max-w-xs rounded-lg border border-slate-300 px-2.5 py-1.5 text-xs focus:border-brand-500 outline-none">
+                                                class="w-full max-w-xs rounded-lg border border-gray-300 px-2.5 py-1.5 text-xs focus:border-brand-500 outline-hidden">
                                             <option value="">+ tambah guru piket…</option>
                                             <template x-for="g in guru" :key="g.id">
                                                 <option :value="g.id" x-text="g.nama" :disabled="daftar(h.id, sh).indexOf(g.id) !== -1"></option>
@@ -65,7 +65,7 @@
                     </tbody>
                 </table>
             </div>
-            <div class="px-5 py-4 border-t border-slate-100 flex justify-end">
+            <div class="px-5 py-4 border-t border-gray-100 flex justify-end">
                 <button type="submit" class="inline-flex items-center gap-2 rounded-xl bg-brand-700 hover:bg-brand-800 text-white font-bold px-6 py-2.5 text-sm transition">
                     <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/></svg>
                     Simpan Jadwal Piket

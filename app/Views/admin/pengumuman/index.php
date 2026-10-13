@@ -9,16 +9,16 @@
 
 <div x-data="pengPage()">
     <div class="flex items-center justify-between mb-5">
-        <p class="text-sm text-slate-500">Kelola pengumuman yang tampil di beranda publik.</p>
+        <p class="text-sm text-gray-500">Kelola pengumuman yang tampil di beranda publik.</p>
         <button @click="openAdd()" class="inline-flex items-center gap-1.5 rounded-lg bg-brand-700 hover:bg-brand-800 text-white text-sm font-semibold px-4 py-2.5 transition">
             <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4"/></svg>
             Tambah Pengumuman
         </button>
     </div>
 
-    <div class="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+    <div class="bg-white rounded-2xl border border-gray-200 shadow-xs overflow-hidden">
         <table class="w-full text-sm">
-            <thead class="bg-slate-50 text-slate-500 text-left">
+            <thead class="bg-gray-50 text-gray-500 text-left">
                 <tr>
                     <th class="px-6 py-3 font-semibold">Judul</th>
                     <th class="px-6 py-3 font-semibold w-28">Status</th>
@@ -26,23 +26,23 @@
                     <th class="px-6 py-3 font-semibold w-28 text-right">Aksi</th>
                 </tr>
             </thead>
-            <tbody class="divide-y divide-slate-100">
+            <tbody class="divide-y divide-gray-100">
                 <?php if (empty($rows)): ?>
-                    <tr><td colspan="4" class="px-6 py-10 text-center text-slate-400">Belum ada pengumuman.</td></tr>
+                    <tr><td colspan="4" class="px-6 py-10 text-center text-gray-400">Belum ada pengumuman.</td></tr>
                 <?php else: foreach ($rows as $r): ?>
-                    <tr class="hover:bg-slate-50">
+                    <tr class="hover:bg-gray-50">
                         <td class="px-6 py-3">
-                            <p class="font-medium text-slate-800"><?= esc($r['judul']) ?></p>
-                            <p class="text-xs text-slate-400 truncate max-w-md"><?= esc(mb_substr($r['isi'], 0, 80)) ?></p>
+                            <p class="font-medium text-gray-800"><?= esc($r['judul']) ?></p>
+                            <p class="text-xs text-gray-400 truncate max-w-md"><?= esc(mb_substr($r['isi'], 0, 80)) ?></p>
                         </td>
                         <td class="px-6 py-3">
                             <?php if ($r['is_aktif']): ?>
                                 <span class="inline-flex rounded-full bg-green-100 text-green-700 px-2.5 py-0.5 text-xs font-semibold">Aktif</span>
                             <?php else: ?>
-                                <span class="inline-flex rounded-full bg-slate-100 text-slate-500 px-2.5 py-0.5 text-xs font-semibold">Nonaktif</span>
+                                <span class="inline-flex rounded-full bg-gray-100 text-gray-500 px-2.5 py-0.5 text-xs font-semibold">Nonaktif</span>
                             <?php endif; ?>
                         </td>
-                        <td class="px-6 py-3 text-slate-500"><?= esc(date('d-m-Y', strtotime($r['created_at']))) ?></td>
+                        <td class="px-6 py-3 text-gray-500"><?= esc(date('d-m-Y', strtotime($r['created_at']))) ?></td>
                         <td class="px-6 py-3 text-right whitespace-nowrap">
                             <div class="inline-flex items-center justify-end gap-1">
                                 <button @click='openEdit(<?= json_encode($r) ?>)' title="Edit" class="inline-flex h-8 w-8 items-center justify-center rounded-lg text-brand-600 hover:bg-brand-50 transition">
@@ -63,25 +63,25 @@
     <div x-show="open" x-cloak x-transition.opacity.duration.200ms class="fixed inset-0 z-50 flex items-center justify-center p-4">
         <div class="absolute inset-0 bg-black/40" @click="open=false"></div>
         <div class="relative bg-white rounded-2xl shadow-xl w-full max-w-lg p-6">
-            <h3 class="font-bold text-lg text-slate-800 mb-4" x-text="mode==='add' ? 'Tambah Pengumuman' : 'Edit Pengumuman'"></h3>
+            <h3 class="font-bold text-lg text-gray-800 mb-4" x-text="mode==='add' ? 'Tambah Pengumuman' : 'Edit Pengumuman'"></h3>
             <form method="post" :action="actionUrl">
                 <?= csrf_field() ?>
                 <div class="space-y-4">
                     <div>
-                        <label class="block text-sm font-medium text-slate-600 mb-1">Judul *</label>
-                        <input type="text" name="judul" x-model="form.judul" maxlength="200" required class="w-full rounded-lg border border-slate-300 px-3 py-2.5 text-sm focus:border-brand-500 outline-none">
+                        <label class="block text-sm font-medium text-gray-600 mb-1">Judul *</label>
+                        <input type="text" name="judul" x-model="form.judul" maxlength="200" required class="w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm focus:border-brand-500 outline-hidden">
                     </div>
                     <div>
-                        <label class="block text-sm font-medium text-slate-600 mb-1">Isi *</label>
-                        <textarea name="isi" x-model="form.isi" rows="4" required class="w-full rounded-lg border border-slate-300 px-3 py-2.5 text-sm focus:border-brand-500 outline-none"></textarea>
+                        <label class="block text-sm font-medium text-gray-600 mb-1">Isi *</label>
+                        <textarea name="isi" x-model="form.isi" rows="4" required class="w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm focus:border-brand-500 outline-hidden"></textarea>
                     </div>
-                    <label class="flex items-center gap-2 text-sm text-slate-600">
-                        <input type="checkbox" name="is_aktif" value="1" x-model="form.is_aktif" class="rounded border-slate-300 text-brand-600 focus:ring-brand-500">
+                    <label class="flex items-center gap-2 text-sm text-gray-600">
+                        <input type="checkbox" name="is_aktif" value="1" x-model="form.is_aktif" class="rounded-sm border-gray-300 text-brand-600 focus:ring-brand-500">
                         Tampilkan di beranda publik (aktif)
                     </label>
                 </div>
                 <div class="flex justify-end gap-2 mt-6">
-                    <button type="button" @click="open=false" class="rounded-lg border border-slate-300 text-slate-600 text-sm font-semibold px-4 py-2.5 hover:bg-slate-50">Batal</button>
+                    <button type="button" @click="open=false" class="rounded-lg border border-gray-300 text-gray-600 text-sm font-semibold px-4 py-2.5 hover:bg-gray-50">Batal</button>
                     <button class="rounded-lg bg-brand-700 hover:bg-brand-800 text-white text-sm font-semibold px-5 py-2.5">Simpan</button>
                 </div>
             </form>

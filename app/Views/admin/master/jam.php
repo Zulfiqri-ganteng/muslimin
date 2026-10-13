@@ -7,10 +7,10 @@
  * @var array  $rows  Slot jam shift aktif
  */
 ob_start(); ?>
-<div class="inline-flex rounded-lg border border-slate-300 bg-white p-1 text-sm font-semibold">
+<div class="inline-flex rounded-lg border border-gray-300 bg-white p-1 text-sm font-semibold">
     <?php foreach (['pagi' => 'Pagi', 'siang' => 'Siang'] as $key => $label): ?>
         <a href="<?= site_url('admin/master/jam?shift=' . $key) ?>"
-           class="px-4 py-1.5 rounded-md transition <?= $shift === $key ? 'bg-brand-700 text-white' : 'text-slate-600 hover:bg-slate-100' ?>">
+           class="px-4 py-1.5 rounded-md transition <?= $shift === $key ? 'bg-brand-700 text-white' : 'text-gray-600 hover:bg-gray-100' ?>">
             <?= $label ?>
         </a>
     <?php endforeach; ?>
@@ -44,15 +44,15 @@ ob_start(); ?>
     ]) ?>
 
     <!-- Tabel -->
-    <div class="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
-        <div class="px-6 py-4 border-b border-slate-100 flex items-center justify-between">
-            <h2 class="font-bold text-slate-800">Daftar Jam — Shift <?= ucfirst($shift) ?> <span class="text-slate-400 font-normal">(<?= count($rows) ?>)</span></h2>
+    <div class="bg-white rounded-2xl border border-gray-200 shadow-xs overflow-hidden">
+        <div class="px-6 py-4 border-b border-gray-100 flex items-center justify-between">
+            <h2 class="font-bold text-gray-800">Daftar Jam — Shift <?= ucfirst($shift) ?> <span class="text-gray-400 font-normal">(<?= count($rows) ?>)</span></h2>
         </div>
         <div class="overflow-x-auto">
             <table class="w-full text-sm">
-                <thead class="bg-slate-50 text-slate-500 text-left">
+                <thead class="bg-gray-50 text-gray-500 text-left">
                     <tr>
-                        <th class="pl-6 pr-2 py-3 w-10"><input type="checkbox" title="Pilih semua di halaman ini" class="js-check-all rounded border-slate-300 text-brand-600 focus:ring-brand-500"></th>
+                        <th class="pl-6 pr-2 py-3 w-10"><input type="checkbox" title="Pilih semua di halaman ini" class="js-check-all rounded-sm border-gray-300 text-brand-600 focus:ring-brand-500"></th>
                         <th class="px-6 py-3 font-semibold w-24">Jam Ke</th>
                         <th class="px-6 py-3 font-semibold">Waktu</th>
                         <th class="px-6 py-3 font-semibold w-28">Durasi</th>
@@ -60,14 +60,14 @@ ob_start(); ?>
                         <th class="px-6 py-3 font-semibold w-28 text-right">Aksi</th>
                     </tr>
                 </thead>
-                <tbody class="divide-y divide-slate-100">
+                <tbody class="divide-y divide-gray-100">
                     <?php if (empty($rows)): ?>
-                        <tr><td colspan="6" class="px-6 py-10 text-center text-slate-400">Belum ada jam untuk shift ini. Tambah manual atau import Excel.</td></tr>
+                        <tr><td colspan="6" class="px-6 py-10 text-center text-gray-400">Belum ada jam untuk shift ini. Tambah manual atau import Excel.</td></tr>
                     <?php else: foreach ($rows as $r): ?>
                         <?php if ($r['is_istirahat']): ?>
                             <!-- Baris ISTIRAHAT: tampil sebagai pemisah di tengah -->
                             <tr class="bg-amber-50">
-                                <td class="pl-6 pr-2 py-2.5"><input type="checkbox" class="row-check rounded border-slate-300 text-brand-600 focus:ring-brand-500" value="<?= (int) $r['id'] ?>"></td>
+                                <td class="pl-6 pr-2 py-2.5"><input type="checkbox" class="row-check rounded-sm border-gray-300 text-brand-600 focus:ring-brand-500" value="<?= (int) $r['id'] ?>"></td>
                                 <td colspan="5" class="px-6 py-2.5">
                                     <div class="flex items-center justify-center gap-3">
                                         <span class="hidden sm:block flex-1 border-t border-dashed border-amber-300"></span>
@@ -88,13 +88,13 @@ ob_start(); ?>
                                 </td>
                             </tr>
                         <?php else: ?>
-                            <tr class="hover:bg-slate-50">
-                                <td class="pl-6 pr-2 py-3"><input type="checkbox" class="row-check rounded border-slate-300 text-brand-600 focus:ring-brand-500" value="<?= (int) $r['id'] ?>"></td>
+                            <tr class="hover:bg-gray-50">
+                                <td class="pl-6 pr-2 py-3"><input type="checkbox" class="row-check rounded-sm border-gray-300 text-brand-600 focus:ring-brand-500" value="<?= (int) $r['id'] ?>"></td>
                                 <td class="px-6 py-3 font-bold text-brand-700"><?= esc($r['jam_ke']) ?></td>
                                 <td class="px-6 py-3"><?= esc(substr($r['waktu_mulai'], 0, 5)) ?> – <?= esc(substr($r['waktu_selesai'], 0, 5)) ?></td>
-                                <td class="px-6 py-3 text-slate-500"><?= esc($r['durasi']) ?> menit</td>
+                                <td class="px-6 py-3 text-gray-500"><?= esc($r['durasi']) ?> menit</td>
                                 <td class="px-6 py-3">
-                                    <span class="inline-flex rounded-full bg-slate-100 text-slate-600 px-2.5 py-0.5 text-xs font-semibold">KBM</span>
+                                    <span class="inline-flex rounded-full bg-gray-100 text-gray-600 px-2.5 py-0.5 text-xs font-semibold">KBM</span>
                                 </td>
                                 <td class="px-6 py-3 text-right whitespace-nowrap">
                                     <?= view('admin/master/partials/row_actions', [
@@ -115,42 +115,42 @@ ob_start(); ?>
     <div x-show="open" x-cloak x-transition.opacity.duration.200ms class="fixed inset-0 z-50 flex items-center justify-center p-4">
         <div class="absolute inset-0 bg-black/40" @click="open=false"></div>
         <div class="relative bg-white rounded-2xl shadow-xl w-full max-w-md p-6">
-            <h3 class="font-bold text-lg text-slate-800 mb-4" x-text="mode==='add' ? 'Tambah Jam Pelajaran' : 'Edit Jam Pelajaran'"></h3>
+            <h3 class="font-bold text-lg text-gray-800 mb-4" x-text="mode==='add' ? 'Tambah Jam Pelajaran' : 'Edit Jam Pelajaran'"></h3>
             <form method="post" :action="actionUrl">
                 <?= csrf_field() ?>
                 <div class="space-y-4">
                     <div>
-                        <label class="block text-sm font-medium text-slate-600 mb-1">Shift</label>
-                        <select name="shift" x-model="form.shift" class="w-full rounded-lg border border-slate-300 px-3 py-2.5 text-sm focus:border-brand-500 outline-none">
+                        <label class="block text-sm font-medium text-gray-600 mb-1">Shift</label>
+                        <select name="shift" x-model="form.shift" class="w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm focus:border-brand-500 outline-hidden">
                             <option value="pagi">Pagi</option>
                             <option value="siang">Siang</option>
                         </select>
                     </div>
                     <div>
-                        <label class="block text-sm font-medium text-slate-600 mb-1">Jam Ke</label>
+                        <label class="block text-sm font-medium text-gray-600 mb-1">Jam Ke</label>
                         <input type="number" name="jam_ke" x-model="form.jam_ke" min="1" required
-                               class="w-full rounded-lg border border-slate-300 px-3 py-2.5 text-sm focus:border-brand-500 outline-none">
+                               class="w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm focus:border-brand-500 outline-hidden">
                     </div>
                     <div class="grid grid-cols-2 gap-3">
                         <div>
-                            <label class="block text-sm font-medium text-slate-600 mb-1">Mulai</label>
+                            <label class="block text-sm font-medium text-gray-600 mb-1">Mulai</label>
                             <input type="time" name="waktu_mulai" x-model="form.waktu_mulai" required
-                                   class="w-full rounded-lg border border-slate-300 px-3 py-2.5 text-sm focus:border-brand-500 outline-none">
+                                   class="w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm focus:border-brand-500 outline-hidden">
                         </div>
                         <div>
-                            <label class="block text-sm font-medium text-slate-600 mb-1">Selesai</label>
+                            <label class="block text-sm font-medium text-gray-600 mb-1">Selesai</label>
                             <input type="time" name="waktu_selesai" x-model="form.waktu_selesai" required
-                                   class="w-full rounded-lg border border-slate-300 px-3 py-2.5 text-sm focus:border-brand-500 outline-none">
+                                   class="w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm focus:border-brand-500 outline-hidden">
                         </div>
                     </div>
-                    <label class="flex items-center gap-2 text-sm text-slate-600">
-                        <input type="checkbox" name="is_istirahat" value="1" x-model="form.is_istirahat" class="rounded border-slate-300 text-brand-600 focus:ring-brand-500">
+                    <label class="flex items-center gap-2 text-sm text-gray-600">
+                        <input type="checkbox" name="is_istirahat" value="1" x-model="form.is_istirahat" class="rounded-sm border-gray-300 text-brand-600 focus:ring-brand-500">
                         Tandai sebagai jam ISTIRAHAT
                     </label>
-                    <p class="text-xs text-slate-400">Durasi dihitung otomatis dari selisih waktu.</p>
+                    <p class="text-xs text-gray-400">Durasi dihitung otomatis dari selisih waktu.</p>
                 </div>
                 <div class="flex justify-end gap-2 mt-6">
-                    <button type="button" @click="open=false" class="rounded-lg border border-slate-300 text-slate-600 text-sm font-semibold px-4 py-2.5 hover:bg-slate-50">Batal</button>
+                    <button type="button" @click="open=false" class="rounded-lg border border-gray-300 text-gray-600 text-sm font-semibold px-4 py-2.5 hover:bg-gray-50">Batal</button>
                     <button class="rounded-lg bg-brand-700 hover:bg-brand-800 text-white text-sm font-semibold px-5 py-2.5">Simpan</button>
                 </div>
             </form>

@@ -8,7 +8,7 @@
         . '<p class="mt-2"><b>Per Kelas / Per Guru</b> — <b>Per Kelas</b> (bawaan) menampilkan tiap kelas urut X → XII (TKJ 1, 2 … 10) berisi jam & guru pengajarnya; saring per jurusan atau cari nama kelas / guru. <b>Per Guru</b> menampilkan kartu per nama guru dengan tombol <b>Set semua</b>. Pesan WhatsApp selalu ditulis per kelas: <i>nama kelas X jam ke 1-3</i>.</p>'
         . '<p class="mt-2"><b>Belum Hadir</b> — saat laporan dikirim masih ada guru yang belum datang? Tandai di panel <b>Belum Hadir</b> (atau tombol <b>Belum hadir</b> di kartu guru). Nama mereka masuk bagian "belum hadir" di pesan WhatsApp. Begitu guru datang, klik <b>Sudah datang</b>: sesi yang sudah dimulai otomatis ditandai <b>Telat</b> dengan jam saat itu, lalu Simpan. Guru yang <b>tetap</b> di daftar ini dihitung <b>tidak hadir</b> di rekap.</p>'
         . '<p class="mt-2"><b>Kirim WhatsApp</b> — sekali klik: absensi disimpan, pesan disusun otomatis sesuai <b>Format Pesan</b>, lalu WhatsApp terbuka tinggal pilih grup. Nama guru yang punya <b>No. WhatsApp</b> (Master Guru) otomatis menjadi <b>tag</b> di grup. Format pesan bisa diubah lewat tombol <b>Format Pesan</b>.</p>'
-        . '<p class="mt-2"><b>Kehadiran Kerja</b> — untuk guru/staf yang masuk tanpa jadwal KBM (TU, wakil kepala, dsb.). Guru berjabatan struktural diisikan otomatis bertanda <span class="rounded bg-amber-50 text-amber-700 border border-amber-200 px-1">disarankan</span>; hapus yang tidak masuk.</p>'
+        . '<p class="mt-2"><b>Kehadiran Kerja</b> — untuk guru/staf yang masuk tanpa jadwal KBM (TU, wakil kepala, dsb.). Guru berjabatan struktural diisikan otomatis bertanda <span class="rounded-sm bg-amber-50 text-amber-700 border border-amber-200 px-1">disarankan</span>; hapus yang tidak masuk.</p>'
         . '<p class="mt-2"><b>Penting:</b> hari yang tidak disimpan tidak dihitung di Rekap. Salah menyimpan hari libur? Gunakan <b>Batalkan pencatatan</b>.</p>',
 ]) ?>
 
@@ -86,27 +86,27 @@
 <div x-data='absensiPage(<?= htmlspecialchars(json_encode($pageCfg), ENT_QUOTES) ?>)' @change="tick++; dirty = true">
 
 <!-- ===================== BAR ATAS: tanggal + shift + ringkasan ===================== -->
-<div class="bg-white rounded-2xl border border-slate-200 shadow-sm p-4 sm:p-5 mb-5">
+<div class="bg-white rounded-2xl border border-gray-200 shadow-xs p-4 sm:p-5 mb-5">
     <div class="flex flex-col lg:flex-row lg:items-end lg:justify-between gap-4">
         <form method="get" class="flex flex-wrap items-end gap-3" data-noload>
             <div>
-                <label class="block text-xs font-semibold text-slate-500 mb-1">Tanggal</label>
+                <label class="block text-xs font-semibold text-gray-500 mb-1">Tanggal</label>
                 <input type="date" name="tanggal" value="<?= esc($tanggal) ?>" @change.stop="$el.form.submit()"
-                       class="rounded-xl border border-slate-300 px-4 py-2.5 text-sm focus:border-brand-500 focus:ring-2 focus:ring-brand-500/20 outline-none">
+                       class="rounded-xl border border-gray-300 px-4 py-2.5 text-sm focus:border-brand-500 focus:ring-2 focus:ring-brand-500/20 outline-hidden">
                 <input type="hidden" name="shift" :value="shift">
             </div>
             <div class="pb-1">
-                <span class="inline-flex items-center gap-2 rounded-lg bg-slate-100 px-3 py-2 text-sm font-semibold text-slate-600">
+                <span class="inline-flex items-center gap-2 rounded-lg bg-gray-100 px-3 py-2 text-sm font-semibold text-gray-600">
                     <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
                     <?= $namaHari !== '' ? esc($namaHari) : 'Hari tak dikenal' ?>
                 </span>
             </div>
             <div>
-                <label class="block text-xs font-semibold text-slate-500 mb-1">Shift KBM</label>
-                <div class="inline-flex rounded-xl border border-slate-300 p-1 bg-slate-50">
+                <label class="block text-xs font-semibold text-gray-500 mb-1">Shift KBM</label>
+                <div class="inline-flex rounded-xl border border-gray-300 p-1 bg-gray-50">
                     <?php foreach (['pagi' => 'Pagi', 'siang' => 'Siang'] as $k => $lbl): ?>
                         <button type="button" @click="setShift('<?= $k ?>')"
-                                :class="shift === '<?= $k ?>' ? 'bg-brand-700 text-white shadow-sm' : 'text-slate-600 hover:bg-white'"
+                                :class="shift === '<?= $k ?>' ? 'bg-brand-700 text-white shadow-xs' : 'text-gray-600 hover:bg-white'"
                                 class="rounded-lg px-4 py-1.5 text-sm font-bold transition"><?= $lbl ?></button>
                     <?php endforeach; ?>
                 </div>
@@ -121,7 +121,7 @@
         </div>
     </div>
 
-    <div class="mt-4 pt-3 border-t border-slate-100 flex flex-wrap items-center justify-between gap-2">
+    <div class="mt-4 pt-3 border-t border-gray-100 flex flex-wrap items-center justify-between gap-2">
         <?php if ($recorded): ?>
             <span class="inline-flex items-center gap-1.5 rounded-lg bg-emerald-50 border border-emerald-200 px-3 py-1.5 text-xs font-bold text-emerald-700">
                 <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/></svg>
@@ -160,25 +160,25 @@
     </template>
 
     <!-- ===================== BELUM HADIR (per shift) ===================== -->
-    <div class="bg-white rounded-2xl border border-slate-200 shadow-sm p-4 sm:p-5 mb-5">
+    <div class="bg-white rounded-2xl border border-gray-200 shadow-xs p-4 sm:p-5 mb-5">
         <div class="flex flex-wrap items-start justify-between gap-3">
             <div>
-                <h3 class="font-bold text-slate-800">Belum Hadir <span class="text-slate-400 font-normal text-sm">— KBM <span x-text="shift"></span></span></h3>
-                <p class="text-xs text-slate-500 mt-0.5">Guru yang belum datang saat laporan dikirim. Klik <b>Sudah datang</b> ketika guru tiba — sesi yang sudah dimulai otomatis ditandai Telat. Yang tetap di daftar ini dihitung <b>tidak hadir</b> di rekap.</p>
+                <h3 class="font-bold text-gray-800">Belum Hadir <span class="text-gray-400 font-normal text-sm">— KBM <span x-text="shift"></span></span></h3>
+                <p class="text-xs text-gray-500 mt-0.5">Guru yang belum datang saat laporan dikirim. Klik <b>Sudah datang</b> ketika guru tiba — sesi yang sudah dimulai otomatis ditandai Telat. Yang tetap di daftar ini dihitung <b>tidak hadir</b> di rekap.</p>
             </div>
             <button type="button" @click="openPicker()"
-                    class="inline-flex items-center gap-1.5 rounded-xl border border-slate-300 hover:bg-slate-50 text-slate-700 font-bold px-4 py-2 text-sm">
+                    class="inline-flex items-center gap-1.5 rounded-xl border border-gray-300 hover:bg-gray-50 text-gray-700 font-bold px-4 py-2 text-sm">
                 <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4"/></svg>
                 Tandai belum hadir
             </button>
         </div>
 
-        <p x-show="belum[shift].length === 0" class="text-sm text-slate-400 py-3 text-center">Belum ada guru yang ditandai belum hadir pada KBM <span x-text="shift"></span>.</p>
+        <p x-show="belum[shift].length === 0" class="text-sm text-gray-400 py-3 text-center">Belum ada guru yang ditandai belum hadir pada KBM <span x-text="shift"></span>.</p>
         <div x-show="belum[shift].length > 0" x-cloak class="mt-3 space-y-2">
             <template x-for="id in belum[shift]" :key="id">
                 <div class="flex items-center gap-3 p-3 rounded-xl border border-red-200 bg-red-50/60">
                     <div class="flex-1 min-w-0">
-                        <div class="font-semibold text-sm text-slate-700 truncate" x-text="namaGuru(id)"></div>
+                        <div class="font-semibold text-sm text-gray-700 truncate" x-text="namaGuru(id)"></div>
                         <div class="text-[11px] text-red-700 font-semibold">Belum hadir</div>
                     </div>
                     <button type="button" @click="sudahDatang(id)"
@@ -186,7 +186,7 @@
                         <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/></svg>
                         Sudah datang
                     </button>
-                    <button type="button" @click="hapusBelum(id)" class="shrink-0 text-slate-400 hover:text-red-600 p-1.5" title="Hapus dari daftar (salah tandai)">
+                    <button type="button" @click="hapusBelum(id)" class="shrink-0 text-gray-400 hover:text-red-600 p-1.5" title="Hapus dari daftar (salah tandai)">
                         <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg>
                     </button>
                 </div>
@@ -196,9 +196,9 @@
 
     <!-- ===================== KEHADIRAN KERJA (di luar jadwal) ===================== -->
     <div id="panel-kerja" x-data='absensiKerja(<?= htmlspecialchars(json_encode($kerjaJson), ENT_QUOTES) ?>, <?= htmlspecialchars(json_encode($guruJson), ENT_QUOTES) ?>)'
-         class="bg-white rounded-2xl border border-slate-200 shadow-sm p-4 sm:p-5 mb-5">
-        <h3 class="font-bold text-slate-800">Kehadiran Kerja <span class="text-slate-400 font-normal text-sm">(di luar jadwal mengajar)</span></h3>
-        <p class="text-xs text-slate-500 mt-0.5">Untuk guru/staf yang <b>masuk kerja</b> tanpa jadwal KBM (staf TU, guru piket, wakil kepala, dsb.). Pilih berlaku <b>Pagi + Siang</b>, pagi saja, atau siang saja. Tetap dihitung di rekap.</p>
+         class="bg-white rounded-2xl border border-gray-200 shadow-xs p-4 sm:p-5 mb-5">
+        <h3 class="font-bold text-gray-800">Kehadiran Kerja <span class="text-gray-400 font-normal text-sm">(di luar jadwal mengajar)</span></h3>
+        <p class="text-xs text-gray-500 mt-0.5">Untuk guru/staf yang <b>masuk kerja</b> tanpa jadwal KBM (staf TU, guru piket, wakil kepala, dsb.). Pilih berlaku <b>Pagi + Siang</b>, pagi saja, atau siang saja. Tetap dihitung di rekap.</p>
         <?php if (! empty($saranKerja)): ?>
             <p class="text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded-lg px-2.5 py-1.5 mt-2">
                 <b><?= count($saranKerja) ?> guru berjabatan struktural</b> diisikan otomatis dan ditandai <b>disarankan</b>.
@@ -209,8 +209,8 @@
         <!-- Tambah guru -->
         <div class="flex flex-wrap items-end gap-2 mt-3">
             <div class="flex-1 min-w-[200px]">
-                <label class="block text-xs font-semibold text-slate-500 mb-1">Tambah guru yang masuk</label>
-                <select x-model.number="pick" class="w-full rounded-xl border border-slate-300 px-3 py-2.5 text-sm focus:border-brand-500 outline-none">
+                <label class="block text-xs font-semibold text-gray-500 mb-1">Tambah guru yang masuk</label>
+                <select x-model.number="pick" class="w-full rounded-xl border border-gray-300 px-3 py-2.5 text-sm focus:border-brand-500 outline-hidden">
                     <option value="0">— pilih guru —</option>
                     <template x-for="g in availableGuru()" :key="g.id">
                         <option :value="g.id" x-text="g.kode ? (g.nama + ' · ' + g.kode) : g.nama"></option>
@@ -224,14 +224,14 @@
             </button>
         </div>
 
-        <p x-show="rows.length === 0" class="text-sm text-slate-400 py-3 text-center">Belum ada guru yang ditandai masuk kerja pada tanggal ini.</p>
+        <p x-show="rows.length === 0" class="text-sm text-gray-400 py-3 text-center">Belum ada guru yang ditandai masuk kerja pada tanggal ini.</p>
         <div class="space-y-2 mt-4" x-show="rows.length > 0" x-cloak>
             <template x-for="(r, i) in rows" :key="r.guru_id">
-                <div class="flex flex-col md:flex-row md:items-center gap-2 p-3 rounded-xl border border-slate-200 bg-slate-50/60">
+                <div class="flex flex-col md:flex-row md:items-center gap-2 p-3 rounded-xl border border-gray-200 bg-gray-50/60">
                     <div class="md:w-52 shrink-0">
-                        <div class="font-semibold text-sm text-slate-700" x-text="r.nama"></div>
+                        <div class="font-semibold text-sm text-gray-700" x-text="r.nama"></div>
                         <div class="flex flex-wrap items-center gap-1 mt-0.5">
-                            <span x-show="r.jabatan" x-cloak class="text-[11px] text-slate-500" x-text="r.jabatan"></span>
+                            <span x-show="r.jabatan" x-cloak class="text-[11px] text-gray-500" x-text="r.jabatan"></span>
                             <span x-show="isPiket(r.guru_id)" x-cloak
                                   class="rounded-full bg-brand-50 text-brand-700 border border-brand-200 px-1.5 py-0.5 text-[10px] font-semibold" x-text="labelPiket(r.guru_id)"></span>
                             <span x-show="r.saran" x-cloak
@@ -240,22 +240,22 @@
                         </div>
                     </div>
                     <select x-model="r.shift" title="Berlaku untuk shift"
-                            class="rounded-lg border border-slate-300 px-3 py-2 text-sm font-semibold focus:border-brand-500 outline-none">
+                            class="rounded-lg border border-gray-300 px-3 py-2 text-sm font-semibold focus:border-brand-500 outline-hidden">
                         <option value="penuh">Pagi + Siang</option>
                         <option value="pagi">Pagi saja</option>
                         <option value="siang">Siang saja</option>
                     </select>
                     <select x-model="r.status"
-                            class="rounded-lg border border-slate-300 px-3 py-2 text-sm font-semibold focus:border-brand-500 outline-none">
+                            class="rounded-lg border border-gray-300 px-3 py-2 text-sm font-semibold focus:border-brand-500 outline-hidden">
                         <?php foreach ($statusOpts as $k => $lbl): ?>
                             <option value="<?= $k ?>"><?= esc($lbl) ?></option>
                         <?php endforeach; ?>
                     </select>
                     <input type="time" x-model="r.jam_masuk" x-show="r.status !== 'hadir'" x-cloak
-                           class="w-32 rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-brand-500 outline-none" title="Jam masuk (opsional)">
+                           class="w-32 rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-brand-500 outline-hidden" title="Jam masuk (opsional)">
                     <input type="text" x-model="r.keterangan" maxlength="255"
                            placeholder="Keterangan (opsional)…"
-                           class="flex-1 rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-brand-500 outline-none">
+                           class="flex-1 rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-brand-500 outline-hidden">
                     <button type="button" @click="remove(i)" class="shrink-0 text-red-500 hover:text-red-600 p-2" title="Hapus">
                         <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg>
                     </button>
@@ -266,24 +266,24 @@
 
     <!-- ===================== ABSENSI MENGAJAR (shift terpilih) ===================== -->
     <?php if (! $hariAktif): ?>
-        <div class="bg-white rounded-2xl border border-slate-200 shadow-sm p-10 text-center text-slate-400 mb-5">
+        <div class="bg-white rounded-2xl border border-gray-200 shadow-xs p-10 text-center text-gray-400 mb-5">
             Tanggal ini bukan hari sekolah aktif — <b>tidak ada absensi mengajar</b>. Gunakan panel <b>Kehadiran Kerja</b> di atas bila ada yang masuk.
         </div>
     <?php elseif ($total === 0): ?>
-        <div class="bg-white rounded-2xl border border-slate-200 shadow-sm p-10 text-center text-slate-400 mb-5">
+        <div class="bg-white rounded-2xl border border-gray-200 shadow-xs p-10 text-center text-gray-400 mb-5">
             Belum ada jadwal KBM pada hari <?= esc($namaHari) ?>. Susun jadwal dulu di menu <b>Jadwal KBM</b> — atau gunakan panel <b>Kehadiran Kerja</b> di atas.
         </div>
     <?php else: ?>
-        <div x-show="guruShift[shift].length === 0" x-cloak class="bg-white rounded-2xl border border-slate-200 shadow-sm p-10 text-center text-slate-400 mb-5">
+        <div x-show="guruShift[shift].length === 0" x-cloak class="bg-white rounded-2xl border border-gray-200 shadow-xs p-10 text-center text-gray-400 mb-5">
             Tidak ada sesi mengajar pada KBM <span x-text="shift"></span> hari ini.
         </div>
 
         <!-- Pilihan tampilan (per kelas / per guru) + filter kelas -->
         <div x-show="guruShift[shift].length > 0" class="flex flex-col lg:flex-row lg:items-center gap-3 mb-4">
-            <div class="inline-flex rounded-xl border border-slate-300 p-1 bg-slate-50 self-start">
+            <div class="inline-flex rounded-xl border border-gray-300 p-1 bg-gray-50 self-start">
                 <?php foreach (['kelas' => 'Per Kelas', 'guru' => 'Per Guru'] as $k => $lbl): ?>
                     <button type="button" @click="gantiTampilan('<?= $k ?>')"
-                            class="rounded-lg px-4 py-1.5 text-sm font-bold transition <?= $tampilan === $k ? 'bg-brand-700 text-white shadow-sm' : 'text-slate-600 hover:bg-white' ?>"><?= $lbl ?></button>
+                            class="rounded-lg px-4 py-1.5 text-sm font-bold transition <?= $tampilan === $k ? 'bg-brand-700 text-white shadow-xs' : 'text-gray-600 hover:bg-white' ?>"><?= $lbl ?></button>
                 <?php endforeach; ?>
             </div>
             <?php if ($tampilan === 'kelas'): ?>
@@ -291,17 +291,17 @@
                     <template x-if="jurusanShift[shift].length > 1">
                         <div class="flex flex-wrap gap-1.5">
                             <button type="button" @click="fJur = ''"
-                                    :class="jurAktif() === '' ? 'bg-brand-700 text-white border-brand-700' : 'bg-white text-slate-600 border-slate-300 hover:bg-slate-50'"
+                                    :class="jurAktif() === '' ? 'bg-brand-700 text-white border-brand-700' : 'bg-white text-gray-600 border-gray-300 hover:bg-gray-50'"
                                     class="rounded-full border px-3 py-1 text-xs font-bold">Semua</button>
                             <template x-for="j in jurusanShift[shift]" :key="j">
                                 <button type="button" @click="fJur = j"
-                                        :class="jurAktif() === j ? 'bg-brand-700 text-white border-brand-700' : 'bg-white text-slate-600 border-slate-300 hover:bg-slate-50'"
+                                        :class="jurAktif() === j ? 'bg-brand-700 text-white border-brand-700' : 'bg-white text-gray-600 border-gray-300 hover:bg-gray-50'"
                                         class="rounded-full border px-3 py-1 text-xs font-bold" x-text="j"></button>
                             </template>
                         </div>
                     </template>
                     <input type="search" x-model="fCari" @change.stop @keydown.enter.prevent placeholder="Cari kelas / guru…"
-                           class="w-full sm:w-56 lg:ml-auto rounded-xl border border-slate-300 px-3 py-2 text-sm focus:border-brand-500 focus:ring-2 focus:ring-brand-500/20 outline-none">
+                           class="w-full sm:w-56 lg:ml-auto rounded-xl border border-gray-300 px-3 py-2 text-sm focus:border-brand-500 focus:ring-2 focus:ring-brand-500/20 outline-hidden">
                 </div>
             <?php endif; ?>
         </div>
@@ -322,7 +322,7 @@
                 }
             }
         ?>
-            <p x-show="guruShift[shift].length > 0 && jumlahKelasTampil() === 0" x-cloak class="bg-white rounded-2xl border border-slate-200 shadow-sm p-8 text-center text-slate-400 mb-4">
+            <p x-show="guruShift[shift].length > 0 && jumlahKelasTampil() === 0" x-cloak class="bg-white rounded-2xl border border-gray-200 shadow-xs p-8 text-center text-gray-400 mb-4">
                 Tidak ada kelas yang cocok dengan pencarian.
             </p>
             <div class="space-y-4">
@@ -334,17 +334,17 @@
                          data-jur="<?= esc((string) ($k['jurusan'] ?? ''), 'attr') ?>"
                          data-cari="<?= esc(implode('|', array_unique($k['cari'])), 'attr') ?>"
                          x-show="kelasTampil($el)"
-                         class="bg-white rounded-2xl border shadow-sm overflow-hidden"
-                         :class="<?= esc(json_encode($gids), 'attr') ?>.some(function (g) { return isBelum(g); }) ? 'border-red-300' : 'border-slate-200'">
-                        <div class="flex items-center justify-between gap-2 px-5 py-3 border-b border-slate-100 bg-slate-50">
-                            <h3 class="font-bold text-slate-800"><?= esc($k['nama']) ?>
+                         class="bg-white rounded-2xl border shadow-xs overflow-hidden"
+                         :class="<?= esc(json_encode($gids), 'attr') ?>.some(function (g) { return isBelum(g); }) ? 'border-red-300' : 'border-gray-200'">
+                        <div class="flex items-center justify-between gap-2 px-5 py-3 border-b border-gray-100 bg-gray-50">
+                            <h3 class="font-bold text-gray-800"><?= esc($k['nama']) ?>
                                 <?php if (! empty($k['jurusan'])): ?>
                                     <span class="ml-1 align-middle rounded-full bg-brand-50 text-brand-700 border border-brand-200 px-2 py-0.5 text-[10px] font-semibold"><?= esc($k['jurusan']) ?></span>
                                 <?php endif; ?>
                             </h3>
-                            <p class="text-xs text-slate-400 shrink-0"><?= count($k['sesi']) ?> jam KBM &middot; <?= count($gids) ?> guru</p>
+                            <p class="text-xs text-gray-400 shrink-0"><?= count($k['sesi']) ?> jam KBM &middot; <?= count($gids) ?> guru</p>
                         </div>
-                        <div class="divide-y divide-slate-100">
+                        <div class="divide-y divide-gray-100">
                             <?php foreach ($k['sesi'] as $it): ?>
                                 <?= view('admin/absensi/_sesi_row', ['s' => $it['s'], 'gid' => $it['gid'], 'namaGuru' => $it['nama'], 'statusOpts' => $statusOpts, 'mode' => 'kelas'], ['saveData' => false]) ?>
                             <?php endforeach; ?>
@@ -355,23 +355,23 @@
         <?php else: ?>
         <div class="space-y-4">
             <?php foreach ($grup as $g): $gid = (int) $g['guru_id']; ?>
-                <div x-show="punyaSesi(<?= $gid ?>)" class="bg-white rounded-2xl border shadow-sm overflow-hidden"
-                     :class="isBelum(<?= $gid ?>) ? 'border-red-300' : 'border-slate-200'">
+                <div x-show="punyaSesi(<?= $gid ?>)" class="bg-white rounded-2xl border shadow-xs overflow-hidden"
+                     :class="isBelum(<?= $gid ?>) ? 'border-red-300' : 'border-gray-200'">
                     <!-- Header guru + set semua -->
-                    <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 px-5 py-3 border-b border-slate-100 bg-slate-50">
+                    <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 px-5 py-3 border-b border-gray-100 bg-gray-50">
                         <div class="min-w-0">
-                            <h3 class="font-bold text-slate-800 truncate"><?= esc($g['nama']) ?>
+                            <h3 class="font-bold text-gray-800 truncate"><?= esc($g['nama']) ?>
                                 <span x-show="piket[shift].indexOf(<?= $gid ?>) !== -1" x-cloak class="ml-1 align-middle rounded-full bg-brand-50 text-brand-700 border border-brand-200 px-1.5 py-0.5 text-[10px] font-semibold">Piket</span>
                             </h3>
-                            <p class="text-xs text-slate-400"><?= esc($g['kode']) ?> &middot; <span x-text="jumlahSesi(<?= $gid ?>) + ' sesi KBM ' + shift"></span></p>
+                            <p class="text-xs text-gray-400"><?= esc($g['kode']) ?> &middot; <span x-text="jumlahSesi(<?= $gid ?>) + ' sesi KBM ' + shift"></span></p>
                         </div>
                         <div class="flex flex-wrap items-center gap-2 shrink-0">
                             <button type="button" x-show="!isBelum(<?= $gid ?>)" @click="tandaiBelum(<?= $gid ?>)"
                                     class="rounded-lg border border-red-200 text-red-600 hover:bg-red-50 px-2.5 py-1.5 text-xs font-bold">Belum hadir</button>
                             <button type="button" x-show="isBelum(<?= $gid ?>)" x-cloak @click="sudahDatang(<?= $gid ?>)"
                                     class="rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white px-2.5 py-1.5 text-xs font-bold">Sudah datang</button>
-                            <label class="text-xs font-semibold text-slate-500">Set semua:</label>
-                            <select class="rounded-lg border border-slate-300 px-2.5 py-1.5 text-xs font-semibold focus:border-brand-500 outline-none"
+                            <label class="text-xs font-semibold text-gray-500">Set semua:</label>
+                            <select class="rounded-lg border border-gray-300 px-2.5 py-1.5 text-xs font-semibold focus:border-brand-500 outline-hidden"
                                     @change.stop="$dispatch('absen-setall', { gid: <?= $gid ?>, shift: shift, val: $event.target.value }); $event.target.selectedIndex = 0; dirty = true; $nextTick(() => tick++)">
                                 <option value="">— pilih —</option>
                                 <?php foreach ($statusOpts as $k => $lbl): ?>
@@ -382,7 +382,7 @@
                     </div>
 
                     <!-- Daftar sesi guru (hanya shift terpilih yang tampil) -->
-                    <div class="divide-y divide-slate-100">
+                    <div class="divide-y divide-gray-100">
                         <?php foreach ($g['sesi'] as $s): ?>
                             <?= view('admin/absensi/_sesi_row', ['s' => $s, 'gid' => $gid, 'statusOpts' => $statusOpts, 'mode' => 'guru'], ['saveData' => false]) ?>
                         <?php endforeach; ?>
@@ -394,11 +394,11 @@
     <?php endif; ?>
 
     <!-- Bar aksi (sticky bawah) -->
-    <div class="sticky bottom-0 mt-5 -mx-4 sm:-mx-6 px-4 sm:px-6 py-3 bg-white/90 backdrop-blur border-t border-slate-200 flex flex-wrap items-center justify-between gap-3">
-        <p class="text-xs text-slate-400 hidden md:block">Tanggal <b><?= esc($tanggal) ?></b> &middot; <?= esc($namaHari) ?> &middot; KBM <b x-text="shift"></b></p>
+    <div class="sticky bottom-0 mt-5 -mx-4 sm:-mx-6 px-4 sm:px-6 py-3 bg-white/90 backdrop-blur-sm border-t border-gray-200 flex flex-wrap items-center justify-between gap-3">
+        <p class="text-xs text-gray-400 hidden md:block">Tanggal <b><?= esc($tanggal) ?></b> &middot; <?= esc($namaHari) ?> &middot; KBM <b x-text="shift"></b></p>
         <div class="ml-auto flex flex-wrap items-center gap-2">
             <button type="button" @click="tplOpen = true"
-                    class="inline-flex items-center gap-1.5 rounded-xl border border-slate-300 hover:bg-slate-50 text-slate-700 font-semibold px-4 py-2.5 text-sm">
+                    class="inline-flex items-center gap-1.5 rounded-xl border border-gray-300 hover:bg-gray-50 text-gray-700 font-semibold px-4 py-2.5 text-sm">
                 <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/></svg>
                 Format Pesan
             </button>
@@ -419,23 +419,23 @@
 <div x-show="pickOpen" x-cloak class="fixed inset-0 z-[80] flex items-center justify-center p-4">
     <div class="absolute inset-0 bg-black/40" @click="pickOpen = false"></div>
     <div class="relative bg-white rounded-2xl shadow-xl w-full max-w-lg overflow-hidden flex flex-col max-h-[85vh]">
-        <div class="px-5 py-4 border-b border-slate-100">
-            <h3 class="font-bold text-slate-800">Tandai Belum Hadir — KBM <span x-text="shift"></span></h3>
+        <div class="px-5 py-4 border-b border-gray-100">
+            <h3 class="font-bold text-gray-800">Tandai Belum Hadir — KBM <span x-text="shift"></span></h3>
             <input type="text" x-model="pickQ" placeholder="Cari nama guru…"
-                   class="mt-3 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm outline-none focus:border-brand-500">
+                   class="mt-3 w-full rounded-lg border border-gray-300 px-3 py-2 text-sm outline-hidden focus:border-brand-500">
         </div>
-        <div class="flex-1 overflow-y-auto divide-y divide-slate-100">
+        <div class="flex-1 overflow-y-auto divide-y divide-gray-100">
             <template x-for="g in pilihan()" :key="g.id">
-                <label class="flex items-center gap-3 px-5 py-2.5 hover:bg-slate-50 cursor-pointer">
-                    <input type="checkbox" :value="g.id" x-model.number="pickSel" class="h-4 w-4 rounded border-slate-300 text-brand-600">
-                    <span class="flex-1 text-sm text-slate-700" x-text="g.nama"></span>
+                <label class="flex items-center gap-3 px-5 py-2.5 hover:bg-gray-50 cursor-pointer">
+                    <input type="checkbox" :value="g.id" x-model.number="pickSel" class="h-4 w-4 rounded-sm border-gray-300 text-brand-600">
+                    <span class="flex-1 text-sm text-gray-700" x-text="g.nama"></span>
                     <span x-show="g.kbm" class="rounded-full bg-brand-50 text-brand-700 px-2 py-0.5 text-[10px] font-bold">KBM</span>
                 </label>
             </template>
-            <p x-show="pilihan().length === 0" class="px-5 py-6 text-center text-sm text-slate-400">Tidak ada guru cocok.</p>
+            <p x-show="pilihan().length === 0" class="px-5 py-6 text-center text-sm text-gray-400">Tidak ada guru cocok.</p>
         </div>
-        <div class="px-5 py-4 border-t border-slate-100 flex items-center justify-end gap-2">
-            <button type="button" @click="pickOpen = false" class="rounded-lg border border-slate-300 px-4 py-2 text-sm font-semibold text-slate-600 hover:bg-slate-50">Batal</button>
+        <div class="px-5 py-4 border-t border-gray-100 flex items-center justify-end gap-2">
+            <button type="button" @click="pickOpen = false" class="rounded-lg border border-gray-300 px-4 py-2 text-sm font-semibold text-gray-600 hover:bg-gray-50">Batal</button>
             <button type="button" @click="terapkanPilihan()" class="rounded-lg bg-brand-700 hover:bg-brand-800 text-white px-5 py-2 text-sm font-bold"
                     x-text="'Tandai (' + pickSel.length + ')'"></button>
         </div>
@@ -446,35 +446,35 @@
 <div x-show="tplOpen" x-cloak class="fixed inset-0 z-[80] flex items-center justify-center p-4">
     <div class="absolute inset-0 bg-black/40" @click="tplOpen = false"></div>
     <div class="relative bg-white rounded-2xl shadow-xl w-full max-w-3xl overflow-hidden flex flex-col max-h-[90vh]">
-        <div class="px-5 py-4 border-b border-slate-100 flex items-center justify-between">
+        <div class="px-5 py-4 border-b border-gray-100 flex items-center justify-between">
             <div>
-                <h3 class="font-bold text-slate-800">Format Pesan WhatsApp</h3>
-                <p class="text-xs text-slate-500" x-text="custom ? 'Memakai format buatan sendiri.' : 'Memakai format bawaan.'"></p>
+                <h3 class="font-bold text-gray-800">Format Pesan WhatsApp</h3>
+                <p class="text-xs text-gray-500" x-text="custom ? 'Memakai format buatan sendiri.' : 'Memakai format bawaan.'"></p>
             </div>
-            <button type="button" @click="tplOpen = false" class="text-slate-400 hover:text-slate-600"><svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg></button>
+            <button type="button" @click="tplOpen = false" class="text-gray-400 hover:text-gray-600"><svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg></button>
         </div>
         <div class="flex-1 overflow-y-auto p-5 grid md:grid-cols-3 gap-4">
             <div class="md:col-span-2">
-                <textarea x-model="tpl" rows="18" class="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm font-mono leading-relaxed outline-none focus:border-brand-500"></textarea>
-                <p class="text-xs text-slate-400 mt-1">Baris daftar (mis. <code>{daftar_belum_hadir}</code>) yang kosong otomatis dihapus bersama satu baris judul tepat di atasnya.</p>
+                <textarea x-model="tpl" rows="18" class="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm font-mono leading-relaxed outline-hidden focus:border-brand-500"></textarea>
+                <p class="text-xs text-gray-400 mt-1">Baris daftar (mis. <code>{daftar_belum_hadir}</code>) yang kosong otomatis dihapus bersama satu baris judul tepat di atasnya.</p>
             </div>
             <div>
-                <p class="text-xs font-bold text-slate-500 mb-2">Isian otomatis (klik untuk menyalin)</p>
+                <p class="text-xs font-bold text-gray-500 mb-2">Isian otomatis (klik untuk menyalin)</p>
                 <div class="space-y-1.5">
                     <?php foreach (\App\Libraries\AbsensiWa::PLACEHOLDERS as $kode => $arti): ?>
                         <button type="button" @click="navigator.clipboard && navigator.clipboard.writeText('<?= esc($kode, 'js') ?>')"
-                                class="block w-full text-left rounded-lg border border-slate-200 px-2.5 py-1.5 hover:bg-slate-50">
+                                class="block w-full text-left rounded-lg border border-gray-200 px-2.5 py-1.5 hover:bg-gray-50">
                             <code class="text-xs font-bold text-brand-700"><?= esc($kode) ?></code>
-                            <span class="block text-[11px] text-slate-500"><?= esc($arti) ?></span>
+                            <span class="block text-[11px] text-gray-500"><?= esc($arti) ?></span>
                         </button>
                     <?php endforeach; ?>
                 </div>
             </div>
         </div>
-        <div class="px-5 py-4 border-t border-slate-100 flex flex-wrap items-center justify-between gap-2">
+        <div class="px-5 py-4 border-t border-gray-100 flex flex-wrap items-center justify-between gap-2">
             <button type="button" @click="resetTemplate()" class="text-sm font-semibold text-red-600 hover:text-red-700">Kembalikan ke bawaan</button>
             <div class="flex gap-2">
-                <button type="button" @click="pratinjau()" class="rounded-lg border border-slate-300 px-4 py-2 text-sm font-semibold text-slate-600 hover:bg-slate-50">Pratinjau (data tersimpan)</button>
+                <button type="button" @click="pratinjau()" class="rounded-lg border border-gray-300 px-4 py-2 text-sm font-semibold text-gray-600 hover:bg-gray-50">Pratinjau (data tersimpan)</button>
                 <button type="button" @click="simpanTemplate()" class="rounded-lg bg-brand-700 hover:bg-brand-800 text-white px-5 py-2 text-sm font-bold">Simpan Format</button>
             </div>
         </div>
@@ -485,13 +485,13 @@
 <div x-show="waText !== ''" x-cloak class="fixed inset-0 z-[90] flex items-center justify-center p-4">
     <div class="absolute inset-0 bg-black/40" @click="waText = ''"></div>
     <div class="relative bg-white rounded-2xl shadow-xl w-full max-w-lg overflow-hidden">
-        <div class="px-5 py-4 border-b border-slate-100 font-bold text-slate-800">Pesan WhatsApp</div>
+        <div class="px-5 py-4 border-b border-gray-100 font-bold text-gray-800">Pesan WhatsApp</div>
         <div class="p-5">
-            <textarea readonly rows="14" x-model="waText" class="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm leading-relaxed outline-none"></textarea>
+            <textarea readonly rows="14" x-model="waText" class="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm leading-relaxed outline-hidden"></textarea>
         </div>
-        <div class="px-5 py-4 border-t border-slate-100 flex items-center justify-end gap-2">
-            <button type="button" @click="navigator.clipboard && navigator.clipboard.writeText(waText); notify('Pesan disalin.')" class="rounded-lg border border-slate-300 px-4 py-2 text-sm font-semibold text-slate-600 hover:bg-slate-50">Salin</button>
-            <button type="button" @click="waText = ''" class="rounded-lg border border-slate-300 px-4 py-2 text-sm font-semibold text-slate-600 hover:bg-slate-50">Tutup</button>
+        <div class="px-5 py-4 border-t border-gray-100 flex items-center justify-end gap-2">
+            <button type="button" @click="navigator.clipboard && navigator.clipboard.writeText(waText); notify('Pesan disalin.')" class="rounded-lg border border-gray-300 px-4 py-2 text-sm font-semibold text-gray-600 hover:bg-gray-50">Salin</button>
+            <button type="button" @click="waText = ''" class="rounded-lg border border-gray-300 px-4 py-2 text-sm font-semibold text-gray-600 hover:bg-gray-50">Tutup</button>
             <a :href="'https://wa.me/?text=' + encodeURIComponent(waText)" target="_blank" rel="noopener"
                class="inline-flex items-center gap-2 rounded-lg bg-green-600 hover:bg-green-700 text-white font-bold px-5 py-2 text-sm">Buka WhatsApp</a>
         </div>
@@ -500,7 +500,7 @@
 
 <!-- Toast -->
 <div x-show="toast.show" x-cloak x-transition class="fixed top-5 left-1/2 -translate-x-1/2 z-[95] rounded-xl px-4 py-2.5 text-sm font-semibold shadow-lg"
-     :class="toast.err ? 'bg-red-600 text-white' : 'bg-slate-800 text-white'" x-text="toast.msg"></div>
+     :class="toast.err ? 'bg-red-600 text-white' : 'bg-gray-800 text-white'" x-text="toast.msg"></div>
 
 </div>
 
@@ -653,7 +653,7 @@
                     { k: 'belum', l: 'Belum hadir', v: this.belum[this.shift].length, c: 'bg-red-50 text-red-700 border-red-200' },
                     { k: 'izin', l: 'Izin', v: c.izin, c: 'bg-brand-50 text-brand-700 border-brand-200' },
                     { k: 'sakit', l: 'Sakit', v: c.sakit, c: 'bg-pink-50 text-pink-700 border-pink-200' },
-                    { k: 'alpa', l: 'Alpa', v: c.alpa, c: 'bg-slate-50 text-slate-600 border-slate-200' },
+                    { k: 'alpa', l: 'Alpa', v: c.alpa, c: 'bg-gray-50 text-gray-600 border-gray-200' },
                 ];
             },
             notify(msg, err) {

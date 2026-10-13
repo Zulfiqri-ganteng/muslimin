@@ -22,27 +22,27 @@
     $qs = '?dari=' . urlencode($dari) . '&sampai=' . urlencode($sampai);
 ?>
 
-<a href="<?= site_url('admin/absensi/rekap') . $qs ?>" class="inline-flex items-center gap-1.5 text-sm font-semibold text-slate-500 hover:text-brand-700 mb-4">
+<a href="<?= site_url('admin/absensi/rekap') . $qs ?>" class="inline-flex items-center gap-1.5 text-sm font-semibold text-gray-500 hover:text-brand-700 mb-4">
     <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7"/></svg>
     Kembali ke Rekap
 </a>
 
 <!-- Header guru + ringkasan -->
-<div class="bg-white rounded-2xl border border-slate-200 shadow-sm p-5 mb-5">
+<div class="bg-white rounded-2xl border border-gray-200 shadow-xs p-5 mb-5">
     <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
         <div>
-            <h2 class="font-bold text-lg text-slate-800"><?= esc($guru['nama']) ?></h2>
-            <p class="text-sm text-slate-400"><?= esc($guru['kode_guru']) ?> &middot; Periode <?= esc($dari) ?> s/d <?= esc($sampai) ?></p>
+            <h2 class="font-bold text-lg text-gray-800"><?= esc($guru['nama']) ?></h2>
+            <p class="text-sm text-gray-400"><?= esc($guru['kode_guru']) ?> &middot; Periode <?= esc($dari) ?> s/d <?= esc($sampai) ?></p>
             <?php if (! empty($jabatan)): ?>
                 <div class="flex flex-wrap gap-1 mt-1.5">
                     <?php foreach ($jabatan as $j): ?>
-                        <span class="inline-flex rounded-full border px-2 py-0.5 text-[11px] font-semibold <?= $j['is_struktural'] ? 'bg-amber-50 text-amber-700 border-amber-200' : 'bg-slate-100 text-slate-600 border-slate-200' ?>"><?= esc($j['nama']) ?></span>
+                        <span class="inline-flex rounded-full border px-2 py-0.5 text-[11px] font-semibold <?= $j['is_struktural'] ? 'bg-amber-50 text-amber-700 border-amber-200' : 'bg-gray-100 text-gray-600 border-gray-200' ?>"><?= esc($j['nama']) ?></span>
                     <?php endforeach; ?>
                 </div>
             <?php endif; ?>
         </div>
         <div class="flex flex-wrap gap-2">
-            <span class="inline-flex items-center rounded-lg border border-slate-200 bg-slate-50 px-2.5 py-1.5 text-xs font-bold text-slate-600">Total sesi: <?= (int) $ringkas['total'] ?></span>
+            <span class="inline-flex items-center rounded-lg border border-gray-200 bg-gray-50 px-2.5 py-1.5 text-xs font-bold text-gray-600">Total sesi: <?= (int) $ringkas['total'] ?></span>
             <span class="inline-flex items-center rounded-lg border px-2.5 py-1.5 text-xs font-bold <?= $chip['hadir'] ?>">Hadir: <?= (int) $ringkas['hadir'] ?></span>
             <?php foreach ($statusOpts as $k => $lbl): ?>
                 <span class="inline-flex items-center rounded-lg border px-2.5 py-1.5 text-xs font-bold <?= $chip[$k] ?>"><?= $lbl ?>: <?= (int) $ringkas[$k] ?></span>
@@ -52,17 +52,17 @@
 </div>
 
 <?php if (empty($detail)): ?>
-    <div class="bg-white rounded-2xl border border-slate-200 shadow-sm p-10 text-center text-slate-400">
+    <div class="bg-white rounded-2xl border border-gray-200 shadow-xs p-10 text-center text-gray-400">
         Tidak ada catatan ketidakhadiran pada periode ini — guru <b>hadir penuh</b>. 🎉
     </div>
 <?php else: ?>
-    <div class="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
-        <div class="px-5 py-3.5 border-b border-slate-100">
-            <p class="font-bold text-slate-800">Rincian Ketidakhadiran <span class="text-slate-400 font-normal">(<?= count($detail) ?> catatan)</span></p>
+    <div class="bg-white rounded-2xl border border-gray-200 shadow-xs overflow-hidden">
+        <div class="px-5 py-3.5 border-b border-gray-100">
+            <p class="font-bold text-gray-800">Rincian Ketidakhadiran <span class="text-gray-400 font-normal">(<?= count($detail) ?> catatan)</span></p>
         </div>
         <div class="overflow-x-auto">
             <table class="w-full text-sm">
-                <thead class="bg-slate-50 text-slate-500 text-left">
+                <thead class="bg-gray-50 text-gray-500 text-left">
                     <tr>
                         <th class="px-4 py-2.5 font-semibold w-36">Tanggal</th>
                         <th class="px-4 py-2.5 font-semibold w-40">Jam</th>
@@ -72,15 +72,15 @@
                         <th class="px-4 py-2.5 font-semibold">Keterangan</th>
                     </tr>
                 </thead>
-                <tbody class="divide-y divide-slate-100">
+                <tbody class="divide-y divide-gray-100">
                     <?php foreach ($detail as $d): $ts = strtotime($d['tanggal']); ?>
-                        <tr class="hover:bg-slate-50/60">
-                            <td class="px-4 py-2.5 whitespace-nowrap"><span class="font-semibold text-slate-700"><?= (int) date('j', $ts) ?> <?= $bulan[(int) date('n', $ts)] ?> <?= date('Y', $ts) ?></span><br><span class="text-xs text-slate-400"><?= $namaHari[(int) date('w', $ts)] ?></span></td>
-                            <td class="px-4 py-2.5 whitespace-nowrap"><?php if ($d['jam_ke'] !== null): ?>Jam <?= esc($d['jam_ke']) ?> <span class="text-xs text-slate-400">(<?= esc(substr((string) $d['waktu_mulai'], 0, 5)) ?>–<?= esc(substr((string) $d['waktu_selesai'], 0, 5)) ?>)</span><?php else: ?><span class="text-slate-300">—</span><?php endif; ?></td>
-                            <td class="px-4 py-2.5"><?php if (! empty($d['label'])): ?><span class="inline-flex items-center rounded-lg border border-red-200 bg-red-50 px-2 py-0.5 text-xs font-semibold text-red-700"><?= esc($d['label']) ?></span><?php elseif (! empty($d['kehadiran_kerja'])): ?><span class="inline-flex items-center rounded-lg border border-slate-200 bg-slate-50 px-2 py-0.5 text-xs font-semibold text-slate-500">Kehadiran kerja</span><?php else: ?><?= esc($d['nama_kelas'] ?? '—') ?> <span class="text-slate-400">·</span> <span class="font-medium"><?= esc($d['nama_mapel'] ?? '—') ?></span><?php endif; ?></td>
+                        <tr class="hover:bg-gray-50/60">
+                            <td class="px-4 py-2.5 whitespace-nowrap"><span class="font-semibold text-gray-700"><?= (int) date('j', $ts) ?> <?= $bulan[(int) date('n', $ts)] ?> <?= date('Y', $ts) ?></span><br><span class="text-xs text-gray-400"><?= $namaHari[(int) date('w', $ts)] ?></span></td>
+                            <td class="px-4 py-2.5 whitespace-nowrap"><?php if ($d['jam_ke'] !== null): ?>Jam <?= esc($d['jam_ke']) ?> <span class="text-xs text-gray-400">(<?= esc(substr((string) $d['waktu_mulai'], 0, 5)) ?>–<?= esc(substr((string) $d['waktu_selesai'], 0, 5)) ?>)</span><?php else: ?><span class="text-gray-300">—</span><?php endif; ?></td>
+                            <td class="px-4 py-2.5"><?php if (! empty($d['label'])): ?><span class="inline-flex items-center rounded-lg border border-red-200 bg-red-50 px-2 py-0.5 text-xs font-semibold text-red-700"><?= esc($d['label']) ?></span><?php elseif (! empty($d['kehadiran_kerja'])): ?><span class="inline-flex items-center rounded-lg border border-gray-200 bg-gray-50 px-2 py-0.5 text-xs font-semibold text-gray-500">Kehadiran kerja</span><?php else: ?><?= esc($d['nama_kelas'] ?? '—') ?> <span class="text-gray-400">·</span> <span class="font-medium"><?= esc($d['nama_mapel'] ?? '—') ?></span><?php endif; ?></td>
                             <td class="px-4 py-2.5"><span class="inline-flex items-center rounded-lg border px-2.5 py-1 text-xs font-bold <?= $badge[$d['status']] ?? $badge['izin'] ?>"><?= esc($statusOpts[$d['status']] ?? $d['status']) ?></span></td>
-                            <td class="px-4 py-2.5"><?= $d['jam_masuk'] ? esc(substr($d['jam_masuk'], 0, 5)) : '<span class="text-slate-300">—</span>' ?></td>
-                            <td class="px-4 py-2.5 text-slate-500"><?= $d['keterangan'] ? esc($d['keterangan']) : '<span class="text-slate-300">—</span>' ?></td>
+                            <td class="px-4 py-2.5"><?= $d['jam_masuk'] ? esc(substr($d['jam_masuk'], 0, 5)) : '<span class="text-gray-300">—</span>' ?></td>
+                            <td class="px-4 py-2.5 text-gray-500"><?= $d['keterangan'] ? esc($d['keterangan']) : '<span class="text-gray-300">—</span>' ?></td>
                         </tr>
                     <?php endforeach; ?>
                 </tbody>

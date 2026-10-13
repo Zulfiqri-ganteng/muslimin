@@ -27,7 +27,7 @@ $urlTab = static fn (string $k) => $base . ($k === 'periode' ? '' : '/' . $k) . 
 $tgl = static fn ($d) => $d ? date('d/m/Y', strtotime((string) $d)) : '—';
 
 $warnaStatus = [
-    'draft'    => 'bg-slate-100 text-slate-600 border-slate-200',
+    'draft'    => 'bg-gray-100 text-gray-600 border-gray-200',
     'berjalan' => 'bg-emerald-50 text-emerald-700 border-emerald-200',
     'selesai'  => 'bg-brand-50 text-brand-700 border-brand-200',
 ];
@@ -44,7 +44,7 @@ $lencana = [
     'susulan'        => $susulanBelum > 0 ? [$susulanBelum . ' belum', 'perlu'] : ((int) $ringkas['tidakHadir'] > 0 ? ['✓', 'ok'] : ['0', 'kosong']),
     'honor'          => ($ringkas['honorStatus'] ?? null) !== null ? [$honorLabel[$ringkas['honorStatus']] ?? $ringkas['honorStatus'], $ringkas['honorStatus'] === 'draf' ? 'perlu' : 'ok'] : ['belum', 'kosong'],
 ];
-$warnaLencana = ['ok' => 'bg-emerald-50 text-emerald-700', 'kosong' => 'bg-slate-100 text-slate-500', 'perlu' => 'bg-amber-100 text-amber-800'];
+$warnaLencana = ['ok' => 'bg-emerald-50 text-emerald-700', 'kosong' => 'bg-gray-100 text-gray-500', 'perlu' => 'bg-amber-100 text-amber-800'];
 
 // Panel yang sudah digarap; sisanya memakai panel "belum tersedia".
 $panelSiap = ['periode', 'jadwal', 'ketidakhadiran', 'susulan', 'rekap', 'honor'];
@@ -153,30 +153,30 @@ if ($tab === 'jadwal') {
 ]) ?>
 
 <!-- ===== Kepala: identitas periode ===== -->
-<div class="bg-white rounded-2xl border border-slate-200 shadow-sm p-4 sm:p-5 mb-5">
+<div class="bg-white rounded-2xl border border-gray-200 shadow-xs p-4 sm:p-5 mb-5">
     <div class="flex flex-col sm:flex-row sm:items-start gap-4">
         <div class="flex-1 min-w-0">
             <div class="flex flex-wrap items-center gap-2">
-                <h2 class="font-bold text-slate-800 text-lg"><?= esc($label) ?></h2>
+                <h2 class="font-bold text-gray-800 text-lg"><?= esc($label) ?></h2>
                 <span class="inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-semibold <?= $warnaStatus[$periode['status']] ?? $warnaStatus['draft'] ?>">
                     <?= esc($labelStatus[$periode['status']] ?? $periode['status']) ?>
                 </span>
-                <span class="inline-flex items-center rounded-full bg-slate-100 text-slate-600 border border-slate-200 px-2.5 py-0.5 text-xs font-semibold">
+                <span class="inline-flex items-center rounded-full bg-gray-100 text-gray-600 border border-gray-200 px-2.5 py-0.5 text-xs font-semibold">
                     Semester <?= esc($periode['semester']) ?>
                 </span>
             </div>
-            <p class="text-sm text-slate-500 mt-1"><?= esc($panjang) ?></p>
-            <p class="text-xs text-slate-500 mt-2">
-                Pelaksanaan: <b class="text-slate-700"><?= $tgl($periode['tanggal_mulai']) ?> &ndash; <?= $tgl($periode['tanggal_selesai']) ?></b>
+            <p class="text-sm text-gray-500 mt-1"><?= esc($panjang) ?></p>
+            <p class="text-xs text-gray-500 mt-2">
+                Pelaksanaan: <b class="text-gray-700"><?= $tgl($periode['tanggal_mulai']) ?> &ndash; <?= $tgl($periode['tanggal_selesai']) ?></b>
                 &nbsp;·&nbsp;
-                Susulan: <b class="text-slate-700"><?= $tgl($periode['susulan_mulai']) ?> &ndash; <?= $tgl($periode['susulan_selesai']) ?></b>
+                Susulan: <b class="text-gray-700"><?= $tgl($periode['susulan_mulai']) ?> &ndash; <?= $tgl($periode['susulan_selesai']) ?></b>
             </p>
         </div>
 
         <?php if (count($riwayat) > 1): ?>
             <form method="get" action="<?= $base . ($tab === 'periode' ? '' : '/' . $tab) ?>" class="shrink-0">
-                <label class="block text-[11px] font-semibold text-slate-500 mb-1">Tahun Pelajaran</label>
-                <select name="tp" data-autosubmit class="rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-brand-500 outline-none">
+                <label class="block text-[11px] font-semibold text-gray-500 mb-1">Tahun Pelajaran</label>
+                <select name="tp" data-autosubmit class="rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-brand-500 outline-hidden">
                     <?php foreach ($riwayat as $r): ?>
                         <option value="<?= esc($r['tahun_ajaran'], 'attr') ?>" <?= $r['tahun_ajaran'] === $tp ? 'selected' : '' ?>>
                             <?= esc($r['tahun_ajaran']) ?><?= $r['tahun_ajaran'] === $berjalan ? ' (berjalan)' : '' ?>
@@ -196,14 +196,14 @@ if ($tab === 'jadwal') {
 </div>
 
 <!-- ===== Tab ===== -->
-<div class="mb-5 overflow-x-auto overflow-y-hidden border-b border-slate-200">
+<div class="mb-5 overflow-x-auto overflow-y-hidden border-b border-gray-200">
     <nav class="flex gap-1 min-w-max">
         <?php foreach ($tabs as $k => $lbl): ?>
             <?php $aktif = $k === $tab; ?>
             <a href="<?= $urlTab($k) ?>"<?= $aktif ? ' aria-current="page"' : '' ?>
                class="px-4 py-2.5 text-sm font-semibold border-b-[3px] -mb-px transition whitespace-nowrap <?= $aktif
                    ? 'border-brand-600 text-brand-700'
-                   : 'border-transparent text-slate-500 hover:text-slate-700 hover:border-slate-300' ?>">
+                   : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300' ?>">
                 <?= esc($lbl) ?>
                 <?php if (isset($lencana[$k])): ?>
                     <span class="ml-1.5 inline-flex items-center rounded-full px-1.5 py-0.5 text-[10px] font-bold leading-none <?= $warnaLencana[$lencana[$k][1]] ?>"><?= esc($lencana[$k][0]) ?></span>

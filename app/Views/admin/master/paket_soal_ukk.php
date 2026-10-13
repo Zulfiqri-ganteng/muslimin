@@ -42,15 +42,15 @@ helper('ukkdoc');
         'bulkLabel'         => 'paket soal',
     ]) ?>
 
-    <div class="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
-        <div class="px-6 py-4 border-b border-slate-100 flex items-center justify-between">
-            <h2 class="font-bold text-slate-800">Daftar Paket Soal <span class="text-slate-400 font-normal">(<?= $total ?>)</span></h2>
+    <div class="bg-white rounded-2xl border border-gray-200 shadow-xs overflow-hidden">
+        <div class="px-6 py-4 border-b border-gray-100 flex items-center justify-between">
+            <h2 class="font-bold text-gray-800">Daftar Paket Soal <span class="text-gray-400 font-normal">(<?= $total ?>)</span></h2>
         </div>
         <div class="overflow-x-auto">
             <table class="w-full text-sm">
-                <thead class="bg-slate-50 text-slate-500 text-left">
+                <thead class="bg-gray-50 text-gray-500 text-left">
                     <tr>
-                        <th class="pl-6 pr-2 py-3 w-10"><input type="checkbox" title="Pilih semua di halaman ini" class="js-check-all rounded border-slate-300 text-brand-600 focus:ring-brand-500"></th>
+                        <th class="pl-6 pr-2 py-3 w-10"><input type="checkbox" title="Pilih semua di halaman ini" class="js-check-all rounded-sm border-gray-300 text-brand-600 focus:ring-brand-500"></th>
                         <th class="px-4 py-3 font-semibold w-24">Kode</th>
                         <th class="px-4 py-3 font-semibold">Nama</th>
                         <th class="px-4 py-3 font-semibold w-32">Jurusan</th>
@@ -59,33 +59,33 @@ helper('ukkdoc');
                         <th class="px-4 py-3 font-semibold w-28 text-right">Aksi</th>
                     </tr>
                 </thead>
-                <tbody class="divide-y divide-slate-100">
+                <tbody class="divide-y divide-gray-100">
                     <?php if (empty($rows)): ?>
-                        <tr><td colspan="7" class="px-6 py-10 text-center text-slate-400">
+                        <tr><td colspan="7" class="px-6 py-10 text-center text-gray-400">
                             <?= $q !== '' ? 'Tidak ada paket soal yang cocok dengan pencarian ini.' : 'Belum ada data paket soal. Tambah manual atau import Excel.' ?>
                         </td></tr>
                     <?php else: foreach ($rows as $r): ?>
-                        <tr class="hover:bg-slate-50">
-                            <td class="pl-6 pr-2 py-3"><input type="checkbox" class="row-check rounded border-slate-300 text-brand-600 focus:ring-brand-500" value="<?= (int) $r['id'] ?>"></td>
+                        <tr class="hover:bg-gray-50">
+                            <td class="pl-6 pr-2 py-3"><input type="checkbox" class="row-check rounded-sm border-gray-300 text-brand-600 focus:ring-brand-500" value="<?= (int) $r['id'] ?>"></td>
                             <td class="px-4 py-3 font-bold text-brand-700"><?= esc($r['kode']) ?></td>
                             <td class="px-4 py-3">
-                                <div class="font-medium text-slate-800"><?= esc($r['nama']) ?></div>
-                                <div class="text-xs text-slate-400">Bobot: <?= (float) $r['bobot_persiapan'] ?>/<?= (float) $r['bobot_proses'] ?>/<?= (float) $r['bobot_hasil'] ?>/<?= (float) $r['bobot_sikap'] ?>/<?= (float) $r['bobot_waktu'] ?></div>
+                                <div class="font-medium text-gray-800"><?= esc($r['nama']) ?></div>
+                                <div class="text-xs text-gray-400">Bobot: <?= (float) $r['bobot_persiapan'] ?>/<?= (float) $r['bobot_proses'] ?>/<?= (float) $r['bobot_hasil'] ?>/<?= (float) $r['bobot_sikap'] ?>/<?= (float) $r['bobot_waktu'] ?></div>
                             </td>
-                            <td class="px-4 py-3 text-slate-600"><?= $r['jurusan_nama'] !== null ? esc($r['jurusan_nama']) : '<span class="text-slate-300">—</span>' ?></td>
-                            <td class="px-4 py-3 text-center text-slate-600"><?= (float) $r['kkm'] ?></td>
+                            <td class="px-4 py-3 text-gray-600"><?= $r['jurusan_nama'] !== null ? esc($r['jurusan_nama']) : '<span class="text-gray-300">—</span>' ?></td>
+                            <td class="px-4 py-3 text-center text-gray-600"><?= (float) $r['kkm'] ?></td>
                             <td class="px-4 py-3 text-xs space-y-1">
                                 <?php if (! empty($r['kisi_kisi_file'])): ?>
                                     <div><a href="<?= esc(ukkdoc_url($r['kisi_kisi_file'])) ?>" target="_blank" class="text-brand-700 hover:underline font-medium">Kisi-kisi</a>
                                         <a href="<?= site_url('admin/master/paket-soal-ukk/hapus-berkas/' . $r['id'] . '/kisi-kisi') ?>" data-method="post" data-confirm="Hapus berkas kisi-kisi ini?" class="text-red-500 hover:underline ml-1">hapus</a></div>
                                 <?php else: ?>
-                                    <div class="text-slate-300">Kisi-kisi: —</div>
+                                    <div class="text-gray-300">Kisi-kisi: —</div>
                                 <?php endif; ?>
                                 <?php if (! empty($r['jobsheet_file'])): ?>
                                     <div><a href="<?= esc(ukkdoc_url($r['jobsheet_file'])) ?>" target="_blank" class="text-brand-700 hover:underline font-medium">Jobsheet</a>
                                         <a href="<?= site_url('admin/master/paket-soal-ukk/hapus-berkas/' . $r['id'] . '/jobsheet') ?>" data-method="post" data-confirm="Hapus berkas jobsheet ini?" class="text-red-500 hover:underline ml-1">hapus</a></div>
                                 <?php else: ?>
-                                    <div class="text-slate-300">Jobsheet: —</div>
+                                    <div class="text-gray-300">Jobsheet: —</div>
                                 <?php endif; ?>
                             </td>
                             <td class="px-4 py-3 text-right whitespace-nowrap">
@@ -101,7 +101,7 @@ helper('ukkdoc');
             </table>
         </div>
         <?php if ($pager): ?>
-            <div class="px-6 py-4 border-t border-slate-100">
+            <div class="px-6 py-4 border-t border-gray-100">
                 <?= $pager->only(['q', 'per'])->links('default', 'admin') ?>
             </div>
         <?php endif; ?>
@@ -111,29 +111,29 @@ helper('ukkdoc');
     <div x-show="open" x-cloak x-transition.opacity.duration.200ms class="fixed inset-0 z-50 flex items-center justify-center p-4">
         <div class="absolute inset-0 bg-black/40" @click="open=false"></div>
         <div class="relative bg-white rounded-2xl shadow-xl w-full max-w-2xl p-6 max-h-[90vh] overflow-y-auto">
-            <h3 class="font-bold text-lg text-slate-800 mb-4" x-text="mode==='add' ? 'Tambah Paket Soal' : 'Edit Paket Soal'"></h3>
+            <h3 class="font-bold text-lg text-gray-800 mb-4" x-text="mode==='add' ? 'Tambah Paket Soal' : 'Edit Paket Soal'"></h3>
             <form method="post" :action="actionUrl" enctype="multipart/form-data">
                 <?= csrf_field() ?>
                 <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div>
-                        <label class="block text-sm font-medium text-slate-600 mb-1">Kode *</label>
+                        <label class="block text-sm font-medium text-gray-600 mb-1">Kode *</label>
                         <input type="text" name="kode" x-model="form.kode" maxlength="30" required
-                               class="w-full rounded-lg border border-slate-300 px-3 py-2.5 text-sm uppercase focus:border-brand-500 focus:ring-2 focus:ring-brand-500/20 outline-none">
+                               class="w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm uppercase focus:border-brand-500 focus:ring-2 focus:ring-brand-500/20 outline-hidden">
                     </div>
                     <div>
-                        <label class="block text-sm font-medium text-slate-600 mb-1">KKM</label>
+                        <label class="block text-sm font-medium text-gray-600 mb-1">KKM</label>
                         <input type="number" name="kkm" x-model="form.kkm" min="0" max="100" step="0.5"
-                               class="w-full rounded-lg border border-slate-300 px-3 py-2.5 text-sm focus:border-brand-500 outline-none">
+                               class="w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm focus:border-brand-500 outline-hidden">
                     </div>
                     <div class="sm:col-span-2">
-                        <label class="block text-sm font-medium text-slate-600 mb-1">Nama *</label>
+                        <label class="block text-sm font-medium text-gray-600 mb-1">Nama *</label>
                         <input type="text" name="nama" x-model="form.nama" maxlength="150" required
-                               class="w-full rounded-lg border border-slate-300 px-3 py-2.5 text-sm focus:border-brand-500 focus:ring-2 focus:ring-brand-500/20 outline-none">
+                               class="w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm focus:border-brand-500 focus:ring-2 focus:ring-brand-500/20 outline-hidden">
                     </div>
                     <div>
-                        <label class="block text-sm font-medium text-slate-600 mb-1">Jurusan</label>
+                        <label class="block text-sm font-medium text-gray-600 mb-1">Jurusan</label>
                         <select name="jurusan_id" x-model="form.jurusan_id"
-                                class="w-full rounded-lg border border-slate-300 px-3 py-2.5 text-sm focus:border-brand-500 outline-none">
+                                class="w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm focus:border-brand-500 outline-hidden">
                             <option value="">— Semua jurusan —</option>
                             <?php foreach ($jurusanOpts as $id => $nama): ?>
                                 <option value="<?= (int) $id ?>"><?= esc($nama) ?></option>
@@ -141,9 +141,9 @@ helper('ukkdoc');
                         </select>
                     </div>
                     <div>
-                        <label class="block text-sm font-medium text-slate-600 mb-1">Tahun Ajaran</label>
+                        <label class="block text-sm font-medium text-gray-600 mb-1">Tahun Ajaran</label>
                         <select name="tahun_ajaran_id" x-model="form.tahun_ajaran_id"
-                                class="w-full rounded-lg border border-slate-300 px-3 py-2.5 text-sm focus:border-brand-500 outline-none">
+                                class="w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm focus:border-brand-500 outline-hidden">
                             <option value="">— Belum ditentukan —</option>
                             <?php foreach ($tahunOpts as $id => $nama): ?>
                                 <option value="<?= (int) $id ?>"><?= esc($nama) ?></option>
@@ -151,68 +151,68 @@ helper('ukkdoc');
                         </select>
                     </div>
                     <div class="sm:col-span-2">
-                        <label class="block text-sm font-medium text-slate-600 mb-1">Deskripsi</label>
+                        <label class="block text-sm font-medium text-gray-600 mb-1">Deskripsi</label>
                         <input type="text" name="deskripsi" x-model="form.deskripsi" maxlength="255"
-                               class="w-full rounded-lg border border-slate-300 px-3 py-2.5 text-sm focus:border-brand-500 outline-none">
+                               class="w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm focus:border-brand-500 outline-hidden">
                     </div>
 
-                    <div class="sm:col-span-2 pt-2 border-t border-slate-100">
-                        <p class="text-sm font-semibold text-slate-700 mb-2">Bobot Komponen Penilaian (%) <span class="text-slate-400 font-normal">— total harus 100</span></p>
+                    <div class="sm:col-span-2 pt-2 border-t border-gray-100">
+                        <p class="text-sm font-semibold text-gray-700 mb-2">Bobot Komponen Penilaian (%) <span class="text-gray-400 font-normal">— total harus 100</span></p>
                         <div class="grid grid-cols-5 gap-2">
                             <div>
-                                <label class="block text-xs text-slate-500 mb-1">Persiapan</label>
+                                <label class="block text-xs text-gray-500 mb-1">Persiapan</label>
                                 <input type="number" name="bobot_persiapan" x-model="form.bobot_persiapan" min="0" max="100" step="0.5"
-                                       class="w-full rounded-lg border border-slate-300 px-2 py-2 text-sm focus:border-brand-500 outline-none">
+                                       class="w-full rounded-lg border border-gray-300 px-2 py-2 text-sm focus:border-brand-500 outline-hidden">
                             </div>
                             <div>
-                                <label class="block text-xs text-slate-500 mb-1">Proses</label>
+                                <label class="block text-xs text-gray-500 mb-1">Proses</label>
                                 <input type="number" name="bobot_proses" x-model="form.bobot_proses" min="0" max="100" step="0.5"
-                                       class="w-full rounded-lg border border-slate-300 px-2 py-2 text-sm focus:border-brand-500 outline-none">
+                                       class="w-full rounded-lg border border-gray-300 px-2 py-2 text-sm focus:border-brand-500 outline-hidden">
                             </div>
                             <div>
-                                <label class="block text-xs text-slate-500 mb-1">Hasil</label>
+                                <label class="block text-xs text-gray-500 mb-1">Hasil</label>
                                 <input type="number" name="bobot_hasil" x-model="form.bobot_hasil" min="0" max="100" step="0.5"
-                                       class="w-full rounded-lg border border-slate-300 px-2 py-2 text-sm focus:border-brand-500 outline-none">
+                                       class="w-full rounded-lg border border-gray-300 px-2 py-2 text-sm focus:border-brand-500 outline-hidden">
                             </div>
                             <div>
-                                <label class="block text-xs text-slate-500 mb-1">Sikap</label>
+                                <label class="block text-xs text-gray-500 mb-1">Sikap</label>
                                 <input type="number" name="bobot_sikap" x-model="form.bobot_sikap" min="0" max="100" step="0.5"
-                                       class="w-full rounded-lg border border-slate-300 px-2 py-2 text-sm focus:border-brand-500 outline-none">
+                                       class="w-full rounded-lg border border-gray-300 px-2 py-2 text-sm focus:border-brand-500 outline-hidden">
                             </div>
                             <div>
-                                <label class="block text-xs text-slate-500 mb-1">Waktu</label>
+                                <label class="block text-xs text-gray-500 mb-1">Waktu</label>
                                 <input type="number" name="bobot_waktu" x-model="form.bobot_waktu" min="0" max="100" step="0.5"
-                                       class="w-full rounded-lg border border-slate-300 px-2 py-2 text-sm focus:border-brand-500 outline-none">
+                                       class="w-full rounded-lg border border-gray-300 px-2 py-2 text-sm focus:border-brand-500 outline-hidden">
                             </div>
                         </div>
                     </div>
 
-                    <div class="sm:col-span-2 pt-2 border-t border-slate-100">
-                        <p class="text-sm font-semibold text-slate-700 mb-2">Dokumen (PDF, maks 10 MB)</p>
+                    <div class="sm:col-span-2 pt-2 border-t border-gray-100">
+                        <p class="text-sm font-semibold text-gray-700 mb-2">Dokumen (PDF, maks 10 MB)</p>
                         <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
                             <div>
-                                <label class="block text-xs text-slate-500 mb-1">Kisi-kisi</label>
+                                <label class="block text-xs text-gray-500 mb-1">Kisi-kisi</label>
                                 <input type="file" name="kisi_kisi" accept="application/pdf"
-                                       class="w-full text-sm rounded-lg border border-slate-300 px-2 py-1.5 file:mr-3 file:rounded-md file:border-0 file:bg-brand-50 file:text-brand-700 file:px-3 file:py-1.5 file:text-xs file:font-semibold">
-                                <p class="text-xs text-slate-400 mt-1">Kosongkan bila tidak ingin mengganti berkas yang sudah ada.</p>
+                                       class="w-full text-sm rounded-lg border border-gray-300 px-2 py-1.5 file:mr-3 file:rounded-md file:border-0 file:bg-brand-50 file:text-brand-700 file:px-3 file:py-1.5 file:text-xs file:font-semibold">
+                                <p class="text-xs text-gray-400 mt-1">Kosongkan bila tidak ingin mengganti berkas yang sudah ada.</p>
                             </div>
                             <div>
-                                <label class="block text-xs text-slate-500 mb-1">Jobsheet</label>
+                                <label class="block text-xs text-gray-500 mb-1">Jobsheet</label>
                                 <input type="file" name="jobsheet" accept="application/pdf"
-                                       class="w-full text-sm rounded-lg border border-slate-300 px-2 py-1.5 file:mr-3 file:rounded-md file:border-0 file:bg-brand-50 file:text-brand-700 file:px-3 file:py-1.5 file:text-xs file:font-semibold">
-                                <p class="text-xs text-slate-400 mt-1">Kosongkan bila tidak ingin mengganti berkas yang sudah ada.</p>
+                                       class="w-full text-sm rounded-lg border border-gray-300 px-2 py-1.5 file:mr-3 file:rounded-md file:border-0 file:bg-brand-50 file:text-brand-700 file:px-3 file:py-1.5 file:text-xs file:font-semibold">
+                                <p class="text-xs text-gray-400 mt-1">Kosongkan bila tidak ingin mengganti berkas yang sudah ada.</p>
                             </div>
                         </div>
                     </div>
 
                     <div class="sm:col-span-2">
-                        <label class="block text-sm font-medium text-slate-600 mb-1">Keterangan</label>
+                        <label class="block text-sm font-medium text-gray-600 mb-1">Keterangan</label>
                         <input type="text" name="keterangan" x-model="form.keterangan" maxlength="255"
-                               class="w-full rounded-lg border border-slate-300 px-3 py-2.5 text-sm focus:border-brand-500 outline-none">
+                               class="w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm focus:border-brand-500 outline-hidden">
                     </div>
                 </div>
                 <div class="flex justify-end gap-2 mt-6">
-                    <button type="button" @click="open=false" class="rounded-lg border border-slate-300 text-slate-600 text-sm font-semibold px-4 py-2.5 hover:bg-slate-50">Batal</button>
+                    <button type="button" @click="open=false" class="rounded-lg border border-gray-300 text-gray-600 text-sm font-semibold px-4 py-2.5 hover:bg-gray-50">Batal</button>
                     <button class="rounded-lg bg-brand-700 hover:bg-brand-800 text-white text-sm font-semibold px-5 py-2.5">Simpan</button>
                 </div>
             </form>

@@ -136,7 +136,7 @@ document.addEventListener('alpine:init', function () {
                         } else {
                             var sama = Number(j.otomatis) === Number(j.nilai);
                             st.textContent = sama ? 'otomatis' : 'diubah';
-                            st.className = 'rounded px-1 text-[10px] font-semibold ' + (sama ? 'bg-emerald-50 text-emerald-700' : 'bg-amber-50 text-amber-700');
+                            st.className = 'rounded-sm px-1 text-[10px] font-semibold ' + (sama ? 'bg-emerald-50 text-emerald-700' : 'bg-amber-50 text-amber-700');
                         }
                     }
                     self.kedip(el, true);

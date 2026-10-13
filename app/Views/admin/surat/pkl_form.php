@@ -79,16 +79,16 @@ $cfg     = [
     <?= csrf_field() ?>
     <?php if ($lapor !== null): ?><input type="hidden" name="lapor_id" value="<?= (int) $lapor['id'] ?>"><?php endif; ?>
 
-    <h1 class="rise text-xl font-bold text-slate-800"><?= $ubah ? 'Ubah ' . esc($label) . ' <span class="font-mono text-sm font-semibold text-slate-400">' . esc($kode) . '</span>' : 'Buat ' . esc($label) ?></h1>
+    <h1 class="rise text-xl font-bold text-gray-800"><?= $ubah ? 'Ubah ' . esc($label) . ' <span class="font-mono text-sm font-semibold text-gray-400">' . esc($kode) . '</span>' : 'Buat ' . esc($label) ?></h1>
 
     <!-- Tempat PKL -->
-    <section class="rise overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
-        <h3 class="border-b border-slate-100 bg-slate-50 px-5 py-3 text-xs font-bold uppercase tracking-wide text-slate-500">Tempat PKL<?= $balasan ? '' : ' &amp; siswa yang ditarik' ?></h3>
+    <section class="rise overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-xs">
+        <h3 class="border-b border-gray-100 bg-gray-50 px-5 py-3 text-xs font-bold uppercase tracking-wide text-gray-500">Tempat PKL<?= $balasan ? '' : ' &amp; siswa yang ditarik' ?></h3>
         <div class="space-y-3 px-5 py-5">
             <?php if ($ubah): ?>
-                <p class="text-sm text-slate-700"><b><?= esc((string) $surat['perusahaan_nama']) ?></b><?php if (! empty($surat['pengajuan_id'])): ?> — <a href="<?= site_url('admin/pkl/' . (int) $surat['pengajuan_id']) ?>" class="font-semibold text-brand-700 hover:underline">lihat ajuan PKL</a><?php endif; ?></p>
+                <p class="text-sm text-gray-700"><b><?= esc((string) $surat['perusahaan_nama']) ?></b><?php if (! empty($surat['pengajuan_id'])): ?> — <a href="<?= site_url('admin/pkl/' . (int) $surat['pengajuan_id']) ?>" class="font-semibold text-brand-700 hover:underline">lihat ajuan PKL</a><?php endif; ?></p>
                 <?php if ($balasan): ?>
-                    <p class="text-xs leading-relaxed text-slate-400">Tempat dan daftar siswa tidak bisa diganti di sini. Bila keliru, batalkan surat ini lalu buat yang baru.</p>
+                    <p class="text-xs leading-relaxed text-gray-400">Tempat dan daftar siswa tidak bisa diganti di sini. Bila keliru, batalkan surat ini lalu buat yang baru.</p>
                 <?php elseif ($ajuan === []): ?>
                     <p class="rounded-xl border border-amber-300 bg-amber-50 px-4 py-3 text-xs text-amber-900">Ajuan PKL surat ini sudah tidak berstatus disetujui, jadi daftar siswa tidak bisa diubah (tetap: <?= esc(implode(', ', array_column($siswaSurat, 'nama'))) ?>).</p>
                     <?php foreach ($siswaSurat as $s): ?><input type="hidden" name="siswa[]" value="<?= (int) $s['siswa_id'] ?>"><?php endforeach; ?>
@@ -100,24 +100,24 @@ $cfg     = [
                     <input type="search" x-model="cari" placeholder="Cari perusahaan, nomor ajuan, atau nama siswa…" class="inp sm:flex-1" aria-label="Cari ajuan">
                     <?php if ($balasan && $lapor === null): ?>
                         <button type="button" @click="pilihSemua()" class="rounded-lg border border-brand-200 bg-white px-3.5 py-2 text-sm font-semibold text-brand-700 hover:bg-brand-50">Pilih semua yang belum punya Balasan</button>
-                        <button type="button" @click="dipilih = []" class="rounded-lg border border-slate-300 bg-white px-3.5 py-2 text-sm font-semibold text-slate-600 hover:bg-slate-50">Kosongkan</button>
+                        <button type="button" @click="dipilih = []" class="rounded-lg border border-gray-300 bg-white px-3.5 py-2 text-sm font-semibold text-gray-600 hover:bg-gray-50">Kosongkan</button>
                     <?php endif; ?>
                 </div>
-                <?php if ($balasan): ?><p class="text-xs text-slate-500"><b x-text="dipilih.length"></b> dari <?= count($ajuan) ?> ajuan dipilih.</p><?php endif; ?>
-                <ul class="max-h-96 divide-y divide-slate-100 overflow-y-auto rounded-xl border border-slate-200">
+                <?php if ($balasan): ?><p class="text-xs text-gray-500"><b x-text="dipilih.length"></b> dari <?= count($ajuan) ?> ajuan dipilih.</p><?php endif; ?>
+                <ul class="max-h-96 divide-y divide-gray-100 overflow-y-auto rounded-xl border border-gray-200">
                     <template x-for="a in ajuan" :key="a.id">
                         <li x-show="tampil(a)">
-                            <label class="flex cursor-pointer items-start gap-3 px-4 py-3 transition hover:bg-slate-50" :class="jenis === 'balasan' && a.balasan && 'cursor-not-allowed opacity-60'">
+                            <label class="flex cursor-pointer items-start gap-3 px-4 py-3 transition hover:bg-gray-50" :class="jenis === 'balasan' && a.balasan && 'cursor-not-allowed opacity-60'">
                                 <?php if ($balasan): ?>
                                     <input type="checkbox" name="ajuan[]" :value="String(a.id)" x-model="dipilih" :disabled="!!a.balasan" class="mt-1 h-4 w-4">
                                 <?php else: ?>
                                     <input type="radio" name="ajuan[]" :value="String(a.id)" x-model="ajuanTunggal" class="mt-1 h-4 w-4">
                                 <?php endif; ?>
                                 <span class="min-w-0 flex-1">
-                                    <span class="block text-sm font-semibold text-slate-800"><span x-text="a.perusahaan"></span> <span class="font-mono text-xs font-normal text-slate-400" x-text="a.kode"></span></span>
-                                    <span class="block text-xs text-slate-500"><span x-text="a.siswa.length"></span> siswa — <span x-text="a.siswa.map(function (s) { return s.nama; }).join(', ')"></span></span>
-                                    <span x-show="a.alamat" class="block text-xs text-slate-400" x-text="a.alamat"></span>
-                                    <span x-show="a.mulai && a.selesai" class="mt-1 inline-block rounded-full bg-slate-100 px-2 py-0.5 text-[11px] font-semibold text-slate-600" x-text="'Periode tercatat: ' + periodeTeks(a.mulai, a.selesai)"></span>
+                                    <span class="block text-sm font-semibold text-gray-800"><span x-text="a.perusahaan"></span> <span class="font-mono text-xs font-normal text-gray-400" x-text="a.kode"></span></span>
+                                    <span class="block text-xs text-gray-500"><span x-text="a.siswa.length"></span> siswa — <span x-text="a.siswa.map(function (s) { return s.nama; }).join(', ')"></span></span>
+                                    <span x-show="a.alamat" class="block text-xs text-gray-400" x-text="a.alamat"></span>
+                                    <span x-show="a.mulai && a.selesai" class="mt-1 inline-block rounded-full bg-gray-100 px-2 py-0.5 text-[11px] font-semibold text-gray-600" x-text="'Periode tercatat: ' + periodeTeks(a.mulai, a.selesai)"></span>
                                     <a x-show="a.balasan" :href="'<?= site_url('admin/surat') ?>/' + (a.balasan ? a.balasan.id : '')" class="mt-1 inline-block rounded-full bg-emerald-100 px-2 py-0.5 text-[11px] font-bold text-emerald-800 hover:underline" x-text="a.balasan ? 'Sudah ada Surat Balasan ' + a.balasan.kode + (a.balasan.nomor ? ' (' + a.balasan.nomor + ')' : '') : ''"></a>
                                     <span x-show="jenis === 'penarikan' && a.penarikan > 0" class="mt-1 inline-block rounded-full bg-rose-100 px-2 py-0.5 text-[11px] font-bold text-rose-800" x-text="a.penarikan + ' surat penarikan sudah ada'"></span>
                                 </span>
@@ -128,13 +128,13 @@ $cfg     = [
             <?php endif; ?>
 
             <?php if (! $balasan && $ajuan !== []): ?>
-                <div x-show="siswaAjuan().length" class="rounded-xl border border-slate-200 px-4 py-3">
-                    <p class="text-xs font-bold uppercase tracking-wide text-slate-500">Siswa yang ditarik <span class="text-red-500">*</span></p>
+                <div x-show="siswaAjuan().length" class="rounded-xl border border-gray-200 px-4 py-3">
+                    <p class="text-xs font-bold uppercase tracking-wide text-gray-500">Siswa yang ditarik <span class="text-red-500">*</span></p>
                     <div class="mt-2 space-y-1.5">
                         <template x-for="s in siswaAjuan()" :key="s.id">
-                            <label class="flex cursor-pointer items-center gap-2 text-sm text-slate-700">
+                            <label class="flex cursor-pointer items-center gap-2 text-sm text-gray-700">
                                 <input type="checkbox" name="siswa[]" :value="String(s.id)" x-model="siswaDipilih" class="h-4 w-4">
-                                <span><span class="font-semibold" x-text="s.nama"></span> <span class="text-xs text-slate-500" x-text="s.kelas"></span></span>
+                                <span><span class="font-semibold" x-text="s.nama"></span> <span class="text-xs text-gray-500" x-text="s.kelas"></span></span>
                             </label>
                         </template>
                     </div>
@@ -144,19 +144,19 @@ $cfg     = [
     </section>
 
     <!-- Isi surat -->
-    <section class="rise overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
-        <h3 class="border-b border-slate-100 bg-slate-50 px-5 py-3 text-xs font-bold uppercase tracking-wide text-slate-500">Isi surat</h3>
+    <section class="rise overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-xs">
+        <h3 class="border-b border-gray-100 bg-gray-50 px-5 py-3 text-xs font-bold uppercase tracking-wide text-gray-500">Isi surat</h3>
         <div class="grid grid-cols-1 gap-4 px-5 py-5 sm:grid-cols-2">
             <div>
                 <label class="lbl" for="sapaan">Kepada Yth. Bapak/Ibu …</label>
                 <input id="sapaan" name="sapaan" type="text" value="<?= esc($nilai['sapaan'], 'attr') ?>" maxlength="60" list="saranSapaan" class="inp" placeholder="Pimpinan">
                 <datalist id="saranSapaan"><?php foreach ($sapaanSaran as $s): ?><option value="<?= esc($s, 'attr') ?>"><?php endforeach; ?></datalist>
-                <p class="mt-1 text-xs text-slate-400">Tercetak "Bapak/Ibu <?= esc($nilai['sapaan']) ?>". Kosong = Pimpinan.</p>
+                <p class="mt-1 text-xs text-gray-400">Tercetak "Bapak/Ibu <?= esc($nilai['sapaan']) ?>". Kosong = Pimpinan.</p>
             </div>
             <div>
                 <label class="lbl" for="tanggal_surat">Tanggal surat <span class="text-red-500">*</span></label>
                 <input id="tanggal_surat" name="tanggal_surat" type="date" value="<?= esc($nilai['tanggal_surat'], 'attr') ?>" required class="inp">
-                <p class="mt-1 text-xs text-slate-400">Menentukan bulan dan tahun pada nomor surat.</p>
+                <p class="mt-1 text-xs text-gray-400">Menentukan bulan dan tahun pada nomor surat.</p>
             </div>
 
             <?php if ($balasan): ?>
@@ -172,13 +172,13 @@ $cfg     = [
                     <div class="sm:col-span-2">
                         <label class="lbl" for="alamat">Alamat perusahaan (baris "Alamat" di surat)</label>
                         <input id="alamat" name="alamat" type="text" value="<?= esc($nilai['alamat'], 'attr') ?>" maxlength="300" class="inp">
-                        <?php if ($lapor !== null): ?><p class="mt-1 text-xs text-slate-400"><?= (string) ($lapor['alamat'] ?? '') !== '' ? 'Alamat baru dari laporan siswa.' : 'Alamat dari ajuan PKL.' ?> Kosongkan = alamat di ajuan PKL.</p><?php endif; ?>
+                        <?php if ($lapor !== null): ?><p class="mt-1 text-xs text-gray-400"><?= (string) ($lapor['alamat'] ?? '') !== '' ? 'Alamat baru dari laporan siswa.' : 'Alamat dari ajuan PKL.' ?> Kosongkan = alamat di ajuan PKL.</p><?php endif; ?>
                     </div>
                 <?php endif; ?>
                 <div class="sm:col-span-2 rounded-xl border border-brand-200 bg-brand-50/60 px-4 py-3 text-sm">
                     <p class="text-xs font-bold uppercase tracking-wide text-brand-700">Pratinjau di surat</p>
-                    <p x-show="lamaTeks() !== ''" class="mt-1.5 text-slate-700"><span class="inline-block w-28 text-slate-500">Periode PKL</span>: <b x-text="lamaTeks() + ', bulan ' + periodeTeks(mulai, selesai)"></b></p>
-                    <p x-show="lamaTeks() === ''" class="mt-1.5 text-xs text-slate-500">Isi tanggal mulai dan selesai PKL untuk melihat pratinjau.</p>
+                    <p x-show="lamaTeks() !== ''" class="mt-1.5 text-gray-700"><span class="inline-block w-28 text-gray-500">Periode PKL</span>: <b x-text="lamaTeks() + ', bulan ' + periodeTeks(mulai, selesai)"></b></p>
+                    <p x-show="lamaTeks() === ''" class="mt-1.5 text-xs text-gray-500">Isi tanggal mulai dan selesai PKL untuk melihat pratinjau.</p>
                     <template x-for="t in peringatan()" :key="t"><p x-text="'⚠ ' + t" class="mt-2 rounded-lg border border-amber-300 bg-amber-50 px-3 py-2 text-xs font-semibold text-amber-900"></p></template>
                 </div>
             <?php else: ?>
@@ -199,22 +199,22 @@ $cfg     = [
                 </div>
                 <div class="sm:col-span-2 rounded-xl border border-brand-200 bg-brand-50/60 px-4 py-3 text-sm">
                     <p class="text-xs font-bold uppercase tracking-wide text-brand-700">Pratinjau di surat</p>
-                    <p class="mt-1.5 leading-relaxed text-slate-700">"…terhitung sejak tanggal <b x-text="tglIndo(tglEfektif) || '……'"></b>, diberhentikan dan ditarik dari kegiatan Praktik Kerja Lapangan di <b x-text="namaTempat() || '……'"></b>. Penarikan tersebut dilakukan karena <b x-text="alasanTeks() || '……'"></b>."</p>
+                    <p class="mt-1.5 leading-relaxed text-gray-700">"…terhitung sejak tanggal <b x-text="tglIndo(tglEfektif) || '……'"></b>, diberhentikan dan ditarik dari kegiatan Praktik Kerja Lapangan di <b x-text="namaTempat() || '……'"></b>. Penarikan tersebut dilakukan karena <b x-text="alasanTeks() || '……'"></b>."</p>
                 </div>
             <?php endif; ?>
         </div>
     </section>
 
     <div class="flex flex-col-reverse gap-2 sm:flex-row sm:items-center sm:justify-between">
-        <a href="<?= $kembali ?>" class="rounded-xl border border-slate-300 bg-white px-5 py-3 text-center text-sm font-semibold text-slate-600 transition hover:bg-slate-50">Batal</a>
+        <a href="<?= $kembali ?>" class="rounded-xl border border-gray-300 bg-white px-5 py-3 text-center text-sm font-semibold text-gray-600 transition hover:bg-gray-50">Batal</a>
         <?php if (! $ubah && ! empty($bisaLangsungAcc)): ?>
             <?php // Dua tombol: yang pertama (tombol Enter) = aman, masuk antrean ACC; yang kedua = peran ini juga memegang hak ACC jenis ini. ?>
             <div class="flex flex-col-reverse gap-2 sm:flex-row">
-                <button type="submit" name="langsung_acc" value="0" class="rounded-xl border border-brand-300 bg-white px-6 py-3 text-sm font-bold text-brand-700 shadow-sm transition hover:bg-brand-50 active:scale-95">Buat &amp; ajukan untuk ACC</button>
-                <button type="submit" name="langsung_acc" value="1" class="rounded-xl bg-green-600 px-8 py-3 text-sm font-bold text-white shadow-sm transition hover:bg-green-700 active:scale-95">✓ Simpan &amp; setujui (ACC)</button>
+                <button type="submit" name="langsung_acc" value="0" class="rounded-xl border border-brand-300 bg-white px-6 py-3 text-sm font-bold text-brand-700 shadow-xs transition hover:bg-brand-50 active:scale-95">Buat &amp; ajukan untuk ACC</button>
+                <button type="submit" name="langsung_acc" value="1" class="rounded-xl bg-green-600 px-8 py-3 text-sm font-bold text-white shadow-xs transition hover:bg-green-700 active:scale-95">✓ Simpan &amp; setujui (ACC)</button>
             </div>
         <?php else: ?>
-            <button type="submit" class="rounded-xl bg-brand-700 px-8 py-3 text-sm font-bold text-white shadow-sm transition hover:bg-brand-800 active:scale-95">
+            <button type="submit" class="rounded-xl bg-brand-700 px-8 py-3 text-sm font-bold text-white shadow-xs transition hover:bg-brand-800 active:scale-95">
                 <?= $ubah ? 'Simpan perubahan' : ($perluAcc ? 'Buat surat &amp; ajukan untuk ACC' : 'Buat surat') ?>
             </button>
         <?php endif; ?>

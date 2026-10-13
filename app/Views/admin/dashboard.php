@@ -50,7 +50,7 @@ $keliling     = 2 * M_PI * 52; // r = 52
 
 // Ujian: status periode → lencana
 $ujStatus = [
-    'draft'    => ['Draft', 'bg-slate-100 text-slate-600'],
+    'draft'    => ['Draft', 'bg-gray-100 text-gray-600'],
     'berjalan' => ['Berjalan', 'bg-emerald-50 text-emerald-700'],
     'selesai'  => ['Selesai', 'bg-brand-50 text-brand-700'],
 ];
@@ -110,46 +110,46 @@ $baris[] = ['Kesediaan guru mengajar', $angka($k['total']) . ' isian · ' . $ang
 <!-- ===== Kepala: tanggal, sapaan, tombol cepat ===== -->
 <div class="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
     <div>
-        <p class="text-sm text-slate-500"><?= esc($hariIni) ?>, <?= esc(IsianBantu::tanggalIndo($absensi['tanggal'])) ?> &middot; Tahun Pelajaran <?= esc($setting['academic_year'] ?? '-') ?></p>
-        <p class="mt-0.5 text-lg font-semibold text-slate-900"><?= esc($salam) ?>, <?= esc(trim(explode(',', $nama)[0])) ?></p>
+        <p class="text-sm text-gray-500"><?= esc($hariIni) ?>, <?= esc(IsianBantu::tanggalIndo($absensi['tanggal'])) ?> &middot; Tahun Pelajaran <?= esc($setting['academic_year'] ?? '-') ?></p>
+        <p class="mt-0.5 text-lg font-semibold text-gray-900"><?= esc($salam) ?>, <?= esc(trim(explode(',', $nama)[0])) ?></p>
     </div>
     <div class="flex flex-wrap gap-2">
         <?php if ($absensi['hari_aktif']): ?>
             <a href="<?= site_url('admin/absensi') ?>?tanggal=<?= esc($absensi['tanggal'], 'url') ?>" class="rounded-md bg-brand-700 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-brand-800"><?= $absensi['recorded'] ? 'Lihat absensi hari ini' : 'Catat absensi hari ini' ?></a>
         <?php endif; ?>
-        <a href="<?= site_url('admin/pengumuman') ?>" class="rounded-md border border-slate-300 bg-white px-4 py-2 text-sm font-medium text-slate-700 transition-colors hover:bg-slate-50">Pengumuman</a>
+        <a href="<?= site_url('admin/pengumuman') ?>" class="rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-50">Pengumuman</a>
     </div>
 </div>
 
 <!-- ===== Angka utama ===== -->
-<div class="mt-5 grid grid-cols-2 gap-px overflow-hidden rounded-lg border border-slate-200 bg-slate-200 lg:grid-cols-4">
-    <a href="<?= site_url('admin/master/siswa') ?>" class="bg-white px-5 py-4 transition-colors hover:bg-slate-50">
-        <p class="text-sm text-slate-500">Siswa aktif</p>
-        <p class="mt-1 text-2xl font-semibold text-slate-900"><?= $angka($siswa['aktif']) ?></p>
-        <p class="mt-0.5 text-xs text-slate-500">di <?= $angka($kur['kelas']) ?> kelas<?= $siswa['tanpa_kelas'] > 0 ? ' · ' . $angka($siswa['tanpa_kelas']) . ' tanpa kelas' : '' ?></p>
+<div class="mt-5 grid grid-cols-2 gap-px overflow-hidden rounded-lg border border-gray-200 bg-gray-200 lg:grid-cols-4">
+    <a href="<?= site_url('admin/master/siswa') ?>" class="bg-white px-5 py-4 transition-colors hover:bg-gray-50">
+        <p class="text-sm text-gray-500">Siswa aktif</p>
+        <p class="mt-1 text-2xl font-semibold text-gray-900"><?= $angka($siswa['aktif']) ?></p>
+        <p class="mt-0.5 text-xs text-gray-500">di <?= $angka($kur['kelas']) ?> kelas<?= $siswa['tanpa_kelas'] > 0 ? ' · ' . $angka($siswa['tanpa_kelas']) . ' tanpa kelas' : '' ?></p>
     </a>
-    <a href="<?= site_url('admin/master/guru') ?>" class="bg-white px-5 py-4 transition-colors hover:bg-slate-50">
-        <p class="text-sm text-slate-500">Guru pengajar</p>
-        <p class="mt-1 text-2xl font-semibold text-slate-900"><?= $angka($kur['guru']) ?></p>
-        <p class="mt-0.5 text-xs text-slate-500"><?= $angka($kur['mapel']) ?> mata pelajaran</p>
+    <a href="<?= site_url('admin/master/guru') ?>" class="bg-white px-5 py-4 transition-colors hover:bg-gray-50">
+        <p class="text-sm text-gray-500">Guru pengajar</p>
+        <p class="mt-1 text-2xl font-semibold text-gray-900"><?= $angka($kur['guru']) ?></p>
+        <p class="mt-0.5 text-xs text-gray-500"><?= $angka($kur['mapel']) ?> mata pelajaran</p>
     </a>
-    <a href="<?= site_url('admin/absensi') ?>" class="bg-white px-5 py-4 transition-colors hover:bg-slate-50">
-        <p class="text-sm text-slate-500">Kehadiran guru hari ini</p>
+    <a href="<?= site_url('admin/absensi') ?>" class="bg-white px-5 py-4 transition-colors hover:bg-gray-50">
+        <p class="text-sm text-gray-500">Kehadiran guru hari ini</p>
         <?php if (! $absensi['hari_aktif']): ?>
-            <p class="mt-1 text-2xl font-semibold text-slate-400">&ndash;</p>
-            <p class="mt-0.5 text-xs text-slate-500">Bukan hari KBM</p>
+            <p class="mt-1 text-2xl font-semibold text-gray-400">&ndash;</p>
+            <p class="mt-0.5 text-xs text-gray-500">Bukan hari KBM</p>
         <?php elseif (! $absensi['recorded']): ?>
             <p class="mt-1 text-lg font-semibold text-amber-700">Belum dicatat</p>
-            <p class="mt-0.5 text-xs text-slate-500"><?= $angka($absensi['total_guru']) ?> guru mengajar hari ini</p>
+            <p class="mt-0.5 text-xs text-gray-500"><?= $angka($absensi['total_guru']) ?> guru mengajar hari ini</p>
         <?php else: ?>
-            <p class="mt-1 text-2xl font-semibold text-slate-900"><?= $persenHadir ?>%</p>
-            <p class="mt-0.5 text-xs text-slate-500"><?= $angka($abs['hadir'] + $abs['telat']) ?> dari <?= $angka($absTotal) ?> guru hadir</p>
+            <p class="mt-1 text-2xl font-semibold text-gray-900"><?= $persenHadir ?>%</p>
+            <p class="mt-0.5 text-xs text-gray-500"><?= $angka($abs['hadir'] + $abs['telat']) ?> dari <?= $angka($absTotal) ?> guru hadir</p>
         <?php endif; ?>
     </a>
-    <a href="<?= site_url('admin/jadwal') ?>" class="bg-white px-5 py-4 transition-colors hover:bg-slate-50">
-        <p class="text-sm text-slate-500">Jadwal KBM tersusun</p>
-        <p class="mt-1 text-2xl font-semibold text-slate-900"><?= $persenJp ?>%</p>
-        <p class="mt-0.5 text-xs text-slate-500"><?= $angka($jpJadwal) ?> dari <?= $angka($jpTugas) ?> JP penugasan</p>
+    <a href="<?= site_url('admin/jadwal') ?>" class="bg-white px-5 py-4 transition-colors hover:bg-gray-50">
+        <p class="text-sm text-gray-500">Jadwal KBM tersusun</p>
+        <p class="mt-1 text-2xl font-semibold text-gray-900"><?= $persenJp ?>%</p>
+        <p class="mt-0.5 text-xs text-gray-500"><?= $angka($jpJadwal) ?> dari <?= $angka($jpTugas) ?> JP penugasan</p>
     </a>
 </div>
 
@@ -158,20 +158,20 @@ $baris[] = ['Kesediaan guru mengajar', $angka($k['total']) . ' isian · ' . $ang
 <div class="contents lg:col-span-2 lg:flex lg:flex-col lg:gap-6">
 
     <!-- Perlu tindakan -->
-    <section class="order-1 rounded-lg border border-slate-200 bg-white" aria-labelledby="judulTindakan">
-        <div class="flex items-center justify-between border-b border-slate-200 px-5 py-3.5">
-            <h2 id="judulTindakan" class="font-semibold text-slate-900">Perlu tindakan</h2>
-            <span class="text-sm text-slate-500"><?= count($tindakan) ?> hal</span>
+    <section class="order-1 rounded-lg border border-gray-200 bg-white" aria-labelledby="judulTindakan">
+        <div class="flex items-center justify-between border-b border-gray-200 px-5 py-3.5">
+            <h2 id="judulTindakan" class="font-semibold text-gray-900">Perlu tindakan</h2>
+            <span class="text-sm text-gray-500"><?= count($tindakan) ?> hal</span>
         </div>
         <?php if ($tindakan === []): ?>
-            <p class="px-5 py-5 text-sm text-slate-600">Tidak ada pekerjaan yang menunggu.</p>
+            <p class="px-5 py-5 text-sm text-gray-600">Tidak ada pekerjaan yang menunggu.</p>
         <?php else: ?>
-            <ul class="divide-y divide-slate-100">
+            <ul class="divide-y divide-gray-100">
                 <?php foreach ($tindakan as $t): [$warna, $ikon] = $ikonTindakan[$t['tingkat']]; ?>
                     <li>
-                        <a href="<?= esc($t['url'], 'attr') ?>" class="group flex items-center gap-3 px-5 py-2.5 transition-colors hover:bg-slate-50">
+                        <a href="<?= esc($t['url'], 'attr') ?>" class="group flex items-center gap-3 px-5 py-2.5 transition-colors hover:bg-gray-50">
                             <span class="<?= $warna ?>"><?= $svg($ikon) ?></span>
-                            <span class="min-w-0 flex-1 text-sm text-slate-700"><b class="font-semibold text-slate-900"><?= $angka($t['n']) ?></b> <?= esc($t['teks']) ?></span>
+                            <span class="min-w-0 flex-1 text-sm text-gray-700"><b class="font-semibold text-gray-900"><?= $angka($t['n']) ?></b> <?= esc($t['teks']) ?></span>
                             <span class="shrink-0 text-sm font-medium text-brand-700 group-hover:underline">Buka</span>
                         </a>
                     </li>
@@ -181,16 +181,16 @@ $baris[] = ['Kesediaan guru mengajar', $angka($k['total']) . ' isian · ' . $ang
     </section>
 
     <!-- Beban mengajar -->
-    <section class="order-3 rounded-lg border border-slate-200 bg-white" aria-labelledby="judulBeban">
-        <div class="flex flex-wrap items-start justify-between gap-2 border-b border-slate-200 px-5 py-3.5">
+    <section class="order-3 rounded-lg border border-gray-200 bg-white" aria-labelledby="judulBeban">
+        <div class="flex flex-wrap items-start justify-between gap-2 border-b border-gray-200 px-5 py-3.5">
             <div>
-                <h2 id="judulBeban" class="font-semibold text-slate-900">Beban mengajar guru</h2>
-                <p class="text-xs text-slate-500">12 terbanyak &middot; batang = JP penugasan, garis tegak = batas maksimal</p>
+                <h2 id="judulBeban" class="font-semibold text-gray-900">Beban mengajar guru</h2>
+                <p class="text-xs text-gray-500">12 terbanyak &middot; batang = JP penugasan, garis tegak = batas maksimal</p>
             </div>
             <a href="<?= site_url('admin/kurikulum/rekap') ?>" class="text-sm font-medium text-brand-700 hover:underline">Rekap lengkap</a>
         </div>
         <?php if ($beban === []): ?>
-            <p class="px-5 py-8 text-center text-sm text-slate-500">Belum ada data beban. Atur Penugasan terlebih dahulu.</p>
+            <p class="px-5 py-8 text-center text-sm text-gray-500">Belum ada data beban. Atur Penugasan terlebih dahulu.</p>
         <?php else: ?>
             <ul class="space-y-1 px-4 py-3">
                 <?php foreach ($beban as $i => $b):
@@ -201,12 +201,12 @@ $baris[] = ['Kesediaan guru mengajar', $angka($k['total']) . ' isian · ' . $ang
                         . ($selisih > 0 ? ' (lebih ' . $selisih . ')' : ($selisih < 0 ? ' (kurang ' . -$selisih . ')' : ' (pas)'))
                         . ' · ' . (int) ($b['jml_tugas'] ?? 0) . ' penugasan'; ?>
                     <li tabindex="0" data-tip="<?= esc($tip, 'attr') ?>"
-                        class="group grid grid-cols-[minmax(0,9rem)_1fr_5.5rem] items-center gap-3 rounded-md px-1.5 py-1 outline-none hover:bg-slate-50 focus-visible:ring-2 focus-visible:ring-brand-300 sm:grid-cols-[minmax(0,13rem)_1fr_6rem]">
-                        <span class="truncate text-sm text-slate-600"><span class="font-medium text-slate-900"><?= esc($b['kode_guru']) ?></span> &middot; <?= esc($b['nama']) ?></span>
-                        <span class="relative h-3 rounded-full bg-slate-100">
+                        class="group grid grid-cols-[minmax(0,9rem)_1fr_5.5rem] items-center gap-3 rounded-md px-1.5 py-1 outline-hidden hover:bg-gray-50 focus-visible:ring-2 focus-visible:ring-brand-300 sm:grid-cols-[minmax(0,13rem)_1fr_6rem]">
+                        <span class="truncate text-sm text-gray-600"><span class="font-medium text-gray-900"><?= esc($b['kode_guru']) ?></span> &middot; <?= esc($b['nama']) ?></span>
+                        <span class="relative h-3 rounded-full bg-gray-100">
                             <span class="bar-grow absolute inset-y-0 left-0 rounded-r-[4px] rounded-l-full bg-brand-500" style="width: <?= round($jp / $skala * 100, 2) ?>%; animation-delay: <?= 0.1 + $i * 0.03 ?>s"></span>
                             <?php if ($max > 0): ?>
-                                <span class="absolute -inset-y-1 w-0.5 rounded bg-slate-700" style="left: calc(<?= round($max / $skala * 100, 2) ?>% - 1px)"></span>
+                                <span class="absolute -inset-y-1 w-0.5 rounded-sm bg-gray-700" style="left: calc(<?= round($max / $skala * 100, 2) ?>% - 1px)"></span>
                             <?php endif; ?>
                         </span>
                         <span class="flex items-center justify-end gap-1 text-right text-sm tabular-nums">
@@ -215,12 +215,12 @@ $baris[] = ['Kesediaan guru mengajar', $angka($k['total']) . ' isian · ' . $ang
                             <?php elseif ($selisih < 0): ?>
                                 <svg class="h-3.5 w-3.5 text-amber-500" viewBox="0 0 20 20" fill="currentColor" aria-label="kurang dari batas"><path d="M10 17L3 5h14z"/></svg>
                             <?php endif; ?>
-                            <span class="font-semibold text-slate-900"><?= $jp ?></span><span class="text-slate-400">/<?= $max ?></span>
+                            <span class="font-semibold text-gray-900"><?= $jp ?></span><span class="text-gray-400">/<?= $max ?></span>
                         </span>
                     </li>
                 <?php endforeach; ?>
             </ul>
-            <div class="flex flex-wrap gap-x-5 gap-y-1 border-t border-slate-100 px-5 py-2.5 text-xs text-slate-500">
+            <div class="flex flex-wrap gap-x-5 gap-y-1 border-t border-gray-100 px-5 py-2.5 text-xs text-gray-500">
                 <span class="inline-flex items-center gap-1"><svg class="h-3 w-3 text-red-600" viewBox="0 0 20 20" fill="currentColor"><path d="M10 3l7 12H3z"/></svg> lebih dari batas (<?= $angka($kur['lebih']) ?> guru)</span>
                 <span class="inline-flex items-center gap-1"><svg class="h-3 w-3 text-amber-500" viewBox="0 0 20 20" fill="currentColor"><path d="M10 17L3 5h14z"/></svg> kurang dari batas (<?= $angka($kur['kurang']) ?> guru)</span>
                 <span>bentrok jadwal: <?= $angka($kur['bentrok']) ?></span>
@@ -229,18 +229,18 @@ $baris[] = ['Kesediaan guru mengajar', $angka($k['total']) . ' isian · ' . $ang
     </section>
 
     <!-- Ringkasan modul -->
-    <section class="order-4 rounded-lg border border-slate-200 bg-white" aria-labelledby="judulModul">
-        <div class="border-b border-slate-200 px-5 py-3.5">
-            <h2 id="judulModul" class="font-semibold text-slate-900">Ringkasan modul</h2>
+    <section class="order-4 rounded-lg border border-gray-200 bg-white" aria-labelledby="judulModul">
+        <div class="border-b border-gray-200 px-5 py-3.5">
+            <h2 id="judulModul" class="font-semibold text-gray-900">Ringkasan modul</h2>
         </div>
-        <ul class="divide-y divide-slate-100">
+        <ul class="divide-y divide-gray-100">
             <?php foreach ($baris as [$judul, $ket, $ket2, $url]): ?>
                 <li class="flex items-start gap-4 px-5 py-3">
                     <div class="min-w-0 flex-1 sm:flex sm:gap-4">
-                        <p class="shrink-0 text-sm font-medium text-slate-900 sm:w-44"><?= esc($judul) ?></p>
-                        <div class="min-w-0 text-sm text-slate-600">
+                        <p class="shrink-0 text-sm font-medium text-gray-900 sm:w-44"><?= esc($judul) ?></p>
+                        <div class="min-w-0 text-sm text-gray-600">
                             <p><?= esc($ket) ?></p>
-                            <?php if ($ket2 !== null): ?><p class="text-xs text-slate-500"><?= esc($ket2) ?></p><?php endif; ?>
+                            <?php if ($ket2 !== null): ?><p class="text-xs text-gray-500"><?= esc($ket2) ?></p><?php endif; ?>
                         </div>
                     </div>
                     <a href="<?= site_url($url) ?>" class="shrink-0 text-sm font-medium text-brand-700 hover:underline">Buka</a>
@@ -250,14 +250,14 @@ $baris[] = ['Kesediaan guru mengajar', $angka($k['total']) . ' isian · ' . $ang
     </section>
 
     <!-- Ujian -->
-    <section class="order-6 rounded-lg border border-slate-200 bg-white" aria-labelledby="judulUjian">
-        <div class="border-b border-slate-200 px-5 py-3.5">
-            <h2 id="judulUjian" class="font-semibold text-slate-900">Ujian &middot; TP <?= esc($ujian['tahun']) ?></h2>
+    <section class="order-6 rounded-lg border border-gray-200 bg-white" aria-labelledby="judulUjian">
+        <div class="border-b border-gray-200 px-5 py-3.5">
+            <h2 id="judulUjian" class="font-semibold text-gray-900">Ujian &middot; TP <?= esc($ujian['tahun']) ?></h2>
         </div>
         <div class="overflow-x-auto">
             <table class="w-full text-sm">
                 <thead>
-                    <tr class="border-b border-slate-100 text-left text-xs text-slate-500">
+                    <tr class="border-b border-gray-100 text-left text-xs text-gray-500">
                         <th class="px-5 py-2 font-medium">Gelombang</th>
                         <th class="px-3 py-2 font-medium">Status</th>
                         <th class="px-3 py-2 text-right font-medium">Sesi</th>
@@ -265,11 +265,11 @@ $baris[] = ['Kesediaan guru mengajar', $angka($k['total']) . ' isian · ' . $ang
                         <th class="px-5 py-2 text-right font-medium">Susulan belum</th>
                     </tr>
                 </thead>
-                <tbody class="divide-y divide-slate-100">
+                <tbody class="divide-y divide-gray-100">
                     <?php foreach ($ujian['kartu'] as $u): [$lblStatus, $lencana] = $ujStatus[$u['status']] ?? $ujStatus['draft']; ?>
                         <tr>
-                            <td class="px-5 py-2.5"><a href="<?= site_url('admin/ujian/' . $u['slug']) ?>" class="font-medium text-slate-900 hover:text-brand-700 hover:underline"><?= esc($u['label']) ?></a></td>
-                            <td class="px-3 py-2.5"><span class="rounded px-2 py-0.5 text-xs font-medium <?= $lencana ?>"><?= $lblStatus ?></span></td>
+                            <td class="px-5 py-2.5"><a href="<?= site_url('admin/ujian/' . $u['slug']) ?>" class="font-medium text-gray-900 hover:text-brand-700 hover:underline"><?= esc($u['label']) ?></a></td>
+                            <td class="px-3 py-2.5"><span class="rounded-sm px-2 py-0.5 text-xs font-medium <?= $lencana ?>"><?= $lblStatus ?></span></td>
                             <td class="px-3 py-2.5 text-right tabular-nums"><?= (int) $u['jadwal'] ?></td>
                             <td class="px-3 py-2.5 text-right tabular-nums"><?= (int) $u['takHadir'] ?></td>
                             <td class="px-5 py-2.5 text-right tabular-nums <?= $u['belum'] > 0 ? 'font-semibold text-amber-700' : '' ?>"><?= (int) $u['belum'] ?></td>
@@ -284,22 +284,22 @@ $baris[] = ['Kesediaan guru mengajar', $angka($k['total']) . ' isian · ' . $ang
 <div class="contents lg:flex lg:flex-col lg:gap-6">
 
     <!-- Hari ini -->
-    <section class="order-2 rounded-lg border border-slate-200 bg-white" aria-labelledby="judulHariIni">
-        <div class="border-b border-slate-200 px-5 py-3.5">
-            <h2 id="judulHariIni" class="font-semibold text-slate-900">Absensi guru hari ini</h2>
-            <p class="text-xs text-slate-500"><?= esc($hariIni) ?>, <?= esc(IsianBantu::tanggalIndo($absensi['tanggal'])) ?></p>
+    <section class="order-2 rounded-lg border border-gray-200 bg-white" aria-labelledby="judulHariIni">
+        <div class="border-b border-gray-200 px-5 py-3.5">
+            <h2 id="judulHariIni" class="font-semibold text-gray-900">Absensi guru hari ini</h2>
+            <p class="text-xs text-gray-500"><?= esc($hariIni) ?>, <?= esc(IsianBantu::tanggalIndo($absensi['tanggal'])) ?></p>
         </div>
         <div class="px-5 py-4 text-sm">
             <?php if (! $absensi['hari_aktif']): ?>
-                <p class="text-slate-600">Hari ini bukan hari KBM aktif.</p>
+                <p class="text-gray-600">Hari ini bukan hari KBM aktif.</p>
             <?php elseif (! $absensi['recorded']): ?>
-                <p class="text-slate-600"><?= $angka($absensi['total_guru']) ?> guru mengajar hari ini. Kehadiran <b class="font-semibold text-amber-700">belum dicatat</b>.</p>
+                <p class="text-gray-600"><?= $angka($absensi['total_guru']) ?> guru mengajar hari ini. Kehadiran <b class="font-semibold text-amber-700">belum dicatat</b>.</p>
             <?php else: ?>
                 <div class="grid grid-cols-5 gap-2 text-center">
                     <?php foreach (['hadir' => 'Hadir', 'telat' => 'Telat', 'izin' => 'Izin', 'sakit' => 'Sakit', 'alpa' => 'Alpa'] as $kk => $lbl): ?>
-                        <div class="rounded-md bg-slate-50 py-2">
-                            <p class="text-base font-semibold tabular-nums text-slate-900"><?= (int) $abs[$kk] ?></p>
-                            <p class="text-[11px] text-slate-500"><?= $lbl ?></p>
+                        <div class="rounded-md bg-gray-50 py-2">
+                            <p class="text-base font-semibold tabular-nums text-gray-900"><?= (int) $abs[$kk] ?></p>
+                            <p class="text-[11px] text-gray-500"><?= $lbl ?></p>
                         </div>
                     <?php endforeach; ?>
                 </div>
@@ -311,24 +311,24 @@ $baris[] = ['Kesediaan guru mengajar', $angka($k['total']) . ' isian · ' . $ang
     </section>
 
     <!-- Siswa -->
-    <section class="order-5 rounded-lg border border-slate-200 bg-white" aria-labelledby="judulSiswa">
-        <div class="flex items-start justify-between gap-2 border-b border-slate-200 px-5 py-3.5">
+    <section class="order-5 rounded-lg border border-gray-200 bg-white" aria-labelledby="judulSiswa">
+        <div class="flex items-start justify-between gap-2 border-b border-gray-200 px-5 py-3.5">
             <div>
-                <h2 id="judulSiswa" class="font-semibold text-slate-900">Siswa aktif</h2>
-                <p class="text-xs text-slate-500"><?= $angka($siswa['aktif']) ?> siswa</p>
+                <h2 id="judulSiswa" class="font-semibold text-gray-900">Siswa aktif</h2>
+                <p class="text-xs text-gray-500"><?= $angka($siswa['aktif']) ?> siswa</p>
             </div>
             <a href="<?= site_url('admin/master/siswa') ?>" class="text-sm font-medium text-brand-700 hover:underline">Data siswa</a>
         </div>
         <div class="space-y-5 px-5 py-4">
             <?php if ($siswa['jurusan'] !== []): ?>
                 <div>
-                    <p class="mb-2 text-xs font-medium text-slate-500">Per jurusan</p>
+                    <p class="mb-2 text-xs font-medium text-gray-500">Per jurusan</p>
                     <ul class="space-y-2">
                         <?php foreach ($siswa['jurusan'] as $i => $j): $pct = $siswa['aktif'] > 0 ? round($j['n'] / $siswa['aktif'] * 100) : 0; ?>
-                            <li tabindex="0" data-tip="<?= esc($j['nama'] . ' — ' . $angka($j['n']) . ' siswa (' . $pct . '%)', 'attr') ?>" class="grid grid-cols-[4.5rem_1fr_3.5rem] items-center gap-3 rounded text-sm outline-none focus-visible:ring-2 focus-visible:ring-brand-300">
-                                <span class="truncate text-slate-600" title="<?= esc($j['nama'], 'attr') ?>"><?= esc($j['label']) ?></span>
-                                <span class="h-1.5 rounded-full bg-slate-100"><span class="bar-grow block h-full rounded-full bg-brand-500" style="width: <?= round($j['n'] / $maxJurusan * 100, 2) ?>%; animation-delay: <?= 0.15 + $i * 0.05 ?>s"></span></span>
-                                <span class="text-right font-medium tabular-nums text-slate-900"><?= $angka($j['n']) ?></span>
+                            <li tabindex="0" data-tip="<?= esc($j['nama'] . ' — ' . $angka($j['n']) . ' siswa (' . $pct . '%)', 'attr') ?>" class="grid grid-cols-[4.5rem_1fr_3.5rem] items-center gap-3 rounded-sm text-sm outline-hidden focus-visible:ring-2 focus-visible:ring-brand-300">
+                                <span class="truncate text-gray-600" title="<?= esc($j['nama'], 'attr') ?>"><?= esc($j['label']) ?></span>
+                                <span class="h-1.5 rounded-full bg-gray-100"><span class="bar-grow block h-full rounded-full bg-brand-500" style="width: <?= round($j['n'] / $maxJurusan * 100, 2) ?>%; animation-delay: <?= 0.15 + $i * 0.05 ?>s"></span></span>
+                                <span class="text-right font-medium tabular-nums text-gray-900"><?= $angka($j['n']) ?></span>
                             </li>
                         <?php endforeach; ?>
                     </ul>
@@ -336,13 +336,13 @@ $baris[] = ['Kesediaan guru mengajar', $angka($k['total']) . ' isian · ' . $ang
             <?php endif; ?>
             <?php if ($siswa['tingkat'] !== []): ?>
                 <div>
-                    <p class="mb-2 text-xs font-medium text-slate-500">Per tingkat</p>
+                    <p class="mb-2 text-xs font-medium text-gray-500">Per tingkat</p>
                     <ul class="space-y-2">
                         <?php foreach ($siswa['tingkat'] as $i => $t): ?>
-                            <li tabindex="0" data-tip="<?= esc('Kelas ' . $t['label'] . ' — ' . $angka($t['n']) . ' siswa', 'attr') ?>" class="grid grid-cols-[4.5rem_1fr_3.5rem] items-center gap-3 rounded text-sm outline-none focus-visible:ring-2 focus-visible:ring-brand-300">
-                                <span class="text-slate-600">Kelas <?= esc($t['label']) ?></span>
-                                <span class="h-1.5 rounded-full bg-slate-100"><span class="bar-grow block h-full rounded-full bg-brand-500" style="width: <?= round($t['n'] / $maxTingkat * 100, 2) ?>%; animation-delay: <?= 0.2 + $i * 0.05 ?>s"></span></span>
-                                <span class="text-right font-medium tabular-nums text-slate-900"><?= $angka($t['n']) ?></span>
+                            <li tabindex="0" data-tip="<?= esc('Kelas ' . $t['label'] . ' — ' . $angka($t['n']) . ' siswa', 'attr') ?>" class="grid grid-cols-[4.5rem_1fr_3.5rem] items-center gap-3 rounded-sm text-sm outline-hidden focus-visible:ring-2 focus-visible:ring-brand-300">
+                                <span class="text-gray-600">Kelas <?= esc($t['label']) ?></span>
+                                <span class="h-1.5 rounded-full bg-gray-100"><span class="bar-grow block h-full rounded-full bg-brand-500" style="width: <?= round($t['n'] / $maxTingkat * 100, 2) ?>%; animation-delay: <?= 0.2 + $i * 0.05 ?>s"></span></span>
+                                <span class="text-right font-medium tabular-nums text-gray-900"><?= $angka($t['n']) ?></span>
                             </li>
                         <?php endforeach; ?>
                     </ul>
@@ -355,16 +355,16 @@ $baris[] = ['Kesediaan guru mengajar', $angka($k['total']) . ' isian · ' . $ang
     </section>
 
     <!-- Kesediaan guru -->
-    <section class="order-7 rounded-lg border border-slate-200 bg-white" aria-labelledby="judulKesediaan">
-        <div class="flex items-start justify-between gap-2 border-b border-slate-200 px-5 py-3.5">
+    <section class="order-7 rounded-lg border border-gray-200 bg-white" aria-labelledby="judulKesediaan">
+        <div class="flex items-start justify-between gap-2 border-b border-gray-200 px-5 py-3.5">
             <div>
-                <h2 id="judulKesediaan" class="font-semibold text-slate-900">Kesediaan guru mengajar</h2>
-                <p class="text-xs text-slate-500">Formulir <?= ! empty($setting['form_open']) ? 'dibuka' : 'ditutup' ?> &middot; <?= (int) $stats['today'] ?> masuk hari ini</p>
+                <h2 id="judulKesediaan" class="font-semibold text-gray-900">Kesediaan guru mengajar</h2>
+                <p class="text-xs text-gray-500">Formulir <?= ! empty($setting['form_open']) ? 'dibuka' : 'ditutup' ?> &middot; <?= (int) $stats['today'] ?> masuk hari ini</p>
             </div>
             <a href="<?= site_url('admin/submissions') ?>" class="text-sm font-medium text-brand-700 hover:underline">Data</a>
         </div>
         <?php if ($totalPegawai === 0): ?>
-            <p class="px-5 py-6 text-sm text-slate-500">Belum ada data kesediaan masuk.</p>
+            <p class="px-5 py-6 text-sm text-gray-500">Belum ada data kesediaan masuk.</p>
         <?php else: ?>
             <div class="flex items-center gap-5 px-5 py-4">
                 <div class="relative h-28 w-28 shrink-0">
@@ -375,24 +375,24 @@ $baris[] = ['Kesediaan guru mengajar', $angka($k['total']) . ' isian · ' . $ang
                             $panjang = $n / $totalPegawai * $keliling;
                             $celah   = $totalPegawai > $n ? 2 : 0; // celah 2px warna permukaan antar-irisan ?>
                             <circle cx="60" cy="60" r="52" fill="none" stroke="<?= $warnaPegawai[$st] ?? '#94a3b8' ?>" stroke-width="16"
-                                    class="donut-seg outline-none" tabindex="0"
+                                    class="donut-seg outline-hidden" tabindex="0"
                                     data-tip="<?= esc($st . ' — ' . $n . ' guru (' . round($n / $totalPegawai * 100) . '%)', 'attr') ?>"
                                     stroke-dasharray="<?= round(max(0.5, $panjang - $celah), 2) ?> <?= round($keliling, 2) ?>"
                                     stroke-dashoffset="<?= round(-$mulai, 2) ?>" style="animation-delay: <?= 0.2 + $kIdx * 0.1 ?>s"/>
                         <?php $mulai += $panjang; $kIdx++; endforeach; ?>
                     </svg>
                     <div class="pointer-events-none absolute inset-0 flex flex-col items-center justify-center">
-                        <span class="text-xl font-semibold text-slate-900"><?= $angka($stats['total']) ?></span>
-                        <span class="text-[11px] text-slate-500">guru</span>
+                        <span class="text-xl font-semibold text-gray-900"><?= $angka($stats['total']) ?></span>
+                        <span class="text-[11px] text-gray-500">guru</span>
                     </div>
                 </div>
                 <ul class="min-w-0 flex-1 space-y-1.5 text-sm">
                     <?php foreach ($stats['byStatus'] as $st => $n): ?>
                         <li class="flex items-center gap-2">
-                            <span class="h-2.5 w-2.5 shrink-0 rounded-sm" style="background: <?= $warnaPegawai[$st] ?? '#94a3b8' ?>"></span>
-                            <span class="flex-1 text-slate-600"><?= esc($st) ?></span>
-                            <span class="font-medium tabular-nums text-slate-900"><?= (int) $n ?></span>
-                            <span class="w-9 text-right text-xs tabular-nums text-slate-400"><?= $totalPegawai > 0 ? round($n / $totalPegawai * 100) : 0 ?>%</span>
+                            <span class="h-2.5 w-2.5 shrink-0 rounded-xs" style="background: <?= $warnaPegawai[$st] ?? '#94a3b8' ?>"></span>
+                            <span class="flex-1 text-gray-600"><?= esc($st) ?></span>
+                            <span class="font-medium tabular-nums text-gray-900"><?= (int) $n ?></span>
+                            <span class="w-9 text-right text-xs tabular-nums text-gray-400"><?= $totalPegawai > 0 ? round($n / $totalPegawai * 100) : 0 ?>%</span>
                         </li>
                     <?php endforeach; ?>
                 </ul>
@@ -401,19 +401,19 @@ $baris[] = ['Kesediaan guru mengajar', $angka($k['total']) . ' isian · ' . $ang
     </section>
 
     <!-- Aktivitas terbaru -->
-    <section class="order-8 rounded-lg border border-slate-200 bg-white" aria-labelledby="judulAktivitas">
-        <div class="flex items-center justify-between border-b border-slate-200 px-5 py-3.5">
-            <h2 id="judulAktivitas" class="font-semibold text-slate-900">Aktivitas terbaru</h2>
+    <section class="order-8 rounded-lg border border-gray-200 bg-white" aria-labelledby="judulAktivitas">
+        <div class="flex items-center justify-between border-b border-gray-200 px-5 py-3.5">
+            <h2 id="judulAktivitas" class="font-semibold text-gray-900">Aktivitas terbaru</h2>
             <a href="<?= site_url('admin/audit') ?>" class="text-sm font-medium text-brand-700 hover:underline">Audit log</a>
         </div>
         <?php if ($aktivitas === []): ?>
-            <p class="px-5 py-5 text-sm text-slate-500">Belum ada aktivitas tercatat.</p>
+            <p class="px-5 py-5 text-sm text-gray-500">Belum ada aktivitas tercatat.</p>
         <?php else: ?>
-            <ul class="divide-y divide-slate-100">
+            <ul class="divide-y divide-gray-100">
                 <?php foreach ($aktivitas as $a): ?>
                     <li class="px-5 py-2.5 text-sm">
-                        <p class="text-slate-700"><span class="font-medium text-slate-900"><?= esc($a['nama'] ?: (! empty($a['admin_id']) ? 'Akun terhapus' : 'Sistem')) ?></span> &middot; <?= esc(mb_strimwidth((string) $a['deskripsi'], 0, 90, '…')) ?></p>
-                        <p class="text-xs text-slate-500"><?= esc($waktuPendek($a['waktu'])) ?></p>
+                        <p class="text-gray-700"><span class="font-medium text-gray-900"><?= esc($a['nama'] ?: (! empty($a['admin_id']) ? 'Akun terhapus' : 'Sistem')) ?></span> &middot; <?= esc(mb_strimwidth((string) $a['deskripsi'], 0, 90, '…')) ?></p>
+                        <p class="text-xs text-gray-500"><?= esc($waktuPendek($a['waktu'])) ?></p>
                     </li>
                 <?php endforeach; ?>
             </ul>
@@ -423,7 +423,7 @@ $baris[] = ['Kesediaan guru mengajar', $angka($k['total']) . ' isian · ' . $ang
 </div>
 
 <?php // Satu tooltip bersama untuk semua [data-tip] (isi diisi lewat textContent di dashboard.js). ?>
-<div id="vizTip" role="tooltip" class="pointer-events-none fixed z-50 hidden max-w-xs rounded-md bg-slate-900 px-3 py-2 text-xs font-medium text-white shadow-lg"></div>
+<div id="vizTip" role="tooltip" class="pointer-events-none fixed z-50 hidden max-w-xs rounded-md bg-gray-900 px-3 py-2 text-xs font-medium text-white shadow-lg"></div>
 
 <?= $this->endSection() ?>
 

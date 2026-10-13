@@ -19,7 +19,7 @@ $warnaJenis = [
     'komputer'   => 'bg-brand-50 text-brand-700 border-brand-200',
     'jaringan'   => 'bg-teal-50 text-teal-700 border-teal-200',
     'multimedia' => 'bg-pink-50 text-pink-700 border-pink-200',
-    'lainnya'    => 'bg-slate-100 text-slate-500 border-slate-200',
+    'lainnya'    => 'bg-gray-100 text-gray-500 border-gray-200',
 ];
 ?>
 <?= $this->extend('layouts/admin') ?>
@@ -54,15 +54,15 @@ $warnaJenis = [
         'bulkLabel'   => 'laboratorium',
     ]) ?>
 
-    <div class="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
-        <div class="px-6 py-4 border-b border-slate-100 flex items-center justify-between">
-            <h2 class="font-bold text-slate-800">Daftar Laboratorium <span class="text-slate-400 font-normal">(<?= $total ?>)</span></h2>
+    <div class="bg-white rounded-2xl border border-gray-200 shadow-xs overflow-hidden">
+        <div class="px-6 py-4 border-b border-gray-100 flex items-center justify-between">
+            <h2 class="font-bold text-gray-800">Daftar Laboratorium <span class="text-gray-400 font-normal">(<?= $total ?>)</span></h2>
         </div>
         <div class="overflow-x-auto">
             <table class="w-full text-sm">
-                <thead class="bg-slate-50 text-slate-500 text-left">
+                <thead class="bg-gray-50 text-gray-500 text-left">
                     <tr>
-                        <th class="pl-6 pr-2 py-3 w-10"><input type="checkbox" title="Pilih semua di halaman ini" class="js-check-all rounded border-slate-300 text-brand-600 focus:ring-brand-500"></th>
+                        <th class="pl-6 pr-2 py-3 w-10"><input type="checkbox" title="Pilih semua di halaman ini" class="js-check-all rounded-sm border-gray-300 text-brand-600 focus:ring-brand-500"></th>
                         <th class="px-4 py-3 font-semibold w-24">Kode</th>
                         <th class="px-4 py-3 font-semibold">Nama Lab</th>
                         <th class="px-4 py-3 font-semibold w-28">Jenis</th>
@@ -72,24 +72,24 @@ $warnaJenis = [
                         <th class="px-4 py-3 font-semibold w-28 text-right">Aksi</th>
                     </tr>
                 </thead>
-                <tbody class="divide-y divide-slate-100">
+                <tbody class="divide-y divide-gray-100">
                     <?php if (empty($rows)): ?>
-                        <tr><td colspan="8" class="px-6 py-10 text-center text-slate-400">
+                        <tr><td colspan="8" class="px-6 py-10 text-center text-gray-400">
                             <?= $q !== '' || $jenis !== '' ? 'Tidak ada lab yang cocok dengan filter ini.' : 'Belum ada data laboratorium. Tambah manual atau import Excel.' ?>
                         </td></tr>
                     <?php else: foreach ($rows as $r): ?>
-                        <tr class="hover:bg-slate-50">
-                            <td class="pl-6 pr-2 py-3"><input type="checkbox" class="row-check rounded border-slate-300 text-brand-600 focus:ring-brand-500" value="<?= (int) $r['id'] ?>"></td>
+                        <tr class="hover:bg-gray-50">
+                            <td class="pl-6 pr-2 py-3"><input type="checkbox" class="row-check rounded-sm border-gray-300 text-brand-600 focus:ring-brand-500" value="<?= (int) $r['id'] ?>"></td>
                             <td class="px-4 py-3 font-bold text-brand-700"><?= esc($r['kode']) ?></td>
-                            <td class="px-4 py-3 font-medium text-slate-800"><?= esc($r['nama']) ?></td>
+                            <td class="px-4 py-3 font-medium text-gray-800"><?= esc($r['nama']) ?></td>
                             <td class="px-4 py-3">
-                                <span class="rounded-full border px-2.5 py-1 text-xs font-semibold <?= $warnaJenis[$r['jenis']] ?? 'bg-slate-100 text-slate-500 border-slate-200' ?>"><?= esc(ucfirst($r['jenis'])) ?></span>
+                                <span class="rounded-full border px-2.5 py-1 text-xs font-semibold <?= $warnaJenis[$r['jenis']] ?? 'bg-gray-100 text-gray-500 border-gray-200' ?>"><?= esc(ucfirst($r['jenis'])) ?></span>
                             </td>
-                            <td class="px-4 py-3 text-slate-600"><?= $r['ruang'] !== null && $r['ruang'] !== '' ? esc($r['ruang']) : '<span class="text-slate-300">—</span>' ?></td>
-                            <td class="px-4 py-3 text-center text-slate-600"><?= $r['kapasitas'] !== null ? (int) $r['kapasitas'] : '<span class="text-slate-300">—</span>' ?></td>
-                            <td class="px-4 py-3 text-slate-600"><?= $r['teknisi_nama'] !== null ? esc($r['teknisi_nama']) : '<span class="text-slate-300">Belum ditentukan</span>' ?></td>
+                            <td class="px-4 py-3 text-gray-600"><?= $r['ruang'] !== null && $r['ruang'] !== '' ? esc($r['ruang']) : '<span class="text-gray-300">—</span>' ?></td>
+                            <td class="px-4 py-3 text-center text-gray-600"><?= $r['kapasitas'] !== null ? (int) $r['kapasitas'] : '<span class="text-gray-300">—</span>' ?></td>
+                            <td class="px-4 py-3 text-gray-600"><?= $r['teknisi_nama'] !== null ? esc($r['teknisi_nama']) : '<span class="text-gray-300">Belum ditentukan</span>' ?></td>
                             <td class="px-4 py-3 text-right whitespace-nowrap">
-                                <a href="<?= site_url('admin/lab-gambar/lab/' . $r['id']) ?>" title="Foto" class="inline-flex h-8 w-8 items-center justify-center rounded-lg text-slate-500 hover:bg-slate-100 transition align-middle">
+                                <a href="<?= site_url('admin/lab-gambar/lab/' . $r['id']) ?>" title="Foto" class="inline-flex h-8 w-8 items-center justify-center rounded-lg text-gray-500 hover:bg-gray-100 transition align-middle">
                                     <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
                                 </a>
                                 <?= view('admin/master/partials/row_actions', [
@@ -104,7 +104,7 @@ $warnaJenis = [
             </table>
         </div>
         <?php if ($pager): ?>
-            <div class="px-6 py-4 border-t border-slate-100">
+            <div class="px-6 py-4 border-t border-gray-100">
                 <?= $pager->only(['q', 'jenis', 'per'])->links('default', 'admin') ?>
             </div>
         <?php endif; ?>
@@ -114,58 +114,58 @@ $warnaJenis = [
     <div x-show="open" x-cloak x-transition.opacity.duration.200ms class="fixed inset-0 z-50 flex items-center justify-center p-4">
         <div class="absolute inset-0 bg-black/40" @click="open=false"></div>
         <div class="relative bg-white rounded-2xl shadow-xl w-full max-w-lg p-6 max-h-[90vh] overflow-y-auto">
-            <h3 class="font-bold text-lg text-slate-800 mb-4" x-text="mode==='add' ? 'Tambah Laboratorium' : 'Edit Laboratorium'"></h3>
+            <h3 class="font-bold text-lg text-gray-800 mb-4" x-text="mode==='add' ? 'Tambah Laboratorium' : 'Edit Laboratorium'"></h3>
             <form method="post" :action="actionUrl">
                 <?= csrf_field() ?>
                 <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div>
-                        <label class="block text-sm font-medium text-slate-600 mb-1">Kode *</label>
+                        <label class="block text-sm font-medium text-gray-600 mb-1">Kode *</label>
                         <input type="text" name="kode" x-model="form.kode" maxlength="30" required
-                               class="w-full rounded-lg border border-slate-300 px-3 py-2.5 text-sm uppercase focus:border-brand-500 focus:ring-2 focus:ring-brand-500/20 outline-none">
+                               class="w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm uppercase focus:border-brand-500 focus:ring-2 focus:ring-brand-500/20 outline-hidden">
                     </div>
                     <div>
-                        <label class="block text-sm font-medium text-slate-600 mb-1">Jenis</label>
+                        <label class="block text-sm font-medium text-gray-600 mb-1">Jenis</label>
                         <select name="jenis" x-model="form.jenis"
-                                class="w-full rounded-lg border border-slate-300 px-3 py-2.5 text-sm focus:border-brand-500 outline-none">
+                                class="w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm focus:border-brand-500 outline-hidden">
                             <?php foreach ($opsiJenis as $val => $label): ?>
                                 <option value="<?= esc($val, 'attr') ?>"><?= esc($label) ?></option>
                             <?php endforeach; ?>
                         </select>
                     </div>
                     <div class="sm:col-span-2">
-                        <label class="block text-sm font-medium text-slate-600 mb-1">Nama Lab *</label>
+                        <label class="block text-sm font-medium text-gray-600 mb-1">Nama Lab *</label>
                         <input type="text" name="nama" x-model="form.nama" maxlength="150" required
-                               class="w-full rounded-lg border border-slate-300 px-3 py-2.5 text-sm focus:border-brand-500 focus:ring-2 focus:ring-brand-500/20 outline-none">
+                               class="w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm focus:border-brand-500 focus:ring-2 focus:ring-brand-500/20 outline-hidden">
                     </div>
                     <div>
-                        <label class="block text-sm font-medium text-slate-600 mb-1">Ruang</label>
+                        <label class="block text-sm font-medium text-gray-600 mb-1">Ruang</label>
                         <input type="text" name="ruang" x-model="form.ruang" maxlength="100"
-                               class="w-full rounded-lg border border-slate-300 px-3 py-2.5 text-sm focus:border-brand-500 outline-none">
+                               class="w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm focus:border-brand-500 outline-hidden">
                     </div>
                     <div>
-                        <label class="block text-sm font-medium text-slate-600 mb-1">Kapasitas</label>
+                        <label class="block text-sm font-medium text-gray-600 mb-1">Kapasitas</label>
                         <input type="number" name="kapasitas" x-model="form.kapasitas" min="0" max="1000"
-                               class="w-full rounded-lg border border-slate-300 px-3 py-2.5 text-sm focus:border-brand-500 outline-none">
+                               class="w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm focus:border-brand-500 outline-hidden">
                     </div>
                     <div class="sm:col-span-2">
-                        <label class="block text-sm font-medium text-slate-600 mb-1">Penanggung Jawab</label>
+                        <label class="block text-sm font-medium text-gray-600 mb-1">Penanggung Jawab</label>
                         <select name="teknisi_id" x-model="form.teknisi_id"
-                                class="w-full rounded-lg border border-slate-300 px-3 py-2.5 text-sm focus:border-brand-500 outline-none">
+                                class="w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm focus:border-brand-500 outline-hidden">
                             <option value="">— Belum ditentukan —</option>
                             <?php foreach ($teknisiOpts as $id => $nama): ?>
                                 <option value="<?= (int) $id ?>"><?= esc($nama) ?></option>
                             <?php endforeach; ?>
                         </select>
-                        <p class="text-xs text-slate-400 mt-1">Diambil dari Master Teknisi.</p>
+                        <p class="text-xs text-gray-400 mt-1">Diambil dari Master Teknisi.</p>
                     </div>
                     <div class="sm:col-span-2">
-                        <label class="block text-sm font-medium text-slate-600 mb-1">Keterangan</label>
+                        <label class="block text-sm font-medium text-gray-600 mb-1">Keterangan</label>
                         <input type="text" name="keterangan" x-model="form.keterangan" maxlength="255"
-                               class="w-full rounded-lg border border-slate-300 px-3 py-2.5 text-sm focus:border-brand-500 outline-none">
+                               class="w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm focus:border-brand-500 outline-hidden">
                     </div>
                 </div>
                 <div class="flex justify-end gap-2 mt-6">
-                    <button type="button" @click="open=false" class="rounded-lg border border-slate-300 text-slate-600 text-sm font-semibold px-4 py-2.5 hover:bg-slate-50">Batal</button>
+                    <button type="button" @click="open=false" class="rounded-lg border border-gray-300 text-gray-600 text-sm font-semibold px-4 py-2.5 hover:bg-gray-50">Batal</button>
                     <button class="rounded-lg bg-brand-700 hover:bg-brand-800 text-white text-sm font-semibold px-5 py-2.5">Simpan</button>
                 </div>
             </form>

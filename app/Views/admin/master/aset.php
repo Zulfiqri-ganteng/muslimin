@@ -30,7 +30,7 @@ $warnaStatus = [
     'tersedia'  => 'bg-emerald-50 text-emerald-700 border-emerald-200',
     'dipinjam'  => 'bg-brand-50 text-brand-700 border-brand-200',
     'perbaikan' => 'bg-amber-50 text-amber-700 border-amber-200',
-    'dihapus'   => 'bg-slate-100 text-slate-500 border-slate-200',
+    'dihapus'   => 'bg-gray-100 text-gray-500 border-gray-200',
 ];
 
 $qsExport = array_filter([
@@ -78,15 +78,15 @@ $qsExport = array_filter([
         'bulkLabel'   => 'aset',
     ]) ?>
 
-    <div class="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
-        <div class="px-6 py-4 border-b border-slate-100 flex items-center justify-between">
-            <h2 class="font-bold text-slate-800">Daftar Aset <span class="text-slate-400 font-normal">(<?= $total ?>)</span></h2>
+    <div class="bg-white rounded-2xl border border-gray-200 shadow-xs overflow-hidden">
+        <div class="px-6 py-4 border-b border-gray-100 flex items-center justify-between">
+            <h2 class="font-bold text-gray-800">Daftar Aset <span class="text-gray-400 font-normal">(<?= $total ?>)</span></h2>
         </div>
         <div class="overflow-x-auto">
             <table class="w-full text-sm">
-                <thead class="bg-slate-50 text-slate-500 text-left">
+                <thead class="bg-gray-50 text-gray-500 text-left">
                     <tr>
-                        <th class="pl-6 pr-2 py-3 w-10"><input type="checkbox" title="Pilih semua di halaman ini" class="js-check-all rounded border-slate-300 text-brand-600 focus:ring-brand-500"></th>
+                        <th class="pl-6 pr-2 py-3 w-10"><input type="checkbox" title="Pilih semua di halaman ini" class="js-check-all rounded-sm border-gray-300 text-brand-600 focus:ring-brand-500"></th>
                         <th class="px-4 py-3 font-semibold w-40">Nomor Aset</th>
                         <th class="px-4 py-3 font-semibold">Nama</th>
                         <th class="px-4 py-3 font-semibold w-28">Kategori</th>
@@ -96,33 +96,33 @@ $qsExport = array_filter([
                         <th class="px-4 py-3 font-semibold w-36 text-right">Aksi</th>
                     </tr>
                 </thead>
-                <tbody class="divide-y divide-slate-100">
+                <tbody class="divide-y divide-gray-100">
                     <?php if (empty($rows)): ?>
-                        <tr><td colspan="8" class="px-6 py-10 text-center text-slate-400">
+                        <tr><td colspan="8" class="px-6 py-10 text-center text-gray-400">
                             <?= $q !== '' || $labId || $kategori !== '' || $kondisi !== '' || $status !== ''
                                 ? 'Tidak ada aset yang cocok dengan filter ini.'
                                 : 'Belum ada data aset. Tambah manual atau import Excel.' ?>
                         </td></tr>
                     <?php else: foreach ($rows as $r):
                         $isKomputer = in_array($r['kategori'], ['komputer', 'laptop'], true); ?>
-                        <tr class="hover:bg-slate-50">
-                            <td class="pl-6 pr-2 py-3"><input type="checkbox" class="row-check rounded border-slate-300 text-brand-600 focus:ring-brand-500" value="<?= (int) $r['id'] ?>"></td>
+                        <tr class="hover:bg-gray-50">
+                            <td class="pl-6 pr-2 py-3"><input type="checkbox" class="row-check rounded-sm border-gray-300 text-brand-600 focus:ring-brand-500" value="<?= (int) $r['id'] ?>"></td>
                             <td class="px-4 py-3 font-mono font-semibold text-brand-700"><?= esc($r['nomor_aset']) ?></td>
                             <td class="px-4 py-3">
-                                <div class="font-medium text-slate-800"><?= esc($r['nama']) ?></div>
-                                <?php if (! empty($r['merk'])): ?><div class="text-xs text-slate-400"><?= esc($r['merk']) ?></div><?php endif; ?>
+                                <div class="font-medium text-gray-800"><?= esc($r['nama']) ?></div>
+                                <?php if (! empty($r['merk'])): ?><div class="text-xs text-gray-400"><?= esc($r['merk']) ?></div><?php endif; ?>
                             </td>
-                            <td class="px-4 py-3 text-slate-600"><?= esc(ucfirst($r['kategori'])) ?></td>
-                            <td class="px-4 py-3 text-slate-600"><?= $r['lab_nama'] !== null ? esc($r['lab_nama']) : '<span class="text-slate-300">—</span>' ?></td>
+                            <td class="px-4 py-3 text-gray-600"><?= esc(ucfirst($r['kategori'])) ?></td>
+                            <td class="px-4 py-3 text-gray-600"><?= $r['lab_nama'] !== null ? esc($r['lab_nama']) : '<span class="text-gray-300">—</span>' ?></td>
                             <td class="px-4 py-3">
-                                <span class="rounded-full border px-2.5 py-1 text-xs font-semibold <?= $warnaKondisi[$r['kondisi']] ?? 'bg-slate-100 text-slate-500 border-slate-200' ?>"><?= esc(ucfirst(str_replace('_', ' ', $r['kondisi']))) ?></span>
+                                <span class="rounded-full border px-2.5 py-1 text-xs font-semibold <?= $warnaKondisi[$r['kondisi']] ?? 'bg-gray-100 text-gray-500 border-gray-200' ?>"><?= esc(ucfirst(str_replace('_', ' ', $r['kondisi']))) ?></span>
                             </td>
                             <td class="px-4 py-3">
-                                <span class="rounded-full border px-2.5 py-1 text-xs font-semibold <?= $warnaStatus[$r['status']] ?? 'bg-slate-100 text-slate-500 border-slate-200' ?>"><?= esc(ucfirst($r['status'])) ?></span>
+                                <span class="rounded-full border px-2.5 py-1 text-xs font-semibold <?= $warnaStatus[$r['status']] ?? 'bg-gray-100 text-gray-500 border-gray-200' ?>"><?= esc(ucfirst($r['status'])) ?></span>
                             </td>
                             <td class="px-4 py-3 text-right whitespace-nowrap">
                                 <div class="inline-flex items-center justify-end gap-1">
-                                    <a href="<?= site_url('admin/lab-gambar/aset/' . $r['id']) ?>" title="Foto" class="inline-flex h-8 w-8 items-center justify-center rounded-lg text-slate-500 hover:bg-slate-100 transition">
+                                    <a href="<?= site_url('admin/lab-gambar/aset/' . $r['id']) ?>" title="Foto" class="inline-flex h-8 w-8 items-center justify-center rounded-lg text-gray-500 hover:bg-gray-100 transition">
                                         <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
                                     </a>
                                     <?php if ($isKomputer): ?>
@@ -144,7 +144,7 @@ $qsExport = array_filter([
             </table>
         </div>
         <?php if ($pager): ?>
-            <div class="px-6 py-4 border-t border-slate-100">
+            <div class="px-6 py-4 border-t border-gray-100">
                 <?= $pager->only(['q', 'lab_id', 'kategori', 'kondisi', 'status', 'per'])->links('default', 'admin') ?>
             </div>
         <?php endif; ?>
@@ -154,34 +154,34 @@ $qsExport = array_filter([
     <div x-show="open" x-cloak x-transition.opacity.duration.200ms class="fixed inset-0 z-50 flex items-center justify-center p-4">
         <div class="absolute inset-0 bg-black/40" @click="open=false"></div>
         <div class="relative bg-white rounded-2xl shadow-xl w-full max-w-2xl p-6 max-h-[90vh] overflow-y-auto">
-            <h3 class="font-bold text-lg text-slate-800 mb-4" x-text="mode==='add' ? 'Tambah Aset' : 'Edit Aset'"></h3>
+            <h3 class="font-bold text-lg text-gray-800 mb-4" x-text="mode==='add' ? 'Tambah Aset' : 'Edit Aset'"></h3>
             <form method="post" :action="actionUrl">
                 <?= csrf_field() ?>
                 <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div>
-                        <label class="block text-sm font-medium text-slate-600 mb-1">Nomor Aset</label>
+                        <label class="block text-sm font-medium text-gray-600 mb-1">Nomor Aset</label>
                         <input type="text" name="nomor_aset" x-model="form.nomor_aset" maxlength="50"
-                               class="w-full rounded-lg border border-slate-300 px-3 py-2.5 text-sm uppercase focus:border-brand-500 outline-none">
-                        <p class="text-xs text-slate-400 mt-1">Kosongkan untuk penomoran otomatis.</p>
+                               class="w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm uppercase focus:border-brand-500 outline-hidden">
+                        <p class="text-xs text-gray-400 mt-1">Kosongkan untuk penomoran otomatis.</p>
                     </div>
                     <div>
-                        <label class="block text-sm font-medium text-slate-600 mb-1">Kategori</label>
+                        <label class="block text-sm font-medium text-gray-600 mb-1">Kategori</label>
                         <select name="kategori" x-model="form.kategori"
-                                class="w-full rounded-lg border border-slate-300 px-3 py-2.5 text-sm focus:border-brand-500 outline-none">
+                                class="w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm focus:border-brand-500 outline-hidden">
                             <?php foreach ($opsiKategori as $val => $label): ?>
                                 <option value="<?= esc($val, 'attr') ?>"><?= esc($label) ?></option>
                             <?php endforeach; ?>
                         </select>
                     </div>
                     <div class="sm:col-span-2">
-                        <label class="block text-sm font-medium text-slate-600 mb-1">Nama Aset *</label>
+                        <label class="block text-sm font-medium text-gray-600 mb-1">Nama Aset *</label>
                         <input type="text" name="nama" x-model="form.nama" maxlength="150" required
-                               class="w-full rounded-lg border border-slate-300 px-3 py-2.5 text-sm focus:border-brand-500 focus:ring-2 focus:ring-brand-500/20 outline-none">
+                               class="w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm focus:border-brand-500 focus:ring-2 focus:ring-brand-500/20 outline-hidden">
                     </div>
                     <div>
-                        <label class="block text-sm font-medium text-slate-600 mb-1">Lokasi (Lab)</label>
+                        <label class="block text-sm font-medium text-gray-600 mb-1">Lokasi (Lab)</label>
                         <select name="lab_id" x-model="form.lab_id"
-                                class="w-full rounded-lg border border-slate-300 px-3 py-2.5 text-sm focus:border-brand-500 outline-none">
+                                class="w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm focus:border-brand-500 outline-hidden">
                             <option value="">— Tanpa lab —</option>
                             <?php foreach ($labOpts as $id => $nama): ?>
                                 <option value="<?= (int) $id ?>"><?= esc($nama) ?></option>
@@ -189,56 +189,56 @@ $qsExport = array_filter([
                         </select>
                     </div>
                     <div>
-                        <label class="block text-sm font-medium text-slate-600 mb-1">Merk</label>
+                        <label class="block text-sm font-medium text-gray-600 mb-1">Merk</label>
                         <input type="text" name="merk" x-model="form.merk" maxlength="100"
-                               class="w-full rounded-lg border border-slate-300 px-3 py-2.5 text-sm focus:border-brand-500 outline-none">
+                               class="w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm focus:border-brand-500 outline-hidden">
                     </div>
                     <div class="sm:col-span-2">
-                        <label class="block text-sm font-medium text-slate-600 mb-1">Spesifikasi ringkas</label>
+                        <label class="block text-sm font-medium text-gray-600 mb-1">Spesifikasi ringkas</label>
                         <input type="text" name="spesifikasi" x-model="form.spesifikasi" maxlength="255"
-                               class="w-full rounded-lg border border-slate-300 px-3 py-2.5 text-sm focus:border-brand-500 outline-none">
+                               class="w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm focus:border-brand-500 outline-hidden">
                     </div>
                     <div>
-                        <label class="block text-sm font-medium text-slate-600 mb-1">Tahun Pengadaan</label>
+                        <label class="block text-sm font-medium text-gray-600 mb-1">Tahun Pengadaan</label>
                         <input type="number" name="tahun_pengadaan" x-model="form.tahun_pengadaan" min="1990" max="2100"
-                               class="w-full rounded-lg border border-slate-300 px-3 py-2.5 text-sm focus:border-brand-500 outline-none">
+                               class="w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm focus:border-brand-500 outline-hidden">
                     </div>
                     <div>
-                        <label class="block text-sm font-medium text-slate-600 mb-1">Sumber Dana</label>
+                        <label class="block text-sm font-medium text-gray-600 mb-1">Sumber Dana</label>
                         <input type="text" name="sumber_dana" x-model="form.sumber_dana" maxlength="100"
-                               class="w-full rounded-lg border border-slate-300 px-3 py-2.5 text-sm focus:border-brand-500 outline-none">
+                               class="w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm focus:border-brand-500 outline-hidden">
                     </div>
                     <div>
-                        <label class="block text-sm font-medium text-slate-600 mb-1">Harga (Rp)</label>
+                        <label class="block text-sm font-medium text-gray-600 mb-1">Harga (Rp)</label>
                         <input type="number" name="harga" x-model="form.harga" min="0" step="1"
-                               class="w-full rounded-lg border border-slate-300 px-3 py-2.5 text-sm focus:border-brand-500 outline-none">
+                               class="w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm focus:border-brand-500 outline-hidden">
                     </div>
                     <div>
-                        <label class="block text-sm font-medium text-slate-600 mb-1">Kondisi</label>
+                        <label class="block text-sm font-medium text-gray-600 mb-1">Kondisi</label>
                         <select name="kondisi" x-model="form.kondisi"
-                                class="w-full rounded-lg border border-slate-300 px-3 py-2.5 text-sm focus:border-brand-500 outline-none">
+                                class="w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm focus:border-brand-500 outline-hidden">
                             <?php foreach ($opsiKondisi as $val => $label): ?>
                                 <option value="<?= esc($val, 'attr') ?>"><?= esc($label) ?></option>
                             <?php endforeach; ?>
                         </select>
                     </div>
                     <div>
-                        <label class="block text-sm font-medium text-slate-600 mb-1">Status</label>
+                        <label class="block text-sm font-medium text-gray-600 mb-1">Status</label>
                         <select name="status" x-model="form.status"
-                                class="w-full rounded-lg border border-slate-300 px-3 py-2.5 text-sm focus:border-brand-500 outline-none">
+                                class="w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm focus:border-brand-500 outline-hidden">
                             <?php foreach ($opsiStatus as $val => $label): ?>
                                 <option value="<?= esc($val, 'attr') ?>"><?= esc($label) ?></option>
                             <?php endforeach; ?>
                         </select>
                     </div>
                     <div class="sm:col-span-2">
-                        <label class="block text-sm font-medium text-slate-600 mb-1">Keterangan</label>
+                        <label class="block text-sm font-medium text-gray-600 mb-1">Keterangan</label>
                         <input type="text" name="keterangan" x-model="form.keterangan" maxlength="255"
-                               class="w-full rounded-lg border border-slate-300 px-3 py-2.5 text-sm focus:border-brand-500 outline-none">
+                               class="w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm focus:border-brand-500 outline-hidden">
                     </div>
                 </div>
                 <div class="flex justify-end gap-2 mt-6">
-                    <button type="button" @click="open=false" class="rounded-lg border border-slate-300 text-slate-600 text-sm font-semibold px-4 py-2.5 hover:bg-slate-50">Batal</button>
+                    <button type="button" @click="open=false" class="rounded-lg border border-gray-300 text-gray-600 text-sm font-semibold px-4 py-2.5 hover:bg-gray-50">Batal</button>
                     <button class="rounded-lg bg-brand-700 hover:bg-brand-800 text-white text-sm font-semibold px-5 py-2.5">Simpan</button>
                 </div>
             </form>

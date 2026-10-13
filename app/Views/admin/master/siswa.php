@@ -19,7 +19,7 @@ $warnaStatus = [
     'aktif'  => 'bg-emerald-50 text-emerald-700 border-emerald-200',
     'lulus'  => 'bg-brand-50 text-brand-700 border-brand-200',
     'pindah' => 'bg-amber-50 text-amber-700 border-amber-200',
-    'keluar' => 'bg-slate-100 text-slate-500 border-slate-200',
+    'keluar' => 'bg-gray-100 text-gray-500 border-gray-200',
 ];
 $opsiStatus  = array_combine($statusList, array_map('ucfirst', $statusList));
 $opsiTingkat = array_combine($tingkatList, array_map(static fn ($t) => 'Kelas ' . $t, $tingkatList));
@@ -35,7 +35,7 @@ $qsExport = array_filter([
 ], static fn ($v) => $v !== '');
 
 $label  = \App\Libraries\BiodataForm::LABEL;
-$kelasInput = 'w-full rounded-lg border border-slate-300 px-3 py-2.5 text-sm focus:border-brand-500 outline-none';
+$kelasInput = 'w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm focus:border-brand-500 outline-hidden';
 
 /**
  * Satu kolom isian modal (gaya sama dengan kolom lain di form ini).
@@ -43,7 +43,7 @@ $kelasInput = 'w-full rounded-lg border border-slate-300 px-3 py-2.5 text-sm foc
  */
 $kolom = static function (string $nama, string $judul, array $o = []) use ($kelasInput): void {
     echo '<div class="' . ($o['span'] ?? '') . '">'
-        . '<label class="block text-sm font-medium text-slate-600 mb-1">' . esc($judul) . '</label>'
+        . '<label class="block text-sm font-medium text-gray-600 mb-1">' . esc($judul) . '</label>'
         . '<input type="' . ($o['type'] ?? 'text') . '" name="' . $nama . '" x-model="form.' . $nama . '"'
         . (isset($o['max']) ? ' maxlength="' . (int) $o['max'] . '"' : '')
         . (isset($o['list']) ? ' list="' . $o['list'] . '"' : '')
@@ -119,15 +119,15 @@ $blokAlamat = static function (string $p) use ($kolom, $label): void {
     ]) ?>
 
     <!-- Tabel -->
-    <div class="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
-        <div class="px-6 py-4 border-b border-slate-100 flex items-center justify-between">
-            <h2 class="font-bold text-slate-800">Daftar Siswa <span class="text-slate-400 font-normal">(<?= $total ?>)</span></h2>
+    <div class="bg-white rounded-2xl border border-gray-200 shadow-xs overflow-hidden">
+        <div class="px-6 py-4 border-b border-gray-100 flex items-center justify-between">
+            <h2 class="font-bold text-gray-800">Daftar Siswa <span class="text-gray-400 font-normal">(<?= $total ?>)</span></h2>
         </div>
         <div class="overflow-x-auto">
             <table class="w-full text-sm">
-                <thead class="bg-slate-50 text-slate-500 text-left">
+                <thead class="bg-gray-50 text-gray-500 text-left">
                     <tr>
-                        <th class="pl-6 pr-2 py-3 w-10"><input type="checkbox" title="Pilih semua di halaman ini" class="js-check-all rounded border-slate-300 text-brand-600 focus:ring-brand-500"></th>
+                        <th class="pl-6 pr-2 py-3 w-10"><input type="checkbox" title="Pilih semua di halaman ini" class="js-check-all rounded-sm border-gray-300 text-brand-600 focus:ring-brand-500"></th>
                         <th class="px-4 py-3 font-semibold w-32">NIS</th>
                         <th class="px-4 py-3 font-semibold">Nama Siswa</th>
                         <th class="px-4 py-3 font-semibold w-14 text-center">JK</th>
@@ -137,21 +137,21 @@ $blokAlamat = static function (string $p) use ($kolom, $label): void {
                         <th class="px-4 py-3 font-semibold w-28 text-right">Aksi</th>
                     </tr>
                 </thead>
-                <tbody class="divide-y divide-slate-100">
+                <tbody class="divide-y divide-gray-100">
                     <?php if (empty($rows)): ?>
-                        <tr><td colspan="8" class="px-6 py-10 text-center text-slate-400">
+                        <tr><td colspan="8" class="px-6 py-10 text-center text-gray-400">
                             <?= $q !== '' || $kelasId || $tingkat !== '' || $status !== '' || $biodata !== ''
                                 ? 'Tidak ada siswa yang cocok dengan filter ini.'
                                 : 'Belum ada data siswa. Tambah manual atau import Excel (lebih cepat untuk satu kelas sekaligus).' ?>
                         </td></tr>
                     <?php else: foreach ($rows as $r): ?>
-                        <tr class="hover:bg-slate-50">
-                            <td class="pl-6 pr-2 py-3"><input type="checkbox" class="row-check rounded border-slate-300 text-brand-600 focus:ring-brand-500" value="<?= (int) $r['id'] ?>"></td>
+                        <tr class="hover:bg-gray-50">
+                            <td class="pl-6 pr-2 py-3"><input type="checkbox" class="row-check rounded-sm border-gray-300 text-brand-600 focus:ring-brand-500" value="<?= (int) $r['id'] ?>"></td>
                             <td class="px-4 py-3 font-semibold text-brand-700"><?= esc($r['nis']) ?></td>
                             <td class="px-4 py-3">
-                                <a href="<?= site_url('admin/master/siswa/' . (int) $r['id']) ?>" class="font-medium text-slate-800 hover:text-brand-700 hover:underline" title="Lihat detail siswa"><?= esc($r['nama']) ?></a>
+                                <a href="<?= site_url('admin/master/siswa/' . (int) $r['id']) ?>" class="font-medium text-gray-800 hover:text-brand-700 hover:underline" title="Lihat detail siswa"><?= esc($r['nama']) ?></a>
                                 <?php if (! empty($r['nisn']) || ! empty($r['biodata_at'])): ?>
-                                    <div class="text-xs text-slate-400">
+                                    <div class="text-xs text-gray-400">
                                         <?php if (! empty($r['nisn'])): ?>NISN <?= esc($r['nisn']) ?><?php endif; ?>
                                         <?php if (! empty($r['biodata_at'])): ?>
                                             <span class="ml-1 font-semibold text-emerald-700" title="Biodata disahkan <?= esc(date('d/m/Y H:i', strtotime($r['biodata_at'])), 'attr') ?>">Biodata ✓</span>
@@ -159,11 +159,11 @@ $blokAlamat = static function (string $p) use ($kolom, $label): void {
                                     </div>
                                 <?php endif; ?>
                             </td>
-                            <td class="px-4 py-3 text-center text-slate-600"><?= $r['jenis_kelamin'] !== null ? esc($r['jenis_kelamin']) : '<span class="text-slate-300">—</span>' ?></td>
-                            <td class="px-4 py-3 text-slate-700"><?= $r['nama_kelas'] !== null ? esc($r['nama_kelas']) : '<span class="text-slate-300">Belum ada kelas</span>' ?></td>
-                            <td class="px-4 py-3 text-slate-600"><?= $r['jurusan_kode'] !== null ? esc($r['jurusan_kode']) : '<span class="text-slate-300">—</span>' ?></td>
+                            <td class="px-4 py-3 text-center text-gray-600"><?= $r['jenis_kelamin'] !== null ? esc($r['jenis_kelamin']) : '<span class="text-gray-300">—</span>' ?></td>
+                            <td class="px-4 py-3 text-gray-700"><?= $r['nama_kelas'] !== null ? esc($r['nama_kelas']) : '<span class="text-gray-300">Belum ada kelas</span>' ?></td>
+                            <td class="px-4 py-3 text-gray-600"><?= $r['jurusan_kode'] !== null ? esc($r['jurusan_kode']) : '<span class="text-gray-300">—</span>' ?></td>
                             <td class="px-4 py-3">
-                                <span class="rounded-full border px-2.5 py-1 text-xs font-semibold <?= $warnaStatus[$r['status']] ?? 'bg-slate-100 text-slate-500 border-slate-200' ?>"><?= esc(ucfirst($r['status'])) ?></span>
+                                <span class="rounded-full border px-2.5 py-1 text-xs font-semibold <?= $warnaStatus[$r['status']] ?? 'bg-gray-100 text-gray-500 border-gray-200' ?>"><?= esc(ucfirst($r['status'])) ?></span>
                             </td>
                             <td class="px-4 py-3 text-right whitespace-nowrap">
                                 <?= view('admin/master/partials/row_actions', [
@@ -179,7 +179,7 @@ $blokAlamat = static function (string $p) use ($kolom, $label): void {
             </table>
         </div>
         <?php if ($pager): ?>
-            <div class="px-6 py-4 border-t border-slate-100">
+            <div class="px-6 py-4 border-t border-gray-100">
                 <?= $pager->only(['q', 'kelas_id', 'tingkat', 'status', 'biodata', 'per'])->links('default', 'admin') ?>
             </div>
         <?php endif; ?>
@@ -189,40 +189,40 @@ $blokAlamat = static function (string $p) use ($kolom, $label): void {
     <div x-show="open" x-cloak x-transition.opacity.duration.200ms class="fixed inset-0 z-50 flex items-center justify-center p-4">
         <div class="absolute inset-0 bg-black/40" @click="open=false"></div>
         <div class="relative bg-white rounded-2xl shadow-xl w-full max-w-2xl p-6 max-h-[90vh] overflow-y-auto">
-            <h3 class="font-bold text-lg text-slate-800 mb-4" x-text="mode==='add' ? 'Tambah Siswa' : 'Edit Siswa'"></h3>
+            <h3 class="font-bold text-lg text-gray-800 mb-4" x-text="mode==='add' ? 'Tambah Siswa' : 'Edit Siswa'"></h3>
             <form method="post" :action="actionUrl">
                 <?= csrf_field() ?>
 
-                <p class="text-xs font-semibold text-slate-400 uppercase tracking-wide mb-2">Identitas</p>
+                <p class="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-2">Identitas</p>
                 <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div>
-                        <label class="block text-sm font-medium text-slate-600 mb-1">NIS *</label>
+                        <label class="block text-sm font-medium text-gray-600 mb-1">NIS *</label>
                         <input type="text" name="nis" x-model="form.nis" maxlength="30" required
-                               class="w-full rounded-lg border border-slate-300 px-3 py-2.5 text-sm focus:border-brand-500 focus:ring-2 focus:ring-brand-500/20 outline-none">
+                               class="w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm focus:border-brand-500 focus:ring-2 focus:ring-brand-500/20 outline-hidden">
                     </div>
                     <div>
-                        <label class="block text-sm font-medium text-slate-600 mb-1">NISN</label>
+                        <label class="block text-sm font-medium text-gray-600 mb-1">NISN</label>
                         <input type="text" name="nisn" x-model="form.nisn" maxlength="30"
-                               class="w-full rounded-lg border border-slate-300 px-3 py-2.5 text-sm focus:border-brand-500 outline-none">
+                               class="w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm focus:border-brand-500 outline-hidden">
                     </div>
                     <div class="sm:col-span-2">
-                        <label class="block text-sm font-medium text-slate-600 mb-1">Nama Lengkap *</label>
+                        <label class="block text-sm font-medium text-gray-600 mb-1">Nama Lengkap *</label>
                         <input type="text" name="nama" x-model="form.nama" maxlength="150" required
-                               class="w-full rounded-lg border border-slate-300 px-3 py-2.5 text-sm focus:border-brand-500 focus:ring-2 focus:ring-brand-500/20 outline-none">
+                               class="w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm focus:border-brand-500 focus:ring-2 focus:ring-brand-500/20 outline-hidden">
                     </div>
                     <div>
-                        <label class="block text-sm font-medium text-slate-600 mb-1">Jenis Kelamin</label>
+                        <label class="block text-sm font-medium text-gray-600 mb-1">Jenis Kelamin</label>
                         <select name="jenis_kelamin" x-model="form.jenis_kelamin"
-                                class="w-full rounded-lg border border-slate-300 px-3 py-2.5 text-sm focus:border-brand-500 outline-none">
+                                class="w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm focus:border-brand-500 outline-hidden">
                             <option value="">— Pilih —</option>
                             <option value="L">Laki-laki</option>
                             <option value="P">Perempuan</option>
                         </select>
                     </div>
                     <div>
-                        <label class="block text-sm font-medium text-slate-600 mb-1">Agama</label>
+                        <label class="block text-sm font-medium text-gray-600 mb-1">Agama</label>
                         <input type="text" name="agama" x-model="form.agama" maxlength="25" list="daftar-agama"
-                               class="w-full rounded-lg border border-slate-300 px-3 py-2.5 text-sm focus:border-brand-500 outline-none">
+                               class="w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm focus:border-brand-500 outline-hidden">
                         <datalist id="daftar-agama">
                             <?php foreach (\App\Models\SiswaModel::AGAMA as $a): ?>
                                 <option value="<?= $a ?>"></option>
@@ -230,17 +230,17 @@ $blokAlamat = static function (string $p) use ($kolom, $label): void {
                         </datalist>
                     </div>
                     <div>
-                        <label class="block text-sm font-medium text-slate-600 mb-1">Tempat Lahir</label>
+                        <label class="block text-sm font-medium text-gray-600 mb-1">Tempat Lahir</label>
                         <input type="text" name="tempat_lahir" x-model="form.tempat_lahir" maxlength="100"
-                               class="w-full rounded-lg border border-slate-300 px-3 py-2.5 text-sm focus:border-brand-500 outline-none">
+                               class="w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm focus:border-brand-500 outline-hidden">
                     </div>
                     <div>
-                        <label class="block text-sm font-medium text-slate-600 mb-1">Tanggal Lahir</label>
+                        <label class="block text-sm font-medium text-gray-600 mb-1">Tanggal Lahir</label>
                         <input type="date" name="tanggal_lahir" x-model="form.tanggal_lahir"
-                               class="w-full rounded-lg border border-slate-300 px-3 py-2.5 text-sm focus:border-brand-500 outline-none">
+                               class="w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm focus:border-brand-500 outline-hidden">
                     </div>
                     <div>
-                        <label class="block text-sm font-medium text-slate-600 mb-1"><?= esc($label['status_keluarga']) ?></label>
+                        <label class="block text-sm font-medium text-gray-600 mb-1"><?= esc($label['status_keluarga']) ?></label>
                         <select name="status_keluarga" x-model="form.status_keluarga" class="<?= $kelasInput ?>">
                             <option value="">— Pilih —</option>
                             <?php foreach (\App\Models\SiswaModel::STATUS_KELUARGA as $sk): ?>
@@ -251,14 +251,14 @@ $blokAlamat = static function (string $p) use ($kolom, $label): void {
                     <?php $kolom('anak_ke', $label['anak_ke'], ['type' => 'number']) ?>
                 </div>
 
-                <p class="text-xs font-semibold text-slate-400 uppercase tracking-wide mt-5 mb-2">Alamat &amp; Kontak Siswa</p>
+                <p class="text-xs font-semibold text-gray-400 uppercase tracking-wide mt-5 mb-2">Alamat &amp; Kontak Siswa</p>
                 <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <?php $kolom('alamat', 'Alamat (jalan / perumahan, blok, nomor)', ['max' => 255, 'span' => 'sm:col-span-2']) ?>
                     <?php $blokAlamat('') ?>
                     <?php $kolom('no_hp', 'No HP Siswa', ['max' => 25, 'mode' => 'tel']) ?>
                 </div>
 
-                <p class="text-xs font-semibold text-slate-400 uppercase tracking-wide mt-5 mb-2">Riwayat Masuk</p>
+                <p class="text-xs font-semibold text-gray-400 uppercase tracking-wide mt-5 mb-2">Riwayat Masuk</p>
                 <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <?php $kolom('sekolah_asal', $label['sekolah_asal'], ['max' => 150, 'span' => 'sm:col-span-2']) ?>
                     <?php $kolom('diterima_kelas', $label['diterima_kelas'], ['max' => 50, 'list' => 'daftar-kelas-siswa']) ?>
@@ -268,7 +268,7 @@ $blokAlamat = static function (string $p) use ($kolom, $label): void {
                     </datalist>
                 </div>
 
-                <p class="text-xs font-semibold text-slate-400 uppercase tracking-wide mt-5 mb-2">Orang Tua</p>
+                <p class="text-xs font-semibold text-gray-400 uppercase tracking-wide mt-5 mb-2">Orang Tua</p>
                 <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <?php $kolom('nama_ayah', $label['nama_ayah'], ['max' => 150]) ?>
                     <?php $kolom('pekerjaan_ayah', $label['pekerjaan_ayah'], ['max' => 100, 'list' => 'daftar-pekerjaan']) ?>
@@ -282,7 +282,7 @@ $blokAlamat = static function (string $p) use ($kolom, $label): void {
                     </datalist>
                 </div>
 
-                <p class="text-xs font-semibold text-slate-400 uppercase tracking-wide mt-5 mb-2">Wali <span class="normal-case font-normal">(kosongkan bila tidak ada wali selain orang tua)</span></p>
+                <p class="text-xs font-semibold text-gray-400 uppercase tracking-wide mt-5 mb-2">Wali <span class="normal-case font-normal">(kosongkan bila tidak ada wali selain orang tua)</span></p>
                 <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <?php $kolom('nama_wali', $label['nama_wali'], ['max' => 150]) ?>
                     <?php $kolom('no_hp_wali', 'No HP Wali', ['max' => 25, 'mode' => 'tel']) ?>
@@ -290,49 +290,49 @@ $blokAlamat = static function (string $p) use ($kolom, $label): void {
                     <?php $kolom('pekerjaan_wali', $label['pekerjaan_wali'], ['max' => 100, 'list' => 'daftar-pekerjaan']) ?>
                 </div>
 
-                <p class="text-xs font-semibold text-slate-400 uppercase tracking-wide mt-5 mb-2">Data Sekolah <span class="normal-case font-normal">(sesuai Daftar Nama Siswa resmi — Format 8355)</span></p>
+                <p class="text-xs font-semibold text-gray-400 uppercase tracking-wide mt-5 mb-2">Data Sekolah <span class="normal-case font-normal">(sesuai Daftar Nama Siswa resmi — Format 8355)</span></p>
                 <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <?php $kolom('nama_orang_tua', \App\Models\SiswaModel::LABEL_SEKOLAH['nama_orang_tua'], ['max' => 150, 'span' => 'sm:col-span-2']) ?>
                     <?php $kolom('sttb_nomor', \App\Models\SiswaModel::LABEL_SEKOLAH['sttb_nomor'] . ' (ijazah SMP/MTs)', ['max' => 60]) ?>
                     <?php $kolom('sttb_tahun', \App\Models\SiswaModel::LABEL_SEKOLAH['sttb_tahun'], ['max' => 4, 'mode' => 'numeric']) ?>
                 </div>
 
-                <p class="text-xs font-semibold text-slate-400 uppercase tracking-wide mt-5 mb-2">Kelas &amp; Status</p>
+                <p class="text-xs font-semibold text-gray-400 uppercase tracking-wide mt-5 mb-2">Kelas &amp; Status</p>
                 <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
                     <div>
-                        <label class="block text-sm font-medium text-slate-600 mb-1">Kelas</label>
+                        <label class="block text-sm font-medium text-gray-600 mb-1">Kelas</label>
                         <select name="kelas_id" x-model="form.kelas_id"
-                                class="w-full rounded-lg border border-slate-300 px-3 py-2.5 text-sm focus:border-brand-500 outline-none">
+                                class="w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm focus:border-brand-500 outline-hidden">
                             <option value="">— Belum ada kelas —</option>
                             <?php foreach ($kelasOpts as $id => $nama): ?>
                                 <option value="<?= (int) $id ?>"><?= esc($nama) ?></option>
                             <?php endforeach; ?>
                         </select>
-                        <p class="text-xs text-slate-400 mt-1">Tingkat &amp; jurusan mengikuti kelas.</p>
+                        <p class="text-xs text-gray-400 mt-1">Tingkat &amp; jurusan mengikuti kelas.</p>
                     </div>
                     <div>
-                        <label class="block text-sm font-medium text-slate-600 mb-1">Tahun Masuk</label>
+                        <label class="block text-sm font-medium text-gray-600 mb-1">Tahun Masuk</label>
                         <input type="number" name="tahun_masuk" x-model="form.tahun_masuk" min="1990" max="2100"
-                               class="w-full rounded-lg border border-slate-300 px-3 py-2.5 text-sm focus:border-brand-500 outline-none">
+                               class="w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm focus:border-brand-500 outline-hidden">
                     </div>
                     <div>
-                        <label class="block text-sm font-medium text-slate-600 mb-1">Status</label>
+                        <label class="block text-sm font-medium text-gray-600 mb-1">Status</label>
                         <select name="status" x-model="form.status"
-                                class="w-full rounded-lg border border-slate-300 px-3 py-2.5 text-sm focus:border-brand-500 outline-none">
+                                class="w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm focus:border-brand-500 outline-hidden">
                             <?php foreach ($opsiStatus as $val => $label): ?>
                                 <option value="<?= esc($val, 'attr') ?>"><?= esc($label) ?></option>
                             <?php endforeach; ?>
                         </select>
                     </div>
                     <div class="sm:col-span-3">
-                        <label class="block text-sm font-medium text-slate-600 mb-1">Keterangan</label>
+                        <label class="block text-sm font-medium text-gray-600 mb-1">Keterangan</label>
                         <input type="text" name="keterangan" x-model="form.keterangan" maxlength="255"
-                               class="w-full rounded-lg border border-slate-300 px-3 py-2.5 text-sm focus:border-brand-500 outline-none">
+                               class="w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm focus:border-brand-500 outline-hidden">
                     </div>
                 </div>
 
                 <div class="flex justify-end gap-2 mt-6">
-                    <button type="button" @click="open=false" class="rounded-lg border border-slate-300 text-slate-600 text-sm font-semibold px-4 py-2.5 hover:bg-slate-50">Batal</button>
+                    <button type="button" @click="open=false" class="rounded-lg border border-gray-300 text-gray-600 text-sm font-semibold px-4 py-2.5 hover:bg-gray-50">Batal</button>
                     <button class="rounded-lg bg-brand-700 hover:bg-brand-800 text-white text-sm font-semibold px-5 py-2.5">Simpan</button>
                 </div>
             </form>

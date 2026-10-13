@@ -19,13 +19,13 @@ $tgl = static fn ($d) => $d ? date('d/m/Y', strtotime((string) $d)) : '—';
         seluruh penguji setelah minimal satu penguji mengisi nilai.</p>',
 ]) ?>
 
-<div class="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
-    <div class="px-6 py-4 border-b border-slate-100">
-        <h2 class="font-bold text-slate-800">Pilih Jadwal untuk Dinilai</h2>
+<div class="bg-white rounded-2xl border border-gray-200 shadow-xs overflow-hidden">
+    <div class="px-6 py-4 border-b border-gray-100">
+        <h2 class="font-bold text-gray-800">Pilih Jadwal untuk Dinilai</h2>
     </div>
     <div class="overflow-x-auto">
         <table class="w-full text-sm">
-            <thead class="bg-slate-50 text-slate-500 text-left">
+            <thead class="bg-gray-50 text-gray-500 text-left">
                 <tr>
                     <th class="px-6 py-3 font-semibold">Paket Soal</th>
                     <th class="px-4 py-3 font-semibold w-32">Tanggal</th>
@@ -34,29 +34,29 @@ $tgl = static fn ($d) => $d ? date('d/m/Y', strtotime((string) $d)) : '—';
                     <th class="px-4 py-3 font-semibold w-24 text-right">Aksi</th>
                 </tr>
             </thead>
-            <tbody class="divide-y divide-slate-100">
+            <tbody class="divide-y divide-gray-100">
                 <?php if (empty($rows)): ?>
-                    <tr><td colspan="5" class="px-6 py-10 text-center text-slate-400">Belum ada jadwal UKK. Buat dulu di menu Jadwal UKK.</td></tr>
+                    <tr><td colspan="5" class="px-6 py-10 text-center text-gray-400">Belum ada jadwal UKK. Buat dulu di menu Jadwal UKK.</td></tr>
                 <?php else: foreach ($rows as $r):
                     $total   = $totalPerJadwal[$r['id']] ?? 0;
                     $dinilai = $dinilaiPerJadwal[$r['id']] ?? 0;
                     $pct     = $total > 0 ? (int) round($dinilai / $total * 100) : 0; ?>
-                    <tr class="hover:bg-slate-50">
+                    <tr class="hover:bg-gray-50">
                         <td class="px-6 py-3">
-                            <div class="font-medium text-slate-800"><?= esc($r['paket_kode'] ?? '—') ?></div>
-                            <div class="text-xs text-slate-400"><?= esc($r['paket_nama'] ?? '—') ?></div>
+                            <div class="font-medium text-gray-800"><?= esc($r['paket_kode'] ?? '—') ?></div>
+                            <div class="text-xs text-gray-400"><?= esc($r['paket_nama'] ?? '—') ?></div>
                         </td>
-                        <td class="px-4 py-3 text-slate-600"><?= $tgl($r['tanggal_mulai']) ?></td>
-                        <td class="px-4 py-3 text-slate-600"><?= esc($r['tempat_nama'] ?? '—') ?></td>
+                        <td class="px-4 py-3 text-gray-600"><?= $tgl($r['tanggal_mulai']) ?></td>
+                        <td class="px-4 py-3 text-gray-600"><?= esc($r['tempat_nama'] ?? '—') ?></td>
                         <td class="px-4 py-3">
                             <?php if ($total === 0): ?>
-                                <span class="text-xs text-slate-400">Belum ada peserta</span>
+                                <span class="text-xs text-gray-400">Belum ada peserta</span>
                             <?php else: ?>
                                 <div class="flex items-center gap-2">
-                                    <div class="flex-1 h-2 rounded-full bg-slate-100 overflow-hidden">
+                                    <div class="flex-1 h-2 rounded-full bg-gray-100 overflow-hidden">
                                         <div class="h-full bg-emerald-500" style="width: <?= $pct ?>%"></div>
                                     </div>
-                                    <span class="text-xs text-slate-500 w-16 text-right"><?= $dinilai ?>/<?= $total ?></span>
+                                    <span class="text-xs text-gray-500 w-16 text-right"><?= $dinilai ?>/<?= $total ?></span>
                                 </div>
                             <?php endif; ?>
                         </td>

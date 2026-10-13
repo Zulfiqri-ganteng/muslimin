@@ -157,8 +157,9 @@
         var allOn   = total > 0 && checked === total;
 
         document.querySelectorAll('.js-bulk-count').forEach(function (n) { n.textContent = checked; });
-        document.querySelectorAll('[data-bulk="selected"]').forEach(function (b) { b.classList.toggle('hidden', checked === 0); });
-        document.querySelectorAll('[data-bulk="all"]').forEach(function (b) { b.classList.toggle('hidden', !allOn); });
+        // Atribut hidden (bukan kelas): tombolnya ber-kelas inline-flex, yang di Tailwind v4 menang atas kelas "hidden".
+        document.querySelectorAll('[data-bulk="selected"]').forEach(function (b) { b.hidden = checked === 0; });
+        document.querySelectorAll('[data-bulk="all"]').forEach(function (b) { b.hidden = !allOn; });
 
         var master = document.querySelector('.js-check-all');
         if (master) { master.checked = allOn; }

@@ -21,17 +21,17 @@ $base = site_url('admin/jadwal-ukk/penguji/' . (int) $jadwal['id']);
         di pilihan penilaian pada tahap Penilaian.</p>',
 ]) ?>
 
-<a href="<?= site_url('admin/jadwal-ukk') ?>" class="inline-flex items-center gap-1.5 text-sm text-slate-500 hover:text-slate-700 mb-4">
+<a href="<?= site_url('admin/jadwal-ukk') ?>" class="inline-flex items-center gap-1.5 text-sm text-gray-500 hover:text-gray-700 mb-4">
     <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7"/></svg>
     Kembali ke Jadwal UKK
 </a>
 
 <!-- Info jadwal -->
-<div class="bg-white rounded-2xl border border-slate-200 shadow-sm p-5 mb-5">
+<div class="bg-white rounded-2xl border border-gray-200 shadow-xs p-5 mb-5">
     <div class="flex flex-wrap items-start justify-between gap-3">
         <div>
-            <h2 class="font-bold text-slate-800 text-lg"><?= esc($jadwal['paket_kode'] ?? '—') ?> — <?= esc($jadwal['paket_nama'] ?? '—') ?></h2>
-            <p class="text-sm text-slate-500 mt-0.5">
+            <h2 class="font-bold text-gray-800 text-lg"><?= esc($jadwal['paket_kode'] ?? '—') ?> — <?= esc($jadwal['paket_nama'] ?? '—') ?></h2>
+            <p class="text-sm text-gray-500 mt-0.5">
                 <?= $tgl($jadwal['tanggal_mulai']) ?><?= ! empty($jadwal['tanggal_selesai']) && $jadwal['tanggal_selesai'] !== $jadwal['tanggal_mulai'] ? ' s/d ' . $tgl($jadwal['tanggal_selesai']) : '' ?>
                 <?= ! empty($jadwal['sesi']) ? ' · ' . esc($jadwal['sesi']) : '' ?>
                 <?= ! empty($jadwal['tempat_nama']) ? ' · ' . esc($jadwal['tempat_nama']) : '' ?>
@@ -42,13 +42,13 @@ $base = site_url('admin/jadwal-ukk/penguji/' . (int) $jadwal['id']);
 
 <div class="grid grid-cols-1 lg:grid-cols-3 gap-5">
     <!-- Daftar penguji tertugas -->
-    <div class="lg:col-span-2 bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
-        <div class="px-6 py-4 border-b border-slate-100">
-            <h2 class="font-bold text-slate-800">Penguji Tertugas (<?= count($list) ?>)</h2>
+    <div class="lg:col-span-2 bg-white rounded-2xl border border-gray-200 shadow-xs overflow-hidden">
+        <div class="px-6 py-4 border-b border-gray-100">
+            <h2 class="font-bold text-gray-800">Penguji Tertugas (<?= count($list) ?>)</h2>
         </div>
         <div class="overflow-x-auto">
             <table class="w-full text-sm">
-                <thead class="bg-slate-50 text-slate-500 text-left">
+                <thead class="bg-gray-50 text-gray-500 text-left">
                     <tr>
                         <th class="px-6 py-3 font-semibold">Nama</th>
                         <th class="px-4 py-3 font-semibold w-24">Tipe</th>
@@ -56,24 +56,24 @@ $base = site_url('admin/jadwal-ukk/penguji/' . (int) $jadwal['id']);
                         <th class="px-4 py-3 font-semibold w-16 text-right">Aksi</th>
                     </tr>
                 </thead>
-                <tbody class="divide-y divide-slate-100">
+                <tbody class="divide-y divide-gray-100">
                     <?php if (empty($list)): ?>
-                        <tr><td colspan="4" class="px-6 py-8 text-center text-slate-400">Belum ada penguji ditugaskan.</td></tr>
+                        <tr><td colspan="4" class="px-6 py-8 text-center text-gray-400">Belum ada penguji ditugaskan.</td></tr>
                     <?php else: foreach ($list as $p):
                         $internal = $p['tipe'] === 'internal';
                         $nama     = $internal ? ($p['guru_nama'] ?? '—') : ($p['eksternal_nama'] ?? '—');
                         $sub      = $internal ? ($p['kode_guru'] ?? '') : ($p['eksternal_instansi'] ?? ''); ?>
-                        <tr class="hover:bg-slate-50">
+                        <tr class="hover:bg-gray-50">
                             <td class="px-6 py-3">
-                                <div class="font-medium text-slate-800"><?= esc($nama) ?></div>
-                                <?php if ($sub !== ''): ?><div class="text-xs text-slate-400"><?= esc($sub) ?></div><?php endif; ?>
+                                <div class="font-medium text-gray-800"><?= esc($nama) ?></div>
+                                <?php if ($sub !== ''): ?><div class="text-xs text-gray-400"><?= esc($sub) ?></div><?php endif; ?>
                             </td>
                             <td class="px-4 py-3">
                                 <span class="rounded-full border px-2 py-0.5 text-xs font-semibold <?= $internal ? 'bg-brand-50 text-brand-700 border-brand-200' : 'bg-amber-50 text-amber-700 border-amber-200' ?>">
                                     <?= $internal ? 'Internal' : 'Eksternal' ?>
                                 </span>
                             </td>
-                            <td class="px-4 py-3 text-slate-600"><?= esc(ucfirst($p['peran'])) ?></td>
+                            <td class="px-4 py-3 text-gray-600"><?= esc(ucfirst($p['peran'])) ?></td>
                             <td class="px-4 py-3 text-right">
                                 <a href="<?= $base ?>/hapus/<?= (int) $p['id'] ?>" data-method="post" data-confirm="Lepas penugasan penguji ini?" title="Hapus"
                                    class="inline-flex h-8 w-8 items-center justify-center rounded-lg text-red-500 hover:bg-red-50 transition">
@@ -88,25 +88,25 @@ $base = site_url('admin/jadwal-ukk/penguji/' . (int) $jadwal['id']);
     </div>
 
     <!-- Form tugaskan penguji -->
-    <div class="bg-white rounded-2xl border border-slate-200 shadow-sm p-5" x-data="{ tipe: 'internal' }">
-        <h2 class="font-bold text-slate-800 mb-4">Tugaskan Penguji</h2>
+    <div class="bg-white rounded-2xl border border-gray-200 shadow-xs p-5" x-data="{ tipe: 'internal' }">
+        <h2 class="font-bold text-gray-800 mb-4">Tugaskan Penguji</h2>
         <form method="post" action="<?= $base ?>">
             <?= csrf_field() ?>
             <div class="space-y-4">
                 <div>
-                    <label class="block text-sm font-medium text-slate-600 mb-1">Tipe Penguji</label>
+                    <label class="block text-sm font-medium text-gray-600 mb-1">Tipe Penguji</label>
                     <div class="flex gap-4">
-                        <label class="inline-flex items-center gap-1.5 text-sm text-slate-700">
+                        <label class="inline-flex items-center gap-1.5 text-sm text-gray-700">
                             <input type="radio" name="tipe" value="internal" x-model="tipe" class="text-brand-600 focus:ring-brand-500"> Internal (guru)
                         </label>
-                        <label class="inline-flex items-center gap-1.5 text-sm text-slate-700">
+                        <label class="inline-flex items-center gap-1.5 text-sm text-gray-700">
                             <input type="radio" name="tipe" value="eksternal" x-model="tipe" class="text-brand-600 focus:ring-brand-500"> Eksternal (DUDI)
                         </label>
                     </div>
                 </div>
                 <div x-show="tipe === 'internal'">
-                    <label class="block text-sm font-medium text-slate-600 mb-1">Guru *</label>
-                    <select name="guru_id" class="w-full rounded-lg border border-slate-300 px-3 py-2.5 text-sm focus:border-brand-500 outline-none">
+                    <label class="block text-sm font-medium text-gray-600 mb-1">Guru *</label>
+                    <select name="guru_id" class="w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm focus:border-brand-500 outline-hidden">
                         <option value="">— Pilih guru —</option>
                         <?php foreach ($guruOpts as $id => $lbl): ?>
                             <option value="<?= (int) $id ?>"><?= esc($lbl) ?></option>
@@ -117,8 +117,8 @@ $base = site_url('admin/jadwal-ukk/penguji/' . (int) $jadwal['id']);
                     <?php endif; ?>
                 </div>
                 <div x-show="tipe === 'eksternal'" x-cloak>
-                    <label class="block text-sm font-medium text-slate-600 mb-1">Penguji Eksternal *</label>
-                    <select name="penguji_eksternal_id" class="w-full rounded-lg border border-slate-300 px-3 py-2.5 text-sm focus:border-brand-500 outline-none">
+                    <label class="block text-sm font-medium text-gray-600 mb-1">Penguji Eksternal *</label>
+                    <select name="penguji_eksternal_id" class="w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm focus:border-brand-500 outline-hidden">
                         <option value="">— Pilih penguji —</option>
                         <?php foreach ($eksternalOpts as $id => $lbl): ?>
                             <option value="<?= (int) $id ?>"><?= esc($lbl) ?></option>
@@ -129,8 +129,8 @@ $base = site_url('admin/jadwal-ukk/penguji/' . (int) $jadwal['id']);
                     <?php endif; ?>
                 </div>
                 <div>
-                    <label class="block text-sm font-medium text-slate-600 mb-1">Peran</label>
-                    <select name="peran" class="w-full rounded-lg border border-slate-300 px-3 py-2.5 text-sm focus:border-brand-500 outline-none">
+                    <label class="block text-sm font-medium text-gray-600 mb-1">Peran</label>
+                    <select name="peran" class="w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm focus:border-brand-500 outline-hidden">
                         <option value="anggota">Anggota</option>
                         <option value="ketua">Ketua</option>
                     </select>

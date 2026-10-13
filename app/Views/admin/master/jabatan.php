@@ -68,15 +68,15 @@ foreach ($kategoriList as $k) {
     ]) ?>
 
     <!-- Tabel -->
-    <div class="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
-        <div class="px-6 py-4 border-b border-slate-100 flex items-center justify-between">
-            <h2 class="font-bold text-slate-800">Daftar Jabatan <span class="text-slate-400 font-normal">(<?= $total ?>)</span></h2>
+    <div class="bg-white rounded-2xl border border-gray-200 shadow-xs overflow-hidden">
+        <div class="px-6 py-4 border-b border-gray-100 flex items-center justify-between">
+            <h2 class="font-bold text-gray-800">Daftar Jabatan <span class="text-gray-400 font-normal">(<?= $total ?>)</span></h2>
         </div>
         <div class="overflow-x-auto">
             <table class="w-full text-sm">
-                <thead class="bg-slate-50 text-slate-500 text-left">
+                <thead class="bg-gray-50 text-gray-500 text-left">
                     <tr>
-                        <th class="pl-6 pr-2 py-3 w-10"><input type="checkbox" title="Pilih semua di halaman ini" class="js-check-all rounded border-slate-300 text-brand-600 focus:ring-brand-500"></th>
+                        <th class="pl-6 pr-2 py-3 w-10"><input type="checkbox" title="Pilih semua di halaman ini" class="js-check-all rounded-sm border-gray-300 text-brand-600 focus:ring-brand-500"></th>
                         <th class="px-4 py-3 font-semibold w-28">Kode</th>
                         <th class="px-4 py-3 font-semibold">Nama Jabatan</th>
                         <th class="px-4 py-3 font-semibold w-32">Kategori</th>
@@ -86,17 +86,17 @@ foreach ($kategoriList as $k) {
                         <th class="px-4 py-3 font-semibold w-28 text-right">Aksi</th>
                     </tr>
                 </thead>
-                <tbody class="divide-y divide-slate-100">
+                <tbody class="divide-y divide-gray-100">
                     <?php if (empty($rows)): ?>
-                        <tr><td colspan="8" class="px-6 py-10 text-center text-slate-400">Belum ada data jabatan. Tambah manual atau import Excel.</td></tr>
+                        <tr><td colspan="8" class="px-6 py-10 text-center text-gray-400">Belum ada data jabatan. Tambah manual atau import Excel.</td></tr>
                     <?php else: foreach ($rows as $r): ?>
-                        <tr class="hover:bg-slate-50">
-                            <td class="pl-6 pr-2 py-3"><input type="checkbox" class="row-check rounded border-slate-300 text-brand-600 focus:ring-brand-500" value="<?= (int) $r['id'] ?>"></td>
+                        <tr class="hover:bg-gray-50">
+                            <td class="pl-6 pr-2 py-3"><input type="checkbox" class="row-check rounded-sm border-gray-300 text-brand-600 focus:ring-brand-500" value="<?= (int) $r['id'] ?>"></td>
                             <td class="px-4 py-3 font-bold text-brand-700"><?= esc($r['kode']) ?></td>
                             <td class="px-4 py-3">
-                                <div class="font-medium text-slate-800"><?= esc($r['nama']) ?></div>
+                                <div class="font-medium text-gray-800"><?= esc($r['nama']) ?></div>
                                 <?php if (! empty($r['keterangan'])): ?>
-                                    <div class="text-xs text-slate-400"><?= esc($r['keterangan']) ?></div>
+                                    <div class="text-xs text-gray-400"><?= esc($r['keterangan']) ?></div>
                                 <?php endif; ?>
                                 <?php if (! empty($r['is_struktural'])): ?>
                                     <span class="inline-flex items-center gap-1 mt-1 rounded-full bg-amber-50 text-amber-700 border border-amber-200 px-2 py-0.5 text-[11px] font-semibold"
@@ -111,13 +111,13 @@ foreach ($kategoriList as $k) {
                                 <?php endif; ?>
                             </td>
                             <td class="px-4 py-3">
-                                <span class="rounded-full bg-slate-100 text-slate-600 px-2.5 py-1 text-xs font-medium"><?= esc($labelKategori[$r['kategori']] ?? $r['kategori']) ?></span>
+                                <span class="rounded-full bg-gray-100 text-gray-600 px-2.5 py-1 text-xs font-medium"><?= esc($labelKategori[$r['kategori']] ?? $r['kategori']) ?></span>
                             </td>
-                            <td class="px-4 py-3 text-slate-600"><?= $r['induk_nama'] !== null ? esc($r['induk_nama']) : '<span class="text-slate-300">—</span>' ?></td>
-                            <td class="px-4 py-3 text-slate-600"><?= $r['jurusan_kode'] !== null ? esc($r['jurusan_kode']) : '<span class="text-slate-300">—</span>' ?></td>
+                            <td class="px-4 py-3 text-gray-600"><?= $r['induk_nama'] !== null ? esc($r['induk_nama']) : '<span class="text-gray-300">—</span>' ?></td>
+                            <td class="px-4 py-3 text-gray-600"><?= $r['jurusan_kode'] !== null ? esc($r['jurusan_kode']) : '<span class="text-gray-300">—</span>' ?></td>
                             <td class="px-4 py-3 text-center">
                                 <?php $n = $jumlahGuru[(int) $r['id']] ?? 0; ?>
-                                <span class="<?= $n > 0 ? 'text-slate-700 font-semibold' : 'text-slate-300' ?>"><?= $n ?></span>
+                                <span class="<?= $n > 0 ? 'text-gray-700 font-semibold' : 'text-gray-300' ?>"><?= $n ?></span>
                             </td>
                             <td class="px-4 py-3 text-right whitespace-nowrap">
                                 <?= view('admin/master/partials/row_actions', [
@@ -132,7 +132,7 @@ foreach ($kategoriList as $k) {
             </table>
         </div>
         <?php if ($pager): ?>
-            <div class="px-6 py-4 border-t border-slate-100">
+            <div class="px-6 py-4 border-t border-gray-100">
                 <?= $pager->only(['q', 'kategori', 'per'])->links('default', 'admin') ?>
             </div>
         <?php endif; ?>
@@ -142,88 +142,88 @@ foreach ($kategoriList as $k) {
     <div x-show="open" x-cloak x-transition.opacity.duration.200ms class="fixed inset-0 z-50 flex items-center justify-center p-4">
         <div class="absolute inset-0 bg-black/40" @click="open=false"></div>
         <div class="relative bg-white rounded-2xl shadow-xl w-full max-w-lg p-6 max-h-[90vh] overflow-y-auto">
-            <h3 class="font-bold text-lg text-slate-800 mb-4" x-text="mode==='add' ? 'Tambah Jabatan' : 'Edit Jabatan'"></h3>
+            <h3 class="font-bold text-lg text-gray-800 mb-4" x-text="mode==='add' ? 'Tambah Jabatan' : 'Edit Jabatan'"></h3>
             <form method="post" :action="actionUrl">
                 <?= csrf_field() ?>
                 <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div>
-                        <label class="block text-sm font-medium text-slate-600 mb-1">Kode *</label>
+                        <label class="block text-sm font-medium text-gray-600 mb-1">Kode *</label>
                         <input type="text" name="kode" x-model="form.kode" maxlength="30" required
-                               class="w-full rounded-lg border border-slate-300 px-3 py-2.5 text-sm uppercase focus:border-brand-500 focus:ring-2 focus:ring-brand-500/20 outline-none">
+                               class="w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm uppercase focus:border-brand-500 focus:ring-2 focus:ring-brand-500/20 outline-hidden">
                     </div>
                     <div>
-                        <label class="block text-sm font-medium text-slate-600 mb-1">Kategori</label>
+                        <label class="block text-sm font-medium text-gray-600 mb-1">Kategori</label>
                         <select name="kategori" x-model="form.kategori"
-                                class="w-full rounded-lg border border-slate-300 px-3 py-2.5 text-sm focus:border-brand-500 outline-none">
+                                class="w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm focus:border-brand-500 outline-hidden">
                             <?php foreach ($opsiKategori as $val => $label): ?>
                                 <option value="<?= esc($val, 'attr') ?>"><?= esc($label) ?></option>
                             <?php endforeach; ?>
                         </select>
                     </div>
                     <div class="sm:col-span-2">
-                        <label class="block text-sm font-medium text-slate-600 mb-1">Nama Jabatan *</label>
+                        <label class="block text-sm font-medium text-gray-600 mb-1">Nama Jabatan *</label>
                         <input type="text" name="nama" x-model="form.nama" maxlength="150" required
-                               class="w-full rounded-lg border border-slate-300 px-3 py-2.5 text-sm focus:border-brand-500 focus:ring-2 focus:ring-brand-500/20 outline-none">
+                               class="w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm focus:border-brand-500 focus:ring-2 focus:ring-brand-500/20 outline-hidden">
                     </div>
                     <div>
-                        <label class="block text-sm font-medium text-slate-600 mb-1">Induk Jabatan</label>
+                        <label class="block text-sm font-medium text-gray-600 mb-1">Induk Jabatan</label>
                         <select name="parent_id" x-model="form.parent_id"
-                                class="w-full rounded-lg border border-slate-300 px-3 py-2.5 text-sm focus:border-brand-500 outline-none">
+                                class="w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm focus:border-brand-500 outline-hidden">
                             <option value="">— Tanpa induk —</option>
                             <?php foreach ($indukOpts as $id => $nama): ?>
                                 <!-- jabatan tak boleh menjadi induk bagi dirinya sendiri -->
                                 <option value="<?= (int) $id ?>" x-show="String(form.id) !== '<?= (int) $id ?>'"><?= esc($nama) ?></option>
                             <?php endforeach; ?>
                         </select>
-                        <p class="text-xs text-slate-400 mt-1">Membentuk hierarki jabatan.</p>
+                        <p class="text-xs text-gray-400 mt-1">Membentuk hierarki jabatan.</p>
                     </div>
                     <div>
-                        <label class="block text-sm font-medium text-slate-600 mb-1">Jurusan</label>
+                        <label class="block text-sm font-medium text-gray-600 mb-1">Jurusan</label>
                         <select name="jurusan_id" x-model="form.jurusan_id"
-                                class="w-full rounded-lg border border-slate-300 px-3 py-2.5 text-sm focus:border-brand-500 outline-none">
+                                class="w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm focus:border-brand-500 outline-hidden">
                             <option value="">— Tidak terkait jurusan —</option>
                             <?php foreach ($jurusanOpts as $id => $nama): ?>
                                 <option value="<?= (int) $id ?>"><?= esc($nama) ?></option>
                             <?php endforeach; ?>
                         </select>
-                        <p class="text-xs text-slate-400 mt-1">Mis. Ketua Program TKJ.</p>
+                        <p class="text-xs text-gray-400 mt-1">Mis. Ketua Program TKJ.</p>
                     </div>
                     <div>
-                        <label class="block text-sm font-medium text-slate-600 mb-1">Level</label>
+                        <label class="block text-sm font-medium text-gray-600 mb-1">Level</label>
                         <input type="number" name="level" x-model="form.level" min="1" max="99"
-                               class="w-full rounded-lg border border-slate-300 px-3 py-2.5 text-sm focus:border-brand-500 outline-none">
-                        <p class="text-xs text-slate-400 mt-1">1 = paling tinggi, untuk urutan tampil.</p>
+                               class="w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm focus:border-brand-500 outline-hidden">
+                        <p class="text-xs text-gray-400 mt-1">1 = paling tinggi, untuk urutan tampil.</p>
                     </div>
                     <div class="sm:col-span-2">
-                        <label class="flex items-start gap-2.5 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2.5 cursor-pointer">
+                        <label class="flex items-start gap-2.5 rounded-lg border border-gray-200 bg-gray-50 px-3 py-2.5 cursor-pointer">
                             <input type="hidden" name="is_struktural" value="0">
                             <input type="checkbox" name="is_struktural" value="1" x-model="form.is_struktural"
-                                   class="mt-0.5 rounded border-slate-300 text-brand-600 focus:ring-brand-500">
+                                   class="mt-0.5 rounded-sm border-gray-300 text-brand-600 focus:ring-brand-500">
                             <span class="text-sm">
-                                <span class="font-medium text-slate-700">Jabatan struktural</span>
-                                <span class="block text-xs text-slate-500">Wajib hadir walau tidak punya jadwal mengajar. Penyandangnya otomatis muncul di panel <b>Kehadiran Kerja</b> pada halaman Absensi, termasuk Sabtu/Minggu.</span>
+                                <span class="font-medium text-gray-700">Jabatan struktural</span>
+                                <span class="block text-xs text-gray-500">Wajib hadir walau tidak punya jadwal mengajar. Penyandangnya otomatis muncul di panel <b>Kehadiran Kerja</b> pada halaman Absensi, termasuk Sabtu/Minggu.</span>
                             </span>
                         </label>
                     </div>
                     <div class="sm:col-span-2">
-                        <label class="flex items-start gap-2.5 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2.5 cursor-pointer">
+                        <label class="flex items-start gap-2.5 rounded-lg border border-gray-200 bg-gray-50 px-3 py-2.5 cursor-pointer">
                             <input type="hidden" name="hadir_harian" value="0">
                             <input type="checkbox" name="hadir_harian" value="1" x-model="form.hadir_harian"
-                                   class="mt-0.5 rounded border-slate-300 text-brand-600 focus:ring-brand-500">
+                                   class="mt-0.5 rounded-sm border-gray-300 text-brand-600 focus:ring-brand-500">
                             <span class="text-sm">
-                                <span class="font-medium text-slate-700">Wajib hadir harian (non-struktural)</span>
-                                <span class="block text-xs text-slate-500">Untuk staf seperti <b>Tata Usaha</b>: penyandangnya otomatis diisikan ke panel <b>Kehadiran Kerja</b> tiap hari dan tampil di bagian "Staf TU &amp; lainnya" pada pesan WhatsApp.</span>
+                                <span class="font-medium text-gray-700">Wajib hadir harian (non-struktural)</span>
+                                <span class="block text-xs text-gray-500">Untuk staf seperti <b>Tata Usaha</b>: penyandangnya otomatis diisikan ke panel <b>Kehadiran Kerja</b> tiap hari dan tampil di bagian "Staf TU &amp; lainnya" pada pesan WhatsApp.</span>
                             </span>
                         </label>
                     </div>
                     <div class="sm:col-span-2">
-                        <label class="block text-sm font-medium text-slate-600 mb-1">Keterangan</label>
+                        <label class="block text-sm font-medium text-gray-600 mb-1">Keterangan</label>
                         <input type="text" name="keterangan" x-model="form.keterangan" maxlength="255"
-                               class="w-full rounded-lg border border-slate-300 px-3 py-2.5 text-sm focus:border-brand-500 outline-none">
+                               class="w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm focus:border-brand-500 outline-hidden">
                     </div>
                 </div>
                 <div class="flex justify-end gap-2 mt-6">
-                    <button type="button" @click="open=false" class="rounded-lg border border-slate-300 text-slate-600 text-sm font-semibold px-4 py-2.5 hover:bg-slate-50">Batal</button>
+                    <button type="button" @click="open=false" class="rounded-lg border border-gray-300 text-gray-600 text-sm font-semibold px-4 py-2.5 hover:bg-gray-50">Batal</button>
                     <button class="rounded-lg bg-brand-700 hover:bg-brand-800 text-white text-sm font-semibold px-5 py-2.5">Simpan</button>
                 </div>
             </form>

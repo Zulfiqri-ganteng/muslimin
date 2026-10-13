@@ -12,7 +12,7 @@ $tgl  = static fn ($d) => $d ? date('d/m/Y', strtotime((string) $d)) : '—';
 $num  = static fn ($v) => $v !== null ? number_format((float) $v, 1) : '';
 $saveUrl = site_url('admin/penilaian-ukk/jadwal/' . (int) $jadwal['id'] . '/simpan');
 $warnaStatus = [
-    'terdaftar'   => 'bg-slate-100 text-slate-600 border-slate-200',
+    'terdaftar'   => 'bg-gray-100 text-gray-600 border-gray-200',
     'hadir'       => 'bg-brand-50 text-brand-700 border-brand-200',
     'tidak_hadir' => 'bg-amber-50 text-amber-700 border-amber-200',
     'lulus'       => 'bg-emerald-50 text-emerald-700 border-emerald-200',
@@ -30,15 +30,15 @@ $warnaStatus = [
         soal. Kolom <b>Nilai Akhir</b> peserta = rata-rata seluruh penguji yang sudah mengisi.</p>',
 ]) ?>
 
-<a href="<?= site_url('admin/penilaian-ukk') ?>" class="inline-flex items-center gap-1.5 text-sm text-slate-500 hover:text-slate-700 mb-4">
+<a href="<?= site_url('admin/penilaian-ukk') ?>" class="inline-flex items-center gap-1.5 text-sm text-gray-500 hover:text-gray-700 mb-4">
     <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7"/></svg>
     Kembali ke Penilaian UKK
 </a>
 
 <!-- Info jadwal -->
-<div class="bg-white rounded-2xl border border-slate-200 shadow-sm p-5 mb-5">
-    <h2 class="font-bold text-slate-800 text-lg"><?= esc($jadwal['paket_kode'] ?? '—') ?> — <?= esc($jadwal['paket_nama'] ?? '—') ?></h2>
-    <p class="text-sm text-slate-500 mt-0.5">
+<div class="bg-white rounded-2xl border border-gray-200 shadow-xs p-5 mb-5">
+    <h2 class="font-bold text-gray-800 text-lg"><?= esc($jadwal['paket_kode'] ?? '—') ?> — <?= esc($jadwal['paket_nama'] ?? '—') ?></h2>
+    <p class="text-sm text-gray-500 mt-0.5">
         <?= $tgl($jadwal['tanggal_mulai']) ?><?= ! empty($jadwal['tempat_nama']) ? ' · ' . esc($jadwal['tempat_nama']) : '' ?>
         <?= $paket ? ' · KKM ' . esc((string) $paket['kkm']) : '' ?>
     </p>
@@ -50,7 +50,7 @@ $warnaStatus = [
         <a href="<?= site_url('admin/jadwal-ukk/penguji/' . (int) $jadwal['id']) ?>" class="font-semibold underline">Tugaskan penguji dulu</a>.
     </div>
 <?php elseif (empty($peserta)): ?>
-    <div class="bg-white rounded-2xl border border-slate-200 shadow-sm p-8 text-center text-slate-400">
+    <div class="bg-white rounded-2xl border border-gray-200 shadow-xs p-8 text-center text-gray-400">
         Belum ada peserta terdaftar pada jadwal ini.
         <a href="<?= site_url('admin/peserta-ukk/daftarkan') ?>" class="text-brand-600 font-semibold hover:underline">Daftarkan peserta</a>.
     </div>
@@ -66,32 +66,32 @@ $warnaStatus = [
               this.open = true;
           } }">
 
-        <div class="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
-            <div class="px-6 py-4 border-b border-slate-100">
-                <h2 class="font-bold text-slate-800">Matriks Nilai (<?= count($peserta) ?> peserta)</h2>
+        <div class="bg-white rounded-2xl border border-gray-200 shadow-xs overflow-hidden">
+            <div class="px-6 py-4 border-b border-gray-100">
+                <h2 class="font-bold text-gray-800">Matriks Nilai (<?= count($peserta) ?> peserta)</h2>
             </div>
             <div class="overflow-x-auto">
                 <table class="w-full text-sm">
-                    <thead class="bg-slate-50 text-slate-500 text-left">
+                    <thead class="bg-gray-50 text-gray-500 text-left">
                         <tr>
                             <th class="px-6 py-3 font-semibold">Peserta</th>
                             <?php foreach ($pengujiList as $pg):
                                 $pgLabel = $pg['tipe'] === 'internal' ? ($pg['guru_nama'] ?? '—') : ($pg['eksternal_nama'] ?? '—'); ?>
                                 <th class="px-3 py-3 font-semibold text-center w-28">
                                     <?= esc($pgLabel) ?>
-                                    <div class="text-[10px] font-normal text-slate-400"><?= $pg['tipe'] === 'internal' ? 'Internal' : 'Eksternal' ?></div>
+                                    <div class="text-[10px] font-normal text-gray-400"><?= $pg['tipe'] === 'internal' ? 'Internal' : 'Eksternal' ?></div>
                                 </th>
                             <?php endforeach; ?>
                             <th class="px-4 py-3 font-semibold w-24 text-right">Nilai Akhir</th>
                             <th class="px-4 py-3 font-semibold w-28">Status</th>
                         </tr>
                     </thead>
-                    <tbody class="divide-y divide-slate-100">
+                    <tbody class="divide-y divide-gray-100">
                         <?php foreach ($peserta as $p): ?>
-                            <tr class="hover:bg-slate-50">
+                            <tr class="hover:bg-gray-50">
                                 <td class="px-6 py-3">
-                                    <div class="font-medium text-slate-800"><?= esc($p['siswa_nama'] ?? '—') ?></div>
-                                    <div class="text-xs text-slate-400 font-mono"><?= esc($p['no_peserta'] ?? '—') ?></div>
+                                    <div class="font-medium text-gray-800"><?= esc($p['siswa_nama'] ?? '—') ?></div>
+                                    <div class="text-xs text-gray-400 font-mono"><?= esc($p['no_peserta'] ?? '—') ?></div>
                                 </td>
                                 <?php foreach ($pengujiList as $pg):
                                     $pengujiId = (int) ($pg['tipe'] === 'internal' ? $pg['guru_id'] : $pg['penguji_eksternal_id']);
@@ -106,14 +106,14 @@ $warnaStatus = [
                                     <td class="px-3 py-3 text-center">
                                         <button type="button"
                                                 @click="openNilai(<?= (int) $p['id'] ?>, '<?= $pg['tipe'] ?>', <?= $pg['tipe'] === 'internal' ? $pengujiId : 'null' ?>, <?= $pg['tipe'] === 'eksternal' ? $pengujiId : 'null' ?>, '<?= esc($cellLabel, 'js') ?>', <?= htmlspecialchars($existingJs, ENT_QUOTES) ?>)"
-                                                class="<?= $n ? 'text-brand-700 font-semibold hover:underline' : 'text-slate-300 hover:text-brand-600 text-xs' ?>">
+                                                class="<?= $n ? 'text-brand-700 font-semibold hover:underline' : 'text-gray-300 hover:text-brand-600 text-xs' ?>">
                                             <?= $n ? $num($n['nilai_akhir']) : 'Isi' ?>
                                         </button>
                                     </td>
                                 <?php endforeach; ?>
-                                <td class="px-4 py-3 text-right font-semibold text-slate-700"><?= $p['nilai_akhir'] !== null ? $num($p['nilai_akhir']) : '—' ?></td>
+                                <td class="px-4 py-3 text-right font-semibold text-gray-700"><?= $p['nilai_akhir'] !== null ? $num($p['nilai_akhir']) : '—' ?></td>
                                 <td class="px-4 py-3">
-                                    <span class="rounded-full border px-2.5 py-1 text-xs font-semibold <?= $warnaStatus[$p['status']] ?? 'bg-slate-100 text-slate-500 border-slate-200' ?>"><?= esc(ucfirst(str_replace('_', ' ', $p['status']))) ?></span>
+                                    <span class="rounded-full border px-2.5 py-1 text-xs font-semibold <?= $warnaStatus[$p['status']] ?? 'bg-gray-100 text-gray-500 border-gray-200' ?>"><?= esc(ucfirst(str_replace('_', ' ', $p['status']))) ?></span>
                                 </td>
                             </tr>
                         <?php endforeach; ?>
@@ -126,8 +126,8 @@ $warnaStatus = [
         <div x-show="open" x-cloak x-transition.opacity.duration.200ms class="fixed inset-0 z-50 flex items-center justify-center p-4">
             <div class="absolute inset-0 bg-black/40" @click="open=false"></div>
             <div class="relative bg-white rounded-2xl shadow-xl w-full max-w-lg p-6 max-h-[90vh] overflow-y-auto">
-                <h3 class="font-bold text-lg text-slate-800 mb-1">Isi Nilai</h3>
-                <p class="text-sm text-slate-500 mb-4" x-text="label"></p>
+                <h3 class="font-bold text-lg text-gray-800 mb-1">Isi Nilai</h3>
+                <p class="text-sm text-gray-500 mb-4" x-text="label"></p>
                 <form method="post" action="<?= $saveUrl ?>">
                     <?= csrf_field() ?>
                     <input type="hidden" name="peserta_ukk_id" x-model="form.peserta_ukk_id">
@@ -136,41 +136,41 @@ $warnaStatus = [
                     <input type="hidden" name="penguji_eksternal_id" x-model="form.penguji_eksternal_id">
                     <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
                         <div>
-                            <label class="block text-sm font-medium text-slate-600 mb-1">Persiapan Kerja</label>
-                            <input type="number" name="persiapan_skor" x-model="form.persiapan_skor" min="0" max="100" step="0.01" class="w-full rounded-lg border border-slate-300 px-3 py-2.5 text-sm focus:border-brand-500 outline-none">
+                            <label class="block text-sm font-medium text-gray-600 mb-1">Persiapan Kerja</label>
+                            <input type="number" name="persiapan_skor" x-model="form.persiapan_skor" min="0" max="100" step="0.01" class="w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm focus:border-brand-500 outline-hidden">
                         </div>
                         <div>
-                            <label class="block text-sm font-medium text-slate-600 mb-1">Proses</label>
-                            <input type="number" name="proses_skor" x-model="form.proses_skor" min="0" max="100" step="0.01" class="w-full rounded-lg border border-slate-300 px-3 py-2.5 text-sm focus:border-brand-500 outline-none">
+                            <label class="block text-sm font-medium text-gray-600 mb-1">Proses</label>
+                            <input type="number" name="proses_skor" x-model="form.proses_skor" min="0" max="100" step="0.01" class="w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm focus:border-brand-500 outline-hidden">
                         </div>
                         <div>
-                            <label class="block text-sm font-medium text-slate-600 mb-1">Hasil Kerja</label>
-                            <input type="number" name="hasil_skor" x-model="form.hasil_skor" min="0" max="100" step="0.01" class="w-full rounded-lg border border-slate-300 px-3 py-2.5 text-sm focus:border-brand-500 outline-none">
+                            <label class="block text-sm font-medium text-gray-600 mb-1">Hasil Kerja</label>
+                            <input type="number" name="hasil_skor" x-model="form.hasil_skor" min="0" max="100" step="0.01" class="w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm focus:border-brand-500 outline-hidden">
                         </div>
                         <div>
-                            <label class="block text-sm font-medium text-slate-600 mb-1">Sikap Kerja</label>
-                            <input type="number" name="sikap_skor" x-model="form.sikap_skor" min="0" max="100" step="0.01" class="w-full rounded-lg border border-slate-300 px-3 py-2.5 text-sm focus:border-brand-500 outline-none">
+                            <label class="block text-sm font-medium text-gray-600 mb-1">Sikap Kerja</label>
+                            <input type="number" name="sikap_skor" x-model="form.sikap_skor" min="0" max="100" step="0.01" class="w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm focus:border-brand-500 outline-hidden">
                         </div>
                         <div>
-                            <label class="block text-sm font-medium text-slate-600 mb-1">Waktu</label>
-                            <input type="number" name="waktu_skor" x-model="form.waktu_skor" min="0" max="100" step="0.01" class="w-full rounded-lg border border-slate-300 px-3 py-2.5 text-sm focus:border-brand-500 outline-none">
+                            <label class="block text-sm font-medium text-gray-600 mb-1">Waktu</label>
+                            <input type="number" name="waktu_skor" x-model="form.waktu_skor" min="0" max="100" step="0.01" class="w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm focus:border-brand-500 outline-hidden">
                         </div>
                         <div>
-                            <label class="block text-sm font-medium text-slate-600 mb-1">Tanggal Nilai</label>
-                            <input type="date" name="tanggal_nilai" x-model="form.tanggal_nilai" class="w-full rounded-lg border border-slate-300 px-3 py-2.5 text-sm focus:border-brand-500 outline-none">
+                            <label class="block text-sm font-medium text-gray-600 mb-1">Tanggal Nilai</label>
+                            <input type="date" name="tanggal_nilai" x-model="form.tanggal_nilai" class="w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm focus:border-brand-500 outline-hidden">
                         </div>
                         <div class="sm:col-span-2">
-                            <label class="block text-sm font-medium text-slate-600 mb-1">Keterangan</label>
-                            <input type="text" name="keterangan" x-model="form.keterangan" maxlength="255" class="w-full rounded-lg border border-slate-300 px-3 py-2.5 text-sm focus:border-brand-500 outline-none">
+                            <label class="block text-sm font-medium text-gray-600 mb-1">Keterangan</label>
+                            <input type="text" name="keterangan" x-model="form.keterangan" maxlength="255" class="w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm focus:border-brand-500 outline-hidden">
                         </div>
                     </div>
                     <?php if ($paket): ?>
-                        <p class="text-xs text-slate-400 mt-3">Bobot: Persiapan <?= esc((string) $paket['bobot_persiapan']) ?>% ·
+                        <p class="text-xs text-gray-400 mt-3">Bobot: Persiapan <?= esc((string) $paket['bobot_persiapan']) ?>% ·
                             Proses <?= esc((string) $paket['bobot_proses']) ?>% · Hasil <?= esc((string) $paket['bobot_hasil']) ?>% ·
                             Sikap <?= esc((string) $paket['bobot_sikap']) ?>% · Waktu <?= esc((string) $paket['bobot_waktu']) ?>%</p>
                     <?php endif; ?>
                     <div class="flex justify-end gap-2 mt-6">
-                        <button type="button" @click="open=false" class="rounded-lg border border-slate-300 text-slate-600 text-sm font-semibold px-4 py-2.5 hover:bg-slate-50">Batal</button>
+                        <button type="button" @click="open=false" class="rounded-lg border border-gray-300 text-gray-600 text-sm font-semibold px-4 py-2.5 hover:bg-gray-50">Batal</button>
                         <button class="rounded-lg bg-brand-700 hover:bg-brand-800 text-white text-sm font-semibold px-5 py-2.5">Simpan Nilai</button>
                     </div>
                 </form>

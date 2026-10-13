@@ -21,7 +21,7 @@
 <?php endif; ?>
 
 <?php if (empty($grouped)): ?>
-    <div class="bg-white rounded-2xl border border-slate-200 shadow-sm p-10 text-center text-slate-400">
+    <div class="bg-white rounded-2xl border border-gray-200 shadow-xs p-10 text-center text-gray-400">
         Belum ada penugasan. Atur di menu <a href="<?= site_url('admin/master/pengampu') ?>" class="text-brand-600 underline">Penugasan</a>.
     </div>
 <?php else: ?>
@@ -32,15 +32,15 @@
             elseif ($total < $max)  { $badge = 'bg-amber-100 text-amber-700';   $stat = 'Kurang'; }
             else                    { $badge = 'bg-emerald-100 text-emerald-700'; $stat = 'Pas'; }
         ?>
-            <div class="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
-                <div class="px-5 py-3.5 border-b border-slate-100 flex items-center justify-between gap-3">
+            <div class="bg-white rounded-2xl border border-gray-200 shadow-xs overflow-hidden">
+                <div class="px-5 py-3.5 border-b border-gray-100 flex items-center justify-between gap-3">
                     <div class="min-w-0">
-                        <p class="font-bold text-slate-800 truncate"><span class="text-slate-400 font-normal"><?= esc($g['kode_guru']) ?></span> · <?= esc($g['guru_nama']) ?></p>
+                        <p class="font-bold text-gray-800 truncate"><span class="text-gray-400 font-normal"><?= esc($g['kode_guru']) ?></span> · <?= esc($g['guru_nama']) ?></p>
                     </div>
                     <div class="flex items-center gap-2 shrink-0">
-                        <span class="text-sm text-slate-500">Total <b class="text-slate-800"><?= $total ?></b> / <?= $max ?> JP</span>
+                        <span class="text-sm text-gray-500">Total <b class="text-gray-800"><?= $total ?></b> / <?= $max ?> JP</span>
                         <span class="inline-flex rounded-full px-2.5 py-0.5 text-xs font-semibold <?= $badge ?>"><?= $stat ?></span>
-                        <span class="text-slate-300">|</span>
+                        <span class="text-gray-300">|</span>
                         <a href="<?= site_url('admin/cetak/jadwal-guru/' . $g['guru_id'] . '/pdf') ?>" target="_blank" title="Jadwal guru (PDF)" class="inline-flex h-8 w-8 items-center justify-center rounded-lg text-red-500 hover:bg-red-50 transition">
                             <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
                         </a>
@@ -50,18 +50,18 @@
                     </div>
                 </div>
                 <table class="w-full text-sm">
-                    <thead class="bg-slate-50 text-slate-500 text-left">
+                    <thead class="bg-gray-50 text-gray-500 text-left">
                         <tr>
                             <th class="px-5 py-2 font-semibold">Mata Pelajaran</th>
                             <th class="px-5 py-2 font-semibold w-40">Kelas</th>
                             <th class="px-5 py-2 font-semibold w-24 text-right">JP</th>
                         </tr>
                     </thead>
-                    <tbody class="divide-y divide-slate-100">
+                    <tbody class="divide-y divide-gray-100">
                         <?php foreach ($g['items'] as $it): ?>
                             <tr>
                                 <td class="px-5 py-2"><?= esc($it['mapel']) ?></td>
-                                <td class="px-5 py-2 text-slate-500"><?= esc($it['kelas']) ?></td>
+                                <td class="px-5 py-2 text-gray-500"><?= esc($it['kelas']) ?></td>
                                 <td class="px-5 py-2 text-right font-semibold"><?= (int) $it['jp'] ?></td>
                             </tr>
                         <?php endforeach; ?>

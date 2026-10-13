@@ -20,7 +20,7 @@ document.addEventListener('alpine:init', function () {
         if (e) { e.textContent = teks; }
     }
     var KELAS_AKTIF = ['bg-brand-500', 'text-white', 'font-semibold'];
-    var KELAS_MATI = ['bg-slate-200'];
+    var KELAS_MATI = ['bg-gray-200'];
     var KELAS_KHUSUS = ['ring-2', 'ring-inset', 'ring-amber-400'];
 
     Alpine.data('koreksiGrid', function () {

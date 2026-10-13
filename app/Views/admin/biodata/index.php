@@ -68,7 +68,7 @@ $warna = [
     'menunggu'  => ['titik' => 'bg-brand-500',    'teks' => 'text-brand-700',    'latar' => 'bg-brand-50',    'garis' => 'border-brand-200',    'aktif' => 'bg-brand-600', 'cincin' => 'ring-brand-300'],
     'perbaikan' => ['titik' => 'bg-amber-500',   'teks' => 'text-amber-800',   'latar' => 'bg-amber-50',   'garis' => 'border-amber-200',   'aktif' => 'bg-amber-500', 'cincin' => 'ring-amber-300'],
     'disetujui' => ['titik' => 'bg-emerald-500', 'teks' => 'text-emerald-700', 'latar' => 'bg-emerald-50', 'garis' => 'border-emerald-200', 'aktif' => 'bg-emerald-600', 'cincin' => 'ring-emerald-300'],
-    'belum'     => ['titik' => 'bg-slate-400',   'teks' => 'text-slate-700',   'latar' => 'bg-slate-50',   'garis' => 'border-slate-200',   'aktif' => 'bg-slate-600', 'cincin' => 'ring-slate-300'],
+    'belum'     => ['titik' => 'bg-gray-400',   'teks' => 'text-gray-700',   'latar' => 'bg-gray-50',   'garis' => 'border-gray-200',   'aktif' => 'bg-gray-600', 'cincin' => 'ring-gray-300'],
     'kelas'     => ['titik' => 'bg-brand-500',   'teks' => 'text-brand-700',   'latar' => 'bg-brand-50',   'garis' => 'border-brand-200',   'aktif' => 'bg-brand-600', 'cincin' => 'ring-brand-300'],
 ];
 $tabs = [
@@ -104,13 +104,13 @@ $waSvg = '<svg class="w-4 h-4" viewBox="0 0 24 24" fill="currentColor" aria-hidd
 /** Keadaan kosong yang ramah: ikon + judul + saran langkah berikutnya. */
 $kosong = static function (string $judul, string $saran, string $aksiHtml = '') use ($ikon, $IKON): string {
     return '<div class="px-6 py-12 text-center">'
-        . '<div class="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-slate-100 text-slate-400">' . $ikon($IKON['kosong'], 'w-7 h-7') . '</div>'
-        . '<p class="mt-3 font-bold text-slate-700">' . $judul . '</p>'
-        . '<p class="mt-1 text-sm text-slate-500 max-w-md mx-auto">' . $saran . '</p>'
+        . '<div class="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-gray-100 text-gray-400">' . $ikon($IKON['kosong'], 'w-7 h-7') . '</div>'
+        . '<p class="mt-3 font-bold text-gray-700">' . $judul . '</p>'
+        . '<p class="mt-1 text-sm text-gray-500 max-w-md mx-auto">' . $saran . '</p>'
         . ($aksiHtml !== '' ? '<div class="mt-4 flex flex-wrap justify-center gap-2">' . $aksiHtml . '</div>' : '')
         . '</div>';
 };
-$tombolSekunder = 'inline-flex items-center justify-center gap-1.5 rounded-lg border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50 transition';
+$tombolSekunder = 'inline-flex items-center justify-center gap-1.5 rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-semibold text-gray-700 hover:bg-gray-50 transition';
 ?>
 <?= $this->extend('layouts/admin') ?>
 <?= $this->section('content') ?>
@@ -147,16 +147,16 @@ $tombolSekunder = 'inline-flex items-center justify-center gap-1.5 rounded-lg bo
     <?php endif; ?>
 
     <?php if ($ringkas['menunggu'] > 0): ?>
-        <div class="flex flex-col sm:flex-row sm:items-center gap-3 rounded-2xl border border-brand-200 bg-gradient-to-r from-brand-50 to-white px-5 py-4">
+        <div class="flex flex-col sm:flex-row sm:items-center gap-3 rounded-2xl border border-brand-200 bg-linear-to-r from-brand-50 to-white px-5 py-4">
             <div class="flex items-start gap-3 flex-1 min-w-0">
                 <span class="mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-brand-600 text-white"><?= $ikon($IKON['periksa'], 'w-5 h-5') ?></span>
-                <div class="text-sm text-slate-700">
-                    <p class="font-bold text-slate-900">Ada <span class="tabular-nums"><?= $fmtAngka($ringkas['menunggu']) ?></span> isian menunggu diperiksa.</p>
+                <div class="text-sm text-gray-700">
+                    <p class="font-bold text-gray-900">Ada <span class="tabular-nums"><?= $fmtAngka($ringkas['menunggu']) ?></span> isian menunggu diperiksa.</p>
                     <p class="mt-0.5">Mulai dari kiriman terlama — setelah disetujui, isian berikutnya langsung terbuka.</p>
                 </div>
             </div>
             <?php if ($pertamaId > 0): ?>
-                <a href="<?= esc(site_url('admin/biodata/' . $pertamaId), 'attr') ?>" class="inline-flex items-center justify-center gap-1.5 rounded-lg bg-brand-600 hover:bg-brand-700 px-5 py-2.5 text-sm font-bold text-white shadow-sm shrink-0">Periksa Sekarang <?= $ikon($IKON['panah']) ?></a>
+                <a href="<?= esc(site_url('admin/biodata/' . $pertamaId), 'attr') ?>" class="inline-flex items-center justify-center gap-1.5 rounded-lg bg-brand-600 hover:bg-brand-700 px-5 py-2.5 text-sm font-bold text-white shadow-xs shrink-0">Periksa Sekarang <?= $ikon($IKON['panah']) ?></a>
             <?php endif; ?>
         </div>
     <?php elseif ($terbuka && $ringkas['sudah'] > 0): ?>
@@ -168,13 +168,13 @@ $tombolSekunder = 'inline-flex items-center justify-center gap-1.5 rounded-lg bo
 
     <!-- ================= 2. Kartu angka (bisa diklik) ================= -->
     <div class="grid grid-cols-2 lg:grid-cols-6 gap-3 sm:gap-4">
-        <a href="<?= esc($urlTab('kelas'), 'attr') ?>" class="col-span-2 rounded-2xl border border-slate-200 bg-white p-4 sm:p-5 shadow-sm hover:border-brand-300 hover:shadow transition">
-            <p class="text-xs font-bold uppercase tracking-wide text-slate-500">Progres pengisian</p>
+        <a href="<?= esc($urlTab('kelas'), 'attr') ?>" class="col-span-2 rounded-2xl border border-gray-200 bg-white p-4 sm:p-5 shadow-xs hover:border-brand-300 hover:shadow-sm transition">
+            <p class="text-xs font-bold uppercase tracking-wide text-gray-500">Progres pengisian</p>
             <p class="mt-1 flex items-baseline gap-2">
-                <span class="text-3xl font-extrabold text-slate-900 tabular-nums"><?= esc($ringkas['persen_teks']) ?></span>
-                <span class="text-sm text-slate-500"><b class="text-slate-700 tabular-nums"><?= $fmtAngka($ringkas['sudah']) ?></b> dari <span class="tabular-nums"><?= $fmtAngka($ringkas['total']) ?></span> siswa aktif</span>
+                <span class="text-3xl font-extrabold text-gray-900 tabular-nums"><?= esc($ringkas['persen_teks']) ?></span>
+                <span class="text-sm text-gray-500"><b class="text-gray-700 tabular-nums"><?= $fmtAngka($ringkas['sudah']) ?></b> dari <span class="tabular-nums"><?= $fmtAngka($ringkas['total']) ?></span> siswa aktif</span>
             </p>
-            <div class="mt-3 h-2.5 w-full rounded-full bg-slate-100 overflow-hidden" role="progressbar" aria-valuenow="<?= $ringkas['rasio'] ?>" aria-valuemin="0" aria-valuemax="100" aria-label="Progres pengisian biodata">
+            <div class="mt-3 h-2.5 w-full rounded-full bg-gray-100 overflow-hidden" role="progressbar" aria-valuenow="<?= $ringkas['rasio'] ?>" aria-valuemin="0" aria-valuemax="100" aria-label="Progres pengisian biodata">
                 <div class="h-full rounded-full bg-brand-500" style="width: <?= $ringkas['rasio'] ?>%"></div>
             </div>
             <p class="mt-2 text-xs font-semibold text-brand-600">Lihat rekap per kelas →</p>
@@ -186,23 +186,23 @@ $tombolSekunder = 'inline-flex items-center justify-center gap-1.5 rounded-lg bo
             'belum'     => ['Belum mengisi', 'perlu dikejar'],
         ] as $kunci => [$label, $ket]): $w = $warna[$kunci]; $aktif = $tab === $kunci; ?>
             <a href="<?= esc($urlTab($kunci), 'attr') ?>" aria-current="<?= $aktif ? 'page' : 'false' ?>"
-               class="rounded-2xl border p-4 shadow-sm transition hover:shadow <?= $aktif ? $w['latar'] . ' ' . $w['garis'] . ' ring-2 ring-offset-1 ' . $w['cincin'] : 'bg-white border-slate-200 hover:border-slate-300' ?>">
+               class="rounded-2xl border p-4 shadow-xs transition hover:shadow-sm <?= $aktif ? $w['latar'] . ' ' . $w['garis'] . ' ring-2 ring-offset-1 ' . $w['cincin'] : 'bg-white border-gray-200 hover:border-gray-300' ?>">
                 <p class="flex items-center gap-1.5 text-xs font-bold uppercase tracking-wide <?= $w['teks'] ?>">
                     <span class="h-2 w-2 rounded-full <?= $w['titik'] ?>" aria-hidden="true"></span><?= esc($label) ?>
                 </p>
-                <p class="mt-1 text-2xl sm:text-3xl font-extrabold text-slate-900 tabular-nums"><?= $fmtAngka($ringkas[$kunci]) ?></p>
-                <p class="text-xs text-slate-500"><?= esc($ket) ?></p>
+                <p class="mt-1 text-2xl sm:text-3xl font-extrabold text-gray-900 tabular-nums"><?= $fmtAngka($ringkas[$kunci]) ?></p>
+                <p class="text-xs text-gray-500"><?= esc($ket) ?></p>
             </a>
         <?php endforeach; ?>
     </div>
 
     <!-- ================= 3. Form & tautan + Laporan ================= -->
     <div class="grid grid-cols-1 lg:grid-cols-5 gap-5">
-        <section id="formIsian" class="lg:col-span-3 bg-white rounded-2xl border border-slate-200 shadow-sm scroll-mt-24">
-            <div class="flex flex-wrap items-center justify-between gap-3 px-5 sm:px-6 py-4 border-b border-slate-100">
+        <section id="formIsian" class="lg:col-span-3 bg-white rounded-2xl border border-gray-200 shadow-xs scroll-mt-24">
+            <div class="flex flex-wrap items-center justify-between gap-3 px-5 sm:px-6 py-4 border-b border-gray-100">
                 <div>
-                    <h2 class="font-bold text-slate-800">Form Isian untuk Siswa</h2>
-                    <p class="text-xs text-slate-500"><?= $terbuka ? ($batasTeks !== '' ? 'Tertutup otomatis ' . esc($batasTeks) . '.' : 'Terbuka tanpa batas waktu.') : 'Siswa belum bisa mengisi.' ?></p>
+                    <h2 class="font-bold text-gray-800">Form Isian untuk Siswa</h2>
+                    <p class="text-xs text-gray-500"><?= $terbuka ? ($batasTeks !== '' ? 'Tertutup otomatis ' . esc($batasTeks) . '.' : 'Terbuka tanpa batas waktu.') : 'Siswa belum bisa mengisi.' ?></p>
                 </div>
                 <!-- Saklar buka/tutup: satu klik langsung tersimpan (dengan konfirmasi). -->
                 <form method="post" action="<?= site_url('admin/biodata/pengaturan') ?>" class="flex items-center gap-3">
@@ -212,17 +212,17 @@ $tombolSekunder = 'inline-flex items-center justify-center gap-1.5 rounded-lg bo
                         <span class="text-sm font-extrabold text-emerald-700">DIBUKA</span>
                         <button type="submit" role="switch" aria-checked="true" aria-label="Tutup form isian"
                                 data-confirm="Tutup form sekarang? Siswa tidak bisa mengisi sampai form dibuka lagi."
-                                class="relative inline-flex h-7 w-12 shrink-0 items-center rounded-full bg-emerald-500 transition hover:bg-emerald-600 focus:outline-none focus:ring-2 focus:ring-emerald-400 focus:ring-offset-2">
-                            <span class="inline-block h-5 w-5 translate-x-6 rounded-full bg-white shadow transition"></span>
+                                class="relative inline-flex h-7 w-12 shrink-0 items-center rounded-full bg-emerald-500 transition hover:bg-emerald-600 focus:outline-hidden focus:ring-2 focus:ring-emerald-400 focus:ring-offset-2">
+                            <span class="inline-block h-5 w-5 translate-x-6 rounded-full bg-white shadow-sm transition"></span>
                         </button>
                     <?php else: ?>
                         <input type="hidden" name="biodata_open" value="1">
                         <input type="hidden" name="biodata_tutup" value="<?= $lewatBatas ? '' : esc($batasInput, 'attr') ?>">
-                        <span class="text-sm font-extrabold text-slate-500">DITUTUP</span>
+                        <span class="text-sm font-extrabold text-gray-500">DITUTUP</span>
                         <button type="submit" role="switch" aria-checked="false" aria-label="Buka form isian"
                                 data-confirm="<?= $lewatBatas ? 'Buka form sekarang? Batas waktu lama sudah lewat, jadi batas waktu dihapus (form terbuka sampai Anda menutupnya).' : 'Buka form sekarang? Siswa bisa langsung mengisi lewat tautan.' ?>"
-                                class="relative inline-flex h-7 w-12 shrink-0 items-center rounded-full bg-slate-300 transition hover:bg-slate-400 focus:outline-none focus:ring-2 focus:ring-brand-400 focus:ring-offset-2">
-                            <span class="inline-block h-5 w-5 translate-x-1 rounded-full bg-white shadow transition"></span>
+                                class="relative inline-flex h-7 w-12 shrink-0 items-center rounded-full bg-gray-300 transition hover:bg-gray-400 focus:outline-hidden focus:ring-2 focus:ring-brand-400 focus:ring-offset-2">
+                            <span class="inline-block h-5 w-5 translate-x-1 rounded-full bg-white shadow-sm transition"></span>
                         </button>
                     <?php endif; ?>
                 </form>
@@ -230,9 +230,9 @@ $tombolSekunder = 'inline-flex items-center justify-center gap-1.5 rounded-lg bo
 
             <div class="px-5 sm:px-6 py-5 space-y-4">
                 <div>
-                    <label class="block text-xs font-bold uppercase tracking-wide text-slate-500 mb-1.5" for="tautanForm">Tautan untuk dibagikan</label>
+                    <label class="block text-xs font-bold uppercase tracking-wide text-gray-500 mb-1.5" for="tautanForm">Tautan untuk dibagikan</label>
                     <div class="flex flex-col sm:flex-row gap-2">
-                        <input id="tautanForm" type="text" readonly value="<?= esc($tautan, 'attr') ?>" class="flex-1 min-w-0 rounded-lg border border-slate-300 bg-slate-50 px-3 py-2.5 text-sm font-semibold text-brand-700" @focus="$event.target.select()">
+                        <input id="tautanForm" type="text" readonly value="<?= esc($tautan, 'attr') ?>" class="flex-1 min-w-0 rounded-lg border border-gray-300 bg-gray-50 px-3 py-2.5 text-sm font-semibold text-brand-700" @focus="$event.target.select()">
                         <div class="grid grid-cols-2 sm:flex gap-2">
                             <button type="button" @click="salin(<?= esc(json_encode($tautan), 'attr') ?>, 'tautan')" class="<?= $tombolSekunder ?> !py-2.5">
                                 <?= $ikon($IKON['salin']) ?><span x-text="tersalin === 'tautan' ? 'Tersalin ✓' : 'Salin'">Salin</span>
@@ -243,49 +243,49 @@ $tombolSekunder = 'inline-flex items-center justify-center gap-1.5 rounded-lg bo
                         </div>
                     </div>
                     <textarea x-ref="pesanBagikan" class="hidden" aria-hidden="true"><?= esc($pesanBagikan) ?></textarea>
-                    <p class="mt-1.5 text-xs text-slate-500">
+                    <p class="mt-1.5 text-xs text-gray-500">
                         Tautan cadangan (bila subdomain bermasalah): <a href="<?= esc($tautanAlt, 'attr') ?>" target="_blank" rel="noopener" class="font-semibold text-brand-600 hover:underline break-all"><?= esc($tautanAlt) ?></a>
                     </p>
                 </div>
 
                 <!-- Batas waktu (opsional) -->
-                <form method="post" action="<?= site_url('admin/biodata/pengaturan') ?>" class="rounded-xl border border-slate-200 bg-slate-50/70 p-3.5">
+                <form method="post" action="<?= site_url('admin/biodata/pengaturan') ?>" class="rounded-xl border border-gray-200 bg-gray-50/70 p-3.5">
                     <?= csrf_field() ?>
                     <?php if ($bukaDiSetelan): ?><input type="hidden" name="biodata_open" value="1"><?php endif; ?>
-                    <label class="block text-sm font-semibold text-slate-700" for="batasTutup">Tutup otomatis pada <span class="font-normal text-slate-400">(boleh kosong)</span></label>
+                    <label class="block text-sm font-semibold text-gray-700" for="batasTutup">Tutup otomatis pada <span class="font-normal text-gray-400">(boleh kosong)</span></label>
                     <div class="mt-1.5 flex flex-col sm:flex-row gap-2">
                         <input type="datetime-local" id="batasTutup" name="biodata_tutup" value="<?= esc($batasInput, 'attr') ?>"
-                               class="flex-1 min-w-0 rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm focus:border-brand-500 focus:ring-2 focus:ring-brand-500/20 outline-none">
+                               class="flex-1 min-w-0 rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm focus:border-brand-500 focus:ring-2 focus:ring-brand-500/20 outline-hidden">
                         <button class="rounded-lg bg-brand-700 hover:bg-brand-800 px-4 py-2 text-sm font-semibold text-white transition">Simpan Batas Waktu</button>
                     </div>
-                    <p class="mt-1 text-xs text-slate-500">Lewat waktu ini form tertutup sendiri. Kosongkan lalu simpan untuk menghapus batas.</p>
+                    <p class="mt-1 text-xs text-gray-500">Lewat waktu ini form tertutup sendiri. Kosongkan lalu simpan untuk menghapus batas.</p>
                 </form>
 
                 <?php if ((int) $ringkas['sudah'] === 0): ?>
-                    <ol class="grid grid-cols-1 sm:grid-cols-3 gap-2 text-xs text-slate-600">
-                        <li class="rounded-lg border border-slate-200 px-3 py-2"><b class="text-brand-700">1.</b> Nyalakan saklar <b>DIBUKA</b>.</li>
-                        <li class="rounded-lg border border-slate-200 px-3 py-2"><b class="text-brand-700">2.</b> <b>Bagikan ke WA</b> grup siswa / wali kelas.</li>
-                        <li class="rounded-lg border border-slate-200 px-3 py-2"><b class="text-brand-700">3.</b> Periksa &amp; <b>setujui</b> isian yang masuk.</li>
+                    <ol class="grid grid-cols-1 sm:grid-cols-3 gap-2 text-xs text-gray-600">
+                        <li class="rounded-lg border border-gray-200 px-3 py-2"><b class="text-brand-700">1.</b> Nyalakan saklar <b>DIBUKA</b>.</li>
+                        <li class="rounded-lg border border-gray-200 px-3 py-2"><b class="text-brand-700">2.</b> <b>Bagikan ke WA</b> grup siswa / wali kelas.</li>
+                        <li class="rounded-lg border border-gray-200 px-3 py-2"><b class="text-brand-700">3.</b> Periksa &amp; <b>setujui</b> isian yang masuk.</li>
                     </ol>
                 <?php endif; ?>
             </div>
         </section>
 
         <!-- Laporan Excel siap cetak -->
-        <section class="lg:col-span-2 bg-white rounded-2xl border border-slate-200 shadow-sm flex flex-col">
-            <div class="px-5 sm:px-6 py-4 border-b border-slate-100">
-                <h2 class="font-bold text-slate-800">Laporan Kelengkapan (Excel)</h2>
-                <p class="text-xs text-slate-500">Siap cetak, dengan kop &amp; tanda tangan.</p>
+        <section class="lg:col-span-2 bg-white rounded-2xl border border-gray-200 shadow-xs flex flex-col">
+            <div class="px-5 sm:px-6 py-4 border-b border-gray-100">
+                <h2 class="font-bold text-gray-800">Laporan Kelengkapan (Excel)</h2>
+                <p class="text-xs text-gray-500">Siap cetak, dengan kop &amp; tanda tangan.</p>
             </div>
             <form method="get" action="<?= site_url('admin/biodata/laporan') ?>" data-noload class="px-5 sm:px-6 py-5 flex flex-col gap-3 flex-1">
-                <ul class="space-y-1.5 text-sm text-slate-600">
+                <ul class="space-y-1.5 text-sm text-gray-600">
                     <li class="flex gap-2"><span class="text-emerald-600">✓</span> Rekap jumlah per kelas</li>
                     <li class="flex gap-2"><span class="text-emerald-600">✓</span> Daftar nama tiap kelas: lengkap / belum</li>
                     <li class="flex gap-2"><span class="text-emerald-600">✓</span> Kolom yang masih kurang per siswa</li>
                 </ul>
                 <div class="mt-auto space-y-2">
                     <label class="sr-only" for="laporanKelas">Kelas untuk laporan</label>
-                    <select id="laporanKelas" name="kelas_id" class="w-full rounded-lg border border-slate-300 bg-white px-3 py-2.5 text-sm focus:border-brand-500 outline-none">
+                    <select id="laporanKelas" name="kelas_id" class="w-full rounded-lg border border-gray-300 bg-white px-3 py-2.5 text-sm focus:border-brand-500 outline-hidden">
                         <option value="">Semua kelas</option>
                         <?php foreach ($kelasOpts as $id => $nama): ?>
                             <option value="<?= (int) $id ?>" <?= $kelasId === (int) $id ? 'selected' : '' ?>><?= esc($nama) ?></option>
@@ -294,38 +294,38 @@ $tombolSekunder = 'inline-flex items-center justify-center gap-1.5 rounded-lg bo
                     <button class="w-full inline-flex items-center justify-center gap-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 px-4 py-2.5 text-sm font-bold text-white transition">
                         <?= $ikon($IKON['unduh']) ?>Unduh Laporan
                     </button>
-                    <p class="text-[11px] text-slate-400 leading-snug">Butuh data lengkap (nama orang tua, alamat, dll.)? Pakai <a href="<?= site_url('admin/master/siswa') ?>" class="font-semibold text-brand-600 hover:underline">Master Siswa → Export</a>.</p>
+                    <p class="text-[11px] text-gray-400 leading-snug">Butuh data lengkap (nama orang tua, alamat, dll.)? Pakai <a href="<?= site_url('admin/master/siswa') ?>" class="font-semibold text-brand-600 hover:underline">Master Siswa → Export</a>.</p>
                 </div>
             </form>
         </section>
     </div>
 
     <!-- ================= 4. Tab daftar ================= -->
-    <div class="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden" id="daftar">
-        <nav x-ref="tabNav" class="relative flex gap-1 overflow-x-auto border-b border-slate-200 px-2 sm:px-3 pt-2" aria-label="Tab isian biodata">
+    <div class="bg-white rounded-2xl border border-gray-200 shadow-xs overflow-hidden" id="daftar">
+        <nav x-ref="tabNav" class="relative flex gap-1 overflow-x-auto border-b border-gray-200 px-2 sm:px-3 pt-2" aria-label="Tab isian biodata">
             <?php foreach ($tabs as $kunci => [$label, $jumlah]): $aktif = $tab === $kunci; $w = $warna[$kunci]; ?>
                 <a href="<?= esc($urlTab($kunci), 'attr') ?>" <?= $aktif ? 'aria-current="page"' : '' ?>
-                   class="shrink-0 inline-flex items-center gap-2 rounded-t-lg px-3.5 sm:px-4 py-2.5 text-sm font-semibold border-b-2 transition <?= $aktif ? 'border-current ' . $w['teks'] . ' ' . $w['latar'] : 'border-transparent text-slate-500 hover:text-slate-800 hover:bg-slate-50' ?>">
+                   class="shrink-0 inline-flex items-center gap-2 rounded-t-lg px-3.5 sm:px-4 py-2.5 text-sm font-semibold border-b-2 transition <?= $aktif ? 'border-current ' . $w['teks'] . ' ' . $w['latar'] : 'border-transparent text-gray-500 hover:text-gray-800 hover:bg-gray-50' ?>">
                     <?php if ($kunci !== 'kelas'): ?><span class="h-2 w-2 rounded-full <?= $w['titik'] ?>" aria-hidden="true"></span><?php endif; ?>
                     <?= esc($label) ?>
-                    <?php if ($jumlah !== null): ?><span class="rounded-full px-2 py-0.5 text-xs tabular-nums <?= $aktif ? $w['aktif'] . ' text-white' : 'bg-slate-100 text-slate-600' ?>"><?= $fmtAngka($jumlah) ?></span><?php endif; ?>
+                    <?php if ($jumlah !== null): ?><span class="rounded-full px-2 py-0.5 text-xs tabular-nums <?= $aktif ? $w['aktif'] . ' text-white' : 'bg-gray-100 text-gray-600' ?>"><?= $fmtAngka($jumlah) ?></span><?php endif; ?>
                 </a>
             <?php endforeach; ?>
         </nav>
 
         <?php if ($tab !== 'kelas'): ?>
-            <form method="get" action="<?= site_url('admin/biodata') ?>" data-noload class="flex flex-col sm:flex-row gap-2 px-4 sm:px-5 py-3.5 border-b border-slate-100 bg-slate-50/60">
+            <form method="get" action="<?= site_url('admin/biodata') ?>" data-noload class="flex flex-col sm:flex-row gap-2 px-4 sm:px-5 py-3.5 border-b border-gray-100 bg-gray-50/60">
                 <input type="hidden" name="tab" value="<?= esc($tab, 'attr') ?>">
-                <select name="kelas_id" data-autosubmit class="rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm focus:border-brand-500 outline-none" aria-label="Saring kelas">
+                <select name="kelas_id" data-autosubmit class="rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm focus:border-brand-500 outline-hidden" aria-label="Saring kelas">
                     <option value="">Semua kelas</option>
                     <?php foreach ($kelasOpts as $id => $nama): ?>
                         <option value="<?= (int) $id ?>" <?= $kelasId === (int) $id ? 'selected' : '' ?>><?= esc($nama) ?></option>
                     <?php endforeach; ?>
                 </select>
                 <div class="relative flex-1">
-                    <span class="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400"><?= $ikon('M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z') ?></span>
+                    <span class="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"><?= $ikon('M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z') ?></span>
                     <input type="search" name="q" value="<?= esc($q, 'attr') ?>" placeholder="Cari nama atau NISN…" aria-label="Cari nama atau NISN"
-                           class="w-full rounded-lg border border-slate-300 bg-white pl-9 pr-3 py-2 text-sm focus:border-brand-500 outline-none">
+                           class="w-full rounded-lg border border-gray-300 bg-white pl-9 pr-3 py-2 text-sm focus:border-brand-500 outline-hidden">
                 </div>
                 <div class="flex gap-2">
                     <button class="flex-1 sm:flex-none rounded-lg bg-brand-700 hover:bg-brand-800 px-4 py-2 text-sm font-semibold text-white">Cari</button>
@@ -338,7 +338,7 @@ $tombolSekunder = 'inline-flex items-center justify-center gap-1.5 rounded-lg bo
 
         <?php if (in_array($tab, ['menunggu', 'disetujui'], true) && ($bisaKembali ?? 0) > 0): ?>
             <!-- Kembalikan SEMUA yang sudah mengisi (menunggu + disetujui), sesuai saringan kelas/pencarian di atas -->
-            <details class="group border-b border-slate-100 bg-amber-50/40">
+            <details class="group border-b border-gray-100 bg-amber-50/40">
                 <summary class="cursor-pointer list-none flex items-center justify-between gap-3 px-4 sm:px-5 py-3 text-sm font-semibold text-amber-900 hover:bg-amber-50">
                     <span>↩ Kembalikan semua yang sudah mengisi untuk diperbaiki (<?= $fmtAngka($bisaKembali) ?><?= $kelasNama !== '' ? ' di ' . esc($kelasNama) : '' ?>)</span>
                     <span class="text-xs font-normal text-amber-700 group-open:hidden">Klik untuk membuka</span>
@@ -348,10 +348,10 @@ $tombolSekunder = 'inline-flex items-center justify-center gap-1.5 rounded-lg bo
                     <input type="hidden" name="tab" value="<?= esc($tab, 'attr') ?>">
                     <input type="hidden" name="kelas_id" value="<?= $kelasId ?: '' ?>">
                     <input type="hidden" name="q" value="<?= esc($q, 'attr') ?>">
-                    <label class="block text-xs font-bold uppercase tracking-wide text-slate-500" for="catatanMassal">Catatan untuk siswa (sama untuk semua)</label>
+                    <label class="block text-xs font-bold uppercase tracking-wide text-gray-500" for="catatanMassal">Catatan untuk siswa (sama untuk semua)</label>
                     <textarea id="catatanMassal" name="catatan" rows="3" maxlength="255" required
-                              class="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm focus:border-brand-500 outline-none"><?= esc($catatanBawaan ?? '') ?></textarea>
-                    <p class="text-xs text-slate-500 leading-relaxed">Mencakup isian <b>menunggu</b> dan <b>disetujui</b><?= $kelasNama !== '' ? ' di ' . esc($kelasNama) : ($q !== '' ? ' yang cocok dengan pencarian' : ' dari SEMUA kelas') ?>. Isian pindah ke tab <b>Perbaikan</b>; data di Master Siswa <b>tidak berubah</b>. Siswa membukanya lagi di form (pakai NISN atau tanggal lahir yang dulu diisi), memeriksa, lalu mengirim ulang.</p>
+                              class="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm focus:border-brand-500 outline-hidden"><?= esc($catatanBawaan ?? '') ?></textarea>
+                    <p class="text-xs text-gray-500 leading-relaxed">Mencakup isian <b>menunggu</b> dan <b>disetujui</b><?= $kelasNama !== '' ? ' di ' . esc($kelasNama) : ($q !== '' ? ' yang cocok dengan pencarian' : ' dari SEMUA kelas') ?>. Isian pindah ke tab <b>Perbaikan</b>; data di Master Siswa <b>tidak berubah</b>. Siswa membukanya lagi di form (pakai NISN atau tanggal lahir yang dulu diisi), memeriksa, lalu mengirim ulang.</p>
                     <button data-confirm="Kembalikan <?= (int) $bisaKembali ?> isian<?= $kelasNama !== '' ? ' di ' . esc($kelasNama, 'attr') : '' ?> ke siswa untuk diperbaiki? Siswa harus membuka dan mengirim ulang isiannya."
                             class="rounded-lg bg-amber-500 hover:bg-amber-600 px-4 py-2 text-sm font-semibold text-white transition">
                         ↩ Kembalikan <?= $fmtAngka($bisaKembali) ?> isian
@@ -363,13 +363,13 @@ $tombolSekunder = 'inline-flex items-center justify-center gap-1.5 rounded-lg bo
         <?php if ($tab === 'menunggu'): ?>
             <!-- ============ MENUNGGU ============ -->
             <?php if ($total > 0): ?>
-                <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2 px-4 sm:px-5 py-3 border-b border-slate-100">
+                <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2 px-4 sm:px-5 py-3 border-b border-gray-100">
                     <div class="flex flex-wrap items-center gap-x-3 gap-y-1 text-sm">
-                        <label class="inline-flex items-center gap-2 font-semibold text-slate-700 cursor-pointer">
-                            <input type="checkbox" @change="pilihSemua($event)" class="h-4 w-4 rounded border-slate-300 text-brand-600 focus:ring-brand-500">
+                        <label class="inline-flex items-center gap-2 font-semibold text-gray-700 cursor-pointer">
+                            <input type="checkbox" @change="pilihSemua($event)" class="h-4 w-4 rounded-sm border-gray-300 text-brand-600 focus:ring-brand-500">
                             Pilih semua
                         </label>
-                        <span class="text-slate-500"><b class="tabular-nums text-slate-700"><?= $fmtAngka($total) ?></b> menunggu<?= $kelasNama !== '' ? ' di ' . esc($kelasNama) : '' ?> · terlama di atas</span>
+                        <span class="text-gray-500"><b class="tabular-nums text-gray-700"><?= $fmtAngka($total) ?></b> menunggu<?= $kelasNama !== '' ? ' di ' . esc($kelasNama) : '' ?> · terlama di atas</span>
                     </div>
                     <div class="grid grid-cols-2 sm:flex gap-2">
                         <button type="submit" form="formMassal" :disabled="jumlah === 0" data-confirm="Setujui isian yang dicentang? Data akan langsung masuk ke Master Siswa."
@@ -400,23 +400,23 @@ $tombolSekunder = 'inline-flex items-center justify-center gap-1.5 rounded-lg bo
                         ? $kosong('Tidak ada isian menunggu yang cocok.', 'Coba kelas lain atau hapus kata kunci pencarian.', '<a href="' . site_url('admin/biodata') . '?tab=menunggu" class="' . $tombolSekunder . '">Tampilkan semua</a>')
                         : $kosong('Tidak ada isian yang menunggu diperiksa.', 'Isian baru dari siswa otomatis muncul di sini. Kejar siswa yang belum mengisi lewat tab <b>Belum Mengisi</b>.', '<a href="' . esc($urlTab('belum'), 'attr') . '" class="' . $tombolSekunder . '">' . $ikon($IKON['orang']) . 'Lihat yang belum mengisi</a>') ?>
                 <?php else: ?>
-                    <div class="hidden md:grid grid-cols-[2.5rem_minmax(0,1fr)_8rem_10rem_7.5rem] gap-3 px-5 py-2.5 bg-slate-50 text-xs font-bold uppercase tracking-wide text-slate-500 border-b border-slate-100">
+                    <div class="hidden md:grid grid-cols-[2.5rem_minmax(0,1fr)_8rem_10rem_7.5rem] gap-3 px-5 py-2.5 bg-gray-50 text-xs font-bold uppercase tracking-wide text-gray-500 border-b border-gray-100">
                         <span></span><span>Nama Siswa</span><span>Kelas</span><span>Dikirim</span><span class="text-right">Aksi</span>
                     </div>
-                    <ul class="divide-y divide-slate-100">
+                    <ul class="divide-y divide-gray-100">
                         <?php foreach ($rows as $r): $perbaikanKe = (int) $r['kirim_ke'] - 1; ?>
-                            <li class="grid grid-cols-[2rem_minmax(0,1fr)_auto] md:grid-cols-[2.5rem_minmax(0,1fr)_8rem_10rem_7.5rem] items-center gap-x-3 gap-y-1 px-4 md:px-5 py-3 hover:bg-slate-50 transition">
-                                <input type="checkbox" name="ids[]" value="<?= (int) $r['id'] ?>" class="bio-cek h-4 w-4 rounded border-slate-300 text-brand-600 focus:ring-brand-500" aria-label="Pilih <?= esc($r['nama'], 'attr') ?>">
+                            <li class="grid grid-cols-[2rem_minmax(0,1fr)_auto] md:grid-cols-[2.5rem_minmax(0,1fr)_8rem_10rem_7.5rem] items-center gap-x-3 gap-y-1 px-4 md:px-5 py-3 hover:bg-gray-50 transition">
+                                <input type="checkbox" name="ids[]" value="<?= (int) $r['id'] ?>" class="bio-cek h-4 w-4 rounded-sm border-gray-300 text-brand-600 focus:ring-brand-500" aria-label="Pilih <?= esc($r['nama'], 'attr') ?>">
                                 <div class="min-w-0">
-                                    <a href="<?= esc($urlDetail((int) $r['id']), 'attr') ?>" class="font-semibold text-slate-800 hover:text-brand-700"><?= esc($r['nama']) ?></a>
-                                    <div class="mt-0.5 flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-slate-500">
+                                    <a href="<?= esc($urlDetail((int) $r['id']), 'attr') ?>" class="font-semibold text-gray-800 hover:text-brand-700"><?= esc($r['nama']) ?></a>
+                                    <div class="mt-0.5 flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-gray-500">
                                         <span>NISN <?= esc($r['nisn'] ?? '—') ?></span>
                                         <span class="md:hidden basis-full"><?= esc($r['nama_kelas'] ?? '—') ?> · <span title="<?= esc($fmtTgl($r['updated_at']), 'attr') ?>"><?= esc($relatif($r['updated_at'])) ?></span></span>
                                         <?php if ($perbaikanKe > 0): ?><span class="rounded-full border border-amber-200 bg-amber-50 px-2 py-0.5 font-bold text-amber-800">Hasil perbaikan<?= $perbaikanKe > 1 ? ' ke-' . $perbaikanKe : '' ?></span><?php endif; ?>
                                     </div>
                                 </div>
-                                <span class="hidden md:block text-sm text-slate-700"><?= esc($r['nama_kelas'] ?? '—') ?></span>
-                                <span class="hidden md:flex items-center gap-1.5 text-sm text-slate-600" title="<?= esc($fmtTgl($r['updated_at']), 'attr') ?>"><?= $ikon($IKON['jam'], 'w-3.5 h-3.5 text-slate-400') ?><?= esc($relatif($r['updated_at'])) ?></span>
+                                <span class="hidden md:block text-sm text-gray-700"><?= esc($r['nama_kelas'] ?? '—') ?></span>
+                                <span class="hidden md:flex items-center gap-1.5 text-sm text-gray-600" title="<?= esc($fmtTgl($r['updated_at']), 'attr') ?>"><?= $ikon($IKON['jam'], 'w-3.5 h-3.5 text-gray-400') ?><?= esc($relatif($r['updated_at'])) ?></span>
                                 <a href="<?= esc($urlDetail((int) $r['id']), 'attr') ?>" class="justify-self-end inline-flex items-center gap-1 rounded-lg bg-brand-600 hover:bg-brand-700 px-3.5 py-2 text-xs font-bold text-white transition">Periksa <?= $ikon($IKON['panah'], 'w-3.5 h-3.5') ?></a>
                             </li>
                         <?php endforeach; ?>
@@ -434,21 +434,21 @@ $tombolSekunder = 'inline-flex items-center justify-center gap-1.5 rounded-lg bo
                         ? $kosong('Tidak ada isian yang sedang diperbaiki.', 'Isian yang Anda <b>Kembalikan</b> ke siswa akan tampil di sini sampai siswa mengirim ulang.')
                         : $kosong('Belum ada isian yang disetujui.', 'Periksa isian di tab <b>Menunggu Verifikasi</b>, lalu setujui agar datanya masuk ke Master Siswa.', '<a href="' . esc($urlTab('menunggu'), 'attr') . '" class="' . $tombolSekunder . '">Buka tab Menunggu</a>')) ?>
             <?php else: ?>
-                <div class="hidden md:grid grid-cols-[minmax(0,1fr)_8rem_minmax(0,1fr)_10rem_6rem] gap-3 px-5 py-2.5 bg-slate-50 text-xs font-bold uppercase tracking-wide text-slate-500 border-b border-slate-100">
+                <div class="hidden md:grid grid-cols-[minmax(0,1fr)_8rem_minmax(0,1fr)_10rem_6rem] gap-3 px-5 py-2.5 bg-gray-50 text-xs font-bold uppercase tracking-wide text-gray-500 border-b border-gray-100">
                     <span>Nama Siswa</span><span>Kelas</span><span><?= $diperbaiki ? 'Catatan untuk siswa' : 'NISN' ?></span><span><?= $diperbaiki ? 'Dikembalikan' : 'Disetujui' ?></span><span class="text-right">Aksi</span>
                 </div>
-                <ul class="divide-y divide-slate-100">
+                <ul class="divide-y divide-gray-100">
                     <?php foreach ($rows as $r): $waktu = $diperbaiki ? $r['updated_at'] : $r['diverifikasi_at']; ?>
-                        <li class="grid grid-cols-[minmax(0,1fr)_auto] md:grid-cols-[minmax(0,1fr)_8rem_minmax(0,1fr)_10rem_6rem] items-center gap-x-3 gap-y-1 px-4 md:px-5 py-3 hover:bg-slate-50 transition">
+                        <li class="grid grid-cols-[minmax(0,1fr)_auto] md:grid-cols-[minmax(0,1fr)_8rem_minmax(0,1fr)_10rem_6rem] items-center gap-x-3 gap-y-1 px-4 md:px-5 py-3 hover:bg-gray-50 transition">
                             <div class="min-w-0">
-                                <a href="<?= esc($urlDetail((int) $r['id']), 'attr') ?>" class="font-semibold text-slate-800 hover:text-brand-700"><?= esc($r['nama']) ?></a>
-                                <p class="md:hidden mt-0.5 text-xs text-slate-500"><?= esc($r['nama_kelas'] ?? '—') ?> · <?= esc($relatif($waktu)) ?></p>
-                                <?php if ($diperbaiki): ?><p class="md:hidden mt-1 text-xs text-amber-800 bg-amber-50 rounded px-2 py-1"><?= esc($r['catatan_admin'] ?? '—') ?></p><?php endif; ?>
+                                <a href="<?= esc($urlDetail((int) $r['id']), 'attr') ?>" class="font-semibold text-gray-800 hover:text-brand-700"><?= esc($r['nama']) ?></a>
+                                <p class="md:hidden mt-0.5 text-xs text-gray-500"><?= esc($r['nama_kelas'] ?? '—') ?> · <?= esc($relatif($waktu)) ?></p>
+                                <?php if ($diperbaiki): ?><p class="md:hidden mt-1 text-xs text-amber-800 bg-amber-50 rounded-sm px-2 py-1"><?= esc($r['catatan_admin'] ?? '—') ?></p><?php endif; ?>
                             </div>
-                            <span class="hidden md:block text-sm text-slate-700"><?= esc($r['nama_kelas'] ?? '—') ?></span>
-                            <span class="hidden md:block text-sm <?= $diperbaiki ? 'text-amber-800' : 'text-slate-600 tabular-nums' ?>"><?= esc($diperbaiki ? ($r['catatan_admin'] ?? '—') : ($r['nisn'] ?? '—')) ?></span>
-                            <span class="hidden md:block text-sm text-slate-600" title="<?= esc($fmtTgl($waktu), 'attr') ?>"><?= esc($relatif($waktu)) ?></span>
-                            <a href="<?= esc($urlDetail((int) $r['id']), 'attr') ?>" class="justify-self-end rounded-lg border border-slate-300 bg-white px-3.5 py-1.5 text-xs font-bold text-slate-700 hover:bg-slate-50 transition">Lihat</a>
+                            <span class="hidden md:block text-sm text-gray-700"><?= esc($r['nama_kelas'] ?? '—') ?></span>
+                            <span class="hidden md:block text-sm <?= $diperbaiki ? 'text-amber-800' : 'text-gray-600 tabular-nums' ?>"><?= esc($diperbaiki ? ($r['catatan_admin'] ?? '—') : ($r['nisn'] ?? '—')) ?></span>
+                            <span class="hidden md:block text-sm text-gray-600" title="<?= esc($fmtTgl($waktu), 'attr') ?>"><?= esc($relatif($waktu)) ?></span>
+                            <a href="<?= esc($urlDetail((int) $r['id']), 'attr') ?>" class="justify-self-end rounded-lg border border-gray-300 bg-white px-3.5 py-1.5 text-xs font-bold text-gray-700 hover:bg-gray-50 transition">Lihat</a>
                         </li>
                     <?php endforeach; ?>
                 </ul>
@@ -460,8 +460,8 @@ $tombolSekunder = 'inline-flex items-center justify-center gap-1.5 rounded-lg bo
                 <div class="px-4 sm:px-5 py-4 bg-emerald-50/70 border-b border-emerald-100">
                     <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                         <div>
-                            <p class="text-sm font-bold text-slate-800"><?= $fmtAngka($total) ?> siswa <?= esc($kelasNama) ?> belum mengisi</p>
-                            <p class="text-xs text-slate-600">Kirim daftar namanya ke wali kelas / grup kelas lewat WhatsApp.</p>
+                            <p class="text-sm font-bold text-gray-800"><?= $fmtAngka($total) ?> siswa <?= esc($kelasNama) ?> belum mengisi</p>
+                            <p class="text-xs text-gray-600">Kirim daftar namanya ke wali kelas / grup kelas lewat WhatsApp.</p>
                         </div>
                         <div class="grid grid-cols-2 sm:flex gap-2">
                             <button type="button" @click="wa($refs.pesanBelum.value)" class="inline-flex items-center justify-center gap-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 px-4 py-2.5 text-sm font-bold text-white transition"><?= $waSvg ?>Kirim ke WA</button>
@@ -470,11 +470,11 @@ $tombolSekunder = 'inline-flex items-center justify-center gap-1.5 rounded-lg bo
                     </div>
                     <details class="mt-3 group">
                         <summary class="cursor-pointer text-xs font-semibold text-emerald-800 hover:underline">Lihat isi pesan</summary>
-                        <textarea x-ref="pesanBelum" readonly rows="6" class="mt-2 w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-xs text-slate-700 font-mono"><?= esc($pesanBelum) ?></textarea>
+                        <textarea x-ref="pesanBelum" readonly rows="6" class="mt-2 w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-xs text-gray-700 font-mono"><?= esc($pesanBelum) ?></textarea>
                     </details>
                 </div>
             <?php elseif ($kelasId === 0 && $total > 0): ?>
-                <div class="flex items-start gap-2 px-4 sm:px-5 py-3 text-sm text-slate-600 bg-brand-50/60 border-b border-brand-100">
+                <div class="flex items-start gap-2 px-4 sm:px-5 py-3 text-sm text-gray-600 bg-brand-50/60 border-b border-brand-100">
                     <span class="text-brand-600 mt-0.5"><?= $ikon('M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z') ?></span>
                     <p>Pilih <b>satu kelas</b> di atas untuk mendapatkan pesan WhatsApp berisi daftar nama yang belum mengisi.</p>
                 </div>
@@ -482,16 +482,16 @@ $tombolSekunder = 'inline-flex items-center justify-center gap-1.5 rounded-lg bo
             <?php if ($rows === []): ?>
                 <?= $kosong($kelasId || $q !== '' ? 'Semua siswa yang cocok sudah mengisi 🎉' : 'Semua siswa aktif sudah mengisi 🎉', 'Tidak ada lagi yang perlu dikejar di daftar ini.') ?>
             <?php else: ?>
-                <div class="hidden md:grid grid-cols-[3.5rem_minmax(0,1fr)_4rem_9rem] gap-3 px-5 py-2.5 bg-slate-50 text-xs font-bold uppercase tracking-wide text-slate-500 border-b border-slate-100">
+                <div class="hidden md:grid grid-cols-[3.5rem_minmax(0,1fr)_4rem_9rem] gap-3 px-5 py-2.5 bg-gray-50 text-xs font-bold uppercase tracking-wide text-gray-500 border-b border-gray-100">
                     <span>No</span><span>Nama Siswa</span><span class="text-center">JK</span><span>Kelas</span>
                 </div>
-                <ul class="divide-y divide-slate-100">
+                <ul class="divide-y divide-gray-100">
                     <?php foreach ($rows as $i => $r): ?>
-                        <li class="grid grid-cols-[2.5rem_minmax(0,1fr)_auto] md:grid-cols-[3.5rem_minmax(0,1fr)_4rem_9rem] items-center gap-3 px-4 md:px-5 py-2.5 text-sm hover:bg-slate-50">
-                            <span class="text-slate-400 tabular-nums"><?= $mulai + $i + 1 ?></span>
-                            <span class="font-medium text-slate-800 min-w-0"><?= esc($r['nama']) ?><span class="md:hidden text-xs font-normal text-slate-500"> · <?= esc($r['jenis_kelamin'] ?? '—') ?></span></span>
-                            <span class="hidden md:block text-center text-slate-600"><?= esc($r['jenis_kelamin'] ?? '—') ?></span>
-                            <span class="text-xs md:text-sm text-slate-600 md:text-slate-700 text-right md:text-left"><?= esc($r['nama_kelas'] ?? '—') ?></span>
+                        <li class="grid grid-cols-[2.5rem_minmax(0,1fr)_auto] md:grid-cols-[3.5rem_minmax(0,1fr)_4rem_9rem] items-center gap-3 px-4 md:px-5 py-2.5 text-sm hover:bg-gray-50">
+                            <span class="text-gray-400 tabular-nums"><?= $mulai + $i + 1 ?></span>
+                            <span class="font-medium text-gray-800 min-w-0"><?= esc($r['nama']) ?><span class="md:hidden text-xs font-normal text-gray-500"> · <?= esc($r['jenis_kelamin'] ?? '—') ?></span></span>
+                            <span class="hidden md:block text-center text-gray-600"><?= esc($r['jenis_kelamin'] ?? '—') ?></span>
+                            <span class="text-xs md:text-sm text-gray-600 md:text-gray-700 text-right md:text-left"><?= esc($r['nama_kelas'] ?? '—') ?></span>
                         </li>
                     <?php endforeach; ?>
                 </ul>
@@ -502,39 +502,39 @@ $tombolSekunder = 'inline-flex items-center justify-center gap-1.5 rounded-lg bo
             <?php if ($perKelas === []): ?>
                 <?= $kosong('Belum ada kelas yang berisi siswa aktif.', 'Tambahkan siswa di Master Data → Siswa.') ?>
             <?php else: ?>
-                <div class="flex flex-wrap items-center gap-x-4 gap-y-1 px-4 sm:px-5 py-2.5 text-xs text-slate-500 border-b border-slate-100">
+                <div class="flex flex-wrap items-center gap-x-4 gap-y-1 px-4 sm:px-5 py-2.5 text-xs text-gray-500 border-b border-gray-100">
                     <span>Warna progres:</span>
                     <span class="inline-flex items-center gap-1"><span class="h-2 w-4 rounded-full bg-red-500"></span>di bawah 34%</span>
                     <span class="inline-flex items-center gap-1"><span class="h-2 w-4 rounded-full bg-amber-500"></span>34–66%</span>
                     <span class="inline-flex items-center gap-1"><span class="h-2 w-4 rounded-full bg-emerald-500"></span>67% ke atas</span>
                 </div>
-                <div class="hidden xl:grid grid-cols-[7rem_minmax(0,1fr)_3.5rem_4.5rem_4.5rem_4.75rem_3.5rem_8.5rem_10.75rem] gap-x-3 px-5 py-2.5 bg-slate-50 text-[11px] font-bold uppercase text-slate-500 border-b border-slate-100">
+                <div class="hidden xl:grid grid-cols-[7rem_minmax(0,1fr)_3.5rem_4.5rem_4.5rem_4.75rem_3.5rem_8.5rem_10.75rem] gap-x-3 px-5 py-2.5 bg-gray-50 text-[11px] font-bold uppercase text-gray-500 border-b border-gray-100">
                     <span>Kelas</span><span>Wali Kelas</span><span class="text-right">Siswa</span><span class="text-right">Menunggu</span><span class="text-right">Disetujui</span><span class="text-right">Perbaikan</span><span class="text-right">Belum</span><span>Sudah mengisi</span><span class="text-right">Aksi</span>
                 </div>
-                <ul class="divide-y divide-slate-100">
+                <ul class="divide-y divide-gray-100">
                     <?php foreach ($perKelas as $k): [$bar, $teksPersen] = $warnaProgres((float) $k['rasio']); ?>
-                        <li class="grid grid-cols-2 xl:grid-cols-[7rem_minmax(0,1fr)_3.5rem_4.5rem_4.5rem_4.75rem_3.5rem_8.5rem_10.75rem] items-center gap-x-3 gap-y-2 px-4 xl:px-5 py-3 hover:bg-slate-50 text-sm">
+                        <li class="grid grid-cols-2 xl:grid-cols-[7rem_minmax(0,1fr)_3.5rem_4.5rem_4.5rem_4.75rem_3.5rem_8.5rem_10.75rem] items-center gap-x-3 gap-y-2 px-4 xl:px-5 py-3 hover:bg-gray-50 text-sm">
                             <div class="col-span-2 xl:col-span-1 flex items-baseline justify-between xl:block">
-                                <span class="font-bold text-slate-800 whitespace-nowrap"><?= esc($k['nama_kelas']) ?></span>
-                                <span class="xl:hidden text-xs text-slate-500 truncate ml-2"><?= esc($k['wali'] ?? '—') ?></span>
+                                <span class="font-bold text-gray-800 whitespace-nowrap"><?= esc($k['nama_kelas']) ?></span>
+                                <span class="xl:hidden text-xs text-gray-500 truncate ml-2"><?= esc($k['wali'] ?? '—') ?></span>
                             </div>
-                            <span class="hidden xl:block text-slate-600 truncate" title="<?= esc($k['wali'] ?? '', 'attr') ?>"><?= esc($k['wali'] ?? '—') ?></span>
-                            <span class="hidden xl:block text-right tabular-nums text-slate-700"><?= $k['total'] ?></span>
-                            <span class="hidden xl:block text-right tabular-nums <?= $k['menunggu'] > 0 ? 'font-bold text-brand-700' : 'text-slate-400' ?>"><?= $k['menunggu'] ?></span>
-                            <span class="hidden xl:block text-right tabular-nums <?= $k['disetujui'] > 0 ? 'text-emerald-700' : 'text-slate-400' ?>"><?= $k['disetujui'] ?></span>
-                            <span class="hidden xl:block text-right tabular-nums <?= $k['perbaikan'] > 0 ? 'text-amber-700' : 'text-slate-400' ?>"><?= $k['perbaikan'] ?></span>
-                            <span class="hidden xl:block text-right tabular-nums font-semibold <?= $k['belum'] > 0 ? 'text-slate-800' : 'text-slate-400' ?>"><?= $k['belum'] ?></span>
+                            <span class="hidden xl:block text-gray-600 truncate" title="<?= esc($k['wali'] ?? '', 'attr') ?>"><?= esc($k['wali'] ?? '—') ?></span>
+                            <span class="hidden xl:block text-right tabular-nums text-gray-700"><?= $k['total'] ?></span>
+                            <span class="hidden xl:block text-right tabular-nums <?= $k['menunggu'] > 0 ? 'font-bold text-brand-700' : 'text-gray-400' ?>"><?= $k['menunggu'] ?></span>
+                            <span class="hidden xl:block text-right tabular-nums <?= $k['disetujui'] > 0 ? 'text-emerald-700' : 'text-gray-400' ?>"><?= $k['disetujui'] ?></span>
+                            <span class="hidden xl:block text-right tabular-nums <?= $k['perbaikan'] > 0 ? 'text-amber-700' : 'text-gray-400' ?>"><?= $k['perbaikan'] ?></span>
+                            <span class="hidden xl:block text-right tabular-nums font-semibold <?= $k['belum'] > 0 ? 'text-gray-800' : 'text-gray-400' ?>"><?= $k['belum'] ?></span>
                             <!-- HP: ringkasan angka dalam satu baris -->
-                            <p class="xl:hidden col-span-2 text-xs text-slate-500">
-                                <?= $k['total'] ?> siswa · <span class="<?= $k['menunggu'] > 0 ? 'font-bold text-brand-700' : '' ?>"><?= $k['menunggu'] ?> menunggu</span> · <?= $k['disetujui'] ?> disetujui · <?= $k['perbaikan'] ?> perbaikan · <b class="text-slate-700"><?= $k['belum'] ?> belum</b>
+                            <p class="xl:hidden col-span-2 text-xs text-gray-500">
+                                <?= $k['total'] ?> siswa · <span class="<?= $k['menunggu'] > 0 ? 'font-bold text-brand-700' : '' ?>"><?= $k['menunggu'] ?> menunggu</span> · <?= $k['disetujui'] ?> disetujui · <?= $k['perbaikan'] ?> perbaikan · <b class="text-gray-700"><?= $k['belum'] ?> belum</b>
                             </p>
                             <div class="col-span-2 xl:col-span-1 flex items-center gap-2" title="<?= $k['sudah'] ?> dari <?= $k['total'] ?> siswa sudah mengisi">
-                                <div class="h-2.5 flex-1 rounded-full bg-slate-100 overflow-hidden"><div class="h-full rounded-full <?= $bar ?>" style="width: <?= $k['rasio'] ?>%"></div></div>
+                                <div class="h-2.5 flex-1 rounded-full bg-gray-100 overflow-hidden"><div class="h-full rounded-full <?= $bar ?>" style="width: <?= $k['rasio'] ?>%"></div></div>
                                 <span class="w-12 shrink-0 text-right text-xs font-bold tabular-nums <?= $teksPersen ?>"><?= esc($k['persen_teks']) ?></span>
                             </div>
                             <div class="col-span-2 xl:col-span-1 flex gap-2 xl:justify-end">
                                 <?php if ($k['belum'] > 0): ?>
-                                    <a href="<?= site_url('admin/biodata') . '?tab=belum&kelas_id=' . (int) $k['id'] ?>" class="flex-1 xl:flex-none inline-flex items-center justify-center gap-1 rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-xs font-bold text-slate-700 hover:bg-slate-50" title="Daftar & pesan WA siswa yang belum mengisi">Yang belum <?= $ikon($IKON['panah'], 'w-3.5 h-3.5') ?></a>
+                                    <a href="<?= site_url('admin/biodata') . '?tab=belum&kelas_id=' . (int) $k['id'] ?>" class="flex-1 xl:flex-none inline-flex items-center justify-center gap-1 rounded-lg border border-gray-300 bg-white px-3 py-1.5 text-xs font-bold text-gray-700 hover:bg-gray-50" title="Daftar & pesan WA siswa yang belum mengisi">Yang belum <?= $ikon($IKON['panah'], 'w-3.5 h-3.5') ?></a>
                                 <?php else: ?>
                                     <span class="flex-1 xl:flex-none inline-flex items-center justify-center rounded-lg bg-emerald-50 border border-emerald-200 px-3 py-1.5 text-xs font-bold text-emerald-700">Semua mengisi ✓</span>
                                 <?php endif; ?>
@@ -547,7 +547,7 @@ $tombolSekunder = 'inline-flex items-center justify-center gap-1.5 rounded-lg bo
         <?php endif; ?>
 
         <?php if ($pager): ?>
-            <div class="px-5 py-4 border-t border-slate-100">
+            <div class="px-5 py-4 border-t border-gray-100">
                 <?= $pager->only(['tab', 'kelas_id', 'q'])->links('default', 'admin') ?>
             </div>
         <?php endif; ?>

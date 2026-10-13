@@ -30,7 +30,7 @@ class SuratSekolahModel extends Model
         'menunggu'     => ['Menunggu ACC', 'bg-amber-100 text-amber-800'],
         'dikembalikan' => ['Dikembalikan', 'bg-orange-100 text-orange-800'],
         'disetujui'    => ['Siap unduh', 'bg-green-100 text-green-800'],
-        'dibatalkan'   => ['Dibatalkan', 'bg-slate-200 text-slate-600'],
+        'dibatalkan'   => ['Dibatalkan', 'bg-gray-200 text-gray-600'],
     ];
 
     /** Kode tampilan, mis. SRT-00012 (bukan nomor surat resmi). */

@@ -24,7 +24,7 @@ $bolehViewerLuar = ! $tautan && in_array($d['visibilitas'], ['link', 'publik'], 
 
 $labelVisib = ['privat' => 'Privat', 'link' => 'Lewat tautan', 'publik' => 'Publik'];
 $warnaVisib = [
-    'privat' => 'bg-slate-100 text-slate-600',
+    'privat' => 'bg-gray-100 text-gray-600',
     'link'   => 'bg-brand-50 text-brand-700',
     'publik' => 'bg-emerald-50 text-emerald-700',
 ];
@@ -51,12 +51,12 @@ $sekolah = (new \App\Models\SettingModel())->get()['school_name'] ?? 'Sekolah';
     <!-- Remah jejak + aksi -->
     <div class="flex flex-col sm:flex-row sm:items-center gap-3 mb-4">
         <nav class="flex items-center gap-1 text-sm flex-1 min-w-0 flex-wrap">
-            <a href="<?= site_url('admin/dokumen') ?>" class="px-2 py-1 rounded-lg hover:bg-slate-100 text-slate-600">Dokumen</a>
+            <a href="<?= site_url('admin/dokumen') ?>" class="px-2 py-1 rounded-lg hover:bg-gray-100 text-gray-600">Dokumen</a>
             <?php foreach ($jejak as $j) { ?>
-                <svg class="w-4 h-4 text-slate-300 shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7"/></svg>
-                <a href="<?= site_url('admin/dokumen?folder=' . $j['id']) ?>" class="px-2 py-1 rounded-lg hover:bg-slate-100 text-slate-600 truncate max-w-[160px]"><?= esc($j['nama']) ?></a>
+                <svg class="w-4 h-4 text-gray-300 shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7"/></svg>
+                <a href="<?= site_url('admin/dokumen?folder=' . $j['id']) ?>" class="px-2 py-1 rounded-lg hover:bg-gray-100 text-gray-600 truncate max-w-[160px]"><?= esc($j['nama']) ?></a>
             <?php } ?>
-            <svg class="w-4 h-4 text-slate-300 shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7"/></svg>
+            <svg class="w-4 h-4 text-gray-300 shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7"/></svg>
             <span class="px-2 py-1 font-semibold text-brand-700 truncate max-w-[220px]"><?= esc($d['judul']) ?></span>
         </nav>
 
@@ -73,7 +73,7 @@ $sekolah = (new \App\Models\SettingModel())->get()['school_name'] ?? 'Sekolah';
                 </a>
             <?php } ?>
             <a href="<?= site_url('admin/dokumen' . ($d['folder_id'] !== null ? '?folder=' . (int) $d['folder_id'] : '')) ?>"
-               class="px-3 py-2 rounded-xl border border-slate-300 text-sm font-medium text-slate-700 hover:bg-slate-50">Kembali</a>
+               class="px-3 py-2 rounded-xl border border-gray-300 text-sm font-medium text-gray-700 hover:bg-gray-50">Kembali</a>
         </div>
     </div>
 
@@ -83,7 +83,7 @@ $sekolah = (new \App\Models\SettingModel())->get()['school_name'] ?? 'Sekolah';
     <div class="space-y-4">
 
         <!-- Penampil -->
-        <div class="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+        <div class="bg-white rounded-2xl border border-gray-200 shadow-xs overflow-hidden">
             <?= view('partials/dokumen_penampil', [
                 'urlIsi'          => $urlIsi,
                 'urlUnduh'        => $urlUnduh,
@@ -106,68 +106,68 @@ $sekolah = (new \App\Models\SettingModel())->get()['school_name'] ?? 'Sekolah';
         <div class="grid grid-cols-1 lg:grid-cols-3 gap-4 items-start">
 
             <!-- Keterangan -->
-            <div class="bg-white rounded-2xl border border-slate-200 shadow-sm p-4">
-                <h3 class="font-semibold text-slate-800 text-sm mb-3">Keterangan Berkas</h3>
+            <div class="bg-white rounded-2xl border border-gray-200 shadow-xs p-4">
+                <h3 class="font-semibold text-gray-800 text-sm mb-3">Keterangan Berkas</h3>
                 <dl class="space-y-2 text-sm">
                     <div class="flex justify-between gap-3">
-                        <dt class="text-slate-500 shrink-0">Judul</dt>
-                        <dd class="text-slate-800 font-medium text-right break-words"><?= esc($d['judul']) ?></dd>
+                        <dt class="text-gray-500 shrink-0">Judul</dt>
+                        <dd class="text-gray-800 font-medium text-right break-words"><?= esc($d['judul']) ?></dd>
                     </div>
                     <?php if (! $tautan) { ?>
                         <div class="flex justify-between gap-3">
-                            <dt class="text-slate-500 shrink-0">Nama berkas</dt>
-                            <dd class="text-slate-700 text-right break-all text-xs"><?= esc((string) $d['nama_asli']) ?></dd>
+                            <dt class="text-gray-500 shrink-0">Nama berkas</dt>
+                            <dd class="text-gray-700 text-right break-all text-xs"><?= esc((string) $d['nama_asli']) ?></dd>
                         </div>
                         <div class="flex justify-between gap-3">
-                            <dt class="text-slate-500">Ukuran</dt>
-                            <dd class="text-slate-700"><?= esc(dokumen_ukuran_manusia((int) $d['ukuran'])) ?></dd>
+                            <dt class="text-gray-500">Ukuran</dt>
+                            <dd class="text-gray-700"><?= esc(dokumen_ukuran_manusia((int) $d['ukuran'])) ?></dd>
                         </div>
                         <div class="flex justify-between gap-3">
-                            <dt class="text-slate-500">Jenis</dt>
-                            <dd class="text-slate-700"><?= esc(strtoupper($ext ?: $kategori)) ?></dd>
+                            <dt class="text-gray-500">Jenis</dt>
+                            <dd class="text-gray-700"><?= esc(strtoupper($ext ?: $kategori)) ?></dd>
                         </div>
                     <?php } else { ?>
                         <div class="flex justify-between gap-3">
-                            <dt class="text-slate-500 shrink-0">Tautan</dt>
+                            <dt class="text-gray-500 shrink-0">Tautan</dt>
                             <dd class="text-right break-all text-xs"><a href="<?= esc($d['url_eksternal']) ?>" target="_blank" rel="noopener" class="text-brand-700 underline"><?= esc($d['url_eksternal']) ?></a></dd>
                         </div>
                     <?php } ?>
                     <div class="flex justify-between gap-3">
-                        <dt class="text-slate-500">Akses</dt>
-                        <dd><span class="px-2 py-0.5 rounded text-[11px] font-medium <?= $warnaVisib[$d['visibilitas']] ?>"><?= esc($labelVisib[$d['visibilitas']]) ?></span></dd>
+                        <dt class="text-gray-500">Akses</dt>
+                        <dd><span class="px-2 py-0.5 rounded-sm text-[11px] font-medium <?= $warnaVisib[$d['visibilitas']] ?>"><?= esc($labelVisib[$d['visibilitas']]) ?></span></dd>
                     </div>
                     <div class="flex justify-between gap-3">
-                        <dt class="text-slate-500">Folder</dt>
-                        <dd class="text-slate-700 text-right"><?= esc((string) ($d['folder_nama'] ?? 'Dokumen (utama)')) ?></dd>
+                        <dt class="text-gray-500">Folder</dt>
+                        <dd class="text-gray-700 text-right"><?= esc((string) ($d['folder_nama'] ?? 'Dokumen (utama)')) ?></dd>
                     </div>
                     <div class="flex justify-between gap-3">
-                        <dt class="text-slate-500">Diunggah</dt>
-                        <dd class="text-slate-700 text-right text-xs">
+                        <dt class="text-gray-500">Diunggah</dt>
+                        <dd class="text-gray-700 text-right text-xs">
                             <?= esc($tgl($d['created_at'])) ?><br>
-                            <span class="text-slate-400"><?= esc((string) ($d['pengunggah'] ?? '—')) ?></span>
+                            <span class="text-gray-400"><?= esc((string) ($d['pengunggah'] ?? '—')) ?></span>
                         </dd>
                     </div>
                     <div class="flex justify-between gap-3">
-                        <dt class="text-slate-500">Dibuka / diunduh</dt>
-                        <dd class="text-slate-700"><?= (int) $d['jml_lihat'] ?> / <?= (int) $d['jml_unduh'] ?></dd>
+                        <dt class="text-gray-500">Dibuka / diunduh</dt>
+                        <dd class="text-gray-700"><?= (int) $d['jml_lihat'] ?> / <?= (int) $d['jml_unduh'] ?></dd>
                     </div>
                 </dl>
 
                 <?php if (trim((string) $d['deskripsi']) !== '') { ?>
-                    <div class="mt-3 pt-3 border-t border-slate-100">
-                        <p class="text-xs text-slate-500 mb-1">Keterangan</p>
-                        <p class="text-sm text-slate-700 whitespace-pre-line"><?= esc($d['deskripsi']) ?></p>
+                    <div class="mt-3 pt-3 border-t border-gray-100">
+                        <p class="text-xs text-gray-500 mb-1">Keterangan</p>
+                        <p class="text-sm text-gray-700 whitespace-pre-line"><?= esc($d['deskripsi']) ?></p>
                     </div>
                 <?php } ?>
             </div>
 
             <!-- Tautan berbagi -->
-            <div class="bg-white rounded-2xl border border-slate-200 shadow-sm p-4">
-                <h3 class="font-semibold text-slate-800 text-sm mb-1">Tautan Berbagi</h3>
-                <p class="text-xs text-slate-500 mb-3">Guru tidak perlu akun — cukup buka tautannya.</p>
+            <div class="bg-white rounded-2xl border border-gray-200 shadow-xs p-4">
+                <h3 class="font-semibold text-gray-800 text-sm mb-1">Tautan Berbagi</h3>
+                <p class="text-xs text-gray-500 mb-3">Guru tidak perlu akun — cukup buka tautannya.</p>
 
                 <?php if ($shares === []) { ?>
-                    <p class="text-sm text-slate-400 py-3 text-center">Belum ada tautan. Klik <b>Bagikan</b> di atas.</p>
+                    <p class="text-sm text-gray-400 py-3 text-center">Belum ada tautan. Klik <b>Bagikan</b> di atas.</p>
                 <?php } else { ?>
                     <div class="space-y-3">
                         <?php foreach ($shares as $s) {
@@ -178,29 +178,29 @@ $sekolah = (new \App\Models\SettingModel())->get()['school_name'] ?? 'Sekolah';
                             $sehat  = ! $mati && ! $lewat && ! $habis;
                             $pesanWa = rawurlencode("Assalamualaikum. Berikut dokumen \"" . $d['judul'] . "\" dari " . $sekolah . ":\n" . $url);
                             ?>
-                            <div class="border rounded-xl p-3 <?= $sehat ? 'border-emerald-200 bg-emerald-50/40' : 'border-slate-200 bg-slate-50' ?>">
+                            <div class="border rounded-xl p-3 <?= $sehat ? 'border-emerald-200 bg-emerald-50/40' : 'border-gray-200 bg-gray-50' ?>">
                                 <div class="flex items-center gap-2 mb-2">
-                                    <span class="px-2 py-0.5 rounded text-[10px] font-bold <?= $sehat ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-200 text-slate-500' ?>">
+                                    <span class="px-2 py-0.5 rounded-sm text-[10px] font-bold <?= $sehat ? 'bg-emerald-100 text-emerald-700' : 'bg-gray-200 text-gray-500' ?>">
                                         <?= $mati ? 'DICABUT' : ($lewat ? 'KEDALUWARSA' : ($habis ? 'JATAH HABIS' : 'AKTIF')) ?>
                                     </span>
                                     <?php if ($s['password_hash']) { ?>
-                                        <span class="px-2 py-0.5 rounded text-[10px] bg-amber-100 text-amber-700">Bersandi</span>
+                                        <span class="px-2 py-0.5 rounded-sm text-[10px] bg-amber-100 text-amber-700">Bersandi</span>
                                     <?php } ?>
                                     <?php if ((int) $s['boleh_unduh'] !== 1) { ?>
-                                        <span class="px-2 py-0.5 rounded text-[10px] bg-slate-200 text-slate-600">Lihat saja</span>
+                                        <span class="px-2 py-0.5 rounded-sm text-[10px] bg-gray-200 text-gray-600">Lihat saja</span>
                                     <?php } ?>
                                 </div>
 
                                 <input readonly value="<?= esc($url, 'attr') ?>" onclick="this.select()"
-                                       class="w-full px-2 py-1.5 rounded-lg border border-slate-300 text-[11px] font-mono bg-white mb-2">
+                                       class="w-full px-2 py-1.5 rounded-lg border border-gray-300 text-[11px] font-mono bg-white mb-2">
 
                                 <div class="flex items-center gap-1.5 flex-wrap">
                                     <button type="button" @click="salin('<?= esc($url, 'js') ?>', $el)"
-                                            class="px-2.5 py-1 rounded-lg border border-slate-300 text-xs font-medium text-slate-700 hover:bg-white">Salin</button>
+                                            class="px-2.5 py-1 rounded-lg border border-gray-300 text-xs font-medium text-gray-700 hover:bg-white">Salin</button>
                                     <a href="https://wa.me/?text=<?= $pesanWa ?>" target="_blank" rel="noopener"
                                        class="px-2.5 py-1 rounded-lg bg-green-600 text-white text-xs font-medium hover:bg-green-700">WhatsApp</a>
                                     <a href="<?= esc($url) ?>" target="_blank" rel="noopener"
-                                       class="px-2.5 py-1 rounded-lg border border-slate-300 text-xs text-slate-600 hover:bg-white">Coba buka</a>
+                                       class="px-2.5 py-1 rounded-lg border border-gray-300 text-xs text-gray-600 hover:bg-white">Coba buka</a>
                                     <?php if (! $mati) { ?>
                                         <form method="post" action="<?= site_url('admin/dokumen/share/' . $s['id'] . '/cabut') ?>" class="ml-auto"
                                               onsubmit="return confirm('Cabut tautan ini? Guru yang sudah memegangnya tidak bisa lagi membuka dokumen.')">
@@ -210,12 +210,12 @@ $sekolah = (new \App\Models\SettingModel())->get()['school_name'] ?? 'Sekolah';
                                     <?php } ?>
                                 </div>
 
-                                <p class="text-[11px] text-slate-500 mt-2">
+                                <p class="text-[11px] text-gray-500 mt-2">
                                     Dibuka <?= (int) $s['jml_akses'] ?>× · diunduh <?= (int) $s['jml_unduh'] ?><?= $s['maks_unduh'] !== null ? '/' . (int) $s['maks_unduh'] : '' ?>×
                                     <?php if (! empty($s['expired_at'])) { ?> · berlaku s/d <?= esc(date('d/m/Y', strtotime((string) $s['expired_at']))) ?><?php } ?>
                                 </p>
                                 <?php if (! empty($s['catatan'])) { ?>
-                                    <p class="text-[11px] text-slate-500 italic mt-0.5"><?= esc($s['catatan']) ?></p>
+                                    <p class="text-[11px] text-gray-500 italic mt-0.5"><?= esc($s['catatan']) ?></p>
                                 <?php } ?>
                             </div>
                         <?php } ?>
@@ -225,14 +225,14 @@ $sekolah = (new \App\Models\SettingModel())->get()['school_name'] ?? 'Sekolah';
 
             <!-- Riwayat akses -->
             <?php if ($riwayat !== []) { ?>
-                <div class="bg-white rounded-2xl border border-slate-200 shadow-sm p-4">
-                    <h3 class="font-semibold text-slate-800 text-sm mb-3">Riwayat Akses Terakhir</h3>
+                <div class="bg-white rounded-2xl border border-gray-200 shadow-xs p-4">
+                    <h3 class="font-semibold text-gray-800 text-sm mb-3">Riwayat Akses Terakhir</h3>
                     <ul class="space-y-1.5 text-xs">
                         <?php foreach ($riwayat as $r) { ?>
                             <li class="flex items-center gap-2">
-                                <span class="px-1.5 py-0.5 rounded text-[10px] font-medium <?= $r['aksi'] === 'unduh' ? 'bg-brand-50 text-brand-700' : 'bg-slate-100 text-slate-500' ?>"><?= esc(ucfirst($r['aksi'])) ?></span>
-                                <span class="text-slate-600 truncate"><?= esc((string) ($r['admin_nama'] ?? 'Tamu lewat tautan')) ?></span>
-                                <span class="text-slate-400 ml-auto shrink-0"><?= esc($tgl($r['created_at'])) ?></span>
+                                <span class="px-1.5 py-0.5 rounded-sm text-[10px] font-medium <?= $r['aksi'] === 'unduh' ? 'bg-brand-50 text-brand-700' : 'bg-gray-100 text-gray-500' ?>"><?= esc(ucfirst($r['aksi'])) ?></span>
+                                <span class="text-gray-600 truncate"><?= esc((string) ($r['admin_nama'] ?? 'Tamu lewat tautan')) ?></span>
+                                <span class="text-gray-400 ml-auto shrink-0"><?= esc($tgl($r['created_at'])) ?></span>
                             </li>
                         <?php } ?>
                     </ul>
@@ -243,32 +243,32 @@ $sekolah = (new \App\Models\SettingModel())->get()['school_name'] ?? 'Sekolah';
 
     <!-- Modal: buat tautan berbagi -->
     <div x-show="bagikanOpen" x-cloak x-transition.opacity.duration.200ms class="fixed inset-0 z-[70] flex items-center justify-center p-4">
-        <div class="absolute inset-0 bg-slate-900/50" @click="bagikanOpen=false"></div>
+        <div class="absolute inset-0 bg-gray-900/50" @click="bagikanOpen=false"></div>
         <form method="post" action="<?= site_url('admin/dokumen/' . $id . '/bagikan') ?>" class="relative bg-white rounded-2xl shadow-xl w-full max-w-md p-5">
             <?= csrf_field() ?>
-            <h3 class="font-semibold text-slate-800 mb-1">Bagikan Dokumen</h3>
-            <p class="text-xs text-slate-500 mb-4">Tautan bisa dibuka siapa pun yang memegangnya, tanpa perlu akun. Semua pembatasan di bawah bersifat opsional.</p>
+            <h3 class="font-semibold text-gray-800 mb-1">Bagikan Dokumen</h3>
+            <p class="text-xs text-gray-500 mb-4">Tautan bisa dibuka siapa pun yang memegangnya, tanpa perlu akun. Semua pembatasan di bawah bersifat opsional.</p>
 
-            <label class="block text-sm text-slate-600 mb-1">Berlaku sampai tanggal</label>
-            <input type="date" name="expired_at" class="w-full px-3 py-2 rounded-xl border border-slate-300 text-sm mb-1">
-            <p class="text-[11px] text-slate-400 mb-3">Kosongkan bila tautan tidak perlu kedaluwarsa.</p>
+            <label class="block text-sm text-gray-600 mb-1">Berlaku sampai tanggal</label>
+            <input type="date" name="expired_at" class="w-full px-3 py-2 rounded-xl border border-gray-300 text-sm mb-1">
+            <p class="text-[11px] text-gray-400 mb-3">Kosongkan bila tautan tidak perlu kedaluwarsa.</p>
 
-            <label class="block text-sm text-slate-600 mb-1">Kata sandi</label>
+            <label class="block text-sm text-gray-600 mb-1">Kata sandi</label>
             <input type="text" name="sandi" autocomplete="off" placeholder="Kosongkan bila tidak perlu"
-                   class="w-full px-3 py-2 rounded-xl border border-slate-300 text-sm mb-3">
+                   class="w-full px-3 py-2 rounded-xl border border-gray-300 text-sm mb-3">
 
-            <label class="block text-sm text-slate-600 mb-1">Batas jumlah unduhan</label>
+            <label class="block text-sm text-gray-600 mb-1">Batas jumlah unduhan</label>
             <input type="number" name="maks_unduh" min="1" placeholder="Kosongkan = tanpa batas"
-                   class="w-full px-3 py-2 rounded-xl border border-slate-300 text-sm mb-3">
+                   class="w-full px-3 py-2 rounded-xl border border-gray-300 text-sm mb-3">
 
             <label class="flex items-center gap-2 mb-3 cursor-pointer">
-                <input type="checkbox" name="boleh_unduh" value="1" checked class="w-4 h-4 rounded border-slate-300 text-brand-600 focus:ring-brand-500">
-                <span class="text-sm text-slate-700">Boleh diunduh (jika dimatikan, hanya bisa dilihat)</span>
+                <input type="checkbox" name="boleh_unduh" value="1" checked class="w-4 h-4 rounded-sm border-gray-300 text-brand-600 focus:ring-brand-500">
+                <span class="text-sm text-gray-700">Boleh diunduh (jika dimatikan, hanya bisa dilihat)</span>
             </label>
 
-            <label class="block text-sm text-slate-600 mb-1">Catatan internal</label>
+            <label class="block text-sm text-gray-600 mb-1">Catatan internal</label>
             <input name="catatan" maxlength="255" placeholder="mis. untuk wali kelas XII"
-                   class="w-full px-3 py-2 rounded-xl border border-slate-300 text-sm mb-4">
+                   class="w-full px-3 py-2 rounded-xl border border-gray-300 text-sm mb-4">
 
             <?php if ($d['visibilitas'] === 'privat') { ?>
                 <p class="text-[11px] text-brand-800 bg-brand-50 border border-brand-200 rounded-lg px-3 py-2 mb-4">
@@ -278,7 +278,7 @@ $sekolah = (new \App\Models\SettingModel())->get()['school_name'] ?? 'Sekolah';
             <?php } ?>
 
             <div class="flex justify-end gap-2">
-                <button type="button" @click="bagikanOpen=false" class="px-4 py-2 rounded-xl border border-slate-300 text-sm">Batal</button>
+                <button type="button" @click="bagikanOpen=false" class="px-4 py-2 rounded-xl border border-gray-300 text-sm">Batal</button>
                 <button class="px-4 py-2 rounded-xl bg-emerald-600 text-white text-sm font-semibold hover:bg-emerald-700">Buat Tautan</button>
             </div>
         </form>

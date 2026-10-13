@@ -1,0 +1,24 @@
+{
+  "name": "muslimin-tampilan",
+  "private": true,
+  "description": "Alat bangun tampilan admin (Tailwind CSS v4 + pola Flowbite Admin Dashboard) dan salinan lokal pustaka JS, font, ikon. Hasil build ikut di-commit, jadi server cukup git pull (tanpa npm). Rancangan: docs/RENCANA-UPGRADE-TAMPILAN.md",
+  "scripts": {
+    "build:admin": "tailwindcss -i resources/css/admin.css -o public/assets/css/admin.css --minify",
+    "watch:admin": "tailwindcss -i resources/css/admin.css -o public/assets/css/admin.css --watch",
+    "vendor": "node tools/salin-vendor.mjs",
+    "uji:peramban": "node tools/uji-peramban.mjs"
+  },
+  "devDependencies": {
+    "@alpinejs/collapse": "3.15.12",
+    "@alpinejs/csp": "3.15.12",
+    "@fontsource-variable/inter": "5.3.0",
+    "@tailwindcss/cli": "4.3.3",
+    "alpinejs": "3.15.12",
+    "flowbite": "3.1.2",
+    "flowbite-icons": "1.5.0",
+    "tailwindcss": "4.3.3"
+  },
+  "overrides": {
+    "@parcel/watcher": "2.6.0"
+  }
+}

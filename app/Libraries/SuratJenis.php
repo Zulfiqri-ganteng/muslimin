@@ -107,7 +107,7 @@ final class SuratJenis
 
     public static function badge(string $kode): string
     {
-        return self::DATA[$kode]['badge'] ?? 'bg-slate-100 text-slate-700';
+        return self::DATA[$kode]['badge'] ?? 'bg-gray-100 text-gray-700';
     }
 
     /** Halaman jenis ini sudah dibangun (menu aktif)? */

@@ -19,7 +19,7 @@ $warnaPeran = [
     'operator' => 'bg-emerald-50 text-emerald-700 ring-emerald-200',
     'hubin'    => 'bg-amber-50 text-amber-700 ring-amber-200',
 ];
-$warnaNetral = 'bg-slate-100 text-slate-600 ring-slate-200';
+$warnaNetral = 'bg-gray-100 text-gray-600 ring-gray-200';
 $labelPeran  = array_map(static fn (array $p): string => (string) $p['label'], $peran);
 $tglLogin    = static fn (?string $t): ?string => $t ? date('d-m-Y H:i', strtotime($t)) : null;
 
@@ -59,24 +59,24 @@ $dataBaris = static fn (array $r, int $saya): string => esc(json_encode([
     <!-- Ringkasan -->
     <div class="mb-5 grid grid-cols-2 gap-3 lg:grid-cols-4">
         <?php foreach ([
-            ['Total akun', $ringkas['total'], 'text-slate-800'],
+            ['Total akun', $ringkas['total'], 'text-gray-800'],
             ['Akun aktif', $ringkas['aktif'], 'text-emerald-600'],
             ['Admin', $ringkas['peran']['admin'] ?? 0, 'text-brand-700'],
             ['Peran lain (bukan Admin)', array_sum($ringkas['peran']) - ($ringkas['peran']['admin'] ?? 0), 'text-amber-600'],
         ] as [$label, $nilai, $warna]): ?>
-            <div class="rounded-2xl border border-slate-200 bg-white px-4 py-3.5 shadow-sm">
-                <p class="text-xs font-semibold text-slate-400"><?= esc($label) ?></p>
+            <div class="rounded-2xl border border-gray-200 bg-white px-4 py-3.5 shadow-xs">
+                <p class="text-xs font-semibold text-gray-400"><?= esc($label) ?></p>
                 <p class="mt-1 text-2xl font-extrabold <?= $warna ?>"><?= (int) $nilai ?></p>
             </div>
         <?php endforeach; ?>
     </div>
 
     <!-- Daftar akun -->
-    <div class="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
-        <div class="flex flex-col gap-3 border-b border-slate-100 px-5 py-4 sm:flex-row sm:items-center sm:justify-between">
+    <div class="overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-xs">
+        <div class="flex flex-col gap-3 border-b border-gray-100 px-5 py-4 sm:flex-row sm:items-center sm:justify-between">
             <div>
-                <h2 class="font-bold text-slate-800">Daftar Akun Staf</h2>
-                <p class="text-xs text-slate-400">Login dengan email, lalu menu menyesuaikan peran.</p>
+                <h2 class="font-bold text-gray-800">Daftar Akun Staf</h2>
+                <p class="text-xs text-gray-400">Login dengan email, lalu menu menyesuaikan peran.</p>
             </div>
             <button type="button" @click="tambah()"
                     class="inline-flex items-center justify-center gap-1.5 rounded-lg bg-brand-700 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-brand-800 active:scale-95">
@@ -88,7 +88,7 @@ $dataBaris = static fn (array $r, int $saya): string => esc(json_encode([
         <!-- Tabel (layar lebar) -->
         <div class="hidden md:block">
             <table class="w-full text-sm">
-                <thead class="bg-slate-50 text-left text-slate-500">
+                <thead class="bg-gray-50 text-left text-gray-500">
                     <tr>
                         <th class="px-5 py-3 font-semibold">Akun</th>
                         <th class="px-5 py-3 font-semibold">Peran</th>
@@ -97,18 +97,18 @@ $dataBaris = static fn (array $r, int $saya): string => esc(json_encode([
                         <th class="w-36 px-5 py-3 text-right font-semibold">Aksi</th>
                     </tr>
                 </thead>
-                <tbody class="divide-y divide-slate-100">
+                <tbody class="divide-y divide-gray-100">
                     <?php foreach ($rows as $r): $milikSaya = (int) $r['id'] === $saya; $aktif = (int) $r['aktif'] === 1; ?>
-                        <tr class="<?= $aktif ? 'hover:bg-slate-50' : 'bg-slate-50/60' ?>" data-akun="<?= $dataBaris($r, $saya) ?>">
+                        <tr class="<?= $aktif ? 'hover:bg-gray-50' : 'bg-gray-50/60' ?>" data-akun="<?= $dataBaris($r, $saya) ?>">
                             <td class="px-5 py-3.5">
                                 <div class="flex items-center gap-3">
                                     <span class="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-brand-100 text-sm font-bold text-brand-700"><?= esc(strtoupper(mb_substr($r['full_name'], 0, 1))) ?></span>
                                     <div class="min-w-0">
-                                        <p class="truncate font-semibold <?= $aktif ? 'text-slate-800' : 'text-slate-400' ?>">
+                                        <p class="truncate font-semibold <?= $aktif ? 'text-gray-800' : 'text-gray-400' ?>">
                                             <?= esc($r['full_name']) ?>
-                                            <?php if ($milikSaya): ?><span class="ml-1 rounded-md bg-slate-100 px-1.5 py-0.5 align-middle text-[10px] font-bold uppercase tracking-wide text-slate-500">Anda</span><?php endif; ?>
+                                            <?php if ($milikSaya): ?><span class="ml-1 rounded-md bg-gray-100 px-1.5 py-0.5 align-middle text-[10px] font-bold uppercase tracking-wide text-gray-500">Anda</span><?php endif; ?>
                                         </p>
-                                        <p class="truncate text-xs text-slate-400"><?= esc($r['email']) ?></p>
+                                        <p class="truncate text-xs text-gray-400"><?= esc($r['email']) ?></p>
                                     </div>
                                 </div>
                             </td>
@@ -120,14 +120,14 @@ $dataBaris = static fn (array $r, int $saya): string => esc(json_encode([
                                     <?php if ($aktif): ?>
                                         <span class="inline-flex rounded-full bg-green-100 px-2.5 py-0.5 text-xs font-semibold text-green-700">Aktif</span>
                                     <?php else: ?>
-                                        <span class="inline-flex rounded-full bg-slate-200 px-2.5 py-0.5 text-xs font-semibold text-slate-500">Nonaktif</span>
+                                        <span class="inline-flex rounded-full bg-gray-200 px-2.5 py-0.5 text-xs font-semibold text-gray-500">Nonaktif</span>
                                     <?php endif; ?>
                                     <?php if ((int) $r['wajib_ganti_sandi'] === 1): ?>
                                         <span class="inline-flex rounded-full bg-amber-50 px-2 py-0.5 text-[11px] font-semibold text-amber-700 ring-1 ring-inset ring-amber-200" title="Masih memakai sandi sementara">Sandi sementara</span>
                                     <?php endif; ?>
                                 </div>
                             </td>
-                            <td class="px-5 py-3.5 text-slate-500"><?= $tglLogin($r['last_login_at']) ?? '<span class="text-slate-300">Belum pernah</span>' ?></td>
+                            <td class="px-5 py-3.5 text-gray-500"><?= $tglLogin($r['last_login_at']) ?? '<span class="text-gray-300">Belum pernah</span>' ?></td>
                             <td class="px-5 py-3.5 text-right">
                                 <div class="inline-flex items-center justify-end gap-1">
                                     <button type="button" @click="ubah(baris($el))" title="Ubah data & peran"
@@ -160,33 +160,33 @@ $dataBaris = static fn (array $r, int $saya): string => esc(json_encode([
         </div>
 
         <!-- Kartu (HP) -->
-        <div class="divide-y divide-slate-100 md:hidden">
+        <div class="divide-y divide-gray-100 md:hidden">
             <?php foreach ($rows as $r): $milikSaya = (int) $r['id'] === $saya; $aktif = (int) $r['aktif'] === 1; ?>
-                <div class="space-y-3 px-4 py-4 <?= $aktif ? '' : 'bg-slate-50/60' ?>" data-akun="<?= $dataBaris($r, $saya) ?>">
+                <div class="space-y-3 px-4 py-4 <?= $aktif ? '' : 'bg-gray-50/60' ?>" data-akun="<?= $dataBaris($r, $saya) ?>">
                     <div class="flex items-start gap-3">
                         <span class="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-brand-100 text-sm font-bold text-brand-700"><?= esc(strtoupper(mb_substr($r['full_name'], 0, 1))) ?></span>
                         <div class="min-w-0 flex-1">
-                            <p class="font-semibold <?= $aktif ? 'text-slate-800' : 'text-slate-400' ?>">
+                            <p class="font-semibold <?= $aktif ? 'text-gray-800' : 'text-gray-400' ?>">
                                 <?= esc($r['full_name']) ?>
-                                <?php if ($milikSaya): ?><span class="ml-1 rounded-md bg-slate-100 px-1.5 py-0.5 align-middle text-[10px] font-bold uppercase tracking-wide text-slate-500">Anda</span><?php endif; ?>
+                                <?php if ($milikSaya): ?><span class="ml-1 rounded-md bg-gray-100 px-1.5 py-0.5 align-middle text-[10px] font-bold uppercase tracking-wide text-gray-500">Anda</span><?php endif; ?>
                             </p>
-                            <p class="break-all text-xs text-slate-400"><?= esc($r['email']) ?></p>
+                            <p class="break-all text-xs text-gray-400"><?= esc($r['email']) ?></p>
                             <div class="mt-2 flex flex-wrap items-center gap-1.5">
                                 <span class="inline-flex rounded-full px-2.5 py-0.5 text-xs font-semibold ring-1 ring-inset <?= $warnaPeran[$r['role']] ?? $warnaNetral ?>"><?= esc($labelPeran[$r['role']] ?? $r['role']) ?></span>
                                 <?php if ($aktif): ?>
                                     <span class="inline-flex rounded-full bg-green-100 px-2.5 py-0.5 text-xs font-semibold text-green-700">Aktif</span>
                                 <?php else: ?>
-                                    <span class="inline-flex rounded-full bg-slate-200 px-2.5 py-0.5 text-xs font-semibold text-slate-500">Nonaktif</span>
+                                    <span class="inline-flex rounded-full bg-gray-200 px-2.5 py-0.5 text-xs font-semibold text-gray-500">Nonaktif</span>
                                 <?php endif; ?>
                                 <?php if ((int) $r['wajib_ganti_sandi'] === 1): ?>
                                     <span class="inline-flex rounded-full bg-amber-50 px-2 py-0.5 text-[11px] font-semibold text-amber-700 ring-1 ring-inset ring-amber-200">Sandi sementara</span>
                                 <?php endif; ?>
                             </div>
-                            <p class="mt-1.5 text-xs text-slate-400">Terakhir login: <?= $tglLogin($r['last_login_at']) ?? 'belum pernah' ?></p>
+                            <p class="mt-1.5 text-xs text-gray-400">Terakhir login: <?= $tglLogin($r['last_login_at']) ?? 'belum pernah' ?></p>
                         </div>
                     </div>
                     <div class="flex flex-wrap gap-2">
-                        <button type="button" @click="ubah(baris($el))" class="rounded-lg border border-slate-300 px-3 py-1.5 text-xs font-semibold text-slate-600 hover:bg-slate-50">Ubah</button>
+                        <button type="button" @click="ubah(baris($el))" class="rounded-lg border border-gray-300 px-3 py-1.5 text-xs font-semibold text-gray-600 hover:bg-gray-50">Ubah</button>
                         <?php if (! $milikSaya): ?>
                             <button type="button" @click="tanya('reset', baris($el))" class="rounded-lg border border-amber-300 px-3 py-1.5 text-xs font-semibold text-amber-700 hover:bg-amber-50">Reset sandi</button>
                             <?php if ($aktif): ?>
@@ -206,10 +206,10 @@ $dataBaris = static fn (array $r, int $saya): string => esc(json_encode([
         <?php foreach ($peran as $kode => $p):
             $level = array_count_values(array_map('strval', array_values((array) ($p['menu'] ?? []))));
         ?>
-            <div class="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+            <div class="rounded-2xl border border-gray-200 bg-white p-4 shadow-xs">
                 <span class="inline-flex rounded-full px-2.5 py-0.5 text-xs font-semibold ring-1 ring-inset <?= $warnaPeran[$kode] ?? $warnaNetral ?>"><?= esc($p['label']) ?></span>
-                <?php if ((string) ($p['ringkas'] ?? '') !== ''): ?><p class="mt-2 text-xs leading-relaxed text-slate-500"><?= esc($p['ringkas']) ?></p><?php endif; ?>
-                <p class="mt-2 text-[11px] font-semibold text-slate-600">
+                <?php if ((string) ($p['ringkas'] ?? '') !== ''): ?><p class="mt-2 text-xs leading-relaxed text-gray-500"><?= esc($p['ringkas']) ?></p><?php endif; ?>
+                <p class="mt-2 text-[11px] font-semibold text-gray-600">
                     <?php if (! empty($p['penuh'])): ?>
                         Semua menu &amp; hak — tidak bisa dibatasi.
                     <?php else: ?>
@@ -219,16 +219,16 @@ $dataBaris = static fn (array $r, int $saya): string => esc(json_encode([
             </div>
         <?php endforeach; ?>
     </div>
-    <p class="mt-2 text-xs text-slate-400">Siapa boleh membuka menu apa, dan hak PKL &amp; Surat tiap peran, diatur di <a href="<?= site_url('admin/hak-akses') ?>" class="font-semibold text-brand-700 hover:underline">Sistem → Hak Akses</a> (keterangan peran juga bisa diubah di sana).</p>
+    <p class="mt-2 text-xs text-gray-400">Siapa boleh membuka menu apa, dan hak PKL &amp; Surat tiap peran, diatur di <a href="<?= site_url('admin/hak-akses') ?>" class="font-semibold text-brand-700 hover:underline">Sistem → Hak Akses</a> (keterangan peran juga bisa diubah di sana).</p>
 
     <!-- ============ Dialog: tambah / ubah akun ============ -->
     <div x-show="formTerbuka" x-cloak x-transition.opacity.duration.200ms
          class="fixed inset-0 z-50 flex items-end justify-center sm:items-center sm:p-4" role="dialog" aria-modal="true">
-        <div class="absolute inset-0 bg-slate-900/50" @click="formTerbuka=false"></div>
+        <div class="absolute inset-0 bg-gray-900/50" @click="formTerbuka=false"></div>
         <div class="relative max-h-[92vh] w-full overflow-y-auto rounded-t-2xl bg-white shadow-2xl sm:max-w-xl sm:rounded-2xl">
-            <div class="flex items-center justify-between border-b border-slate-100 px-5 py-4 sm:px-6">
-                <h3 class="text-lg font-bold text-slate-800" x-text="mode==='tambah' ? 'Tambah Akun Staf' : 'Ubah Akun'"></h3>
-                <button type="button" @click="formTerbuka=false" class="text-slate-400 hover:text-slate-600" title="Tutup">
+            <div class="flex items-center justify-between border-b border-gray-100 px-5 py-4 sm:px-6">
+                <h3 class="text-lg font-bold text-gray-800" x-text="mode==='tambah' ? 'Tambah Akun Staf' : 'Ubah Akun'"></h3>
+                <button type="button" @click="formTerbuka=false" class="text-gray-400 hover:text-gray-600" title="Tutup">
                     <svg class="h-5 w-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg>
                 </button>
             </div>
@@ -241,10 +241,10 @@ $dataBaris = static fn (array $r, int $saya): string => esc(json_encode([
                 <div>
                     <label class="lbl" for="akun-email">Email <span class="text-red-500">*</span></label>
                     <input id="akun-email" type="email" name="email" x-model="form.email" maxlength="150" required autocomplete="off" inputmode="email" class="inp" placeholder="nama@sekolah.sch.id">
-                    <p class="mt-1 text-xs text-slate-400">Dipakai untuk login — pastikan penulisannya benar.</p>
+                    <p class="mt-1 text-xs text-gray-400">Dipakai untuk login — pastikan penulisannya benar.</p>
                 </div>
                 <div>
-                    <label class="lbl" for="akun-hp">No. HP <span class="font-normal text-slate-400">(opsional)</span></label>
+                    <label class="lbl" for="akun-hp">No. HP <span class="font-normal text-gray-400">(opsional)</span></label>
                     <input id="akun-hp" type="tel" name="phone" x-model="form.phone" maxlength="20" autocomplete="off" inputmode="tel" class="inp" placeholder="08xxxxxxxxxx">
                 </div>
 
@@ -253,11 +253,11 @@ $dataBaris = static fn (array $r, int $saya): string => esc(json_encode([
                     <div class="space-y-2">
                         <?php foreach ($peran as $kode => $p): ?>
                             <label class="flex cursor-pointer items-start gap-3 rounded-xl border p-3 transition"
-                                   :class="[form.role === '<?= esc($kode, 'js') ?>' ? 'border-brand-500 bg-brand-50 ring-2 ring-brand-500/20' : 'border-slate-200 hover:bg-slate-50', peranTerkunci ? 'cursor-not-allowed opacity-60' : '']">
-                                <input type="radio" name="role" value="<?= esc($kode, 'attr') ?>" x-model="form.role" :disabled="peranTerkunci" class="mt-1 h-4 w-4 border-slate-300 text-brand-600 focus:ring-brand-500">
+                                   :class="[form.role === '<?= esc($kode, 'js') ?>' ? 'border-brand-500 bg-brand-50 ring-2 ring-brand-500/20' : 'border-gray-200 hover:bg-gray-50', peranTerkunci ? 'cursor-not-allowed opacity-60' : '']">
+                                <input type="radio" name="role" value="<?= esc($kode, 'attr') ?>" x-model="form.role" :disabled="peranTerkunci" class="mt-1 h-4 w-4 border-gray-300 text-brand-600 focus:ring-brand-500">
                                 <span class="min-w-0">
-                                    <span class="block text-sm font-semibold text-slate-800"><?= esc($p['label']) ?></span>
-                                    <span class="mt-0.5 block text-xs leading-relaxed text-slate-500"><?= esc($p['ringkas']) ?></span>
+                                    <span class="block text-sm font-semibold text-gray-800"><?= esc($p['label']) ?></span>
+                                    <span class="mt-0.5 block text-xs leading-relaxed text-gray-500"><?= esc($p['ringkas']) ?></span>
                                 </span>
                             </label>
                         <?php endforeach; ?>
@@ -270,7 +270,7 @@ $dataBaris = static fn (array $r, int $saya): string => esc(json_encode([
                 </div>
 
                 <div class="flex justify-end gap-2 pt-1">
-                    <button type="button" @click="formTerbuka=false" class="rounded-lg border border-slate-300 px-4 py-2.5 text-sm font-semibold text-slate-600 hover:bg-slate-50">Batal</button>
+                    <button type="button" @click="formTerbuka=false" class="rounded-lg border border-gray-300 px-4 py-2.5 text-sm font-semibold text-gray-600 hover:bg-gray-50">Batal</button>
                     <button class="rounded-lg bg-brand-700 px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-brand-800 active:scale-95" x-text="mode==='tambah' ? 'Simpan Akun' : 'Simpan Perubahan'"></button>
                 </div>
             </form>
@@ -280,7 +280,7 @@ $dataBaris = static fn (array $r, int $saya): string => esc(json_encode([
     <!-- ============ Dialog: konfirmasi (reset / nonaktifkan / aktifkan) ============ -->
     <div x-show="tanyaTerbuka" x-cloak x-transition.opacity.duration.200ms
          class="fixed inset-0 z-50 flex items-center justify-center p-4" role="alertdialog" aria-modal="true">
-        <div class="absolute inset-0 bg-slate-900/50" @click="tanyaTerbuka=false"></div>
+        <div class="absolute inset-0 bg-gray-900/50" @click="tanyaTerbuka=false"></div>
         <div class="relative w-full max-w-md rounded-2xl bg-white p-6 shadow-2xl">
             <div class="flex items-start gap-3">
                 <span class="flex h-10 w-10 shrink-0 items-center justify-center rounded-full"
@@ -288,14 +288,14 @@ $dataBaris = static fn (array $r, int $saya): string => esc(json_encode([
                     <svg class="h-5 w-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/></svg>
                 </span>
                 <div class="min-w-0">
-                    <h3 class="text-base font-bold text-slate-800" x-text="tanyaData.judul"></h3>
-                    <p class="mt-1.5 text-sm leading-relaxed text-slate-600" x-text="tanyaData.pesan"></p>
+                    <h3 class="text-base font-bold text-gray-800" x-text="tanyaData.judul"></h3>
+                    <p class="mt-1.5 text-sm leading-relaxed text-gray-600" x-text="tanyaData.pesan"></p>
                 </div>
             </div>
             <form method="post" :action="tanyaData.url" class="mt-5 flex justify-end gap-2">
                 <?= csrf_field() ?>
                 <input type="hidden" name="aktif" :value="tanyaData.aktif">
-                <button type="button" @click="tanyaTerbuka=false" class="rounded-lg border border-slate-300 px-4 py-2.5 text-sm font-semibold text-slate-600 hover:bg-slate-50">Batal</button>
+                <button type="button" @click="tanyaTerbuka=false" class="rounded-lg border border-gray-300 px-4 py-2.5 text-sm font-semibold text-gray-600 hover:bg-gray-50">Batal</button>
                 <button class="rounded-lg px-5 py-2.5 text-sm font-semibold text-white transition active:scale-95"
                         :class="tanyaData.bahaya ? 'bg-red-600 hover:bg-red-700' : 'bg-brand-700 hover:bg-brand-800'" x-text="tanyaData.tombol"></button>
             </form>
@@ -305,7 +305,7 @@ $dataBaris = static fn (array $r, int $saya): string => esc(json_encode([
     <!-- ============ Dialog: sandi sementara (SEKALI tampil, tak bisa ditutup tak sengaja) ============ -->
     <div x-show="sandi" x-cloak x-transition.opacity.duration.200ms
          class="fixed inset-0 z-[60] flex items-end justify-center sm:items-center sm:p-4" role="alertdialog" aria-modal="true">
-        <div class="absolute inset-0 bg-slate-900/60"></div>
+        <div class="absolute inset-0 bg-gray-900/60"></div>
         <div class="relative max-h-[92vh] w-full overflow-y-auto rounded-t-2xl bg-white shadow-2xl sm:max-w-lg sm:rounded-2xl" x-show="sandi">
             <div class="bg-brand-700 px-5 py-4 sm:rounded-t-2xl sm:px-6">
                 <h3 class="text-lg font-bold text-white" x-text="sandi && sandi.jenis==='direset' ? 'Kata sandi sementara baru' : 'Akun berhasil dibuat'"></h3>
@@ -318,17 +318,17 @@ $dataBaris = static fn (array $r, int $saya): string => esc(json_encode([
                 </div>
                 <dl class="space-y-3 text-sm">
                     <div>
-                        <dt class="text-xs font-semibold uppercase tracking-wide text-slate-400">Email (untuk login)</dt>
-                        <dd class="mt-0.5 break-all font-medium text-slate-800" x-text="sandi ? sandi.email : ''"></dd>
+                        <dt class="text-xs font-semibold uppercase tracking-wide text-gray-400">Email (untuk login)</dt>
+                        <dd class="mt-0.5 break-all font-medium text-gray-800" x-text="sandi ? sandi.email : ''"></dd>
                     </div>
                     <div>
-                        <dt class="text-xs font-semibold uppercase tracking-wide text-slate-400">Kata sandi sementara</dt>
-                        <dd class="mt-1 select-all rounded-xl border border-slate-300 bg-slate-50 px-4 py-3 text-center font-mono text-2xl font-bold tracking-widest text-slate-900" x-text="sandi ? sandi.sandi : ''"></dd>
+                        <dt class="text-xs font-semibold uppercase tracking-wide text-gray-400">Kata sandi sementara</dt>
+                        <dd class="mt-1 select-all rounded-xl border border-gray-300 bg-gray-50 px-4 py-3 text-center font-mono text-2xl font-bold tracking-widest text-gray-900" x-text="sandi ? sandi.sandi : ''"></dd>
                     </div>
                 </dl>
                 <div class="grid grid-cols-1 gap-2 sm:grid-cols-2">
                     <button type="button" @click="salin(sandi.sandi, 'sandi')"
-                            class="inline-flex items-center justify-center gap-1.5 rounded-lg border border-slate-300 px-4 py-2.5 text-sm font-semibold text-slate-700 hover:bg-slate-50">
+                            class="inline-flex items-center justify-center gap-1.5 rounded-lg border border-gray-300 px-4 py-2.5 text-sm font-semibold text-gray-700 hover:bg-gray-50">
                         <span x-text="tersalin==='sandi' ? '✓ Sandi tersalin' : 'Salin sandi'"></span>
                     </button>
                     <button type="button" @click="salin(pesanLengkap(), 'pesan')"
@@ -336,7 +336,7 @@ $dataBaris = static fn (array $r, int $saya): string => esc(json_encode([
                         <span x-text="tersalin==='pesan' ? '✓ Pesan tersalin' : 'Salin pesan untuk WhatsApp'"></span>
                     </button>
                 </div>
-                <p class="text-xs leading-relaxed text-slate-500">Yang bersangkutan akan diminta mengganti sandi ini saat login pertama.</p>
+                <p class="text-xs leading-relaxed text-gray-500">Yang bersangkutan akan diminta mengganti sandi ini saat login pertama.</p>
                 <button type="button" @click="sandi=null" class="w-full rounded-lg bg-brand-700 px-5 py-3 text-sm font-bold text-white transition hover:bg-brand-800 active:scale-95">Sudah saya catat</button>
             </div>
         </div>

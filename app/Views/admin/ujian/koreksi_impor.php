@@ -34,18 +34,18 @@ $badge = [
 <?= $this->section('content') ?>
 
 <div class="mx-auto max-w-6xl space-y-4">
-    <section class="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm sm:p-5">
+    <section class="rounded-2xl border border-gray-200 bg-white p-4 shadow-xs sm:p-5">
         <div class="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
             <div class="min-w-0">
-                <p class="text-xs font-semibold uppercase tracking-wide text-slate-400"><?= esc($label) ?></p>
-                <h2 class="mt-0.5 text-lg font-bold text-slate-800">Periksa hasil bacaan Excel KOREKSI</h2>
-                <p class="mt-1 text-sm text-slate-500">Berkas: <b class="text-slate-700"><?= esc($berkas) ?></b> · lembar &quot;<?= esc($payload['lembar']) ?>&quot; · <?= count($payload['guru']) ?> guru, <?= $jmlBaris ?> baris mapel. <b>Belum ada yang tersimpan.</b></p>
+                <p class="text-xs font-semibold uppercase tracking-wide text-gray-400"><?= esc($label) ?></p>
+                <h2 class="mt-0.5 text-lg font-bold text-gray-800">Periksa hasil bacaan Excel KOREKSI</h2>
+                <p class="mt-1 text-sm text-gray-500">Berkas: <b class="text-gray-700"><?= esc($berkas) ?></b> · lembar &quot;<?= esc($payload['lembar']) ?>&quot; · <?= count($payload['guru']) ?> guru, <?= $jmlBaris ?> baris mapel. <b>Belum ada yang tersimpan.</b></p>
             </div>
-            <a href="<?= esc($kembali) ?>" class="inline-flex shrink-0 items-center rounded-lg border border-slate-300 px-4 py-2 text-sm font-semibold text-slate-600 hover:bg-slate-50">Batal, kembali</a>
+            <a href="<?= esc($kembali) ?>" class="inline-flex shrink-0 items-center rounded-lg border border-gray-300 px-4 py-2 text-sm font-semibold text-gray-600 hover:bg-gray-50">Batal, kembali</a>
         </div>
         <div class="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-5">
             <?php foreach (['cocok' => 'Cocok', 'mirip' => 'Mirip', 'ganda' => 'Nama ganda', 'tidak' => 'Tidak ada'] as $k => $l): ?>
-                <div class="rounded-xl border border-slate-200 px-3 py-2"><p class="text-[11px] font-semibold uppercase tracking-wide text-slate-400"><?= $l ?></p><p class="text-xl font-extrabold tabular-nums text-slate-800"><?= $hit[$k] ?></p></div>
+                <div class="rounded-xl border border-gray-200 px-3 py-2"><p class="text-[11px] font-semibold uppercase tracking-wide text-gray-400"><?= $l ?></p><p class="text-xl font-extrabold tabular-nums text-gray-800"><?= $hit[$k] ?></p></div>
             <?php endforeach; ?>
             <div class="rounded-xl border border-brand-200 bg-brand-50 px-3 py-2"><p class="text-[11px] font-semibold uppercase tracking-wide text-brand-700">Total lembar di Excel</p><p class="text-lg font-extrabold tabular-nums text-brand-700"><?= $rp($total) ?></p></div>
         </div>
@@ -64,23 +64,23 @@ $badge = [
         <input type="hidden" name="periode_id" value="<?= (int) $periode['id'] ?>">
         <input type="hidden" name="token" value="<?= esc($token, 'attr') ?>">
 
-        <section class="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+        <section class="overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-xs">
             <div class="overflow-x-auto">
                 <table class="w-full min-w-[52rem] text-sm">
-                    <thead class="bg-slate-50 text-left text-[11px] font-bold uppercase tracking-wide text-slate-500">
+                    <thead class="bg-gray-50 text-left text-[11px] font-bold uppercase tracking-wide text-gray-500">
                         <tr><th class="px-4 py-2">No</th><th class="px-3 py-2">Nama di Excel</th><th class="px-3 py-2 text-right">Baris mapel</th><th class="px-3 py-2 text-right">Lembar</th><th class="px-3 py-2">Pencocokan</th><th class="px-3 py-2">Penerima honor</th></tr>
                     </thead>
-                    <tbody class="divide-y divide-slate-100">
+                    <tbody class="divide-y divide-gray-100">
                         <?php foreach ($payload['guru'] as $i => $g): ?>
                             <?php [$teks, $kls] = $badge[$g['status']]; ?>
                             <tr class="<?= $g['status'] === 'tidak' || $g['status'] === 'ganda' ? 'bg-red-50/40' : '' ?>">
-                                <td class="px-4 py-2 tabular-nums text-slate-500"><?= $g['no'] !== null ? (int) $g['no'] : '' ?></td>
-                                <td class="px-3 py-2 font-semibold text-slate-800"><?= esc($g['nama']) ?></td>
-                                <td class="px-3 py-2 text-right tabular-nums text-slate-600"><?= count($g['baris']) ?></td>
-                                <td class="px-3 py-2 text-right tabular-nums text-slate-600"><?= $rp($g['total']) ?></td>
+                                <td class="px-4 py-2 tabular-nums text-gray-500"><?= $g['no'] !== null ? (int) $g['no'] : '' ?></td>
+                                <td class="px-3 py-2 font-semibold text-gray-800"><?= esc($g['nama']) ?></td>
+                                <td class="px-3 py-2 text-right tabular-nums text-gray-600"><?= count($g['baris']) ?></td>
+                                <td class="px-3 py-2 text-right tabular-nums text-gray-600"><?= $rp($g['total']) ?></td>
                                 <td class="px-3 py-2"><span class="inline-flex rounded-full border px-2.5 py-0.5 text-xs font-semibold <?= $kls ?>"><?= esc($teks) ?></span></td>
                                 <td class="px-3 py-2">
-                                    <select name="aksi[<?= $i ?>]" class="w-full rounded-lg border border-slate-300 bg-white px-2 py-1.5 text-sm" aria-label="Penerima honor untuk <?= esc($g['nama'], 'attr') ?>">
+                                    <select name="aksi[<?= $i ?>]" class="w-full rounded-lg border border-gray-300 bg-white px-2 py-1.5 text-sm" aria-label="Penerima honor untuk <?= esc($g['nama'], 'attr') ?>">
                                         <option value="lewati" <?= $g['baris_id'] === null ? 'selected' : '' ?>>— lewati guru ini —</option>
                                         <?php foreach ($penerima as $p): ?>
                                             <option value="baris:<?= (int) $p['id'] ?>" <?= (int) $g['baris_id'] === (int) $p['id'] ? 'selected' : '' ?>><?= esc($p['nama']) ?></option>
@@ -94,16 +94,16 @@ $badge = [
             </div>
         </section>
 
-        <section class="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm sm:p-5">
-            <label class="flex cursor-pointer items-start gap-2.5 text-sm text-slate-700">
-                <input type="checkbox" name="ganti" value="1" checked class="mt-0.5 h-4 w-4 rounded border-slate-300">
+        <section class="rounded-2xl border border-gray-200 bg-white p-4 shadow-xs sm:p-5">
+            <label class="flex cursor-pointer items-start gap-2.5 text-sm text-gray-700">
+                <input type="checkbox" name="ganti" value="1" checked class="mt-0.5 h-4 w-4 rounded-sm border-gray-300">
                 <span><b>Ganti seluruh ceklis yang sekarang</b><?= $adaCeklis ? ' <span class="text-amber-700">(ceklis sekarang sudah berisi dan akan dibuang)</span>' : '' ?>. Tanpa tanda ini, guru yang sudah punya isi dilewati.</span>
             </label>
-            <p class="mt-2 text-xs leading-relaxed text-slate-500">Jumlah peserta tiap kelas diambil dari angka yang paling sering muncul di kolom kelasnya; sel yang angkanya berbeda disimpan sebagai angka khusus. Angka <b>Koreksi di honor tidak berubah</b> sampai kamu menekan &quot;Terapkan ke kolom Koreksi honor&quot; di halaman ceklis.</p>
+            <p class="mt-2 text-xs leading-relaxed text-gray-500">Jumlah peserta tiap kelas diambil dari angka yang paling sering muncul di kolom kelasnya; sel yang angkanya berbeda disimpan sebagai angka khusus. Angka <b>Koreksi di honor tidak berubah</b> sampai kamu menekan &quot;Terapkan ke kolom Koreksi honor&quot; di halaman ceklis.</p>
             <?php if ($terkunci): ?>
-                <p class="mt-3 rounded-lg bg-slate-100 px-4 py-2 text-sm font-semibold text-slate-600">Honor DIKUNCI &mdash; tidak bisa diubah.</p>
+                <p class="mt-3 rounded-lg bg-gray-100 px-4 py-2 text-sm font-semibold text-gray-600">Honor DIKUNCI &mdash; tidak bisa diubah.</p>
             <?php else: ?>
-                <button type="submit" class="mt-4 rounded-lg bg-brand-700 px-8 py-3 text-sm font-bold text-white shadow-sm transition hover:bg-brand-800 active:scale-95">Terapkan impor</button>
+                <button type="submit" class="mt-4 rounded-lg bg-brand-700 px-8 py-3 text-sm font-bold text-white shadow-xs transition hover:bg-brand-800 active:scale-95">Terapkan impor</button>
             <?php endif; ?>
         </section>
     </form>

@@ -50,12 +50,12 @@ $jmlMenu = static fn (array $p): int => count((array) ($p['menu'] ?? []));
 <!-- Ringkasan peran -->
 <div class="mb-5 grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
     <?php foreach ($semua as $kode => $p): $n = $akun[$kode] ?? ['n' => 0, 'aktif' => 0]; ?>
-        <div class="rounded-2xl border border-slate-200 bg-white px-4 py-3.5 shadow-sm">
+        <div class="rounded-2xl border border-gray-200 bg-white px-4 py-3.5 shadow-xs">
             <div class="flex items-start justify-between gap-2">
-                <p class="font-semibold text-slate-800"><?= esc($p['label']) ?></p>
-                <span class="shrink-0 rounded-md px-2 py-0.5 text-[11px] font-semibold <?= ! empty($p['penuh']) ? 'bg-brand-50 text-brand-700' : (! empty($p['sistem']) ? 'bg-slate-100 text-slate-600' : 'bg-emerald-50 text-emerald-700') ?>"><?= ! empty($p['penuh']) ? 'Penuh' : (! empty($p['sistem']) ? 'Bawaan' : 'Buatan') ?></span>
+                <p class="font-semibold text-gray-800"><?= esc($p['label']) ?></p>
+                <span class="shrink-0 rounded-md px-2 py-0.5 text-[11px] font-semibold <?= ! empty($p['penuh']) ? 'bg-brand-50 text-brand-700' : (! empty($p['sistem']) ? 'bg-gray-100 text-gray-600' : 'bg-emerald-50 text-emerald-700') ?>"><?= ! empty($p['penuh']) ? 'Penuh' : (! empty($p['sistem']) ? 'Bawaan' : 'Buatan') ?></span>
             </div>
-            <p class="mt-1 text-xs text-slate-500">
+            <p class="mt-1 text-xs text-gray-500">
                 <?= (int) $n['aktif'] ?> akun aktif<?= $n['n'] > $n['aktif'] ? ' (+' . ($n['n'] - $n['aktif']) . ' nonaktif)' : '' ?>
                 <?php if (empty($p['penuh'])): ?> · <?= $jmlMenu($p) ?> menu · <?= count((array) ($p['hak'] ?? [])) ?> hak PKL/Surat<?php else: ?> · semua menu &amp; hak<?php endif; ?>
             </p>
@@ -65,7 +65,7 @@ $jmlMenu = static fn (array $p): int => count((array) ($p['menu'] ?? []));
 
 <nav class="mb-5 flex gap-1.5 overflow-x-auto pb-1" aria-label="Bagian Hak Akses">
     <?php foreach ($tabs as $k => $label): $aktif = $bagian === $k; ?>
-        <a href="<?= site_url('admin/hak-akses') . '?bagian=' . $k ?>" class="inline-flex shrink-0 items-center rounded-xl px-3.5 py-2 text-sm font-semibold transition <?= $aktif ? 'bg-brand-700 text-white shadow-sm' : 'border border-slate-200 bg-white text-slate-600 hover:border-brand-200 hover:bg-brand-50 hover:text-brand-700' ?>"<?= $aktif ? ' aria-current="page"' : '' ?>><?= esc($label) ?></a>
+        <a href="<?= site_url('admin/hak-akses') . '?bagian=' . $k ?>" class="inline-flex shrink-0 items-center rounded-xl px-3.5 py-2 text-sm font-semibold transition <?= $aktif ? 'bg-brand-700 text-white shadow-xs' : 'border border-gray-200 bg-white text-gray-600 hover:border-brand-200 hover:bg-brand-50 hover:text-brand-700' ?>"<?= $aktif ? ' aria-current="page"' : '' ?>><?= esc($label) ?></a>
     <?php endforeach; ?>
 </nav>
 
@@ -77,35 +77,35 @@ $jmlMenu = static fn (array $p): int => count((array) ($p['menu'] ?? []));
 <?php endif; ?>
 
 <?php if ($atur === []): ?>
-    <p class="rounded-2xl border border-slate-200 bg-white px-5 py-6 text-center text-sm text-slate-500">Belum ada peran selain Admin.</p>
+    <p class="rounded-2xl border border-gray-200 bg-white px-5 py-6 text-center text-sm text-gray-500">Belum ada peran selain Admin.</p>
 <?php elseif ($bagian === 'menu'): ?>
     <!-- ================= MENU PER PERAN ================= -->
     <form method="post" action="<?= site_url('admin/hak-akses/menu') ?>" class="space-y-5">
         <?= csrf_field() ?>
         <input type="hidden" name="bagian" value="menu">
-        <p class="text-sm text-slate-600"><b>Tidak</b> = menu hilang · <b>Lihat</b> = buka &amp; unduh saja · <b>Kelola</b> = semua aksi · <b>Boleh</b> = modul terbuka, rinciannya di bagian <a class="font-semibold text-brand-700 underline" href="<?= site_url('admin/hak-akses?bagian=pkl') ?>">PKL &amp; Surat</a>.</p>
+        <p class="text-sm text-gray-600"><b>Tidak</b> = menu hilang · <b>Lihat</b> = buka &amp; unduh saja · <b>Kelola</b> = semua aksi · <b>Boleh</b> = modul terbuka, rinciannya di bagian <a class="font-semibold text-brand-700 underline" href="<?= site_url('admin/hak-akses?bagian=pkl') ?>">PKL &amp; Surat</a>.</p>
         <?php foreach ($grupMenu as $judul => $entri): ?>
-            <section class="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
-                <h3 class="border-b border-slate-100 bg-slate-50 px-5 py-3 text-xs font-bold uppercase tracking-wide text-slate-500"><?= esc($judul) ?></h3>
+            <section class="overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-xs">
+                <h3 class="border-b border-gray-100 bg-gray-50 px-5 py-3 text-xs font-bold uppercase tracking-wide text-gray-500"><?= esc($judul) ?></h3>
                 <div class="overflow-x-auto">
                     <table class="w-full min-w-[36rem] text-sm">
-                        <thead class="text-left text-xs text-slate-500">
-                            <tr class="border-b border-slate-100">
+                        <thead class="text-left text-xs text-gray-500">
+                            <tr class="border-b border-gray-100">
                                 <th class="sticky left-0 z-10 bg-white px-5 py-2.5 font-semibold">Menu</th>
                                 <?php foreach ($atur as $kode): ?><th class="w-36 px-2 py-2.5 text-center font-semibold"><?= esc(HakPeran::label($kode)) ?></th><?php endforeach; ?>
                                 <th class="w-20 px-2 py-2.5 text-center font-semibold">Admin</th>
                             </tr>
                         </thead>
-                        <tbody class="divide-y divide-slate-100">
+                        <tbody class="divide-y divide-gray-100">
                             <?php foreach ($entri as $e): $modul = $e['jenis'] === MenuAdmin::MODUL; ?>
-                                <tr class="align-top hover:bg-slate-50">
+                                <tr class="align-top hover:bg-gray-50">
                                     <td class="sticky left-0 z-10 bg-white px-5 py-2.5">
-                                        <p class="font-semibold text-slate-800"><?= esc($e['label']) ?><?php if ($modul): ?> <span class="ml-1 rounded bg-brand-50 px-1.5 py-0.5 text-[10px] font-bold uppercase text-brand-700">modul</span><?php endif; ?><?php if ($e['item'] === []): ?> <span class="ml-1 rounded bg-slate-100 px-1.5 py-0.5 text-[10px] font-semibold text-slate-500">tanpa menu samping</span><?php endif; ?></p>
-                                        <?php if ($e['ket'] !== ''): ?><p class="mt-0.5 max-w-md text-xs leading-relaxed text-slate-500"><?= esc($e['ket']) ?></p><?php endif; ?>
+                                        <p class="font-semibold text-gray-800"><?= esc($e['label']) ?><?php if ($modul): ?> <span class="ml-1 rounded-sm bg-brand-50 px-1.5 py-0.5 text-[10px] font-bold uppercase text-brand-700">modul</span><?php endif; ?><?php if ($e['item'] === []): ?> <span class="ml-1 rounded-sm bg-gray-100 px-1.5 py-0.5 text-[10px] font-semibold text-gray-500">tanpa menu samping</span><?php endif; ?></p>
+                                        <?php if ($e['ket'] !== ''): ?><p class="mt-0.5 max-w-md text-xs leading-relaxed text-gray-500"><?= esc($e['ket']) ?></p><?php endif; ?>
                                     </td>
                                     <?php foreach ($atur as $kode): $lv = (string) ($semua[$kode]['menu'][$e['kunci']] ?? ''); ?>
                                         <td class="px-2 py-2 text-center">
-                                            <select name="menu[<?= esc($kode, 'attr') ?>][<?= esc($e['kunci'], 'attr') ?>]" class="w-full rounded-lg border px-2 py-1.5 text-sm <?= $lv !== '' ? 'border-brand-300 bg-brand-50 font-semibold text-brand-800' : 'border-slate-200 bg-white text-slate-500' ?>" aria-label="<?= esc(HakPeran::label($kode) . ': ' . $e['label'], 'attr') ?>">
+                                            <select name="menu[<?= esc($kode, 'attr') ?>][<?= esc($e['kunci'], 'attr') ?>]" class="w-full rounded-lg border px-2 py-1.5 text-sm <?= $lv !== '' ? 'border-brand-300 bg-brand-50 font-semibold text-brand-800' : 'border-gray-200 bg-white text-gray-500' ?>" aria-label="<?= esc(HakPeran::label($kode) . ': ' . $e['label'], 'attr') ?>">
                                                 <option value="">— Tidak</option>
                                                 <?php if ($modul): ?>
                                                     <option value="boleh" <?= $lv === 'boleh' ? 'selected' : '' ?>>Boleh</option>
@@ -124,11 +124,11 @@ $jmlMenu = static fn (array $p): int => count((array) ($p['menu'] ?? []));
                 </div>
             </section>
         <?php endforeach; ?>
-        <p class="text-xs text-slate-500">Selalu khusus Admin (tidak ada di tabel): <b>Kelola Akun</b> dan <b>Hak Akses</b>. Semua peran bisa membuka <b>Profil Saya</b>.</p>
+        <p class="text-xs text-gray-500">Selalu khusus Admin (tidak ada di tabel): <b>Kelola Akun</b> dan <b>Hak Akses</b>. Semua peran bisa membuka <b>Profil Saya</b>.</p>
         <div class="flex flex-col-reverse gap-2 sm:flex-row sm:items-center sm:justify-between">
             <button type="submit" formaction="<?= site_url('admin/hak-akses/bawaan') ?>" formnovalidate data-confirm="Kembalikan MENU Operator Sekolah & Waka Hubin ke aturan bawaan sekolah? Peran buatan tidak diubah."
-                    class="rounded-xl border border-slate-300 bg-white px-5 py-3 text-sm font-semibold text-slate-600 transition hover:bg-slate-50">Kembalikan menu ke bawaan</button>
-            <button type="submit" class="rounded-xl bg-brand-700 px-8 py-3 text-sm font-bold text-white shadow-sm transition hover:bg-brand-800 active:scale-95"<?= $tabelAda ? '' : ' disabled' ?>>Simpan menu</button>
+                    class="rounded-xl border border-gray-300 bg-white px-5 py-3 text-sm font-semibold text-gray-600 transition hover:bg-gray-50">Kembalikan menu ke bawaan</button>
+            <button type="submit" class="rounded-xl bg-brand-700 px-8 py-3 text-sm font-bold text-white shadow-xs transition hover:bg-brand-800 active:scale-95"<?= $tabelAda ? '' : ' disabled' ?>>Simpan menu</button>
         </div>
     </form>
 
@@ -144,30 +144,30 @@ $jmlMenu = static fn (array $p): int => count((array) ($p['menu'] ?? []));
             </div>
         <?php endif; ?>
 
-        <section class="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
-            <h3 class="border-b border-slate-100 bg-slate-50 px-5 py-3 text-xs font-bold uppercase tracking-wide text-slate-500">PKL / Prakerin</h3>
+        <section class="overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-xs">
+            <h3 class="border-b border-gray-100 bg-gray-50 px-5 py-3 text-xs font-bold uppercase tracking-wide text-gray-500">PKL / Prakerin</h3>
             <div class="overflow-x-auto">
                 <table class="w-full min-w-[36rem] text-sm">
-                    <thead class="text-left text-xs text-slate-500">
-                        <tr class="border-b border-slate-100">
+                    <thead class="text-left text-xs text-gray-500">
+                        <tr class="border-b border-gray-100">
                             <th class="sticky left-0 z-10 bg-white px-5 py-2.5 font-semibold">Hak</th>
                             <?php foreach ($atur as $kode): ?><th class="w-32 px-2 py-2.5 text-center font-semibold"><?= esc(HakPeran::label($kode)) ?><?php if ($tanpaModul[$kode]['pkl']): ?><span class="block text-[10px] font-normal text-amber-700">modul PKL belum diberi</span><?php endif; ?></th><?php endforeach; ?>
                             <th class="w-20 px-2 py-2.5 text-center font-semibold">Admin</th>
                         </tr>
                     </thead>
-                    <tbody class="divide-y divide-slate-100">
+                    <tbody class="divide-y divide-gray-100">
                         <?php foreach ($hakPkl as $kunci => [$judul, $ket]): ?>
-                            <tr class="align-top hover:bg-slate-50">
+                            <tr class="align-top hover:bg-gray-50">
                                 <td class="sticky left-0 z-10 bg-white px-5 py-3">
-                                    <p class="font-semibold text-slate-800"><?= esc($judul) ?></p>
-                                    <p class="mt-0.5 max-w-xl text-xs leading-relaxed text-slate-500"><?= esc($ket) ?></p>
+                                    <p class="font-semibold text-gray-800"><?= esc($judul) ?></p>
+                                    <p class="mt-0.5 max-w-xl text-xs leading-relaxed text-gray-500"><?= esc($ket) ?></p>
                                 </td>
                                 <?php foreach ($atur as $kode): ?>
                                     <td class="px-2 py-3 text-center">
-                                        <label class="inline-flex h-10 w-10 cursor-pointer items-center justify-center rounded-xl border border-slate-200 transition has-[:checked]:border-brand-500 has-[:checked]:bg-brand-50 hover:bg-slate-50">
+                                        <label class="inline-flex h-10 w-10 cursor-pointer items-center justify-center rounded-xl border border-gray-200 transition has-[:checked]:border-brand-500 has-[:checked]:bg-brand-50 hover:bg-gray-50">
                                             <input type="checkbox" name="hak[<?= esc($kode, 'attr') ?>][]" value="<?= esc($kunci, 'attr') ?>" <?= ! empty($matriksPkl[$kode][$kunci]) ? 'checked' : '' ?> class="h-5 w-5" aria-label="<?= esc(HakPeran::label($kode) . ': ' . $judul, 'attr') ?>">
                                         </label>
-                                        <?php if (in_array($kunci, $bawaanPkl[$kode] ?? [], true)): ?><p class="mt-1 text-[10px] text-slate-400">bawaan</p><?php endif; ?>
+                                        <?php if (in_array($kunci, $bawaanPkl[$kode] ?? [], true)): ?><p class="mt-1 text-[10px] text-gray-400">bawaan</p><?php endif; ?>
                                     </td>
                                 <?php endforeach; ?>
                                 <td class="px-2 py-3 text-center text-xs font-semibold text-green-700">✓</td>
@@ -178,40 +178,40 @@ $jmlMenu = static fn (array $p): int => count((array) ($p['menu'] ?? []));
             </div>
         </section>
 
-        <section class="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
-            <h3 class="border-b border-slate-100 bg-slate-50 px-5 py-3 text-xs font-bold uppercase tracking-wide text-slate-500">Surat Sekolah — per jenis surat</h3>
-            <p class="border-b border-slate-100 px-5 py-3 text-xs leading-relaxed text-slate-500">
+        <section class="overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-xs">
+            <h3 class="border-b border-gray-100 bg-gray-50 px-5 py-3 text-xs font-bold uppercase tracking-wide text-gray-500">Surat Sekolah — per jenis surat</h3>
+            <p class="border-b border-gray-100 px-5 py-3 text-xs leading-relaxed text-gray-500">
                 <b>Buat</b> = membuat, mengubah, mengajukan ulang, membatalkan · <b>ACC</b> = menyetujui / mengembalikan (tercatat di kaki surat) · <b>Unduh</b> = mencetak (nomor terbit saat unduhan pertama).
                 <b>Wajib ACC</b> tidak dicentang = surat langsung siap unduh setelah dibuat. Peran yang memegang <b>Buat + ACC</b> mendapat tombol satu klik <b>Simpan &amp; setujui</b>.
             </p>
             <div class="overflow-x-auto">
                 <table class="w-full min-w-[40rem] text-sm">
-                    <thead class="text-left text-xs text-slate-500">
-                        <tr class="border-b border-slate-100">
+                    <thead class="text-left text-xs text-gray-500">
+                        <tr class="border-b border-gray-100">
                             <th class="sticky left-0 z-10 bg-white px-5 py-2.5 font-semibold">Jenis surat</th>
                             <th class="w-24 px-2 py-2.5 text-center font-semibold">Wajib ACC</th>
                             <?php foreach ($atur as $kode): ?><th class="w-44 px-2 py-2.5 text-center font-semibold"><?= esc(HakPeran::label($kode)) ?><?php if ($tanpaModul[$kode]['surat']): ?><span class="block text-[10px] font-normal text-amber-700">modul Surat belum diberi</span><?php endif; ?></th><?php endforeach; ?>
                         </tr>
                     </thead>
-                    <tbody class="divide-y divide-slate-100">
+                    <tbody class="divide-y divide-gray-100">
                         <?php foreach (SuratJenis::kode() as $j): $bernomor = SuratJenis::bernomor($j); ?>
-                            <tr class="align-top hover:bg-slate-50">
+                            <tr class="align-top hover:bg-gray-50">
                                 <td class="sticky left-0 z-10 bg-white px-5 py-3">
-                                    <p class="font-semibold text-slate-800"><?= esc(SuratJenis::label($j)) ?></p>
-                                    <p class="mt-0.5 max-w-xs text-xs leading-relaxed text-slate-500"><?= esc(SuratJenis::DATA[$j]['ringkas']) ?></p>
+                                    <p class="font-semibold text-gray-800"><?= esc(SuratJenis::label($j)) ?></p>
+                                    <p class="mt-0.5 max-w-xs text-xs leading-relaxed text-gray-500"><?= esc(SuratJenis::DATA[$j]['ringkas']) ?></p>
                                 </td>
                                 <td class="px-2 py-3 text-center">
                                     <?php if ($bernomor): ?>
                                         <input type="checkbox" name="acc[]" value="<?= esc($j, 'attr') ?>" <?= ! empty($accSurat[$j]) ? 'checked' : '' ?> class="h-5 w-5" aria-label="<?= esc(SuratJenis::label($j) . ' wajib ACC', 'attr') ?>">
                                     <?php else: ?>
-                                        <span class="text-xs text-slate-400" title="Tanpa nomor, tidak memakai ACC">—</span>
+                                        <span class="text-xs text-gray-400" title="Tanpa nomor, tidak memakai ACC">—</span>
                                     <?php endif; ?>
                                 </td>
                                 <?php foreach ($atur as $kode): ?>
                                     <td class="px-2 py-3">
                                         <div class="flex flex-wrap justify-center gap-1.5">
                                             <?php foreach (PklHak::aksiUntuk($j) as $aksi): $ada = ! empty($matriksSurat[$kode][$j][$aksi]); ?>
-                                                <label class="inline-flex cursor-pointer items-center gap-1 rounded-lg border px-2 py-1.5 text-xs font-semibold transition has-[:checked]:border-brand-500 has-[:checked]:bg-brand-50 has-[:checked]:text-brand-800 <?= $ada ? '' : 'border-slate-200 text-slate-500' ?>">
+                                                <label class="inline-flex cursor-pointer items-center gap-1 rounded-lg border px-2 py-1.5 text-xs font-semibold transition has-[:checked]:border-brand-500 has-[:checked]:bg-brand-50 has-[:checked]:text-brand-800 <?= $ada ? '' : 'border-gray-200 text-gray-500' ?>">
                                                     <input type="checkbox" name="hak[<?= esc($kode, 'attr') ?>][]" value="<?= esc(PklHak::kunciSurat($aksi, $j), 'attr') ?>" <?= $ada ? 'checked' : '' ?> class="h-3.5 w-3.5">
                                                     <?= esc($aksiSurat[$aksi][0]) ?>
                                                 </label>
@@ -228,8 +228,8 @@ $jmlMenu = static fn (array $p): int => count((array) ($p['menu'] ?? []));
 
         <div class="flex flex-col-reverse gap-2 sm:flex-row sm:items-center sm:justify-between">
             <button type="submit" formaction="<?= site_url('admin/hak-akses/bawaan') ?>" formnovalidate data-confirm="Kembalikan hak PKL & Surat Operator Sekolah & Waka Hubin ke bawaan sekolah (Waka Hubin = ACC; Operator = surat & biaya)? Peran buatan tidak diubah."
-                    class="rounded-xl border border-slate-300 bg-white px-5 py-3 text-sm font-semibold text-slate-600 transition hover:bg-slate-50">Kembalikan ke bawaan sekolah</button>
-            <button type="submit" class="rounded-xl bg-brand-700 px-8 py-3 text-sm font-bold text-white shadow-sm transition hover:bg-brand-800 active:scale-95"<?= $tabelAda ? '' : ' disabled' ?>>Simpan hak PKL &amp; Surat</button>
+                    class="rounded-xl border border-gray-300 bg-white px-5 py-3 text-sm font-semibold text-gray-600 transition hover:bg-gray-50">Kembalikan ke bawaan sekolah</button>
+            <button type="submit" class="rounded-xl bg-brand-700 px-8 py-3 text-sm font-bold text-white shadow-xs transition hover:bg-brand-800 active:scale-95"<?= $tabelAda ? '' : ' disabled' ?>>Simpan hak PKL &amp; Surat</button>
         </div>
     </form>
 
@@ -238,17 +238,17 @@ $jmlMenu = static fn (array $p): int => count((array) ($p['menu'] ?? []));
     <div class="grid gap-5 lg:grid-cols-3">
         <div class="space-y-3 lg:col-span-2">
             <?php foreach ($semua as $kode => $p): $n = $akun[$kode] ?? ['n' => 0, 'aktif' => 0]; $penuh = ! empty($p['penuh']); ?>
-                <section class="rounded-2xl border border-slate-200 bg-white px-5 py-4 shadow-sm">
+                <section class="rounded-2xl border border-gray-200 bg-white px-5 py-4 shadow-xs">
                     <div class="flex flex-wrap items-start justify-between gap-2">
                         <div>
-                            <p class="font-semibold text-slate-800"><?= esc($p['label']) ?> <span class="ml-1 font-mono text-xs font-normal text-slate-400"><?= esc($kode) ?></span></p>
-                            <p class="mt-0.5 text-xs text-slate-500"><?= $n['n'] ?> akun · halaman awal: <b><?= esc(HakPeran::beranda($kode)) ?></b> · aplikasi Android: <b><?= ! empty($p['api']) ? 'boleh' : 'tidak' ?></b></p>
-                            <?php if ((string) ($p['ringkas'] ?? '') !== ''): ?><p class="mt-1 max-w-2xl text-xs leading-relaxed text-slate-500"><?= esc($p['ringkas']) ?></p><?php endif; ?>
+                            <p class="font-semibold text-gray-800"><?= esc($p['label']) ?> <span class="ml-1 font-mono text-xs font-normal text-gray-400"><?= esc($kode) ?></span></p>
+                            <p class="mt-0.5 text-xs text-gray-500"><?= $n['n'] ?> akun · halaman awal: <b><?= esc(HakPeran::beranda($kode)) ?></b> · aplikasi Android: <b><?= ! empty($p['api']) ? 'boleh' : 'tidak' ?></b></p>
+                            <?php if ((string) ($p['ringkas'] ?? '') !== ''): ?><p class="mt-1 max-w-2xl text-xs leading-relaxed text-gray-500"><?= esc($p['ringkas']) ?></p><?php endif; ?>
                         </div>
-                        <span class="rounded-md px-2 py-0.5 text-[11px] font-semibold <?= $penuh ? 'bg-brand-50 text-brand-700' : (! empty($p['sistem']) ? 'bg-slate-100 text-slate-600' : 'bg-emerald-50 text-emerald-700') ?>"><?= $penuh ? 'Penuh, tidak bisa diubah' : (! empty($p['sistem']) ? 'Bawaan sistem' : 'Buatan Admin') ?></span>
+                        <span class="rounded-md px-2 py-0.5 text-[11px] font-semibold <?= $penuh ? 'bg-brand-50 text-brand-700' : (! empty($p['sistem']) ? 'bg-gray-100 text-gray-600' : 'bg-emerald-50 text-emerald-700') ?>"><?= $penuh ? 'Penuh, tidak bisa diubah' : (! empty($p['sistem']) ? 'Bawaan sistem' : 'Buatan Admin') ?></span>
                     </div>
                     <?php if (! $penuh): ?>
-                        <details class="mt-3 rounded-xl border border-slate-200 open:bg-slate-50">
+                        <details class="mt-3 rounded-xl border border-gray-200 open:bg-gray-50">
                             <summary class="cursor-pointer px-4 py-2.5 text-sm font-semibold text-brand-700">Ubah nama, halaman awal, aplikasi</summary>
                             <form method="post" action="<?= site_url('admin/hak-akses/peran/' . rawurlencode($kode)) ?>" class="space-y-3 px-4 pb-4">
                                 <?= csrf_field() ?>
@@ -260,9 +260,9 @@ $jmlMenu = static fn (array $p): int => count((array) ($p['menu'] ?? []));
                                         <option value="">(otomatis: menu pertama yang boleh dibuka)</option>
                                         <?php foreach ($berandaPilihan[$kode] ?? [] as $url => $lbl): ?><option value="<?= esc($url, 'attr') ?>" <?= trim((string) $p['beranda'], '/') === $url ? 'selected' : '' ?>><?= esc($lbl) ?></option><?php endforeach; ?>
                                     </select>
-                                    <p class="mt-1 text-xs text-slate-400">Hanya menu yang sudah diberikan ke peran ini yang bisa dipilih.</p>
+                                    <p class="mt-1 text-xs text-gray-400">Hanya menu yang sudah diberikan ke peran ini yang bisa dipilih.</p>
                                 </div>
-                                <label class="flex cursor-pointer items-start gap-2 text-sm text-slate-700"><input type="checkbox" name="api" value="1" <?= ! empty($p['api']) ? 'checked' : '' ?> class="mt-0.5 h-4 w-4"> <span>Boleh memakai <b>aplikasi Android</b> <span class="block text-xs text-slate-500">Di aplikasi, peran selain Admin hanya mendapat modul PKL &amp; Surat Sekolah (bila modulnya diberikan).</span></span></label>
+                                <label class="flex cursor-pointer items-start gap-2 text-sm text-gray-700"><input type="checkbox" name="api" value="1" <?= ! empty($p['api']) ? 'checked' : '' ?> class="mt-0.5 h-4 w-4"> <span>Boleh memakai <b>aplikasi Android</b> <span class="block text-xs text-gray-500">Di aplikasi, peran selain Admin hanya mendapat modul PKL &amp; Surat Sekolah (bila modulnya diberikan).</span></span></label>
                                 <div class="flex justify-end"><button type="submit" class="rounded-xl bg-brand-700 px-5 py-2.5 text-sm font-bold text-white hover:bg-brand-800">Simpan peran</button></div>
                             </form>
                         </details>
@@ -270,7 +270,7 @@ $jmlMenu = static fn (array $p): int => count((array) ($p['menu'] ?? []));
                             <form method="post" action="<?= site_url('admin/hak-akses/peran/' . rawurlencode($kode) . '/hapus') ?>" class="mt-2 text-right">
                                 <?= csrf_field() ?>
                                 <?php if ($n['n'] > 0): ?>
-                                    <p class="text-xs text-slate-400">Tidak bisa dihapus: masih dipakai <?= $n['n'] ?> akun (ganti perannya di Kelola Akun dulu).</p>
+                                    <p class="text-xs text-gray-400">Tidak bisa dihapus: masih dipakai <?= $n['n'] ?> akun (ganti perannya di Kelola Akun dulu).</p>
                                 <?php else: ?>
                                     <button type="submit" data-confirm="Hapus peran &quot;<?= esc($p['label'], 'attr') ?>&quot;? Menu dan haknya ikut terhapus." class="text-xs font-semibold text-red-600 hover:underline">Hapus peran ini</button>
                                 <?php endif; ?>
@@ -281,8 +281,8 @@ $jmlMenu = static fn (array $p): int => count((array) ($p['menu'] ?? []));
             <?php endforeach; ?>
         </div>
 
-        <section class="h-max rounded-2xl border border-slate-200 bg-white shadow-sm">
-            <h3 class="border-b border-slate-100 bg-slate-50 px-5 py-3 text-xs font-bold uppercase tracking-wide text-slate-500">Tambah peran baru</h3>
+        <section class="h-max rounded-2xl border border-gray-200 bg-white shadow-xs">
+            <h3 class="border-b border-gray-100 bg-gray-50 px-5 py-3 text-xs font-bold uppercase tracking-wide text-gray-500">Tambah peran baru</h3>
             <form method="post" action="<?= site_url('admin/hak-akses/peran') ?>" class="space-y-3 px-5 py-4">
                 <?= csrf_field() ?>
                 <div><label class="lbl" for="peran_baru">Nama peran <span class="text-red-500">*</span></label><input id="peran_baru" name="label" required minlength="3" maxlength="60" placeholder="mis. Waka Kesiswaan" class="inp"></div>
@@ -294,9 +294,9 @@ $jmlMenu = static fn (array $p): int => count((array) ($p['menu'] ?? []));
                         <?php foreach ($atur as $kode): ?><option value="<?= esc($kode, 'attr') ?>"><?= esc(HakPeran::label($kode)) ?></option><?php endforeach; ?>
                     </select>
                 </div>
-                <label class="flex cursor-pointer items-start gap-2 text-sm text-slate-700"><input type="checkbox" name="api" value="1" class="mt-0.5 h-4 w-4"> <span>Boleh memakai aplikasi Android</span></label>
+                <label class="flex cursor-pointer items-start gap-2 text-sm text-gray-700"><input type="checkbox" name="api" value="1" class="mt-0.5 h-4 w-4"> <span>Boleh memakai aplikasi Android</span></label>
                 <button type="submit" class="w-full rounded-xl bg-brand-700 px-5 py-2.5 text-sm font-bold text-white hover:bg-brand-800"<?= $tabelAda ? '' : ' disabled' ?>>Tambah peran</button>
-                <p class="text-xs leading-relaxed text-slate-500">Setelah dibuat, atur menunya di bagian <b>Menu per peran</b>, lalu pilih peran ini untuk akun di <a class="font-semibold text-brand-700 underline" href="<?= site_url('admin/akun') ?>">Kelola Akun</a>.</p>
+                <p class="text-xs leading-relaxed text-gray-500">Setelah dibuat, atur menunya di bagian <b>Menu per peran</b>, lalu pilih peran ini untuk akun di <a class="font-semibold text-brand-700 underline" href="<?= site_url('admin/akun') ?>">Kelola Akun</a>.</p>
             </form>
         </section>
     </div>

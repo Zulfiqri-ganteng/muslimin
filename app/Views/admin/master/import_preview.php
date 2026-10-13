@@ -32,11 +32,11 @@ unset($c);
      data-cols="<?= esc(json_encode(array_column($cols, 'key')), 'attr') ?>"
      data-rows="<?= esc(json_encode(array_values($rows)), 'attr') ?>">
     <!-- Header -->
-    <div class="bg-white rounded-2xl border border-slate-200 shadow-sm p-5">
+    <div class="bg-white rounded-2xl border border-gray-200 shadow-xs p-5">
         <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
             <div>
-                <h2 class="font-bold text-lg text-slate-800">Pratinjau Impor — <?= esc($subtitle) ?></h2>
-                <p class="text-sm text-slate-500 mt-1">Periksa &amp; <b>edit langsung</b> data di bawah sebelum disimpan. Anda bisa mengubah sel, menghapus baris, atau menambah baris baru. Klik <b>Simpan</b> bila sudah benar.</p>
+                <h2 class="font-bold text-lg text-gray-800">Pratinjau Impor — <?= esc($subtitle) ?></h2>
+                <p class="text-sm text-gray-500 mt-1">Periksa &amp; <b>edit langsung</b> data di bawah sebelum disimpan. Anda bisa mengubah sel, menghapus baris, atau menambah baris baru. Klik <b>Simpan</b> bila sudah benar.</p>
             </div>
             <div class="flex items-center gap-2 text-sm">
                 <span class="inline-flex items-center gap-1.5 rounded-lg bg-emerald-50 text-emerald-700 px-3 py-1.5 font-semibold">
@@ -54,10 +54,10 @@ unset($c);
                 <?php foreach (($c['options'] ?? []) as $opt): ?><option value="<?= esc($opt, 'attr') ?>"></option><?php endforeach; ?>
             </datalist>
         <?php endif; endforeach; ?>
-        <div class="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+        <div class="bg-white rounded-2xl border border-gray-200 shadow-xs overflow-hidden">
             <div class="overflow-x-auto">
                 <table class="w-full text-sm">
-                    <thead class="bg-slate-50 text-slate-500 text-left">
+                    <thead class="bg-gray-50 text-gray-500 text-left">
                         <tr>
                             <th class="px-3 py-3 font-semibold w-12 text-center">#</th>
                             <th class="px-3 py-3 font-semibold w-28">Status</th>
@@ -69,10 +69,10 @@ unset($c);
                             <th class="px-3 py-3 font-semibold w-14 text-center">Aksi</th>
                         </tr>
                     </thead>
-                    <tbody class="divide-y divide-slate-100">
+                    <tbody class="divide-y divide-gray-100">
                         <template x-for="(row, idx) in rows" :key="row._uid">
-                            <tr class="hover:bg-slate-50 align-top">
-                                <td class="px-3 py-2 text-center text-slate-400" x-text="idx + 1"></td>
+                            <tr class="hover:bg-gray-50 align-top">
+                                <td class="px-3 py-2 text-center text-gray-400" x-text="idx + 1"></td>
                                 <td class="px-3 py-2">
                                     <span class="inline-flex rounded-full px-2 py-0.5 text-xs font-semibold"
                                           :class="row._status === 'perbarui' ? 'bg-amber-100 text-amber-700' : 'bg-emerald-100 text-emerald-700'"
@@ -82,7 +82,7 @@ unset($c);
                                     <td class="px-3 py-2">
                                         <?php if ($type === 'select'): ?>
                                             <select x-model="row['<?= esc($key, 'js') ?>']"
-                                                    class="w-full rounded-lg border border-slate-300 px-2 py-1.5 text-sm focus:border-brand-500 outline-none">
+                                                    class="w-full rounded-lg border border-gray-300 px-2 py-1.5 text-sm focus:border-brand-500 outline-hidden">
                                                 <option value="">—</option>
                                                 <?php foreach (($c['options'] ?? []) as $opt): ?>
                                                     <option value="<?= esc($opt, 'attr') ?>"><?= esc($opt) ?></option>
@@ -91,11 +91,11 @@ unset($c);
                                         <?php elseif ($type === 'datalist'): ?>
                                             <input type="text" list="dl_<?= esc($key, 'attr') ?>"
                                                    x-model="row['<?= esc($key, 'js') ?>']"
-                                                   class="w-full rounded-lg border border-slate-300 px-2 py-1.5 text-sm focus:border-brand-500 outline-none">
+                                                   class="w-full rounded-lg border border-gray-300 px-2 py-1.5 text-sm focus:border-brand-500 outline-hidden">
                                         <?php else: ?>
                                             <input type="<?= $type === 'number' ? 'number' : 'text' ?>"
                                                    x-model="row['<?= esc($key, 'js') ?>']"
-                                                   class="w-full rounded-lg border border-slate-300 px-2 py-1.5 text-sm focus:border-brand-500 outline-none">
+                                                   class="w-full rounded-lg border border-gray-300 px-2 py-1.5 text-sm focus:border-brand-500 outline-hidden">
                                         <?php endif; ?>
                                     </td>
                                 <?php endforeach; ?>
@@ -107,13 +107,13 @@ unset($c);
                             </tr>
                         </template>
                         <tr x-show="rows.length === 0">
-                            <td colspan="<?= count($cols) + 3 ?>" class="px-6 py-10 text-center text-slate-400">Tidak ada baris. Tambah baris atau batalkan.</td>
+                            <td colspan="<?= count($cols) + 3 ?>" class="px-6 py-10 text-center text-gray-400">Tidak ada baris. Tambah baris atau batalkan.</td>
                         </tr>
                     </tbody>
                 </table>
             </div>
-            <div class="px-4 py-3 border-t border-slate-100">
-                <button type="button" @click="addRow()" class="inline-flex items-center gap-1.5 rounded-lg border border-slate-300 text-slate-600 text-sm font-semibold px-3.5 py-2 hover:bg-slate-50 transition">
+            <div class="px-4 py-3 border-t border-gray-100">
+                <button type="button" @click="addRow()" class="inline-flex items-center gap-1.5 rounded-lg border border-gray-300 text-gray-600 text-sm font-semibold px-3.5 py-2 hover:bg-gray-50 transition">
                     <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4"/></svg>
                     Tambah Baris
                 </button>
@@ -124,7 +124,7 @@ unset($c);
         <div x-ref="payload"></div>
 
         <div class="flex flex-wrap justify-end gap-2 mt-5">
-            <a href="<?= esc($backUrl) ?>" class="rounded-lg border border-slate-300 text-slate-600 text-sm font-semibold px-5 py-2.5 hover:bg-slate-50 transition">Batal</a>
+            <a href="<?= esc($backUrl) ?>" class="rounded-lg border border-gray-300 text-gray-600 text-sm font-semibold px-5 py-2.5 hover:bg-gray-50 transition">Batal</a>
             <button type="submit" class="inline-flex items-center gap-1.5 rounded-lg bg-brand-700 hover:bg-brand-800 text-white text-sm font-semibold px-6 py-2.5 transition">
                 <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/></svg>
                 Simpan <span x-text="rows.length"></span> Data

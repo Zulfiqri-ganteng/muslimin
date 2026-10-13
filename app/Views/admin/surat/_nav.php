@@ -24,9 +24,9 @@ foreach (SuratSekolahModel::STATUS as $s) {
         $url   = site_url('admin/surat') . ($kode !== '' || $bawa !== [] ? '?' . http_build_query($bawa + ($kode !== '' ? ['status' => $kode] : [])) : '');
     ?>
         <a href="<?= esc($url, 'attr') ?>"
-           class="inline-flex shrink-0 items-center gap-2 rounded-xl px-3.5 py-2 text-sm font-semibold transition active:scale-95 <?= $aktif ? 'bg-brand-700 text-white shadow-md shadow-brand-700/20' : 'border border-slate-200 bg-white text-slate-600 hover:border-brand-200 hover:bg-brand-50 hover:text-brand-700' ?>"<?= $aktif ? ' aria-current="page"' : '' ?>>
+           class="inline-flex shrink-0 items-center gap-2 rounded-xl px-3.5 py-2 text-sm font-semibold transition active:scale-95 <?= $aktif ? 'bg-brand-700 text-white shadow-md shadow-brand-700/20' : 'border border-gray-200 bg-white text-gray-600 hover:border-brand-200 hover:bg-brand-50 hover:text-brand-700' ?>"<?= $aktif ? ' aria-current="page"' : '' ?>>
             <?= esc($label) ?>
-            <span class="inline-flex min-w-[1.4rem] justify-center rounded-full px-1.5 py-0.5 text-[11px] font-bold <?= $aktif ? 'bg-white/20 text-white' : ($kode === 'menunggu' && $jumlah > 0 ? 'bg-amber-100 text-amber-800' : 'bg-slate-100 text-slate-500') ?>"><?= $jumlah ?></span>
+            <span class="inline-flex min-w-[1.4rem] justify-center rounded-full px-1.5 py-0.5 text-[11px] font-bold <?= $aktif ? 'bg-white/20 text-white' : ($kode === 'menunggu' && $jumlah > 0 ? 'bg-amber-100 text-amber-800' : 'bg-gray-100 text-gray-500') ?>"><?= $jumlah ?></span>
         </a>
     <?php endforeach; ?>
 </nav>

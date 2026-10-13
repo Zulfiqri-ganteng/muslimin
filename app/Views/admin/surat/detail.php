@@ -28,7 +28,7 @@ use App\Libraries\SuratPeriksa;
 use App\Libraries\SuratSekolah;
 use App\Models\SuratSekolahModel;
 
-[$stLabel, $stKelas] = SuratSekolahModel::TAMPIL_STATUS[$surat['status']] ?? [$surat['status'], 'bg-slate-100 text-slate-600'];
+[$stLabel, $stKelas] = SuratSekolahModel::TAMPIL_STATUS[$surat['status']] ?? [$surat['status'], 'bg-gray-100 text-gray-600'];
 $id       = (int) $surat['id'];
 $jenis    = (string) $surat['jenis'];
 $status   = (string) $surat['status'];
@@ -60,9 +60,9 @@ $adaBahaya = SuratPeriksa::adaBahaya($periksa);
         <div class="flex flex-wrap items-center gap-2">
             <span class="inline-flex rounded-full px-2.5 py-0.5 text-[11px] font-bold <?= esc(SuratJenis::badge($jenis), 'attr') ?>"><?= esc(SuratJenis::label($jenis)) ?></span>
             <span class="inline-flex rounded-full px-2.5 py-0.5 text-[11px] font-bold <?= esc($stKelas, 'attr') ?>"><?= esc($stLabel) ?></span>
-            <span class="font-mono text-xs font-semibold text-slate-400"><?= esc($kode) ?></span>
+            <span class="font-mono text-xs font-semibold text-gray-400"><?= esc($kode) ?></span>
         </div>
-        <h1 class="mt-2 text-xl font-bold leading-snug text-slate-800"><?= esc($surat['judul']) ?></h1>
+        <h1 class="mt-2 text-xl font-bold leading-snug text-gray-800"><?= esc($surat['judul']) ?></h1>
     </div>
 </div>
 
@@ -73,7 +73,7 @@ $adaBahaya = SuratPeriksa::adaBahaya($periksa);
     <p class="rise mb-4 rounded-xl border border-orange-300 bg-orange-50 px-4 py-3 text-sm leading-relaxed text-orange-900"><b>Dikembalikan dengan catatan:</b> <?= esc($surat['catatan_staf']) ?></p>
 <?php endif; ?>
 <?php if ($status === 'dibatalkan'): ?>
-    <p class="rise mb-4 rounded-xl border border-slate-300 bg-slate-100 px-4 py-3 text-sm leading-relaxed text-slate-700"><b>Surat dibatalkan.</b> <?= (string) $surat['catatan_staf'] !== '' ? esc($surat['catatan_staf']) : '' ?><?= $bernomor ? ' Nomor ' . esc($surat['nomor']) . ' tetap tercatat dan tidak dipakai lagi.' : '' ?></p>
+    <p class="rise mb-4 rounded-xl border border-gray-300 bg-gray-100 px-4 py-3 text-sm leading-relaxed text-gray-700"><b>Surat dibatalkan.</b> <?= (string) $surat['catatan_staf'] !== '' ? esc($surat['catatan_staf']) : '' ?><?= $bernomor ? ' Nomor ' . esc($surat['nomor']) . ' tetap tercatat dan tidak dipakai lagi.' : '' ?></p>
 <?php endif; ?>
 <?php foreach ($periksa as $w): $bahaya = $w['tingkat'] === 'bahaya'; ?>
     <p class="rise mb-3 rounded-xl border px-4 py-3 text-sm font-semibold leading-relaxed <?= $bahaya ? 'border-red-300 bg-red-50 text-red-800' : 'border-amber-300 bg-amber-50 text-amber-900' ?>">⚠ <?= $bahaya ? 'BAHAYA: ' : '' ?><?= esc($w['teks']) ?>
@@ -83,30 +83,30 @@ $adaBahaya = SuratPeriksa::adaBahaya($periksa);
 <div class="grid gap-5 lg:grid-cols-[1fr_20rem]">
     <div class="space-y-5">
         <!-- Data surat -->
-        <section class="rise rise-1 overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
-            <h3 class="border-b border-slate-100 bg-slate-50 px-5 py-3 text-xs font-bold uppercase tracking-wide text-slate-500">Data surat</h3>
+        <section class="rise rise-1 overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-xs">
+            <h3 class="border-b border-gray-100 bg-gray-50 px-5 py-3 text-xs font-bold uppercase tracking-wide text-gray-500">Data surat</h3>
             <dl class="grid gap-x-6 gap-y-4 px-5 py-5 text-sm sm:grid-cols-2">
-                <div><dt class="text-xs text-slate-500">Nomor surat</dt><dd class="font-mono font-bold text-slate-800"><?= $bernomor ? esc($surat['nomor']) : '<span class="font-sans font-normal text-slate-400">' . (SuratJenis::bernomor($jenis) ? 'belum diterbitkan' : 'jenis ini tidak bernomor') . '</span>' ?></dd></div>
-                <div><dt class="text-xs text-slate-500">Tanggal surat</dt><dd class="font-semibold text-slate-800"><?= esc(IsianBantu::tanggalIndo((string) $surat['tanggal_surat'])) ?></dd></div>
+                <div><dt class="text-xs text-gray-500">Nomor surat</dt><dd class="font-mono font-bold text-gray-800"><?= $bernomor ? esc($surat['nomor']) : '<span class="font-sans font-normal text-gray-400">' . (SuratJenis::bernomor($jenis) ? 'belum diterbitkan' : 'jenis ini tidak bernomor') . '</span>' ?></dd></div>
+                <div><dt class="text-xs text-gray-500">Tanggal surat</dt><dd class="font-semibold text-gray-800"><?= esc(IsianBantu::tanggalIndo((string) $surat['tanggal_surat'])) ?></dd></div>
                 <?php if ((string) $surat['perusahaan_nama'] !== ''): ?>
-                    <div class="sm:col-span-2"><dt class="text-xs text-slate-500">Perusahaan / tujuan</dt><dd class="font-semibold text-slate-800"><?= esc($surat['perusahaan_nama']) ?>
+                    <div class="sm:col-span-2"><dt class="text-xs text-gray-500">Perusahaan / tujuan</dt><dd class="font-semibold text-gray-800"><?= esc($surat['perusahaan_nama']) ?>
                         <?php if (! empty($surat['pengajuan_id'])): ?><a href="<?= site_url('admin/pkl/' . (int) $surat['pengajuan_id']) ?>" class="ml-1 text-xs font-semibold text-brand-700 hover:underline">lihat ajuan PKL →</a><?php endif; ?></dd></div>
                 <?php endif; ?>
                 <?php foreach ($ringkasIsi as [$label, $nilai]): ?>
-                    <div><dt class="text-xs text-slate-500"><?= esc($label) ?></dt><dd class="font-semibold text-slate-800"><?= esc($nilai) ?></dd></div>
+                    <div><dt class="text-xs text-gray-500"><?= esc($label) ?></dt><dd class="font-semibold text-gray-800"><?= esc($nilai) ?></dd></div>
                 <?php endforeach; ?>
-                <div><dt class="text-xs text-slate-500">Dibuat oleh</dt><dd class="font-semibold text-slate-800"><?= esc((string) $surat['dibuat_nama'] !== '' ? $surat['dibuat_nama'] : '—') ?></dd><dd class="text-xs text-slate-400"><?= esc(date('d-m-Y H:i', strtotime((string) $surat['created_at']))) ?></dd></div>
+                <div><dt class="text-xs text-gray-500">Dibuat oleh</dt><dd class="font-semibold text-gray-800"><?= esc((string) $surat['dibuat_nama'] !== '' ? $surat['dibuat_nama'] : '—') ?></dd><dd class="text-xs text-gray-400"><?= esc(date('d-m-Y H:i', strtotime((string) $surat['created_at']))) ?></dd></div>
             </dl>
         </section>
 
         <!-- Siswa -->
         <?php if ($siswa !== []): ?>
-            <section class="rise rise-2 overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
-                <h3 class="border-b border-slate-100 bg-slate-50 px-5 py-3 text-xs font-bold uppercase tracking-wide text-slate-500">Siswa pada surat <span class="ml-1 rounded-full bg-slate-200 px-2 py-0.5 text-[11px] text-slate-600"><?= count($siswa) ?></span></h3>
+            <section class="rise rise-2 overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-xs">
+                <h3 class="border-b border-gray-100 bg-gray-50 px-5 py-3 text-xs font-bold uppercase tracking-wide text-gray-500">Siswa pada surat <span class="ml-1 rounded-full bg-gray-200 px-2 py-0.5 text-[11px] text-gray-600"><?= count($siswa) ?></span></h3>
                 <div class="overflow-x-auto">
                     <table class="w-full min-w-[34rem] text-sm">
-                        <thead class="text-left text-slate-500">
-                            <tr class="border-b border-slate-100">
+                        <thead class="text-left text-gray-500">
+                            <tr class="border-b border-gray-100">
                                 <th class="w-12 px-5 py-2.5 font-semibold">No</th>
                                 <th class="px-3 py-2.5 font-semibold">Nama</th>
                                 <th class="px-3 py-2.5 font-semibold">NIS</th>
@@ -115,17 +115,17 @@ $adaBahaya = SuratPeriksa::adaBahaya($periksa);
                                 <th class="px-5 py-2.5 font-semibold">HP</th>
                             </tr>
                         </thead>
-                        <tbody class="divide-y divide-slate-100">
+                        <tbody class="divide-y divide-gray-100">
                             <?php foreach ($siswa as $i => $a):
                                 $hp = trim((string) ($a['hp'] ?? '')) !== '' ? (string) $a['hp'] : (string) ($a['hp_master'] ?? '');
                             ?>
                                 <tr>
-                                    <td class="px-5 py-2.5 text-slate-400"><?= $i + 1 ?></td>
-                                    <td class="px-3 py-2.5 font-semibold text-slate-800"><?= esc($a['nama']) ?></td>
-                                    <td class="px-3 py-2.5 font-mono text-xs text-slate-600"><?= esc((string) $a['nis'] !== '' ? $a['nis'] : '—') ?></td>
-                                    <td class="whitespace-nowrap px-3 py-2.5 text-slate-600"><?= esc((string) ($a['nama_kelas'] ?? '') !== '' ? $a['nama_kelas'] : '—') ?></td>
-                                    <td class="px-3 py-2.5 text-slate-600"><?= esc((string) ($a['jurusan_nama'] ?? '') !== '' ? $a['jurusan_nama'] : '—') ?></td>
-                                    <td class="whitespace-nowrap px-5 py-2.5 font-mono text-xs text-slate-600"><?= $hp !== '' ? esc($hp) : '<span class="text-slate-300">—</span>' ?></td>
+                                    <td class="px-5 py-2.5 text-gray-400"><?= $i + 1 ?></td>
+                                    <td class="px-3 py-2.5 font-semibold text-gray-800"><?= esc($a['nama']) ?></td>
+                                    <td class="px-3 py-2.5 font-mono text-xs text-gray-600"><?= esc((string) $a['nis'] !== '' ? $a['nis'] : '—') ?></td>
+                                    <td class="whitespace-nowrap px-3 py-2.5 text-gray-600"><?= esc((string) ($a['nama_kelas'] ?? '') !== '' ? $a['nama_kelas'] : '—') ?></td>
+                                    <td class="px-3 py-2.5 text-gray-600"><?= esc((string) ($a['jurusan_nama'] ?? '') !== '' ? $a['jurusan_nama'] : '—') ?></td>
+                                    <td class="whitespace-nowrap px-5 py-2.5 font-mono text-xs text-gray-600"><?= $hp !== '' ? esc($hp) : '<span class="text-gray-300">—</span>' ?></td>
                                 </tr>
                             <?php endforeach; ?>
                         </tbody>
@@ -138,15 +138,15 @@ $adaBahaya = SuratPeriksa::adaBahaya($periksa);
     <div class="space-y-5">
         <!-- Tindakan -->
         <?php if ($status !== 'dibatalkan'): ?>
-            <section class="rise rise-1 overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
-                <h3 class="border-b border-slate-100 bg-slate-50 px-5 py-3 text-xs font-bold uppercase tracking-wide text-slate-500">Tindakan</h3>
+            <section class="rise rise-1 overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-xs">
+                <h3 class="border-b border-gray-100 bg-gray-50 px-5 py-3 text-xs font-bold uppercase tracking-wide text-gray-500">Tindakan</h3>
                 <div class="space-y-3 px-5 py-5 text-sm">
                     <?php if ($status === 'menunggu'): ?>
                         <?php if ($bolehAcc): ?>
                             <button type="button" @click="dlg = 'acc'" class="w-full rounded-xl bg-green-600 px-4 py-2.5 text-sm font-bold text-white transition hover:bg-green-700 active:scale-95">✓ ACC surat ini</button>
                             <button type="button" @click="dlg = 'kembalikan'" class="w-full rounded-xl border border-amber-300 bg-amber-50 px-4 py-2.5 text-sm font-bold text-amber-800 transition hover:bg-amber-100 active:scale-95">↩ Kembalikan untuk diperbaiki</button>
                         <?php else: ?>
-                            <p class="rounded-xl border border-slate-200 bg-slate-50 px-3.5 py-3 text-xs leading-relaxed text-slate-600">🔒 Surat ini menunggu <b>ACC</b> dari <?= esc($pemegangAcc ?? 'peran yang berhak') ?>. Akun <?= esc(HakAkses::label($peran)) ?> tidak punya hak ACC jenis surat ini.</p>
+                            <p class="rounded-xl border border-gray-200 bg-gray-50 px-3.5 py-3 text-xs leading-relaxed text-gray-600">🔒 Surat ini menunggu <b>ACC</b> dari <?= esc($pemegangAcc ?? 'peran yang berhak') ?>. Akun <?= esc(HakAkses::label($peran)) ?> tidak punya hak ACC jenis surat ini.</p>
                         <?php endif; ?>
                     <?php elseif ($status === 'dikembalikan'): ?>
                         <?php if ($bolehBuat): ?>
@@ -154,9 +154,9 @@ $adaBahaya = SuratPeriksa::adaBahaya($periksa);
                                 <?= csrf_field() ?>
                                 <button type="submit" class="w-full rounded-xl bg-brand-700 px-4 py-2.5 text-sm font-bold text-white transition hover:bg-brand-800 active:scale-95">Ajukan ulang untuk ACC</button>
                             </form>
-                            <p class="text-xs leading-relaxed text-slate-500">Perbaiki dulu sesuai catatan di atas bila perlu, lalu ajukan ulang. Riwayatnya tercatat.</p>
+                            <p class="text-xs leading-relaxed text-gray-500">Perbaiki dulu sesuai catatan di atas bila perlu, lalu ajukan ulang. Riwayatnya tercatat.</p>
                         <?php else: ?>
-                            <p class="rounded-xl border border-slate-200 bg-slate-50 px-3.5 py-3 text-xs leading-relaxed text-slate-600">Menunggu pembuat surat memperbaiki dan mengajukan ulang.</p>
+                            <p class="rounded-xl border border-gray-200 bg-gray-50 px-3.5 py-3 text-xs leading-relaxed text-gray-600">Menunggu pembuat surat memperbaiki dan mengajukan ulang.</p>
                         <?php endif; ?>
                     <?php elseif ($status === 'disetujui'): ?>
                         <?php if ($bolehUnduh): ?>
@@ -165,77 +165,77 @@ $adaBahaya = SuratPeriksa::adaBahaya($periksa);
                                     <?= csrf_field() ?>
                                     <button type="submit" class="w-full rounded-xl bg-brand-700 px-4 py-2.5 text-sm font-bold text-white transition hover:bg-brand-800 active:scale-95">⬇ <?= (int) $surat['cetak_ke'] > 0 ? 'Unduh ulang surat (Word)' : 'Unduh surat (Word)' ?></button>
                                 </form>
-                                <p class="text-xs leading-relaxed text-slate-500"><?= $bernomor || ! SuratJenis::bernomor($jenis) ? 'Unduh ulang memakai nomor yang sama.' : 'Nomor surat diterbitkan sekali, saat surat pertama diunduh.' ?></p>
+                                <p class="text-xs leading-relaxed text-gray-500"><?= $bernomor || ! SuratJenis::bernomor($jenis) ? 'Unduh ulang memakai nomor yang sama.' : 'Nomor surat diterbitkan sekali, saat surat pertama diunduh.' ?></p>
                                 <?php if (! empty($kabarWa)): $hw = $hitungWa ?? ['total' => 0, 'dikabari' => 0]; ?>
                                     <?php if ((int) $surat['cetak_ke'] > 0): ?>
                                         <button type="button" @click="window.dispatchEvent(new CustomEvent('surat-wa', { detail: { id: <?= $id ?> } }))"
                                                 class="w-full rounded-xl border border-green-300 bg-white px-4 py-2.5 text-sm font-bold text-green-700 transition hover:bg-green-50 active:scale-95">Kabari siswa via WhatsApp</button>
-                                        <p class="text-xs leading-relaxed <?= $hw['dikabari'] >= $hw['total'] && $hw['total'] > 0 ? 'font-semibold text-green-700' : 'text-slate-500' ?>">
+                                        <p class="text-xs leading-relaxed <?= $hw['dikabari'] >= $hw['total'] && $hw['total'] > 0 ? 'font-semibold text-green-700' : 'text-gray-500' ?>">
                                             <?= $hw['dikabari'] >= $hw['total'] && $hw['total'] > 0 ? '✓ Semua siswa (' . $hw['total'] . ') sudah dikabari surat ini siap diambil.' : 'Sudah dikabari: ' . $hw['dikabari'] . ' dari ' . $hw['total'] . ' siswa. Pesan: surat siap diambil di Tata Usaha.' ?>
                                         </p>
                                     <?php else: ?>
-                                        <p class="text-xs leading-relaxed text-slate-500">Setelah surat diunduh, siswa bisa dikabari lewat WhatsApp bahwa suratnya siap diambil.</p>
+                                        <p class="text-xs leading-relaxed text-gray-500">Setelah surat diunduh, siswa bisa dikabari lewat WhatsApp bahwa suratnya siap diambil.</p>
                                     <?php endif; ?>
                                 <?php endif; ?>
                             <?php else: ?>
-                                <p class="rounded-xl border border-slate-200 bg-slate-50 px-3.5 py-3 text-xs leading-relaxed text-slate-600">Template Word untuk <?= esc(SuratJenis::label($jenis)) ?> belum tersedia, jadi surat ini belum bisa diunduh.</p>
+                                <p class="rounded-xl border border-gray-200 bg-gray-50 px-3.5 py-3 text-xs leading-relaxed text-gray-600">Template Word untuk <?= esc(SuratJenis::label($jenis)) ?> belum tersedia, jadi surat ini belum bisa diunduh.</p>
                             <?php endif; ?>
                         <?php else: ?>
-                            <p class="rounded-xl border border-slate-200 bg-slate-50 px-3.5 py-3 text-xs leading-relaxed text-slate-600">🔒 Surat ini diunduh oleh <?= esc($pemegangUnduh ?? 'peran yang berhak') ?> (diatur Admin di Sistem → Hak Akses).</p>
+                            <p class="rounded-xl border border-gray-200 bg-gray-50 px-3.5 py-3 text-xs leading-relaxed text-gray-600">🔒 Surat ini diunduh oleh <?= esc($pemegangUnduh ?? 'peran yang berhak') ?> (diatur Admin di Sistem → Hak Akses).</p>
                         <?php endif; ?>
                         <?php if ($bisaBatalAcc && $bolehAcc): ?>
                             <button type="button" @click="dlg = 'batalacc'" class="w-full rounded-xl border border-amber-300 bg-white px-4 py-2 text-xs font-bold text-amber-800 transition hover:bg-amber-50">Batalkan persetujuan</button>
                         <?php endif; ?>
                     <?php endif; ?>
                     <?php if ($bolehBuat && $alamatUbah !== ''): ?>
-                        <a href="<?= esc($alamatUbah, 'attr') ?>" class="block w-full rounded-xl border border-slate-300 bg-white px-4 py-2 text-center text-xs font-bold text-slate-700 transition hover:bg-slate-50">✎ Ubah data surat</a>
+                        <a href="<?= esc($alamatUbah, 'attr') ?>" class="block w-full rounded-xl border border-gray-300 bg-white px-4 py-2 text-center text-xs font-bold text-gray-700 transition hover:bg-gray-50">✎ Ubah data surat</a>
                     <?php endif; ?>
                     <?php if ($bolehBuat): ?>
-                        <button type="button" @click="dlg = 'batal'" class="w-full rounded-xl border border-slate-200 bg-white px-4 py-2 text-xs font-semibold text-slate-500 transition hover:border-red-300 hover:bg-red-50 hover:text-red-700">Batalkan surat</button>
+                        <button type="button" @click="dlg = 'batal'" class="w-full rounded-xl border border-gray-200 bg-white px-4 py-2 text-xs font-semibold text-gray-500 transition hover:border-red-300 hover:bg-red-50 hover:text-red-700">Batalkan surat</button>
                     <?php endif; ?>
                 </div>
             </section>
         <?php endif; ?>
 
         <!-- Status & ACC -->
-        <section class="rise rise-1 overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
-            <h3 class="border-b border-slate-100 bg-slate-50 px-5 py-3 text-xs font-bold uppercase tracking-wide text-slate-500">Persetujuan &amp; unduhan</h3>
+        <section class="rise rise-1 overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-xs">
+            <h3 class="border-b border-gray-100 bg-gray-50 px-5 py-3 text-xs font-bold uppercase tracking-wide text-gray-500">Persetujuan &amp; unduhan</h3>
             <div class="space-y-4 px-5 py-5 text-sm">
                 <div>
-                    <p class="text-xs text-slate-500">Aturan jenis ini</p>
-                    <p class="font-semibold text-slate-800"><?= $wajibAcc ? 'Wajib ACC sebelum diunduh' : 'Tanpa ACC (langsung siap unduh)' ?></p>
+                    <p class="text-xs text-gray-500">Aturan jenis ini</p>
+                    <p class="font-semibold text-gray-800"><?= $wajibAcc ? 'Wajib ACC sebelum diunduh' : 'Tanpa ACC (langsung siap unduh)' ?></p>
                 </div>
                 <?php if (! empty($surat['acc_at'])): ?>
                     <div>
-                        <p class="text-xs text-slate-500">Disetujui oleh</p>
-                        <p class="font-semibold text-slate-800"><?= esc((string) $surat['acc_nama']) ?></p>
-                        <p class="text-xs text-slate-500"><?= esc(HakAkses::label((string) $surat['acc_peran'])) ?></p>
-                        <p class="text-xs text-slate-400"><?= esc(PklSurat::waktuIndo((string) $surat['acc_at'])) ?></p>
-                        <?php if ((string) $surat['acc_kode'] !== ''): ?><p class="mt-1 font-mono text-xs font-semibold text-slate-600"><?= esc($surat['acc_kode']) ?></p><?php endif; ?>
+                        <p class="text-xs text-gray-500">Disetujui oleh</p>
+                        <p class="font-semibold text-gray-800"><?= esc((string) $surat['acc_nama']) ?></p>
+                        <p class="text-xs text-gray-500"><?= esc(HakAkses::label((string) $surat['acc_peran'])) ?></p>
+                        <p class="text-xs text-gray-400"><?= esc(PklSurat::waktuIndo((string) $surat['acc_at'])) ?></p>
+                        <?php if ((string) $surat['acc_kode'] !== ''): ?><p class="mt-1 font-mono text-xs font-semibold text-gray-600"><?= esc($surat['acc_kode']) ?></p><?php endif; ?>
                     </div>
                 <?php elseif ($status === 'menunggu'): ?>
                     <p class="rounded-lg bg-amber-50 px-3 py-2 text-xs font-semibold leading-relaxed text-amber-800">Menunggu persetujuan<?= (string) $surat['diajukan_at'] !== '' ? ' sejak ' . esc(date('d-m-Y H:i', strtotime((string) $surat['diajukan_at']))) : '' ?>.</p>
                 <?php endif; ?>
                 <div>
-                    <p class="text-xs text-slate-500">Diunduh</p>
-                    <p class="font-semibold text-slate-800"><?= (int) $surat['cetak_ke'] > 0 ? (int) $surat['cetak_ke'] . ' kali' : 'belum pernah' ?></p>
-                    <?php if (! empty($surat['terakhir_cetak_at'])): ?><p class="text-xs text-slate-400">terakhir <?= esc(date('d-m-Y H:i', strtotime((string) $surat['terakhir_cetak_at']))) ?></p><?php endif; ?>
+                    <p class="text-xs text-gray-500">Diunduh</p>
+                    <p class="font-semibold text-gray-800"><?= (int) $surat['cetak_ke'] > 0 ? (int) $surat['cetak_ke'] . ' kali' : 'belum pernah' ?></p>
+                    <?php if (! empty($surat['terakhir_cetak_at'])): ?><p class="text-xs text-gray-400">terakhir <?= esc(date('d-m-Y H:i', strtotime((string) $surat['terakhir_cetak_at']))) ?></p><?php endif; ?>
                 </div>
             </div>
         </section>
 
         <!-- Riwayat -->
-        <section class="rise rise-2 overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
-            <h3 class="border-b border-slate-100 bg-slate-50 px-5 py-3 text-xs font-bold uppercase tracking-wide text-slate-500">Riwayat</h3>
+        <section class="rise rise-2 overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-xs">
+            <h3 class="border-b border-gray-100 bg-gray-50 px-5 py-3 text-xs font-bold uppercase tracking-wide text-gray-500">Riwayat</h3>
             <?php if ($riwayat === []): ?>
-                <p class="px-5 py-5 text-center text-sm text-slate-400">Belum ada riwayat.</p>
+                <p class="px-5 py-5 text-center text-sm text-gray-400">Belum ada riwayat.</p>
             <?php else: ?>
-                <ol class="divide-y divide-slate-100">
+                <ol class="divide-y divide-gray-100">
                     <?php foreach ($riwayat as $h): ?>
                         <li class="px-5 py-3 text-sm">
-                            <p class="font-semibold text-slate-800"><?= esc(SuratSekolah::AKSI[$h['aksi']] ?? $h['aksi']) ?></p>
-                            <?php if ((string) $h['catatan'] !== ''): ?><p class="text-xs leading-relaxed text-slate-500"><?= esc($h['catatan']) ?></p><?php endif; ?>
-                            <p class="mt-0.5 text-xs text-slate-400"><?= esc($h['oleh']) ?><?= (string) $h['peran'] !== '' ? ' (' . esc(HakAkses::label((string) $h['peran'])) . ')' : '' ?> · <?= esc(date('d-m-Y H:i', strtotime((string) $h['created_at']))) ?></p>
+                            <p class="font-semibold text-gray-800"><?= esc(SuratSekolah::AKSI[$h['aksi']] ?? $h['aksi']) ?></p>
+                            <?php if ((string) $h['catatan'] !== ''): ?><p class="text-xs leading-relaxed text-gray-500"><?= esc($h['catatan']) ?></p><?php endif; ?>
+                            <p class="mt-0.5 text-xs text-gray-400"><?= esc($h['oleh']) ?><?= (string) $h['peran'] !== '' ? ' (' . esc(HakAkses::label((string) $h['peran'])) . ')' : '' ?> · <?= esc(date('d-m-Y H:i', strtotime((string) $h['created_at']))) ?></p>
                         </li>
                     <?php endforeach; ?>
                 </ol>
@@ -248,26 +248,26 @@ $adaBahaya = SuratPeriksa::adaBahaya($periksa);
 <?php
 $dialog = static function (string $kunci, string $judul, string $aksiUrl, string $isi, string $tombol, string $warnaTombol) use ($id): void {
     echo '<div x-show="dlg === \'' . $kunci . '\'" x-cloak x-transition.opacity.duration.150ms class="fixed inset-0 z-50 flex items-end justify-center sm:items-center sm:p-4" role="dialog" aria-modal="true">'
-        . '<div class="absolute inset-0 bg-slate-900/50" @click="dlg = \'\'"></div>'
+        . '<div class="absolute inset-0 bg-gray-900/50" @click="dlg = \'\'"></div>'
         . '<form method="post" action="' . esc(site_url('admin/surat/' . $id . '/' . $aksiUrl), 'attr') . '" class="relative max-h-[92vh] w-full overflow-y-auto rounded-t-2xl bg-white shadow-2xl sm:max-w-lg sm:rounded-2xl">'
         . csrf_field()
-        . '<div class="border-b border-slate-100 px-5 py-4"><h3 class="text-lg font-bold text-slate-800">' . $judul . '</h3></div>'
-        . '<div class="space-y-4 p-5 text-sm text-slate-600">' . $isi . '</div>'
-        . '<div class="flex flex-col-reverse gap-2 border-t border-slate-100 px-5 py-4 sm:flex-row sm:justify-end">'
-        . '<button type="button" @click="dlg = \'\'" class="rounded-xl border border-slate-300 px-5 py-2.5 text-sm font-semibold text-slate-600 transition hover:bg-slate-50">Batal</button>'
+        . '<div class="border-b border-gray-100 px-5 py-4"><h3 class="text-lg font-bold text-gray-800">' . $judul . '</h3></div>'
+        . '<div class="space-y-4 p-5 text-sm text-gray-600">' . $isi . '</div>'
+        . '<div class="flex flex-col-reverse gap-2 border-t border-gray-100 px-5 py-4 sm:flex-row sm:justify-end">'
+        . '<button type="button" @click="dlg = \'\'" class="rounded-xl border border-gray-300 px-5 py-2.5 text-sm font-semibold text-gray-600 transition hover:bg-gray-50">Batal</button>'
         . '<button type="submit" class="rounded-xl px-5 py-2.5 text-sm font-bold text-white transition active:scale-95 ' . $warnaTombol . '">' . $tombol . '</button>'
         . '</div></form></div>';
 };
 $kotakAlasan = static fn (string $ph, string $untuk): string => '<div><label class="lbl" for="alasan_' . $untuk . '">Alasan <span class="text-red-500">*</span></label>'
     . '<textarea id="alasan_' . $untuk . '" name="catatan" rows="3" required minlength="5" maxlength="255" class="inp" placeholder="' . esc($ph, 'attr') . '"></textarea>'
-    . '<p class="mt-1 text-xs text-slate-400">Minimal 5 huruf. Tercatat di riwayat surat.</p></div>';
+    . '<p class="mt-1 text-xs text-gray-400">Minimal 5 huruf. Tercatat di riwayat surat.</p></div>';
 
 if ($status === 'menunggu' && $bolehAcc) {
     $isiAcc = '<p>Surat <b>' . esc($kode) . '</b> — ' . esc($surat['judul']) . ' akan disetujui dan siap diunduh oleh yang berhak (nomor surat terbit saat pertama diunduh).</p>';
     if ($adaBahaya) {
         $isiAcc .= '<label class="flex cursor-pointer items-start gap-2 rounded-xl border border-red-300 bg-red-50 p-3 text-red-800"><input type="checkbox" name="paham" value="1" required class="mt-0.5"><span class="text-sm font-semibold">Ada peringatan BAHAYA di halaman ini. Saya sudah memeriksanya dan tetap ingin meng-ACC.</span></label>';
     }
-    $isiAcc .= '<p class="rounded-xl border border-slate-200 bg-slate-50 px-4 py-2.5 text-xs leading-relaxed text-slate-600">Persetujuan ini akan <b>tercatat atas nama ' . esc($namaSaya) . '</b> (' . esc(HakAkses::label($peran)) . ') lengkap dengan tanggal &amp; jam, dan tercetak di kaki surat.</p>';
+    $isiAcc .= '<p class="rounded-xl border border-gray-200 bg-gray-50 px-4 py-2.5 text-xs leading-relaxed text-gray-600">Persetujuan ini akan <b>tercatat atas nama ' . esc($namaSaya) . '</b> (' . esc(HakAkses::label($peran)) . ') lengkap dengan tanggal &amp; jam, dan tercetak di kaki surat.</p>';
     $dialog('acc', 'ACC surat ' . esc($kode) . '?', 'acc', $isiAcc, '✓ Ya, ACC', 'bg-green-600 hover:bg-green-700');
     $dialog('kembalikan', 'Kembalikan untuk diperbaiki', 'kembalikan',
         '<p>Surat kembali ke pembuatnya untuk diperbaiki, lalu diajukan ulang kepada Anda.</p>' . $kotakAlasan('Contoh: Tanggal pelaksanaan belum sesuai kalender ujian.', 'kembalikan'),

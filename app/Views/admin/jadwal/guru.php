@@ -23,11 +23,11 @@
 
 <div>
     <!-- Pemilih guru + tombol cetak -->
-    <div class="bg-white rounded-2xl border border-slate-200 shadow-sm p-4 mb-5">
+    <div class="bg-white rounded-2xl border border-gray-200 shadow-xs p-4 mb-5">
         <div class="flex flex-col lg:flex-row lg:items-center gap-3">
             <form method="get" class="flex flex-1 items-center gap-2 min-w-0">
-                <label class="text-sm font-semibold text-slate-600 shrink-0">Guru:</label>
-                <select name="guru_id" data-autosubmit class="flex-1 rounded-lg border border-slate-300 px-3 py-2.5 text-sm focus:border-brand-500 outline-none min-w-[200px]">
+                <label class="text-sm font-semibold text-gray-600 shrink-0">Guru:</label>
+                <select name="guru_id" data-autosubmit class="flex-1 rounded-lg border border-gray-300 px-3 py-2.5 text-sm focus:border-brand-500 outline-hidden min-w-[200px]">
                     <option value="" <?= $guruId === 0 ? 'selected' : '' ?>><?= empty($guruOpts) ? '— belum ada guru —' : '— pilih guru —' ?></option>
                     <?php foreach ($guruOpts as $id => $label): ?>
                         <option value="<?= $id ?>" <?= $guruId === (int) $id ? 'selected' : '' ?>><?= esc($label) ?></option>
@@ -42,7 +42,7 @@
                         Cetak PDF
                     </a>
                     <a href="<?= site_url('admin/cetak/jadwal-guru/' . $guruId . '/excel') ?>"
-                       class="inline-flex items-center gap-1.5 rounded-lg border border-slate-300 bg-white text-slate-600 hover:bg-slate-50 text-sm font-semibold px-3.5 py-2.5 transition">
+                       class="inline-flex items-center gap-1.5 rounded-lg border border-gray-300 bg-white text-gray-600 hover:bg-gray-50 text-sm font-semibold px-3.5 py-2.5 transition">
                         <svg class="w-4 h-4 text-emerald-600" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 10v6m0 0l-3-3m3 3l3-3M4 6a2 2 0 012-2h5l2 2h5a2 2 0 012 2v9a2 2 0 01-2 2H6a2 2 0 01-2-2V6z"/></svg>
                         Unduh Excel
                     </a>
@@ -52,11 +52,11 @@
     </div>
 
     <?php if (! $guru): ?>
-        <div class="bg-white rounded-2xl border border-slate-200 shadow-sm p-10 text-center text-slate-400">Pilih guru terlebih dahulu untuk melihat jadwal mengajarnya.</div>
+        <div class="bg-white rounded-2xl border border-gray-200 shadow-xs p-10 text-center text-gray-400">Pilih guru terlebih dahulu untuk melihat jadwal mengajarnya.</div>
     <?php elseif (empty($jam) || empty($hari)): ?>
-        <div class="bg-white rounded-2xl border border-slate-200 shadow-sm p-10 text-center text-slate-400">Belum ada data hari aktif atau jam pelajaran.</div>
+        <div class="bg-white rounded-2xl border border-gray-200 shadow-xs p-10 text-center text-gray-400">Belum ada data hari aktif atau jam pelajaran.</div>
     <?php elseif (empty($grid)): ?>
-        <div class="bg-white rounded-2xl border border-slate-200 shadow-sm p-10 text-center text-slate-400">Belum ada jadwal mengajar untuk <?= esc($guru['nama']) ?>. Susun dulu di menu Jadwal KBM.</div>
+        <div class="bg-white rounded-2xl border border-gray-200 shadow-xs p-10 text-center text-gray-400">Belum ada jadwal mengajar untuk <?= esc($guru['nama']) ?>. Susun dulu di menu Jadwal KBM.</div>
     <?php else: ?>
         <?php
             // Pisahkan jam per shift → tiap shift jadi kartu/tabel sendiri.
@@ -84,42 +84,42 @@
         ?>
         <div class="space-y-5">
             <!-- Ringkasan guru -->
-            <div class="bg-white rounded-2xl border border-slate-200 shadow-sm px-5 py-4 flex flex-wrap items-center justify-between gap-3">
+            <div class="bg-white rounded-2xl border border-gray-200 shadow-xs px-5 py-4 flex flex-wrap items-center justify-between gap-3">
                 <div>
-                    <h2 class="font-bold text-lg text-slate-800"><?= esc($guru['nama']) ?></h2>
-                    <p class="text-sm text-slate-400">Kode <?= esc($guru['kode_guru']) ?><?= $guru['nip'] ? ' · NIP ' . esc($guru['nip']) : '' ?></p>
+                    <h2 class="font-bold text-lg text-gray-800"><?= esc($guru['nama']) ?></h2>
+                    <p class="text-sm text-gray-400">Kode <?= esc($guru['kode_guru']) ?><?= $guru['nip'] ? ' · NIP ' . esc($guru['nip']) : '' ?></p>
                 </div>
-                <p class="text-sm text-slate-500"><span class="font-extrabold text-brand-700 text-lg"><?= count($grid) ?></span> <span class="text-slate-400">JP/minggu terjadwal</span></p>
+                <p class="text-sm text-gray-500"><span class="font-extrabold text-brand-700 text-lg"><?= count($grid) ?></span> <span class="text-gray-400">JP/minggu terjadwal</span></p>
             </div>
 
             <!-- Satu kartu per shift -->
             <?php foreach ($byShift as $shift => $jamShift): ?>
-                <div class="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
-                    <div class="px-5 py-3 border-b border-slate-100 bg-brand-50">
+                <div class="bg-white rounded-2xl border border-gray-200 shadow-xs overflow-hidden">
+                    <div class="px-5 py-3 border-b border-gray-100 bg-brand-50">
                         <h3 class="font-bold text-brand-700 text-sm uppercase tracking-wider">Shift <?= esc($shiftLabel[$shift] ?? ucfirst($shift)) ?></h3>
                     </div>
                     <div class="overflow-x-auto">
                         <table class="w-full text-sm border-collapse">
                             <thead>
-                                <tr class="bg-slate-50 text-slate-500">
-                                    <th class="px-3 py-3 text-left font-semibold w-36 border-b border-slate-100">Jam</th>
+                                <tr class="bg-gray-50 text-gray-500">
+                                    <th class="px-3 py-3 text-left font-semibold w-36 border-b border-gray-100">Jam</th>
                                     <?php foreach ($hari as $h): ?>
-                                        <th class="px-2 py-3 text-center font-semibold border-b border-l border-slate-100 min-w-[110px]"><?= esc($h['nama']) ?></th>
+                                        <th class="px-2 py-3 text-center font-semibold border-b border-l border-gray-100 min-w-[110px]"><?= esc($h['nama']) ?></th>
                                     <?php endforeach; ?>
                                 </tr>
                             </thead>
                             <tbody>
                                 <?php foreach ($jamShift as $j): ?>
                                     <?php if (! empty($j['is_istirahat'])): ?>
-                                        <tr><td colspan="<?= count($hari) + 1 ?>" class="bg-amber-50 text-amber-700 text-center text-xs font-semibold py-1.5 border-b border-slate-100 tracking-wider">ISTIRAHAT (<?= esc(substr($j['waktu_mulai'], 0, 5)) ?>–<?= esc(substr($j['waktu_selesai'], 0, 5)) ?>)</td></tr>
+                                        <tr><td colspan="<?= count($hari) + 1 ?>" class="bg-amber-50 text-amber-700 text-center text-xs font-semibold py-1.5 border-b border-gray-100 tracking-wider">ISTIRAHAT (<?= esc(substr($j['waktu_mulai'], 0, 5)) ?>–<?= esc(substr($j['waktu_selesai'], 0, 5)) ?>)</td></tr>
                                     <?php else: ?>
-                                        <tr class="hover:bg-slate-50/50">
-                                            <td class="px-3 py-2 border-b border-slate-100 whitespace-nowrap align-top">
+                                        <tr class="hover:bg-gray-50/50">
+                                            <td class="px-3 py-2 border-b border-gray-100 whitespace-nowrap align-top">
                                                 <span class="font-bold text-brand-700">Jam ke <?= esc($j['jam_ke']) ?></span><br>
-                                                <span class="text-slate-400 text-xs"><?= esc(substr($j['waktu_mulai'], 0, 5)) ?>–<?= esc(substr($j['waktu_selesai'], 0, 5)) ?></span>
+                                                <span class="text-gray-400 text-xs"><?= esc(substr($j['waktu_mulai'], 0, 5)) ?>–<?= esc(substr($j['waktu_selesai'], 0, 5)) ?></span>
                                             </td>
                                             <?php foreach ($hari as $h): $c = $grid[$h['id'] . '-' . $j['id']] ?? null; ?>
-                                                <td class="p-1.5 border-b border-l border-slate-100 align-top">
+                                                <td class="p-1.5 border-b border-l border-gray-100 align-top">
                                                     <?php if ($c): ?>
                                                         <div class="rounded-lg bg-emerald-50 border border-emerald-100 p-1.5">
                                                             <p class="text-emerald-700 text-sm leading-tight"><?= esc($c['nama_kelas']) ?></p>

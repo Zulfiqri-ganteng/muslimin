@@ -62,11 +62,11 @@ ob_start(); ?>
     <?php endif; ?>
 
     <?php if (($showAdd || $showImport) && $exportUrl): ?>
-        <span class="hidden sm:block w-px h-6 bg-slate-200 mx-0.5"></span>
+        <span class="hidden sm:block w-px h-6 bg-gray-200 mx-0.5"></span>
     <?php endif; ?>
 
     <?php if ($exportUrl): ?>
-        <a href="<?= $exportUrl ?>"<?= $filterLangsung && $searchPlaceholder !== null ? ' data-export-filter="toolbarFilter"' : '' ?> title="<?= esc($exportTitle, 'attr') ?>" class="inline-flex items-center gap-1.5 rounded-lg border border-slate-300 bg-white text-slate-600 hover:bg-slate-50 text-sm font-semibold px-3.5 py-2.5 transition">
+        <a href="<?= $exportUrl ?>"<?= $filterLangsung && $searchPlaceholder !== null ? ' data-export-filter="toolbarFilter"' : '' ?> title="<?= esc($exportTitle, 'attr') ?>" class="inline-flex items-center gap-1.5 rounded-lg border border-gray-300 bg-white text-gray-600 hover:bg-gray-50 text-sm font-semibold px-3.5 py-2.5 transition">
             <svg class="w-4 h-4 text-emerald-600" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 10v6m0 0l-3-3m3 3l3-3M4 6a2 2 0 012-2h5l2 2h5a2 2 0 012 2v9a2 2 0 01-2 2H6a2 2 0 01-2-2V6z"/></svg>
             Export
         </a>
@@ -74,49 +74,50 @@ ob_start(); ?>
     <?= $extraActions ?? '' ?>
 
     <?php if ($bulkUrl): ?>
-        <!-- Muncul hanya saat ada baris tercentang (ditangani global di assets/js/admin/app.js) -->
-        <button type="button" data-bulk="selected" class="hidden inline-flex items-center gap-1.5 rounded-lg bg-red-600 hover:bg-red-700 text-white text-sm font-semibold px-3.5 py-2.5 transition">
+        <!-- Muncul hanya saat ada baris tercentang (ditangani global di assets/js/admin/app.js). Disembunyikan lewat ATRIBUT hidden,
+             bukan kelas: di Tailwind v4 kelas "inline-flex" menang atas kelas "hidden" (urutan abjad). -->
+        <button type="button" data-bulk="selected" hidden class="inline-flex items-center gap-1.5 rounded-lg bg-red-600 hover:bg-red-700 text-white text-sm font-semibold px-3.5 py-2.5 transition">
             <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
             Hapus Terpilih (<span class="js-bulk-count">0</span>)
         </button>
         <!-- Muncul hanya saat SEMUA baris tercentang (select all) -->
-        <button type="button" data-bulk="all" class="hidden inline-flex items-center gap-1.5 rounded-lg border text-sm font-semibold px-3.5 py-2.5 transition bg-white text-red-600 border-red-200 hover:bg-red-50">
+        <button type="button" data-bulk="all" hidden class="inline-flex items-center gap-1.5 rounded-lg border text-sm font-semibold px-3.5 py-2.5 transition bg-white text-red-600 border-red-200 hover:bg-red-50">
             <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
             Hapus Semua
         </button>
     <?php endif; ?>
 <?php $actionsHtml = ob_get_clean(); ?>
 
-<div class="bg-white rounded-2xl border border-slate-200 shadow-sm p-4 mb-5">
+<div class="bg-white rounded-2xl border border-gray-200 shadow-xs p-4 mb-5">
     <?php if ($searchPlaceholder !== null): ?>
         <!-- Baris 1: pencarian & filter (lebar penuh) -->
         <form method="get" id="toolbarFilter" class="flex flex-col sm:flex-row sm:flex-wrap sm:items-center gap-2">
             <div class="relative flex-1 min-w-[200px]">
-                <svg class="w-5 h-5 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
+                <svg class="w-5 h-5 text-gray-400 absolute left-3 top-1/2 -translate-y-1/2" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
                 <input type="text" name="q" value="<?= esc($q) ?>" placeholder="<?= esc($searchPlaceholder) ?>"
-                       class="w-full rounded-lg border border-slate-300 pl-10 pr-3 py-2.5 text-sm focus:border-brand-500 focus:ring-2 focus:ring-brand-500/20 outline-none">
+                       class="w-full rounded-lg border border-gray-300 pl-10 pr-3 py-2.5 text-sm focus:border-brand-500 focus:ring-2 focus:ring-brand-500/20 outline-hidden">
             </div>
             <?php foreach ($filters as $f): ?>
-                <select name="<?= esc($f['name'], 'attr') ?>" data-filter<?= $filterLangsung ? ' data-autosubmit' : '' ?> class="rounded-lg border border-slate-300 px-3 py-2.5 text-sm focus:border-brand-500 outline-none shrink-0">
+                <select name="<?= esc($f['name'], 'attr') ?>" data-filter<?= $filterLangsung ? ' data-autosubmit' : '' ?> class="rounded-lg border border-gray-300 px-3 py-2.5 text-sm focus:border-brand-500 outline-hidden shrink-0">
                     <option value=""><?= esc($f['all']) ?></option>
                     <?php foreach ($f['options'] as $val => $label): ?>
                         <option value="<?= esc($val, 'attr') ?>" <?= (string) ($f['value'] ?? '') === (string) $val ? 'selected' : '' ?>><?= esc($label) ?></option>
                     <?php endforeach; ?>
                 </select>
             <?php endforeach; ?>
-            <select name="per" data-autosubmit title="Jumlah data per halaman" class="rounded-lg border border-slate-300 px-3 py-2.5 text-sm focus:border-brand-500 outline-none shrink-0">
+            <select name="per" data-autosubmit title="Jumlah data per halaman" class="rounded-lg border border-gray-300 px-3 py-2.5 text-sm focus:border-brand-500 outline-hidden shrink-0">
                 <?php foreach ([10, 20, 30, 40, 50] as $n): ?>
                     <option value="<?= $n ?>" <?= $per === $n ? 'selected' : '' ?>>Tampilkan <?= $n ?></option>
                 <?php endforeach; ?>
             </select>
             <button class="rounded-lg bg-brand-700 hover:bg-brand-800 text-white text-sm font-semibold px-5 py-2.5 transition shrink-0">Cari</button>
             <?php if ($adaFilterAktif): ?>
-                <a href="<?= $baseUrl ?>" class="rounded-lg border border-slate-300 text-slate-600 text-sm font-semibold px-4 py-2.5 hover:bg-slate-50 transition text-center shrink-0">Reset</a>
+                <a href="<?= $baseUrl ?>" class="rounded-lg border border-gray-300 text-gray-600 text-sm font-semibold px-4 py-2.5 hover:bg-gray-50 transition text-center shrink-0">Reset</a>
             <?php endif; ?>
         </form>
 
         <!-- Baris 2: tombol aksi (rata kanan) -->
-        <div class="flex flex-wrap items-center justify-end gap-2 border-t border-slate-100 mt-3 pt-3">
+        <div class="flex flex-wrap items-center justify-end gap-2 border-t border-gray-100 mt-3 pt-3">
             <?= $actionsHtml ?>
         </div>
     <?php else: ?>

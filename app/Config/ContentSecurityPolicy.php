@@ -12,6 +12,12 @@ use CodeIgniter\Config\BaseConfig;
  * Suggested reference for explanations:
  *
  * @see https://www.html5rocks.com/en/tutorials/security/content-security-policy/
+ *
+ * RANCANGAN KEBIJAKAN SIAP-CSP (2026-10-13, F0 rombak tampilan — docs/RENCANA-UPGRADE-TAMPILAN.md §5a):
+ * tanpa 'unsafe-inline' / 'unsafe-eval'; skrip & gaya hanya dari server sendiri + nonce (csp_script_nonce() / csp_style_nonce());
+ * atribut onclick= dan style= ditolak ('none'). CSP masih MATI di server (App::$CSPEnabled = false). Di laptop dinyalakan
+ * dalam mode "lapor saja" lewat .env (app.CSPEnabled = true, contentsecuritypolicy.reportOnly = true) supaya pelanggaran
+ * tiap fase terlihat tanpa memblokir. Dirapikan lagi lalu dinyalakan (mode blokir) di seri keamanan.
  */
 class ContentSecurityPolicy extends BaseConfig
 {
@@ -52,7 +58,7 @@ class ContentSecurityPolicy extends BaseConfig
      *
      * @var list<string>|string|null
      */
-    public $defaultSrc;
+    public $defaultSrc = 'self';
 
     /**
      * Lists allowed scripts' URLs.
@@ -74,7 +80,7 @@ class ContentSecurityPolicy extends BaseConfig
      *
      * @var list<string>|string
      */
-    public array|string $scriptSrcAttr = 'self';
+    public array|string $scriptSrcAttr = 'none';
 
     /**
      * Lists allowed stylesheets' URLs.
@@ -96,14 +102,14 @@ class ContentSecurityPolicy extends BaseConfig
      *
      * @var list<string>|string
      */
-    public array|string $styleSrcAttr = 'self';
+    public array|string $styleSrcAttr = 'none';
 
     /**
      * Defines the origins from which images can be loaded.
      *
      * @var list<string>|string
      */
-    public $imageSrc = 'self';
+    public $imageSrc = ['self', 'data:', 'blob:'];
 
     /**
      * Restricts the URLs that can appear in a page's `<base>` element.
@@ -112,7 +118,7 @@ class ContentSecurityPolicy extends BaseConfig
      *
      * @var list<string>|string|null
      */
-    public $baseURI;
+    public $baseURI = 'self';
 
     /**
      * Lists the URLs for workers and embedded frame contents
@@ -134,7 +140,7 @@ class ContentSecurityPolicy extends BaseConfig
      *
      * @var list<string>|string
      */
-    public $fontSrc;
+    public $fontSrc = 'self';
 
     /**
      * Lists valid endpoints for submission from `<form>` tags.
@@ -151,7 +157,7 @@ class ContentSecurityPolicy extends BaseConfig
      *
      * @var list<string>|string|null
      */
-    public $frameAncestors;
+    public $frameAncestors = 'self';
 
     /**
      * The frame-src directive restricts the URLs which may
@@ -159,26 +165,26 @@ class ContentSecurityPolicy extends BaseConfig
      *
      * @var list<string>|string|null
      */
-    public $frameSrc;
+    public $frameSrc = ['self', 'https://www.youtube-nocookie.com']; // video YouTube di Arsip Dokumen (partials/dokumen_penampil.php)
 
     /**
      * Restricts the origins allowed to deliver video and audio.
      *
      * @var list<string>|string|null
      */
-    public $mediaSrc;
+    public $mediaSrc = 'self';
 
     /**
      * Allows control over Flash and other plugins.
      *
      * @var list<string>|string
      */
-    public $objectSrc = 'self';
+    public $objectSrc = 'none';
 
     /**
      * @var list<string>|string|null
      */
-    public $manifestSrc;
+    public $manifestSrc = 'self';
 
     /**
      * @var list<string>|string

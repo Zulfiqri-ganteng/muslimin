@@ -10,27 +10,27 @@
 <form method="post" action="<?= site_url('admin/settings') ?>" enctype="multipart/form-data" class="max-w-3xl">
     <?= csrf_field() ?>
 
-    <div class="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
-        <div class="px-6 py-4 border-b border-slate-100">
-            <h2 class="font-bold text-slate-800">Identitas Sekolah</h2>
-            <p class="text-sm text-slate-400">Data ini dipakai pada kop surat, PDF, dan halaman form guru.</p>
+    <div class="bg-white rounded-2xl border border-gray-200 shadow-xs overflow-hidden">
+        <div class="px-6 py-4 border-b border-gray-100">
+            <h2 class="font-bold text-gray-800">Identitas Sekolah</h2>
+            <p class="text-sm text-gray-400">Data ini dipakai pada kop surat, PDF, dan halaman form guru.</p>
         </div>
         <div class="p-6 space-y-5">
             <!-- Logo -->
             <div class="flex items-center gap-5">
-                <div class="h-20 w-20 rounded-xl bg-slate-100 border border-slate-200 flex items-center justify-center overflow-hidden shrink-0">
+                <div class="h-20 w-20 rounded-xl bg-gray-100 border border-gray-200 flex items-center justify-center overflow-hidden shrink-0">
                     <?php if (! empty($setting['logo'])): ?>
                         <img src="<?= base_url('uploads/' . esc($setting['logo'])) ?>" class="h-full w-full object-contain" alt="Logo">
                     <?php else: ?>
-                        <svg class="w-8 h-8 text-slate-300" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24">
+                        <svg class="w-8 h-8 text-gray-300" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
                         </svg>
                     <?php endif; ?>
                 </div>
                 <div>
                     <label class="lbl">Logo Sekolah</label>
-                    <input type="file" name="logo" accept="image/*" class="text-sm text-slate-500 file:mr-3 file:rounded-lg file:border-0 file:bg-brand-50 file:px-4 file:py-2 file:text-sm file:font-semibold file:text-brand-700 hover:file:bg-brand-100">
-                    <p class="text-xs text-slate-400 mt-1">PNG/JPG, disarankan rasio persegi.</p>
+                    <input type="file" name="logo" accept="image/*" class="text-sm text-gray-500 file:mr-3 file:rounded-lg file:border-0 file:bg-brand-50 file:px-4 file:py-2 file:text-sm file:font-semibold file:text-brand-700 hover:file:bg-brand-100">
+                    <p class="text-xs text-gray-400 mt-1">PNG/JPG, disarankan rasio persegi.</p>
                 </div>
             </div>
 
@@ -78,9 +78,9 @@
         </div>
     </div>
 
-    <div class="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden mt-5">
-        <div class="px-6 py-4 border-b border-slate-100">
-            <h2 class="font-bold text-slate-800">Kepala Sekolah &amp; Form</h2>
+    <div class="bg-white rounded-2xl border border-gray-200 shadow-xs overflow-hidden mt-5">
+        <div class="px-6 py-4 border-b border-gray-100">
+            <h2 class="font-bold text-gray-800">Kepala Sekolah &amp; Form</h2>
         </div>
         <div class="p-6 space-y-5">
             <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -97,7 +97,7 @@
                 <div>
                     <label class="lbl">Pengawas Pembina</label>
                     <input type="text" name="supervisor_name" value="<?= esc($setting['supervisor_name'] ?? '') ?>" class="inp" placeholder="Nama & gelar">
-                    <p class="text-xs text-slate-400 mt-1">Tanda tangan "Mengetahui," pada Daftar Nama Siswa (Format 8355).</p>
+                    <p class="text-xs text-gray-400 mt-1">Tanda tangan "Mengetahui," pada Daftar Nama Siswa (Format 8355).</p>
                 </div>
                 <div>
                     <label class="lbl">NIP Pengawas Pembina</label>
@@ -116,45 +116,45 @@
                 <label class="lbl">Teks Pengantar Form</label>
                 <textarea name="form_intro" rows="2" class="inp" placeholder="Kalimat pengantar di atas form guru"><?= esc($setting['form_intro']) ?></textarea>
             </div>
-            <label class="flex items-center gap-3 cursor-pointer rounded-xl border border-slate-200 p-4 hover:bg-slate-50">
-                <input type="checkbox" name="form_open" value="1" class="h-5 w-5 rounded border-slate-300 text-brand-600 focus:ring-brand-500" <?= $setting['form_open'] ? 'checked' : '' ?>>
+            <label class="flex items-center gap-3 cursor-pointer rounded-xl border border-gray-200 p-4 hover:bg-gray-50">
+                <input type="checkbox" name="form_open" value="1" class="h-5 w-5 rounded-sm border-gray-300 text-brand-600 focus:ring-brand-500" <?= $setting['form_open'] ? 'checked' : '' ?>>
                 <span>
-                    <span class="block text-sm font-semibold text-slate-700">Buka pengisian form</span>
-                    <span class="block text-xs text-slate-400">Jika dimatikan, guru tidak bisa mengisi form (ditampilkan halaman "ditutup").</span>
+                    <span class="block text-sm font-semibold text-gray-700">Buka pengisian form</span>
+                    <span class="block text-xs text-gray-400">Jika dimatikan, guru tidak bisa mengisi form (ditampilkan halaman "ditutup").</span>
                 </span>
             </label>
-            <label class="flex items-center gap-3 cursor-pointer rounded-xl border border-slate-200 p-4 hover:bg-slate-50">
-                <input type="checkbox" name="jadwal_publik" value="1" class="h-5 w-5 rounded border-slate-300 text-brand-600 focus:ring-brand-500" <?= ($setting['jadwal_publik'] ?? 1) ? 'checked' : '' ?>>
+            <label class="flex items-center gap-3 cursor-pointer rounded-xl border border-gray-200 p-4 hover:bg-gray-50">
+                <input type="checkbox" name="jadwal_publik" value="1" class="h-5 w-5 rounded-sm border-gray-300 text-brand-600 focus:ring-brand-500" <?= ($setting['jadwal_publik'] ?? 1) ? 'checked' : '' ?>>
                 <span>
-                    <span class="block text-sm font-semibold text-slate-700">Tampilkan jadwal ke publik</span>
-                    <span class="block text-xs text-slate-400">Jika dimatikan, halaman Jadwal Kelas/Guru di situs publik disembunyikan.</span>
+                    <span class="block text-sm font-semibold text-gray-700">Tampilkan jadwal ke publik</span>
+                    <span class="block text-xs text-gray-400">Jika dimatikan, halaman Jadwal Kelas/Guru di situs publik disembunyikan.</span>
                 </span>
             </label>
-            <label class="flex items-center gap-3 cursor-pointer rounded-xl border border-slate-200 p-4 hover:bg-slate-50">
-                <input type="checkbox" name="absensi_publik" value="1" class="h-5 w-5 rounded border-slate-300 text-brand-600 focus:ring-brand-500" <?= ($setting['absensi_publik'] ?? 1) ? 'checked' : '' ?>>
+            <label class="flex items-center gap-3 cursor-pointer rounded-xl border border-gray-200 p-4 hover:bg-gray-50">
+                <input type="checkbox" name="absensi_publik" value="1" class="h-5 w-5 rounded-sm border-gray-300 text-brand-600 focus:ring-brand-500" <?= ($setting['absensi_publik'] ?? 1) ? 'checked' : '' ?>>
                 <span>
-                    <span class="block text-sm font-semibold text-slate-700">Tampilkan absensi ke publik</span>
-                    <span class="block text-xs text-slate-400">Jika dimatikan, halaman Absensi Guru di situs publik disembunyikan (pengelolaan di admin tetap jalan).</span>
+                    <span class="block text-sm font-semibold text-gray-700">Tampilkan absensi ke publik</span>
+                    <span class="block text-xs text-gray-400">Jika dimatikan, halaman Absensi Guru di situs publik disembunyikan (pengelolaan di admin tetap jalan).</span>
                 </span>
             </label>
-            <label class="flex items-center gap-3 cursor-pointer rounded-xl border border-slate-200 p-4 hover:bg-slate-50">
-                <input type="checkbox" name="dokumen_publik" value="1" class="h-5 w-5 rounded border-slate-300 text-brand-600 focus:ring-brand-500" <?= ($setting['dokumen_publik'] ?? 0) ? 'checked' : '' ?>>
+            <label class="flex items-center gap-3 cursor-pointer rounded-xl border border-gray-200 p-4 hover:bg-gray-50">
+                <input type="checkbox" name="dokumen_publik" value="1" class="h-5 w-5 rounded-sm border-gray-300 text-brand-600 focus:ring-brand-500" <?= ($setting['dokumen_publik'] ?? 0) ? 'checked' : '' ?>>
                 <span>
-                    <span class="block text-sm font-semibold text-slate-700">Tampilkan halaman Dokumen publik</span>
-                    <span class="block text-xs text-slate-400">Menampilkan menu "Dokumen" di situs publik berisi berkas yang ditandai <b>Publik</b>. Berkas privat & yang dibagikan lewat tautan tidak ikut tampil.</span>
+                    <span class="block text-sm font-semibold text-gray-700">Tampilkan halaman Dokumen publik</span>
+                    <span class="block text-xs text-gray-400">Menampilkan menu "Dokumen" di situs publik berisi berkas yang ditandai <b>Publik</b>. Berkas privat & yang dibagikan lewat tautan tidak ikut tampil.</span>
                 </span>
             </label>
         </div>
     </div>
 
     <!-- ===== Manajemen Dokumen ===== -->
-    <div class="bg-white rounded-2xl border border-slate-200 shadow-sm p-5 sm:p-6">
-        <h2 class="text-sm font-bold text-slate-700 uppercase tracking-wide mb-4">Manajemen Dokumen</h2>
+    <div class="bg-white rounded-2xl border border-gray-200 shadow-xs p-5 sm:p-6">
+        <h2 class="text-sm font-bold text-gray-700 uppercase tracking-wide mb-4">Manajemen Dokumen</h2>
         <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
                 <label class="lbl">Batas ukuran per berkas (MB)</label>
                 <input type="number" name="dok_maks_mb" min="1" max="200" value="<?= esc((string) ($setting['dok_maks_mb'] ?? 25)) ?>" class="inp">
-                <p class="text-xs text-slate-400 mt-1">
+                <p class="text-xs text-gray-400 mt-1">
                     Server juga punya batasnya sendiri. Bila unggahan gagal padahal masih di bawah angka ini,
                     berarti batas server (<code>upload_max_filesize</code>) lebih kecil — naikkan lewat cPanel.
                 </p>
@@ -162,14 +162,14 @@
             <div>
                 <label class="lbl">Pagu total penyimpanan (MB)</label>
                 <input type="number" name="dok_kuota_mb" min="100" value="<?= esc((string) ($setting['dok_kuota_mb'] ?? 2048)) ?>" class="inp">
-                <p class="text-xs text-slate-400 mt-1">Dipakai untuk bar "penyimpanan terpakai" dan peringatan saat hampir penuh. Sesuaikan dengan kuota disk hosting.</p>
+                <p class="text-xs text-gray-400 mt-1">Dipakai untuk bar "penyimpanan terpakai" dan peringatan saat hampir penuh. Sesuaikan dengan kuota disk hosting.</p>
             </div>
         </div>
-        <label class="flex items-center gap-3 cursor-pointer rounded-xl border border-slate-200 p-4 hover:bg-slate-50 mt-4">
-            <input type="checkbox" name="dok_izinkan_video" value="1" class="h-5 w-5 rounded border-slate-300 text-brand-600 focus:ring-brand-500" <?= ($setting['dok_izinkan_video'] ?? 0) ? 'checked' : '' ?>>
+        <label class="flex items-center gap-3 cursor-pointer rounded-xl border border-gray-200 p-4 hover:bg-gray-50 mt-4">
+            <input type="checkbox" name="dok_izinkan_video" value="1" class="h-5 w-5 rounded-sm border-gray-300 text-brand-600 focus:ring-brand-500" <?= ($setting['dok_izinkan_video'] ?? 0) ? 'checked' : '' ?>>
             <span>
-                <span class="block text-sm font-semibold text-slate-700">Izinkan unggah berkas video</span>
-                <span class="block text-xs text-slate-400">
+                <span class="block text-sm font-semibold text-gray-700">Izinkan unggah berkas video</span>
+                <span class="block text-xs text-gray-400">
                     Sengaja <b>dimatikan</b>: satu video kegiatan bisa ratusan MB dan cepat menghabiskan disk hosting.
                     Selama mati, video ditempel sebagai <b>tautan</b> YouTube/Google Drive. Nyalakan hanya bila kuota disk memang lega.
                 </span>
@@ -188,8 +188,8 @@
 </form>
 
 <style type="text/tailwindcss">
-    .lbl { @apply block text-sm font-medium text-slate-600 mb-1.5; }
-    .inp { @apply w-full rounded-lg border border-slate-300 px-3.5 py-2.5 text-sm focus:border-brand-500 focus:ring-2 focus:ring-brand-500/20 outline-none transition; }
+    .lbl { @apply block text-sm font-medium text-gray-600 mb-1.5; }
+    .inp { @apply w-full rounded-lg border border-gray-300 px-3.5 py-2.5 text-sm focus:border-brand-500 focus:ring-2 focus:ring-brand-500/20 outline-hidden transition; }
 </style>
 
 <?= $this->endSection() ?>

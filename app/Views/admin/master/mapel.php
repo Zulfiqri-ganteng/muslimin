@@ -56,15 +56,15 @@ foreach ($allGuru as $id => $label) {
     ]) ?>
 
     <!-- Tabel -->
-    <div class="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
-        <div class="px-6 py-4 border-b border-slate-100 flex items-center justify-between">
-            <h2 class="font-bold text-slate-800">Daftar Mata Pelajaran <span class="text-slate-400 font-normal">(<?= $total ?>)</span></h2>
+    <div class="bg-white rounded-2xl border border-gray-200 shadow-xs overflow-hidden">
+        <div class="px-6 py-4 border-b border-gray-100 flex items-center justify-between">
+            <h2 class="font-bold text-gray-800">Daftar Mata Pelajaran <span class="text-gray-400 font-normal">(<?= $total ?>)</span></h2>
         </div>
         <div class="overflow-x-auto">
             <table class="w-full text-sm">
-                <thead class="bg-slate-50 text-slate-500 text-left">
+                <thead class="bg-gray-50 text-gray-500 text-left">
                     <tr>
-                        <th class="pl-6 pr-2 py-3 w-10"><input type="checkbox" title="Pilih semua di halaman ini" class="js-check-all rounded border-slate-300 text-brand-600 focus:ring-brand-500"></th>
+                        <th class="pl-6 pr-2 py-3 w-10"><input type="checkbox" title="Pilih semua di halaman ini" class="js-check-all rounded-sm border-gray-300 text-brand-600 focus:ring-brand-500"></th>
                         <th class="px-6 py-3 font-semibold w-20">Kode</th>
                         <th class="px-6 py-3 font-semibold">Nama Mapel</th>
                         <th class="px-6 py-3 font-semibold w-40">Kelompok</th>
@@ -73,20 +73,20 @@ foreach ($allGuru as $id => $label) {
                         <th class="px-6 py-3 font-semibold w-28 text-right">Aksi</th>
                     </tr>
                 </thead>
-                <tbody class="divide-y divide-slate-100">
+                <tbody class="divide-y divide-gray-100">
                     <?php if (empty($rows)): ?>
-                        <tr><td colspan="7" class="px-6 py-10 text-center text-slate-400">Belum ada mata pelajaran. Tambah manual atau import Excel.</td></tr>
+                        <tr><td colspan="7" class="px-6 py-10 text-center text-gray-400">Belum ada mata pelajaran. Tambah manual atau import Excel.</td></tr>
                     <?php else: foreach ($rows as $r): $jml = count($kompMap[(int) $r['id']] ?? []); ?>
-                        <tr class="hover:bg-slate-50">
-                            <td class="pl-6 pr-2 py-3"><input type="checkbox" class="row-check rounded border-slate-300 text-brand-600 focus:ring-brand-500" value="<?= (int) $r['id'] ?>"></td>
+                        <tr class="hover:bg-gray-50">
+                            <td class="pl-6 pr-2 py-3"><input type="checkbox" class="row-check rounded-sm border-gray-300 text-brand-600 focus:ring-brand-500" value="<?= (int) $r['id'] ?>"></td>
                             <td class="px-6 py-3 font-bold text-brand-700"><?= esc($r['kode_mapel']) ?></td>
                             <td class="px-6 py-3 font-medium"><?= esc($r['nama_mapel']) ?></td>
-                            <td class="px-6 py-3 text-slate-500"><?= esc($r['kelompok'] ?: '—') ?></td>
-                            <td class="px-6 py-3 text-slate-500"><?= esc($r['jp_default']) ?> JP</td>
+                            <td class="px-6 py-3 text-gray-500"><?= esc($r['kelompok'] ?: '—') ?></td>
+                            <td class="px-6 py-3 text-gray-500"><?= esc($r['jp_default']) ?> JP</td>
                             <td class="px-6 py-3">
                                 <button type="button" @click="openKompetensiEl($el)"
                                         data-id="<?= (int) $r['id'] ?>" data-nama="<?= esc($r['nama_mapel'], 'attr') ?>"
-                                        class="inline-flex items-center gap-1.5 rounded-lg border border-slate-300 px-2.5 py-1 text-xs font-semibold text-slate-600 hover:bg-slate-50">
+                                        class="inline-flex items-center gap-1.5 rounded-lg border border-gray-300 px-2.5 py-1 text-xs font-semibold text-gray-600 hover:bg-gray-50">
                                     <span class="inline-flex items-center justify-center rounded-full bg-brand-100 text-brand-700 w-5 h-5 text-[11px] font-bold"><?= $jml ?></span>
                                     Atur Guru
                                 </button>
@@ -104,7 +104,7 @@ foreach ($allGuru as $id => $label) {
             </table>
         </div>
         <?php if ($pager): ?>
-            <div class="px-6 py-4 border-t border-slate-100">
+            <div class="px-6 py-4 border-t border-gray-100">
                 <?= $pager->only(['q', 'kelompok', 'per'])->links('default', 'admin') ?>
             </div>
         <?php endif; ?>
@@ -114,36 +114,36 @@ foreach ($allGuru as $id => $label) {
     <div x-show="open" x-cloak x-transition.opacity.duration.200ms class="fixed inset-0 z-50 flex items-center justify-center p-4">
         <div class="absolute inset-0 bg-black/40" @click="open=false"></div>
         <div class="relative bg-white rounded-2xl shadow-xl w-full max-w-lg p-6">
-            <h3 class="font-bold text-lg text-slate-800 mb-4" x-text="mode==='add' ? 'Tambah Mata Pelajaran' : 'Edit Mata Pelajaran'"></h3>
+            <h3 class="font-bold text-lg text-gray-800 mb-4" x-text="mode==='add' ? 'Tambah Mata Pelajaran' : 'Edit Mata Pelajaran'"></h3>
             <form method="post" :action="actionUrl">
                 <?= csrf_field() ?>
                 <div class="grid grid-cols-2 gap-4">
                     <div>
-                        <label class="block text-sm font-medium text-slate-600 mb-1">Kode Mapel *</label>
+                        <label class="block text-sm font-medium text-gray-600 mb-1">Kode Mapel *</label>
                         <input type="text" name="kode_mapel" x-model="form.kode_mapel" maxlength="20" required
-                               class="w-full rounded-lg border border-slate-300 px-3 py-2.5 text-sm uppercase focus:border-brand-500 outline-none">
+                               class="w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm uppercase focus:border-brand-500 outline-hidden">
                     </div>
                     <div>
-                        <label class="block text-sm font-medium text-slate-600 mb-1">JP / Minggu</label>
+                        <label class="block text-sm font-medium text-gray-600 mb-1">JP / Minggu</label>
                         <input type="number" name="jp_default" x-model="form.jp_default" min="0" max="50"
-                               class="w-full rounded-lg border border-slate-300 px-3 py-2.5 text-sm focus:border-brand-500 outline-none">
+                               class="w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm focus:border-brand-500 outline-hidden">
                     </div>
                     <div class="col-span-2">
-                        <label class="block text-sm font-medium text-slate-600 mb-1">Nama Mapel *</label>
+                        <label class="block text-sm font-medium text-gray-600 mb-1">Nama Mapel *</label>
                         <input type="text" name="nama_mapel" x-model="form.nama_mapel" maxlength="150" required
-                               class="w-full rounded-lg border border-slate-300 px-3 py-2.5 text-sm focus:border-brand-500 outline-none">
+                               class="w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm focus:border-brand-500 outline-hidden">
                     </div>
                     <div class="col-span-2">
-                        <label class="block text-sm font-medium text-slate-600 mb-1">Kelompok</label>
+                        <label class="block text-sm font-medium text-gray-600 mb-1">Kelompok</label>
                         <input list="kelompokOpt" name="kelompok" x-model="form.kelompok" maxlength="50"
-                               class="w-full rounded-lg border border-slate-300 px-3 py-2.5 text-sm focus:border-brand-500 outline-none">
+                               class="w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm focus:border-brand-500 outline-hidden">
                         <datalist id="kelompokOpt">
                             <?php foreach ($kelompokList as $k): ?><option value="<?= esc($k) ?>"></option><?php endforeach; ?>
                         </datalist>
                     </div>
                 </div>
                 <div class="flex justify-end gap-2 mt-6">
-                    <button type="button" @click="open=false" class="rounded-lg border border-slate-300 text-slate-600 text-sm font-semibold px-4 py-2.5 hover:bg-slate-50">Batal</button>
+                    <button type="button" @click="open=false" class="rounded-lg border border-gray-300 text-gray-600 text-sm font-semibold px-4 py-2.5 hover:bg-gray-50">Batal</button>
                     <button class="rounded-lg bg-brand-700 hover:bg-brand-800 text-white text-sm font-semibold px-5 py-2.5">Simpan</button>
                 </div>
             </form>
@@ -154,26 +154,26 @@ foreach ($allGuru as $id => $label) {
     <div x-show="kompOpen" x-cloak x-transition.opacity.duration.200ms class="fixed inset-0 z-50 flex items-center justify-center p-4">
         <div class="absolute inset-0 bg-black/40" @click="kompOpen=false"></div>
         <div class="relative bg-white rounded-2xl shadow-xl w-full max-w-md p-6 max-h-[85vh] flex flex-col">
-            <h3 class="font-bold text-lg text-slate-800 mb-1">Guru Pengampu</h3>
-            <p class="text-sm text-slate-500 mb-3" x-text="kompMapel"></p>
+            <h3 class="font-bold text-lg text-gray-800 mb-1">Guru Pengampu</h3>
+            <p class="text-sm text-gray-500 mb-3" x-text="kompMapel"></p>
             <form method="post" :action="kompUrl" class="flex flex-col flex-1 min-h-0">
                 <?= csrf_field() ?>
-                <div class="flex-1 overflow-y-auto border border-slate-200 rounded-lg p-3 space-y-1.5">
+                <div class="flex-1 overflow-y-auto border border-gray-200 rounded-lg p-3 space-y-1.5">
                     <template x-if="allGuru.length === 0">
-                        <p class="text-sm text-slate-400 text-center py-6">Belum ada data guru. Tambahkan guru terlebih dahulu.</p>
+                        <p class="text-sm text-gray-400 text-center py-6">Belum ada data guru. Tambahkan guru terlebih dahulu.</p>
                     </template>
                     <template x-for="g in allGuru" :key="g.id">
-                        <label class="flex items-center gap-2 text-sm text-slate-700 hover:bg-slate-50 rounded px-2 py-1.5 cursor-pointer">
+                        <label class="flex items-center gap-2 text-sm text-gray-700 hover:bg-gray-50 rounded-sm px-2 py-1.5 cursor-pointer">
                             <input type="checkbox" name="guru_ids[]" :value="g.id" x-model.number="selected"
-                                   class="rounded border-slate-300 text-brand-600 focus:ring-brand-500">
+                                   class="rounded-sm border-gray-300 text-brand-600 focus:ring-brand-500">
                             <span x-text="g.label"></span>
                         </label>
                     </template>
                 </div>
                 <div class="flex justify-between items-center gap-2 mt-4">
-                    <span class="text-xs text-slate-400"><span x-text="selected.length"></span> guru dipilih</span>
+                    <span class="text-xs text-gray-400"><span x-text="selected.length"></span> guru dipilih</span>
                     <div class="flex gap-2">
-                        <button type="button" @click="kompOpen=false" class="rounded-lg border border-slate-300 text-slate-600 text-sm font-semibold px-4 py-2.5 hover:bg-slate-50">Batal</button>
+                        <button type="button" @click="kompOpen=false" class="rounded-lg border border-gray-300 text-gray-600 text-sm font-semibold px-4 py-2.5 hover:bg-gray-50">Batal</button>
                         <button class="rounded-lg bg-brand-700 hover:bg-brand-800 text-white text-sm font-semibold px-5 py-2.5">Simpan</button>
                     </div>
                 </div>

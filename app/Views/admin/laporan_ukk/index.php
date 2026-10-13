@@ -17,7 +17,7 @@ $statusLabel = [
     'lulus' => 'Lulus', 'tidak_lulus' => 'Tidak Lulus',
 ];
 $statusTextColor = [
-    'terdaftar' => 'text-slate-600', 'hadir' => 'text-brand-700',
+    'terdaftar' => 'text-gray-600', 'hadir' => 'text-brand-700',
     'tidak_hadir' => 'text-amber-700', 'lulus' => 'text-emerald-700',
     'tidak_lulus' => 'text-red-700',
 ];
@@ -32,9 +32,9 @@ $statusTextColor = [
         per tahun ajaran. Bisa diunduh sebagai PDF (siap cetak dengan kop resmi) atau Excel.</p>',
 ]) ?>
 
-<div class="bg-white rounded-2xl border border-slate-200 shadow-sm p-4 mb-5">
+<div class="bg-white rounded-2xl border border-gray-200 shadow-xs p-4 mb-5">
     <form method="get" class="flex flex-col sm:flex-row sm:flex-wrap sm:items-center gap-2">
-        <select name="tahun_ajaran_id" data-autosubmit class="rounded-lg border border-slate-300 px-3 py-2.5 text-sm focus:border-brand-500 outline-none shrink-0">
+        <select name="tahun_ajaran_id" data-autosubmit class="rounded-lg border border-gray-300 px-3 py-2.5 text-sm focus:border-brand-500 outline-hidden shrink-0">
             <option value="">Semua tahun ajaran</option>
             <?php foreach ($tahunOpts as $id => $lbl): ?>
                 <option value="<?= (int) $id ?>" <?= $tahunId === (int) $id ? 'selected' : '' ?>><?= esc($lbl) ?></option>
@@ -56,32 +56,32 @@ $statusTextColor = [
 
 <!-- Stat tiles -->
 <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3 mb-5">
-    <div class="bg-white rounded-2xl border border-slate-200 shadow-sm p-4">
-        <div class="text-xs text-slate-500">Total Peserta</div>
-        <div class="text-2xl font-bold text-slate-800 mt-1"><?= (int) $totalPeserta ?></div>
+    <div class="bg-white rounded-2xl border border-gray-200 shadow-xs p-4">
+        <div class="text-xs text-gray-500">Total Peserta</div>
+        <div class="text-2xl font-bold text-gray-800 mt-1"><?= (int) $totalPeserta ?></div>
     </div>
     <?php foreach ($perStatus as $k => $v): ?>
-        <div class="bg-white rounded-2xl border border-slate-200 shadow-sm p-4">
-            <div class="text-xs text-slate-500"><?= esc($statusLabel[$k] ?? ucfirst($k)) ?></div>
-            <div class="text-2xl font-bold mt-1 <?= $statusTextColor[$k] ?? 'text-slate-800' ?>"><?= (int) $v ?></div>
+        <div class="bg-white rounded-2xl border border-gray-200 shadow-xs p-4">
+            <div class="text-xs text-gray-500"><?= esc($statusLabel[$k] ?? ucfirst($k)) ?></div>
+            <div class="text-2xl font-bold mt-1 <?= $statusTextColor[$k] ?? 'text-gray-800' ?>"><?= (int) $v ?></div>
         </div>
     <?php endforeach; ?>
 </div>
 
-<div class="bg-white rounded-2xl border border-slate-200 shadow-sm p-4 mb-5">
-    <div class="text-sm text-slate-500">Rata-rata Nilai Akhir (seluruh peserta yang sudah dinilai)</div>
+<div class="bg-white rounded-2xl border border-gray-200 shadow-xs p-4 mb-5">
+    <div class="text-sm text-gray-500">Rata-rata Nilai Akhir (seluruh peserta yang sudah dinilai)</div>
     <div class="text-3xl font-bold text-brand-700 mt-1"><?= $num($rataNilai) ?></div>
 </div>
 
 <div class="grid grid-cols-1 lg:grid-cols-2 gap-5">
     <!-- Per paket soal -->
-    <div class="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
-        <div class="px-6 py-4 border-b border-slate-100">
-            <h2 class="font-bold text-slate-800">Rekap per Paket Soal</h2>
+    <div class="bg-white rounded-2xl border border-gray-200 shadow-xs overflow-hidden">
+        <div class="px-6 py-4 border-b border-gray-100">
+            <h2 class="font-bold text-gray-800">Rekap per Paket Soal</h2>
         </div>
         <div class="overflow-x-auto">
             <table class="w-full text-sm">
-                <thead class="bg-slate-50 text-slate-500 text-left">
+                <thead class="bg-gray-50 text-gray-500 text-left">
                     <tr>
                         <th class="px-4 py-2.5 font-semibold">Paket Soal</th>
                         <th class="px-3 py-2.5 font-semibold text-right">Total</th>
@@ -90,14 +90,14 @@ $statusTextColor = [
                         <th class="px-3 py-2.5 font-semibold text-right">Rata²</th>
                     </tr>
                 </thead>
-                <tbody class="divide-y divide-slate-100">
+                <tbody class="divide-y divide-gray-100">
                     <?php if (empty($perPaket)): ?>
-                        <tr><td colspan="5" class="px-4 py-6 text-center text-slate-400">Belum ada data.</td></tr>
+                        <tr><td colspan="5" class="px-4 py-6 text-center text-gray-400">Belum ada data.</td></tr>
                     <?php else: foreach ($perPaket as $r): ?>
-                        <tr class="hover:bg-slate-50">
+                        <tr class="hover:bg-gray-50">
                             <td class="px-4 py-2.5">
-                                <div class="font-medium text-slate-700"><?= esc($r['paket_kode']) ?></div>
-                                <div class="text-xs text-slate-400"><?= esc($r['paket_nama']) ?></div>
+                                <div class="font-medium text-gray-700"><?= esc($r['paket_kode']) ?></div>
+                                <div class="text-xs text-gray-400"><?= esc($r['paket_nama']) ?></div>
                             </td>
                             <td class="px-3 py-2.5 text-right"><?= (int) $r['total'] ?></td>
                             <td class="px-3 py-2.5 text-right text-emerald-700 font-semibold"><?= (int) $r['lulus'] ?></td>
@@ -111,13 +111,13 @@ $statusTextColor = [
     </div>
 
     <!-- Per jurusan -->
-    <div class="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
-        <div class="px-6 py-4 border-b border-slate-100">
-            <h2 class="font-bold text-slate-800">Rekap per Jurusan</h2>
+    <div class="bg-white rounded-2xl border border-gray-200 shadow-xs overflow-hidden">
+        <div class="px-6 py-4 border-b border-gray-100">
+            <h2 class="font-bold text-gray-800">Rekap per Jurusan</h2>
         </div>
         <div class="overflow-x-auto">
             <table class="w-full text-sm">
-                <thead class="bg-slate-50 text-slate-500 text-left">
+                <thead class="bg-gray-50 text-gray-500 text-left">
                     <tr>
                         <th class="px-4 py-2.5 font-semibold">Jurusan</th>
                         <th class="px-3 py-2.5 font-semibold text-right">Total</th>
@@ -125,12 +125,12 @@ $statusTextColor = [
                         <th class="px-3 py-2.5 font-semibold text-right">T. Lulus</th>
                     </tr>
                 </thead>
-                <tbody class="divide-y divide-slate-100">
+                <tbody class="divide-y divide-gray-100">
                     <?php if (empty($perJurusan)): ?>
-                        <tr><td colspan="4" class="px-4 py-6 text-center text-slate-400">Belum ada data.</td></tr>
+                        <tr><td colspan="4" class="px-4 py-6 text-center text-gray-400">Belum ada data.</td></tr>
                     <?php else: foreach ($perJurusan as $r): ?>
-                        <tr class="hover:bg-slate-50">
-                            <td class="px-4 py-2.5 text-slate-700"><?= esc($r['jurusan_nama'] ?? '(tanpa jurusan)') ?></td>
+                        <tr class="hover:bg-gray-50">
+                            <td class="px-4 py-2.5 text-gray-700"><?= esc($r['jurusan_nama'] ?? '(tanpa jurusan)') ?></td>
                             <td class="px-3 py-2.5 text-right"><?= (int) $r['total'] ?></td>
                             <td class="px-3 py-2.5 text-right text-emerald-700 font-semibold"><?= (int) $r['lulus'] ?></td>
                             <td class="px-3 py-2.5 text-right text-red-700 font-semibold"><?= (int) $r['tidak_lulus'] ?></td>

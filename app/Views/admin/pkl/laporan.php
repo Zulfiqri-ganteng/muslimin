@@ -48,38 +48,38 @@ $adaSaringan = $f['kelas_id'] > 0 || $f['jurusan'] !== '' || $f['status'] !== ''
 <div class="rise mb-5 space-y-3">
     <div class="grid grid-cols-2 gap-3 sm:grid-cols-5">
         <?php foreach ([
-            ['Siswa', (int) $ringkas['siswa'], 'text-slate-800'],
+            ['Siswa', (int) $ringkas['siswa'], 'text-gray-800'],
             ['Lunas', (int) $ringkas['lunas'], 'text-green-700'],
             ['Sebagian', (int) $ringkas['sebagian'], 'text-amber-700'],
             ['Belum', (int) $ringkas['belum'], 'text-red-600'],
             ['Penerima beasiswa', (int) $ringkas['beasiswa'], 'text-brand-700'],
         ] as [$label, $nilai, $warna]): ?>
-            <div class="rounded-2xl border border-slate-200 bg-white px-4 py-3.5 shadow-sm">
-                <p class="text-[11px] font-bold uppercase tracking-wide text-slate-400"><?= esc($label) ?></p>
+            <div class="rounded-2xl border border-gray-200 bg-white px-4 py-3.5 shadow-xs">
+                <p class="text-[11px] font-bold uppercase tracking-wide text-gray-400"><?= esc($label) ?></p>
                 <p class="mt-1 text-2xl font-extrabold <?= $warna ?>"><?= esc((string) $nilai) ?></p>
             </div>
         <?php endforeach; ?>
     </div>
     <div class="grid grid-cols-1 gap-3 sm:grid-cols-2">
-        <div class="rounded-2xl border border-brand-200 bg-brand-50/60 px-5 py-3.5 shadow-sm">
+        <div class="rounded-2xl border border-brand-200 bg-brand-50/60 px-5 py-3.5 shadow-xs">
             <p class="text-[11px] font-bold uppercase tracking-wide text-brand-700/70">Uang tercatat<?= ($f['dari'] !== '' || $f['sampai'] !== '') ? ' (pada rentang tanggal)' : '' ?></p>
             <p class="mt-1 text-2xl font-extrabold text-brand-700"><?= esc($rp((int) $ringkas['uang_masuk'])) ?></p>
         </div>
-        <div class="rounded-2xl border border-red-200 bg-red-50/60 px-5 py-3.5 shadow-sm">
+        <div class="rounded-2xl border border-red-200 bg-red-50/60 px-5 py-3.5 shadow-xs">
             <p class="text-[11px] font-bold uppercase tracking-wide text-red-700/70">Kekurangan (yang seharusnya sudah ada)</p>
             <p class="mt-1 text-2xl font-extrabold text-red-600"><?= esc($rp((int) $ringkas['total_kekurangan'])) ?></p>
         </div>
     </div>
 </div>
 
-<div class="rise rise-1 overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
-    <div class="border-b border-slate-100 px-5 py-4">
+<div class="rise rise-1 overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-xs">
+    <div class="border-b border-gray-100 px-5 py-4">
         <div class="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
             <div>
-                <h2 class="flex items-center gap-2 font-bold text-slate-800">Laporan Pembayaran <span class="rounded-full bg-slate-100 px-2 py-0.5 text-xs font-bold text-slate-500"><?= (int) $total ?></span></h2>
-                <p class="mt-0.5 max-w-2xl text-xs text-slate-400">Siswa dengan surat PKL yang sudah disetujui, dan biaya yang tercatat saat suratnya diunduh.</p>
+                <h2 class="flex items-center gap-2 font-bold text-gray-800">Laporan Pembayaran <span class="rounded-full bg-gray-100 px-2 py-0.5 text-xs font-bold text-gray-500"><?= (int) $total ?></span></h2>
+                <p class="mt-0.5 max-w-2xl text-xs text-gray-400">Siswa dengan surat PKL yang sudah disetujui, dan biaya yang tercatat saat suratnya diunduh.</p>
             </div>
-            <a href="<?= site_url('admin/pkl/laporan/excel') . ($queryUnduh !== '' ? '?' . esc($queryUnduh, 'attr') : '') ?>" class="inline-flex shrink-0 items-center justify-center gap-2 rounded-lg bg-green-600 px-4 py-2.5 text-sm font-bold text-white shadow-sm transition hover:bg-green-700 active:scale-95">
+            <a href="<?= site_url('admin/pkl/laporan/excel') . ($queryUnduh !== '' ? '?' . esc($queryUnduh, 'attr') : '') ?>" class="inline-flex shrink-0 items-center justify-center gap-2 rounded-lg bg-green-600 px-4 py-2.5 text-sm font-bold text-white shadow-xs transition hover:bg-green-700 active:scale-95">
                 <svg class="h-4 w-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M4 16v2a2 2 0 002 2h12a2 2 0 002-2v-2M7 10l5 5m0 0l5-5m-5 5V4"/></svg>
                 Unduh Excel<?= $adaSaringan ? ' (sesuai saringan)' : '' ?>
             </a>
@@ -99,26 +99,26 @@ $adaSaringan = $f['kelas_id'] > 0 || $f['jurusan'] !== '' || $f['status'] !== ''
                 <option value="">Semua status</option>
                 <?php foreach (PklLaporanBiaya::STATUS as $kode => $label): ?><option value="<?= $kode ?>" <?= $f['status'] === $kode ? 'selected' : '' ?>><?= esc($label) ?></option><?php endforeach; ?>
             </select>
-            <label class="flex items-center gap-2 text-xs font-semibold text-slate-500">Dari <input type="date" name="dari" value="<?= esc($f['dari'], 'attr') ?>" class="inp"></label>
-            <label class="flex items-center gap-2 text-xs font-semibold text-slate-500">Sampai <input type="date" name="sampai" value="<?= esc($f['sampai'], 'attr') ?>" class="inp"></label>
-            <label class="flex items-center gap-2 text-sm font-medium text-slate-600"><input type="checkbox" name="beasiswa" value="1" <?= $f['beasiswa'] ? 'checked' : '' ?> class="h-4 w-4"> Hanya penerima beasiswa</label>
+            <label class="flex items-center gap-2 text-xs font-semibold text-gray-500">Dari <input type="date" name="dari" value="<?= esc($f['dari'], 'attr') ?>" class="inp"></label>
+            <label class="flex items-center gap-2 text-xs font-semibold text-gray-500">Sampai <input type="date" name="sampai" value="<?= esc($f['sampai'], 'attr') ?>" class="inp"></label>
+            <label class="flex items-center gap-2 text-sm font-medium text-gray-600"><input type="checkbox" name="beasiswa" value="1" <?= $f['beasiswa'] ? 'checked' : '' ?> class="h-4 w-4"> Hanya penerima beasiswa</label>
             <div class="flex gap-2 sm:col-span-2 lg:col-span-4">
                 <button type="submit" class="rounded-lg bg-brand-700 px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-brand-800">Terapkan</button>
-                <?php if ($adaSaringan): ?><a href="<?= site_url('admin/pkl/laporan') ?>" class="rounded-lg border border-slate-300 px-5 py-2.5 text-sm font-semibold text-slate-600 transition hover:bg-slate-50">Reset</a><?php endif; ?>
+                <?php if ($adaSaringan): ?><a href="<?= site_url('admin/pkl/laporan') ?>" class="rounded-lg border border-gray-300 px-5 py-2.5 text-sm font-semibold text-gray-600 transition hover:bg-gray-50">Reset</a><?php endif; ?>
             </div>
         </form>
     </div>
 
     <?php if ($baris === []): ?>
         <div class="px-5 py-12 text-center">
-            <p class="font-semibold text-slate-700"><?= $adaSaringan ? 'Tidak ada siswa yang cocok dengan saringan.' : 'Belum ada data pembayaran.' ?></p>
-            <p class="mt-1 text-sm text-slate-400"><?= $adaSaringan ? '' : 'Data muncul setelah surat PKL diunduh dan biayanya dicatat.' ?></p>
+            <p class="font-semibold text-gray-700"><?= $adaSaringan ? 'Tidak ada siswa yang cocok dengan saringan.' : 'Belum ada data pembayaran.' ?></p>
+            <p class="mt-1 text-sm text-gray-400"><?= $adaSaringan ? '' : 'Data muncul setelah surat PKL diunduh dan biayanya dicatat.' ?></p>
         </div>
     <?php else: ?>
         <!-- Tabel (layar sangat lebar; di bawah itu memakai kartu agar tak perlu geser samping) -->
         <div class="hidden overflow-x-auto 2xl:block">
             <table class="w-full text-sm">
-                <thead class="bg-slate-50 text-left text-slate-500">
+                <thead class="bg-gray-50 text-left text-gray-500">
                     <tr>
                         <th class="px-5 py-3 font-semibold">Siswa</th>
                         <th class="px-3 py-3 font-semibold">Kelas · Jurusan</th>
@@ -129,25 +129,25 @@ $adaSaringan = $f['kelas_id'] > 0 || $f['jurusan'] !== '' || $f['status'] !== ''
                         <th class="px-5 py-3 text-center font-semibold">Status</th>
                     </tr>
                 </thead>
-                <tbody class="divide-y divide-slate-100">
+                <tbody class="divide-y divide-gray-100">
                     <?php foreach ($baris as $b): ?>
-                        <tr class="align-top hover:bg-slate-50">
+                        <tr class="align-top hover:bg-gray-50">
                             <td class="px-5 py-3">
-                                <p class="font-semibold text-slate-800"><?= $b['ajuan_id'] ? '<a href="' . esc(site_url('admin/pkl/' . $b['ajuan_id']), 'attr') . '" class="hover:text-brand-700">' . esc($b['nama']) . '</a>' : esc($b['nama']) ?></p>
-                                <p class="text-xs text-slate-400">NIS <?= esc($b['nis'] ?: '—') ?><?= $b['beasiswa'] ? ' · <span class="font-semibold text-brand-600">🎓 ' . esc($b['beasiswa']) . '</span>' : '' ?></p>
+                                <p class="font-semibold text-gray-800"><?= $b['ajuan_id'] ? '<a href="' . esc(site_url('admin/pkl/' . $b['ajuan_id']), 'attr') . '" class="hover:text-brand-700">' . esc($b['nama']) . '</a>' : esc($b['nama']) ?></p>
+                                <p class="text-xs text-gray-400">NIS <?= esc($b['nis'] ?: '—') ?><?= $b['beasiswa'] ? ' · <span class="font-semibold text-brand-600">🎓 ' . esc($b['beasiswa']) . '</span>' : '' ?></p>
                                 <?php if ($b['keringanan']): ?><p class="mt-0.5 max-w-[16rem] text-xs text-amber-700">Keringanan: <?= esc($b['keringanan']) ?></p><?php endif; ?>
                             </td>
-                            <td class="px-3 py-3 text-xs text-slate-600"><b class="text-slate-700"><?= esc($b['kelas'] ?: '—') ?></b><br><?= esc($b['jurusan']) ?></td>
-                            <td class="px-3 py-3 text-xs text-slate-600"><?= esc($b['perusahaan'] ?: '—') ?><br><span class="font-mono text-slate-400"><?= esc($b['nomor_surat'] ?: 'belum bernomor') ?></span></td>
+                            <td class="px-3 py-3 text-xs text-gray-600"><b class="text-gray-700"><?= esc($b['kelas'] ?: '—') ?></b><br><?= esc($b['jurusan']) ?></td>
+                            <td class="px-3 py-3 text-xs text-gray-600"><?= esc($b['perusahaan'] ?: '—') ?><br><span class="font-mono text-gray-400"><?= esc($b['nomor_surat'] ?: 'belum bernomor') ?></span></td>
                             <?php foreach ($jenis as $j): $v = $b['bayar'][$j['kode']] ?? ['total' => 0, 'periode' => []]; ?>
                                 <td class="whitespace-nowrap px-3 py-3 text-right text-xs">
-                                    <?php if ($v['total'] > 0): ?><b class="text-slate-800"><?= esc($rp($v['total'])) ?></b><?php if ($j['siklus'] === 'bulanan'): ?><br><span class="text-slate-400"><?= esc(implode(', ', $v['periode'])) ?></span><?php endif; ?>
+                                    <?php if ($v['total'] > 0): ?><b class="text-gray-800"><?= esc($rp($v['total'])) ?></b><?php if ($j['siklus'] === 'bulanan'): ?><br><span class="text-gray-400"><?= esc(implode(', ', $v['periode'])) ?></span><?php endif; ?>
                                     <?php elseif ($j['kode'] === 'spp' && $b['beasiswa']): ?><span class="text-brand-500">dibebaskan</span>
-                                    <?php else: ?><span class="text-slate-300">—</span><?php endif; ?>
+                                    <?php else: ?><span class="text-gray-300">—</span><?php endif; ?>
                                 </td>
                             <?php endforeach; ?>
-                            <td class="whitespace-nowrap px-3 py-3 text-right text-sm font-bold text-slate-800"><?= esc($rp((int) $b['total_bayar'])) ?></td>
-                            <td class="whitespace-nowrap px-3 py-3 text-right text-xs font-semibold <?= $b['kekurangan'] > 0 ? 'text-red-600' : 'text-slate-300' ?>"><?= $b['kekurangan'] > 0 ? esc($rp((int) $b['kekurangan'])) : '—' ?></td>
+                            <td class="whitespace-nowrap px-3 py-3 text-right text-sm font-bold text-gray-800"><?= esc($rp((int) $b['total_bayar'])) ?></td>
+                            <td class="whitespace-nowrap px-3 py-3 text-right text-xs font-semibold <?= $b['kekurangan'] > 0 ? 'text-red-600' : 'text-gray-300' ?>"><?= $b['kekurangan'] > 0 ? esc($rp((int) $b['kekurangan'])) : '—' ?></td>
                             <td class="px-5 py-3 text-center"><span class="inline-flex whitespace-nowrap rounded-full px-2.5 py-0.5 text-xs font-semibold <?= $warnaStatus[$b['status']] ?>"><?= esc($b['status_label']) ?></span></td>
                         </tr>
                     <?php endforeach; ?>
@@ -156,23 +156,23 @@ $adaSaringan = $f['kelas_id'] > 0 || $f['jurusan'] !== '' || $f['status'] !== ''
         </div>
 
         <!-- Kartu (HP, tablet, laptop) -->
-        <ul class="divide-y divide-slate-100 2xl:hidden">
+        <ul class="divide-y divide-gray-100 2xl:hidden">
             <?php foreach ($baris as $b): ?>
                 <li class="px-4 py-3.5">
                     <div class="flex items-start justify-between gap-3">
                         <div class="min-w-0">
-                            <p class="font-semibold text-slate-800"><?= $b['ajuan_id'] ? '<a href="' . esc(site_url('admin/pkl/' . $b['ajuan_id']), 'attr') . '">' . esc($b['nama']) . '</a>' : esc($b['nama']) ?></p>
-                            <p class="text-xs text-slate-500"><?= esc($b['kelas'] ?: '—') ?> · <?= esc($b['jurusan']) ?> · NIS <?= esc($b['nis'] ?: '—') ?></p>
+                            <p class="font-semibold text-gray-800"><?= $b['ajuan_id'] ? '<a href="' . esc(site_url('admin/pkl/' . $b['ajuan_id']), 'attr') . '">' . esc($b['nama']) . '</a>' : esc($b['nama']) ?></p>
+                            <p class="text-xs text-gray-500"><?= esc($b['kelas'] ?: '—') ?> · <?= esc($b['jurusan']) ?> · NIS <?= esc($b['nis'] ?: '—') ?></p>
                         </div>
                         <span class="inline-flex shrink-0 rounded-full px-2.5 py-0.5 text-xs font-semibold <?= $warnaStatus[$b['status']] ?>"><?= esc($b['status_label']) ?></span>
                     </div>
-                    <p class="mt-1 text-xs text-slate-400"><?= esc($b['perusahaan'] ?: '—') ?> · <span class="font-mono"><?= esc($b['nomor_surat'] ?: 'belum bernomor') ?></span></p>
+                    <p class="mt-1 text-xs text-gray-400"><?= esc($b['perusahaan'] ?: '—') ?> · <span class="font-mono"><?= esc($b['nomor_surat'] ?: 'belum bernomor') ?></span></p>
                     <dl class="mt-2 grid grid-cols-2 gap-x-3 gap-y-1 text-xs">
                         <?php foreach ($jenis as $j): $v = $b['bayar'][$j['kode']] ?? ['total' => 0, 'periode' => []]; ?>
-                            <div class="flex justify-between gap-2"><dt class="text-slate-500"><?= esc($j['nama']) ?></dt><dd class="font-semibold <?= $v['total'] > 0 ? 'text-slate-800' : 'text-slate-300' ?>"><?= $v['total'] > 0 ? esc($rp($v['total'])) : ($j['kode'] === 'spp' && $b['beasiswa'] ? 'bebas' : '—') ?></dd></div>
+                            <div class="flex justify-between gap-2"><dt class="text-gray-500"><?= esc($j['nama']) ?></dt><dd class="font-semibold <?= $v['total'] > 0 ? 'text-gray-800' : 'text-gray-300' ?>"><?= $v['total'] > 0 ? esc($rp($v['total'])) : ($j['kode'] === 'spp' && $b['beasiswa'] ? 'bebas' : '—') ?></dd></div>
                         <?php endforeach; ?>
                     </dl>
-                    <p class="mt-2 flex items-center justify-between border-t border-slate-100 pt-2 text-xs"><span class="text-slate-500">Total <b class="text-slate-800"><?= esc($rp((int) $b['total_bayar'])) ?></b></span><?php if ($b['kekurangan'] > 0): ?><span class="font-semibold text-red-600">Kurang <?= esc($rp((int) $b['kekurangan'])) ?></span><?php endif; ?></p>
+                    <p class="mt-2 flex items-center justify-between border-t border-gray-100 pt-2 text-xs"><span class="text-gray-500">Total <b class="text-gray-800"><?= esc($rp((int) $b['total_bayar'])) ?></b></span><?php if ($b['kekurangan'] > 0): ?><span class="font-semibold text-red-600">Kurang <?= esc($rp((int) $b['kekurangan'])) ?></span><?php endif; ?></p>
                     <?php if ($b['beasiswa']): ?><p class="mt-1 text-xs font-semibold text-brand-600">🎓 Beasiswa <?= esc($b['beasiswa']) ?></p><?php endif; ?>
                     <?php if ($b['keringanan']): ?><p class="mt-1 text-xs text-amber-700">Keringanan: <?= esc($b['keringanan']) ?></p><?php endif; ?>
                 </li>
@@ -180,9 +180,9 @@ $adaSaringan = $f['kelas_id'] > 0 || $f['jurusan'] !== '' || $f['status'] !== ''
         </ul>
 
         <?php if ($jmlHal > 1): ?>
-            <div class="flex items-center justify-between border-t border-slate-100 px-5 py-3 text-sm">
+            <div class="flex items-center justify-between border-t border-gray-100 px-5 py-3 text-sm">
                 <?php if ($page > 1): ?><a href="<?= esc($urlHal($page - 1), 'attr') ?>" class="font-semibold text-brand-700 hover:underline">← Sebelumnya</a><?php else: ?><span></span><?php endif; ?>
-                <span class="text-xs text-slate-400">Halaman <?= $page ?> dari <?= $jmlHal ?></span>
+                <span class="text-xs text-gray-400">Halaman <?= $page ?> dari <?= $jmlHal ?></span>
                 <?php if ($page < $jmlHal): ?><a href="<?= esc($urlHal($page + 1), 'attr') ?>" class="font-semibold text-brand-700 hover:underline">Berikutnya →</a><?php else: ?><span></span><?php endif; ?>
             </div>
         <?php endif; ?>
