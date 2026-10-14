@@ -1,6 +1,6 @@
 <?php
 /**
- * Tab Periode — ringkasan angka + form pengaturan periode ujian.
+ * Tab Periode — ringkasan angka + form pengaturan periode ujian (rombak tampilan F7: kartu angka stat-*, formulir kit).
  *
  * @var array<string,mixed>  $periode
  * @var string               $label
@@ -10,91 +10,84 @@
  * @var array<string,string> $labelStatus
  */
 $old = static fn (string $f, $fallback) => old($f) ?? ($fallback ?? '');
+$kartu = [
+    ['Jadwal ujian', $ringkas['jadwal'], 'Mapel terjadwal', 'calendar-week', 'text-brand-700 dark:text-brand-400'],
+    ['Siswa aktif', $ringkas['siswaAktif'], 'Calon peserta', 'users', 'text-gray-900 dark:text-white'],
+    ['Tidak hadir', $ringkas['tidakHadir'], 'Tercatat berhalangan', 'exclamation-circle', 'text-yellow-700 dark:text-yellow-400'],
+    ['Susulan selesai', $ringkas['statusList']['selesai'], 'Sudah dilaksanakan', 'check-circle', 'text-green-700 dark:text-green-400'],
+];
 ?>
 
-<!-- ===== Kartu ringkasan ===== -->
-<div class="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 mb-5">
-    <?php
-    $kartu = [
-        ['Jadwal Ujian', $ringkas['jadwal'], 'Mapel terjadwal', 'text-brand-700'],
-        ['Siswa Aktif', $ringkas['siswaAktif'], 'Calon peserta', 'text-gray-700'],
-        ['Tidak Hadir', $ringkas['tidakHadir'], 'Tercatat berhalangan', 'text-amber-700'],
-        ['Susulan Selesai', $ringkas['statusList']['selesai'], 'Sudah dilaksanakan', 'text-emerald-700'],
-    ];
-    foreach ($kartu as [$judul, $angka, $ket, $warna]): ?>
-        <div class="bg-white rounded-2xl border border-gray-200 shadow-xs p-4">
-            <p class="text-xs font-semibold text-gray-500"><?= esc($judul) ?></p>
-            <p class="text-2xl font-extrabold <?= $warna ?> mt-1"><?= number_format((int) $angka, 0, ',', '.') ?></p>
-            <p class="text-[11px] text-gray-400 mt-0.5"><?= esc($ket) ?></p>
-        </div>
-    <?php endforeach; ?>
-</div>
-
-<!-- ===== Form pengaturan periode ===== -->
-<div class="bg-white rounded-2xl border border-gray-200 shadow-xs overflow-hidden">
-    <div class="px-6 py-4 border-b border-gray-100">
-        <h2 class="font-bold text-gray-800">Pengaturan Periode</h2>
-        <p class="text-xs text-gray-500 mt-0.5">Tanggal boleh dikosongkan dulu dan diisi belakangan.</p>
+<div class="space-y-4">
+    <!-- ===== Kartu ringkasan ===== -->
+    <div class="grid grid-cols-2 gap-4 lg:grid-cols-4">
+        <?php foreach ($kartu as [$judul, $angka, $ket, $ik, $warna]): ?>
+            <div class="kartu kartu-isi">
+                <p class="stat-label flex items-center gap-2 text-sm"><?= ikon($ik, 'h-4 w-4 shrink-0') ?><?= esc($judul) ?></p>
+                <p class="stat-angka mt-2 tabular-nums <?= $warna ?>"><?= number_format((int) $angka, 0, ',', '.') ?></p>
+                <p class="stat-ket"><?= esc($ket) ?></p>
+            </div>
+        <?php endforeach; ?>
     </div>
 
-    <form method="post" action="<?= $base ?>/periode" class="p-6 space-y-5">
-        <?= csrf_field() ?>
-        <input type="hidden" name="id" value="<?= (int) $periode['id'] ?>">
-
-        <div class="grid sm:grid-cols-2 gap-4">
+    <!-- ===== Form pengaturan periode ===== -->
+    <section class="kartu" aria-labelledby="judul-periode">
+        <div class="kartu-kepala">
             <div>
-                <label class="block text-sm font-semibold text-gray-700 mb-1.5">Tanggal Mulai Ujian</label>
-                <input type="date" name="tanggal_mulai" value="<?= esc($old('tanggal_mulai', $periode['tanggal_mulai']), 'attr') ?>"
-                       class="w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm focus:border-brand-500 focus:ring-2 focus:ring-brand-500/20 outline-hidden">
-            </div>
-            <div>
-                <label class="block text-sm font-semibold text-gray-700 mb-1.5">Tanggal Selesai Ujian</label>
-                <input type="date" name="tanggal_selesai" value="<?= esc($old('tanggal_selesai', $periode['tanggal_selesai']), 'attr') ?>"
-                       class="w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm focus:border-brand-500 focus:ring-2 focus:ring-brand-500/20 outline-hidden">
-            </div>
-            <div>
-                <label class="block text-sm font-semibold text-gray-700 mb-1.5">Mulai Ujian Susulan</label>
-                <input type="date" name="susulan_mulai" value="<?= esc($old('susulan_mulai', $periode['susulan_mulai']), 'attr') ?>"
-                       class="w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm focus:border-brand-500 focus:ring-2 focus:ring-brand-500/20 outline-hidden">
-            </div>
-            <div>
-                <label class="block text-sm font-semibold text-gray-700 mb-1.5">Selesai Ujian Susulan</label>
-                <input type="date" name="susulan_selesai" value="<?= esc($old('susulan_selesai', $periode['susulan_selesai']), 'attr') ?>"
-                       class="w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm focus:border-brand-500 focus:ring-2 focus:ring-brand-500/20 outline-hidden">
-            </div>
-            <div>
-                <label class="block text-sm font-semibold text-gray-700 mb-1.5">Status</label>
-                <select name="status" class="w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm focus:border-brand-500 outline-hidden">
-                    <?php foreach ($labelStatus as $k => $lbl): ?>
-                        <option value="<?= esc($k, 'attr') ?>" <?= $old('status', $periode['status']) === $k ? 'selected' : '' ?>><?= esc($lbl) ?></option>
-                    <?php endforeach; ?>
-                </select>
-            </div>
-            <div>
-                <label class="block text-sm font-semibold text-gray-700 mb-1.5">
-                    Nama Tampil <span class="font-normal text-gray-400">(opsional)</span>
-                </label>
-                <input type="text" name="nama" maxlength="100" value="<?= esc($old('nama', $periode['nama']), 'attr') ?>"
-                       placeholder="<?= esc($label, 'attr') ?>"
-                       class="w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm focus:border-brand-500 focus:ring-2 focus:ring-brand-500/20 outline-hidden">
+                <h2 id="judul-periode" class="kartu-judul">Pengaturan periode</h2>
+                <p class="kartu-ket">Tanggal boleh dikosongkan dulu dan diisi belakangan.</p>
             </div>
         </div>
 
-        <div>
-            <label class="block text-sm font-semibold text-gray-700 mb-1.5">Keterangan</label>
-            <input type="text" name="keterangan" maxlength="255" value="<?= esc($old('keterangan', $periode['keterangan']), 'attr') ?>"
-                   placeholder="Catatan internal, mis. nomor SK panitia"
-                   class="w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm focus:border-brand-500 focus:ring-2 focus:ring-brand-500/20 outline-hidden">
-        </div>
+        <form method="post" action="<?= $base ?>/periode">
+            <?= csrf_field() ?>
+            <input type="hidden" name="id" value="<?= (int) $periode['id'] ?>">
 
-        <div class="flex flex-wrap items-center gap-3 border-t border-gray-100 pt-4">
-            <button class="rounded-lg bg-brand-700 hover:bg-brand-800 text-white text-sm font-semibold px-5 py-2.5 transition">
-                Simpan Pengaturan
-            </button>
-            <p class="text-xs text-gray-500">
-                Tahun pelajaran <b><?= esc($tp) ?></b> &amp; semester <b><?= esc($periode['semester']) ?></b>
-                mengikuti jenis ujian dan Pengaturan Sekolah — tidak diubah dari sini.
-            </p>
-        </div>
-    </form>
+            <div class="kartu-isi space-y-4">
+                <div class="grid gap-4 sm:grid-cols-2">
+                    <div>
+                        <label class="lbl" for="pr-mulai">Tanggal mulai ujian</label>
+                        <input type="date" id="pr-mulai" name="tanggal_mulai" value="<?= esc($old('tanggal_mulai', $periode['tanggal_mulai']), 'attr') ?>" class="inp">
+                    </div>
+                    <div>
+                        <label class="lbl" for="pr-selesai">Tanggal selesai ujian</label>
+                        <input type="date" id="pr-selesai" name="tanggal_selesai" value="<?= esc($old('tanggal_selesai', $periode['tanggal_selesai']), 'attr') ?>" class="inp">
+                    </div>
+                    <div>
+                        <label class="lbl" for="pr-sus-mulai">Mulai ujian susulan</label>
+                        <input type="date" id="pr-sus-mulai" name="susulan_mulai" value="<?= esc($old('susulan_mulai', $periode['susulan_mulai']), 'attr') ?>" class="inp">
+                    </div>
+                    <div>
+                        <label class="lbl" for="pr-sus-selesai">Selesai ujian susulan</label>
+                        <input type="date" id="pr-sus-selesai" name="susulan_selesai" value="<?= esc($old('susulan_selesai', $periode['susulan_selesai']), 'attr') ?>" class="inp">
+                    </div>
+                    <div>
+                        <label class="lbl" for="pr-status">Status</label>
+                        <select id="pr-status" name="status" class="inp">
+                            <?php foreach ($labelStatus as $k => $lbl): ?>
+                                <option value="<?= esc($k, 'attr') ?>"<?= $old('status', $periode['status']) === $k ? ' selected' : '' ?>><?= esc($lbl) ?></option>
+                            <?php endforeach; ?>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="lbl" for="pr-nama">Nama tampil <span class="font-normal text-gray-500 dark:text-gray-400">(opsional)</span></label>
+                        <input type="text" id="pr-nama" name="nama" maxlength="100" value="<?= esc($old('nama', $periode['nama']), 'attr') ?>" placeholder="<?= esc($label, 'attr') ?>" class="inp">
+                    </div>
+                </div>
+
+                <div>
+                    <label class="lbl" for="pr-ket">Keterangan</label>
+                    <input type="text" id="pr-ket" name="keterangan" maxlength="255" value="<?= esc($old('keterangan', $periode['keterangan']), 'attr') ?>" placeholder="Catatan internal, mis. nomor SK panitia" class="inp">
+                </div>
+            </div>
+
+            <div class="kartu-kaki flex flex-wrap items-center gap-3">
+                <button type="submit" class="btn btn-utama"><?= ikon('check', 'h-4 w-4') ?>Simpan pengaturan</button>
+                <p class="text-xs text-gray-500 dark:text-gray-400">
+                    Tahun pelajaran <b><?= esc($tp) ?></b> &amp; semester <b><?= esc($periode['semester']) ?></b>
+                    mengikuti jenis ujian dan Pengaturan Sekolah — tidak diubah dari sini.
+                </p>
+            </div>
+        </form>
+    </section>
 </div>

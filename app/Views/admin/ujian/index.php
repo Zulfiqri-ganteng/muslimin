@@ -1,6 +1,7 @@
 <?php
 /**
- * Kerangka halaman satu jenis ujian (ASTS 1 / ASAS / ASTS 2 / ASAT).
+ * Kerangka halaman satu jenis ujian (ASTS 1 / ASAS / ASTS 2 / ASAT). Rombak tampilan F7: kartu identitas periode + lencana status,
+ * pemilih tahun pelajaran kit, bilah tab kit (.tab-daftar/.tab) dengan lencana kelengkapan.
  *
  * Berkas ini hanya memuat bagian yang sama untuk semua tab: identitas
  * periode, pemilih tahun pelajaran, dan bilah tab. Isi tiap tab ada di
@@ -26,25 +27,21 @@ $urlTab = static fn (string $k) => $base . ($k === 'periode' ? '' : '/' . $k) . 
 
 $tgl = static fn ($d) => $d ? date('d/m/Y', strtotime((string) $d)) : '—';
 
-$warnaStatus = [
-    'draft'    => 'bg-gray-100 text-gray-600 border-gray-200',
-    'berjalan' => 'bg-emerald-50 text-emerald-700 border-emerald-200',
-    'selesai'  => 'bg-brand-50 text-brand-700 border-brand-200',
-];
+$warnaStatus = ['draft' => 'lencana-abu', 'berjalan' => 'lencana-hijau', 'selesai' => 'lencana-merek'];
 $labelStatus = ['draft' => 'Draft', 'berjalan' => 'Berjalan', 'selesai' => 'Selesai'];
 
-// Lencana kelengkapan di baris tab: [teks, nada]. Nada: ok (hijau) | kosong (abu) | perlu (kuning).
+// Lencana kelengkapan di baris tab: [teks, nada] (teks null = ikon centang). Nada: ok (hijau) | kosong (abu) | perlu (kuning).
 $periodeTerisi = ! empty($periode['tanggal_mulai']) && ! empty($periode['tanggal_selesai']);
 $susulanBelum  = max(0, (int) ($ringkas['tidakHadir'] ?? 0) - (int) (($ringkas['statusList'] ?? [])['selesai'] ?? 0));
 $honorLabel    = ['draf' => 'Draf', 'final' => 'Final', 'dikunci' => 'Dikunci'];
 $lencana = [
-    'periode'        => $periodeTerisi ? ['✓', 'ok'] : ['atur', 'perlu'],
+    'periode'        => $periodeTerisi ? [null, 'ok'] : ['atur', 'perlu'],
     'jadwal'         => (int) $ringkas['jadwal'] > 0 ? [(string) (int) $ringkas['jadwal'], 'ok'] : ['kosong', 'perlu'],
     'ketidakhadiran' => (int) $ringkas['tidakHadir'] > 0 ? [(string) (int) $ringkas['tidakHadir'], 'ok'] : ['0', 'kosong'],
-    'susulan'        => $susulanBelum > 0 ? [$susulanBelum . ' belum', 'perlu'] : ((int) $ringkas['tidakHadir'] > 0 ? ['✓', 'ok'] : ['0', 'kosong']),
+    'susulan'        => $susulanBelum > 0 ? [$susulanBelum . ' belum', 'perlu'] : ((int) $ringkas['tidakHadir'] > 0 ? [null, 'ok'] : ['0', 'kosong']),
     'honor'          => ($ringkas['honorStatus'] ?? null) !== null ? [$honorLabel[$ringkas['honorStatus']] ?? $ringkas['honorStatus'], $ringkas['honorStatus'] === 'draf' ? 'perlu' : 'ok'] : ['belum', 'kosong'],
 ];
-$warnaLencana = ['ok' => 'bg-emerald-50 text-emerald-700', 'kosong' => 'bg-gray-100 text-gray-500', 'perlu' => 'bg-amber-100 text-amber-800'];
+$warnaLencana = ['ok' => 'lencana-hijau', 'kosong' => 'lencana-abu', 'perlu' => 'lencana-kuning'];
 
 // Panel yang sudah digarap; sisanya memakai panel "belum tersedia".
 $panelSiap = ['periode', 'jadwal', 'ketidakhadiran', 'susulan', 'rekap', 'honor'];
@@ -152,65 +149,57 @@ if ($tab === 'jadwal') {
         akan dibuat otomatis dan data tahun lama tetap tersimpan.</p>',
 ]) ?>
 
-<!-- ===== Kepala: identitas periode ===== -->
-<div class="bg-white rounded-2xl border border-gray-200 shadow-xs p-4 sm:p-5 mb-5">
-    <div class="flex flex-col sm:flex-row sm:items-start gap-4">
-        <div class="flex-1 min-w-0">
-            <div class="flex flex-wrap items-center gap-2">
-                <h2 class="font-bold text-gray-800 text-lg"><?= esc($label) ?></h2>
-                <span class="inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-semibold <?= $warnaStatus[$periode['status']] ?? $warnaStatus['draft'] ?>">
-                    <?= esc($labelStatus[$periode['status']] ?? $periode['status']) ?>
-                </span>
-                <span class="inline-flex items-center rounded-full bg-gray-100 text-gray-600 border border-gray-200 px-2.5 py-0.5 text-xs font-semibold">
-                    Semester <?= esc($periode['semester']) ?>
-                </span>
+<div class="mb-4 space-y-4">
+    <!-- ===== Kepala: identitas periode ===== -->
+    <section class="kartu kartu-isi" aria-labelledby="judul-periode-ujian">
+        <div class="flex flex-col gap-4 sm:flex-row sm:items-start">
+            <div class="min-w-0 flex-1">
+                <div class="flex flex-wrap items-center gap-2">
+                    <h2 id="judul-periode-ujian" class="text-lg font-semibold text-gray-900 dark:text-white"><?= esc($label) ?></h2>
+                    <span class="lencana <?= $warnaStatus[$periode['status']] ?? $warnaStatus['draft'] ?>"><?= esc($labelStatus[$periode['status']] ?? $periode['status']) ?></span>
+                    <span class="lencana lencana-abu">Semester <?= esc($periode['semester']) ?></span>
+                </div>
+                <p class="mt-1 text-sm text-gray-500 dark:text-gray-400"><?= esc($panjang) ?></p>
+                <p class="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-gray-500 dark:text-gray-400">
+                    <span class="inline-flex items-center gap-1.5"><?= ikon('calendar-month', 'h-4 w-4 shrink-0') ?>Pelaksanaan: <b class="font-semibold text-gray-900 dark:text-white"><?= $tgl($periode['tanggal_mulai']) ?> &ndash; <?= $tgl($periode['tanggal_selesai']) ?></b></span>
+                    <span class="inline-flex items-center gap-1.5"><?= ikon('calendar-plus', 'h-4 w-4 shrink-0') ?>Susulan: <b class="font-semibold text-gray-900 dark:text-white"><?= $tgl($periode['susulan_mulai']) ?> &ndash; <?= $tgl($periode['susulan_selesai']) ?></b></span>
+                </p>
             </div>
-            <p class="text-sm text-gray-500 mt-1"><?= esc($panjang) ?></p>
-            <p class="text-xs text-gray-500 mt-2">
-                Pelaksanaan: <b class="text-gray-700"><?= $tgl($periode['tanggal_mulai']) ?> &ndash; <?= $tgl($periode['tanggal_selesai']) ?></b>
-                &nbsp;·&nbsp;
-                Susulan: <b class="text-gray-700"><?= $tgl($periode['susulan_mulai']) ?> &ndash; <?= $tgl($periode['susulan_selesai']) ?></b>
-            </p>
+
+            <?php if (count($riwayat) > 1): ?>
+                <form method="get" action="<?= $base . ($tab === 'periode' ? '' : '/' . $tab) ?>" class="shrink-0">
+                    <label class="lbl" for="pilihTp">Tahun pelajaran</label>
+                    <select id="pilihTp" name="tp" data-autosubmit class="inp">
+                        <?php foreach ($riwayat as $r): ?>
+                            <option value="<?= esc($r['tahun_ajaran'], 'attr') ?>"<?= $r['tahun_ajaran'] === $tp ? ' selected' : '' ?>>
+                                <?= esc($r['tahun_ajaran']) ?><?= $r['tahun_ajaran'] === $berjalan ? ' (berjalan)' : '' ?>
+                            </option>
+                        <?php endforeach; ?>
+                    </select>
+                </form>
+            <?php endif; ?>
         </div>
 
-        <?php if (count($riwayat) > 1): ?>
-            <form method="get" action="<?= $base . ($tab === 'periode' ? '' : '/' . $tab) ?>" class="shrink-0">
-                <label class="block text-[11px] font-semibold text-gray-500 mb-1">Tahun Pelajaran</label>
-                <select name="tp" data-autosubmit class="rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-brand-500 outline-hidden">
-                    <?php foreach ($riwayat as $r): ?>
-                        <option value="<?= esc($r['tahun_ajaran'], 'attr') ?>" <?= $r['tahun_ajaran'] === $tp ? 'selected' : '' ?>>
-                            <?= esc($r['tahun_ajaran']) ?><?= $r['tahun_ajaran'] === $berjalan ? ' (berjalan)' : '' ?>
-                        </option>
-                    <?php endforeach; ?>
-                </select>
-            </form>
+        <?php if ($tp !== $berjalan): ?>
+            <div class="mt-4">
+                <?= ui_peringatan('awas', '', ['html' => 'Kamu sedang melihat tahun pelajaran <b>' . esc($tp) . '</b>, bukan tahun berjalan (' . esc($berjalan) . '). <a href="' . $base . '" class="font-semibold underline">Kembali ke tahun berjalan</a>']) ?>
+            </div>
         <?php endif; ?>
+    </section>
+
+    <!-- ===== Tab ===== -->
+    <div class="overflow-x-auto">
+        <nav class="tab-daftar min-w-max flex-nowrap" aria-label="Bagian ujian">
+            <?php foreach ($tabs as $k => $lbl): $aktif = $k === $tab; ?>
+                <a href="<?= $urlTab($k) ?>" class="tab whitespace-nowrap"<?= $aktif ? ' aria-current="page"' : '' ?>>
+                    <?= esc($lbl) ?>
+                    <?php if (isset($lencana[$k])): [$teksL, $nadaL] = $lencana[$k]; ?>
+                        <span class="lencana <?= $warnaLencana[$nadaL] ?> px-1.5 py-0 text-[11px]"><?= $teksL === null ? ikon('check', 'h-3 w-3') . '<span class="sr-only">lengkap</span>' : esc($teksL) ?></span>
+                    <?php endif; ?>
+                </a>
+            <?php endforeach; ?>
+        </nav>
     </div>
-
-    <?php if ($tp !== $berjalan): ?>
-        <div class="mt-4 rounded-xl bg-amber-50 border border-amber-200 px-4 py-3 text-sm text-amber-800">
-            Kamu sedang melihat tahun pelajaran <b><?= esc($tp) ?></b>, bukan tahun berjalan (<?= esc($berjalan) ?>).
-            <a href="<?= $base ?>" class="font-semibold underline">Kembali ke tahun berjalan</a>
-        </div>
-    <?php endif; ?>
-</div>
-
-<!-- ===== Tab ===== -->
-<div class="mb-5 overflow-x-auto overflow-y-hidden border-b border-gray-200">
-    <nav class="flex gap-1 min-w-max">
-        <?php foreach ($tabs as $k => $lbl): ?>
-            <?php $aktif = $k === $tab; ?>
-            <a href="<?= $urlTab($k) ?>"<?= $aktif ? ' aria-current="page"' : '' ?>
-               class="px-4 py-2.5 text-sm font-semibold border-b-[3px] -mb-px transition whitespace-nowrap <?= $aktif
-                   ? 'border-brand-600 text-brand-700'
-                   : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300' ?>">
-                <?= esc($lbl) ?>
-                <?php if (isset($lencana[$k])): ?>
-                    <span class="ml-1.5 inline-flex items-center rounded-full px-1.5 py-0.5 text-[10px] font-bold leading-none <?= $warnaLencana[$lencana[$k][1]] ?>"><?= esc($lencana[$k][0]) ?></span>
-                <?php endif; ?>
-            </a>
-        <?php endforeach; ?>
-    </nav>
 </div>
 
 <?= view($panelView, $panelData) ?>

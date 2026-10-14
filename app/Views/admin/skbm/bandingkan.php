@@ -2,82 +2,98 @@
 /**
  * Perbandingan SKBM dengan data Penugasan (pengampu) — KHUSUS ADMIN. Hanya MEMBANDINGKAN: tidak mengubah Penugasan,
  * Jadwal KBM, maupun honor. Pasangan yang dibandingkan: guru × kelas (hanya guru yang ada di SKBM).
+ * Rombak tampilan F7: kartu angka, kartu per bagian dengan tabel kit, lencana jumlah, peringatan kit.
  *
  * @var string $tahun  @var array $b  hasil Skbm::bandingkanDenganPengampu()  @var string $back
  */
 $maks = 300;
+// [kunci, judul, uraian, lencana jumlah, kolom mapel penugasan?]
 $bagian = [
-    ['hanya_skbm', 'Ada di SKBM, belum ada di Penugasan', 'SK menugaskan guru ini di kelas tersebut, tetapi menu Penugasan belum memuatnya. Periksa: apakah Penugasan perlu ditambah (Jadwal KBM & Rekap Beban memakai Penugasan)?', 'border-amber-300 bg-amber-50 text-amber-900', false],
-    ['hanya_pengampu', 'Ada di Penugasan, tidak ada di SKBM', 'Penugasan memuat pasangan ini, tetapi SKBM tidak. Periksa: apakah SKBM belum lengkap, atau Penugasan yang kelebihan?', 'border-orange-300 bg-orange-50 text-orange-900', false],
-    ['jp_beda', 'JP berbeda', 'Pasangan guru–kelas sama di keduanya, tetapi jumlah JP per minggu berbeda.', 'border-brand-300 bg-brand-50 text-brand-900', true],
+    ['hanya_skbm', 'Ada di SKBM, belum ada di Penugasan', 'SK menugaskan guru ini di kelas tersebut, tetapi menu Penugasan belum memuatnya. Periksa: apakah Penugasan perlu ditambah (Jadwal KBM & Rekap Beban memakai Penugasan)?', 'lencana-kuning', false],
+    ['hanya_pengampu', 'Ada di Penugasan, tidak ada di SKBM', 'Penugasan memuat pasangan ini, tetapi SKBM tidak. Periksa: apakah SKBM belum lengkap, atau Penugasan yang kelebihan?', 'lencana-merah', false],
+    ['jp_beda', 'JP berbeda', 'Pasangan guru–kelas sama di keduanya, tetapi jumlah JP per minggu berbeda.', 'lencana-biru', true],
 ];
+$strip = '<span class="text-gray-300 dark:text-gray-600">&mdash;</span>';
 ?>
 <?= $this->extend('layouts/admin') ?>
+
+<?= $this->section('aksi') ?>
+<a href="<?= esc($back, 'attr') ?>" class="btn btn-netral"><?= ikon('chevron-left', 'h-4 w-4') ?>Kembali ke SKBM</a>
+<?= $this->endSection() ?>
+
 <?= $this->section('content') ?>
 
 <div class="mx-auto max-w-6xl space-y-4">
-    <section class="rounded-2xl border border-gray-200 bg-white p-4 shadow-xs sm:p-5">
-        <div class="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-            <div class="min-w-0">
-                <p class="text-xs font-semibold uppercase tracking-wide text-gray-400">SKBM &middot; perbandingan dengan Penugasan</p>
-                <h2 class="mt-0.5 text-lg font-bold text-gray-800">SKBM <?= esc($tahun) ?> dibandingkan dengan Penugasan</h2>
-                <p class="mt-1 max-w-3xl text-sm leading-relaxed text-gray-500">Halaman ini hanya <b>membandingkan</b>: data Penugasan, Jadwal KBM, dan honor tidak diubah. Yang dicocokkan ialah pasangan <b>guru &times; kelas</b>, hanya untuk guru yang ada di SKBM.</p>
-            </div>
-            <a href="<?= esc($back, 'attr') ?>" class="inline-flex shrink-0 items-center rounded-lg border border-gray-300 px-4 py-2 text-sm font-semibold text-gray-600 hover:bg-gray-50">&larr; Kembali ke SKBM</a>
-        </div>
+    <section class="kartu kartu-isi" aria-labelledby="judul-banding">
+        <p class="text-xs font-semibold tracking-wide text-gray-500 uppercase dark:text-gray-400">SKBM &middot; perbandingan dengan Penugasan</p>
+        <h2 id="judul-banding" class="mt-0.5 text-lg font-semibold text-gray-900 dark:text-white">SKBM <?= esc($tahun) ?> dibandingkan dengan Penugasan</h2>
+        <p class="mt-1 max-w-3xl text-sm leading-relaxed text-gray-500 dark:text-gray-400">Halaman ini hanya <b>membandingkan</b>: data Penugasan, Jadwal KBM, dan honor tidak diubah. Yang dicocokkan ialah pasangan <b>guru &times; kelas</b>, hanya untuk guru yang ada di SKBM.</p>
 
         <?php if (! $b['ada']): ?>
-            <p class="mt-4 rounded-xl border border-gray-200 bg-gray-50 px-4 py-3 text-sm text-gray-600">SKBM <?= esc($tahun) ?> belum diisi, jadi belum ada yang dibandingkan.</p>
+            <div class="mt-4"><?= ui_peringatan('info', 'SKBM ' . $tahun . ' belum diisi, jadi belum ada yang dibandingkan.') ?></div>
         <?php else: ?>
             <div class="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-5">
-                <div class="rounded-xl border border-gray-200 px-3 py-2"><p class="text-[11px] font-semibold uppercase tracking-wide text-gray-400">Guru di SKBM</p><p class="text-xl font-extrabold tabular-nums text-gray-800"><?= (int) $b['guru_skbm'] ?></p></div>
-                <div class="rounded-xl border border-emerald-200 bg-emerald-50 px-3 py-2"><p class="text-[11px] font-semibold uppercase tracking-wide text-emerald-700">Sama</p><p class="text-xl font-extrabold tabular-nums text-emerald-700"><?= (int) $b['sama'] ?></p></div>
-                <div class="rounded-xl border px-3 py-2 <?= $b['hanya_skbm'] !== [] ? 'border-amber-300 bg-amber-50' : 'border-gray-200' ?>"><p class="text-[11px] font-semibold uppercase tracking-wide text-gray-400">Hanya di SKBM</p><p class="text-xl font-extrabold tabular-nums text-gray-800"><?= count($b['hanya_skbm']) ?></p></div>
-                <div class="rounded-xl border px-3 py-2 <?= $b['hanya_pengampu'] !== [] ? 'border-orange-300 bg-orange-50' : 'border-gray-200' ?>"><p class="text-[11px] font-semibold uppercase tracking-wide text-gray-400">Hanya di Penugasan</p><p class="text-xl font-extrabold tabular-nums text-gray-800"><?= count($b['hanya_pengampu']) ?></p></div>
-                <div class="rounded-xl border px-3 py-2 <?= $b['jp_beda'] !== [] ? 'border-brand-300 bg-brand-50' : 'border-gray-200' ?>"><p class="text-[11px] font-semibold uppercase tracking-wide text-gray-400">JP beda</p><p class="text-xl font-extrabold tabular-nums text-gray-800"><?= count($b['jp_beda']) ?></p></div>
+                <?php foreach ([
+                    ['Guru di SKBM', (int) $b['guru_skbm'], ''],
+                    ['Sama', (int) $b['sama'], 'text-green-700 dark:text-green-400'],
+                    ['Hanya di SKBM', count($b['hanya_skbm']), $b['hanya_skbm'] !== [] ? 'text-yellow-700 dark:text-yellow-400' : ''],
+                    ['Hanya di Penugasan', count($b['hanya_pengampu']), $b['hanya_pengampu'] !== [] ? 'text-red-700 dark:text-red-400' : ''],
+                    ['JP beda', count($b['jp_beda']), $b['jp_beda'] !== [] ? 'text-blue-700 dark:text-blue-400' : ''],
+                ] as [$lbl, $n, $warna]): ?>
+                    <div class="rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 dark:border-gray-600 dark:bg-gray-700/50">
+                        <p class="text-[11px] font-semibold tracking-wide text-gray-500 uppercase dark:text-gray-400"><?= esc($lbl) ?></p>
+                        <p class="text-xl font-bold tabular-nums <?= $warna !== '' ? $warna : 'text-gray-900 dark:text-white' ?>"><?= $n ?></p>
+                    </div>
+                <?php endforeach; ?>
             </div>
             <?php if ($b['hanya_skbm'] === [] && $b['hanya_pengampu'] === [] && $b['jp_beda'] === []): ?>
-                <p class="mt-4 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm font-semibold text-emerald-800">Semua sama: Penugasan sesuai dengan SKBM untuk guru-guru yang ada di SKBM.</p>
+                <div class="mt-4"><?= ui_peringatan('sukses', 'Semua sama: Penugasan sesuai dengan SKBM untuk guru-guru yang ada di SKBM.') ?></div>
             <?php endif; ?>
         <?php endif; ?>
     </section>
 
     <?php if ($b['ada']): ?>
-        <?php foreach ($bagian as [$kunci, $judul, $uraian, $warna, $adaJp]): $isi = $b[$kunci]; ?>
+        <?php foreach ($bagian as [$kunci, $judul, $uraian, $lencana, $adaJp]): $isi = $b[$kunci]; ?>
             <?php if ($isi === []) { continue; } ?>
-            <section class="overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-xs">
-                <div class="border-b px-4 py-3 <?= $warna ?>">
-                    <h3 class="text-sm font-bold"><?= esc($judul) ?> <span class="font-semibold">(<?= count($isi) ?>)</span></h3>
-                    <p class="mt-0.5 text-xs leading-relaxed"><?= esc($uraian) ?></p>
+            <section class="kartu overflow-hidden" aria-label="<?= esc($judul, 'attr') ?>">
+                <div class="kartu-kepala">
+                    <div class="min-w-0">
+                        <h3 class="flex flex-wrap items-center gap-2 text-base font-semibold text-gray-900 dark:text-white"><?= esc($judul) ?> <span class="lencana <?= $lencana ?>"><?= count($isi) ?></span></h3>
+                        <p class="kartu-ket max-w-3xl"><?= esc($uraian) ?></p>
+                    </div>
                 </div>
-                <div class="max-h-[32rem] overflow-auto">
-                    <table class="w-full min-w-[40rem] text-sm">
-                        <thead class="sticky top-0 bg-gray-50 text-left text-[11px] font-bold uppercase tracking-wide text-gray-500">
-                            <tr><th class="px-4 py-2">Guru</th><th class="px-3 py-2">Kelas</th><th class="px-3 py-2">Mapel di SKBM</th><?php if ($adaJp): ?><th class="px-3 py-2">Mapel di Penugasan</th><?php endif; ?><th class="px-3 py-2 text-right">JP SKBM</th><th class="px-3 py-2 text-right">JP Penugasan</th></tr>
+                <div class="tabel-bungkus panel-gulir max-h-[32rem]">
+                    <table class="tabel min-w-[40rem]">
+                        <thead class="sticky top-0 z-10">
+                            <tr>
+                                <th scope="col">Guru</th><th scope="col">Kelas</th><th scope="col">Mapel di SKBM</th>
+                                <?php if ($adaJp): ?><th scope="col">Mapel di Penugasan</th><?php endif; ?>
+                                <th scope="col" class="text-right">JP SKBM</th><th scope="col" class="text-right">JP Penugasan</th>
+                            </tr>
                         </thead>
-                        <tbody class="divide-y divide-gray-100">
+                        <tbody>
                             <?php foreach (array_slice($isi, 0, $maks) as $r): ?>
                                 <tr>
-                                    <td class="px-4 py-1.5 font-semibold text-gray-800"><?= esc($r['guru']) ?></td>
-                                    <td class="px-3 py-1.5 text-gray-700"><?= esc($r['kelas']) ?></td>
-                                    <td class="px-3 py-1.5 text-gray-600"><?= $kunci === 'hanya_pengampu' ? '<span class="text-gray-300">&mdash;</span>' : esc($r['mapel']) ?></td>
-                                    <?php if ($adaJp): ?><td class="px-3 py-1.5 text-gray-600"><?= esc($r['mapel_pengampu'] ?? '') ?></td><?php endif; ?>
-                                    <td class="px-3 py-1.5 text-right tabular-nums text-gray-700"><?= $r['jp_skbm'] === null ? '<span class="text-gray-300">&mdash;</span>' : (int) $r['jp_skbm'] ?></td>
-                                    <td class="px-3 py-1.5 text-right tabular-nums text-gray-700"><?= $r['jp_pengampu'] === null ? '<span class="text-gray-300">&mdash;</span>' : (int) $r['jp_pengampu'] ?></td>
+                                    <td class="font-semibold text-gray-900 dark:text-white"><?= esc($r['guru']) ?></td>
+                                    <td><?= esc($r['kelas']) ?></td>
+                                    <td><?= $kunci === 'hanya_pengampu' ? $strip : esc($r['mapel']) ?></td>
+                                    <?php if ($adaJp): ?><td><?= esc($r['mapel_pengampu'] ?? '') ?></td><?php endif; ?>
+                                    <td class="text-right tabular-nums"><?= $r['jp_skbm'] === null ? $strip : (int) $r['jp_skbm'] ?></td>
+                                    <td class="text-right tabular-nums"><?= $r['jp_pengampu'] === null ? $strip : (int) $r['jp_pengampu'] ?></td>
                                 </tr>
                             <?php endforeach; ?>
                         </tbody>
                     </table>
                 </div>
-                <?php if (count($isi) > $maks): ?><p class="border-t border-gray-100 px-4 py-2 text-xs text-gray-500">Ditampilkan <?= $maks ?> baris pertama dari <?= count($isi) ?>.</p><?php endif; ?>
+                <?php if (count($isi) > $maks): ?><p class="kartu-kaki text-xs text-gray-500 dark:text-gray-400">Ditampilkan <?= $maks ?> baris pertama dari <?= count($isi) ?>.</p><?php endif; ?>
             </section>
         <?php endforeach; ?>
 
         <?php if ($b['guru_tanpa_skbm'] !== []): ?>
-            <section class="rounded-2xl border border-gray-200 bg-white p-4 shadow-xs sm:p-5">
-                <h3 class="text-sm font-bold text-gray-700">Punya Penugasan tetapi tidak ada di SKBM <span class="font-semibold text-gray-500">(<?= count($b['guru_tanpa_skbm']) ?> guru)</span></h3>
-                <p class="mt-0.5 text-xs leading-relaxed text-gray-500">Tidak dibandingkan per kelas karena gurunya memang belum masuk SKBM <?= esc($tahun) ?>. Bila seharusnya ada, tambahkan di halaman SKBM.</p>
-                <p class="mt-2 text-sm leading-relaxed text-gray-700"><?= esc(implode(' · ', $b['guru_tanpa_skbm'])) ?></p>
+            <section class="kartu kartu-isi" aria-labelledby="judul-tanpa-skbm">
+                <h3 id="judul-tanpa-skbm" class="flex flex-wrap items-center gap-2 text-base font-semibold text-gray-900 dark:text-white">Punya Penugasan tetapi tidak ada di SKBM <span class="lencana lencana-abu"><?= count($b['guru_tanpa_skbm']) ?> guru</span></h3>
+                <p class="mt-1 text-sm leading-relaxed text-gray-500 dark:text-gray-400">Tidak dibandingkan per kelas karena gurunya memang belum masuk SKBM <?= esc($tahun) ?>. Bila seharusnya ada, tambahkan di halaman SKBM.</p>
+                <p class="mt-2 text-sm leading-relaxed text-gray-900 dark:text-white"><?= esc(implode(' · ', $b['guru_tanpa_skbm'])) ?></p>
             </section>
         <?php endif; ?>
     <?php endif; ?>

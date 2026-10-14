@@ -1,6 +1,6 @@
 <?php
 /**
- * Panel untuk tab yang belum digarap.
+ * Panel untuk tab yang belum digarap (rombak tampilan F7: keadaan kosong kit).
  *
  * @var string               $tab
  * @var array<string,string> $tabs
@@ -8,13 +8,11 @@
  * @var string               $qtp
  */
 ?>
-<div class="bg-white rounded-2xl border border-gray-200 shadow-xs p-10 text-center">
-    <span class="mx-auto flex h-12 w-12 items-center justify-center rounded-xl bg-gray-100 text-gray-400">
-        <svg class="w-6 h-6" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
-    </span>
-    <p class="font-bold text-gray-700 mt-3"><?= esc($tabs[$tab]) ?> belum tersedia</p>
-    <p class="text-sm text-gray-500 mt-1 max-w-md mx-auto">
-        Bagian ini sedang disiapkan dan akan aktif pada tahap pengembangan berikutnya.
-        Sementara itu, susun dulu <a href="<?= $base ?>/jadwal<?= $qtp ?>" class="text-brand-600 font-semibold hover:underline">jadwal ujiannya</a>.
-    </p>
+<div class="kartu">
+    <?= ui_kosong([
+        'ikon'  => 'clock',
+        'judul' => ($tabs[$tab] ?? 'Bagian ini') . ' belum tersedia',
+        'teks'  => 'Bagian ini sedang disiapkan dan akan aktif pada tahap pengembangan berikutnya. Sementara itu, susun dulu jadwal ujiannya.',
+        'aksi'  => '<a href="' . $base . '/jadwal' . $qtp . '" class="btn btn-netral">' . ikon('calendar-week', 'h-4 w-4') . 'Buka jadwal ujian</a>',
+    ]) ?>
 </div>
