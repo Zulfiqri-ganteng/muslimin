@@ -21,8 +21,9 @@
   tooltips: false;
 }
 
-/* Mode gelap seluruh halaman = F11 (ditunda). Varian disiapkan supaya kelas dark: kelak tidak perlu mengubah mesin. */
-@custom-variant dark (&:where(.dark, .dark *));
+/* Mode Gelap (R2): <html data-mode="gelap"> ditulis server dari Pengaturan → Tampilan (Libraries\Tampilan). Kelas dark: = varian ini.
+   Pakai atribut bernama PERSIS data-mode hanya di <html> (atribut lain di halaman: data-mode-awal, data-pratinjau). */
+@custom-variant dark (&:where([data-mode="gelap"], [data-mode="gelap"] *));
 
 @theme {
   --font-sans: 'Inter', 'Segoe UI', system-ui, sans-serif;
@@ -95,16 +96,6 @@
   }
   /* Gaya menu samping. Tanpa atribut = Terang (persis template Flowbite). --sb-penanda = garis kiri menu aktif (Berwarna: mint,
      aksen Warna Sekolah). */
-  [data-sidebar="warna"] {
-    --sb-bg: rgb(var(--brand-900));            --sb-garis: rgb(255 255 255 / .1);
-    --sb-teks: rgb(var(--brand-100));          --sb-ikon: rgb(var(--brand-300));          --sb-redup: rgb(var(--brand-300));
-    --sb-judul-aktif: var(--color-white);      --sb-hover-bg: rgb(255 255 255 / .1);      --sb-hover-teks: var(--color-white);
-    --sb-aktif-bg: rgb(255 255 255 / .15);     --sb-aktif-teks: var(--color-white);       --sb-aktif-ikon: var(--color-white);
-    --sb-penanda: var(--color-emerald-300);
-    --sb-cari-bg: rgb(255 255 255 / .1);       --sb-cari-garis: transparent;               --sb-cari-teks: var(--color-white);
-    --sb-cari-placeholder: rgb(var(--brand-300));
-    --sb-segera-bg: rgb(252 196 25 / .2);      --sb-segera-teks: var(--color-gold-400);   --sb-nonaktif: rgb(var(--brand-300) / .7);
-  }
   /* Terang = sidebar template Flowbite (partials/sidebar.html): putih, garis kanan gray-200, teks gray-900, ikon gray-500
      (gray-900 saat disorot), menu aktif & sorot berlatar gray-100. */
   :root, [data-sidebar="terang"] {
@@ -117,13 +108,24 @@
     --sb-cari-placeholder: var(--color-gray-500);
     --sb-segera-bg: var(--color-yellow-100);   --sb-segera-teks: var(--color-yellow-800); --sb-nonaktif: var(--color-gray-400);
   }
-  /* Gelap = sidebar gelap Flowbite (abu tua), isi halaman tetap terang (mode gelap penuh = F11). */
+  /* Warna Sekolah: ditulis SESUDAH blok :root di atas — :root & [data-sidebar] sama kuatnya, yang belakangan menang. */
+  [data-sidebar="warna"] {
+    --sb-bg: rgb(var(--brand-900));            --sb-garis: rgb(255 255 255 / .1);
+    --sb-teks: rgb(var(--brand-100));          --sb-ikon: rgb(var(--brand-300));          --sb-redup: rgb(var(--brand-300));
+    --sb-judul-aktif: var(--color-white);      --sb-hover-bg: rgb(255 255 255 / .1);      --sb-hover-teks: var(--color-white);
+    --sb-aktif-bg: rgb(255 255 255 / .15);     --sb-aktif-teks: var(--color-white);       --sb-aktif-ikon: var(--color-white);
+    --sb-penanda: var(--color-emerald-300);
+    --sb-cari-bg: rgb(255 255 255 / .1);       --sb-cari-garis: transparent;               --sb-cari-teks: var(--color-white);
+    --sb-cari-placeholder: rgb(var(--brand-300));
+    --sb-segera-bg: rgb(252 196 25 / .2);      --sb-segera-teks: var(--color-gold-400);   --sb-nonaktif: rgb(var(--brand-300) / .7);
+  }
+  /* Gelap = sidebar template Flowbite versi dark (dark:bg-gray-800 dark:border-gray-700, teks gray-200, sorot/aktif gray-700). */
   [data-sidebar="gelap"] {
     --sb-bg: var(--color-gray-800);            --sb-garis: var(--color-gray-700);
     --sb-teks: var(--color-gray-200);          --sb-ikon: var(--color-gray-400);          --sb-redup: var(--color-gray-400);
     --sb-judul-aktif: var(--color-white);      --sb-hover-bg: var(--color-gray-700);      --sb-hover-teks: var(--color-white);
-    --sb-aktif-bg: var(--color-gray-700);      --sb-aktif-teks: var(--color-white);       --sb-aktif-ikon: rgb(var(--brand-300));
-    --sb-penanda: rgb(var(--brand-400));
+    --sb-aktif-bg: var(--color-gray-700);      --sb-aktif-teks: var(--color-white);       --sb-aktif-ikon: var(--color-white);
+    --sb-penanda: transparent;
     --sb-cari-bg: var(--color-gray-700);       --sb-cari-garis: var(--color-gray-600);    --sb-cari-teks: var(--color-white);
     --sb-cari-placeholder: var(--color-gray-400);
     --sb-segera-bg: rgb(250 204 21 / .15);     --sb-segera-teks: var(--color-yellow-300); --sb-nonaktif: var(--color-gray-500);
@@ -464,3 +466,151 @@
 @media (prefers-reduced-motion: reduce) {
   @view-transition { navigation: none; }
 }
+
+/* =====================================================================================================================
+   MODE GELAP (R2) — <html data-mode="gelap"> (Pengaturan Sekolah → Tampilan). Nilai mengikuti versi dark template Flowbite
+   (dark:bg-gray-800, dark:border-gray-700, dark:text-gray-400, …). Bagian:
+     1) kerangka & kit komponen (kelas dark: lewat @apply — satu tempat, halaman yang memakai kit otomatis ikut gelap);
+     2) pratinjau mode di Pengaturan (kartu Gelap selalu gelap, kartu lain selalu terang);
+     3) LAPISAN PENYESUAI untuk halaman yang BELUM dirombak (kelas utilitas lama di isi halaman) — dibuang di F12.
+   ===================================================================================================================== */
+@layer components {
+  /* 1a. Kerangka */
+  .navbar        { @apply dark:border-gray-700 dark:bg-gray-800; }
+  .tombol-navbar { @apply dark:text-gray-400 dark:hover:bg-gray-700 dark:hover:text-white dark:focus:bg-gray-700 dark:focus:ring-gray-700; }
+  .navbar-nama   { @apply dark:text-white; }
+  .navbar-cari   { @apply dark:border-gray-600 dark:bg-gray-700 dark:text-white dark:placeholder-gray-400; }
+  .kaki-kartu    { @apply dark:bg-gray-800; }
+  .kaki-tautan a, .kaki-hak { @apply dark:text-gray-400; }
+  .remah a       { @apply dark:text-gray-400 dark:hover:text-white; }
+  .remah [aria-current='page'] { @apply dark:text-gray-500; }
+  .judul-halaman { @apply dark:text-white; }
+  .ket-halaman   { @apply dark:text-gray-400; }
+
+  /* 1b. Kit komponen */
+  .btn-utama   { @apply dark:focus:ring-brand-800; }
+  .btn-netral  { @apply dark:border-gray-600 dark:bg-gray-800 dark:text-gray-400 dark:hover:bg-gray-700 dark:hover:text-white dark:focus:ring-gray-700; }
+  .btn-teks    { @apply dark:text-gray-400 dark:hover:bg-gray-700 dark:hover:text-white dark:focus:ring-gray-700; }
+  .lbl         { @apply dark:text-white; }
+  .inp, .inp-berkas { @apply dark:border-gray-600 dark:bg-gray-700 dark:text-white dark:placeholder-gray-400; }
+  .inp-err     { @apply dark:border-red-500 dark:text-red-400; }
+  .hint        { @apply dark:text-gray-400; }
+  .err-msg     { @apply dark:text-red-400; }
+  .tombol-sandi { @apply dark:text-gray-400 dark:hover:text-white; }
+  .cek         { @apply dark:border-gray-600 dark:bg-gray-700; }
+  .cek-label, .saklar-label { @apply dark:text-gray-300; }
+  .saklar-jalur { @apply dark:bg-gray-700; }
+  .kartu       { @apply dark:border-gray-700 dark:bg-gray-800; }
+  .kartu-kepala, .kartu-kaki { @apply dark:border-gray-700; }
+  .kartu-judul { @apply dark:text-white; }
+  .kartu-ket   { @apply dark:text-gray-400; }
+  .tabel       { @apply dark:text-gray-400; }
+  .tabel thead { @apply dark:bg-gray-700 dark:text-gray-400; }
+  .tabel tbody tr { @apply dark:border-gray-700 dark:bg-gray-800 dark:hover:bg-gray-700; }
+  .tabel tbody th { @apply dark:text-white; }
+  .lencana-abu    { @apply dark:bg-gray-700 dark:text-gray-300; }
+  .lencana-merek  { @apply dark:bg-brand-900 dark:text-brand-300; }
+  .lencana-hijau  { @apply dark:bg-green-900 dark:text-green-300; }
+  .lencana-kuning { @apply dark:bg-yellow-900 dark:text-yellow-300; }
+  .lencana-merah  { @apply dark:bg-red-900 dark:text-red-300; }
+  .lencana-biru   { @apply dark:bg-blue-900 dark:text-blue-300; }
+  .tab-daftar  { @apply dark:border-gray-700 dark:text-gray-400; }
+  .tab         { @apply dark:hover:text-gray-300; }
+  .tab[aria-current='page'], .tab[aria-selected='true'] { @apply dark:border-brand-500 dark:text-brand-400; }
+  .tab-jumlah  { @apply dark:bg-gray-700 dark:text-gray-300; }
+  .dropdown-menu   { @apply dark:divide-gray-600 dark:border-gray-600 dark:bg-gray-700; }
+  .dropdown-kepala { @apply dark:text-white; }
+  .dropdown-item   { @apply dark:text-gray-200 dark:hover:bg-gray-600 dark:hover:text-white dark:focus:bg-gray-600; }
+  .dropdown-item-bahaya { @apply dark:text-red-400 dark:hover:bg-gray-600 dark:hover:text-red-300 dark:focus:bg-gray-600; }
+  .dialog-panel  { @apply dark:bg-gray-700; }
+  .dialog-kepala, .dialog-kaki { @apply dark:border-gray-600; }
+  .dialog-judul  { @apply dark:text-white; }
+  .tombol-tutup  { @apply dark:hover:bg-gray-600 dark:hover:text-white; }
+  .laci-panel    { @apply dark:bg-gray-800; }
+  .laci-kepala, .laci-kaki { @apply dark:border-gray-700; }
+  .laci-judul    { @apply dark:text-gray-400; }
+  .toast         { @apply dark:border-gray-700 dark:bg-gray-800 dark:text-gray-400; }
+  .toast-pesan   { @apply dark:text-gray-300; }
+  .toast-sukses .toast-ikon { @apply dark:bg-green-800 dark:text-green-200; }
+  .toast-galat  .toast-ikon { @apply dark:bg-red-800 dark:text-red-200; }
+  .toast-awas   .toast-ikon { @apply dark:bg-orange-700 dark:text-orange-200; }
+  .toast-info   .toast-ikon { @apply dark:bg-brand-800 dark:text-brand-200; }
+  .peringatan-info   { @apply dark:border-blue-800 dark:bg-gray-800 dark:text-blue-400; }
+  .peringatan-sukses { @apply dark:border-green-800 dark:bg-gray-800 dark:text-green-400; }
+  .peringatan-galat  { @apply dark:border-red-800 dark:bg-gray-800 dark:text-red-400; }
+  .peringatan-awas   { @apply dark:border-yellow-800 dark:bg-gray-800 dark:text-yellow-300; }
+  .peringatan-netral { @apply dark:border-gray-600 dark:bg-gray-800 dark:text-gray-300; }
+  .paginasi-item { @apply dark:border-gray-700 dark:bg-gray-800 dark:text-gray-400 dark:hover:bg-gray-700 dark:hover:text-white; }
+  .paginasi-item[aria-current='page'] { @apply dark:border-gray-700 dark:bg-gray-700 dark:text-white; }
+  .paginasi-item[aria-disabled='true'] { @apply dark:text-gray-600; }
+  .paginasi-info   { @apply dark:text-gray-400; }
+  .paginasi-info b { @apply dark:text-white; }
+  .kosong-ikon  { @apply dark:bg-gray-700 dark:text-gray-400; }
+  .kosong-judul { @apply dark:text-white; }
+  .kosong-teks  { @apply dark:text-gray-400; }
+  .dok-pratinjau p, .dok-pratinjau ul, .dok-pratinjau ol { @apply dark:text-gray-300; }
+  .dok-pratinjau strong { @apply dark:text-white; }
+
+  /* 2. Pratinjau mode (Pengaturan → Tampilan): <span class="pratinjau-tema" data-pratinjau="terang|gelap|sekolah"> — tidak memakai
+        dark:, jadi kartu Terang/Warna Sekolah tetap terang walau halaman sedang gelap, dan kartu Gelap selalu gelap. */
+  .pratinjau-tema[data-pratinjau="gelap"] { @apply border-gray-700 bg-gray-900; }
+  .pratinjau-tema[data-pratinjau="gelap"] .pratinjau-tema-bilah { @apply border-gray-700 bg-gray-800; }
+  .pratinjau-tema[data-pratinjau="gelap"] .pratinjau-tema-isi > span:not(.tombol) { @apply bg-gray-700; }
+}
+
+/* 3. LAPISAN PENYESUAI mode gelap untuk halaman yang BELUM dirombak (F5–F10 menggantinya dengan kit). Tanpa @layer → menang atas
+      kelas utilitas lama; hanya di .kerangka-isi (isi halaman), tidak menyentuh bingkai & kit. Dibuang di F12. */
+[data-mode="gelap"] .kerangka-isi {
+  .bg-white { @apply bg-gray-800; }
+  .bg-gray-50 { @apply bg-gray-700/50; }
+  .bg-gray-100 { @apply bg-gray-700; }
+  .bg-gray-200 { @apply bg-gray-600; }
+  .text-gray-900 { @apply text-white; }
+  .text-gray-800 { @apply text-gray-100; }
+  .text-gray-700 { @apply text-gray-200; }
+  .text-gray-600 { @apply text-gray-300; }
+  .text-gray-500 { @apply text-gray-400; }
+  .text-gray-400 { @apply text-gray-500; }
+  .border-gray-100, .border-gray-200 { @apply border-gray-700; }
+  .border-gray-300 { @apply border-gray-600; }
+  .divide-gray-100 > :not(:last-child), .divide-gray-200 > :not(:last-child) { @apply border-gray-700; }
+  .hover\:bg-white:hover, .hover\:bg-gray-50:hover, .hover\:bg-gray-100:hover { @apply bg-gray-700; }
+  .hover\:text-gray-900:hover, .hover\:text-gray-800:hover { @apply text-white; }
+  .hover\:text-gray-700:hover { @apply text-gray-200; }
+  /* Kotak berwarna muda (info/peringatan lama, lencana) → warna transparan di atas latar gelap + tulisan terang. */
+  .bg-brand-50 { @apply bg-brand-500/10; }
+  .bg-brand-100 { @apply bg-brand-500/20; }
+  .text-brand-700, .text-brand-800, .text-brand-900 { @apply text-brand-300; }
+  .border-brand-100, .border-brand-200 { @apply border-brand-500/30; }
+  .bg-amber-50, .bg-yellow-50 { @apply bg-amber-500/10; }
+  .bg-amber-100, .bg-yellow-100 { @apply bg-amber-500/20; }
+  .text-amber-700, .text-amber-800, .text-amber-900, .text-yellow-700, .text-yellow-800, .text-yellow-900 { @apply text-amber-300; }
+  .border-amber-200, .border-amber-300, .border-yellow-200, .border-yellow-300 { @apply border-amber-500/40; }
+  .bg-red-50 { @apply bg-red-500/10; }
+  .bg-red-100 { @apply bg-red-500/20; }
+  .text-red-700, .text-red-800, .text-red-900 { @apply text-red-300; }
+  .border-red-200, .border-red-300 { @apply border-red-500/40; }
+  .bg-green-50, .bg-emerald-50 { @apply bg-green-500/10; }
+  .bg-green-100, .bg-emerald-100 { @apply bg-green-500/20; }
+  .text-green-700, .text-green-800, .text-green-900, .text-emerald-700, .text-emerald-800 { @apply text-green-300; }
+  .border-green-200, .border-green-300, .border-emerald-200, .border-emerald-300 { @apply border-green-500/40; }
+  .bg-blue-50, .bg-sky-50 { @apply bg-blue-500/10; }
+  .bg-blue-100, .bg-sky-100 { @apply bg-blue-500/20; }
+  .text-blue-700, .text-blue-800, .text-blue-900, .text-sky-700, .text-sky-800, .text-sky-900 { @apply text-blue-300; }
+  .border-blue-200, .border-blue-300, .border-sky-200, .border-sky-300 { @apply border-blue-500/40; }
+  .bg-orange-50 { @apply bg-orange-500/10; }
+  .bg-orange-100 { @apply bg-orange-500/20; }
+  .text-orange-700, .text-orange-800 { @apply text-orange-300; }
+  /* Isian lama tanpa kelas kit (latar putih bawaan peramban). */
+  :is(input, select, textarea):not([type="checkbox"], [type="radio"], [type="range"], [type="color"], [type="file"], [type="submit"], [type="button"], .inp) {
+    @apply border-gray-600 bg-gray-700 text-white;
+  }
+  :is(input, textarea)::placeholder { @apply text-gray-400; }
+  /* Tombol "Pilih berkas" lama (file:bg-brand-50 file:text-brand-700 → hampir putih) — gaya tombol berkas Flowbite dark. */
+  [type="file"]:not(.inp-berkas)::file-selector-button { @apply bg-gray-600 text-white; }
+  [type="file"]:not(.inp-berkas):hover::file-selector-button { @apply bg-gray-500; }
+}
+
+/* (R2) Mode gelap: bilah gulir & kontrol bawaan peramban ikut gelap; kotak centang/radio lama (tanpa .cek) di isi halaman. */
+[data-mode="gelap"] { color-scheme: dark; }
+[data-mode="gelap"] .kerangka-isi :is([type="checkbox"], [type="radio"]):not(.cek):not(:checked) { @apply border-gray-600 bg-gray-700; }

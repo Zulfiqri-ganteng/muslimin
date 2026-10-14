@@ -31,8 +31,8 @@ class Settings extends BaseController
     }
 
     /**
-     * POST admin/settings/tampilan — tema panel admin (warna utama × gaya menu samping) untuk SEMUA akun. Khusus peran Admin.
-     * Isian: pilihan = salah satu kunci tema siap pakai ("lilac-warna", …) atau "sendiri" (+ tema_warna & tema_sidebar).
+     * POST admin/settings/tampilan — mode tampilan panel admin (Terang / Gelap / Warna Sekolah) untuk SEMUA akun. Khusus peran Admin.
+     * Isian: pilihan = kunci Tampilan::MODE ("terang", "gelap", "sekolah").
      */
     public function simpanTampilan()
     {
@@ -44,19 +44,12 @@ class Settings extends BaseController
         }
 
         $pilihan = (string) $this->request->getPost('pilihan');
-        $warna   = (string) $this->request->getPost('tema_warna');
-        $sidebar = (string) $this->request->getPost('tema_sidebar');
-        foreach (Tampilan::PRESET as $p) {
-            if ($pilihan === $p['warna'] . '-' . $p['sidebar']) {
-                [$warna, $sidebar] = [$p['warna'], $p['sidebar']];
-            }
-        }
-        if (! isset(Tampilan::WARNA[$warna], Tampilan::SIDEBAR[$sidebar])) {
+        if (! isset(Tampilan::MODE[$pilihan])) {
             return redirect()->to(site_url('admin/settings') . '#tampilan')->with('error', 'Pilihan tema tidak dikenali.');
         }
 
-        $this->model->store(['tema_warna' => $warna, 'tema_sidebar' => $sidebar]);
-        $nama = Tampilan::namaTema($warna, $sidebar);
+        $this->model->store(['tema_warna' => Tampilan::MODE[$pilihan]['warna'], 'tema_sidebar' => Tampilan::MODE[$pilihan]['sidebar']]);
+        $nama = Tampilan::namaTema($pilihan);
         (new AuditModel())->record('update', 'settings', 1, 'Tema tampilan panel admin diganti: ' . $nama);
 
         return redirect()->to(site_url('admin/settings') . '#tampilan')->with('success', 'Tema tampilan disimpan: ' . $nama . '. Berlaku untuk semua akun.');

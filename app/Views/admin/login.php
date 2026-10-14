@@ -18,7 +18,7 @@ $fokusSandi  = (string) old('login') !== '';
 $tema        = \App\Libraries\Tampilan::tema($setting ?? null);
 ?>
 <!DOCTYPE html>
-<html lang="id" data-warna="<?= $tema['warna'] ?>" data-sidebar="<?= $tema['sidebar'] ?>">
+<html lang="id" data-mode="<?= $tema['mode'] ?>" data-warna="<?= $tema['warna'] ?>" data-sidebar="<?= $tema['sidebar'] ?>">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -28,7 +28,7 @@ $tema        = \App\Libraries\Tampilan::tema($setting ?? null);
     <link rel="preload" href="<?= base_url('assets/fonts/inter/inter-latin-wght-normal.woff2') ?>" as="font" type="font/woff2" crossorigin>
     <link rel="stylesheet" href="<?= base_url('assets/css/admin.css') ?>?v=<?= @filemtime(FCPATH . 'assets/css/admin.css') ?>" <?= csp_style_nonce() ?>>
 </head>
-<body class="bg-gray-50 text-gray-800 antialiased">
+<body class="bg-gray-50 text-gray-800 antialiased dark:bg-gray-900 dark:text-gray-200">
 <main class="flex min-h-screen flex-col items-center justify-center px-4 py-10">
     <a href="<?= site_url('/') ?>" class="mb-6 flex max-w-md items-center gap-3 rounded-lg focus:outline-hidden focus-visible:ring-2 focus-visible:ring-brand-300" title="Ke beranda situs sekolah">
         <?php if ($adaLogo): ?>
@@ -37,16 +37,16 @@ $tema        = \App\Libraries\Tampilan::tema($setting ?? null);
             <span class="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg bg-brand-700 text-lg font-semibold text-white" aria-hidden="true"><?= esc(mb_strtoupper(mb_substr($namaSekolah, 0, 1))) ?></span>
         <?php endif; ?>
         <span class="min-w-0 leading-tight">
-            <span class="block text-lg font-semibold break-words text-gray-900 sm:text-xl"><?= esc($namaSekolah) ?></span>
-            <span class="block text-sm text-gray-500">Sistem Informasi Akademik Sekolah</span>
+            <span class="block text-lg font-semibold break-words text-gray-900 sm:text-xl dark:text-white"><?= esc($namaSekolah) ?></span>
+            <span class="block text-sm text-gray-500 dark:text-gray-400">Sistem Informasi Akademik Sekolah</span>
         </span>
     </a>
 
     <div class="kartu w-full max-w-md shadow-sm">
         <div class="space-y-6 p-6 sm:p-8">
             <div>
-                <h1 class="text-xl font-semibold text-gray-900 sm:text-2xl">Masuk ke panel admin</h1>
-                <p class="mt-1 text-sm text-gray-500">Gunakan username atau email akun sekolah Anda.</p>
+                <h1 class="text-xl font-semibold text-gray-900 sm:text-2xl dark:text-white">Masuk ke panel admin</h1>
+                <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">Gunakan username atau email akun sekolah Anda.</p>
             </div>
 
             <?php if (session('error')): ?><?= ui_peringatan('galat', (string) session('error')) ?><?php endif; ?>
@@ -82,11 +82,11 @@ $tema        = \App\Libraries\Tampilan::tema($setting ?? null);
                 </button>
             </form>
 
-            <p class="text-sm text-gray-500">Lupa kata sandi? Hubungi Admin sekolah untuk dibuatkan sandi sementara.</p>
+            <p class="text-sm text-gray-500 dark:text-gray-400">Lupa kata sandi? Hubungi Admin sekolah untuk dibuatkan sandi sementara.</p>
         </div>
     </div>
 
-    <footer class="mt-8 text-center text-xs text-gray-500">
+    <footer class="mt-8 text-center text-xs text-gray-500 dark:text-gray-400">
         <p>&copy; <?= date('Y') ?> &middot; Sistem Informasi Akademik Sekolah (BINUS)</p>
         <?= view('partials/kredit', ['kreditKelas' => 'mt-1']) ?>
     </footer>

@@ -140,7 +140,7 @@ $alpineJs = \App\Libraries\Tampilan::alpineCsp($cur) ? 'assets/js/vendor/alpine-
 $js       = static fn (string $berkas): string => '<script defer src="' . base_url($berkas) . '?v=' . @filemtime(FCPATH . $berkas) . '" ' . csp_script_nonce() . '></script>';
 ?>
 <!DOCTYPE html>
-<html lang="id" data-warna="<?= $tema['warna'] ?>" data-sidebar="<?= $tema['sidebar'] ?>"<?= $ciut ? ' data-ciut' : '' ?>>
+<html lang="id" data-mode="<?= $tema['mode'] ?>" data-warna="<?= $tema['warna'] ?>" data-sidebar="<?= $tema['sidebar'] ?>"<?= $ciut ? ' data-ciut' : '' ?>>
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -155,14 +155,14 @@ $js       = static fn (string $berkas): string => '<script defer src="' . base_u
     <link rel="preload" href="<?= base_url('assets/fonts/inter/inter-latin-wght-normal.woff2') ?>" as="font" type="font/woff2" crossorigin>
     <link rel="stylesheet" href="<?= base_url('assets/css/admin.css') ?>?v=<?= @filemtime(FCPATH . 'assets/css/admin.css') ?>" <?= csp_style_nonce() ?>>
 </head>
-<body class="bg-gray-50 text-gray-800 antialiased" x-data="adminLayout" @keydown.escape.window="tutupLaci()">
+<body class="bg-gray-50 text-gray-800 antialiased dark:bg-gray-900 dark:text-gray-200" x-data="adminLayout" @keydown.escape.window="tutupLaci()">
 <a href="#isi" class="sr-only focus:not-sr-only focus:fixed focus:top-3 focus:left-3 focus:z-[80] focus:rounded-lg focus:bg-white focus:px-4 focus:py-2 focus:text-sm focus:font-medium focus:text-brand-700 focus:shadow-sm">Lewati ke isi halaman</a>
 
 <!-- Layar "Memproses…" saat formulir dikirim (semua formulir, kecuali data-noload). -->
-<div x-show="loading" x-cloak x-transition.opacity.duration.150ms class="fixed inset-0 z-[70] flex items-center justify-center bg-white/70" role="status" aria-live="polite">
+<div x-show="loading" x-cloak x-transition.opacity.duration.150ms class="fixed inset-0 z-[70] flex items-center justify-center bg-white/70 dark:bg-gray-900/70" role="status" aria-live="polite">
     <div class="flex flex-col items-center gap-3">
         <span class="pemutar h-10 w-10 border-4 text-brand-600" aria-hidden="true"></span>
-        <p class="text-sm font-medium text-brand-700" x-text="pesan">Memproses…</p>
+        <p class="text-sm font-medium text-brand-700 dark:text-brand-300" x-text="pesan">Memproses…</p>
     </div>
 </div>
 

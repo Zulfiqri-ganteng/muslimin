@@ -1,6 +1,6 @@
 /**
  * Halaman ui-kit (rombak tampilan F1, khusus laptop; sejak F3 di dalam layouts/admin) — komponen Alpine `uiKit` (aksi contoh +
- * uji-diri) dan `uiKitTema` (pemilih tema CONTOH: menulis <html data-warna data-sidebar>, disimpan di peramban saja).
+ * uji-diri) dan `uiKitTema` (pemilih tema CONTOH: menulis <html data-mode data-warna data-sidebar>, disimpan di peramban saja).
  *
  * Uji-diri (?uji=1 → <div x-data="uiKit" data-mode-uji="1">): setelah Alpine versi CSP berjalan, tiap komponen kit (ui.js) dicoba
  * lewat DOM — format, dropdown, tab, dialog, laci, toast, peringatan, konfirmasi (tombol, formulir, dari JS) — lalu KERANGKA layout
@@ -12,7 +12,7 @@
     'use strict';
 
     // Tema contoh → pasangan warna utama × gaya menu samping (sama dengan Libraries\Tampilan::PRESET).
-    var TEMA = { terang: ['biru', 'terang'], gelap: ['biru', 'gelap'], lilac: ['lilac', 'warna'] };
+    var TEMA = { terang: ['biru', 'terang', 'terang'], gelap: ['biru', 'gelap', 'gelap'], lilac: ['lilac', 'warna', 'sekolah'] };
     var modeUji = document.querySelector('[data-mode-uji="1"]') !== null;
     if (modeUji) {
         window.__ujiSibuk = true;
@@ -342,10 +342,9 @@
                         this.terapkan();
                         return;
                     }
-                    var w = document.documentElement.getAttribute('data-warna');
-                    var s = document.documentElement.getAttribute('data-sidebar');
+                    var m = document.documentElement.getAttribute('data-mode');
                     Object.keys(TEMA).forEach(function (k) {
-                        if (TEMA[k][0] === w && TEMA[k][1] === s) { self.tema = k; }
+                        if (TEMA[k][2] === m) { self.tema = k; }
                     });
                 },
                 pilih: function (t) {
@@ -357,6 +356,7 @@
                 terapkan: function () {
                     document.documentElement.setAttribute('data-warna', TEMA[this.tema][0]);
                     document.documentElement.setAttribute('data-sidebar', TEMA[this.tema][1]);
+                    document.documentElement.setAttribute('data-mode', TEMA[this.tema][2]);
                 },
             };
         });

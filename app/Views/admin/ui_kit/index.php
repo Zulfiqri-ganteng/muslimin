@@ -16,11 +16,11 @@ $kode = static fn (string $teks): string => '<code class="rounded-md bg-gray-100
 <?= $this->section('aksi') ?>
 <div class="inline-flex rounded-lg border border-gray-200 bg-gray-50 p-1" role="radiogroup" aria-label="Tema contoh" x-data="uiKitTema">
     <button type="button" role="radio" :aria-checked="tema === 'terang'" @click="pilih('terang')"
-            class="rounded-md px-3 py-1.5 text-sm font-medium text-gray-500 transition hover:text-gray-900 aria-checked:bg-white aria-checked:text-gray-900 aria-checked:shadow-xs">Flowbite Terang</button>
+            class="rounded-md px-3 py-1.5 text-sm font-medium text-gray-500 transition hover:text-gray-900 aria-checked:bg-white aria-checked:text-gray-900 aria-checked:shadow-xs">Terang</button>
     <button type="button" role="radio" :aria-checked="tema === 'gelap'" @click="pilih('gelap')"
-            class="rounded-md px-3 py-1.5 text-sm font-medium text-gray-500 transition hover:text-gray-900 aria-checked:bg-white aria-checked:text-gray-900 aria-checked:shadow-xs">Flowbite Gelap</button>
+            class="rounded-md px-3 py-1.5 text-sm font-medium text-gray-500 transition hover:text-gray-900 aria-checked:bg-white aria-checked:text-gray-900 aria-checked:shadow-xs">Gelap</button>
     <button type="button" role="radio" :aria-checked="tema === 'lilac'" @click="pilih('lilac')"
-            class="rounded-md px-3 py-1.5 text-sm font-medium text-gray-500 transition hover:text-gray-900 aria-checked:bg-white aria-checked:text-gray-900 aria-checked:shadow-xs">Lilac Sekolah</button>
+            class="rounded-md px-3 py-1.5 text-sm font-medium text-gray-500 transition hover:text-gray-900 aria-checked:bg-white aria-checked:text-gray-900 aria-checked:shadow-xs">Warna Sekolah</button>
 </div>
 <?= $this->endSection() ?>
 

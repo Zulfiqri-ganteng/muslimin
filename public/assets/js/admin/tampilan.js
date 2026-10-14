@@ -1,51 +1,38 @@
 /**
- * Pengaturan Sekolah → Tampilan panel admin (rombak tampilan F3): pemilih tema dengan pratinjau langsung.
- * <section x-data="pilihTema" data-warna="…" data-sidebar="…"> — pilihan tema siap pakai (radio name=pilihan, nilai
- * "warna-sidebar" atau "sendiri") + "Atur sendiri" (select tema_warna & tema_sidebar). Setiap perubahan langsung ditulis ke
- * <html data-warna data-sidebar> (seluruh halaman ikut berubah); baru tersimpan untuk semua akun setelah formulir dikirim.
+ * Pengaturan Sekolah → Tampilan panel admin (rombak tampilan F3 + R2): pemilih MODE (Terang / Gelap / Warna Sekolah) dengan pratinjau
+ * langsung. <section x-data="pilihTema" data-mode-awal="…"> berisi radio name=pilihan (nilai = kunci mode). Setiap pilihan langsung
+ * ditulis ke <html data-mode data-warna data-sidebar> (seluruh halaman ikut berubah); baru tersimpan untuk semua akun setelah
+ * formulir dikirim. Pasangan warna & menu samping tiap mode = Libraries\Tampilan::MODE.
  * Siap Alpine versi CSP: isian hanya nama properti/metode; akar dibaca di init(), tidak lewat this.$el di metode.
  */
 (function () {
     'use strict';
 
+    var MODE = { terang: ['biru', 'terang'], gelap: ['biru', 'gelap'], sekolah: ['lilac', 'warna'] };
+
     document.addEventListener('alpine:init', function () {
         Alpine.data('pilihTema', function () {
             var html = document.documentElement;
-            var asli = { warna: '', sidebar: '', pilihan: '' };
+            var awal = 'terang';
             return {
                 pilihan: '',
-                warna: '',
-                sidebar: '',
                 init: function () {
                     var self = this;
-                    var akar = this.$el;
-                    asli.warna = akar.getAttribute('data-warna') || 'lilac';
-                    asli.sidebar = akar.getAttribute('data-sidebar') || 'warna';
-                    var cocok = akar.querySelector('input[name="pilihan"][value="' + asli.warna + '-' + asli.sidebar + '"]');
-                    asli.pilihan = cocok ? cocok.value : 'sendiri';
-                    this.warna = asli.warna;
-                    this.sidebar = asli.sidebar;
-                    this.pilihan = asli.pilihan;
-                    // Tema siap pakai → isi warna & menu samping; "Atur sendiri" memakai pilihan di kotak pilih.
-                    this.$watch('pilihan', function (v) {
-                        if (v === 'sendiri') { return; }
-                        var bagian = String(v).split('-');
-                        self.warna = bagian[0];
-                        self.sidebar = bagian[1];
-                    });
-                    this.$watch('warna', function () { self.terapkan(); });
-                    this.$watch('sidebar', function () { self.terapkan(); });
+                    var m = this.$el.getAttribute('data-mode-awal');
+                    awal = Object.prototype.hasOwnProperty.call(MODE, m) ? m : 'terang';
+                    this.pilihan = awal;
+                    this.$watch('pilihan', function () { self.terapkan(); });
                 },
                 /* Pratinjau langsung di seluruh halaman. */
                 terapkan: function () {
-                    html.setAttribute('data-warna', this.warna);
-                    html.setAttribute('data-sidebar', this.sidebar);
+                    if (!Object.prototype.hasOwnProperty.call(MODE, this.pilihan)) { return; }
+                    html.setAttribute('data-mode', this.pilihan);
+                    html.setAttribute('data-warna', MODE[this.pilihan][0]);
+                    html.setAttribute('data-sidebar', MODE[this.pilihan][1]);
                 },
-                berubah: function () { return this.warna !== asli.warna || this.sidebar !== asli.sidebar; },
+                berubah: function () { return this.pilihan !== awal; },
                 batal: function () {
-                    this.pilihan = asli.pilihan;
-                    this.warna = asli.warna;
-                    this.sidebar = asli.sidebar;
+                    this.pilihan = awal;
                     this.terapkan();
                 },
             };
