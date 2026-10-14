@@ -1,9 +1,15 @@
 <?php
 /**
- * Kerangka panel admin (rombak tampilan F3 — docs/RENCANA-UPGRADE-TAMPILAN.md §3–§5a), pola Flowbite Admin Dashboard:
- * bilah atas putih selebar layar (tombol menu, logo + nama sekolah, menu akun), menu samping di bawahnya (3 gaya tema, cari menu,
- * grup lipat, bisa diciutkan jadi ikon, laci di HP), kepala halaman seragam (remah roti otomatis dari katalog menu + judul), pesan,
- * isi, kaki. Tema (<html data-warna data-sidebar>) & status menu (ciut, grup terbuka — cookie) ditulis server: tanpa kedipan.
+ * Kerangka panel admin (rombak tampilan F3 + revisi R1 — docs/RENCANA-UPGRADE-TAMPILAN.md §3–§5a), MENGIKUTI TEMPLATE Flowbite Admin
+ * Dashboard (resources/flowbite: layouts/_default/dashboard.html, partials/navbar-dashboard.html, partials/sidebar.html,
+ * partials/footer-dashboard.html):
+ *   - bilah atas putih bergaris bawah: tombol menu, logo + nama sekolah (teks besar), kotak cari (desktop), avatar akun;
+ *   - menu samping putih bergaris kanan: baris menu 16px ber-ikon solid, GRUP = satu baris ber-ikon + panah ▾ dengan isi menjorok
+ *     tanpa ikon, menu aktif berlatar abu, daftar kedua (tautan luar) dipisah garis, deret ikon kecil di bawah (desktop);
+ *   - isi berlatar abu muda, kaki = kartu putih bertautan + baris hak cipta.
+ * Semua menu & fitur tetap: katalog Libraries\MenuAdmin (disaring hak tiap peran), cari menu (atas & di laci HP, satu nilai `cari`),
+ * grup lipat (cookie sb_grup), ciutkan menu jadi deret ikon (desktop, cookie sb_ciut), laci di HP, kepala halaman + remah otomatis.
+ * Warna lewat token tema (<html data-warna data-sidebar>, ditulis server — tanpa kedipan).
  * SIAP CSP: tanpa skrip/gaya sebaris; atribut Alpine hanya isian sederhana (adminLayout / sbMenu / sbGrup di app.js, kit di ui.js),
  * jadi jalan di Alpine biasa maupun versi CSP (dipilih per grup: Config\Tampilan::$alpineCsp).
  *
@@ -32,6 +38,8 @@ $beranda        = \App\Libraries\HakAkses::beranda($peranKini);
 // rute tetap menolak POST di halaman itu; ini hanya supaya pengguna tidak mengisi formulir yang pasti ditolak.
 $lihatSaja       = \App\Libraries\HakAkses::levelAlamat($peranKini, $cur) === \App\Libraries\MenuAdmin::LIHAT;
 $bolehFormPublik = \App\Libraries\HakAkses::boleh($peranKini, 'admin/submissions');
+$bolehPengaturan = \App\Libraries\HakAkses::boleh($peranKini, 'admin/settings');
+$adminUtama      = $peranKini === \App\Libraries\HakPeran::ADMIN;
 
 $setting    = (new \App\Models\SettingModel())->get();
 $schoolName = trim((string) ($setting['school_name'] ?? '')) ?: 'Panel Admin';
@@ -68,7 +76,8 @@ $remah        = [];
 foreach ($groups as $g) {
     foreach ($g['items'] as $it) {
         if (! ($it[4] ?? false) && $itemAktif($it)) {
-            if ($g['title'] !== null) {
+            // Nama grup sama dengan nama menunya (mis. Guru › Guru) → cukup sekali.
+            if ($g['title'] !== null && mb_strtolower($namaGrup((string) $g['title'])) !== mb_strtolower((string) $it[1])) {
                 $remah[] = [$namaGrup((string) $g['title'])];
             }
             if (mb_strtolower((string) $it[1]) === mb_strtolower($judulHalaman)) {
@@ -93,25 +102,39 @@ $kepalaKhusus = trim($this->renderSection('kepala'));
 $aksiHalaman  = trim($this->renderSection('aksi'));
 $punyaJudul   = str_contains($isiHalaman, '<h1');
 
-// Pencarian menu: item tampil bila teks cari kosong atau cocok dengan labelnya (sbMenu.sesuai di app.js).
+// Ikon menu samping: versi SOLID seperti template (cadangan versi garis bila ikon itu tak punya versi solid).
+$ikonSb = static fn (string $nama, string $kelas): string => is_file(APPPATH . 'ThirdParty/flowbite-icons/solid/' . $nama . '.svg')
+    ? ikon($nama, $kelas, 'solid') : ikon($nama, $kelas);
+// Pencarian menu: baris tampil bila teks cari kosong atau cocok dengan labelnya (sbMenu.sesuai di app.js).
 $atrCari = static fn (string $label): string => ' x-show="sesuai(' . esc(json_encode(mb_strtolower($label)), 'attr') . ')"';
-$renderItem = static function (array $it) use ($itemAktif, $atrCari): void {
+// Satu baris menu. $anak = isi grup (menjorok, tanpa ikon — pola template).
+$renderItem = static function (array $it, bool $anak = false) use ($itemAktif, $atrCari, $ikonSb): void {
     [$url, $label, $ikon] = $it;
+    $kelas  = $anak ? 'sb-item sb-anak' : 'sb-item';
+    $ikonEl = $anak ? '' : $ikonSb((string) $ikon, 'sb-ikon');
     if ($it[4] ?? false) {
         // Menu rancangan (fitur belum jadi): redup, tak bisa diklik, bertanda "Segera".
-        echo '<div class="sb-item sb-item-segera" title="' . esc($label, 'attr') . ' — segera hadir" aria-disabled="true"' . $atrCari($label) . '>'
-            . ikon((string) $ikon, 'sb-ikon') . '<span class="sb-label">' . esc($label) . '</span><span class="sb-segera">Segera</span></div>';
+        echo '<li' . $atrCari($label) . '><div class="' . $kelas . ' sb-item-segera" title="' . esc($label, 'attr') . ' — segera hadir" aria-disabled="true">'
+            . $ikonEl . '<span class="sb-label">' . esc($label) . '</span><span class="sb-segera">Segera</span></div></li>';
 
         return;
     }
-    echo '<a href="' . site_url($url) . '" class="sb-item" title="' . esc($label, 'attr') . '"' . ($itemAktif($it) ? ' aria-current="page"' : '')
-        . $atrCari($label) . '>' . ikon((string) $ikon, 'sb-ikon') . '<span class="sb-label">' . esc($label) . '</span></a>';
+    echo '<li' . $atrCari($label) . '><a href="' . site_url($url) . '" class="' . $kelas . '" title="' . esc($label, 'attr') . '"'
+        . ($itemAktif($it) ? ' aria-current="page"' : '') . '>' . $ikonEl . '<span class="sb-label">' . esc($label) . '</span></a></li>';
 };
+// Tautan luar di daftar kedua (pola template: dipisah garis, di bawah menu utama).
+$tautanLuar = [[site_url('/'), 'Situs sekolah', 'globe']];
+if ($bolehFormPublik) {
+    $tautanLuar[] = [site_url('isi'), 'Form kesediaan guru', 'clipboard-list'];
+}
 $semuaLabel = [];
 foreach ($groups as $g) {
     foreach ($g['items'] as $it) {
         $semuaLabel[] = mb_strtolower((string) $it[1]);
     }
+}
+foreach ($tautanLuar as $t) {
+    $semuaLabel[] = mb_strtolower($t[1]);
 }
 $alpineJs = \App\Libraries\Tampilan::alpineCsp($cur) ? 'assets/js/vendor/alpine-csp.min.js' : 'assets/js/vendor/alpine.min.js';
 $js       = static fn (string $berkas): string => '<script defer src="' . base_url($berkas) . '?v=' . @filemtime(FCPATH . $berkas) . '" ' . csp_script_nonce() . '></script>';
@@ -143,103 +166,133 @@ $js       = static fn (string $berkas): string => '<script defer src="' . base_u
     </div>
 </div>
 
-<!-- ===================== BILAH ATAS ===================== -->
-<header class="navbar">
-    <div class="flex h-full items-center justify-between gap-3 px-3 lg:px-4">
-        <div class="flex min-w-0 items-center gap-2">
-            <button type="button" class="tombol-navbar lg:hidden" @click="alihLaci()" aria-controls="menu-samping" :aria-expanded="sidebar" aria-label="Buka atau tutup menu"><?= ikon('bars', 'h-6 w-6') ?></button>
+<!-- ===================== BILAH ATAS (template: navbar-dashboard) ===================== -->
+<nav class="navbar" aria-label="Bilah atas">
+    <div class="navbar-dalam">
+        <div class="flex min-w-0 items-center">
+            <button type="button" class="tombol-navbar lg:hidden" @click="alihLaci()" aria-controls="menu-samping" :aria-expanded="sidebar" aria-label="Buka atau tutup menu">
+                <span x-show="! sidebar"><?= ikon('bars', 'h-6 w-6') ?></span>
+                <span x-show="sidebar" x-cloak><?= ikon('close', 'h-6 w-6') ?></span>
+            </button>
             <button type="button" class="tombol-navbar hidden lg:inline-flex" @click="alihCiut()" aria-controls="menu-samping" :aria-pressed="collapsed"
                     aria-label="Ciutkan menu samping" :title="collapsed ? 'Lebarkan menu samping' : 'Ciutkan menu samping'"><?= ikon('bars', 'h-6 w-6') ?></button>
-            <a href="<?= site_url($beranda) ?>" class="flex min-w-0 items-center gap-2.5 rounded-lg focus:outline-hidden focus-visible:ring-2 focus-visible:ring-brand-300">
+            <a href="<?= site_url($beranda) ?>" class="navbar-merek" title="<?= esc($schoolName, 'attr') ?>">
                 <?php if ($schoolLogo !== null): ?>
-                    <img src="<?= esc($schoolLogo, 'attr') ?>" alt="" class="h-9 w-9 shrink-0 rounded-lg object-contain">
+                    <img src="<?= esc($schoolLogo, 'attr') ?>" alt="" class="mr-3 h-8 w-8 shrink-0 rounded-lg object-contain">
                 <?php else: ?>
-                    <span class="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-brand-700 font-semibold text-white" aria-hidden="true"><?= esc(mb_strtoupper(mb_substr($schoolName, 0, 1))) ?></span>
+                    <span class="mr-3 flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-brand-700 text-sm font-semibold text-white" aria-hidden="true"><?= esc(mb_strtoupper(mb_substr($schoolName, 0, 1))) ?></span>
                 <?php endif; ?>
-                <span class="hidden min-w-0 leading-tight sm:block">
-                    <span class="block truncate text-sm font-semibold text-gray-900" title="<?= esc($schoolName, 'attr') ?>"><?= esc($schoolName) ?></span>
-                    <span class="block text-xs text-gray-500">Sistem Informasi Akademik Sekolah</span>
-                </span>
+                <span class="navbar-nama"><?= esc($schoolName) ?></span>
             </a>
+            <div class="hidden lg:block lg:pl-3.5" role="search">
+                <label for="cari-menu-atas" class="sr-only">Cari menu</label>
+                <div class="relative lg:w-96">
+                    <div class="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3"><?= ikon('search', 'h-5 w-5 text-gray-500', 'solid') ?></div>
+                    <input type="search" id="cari-menu-atas" class="navbar-cari" placeholder="Cari menu…" autocomplete="off" x-model="cari" @keydown.enter.prevent="bukaHasilPertama()">
+                </div>
+            </div>
         </div>
 
-        <!-- Menu akun -->
-        <div class="relative" x-data="dropdown" @click.outside="tutup()" @keydown.escape="tutup(true)" @keydown.down.prevent="gerak(1)" @keydown.up.prevent="gerak(-1)">
-            <button type="button" x-ref="pemicu" @click="alih()" :aria-expanded="buka" aria-haspopup="true" aria-label="Menu akun <?= esc($namaAkun, 'attr') ?>"
-                    class="flex items-center gap-2 rounded-lg p-1 text-left transition hover:bg-gray-100 focus:outline-hidden focus-visible:ring-2 focus-visible:ring-gray-300">
-                <span class="hidden text-right leading-tight sm:block">
-                    <span class="block max-w-48 truncate text-sm font-medium text-gray-900"><?= esc($namaAkun) ?></span>
-                    <span class="block text-xs text-gray-500"><?= esc($labelPeranKini) ?></span>
-                </span>
-                <?php if (! empty($admin['photo'])): ?>
-                    <img src="<?= base_url('uploads/' . esc($admin['photo'], 'url')) ?>" alt="" class="h-9 w-9 shrink-0 rounded-full object-cover">
-                <?php else: ?>
-                    <span class="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-brand-100 text-sm font-semibold text-brand-700" aria-hidden="true"><?= esc($awalAkun) ?></span>
-                <?php endif; ?>
-                <?= ikon('chevron-down', 'hidden h-4 w-4 text-gray-500 sm:block') ?>
-            </button>
-            <div class="dropdown-menu right-0 w-60" x-show="buka" x-cloak x-transition.origin.top.right.duration.150ms>
-                <div class="dropdown-kepala">
-                    <p class="truncate text-sm font-semibold"><?= esc($namaAkun) ?></p>
-                    <p class="truncate text-xs text-gray-500"><?= esc($labelPeranKini) ?> &middot; @<?= esc((string) ($admin['username'] ?? '')) ?></p>
-                </div>
-                <ul class="py-1">
-                    <li><a href="<?= site_url('admin/profile') ?>" class="dropdown-item"><?= ikon('user', 'h-4 w-4') ?>Profil Saya</a></li>
-                    <?php if ($bolehFormPublik): // tautan form kesediaan guru — tak relevan bagi Operator/Hubin ?>
-                        <li><a href="<?= site_url('isi') ?>" target="_blank" rel="noopener" class="dropdown-item"><?= ikon('arrow-up-right-from-square', 'h-4 w-4') ?>Lihat Form Publik</a></li>
+        <div class="flex items-center">
+            <button type="button" class="tombol-navbar lg:hidden" @click="alihLaci()" aria-label="Cari menu"><?= ikon('search', 'h-6 w-6', 'solid') ?></button>
+            <!-- Menu akun (template: avatar bulat + dropdown) -->
+            <div class="relative ml-3" x-data="dropdown" @click.outside="tutup()" @keydown.escape="tutup(true)" @keydown.down.prevent="gerak(1)" @keydown.up.prevent="gerak(-1)">
+                <button type="button" x-ref="pemicu" @click="alih()" :aria-expanded="buka" aria-haspopup="true" aria-label="Menu akun <?= esc($namaAkun, 'attr') ?>"
+                        class="flex rounded-full text-sm focus:ring-4 focus:ring-gray-300 focus:outline-hidden" title="<?= esc($namaAkun . ' · ' . $labelPeranKini, 'attr') ?>">
+                    <?php if (! empty($admin['photo'])): ?>
+                        <img src="<?= base_url('uploads/' . esc($admin['photo'], 'url')) ?>" alt="" class="h-8 w-8 rounded-full object-cover">
+                    <?php else: ?>
+                        <span class="flex h-8 w-8 items-center justify-center rounded-full bg-brand-100 text-sm font-semibold text-brand-700" aria-hidden="true"><?= esc($awalAkun) ?></span>
                     <?php endif; ?>
-                </ul>
-                <ul class="py-1">
-                    <li><a href="<?= site_url('admin/logout') ?>" class="dropdown-item dropdown-item-bahaya"><?= ikon('arrow-right-to-bracket', 'h-4 w-4') ?>Keluar</a></li>
-                </ul>
+                </button>
+                <div class="dropdown-menu right-0 w-60" x-show="buka" x-cloak x-transition.origin.top.right.duration.150ms>
+                    <div class="dropdown-kepala">
+                        <p class="truncate text-sm text-gray-900"><?= esc($namaAkun) ?></p>
+                        <p class="truncate text-sm font-medium text-gray-900"><?= esc($labelPeranKini) ?> &middot; @<?= esc((string) ($admin['username'] ?? '')) ?></p>
+                    </div>
+                    <ul class="py-1">
+                        <li><a href="<?= site_url('admin/profile') ?>" class="dropdown-item"><?= ikon('user', 'h-4 w-4') ?>Profil saya</a></li>
+                        <?php if ($bolehPengaturan): ?>
+                            <li><a href="<?= site_url('admin/settings') ?>" class="dropdown-item"><?= ikon('cog', 'h-4 w-4') ?>Pengaturan sekolah</a></li>
+                        <?php endif; ?>
+                    </ul>
+                    <ul class="py-1">
+                        <li><a href="<?= site_url('admin/logout') ?>" class="dropdown-item dropdown-item-bahaya"><?= ikon('arrow-right-to-bracket', 'h-4 w-4') ?>Keluar</a></li>
+                    </ul>
+                </div>
             </div>
         </div>
     </div>
-</header>
+</nav>
 
-<!-- ===================== MENU SAMPING ===================== -->
+<!-- ===================== MENU SAMPING (template: sidebar) ===================== -->
 <aside id="menu-samping" class="sb" :data-terbuka="sidebar" aria-label="Menu samping">
-    <nav class="sb-nav" aria-label="Menu utama" x-data="sbMenu" data-label="<?= esc(json_encode($semuaLabel), 'attr') ?>">
-        <label class="sb-cari-wadah">
-            <span class="sr-only">Cari menu</span>
-            <?= ikon('search', 'sb-cari-ikon') ?>
-            <input type="search" x-model="cari" class="sb-cari" placeholder="Cari menu…" autocomplete="off">
-        </label>
-        <?php foreach ($groups as $g): ?>
-            <?php if ($g['title'] === null): ?>
-                <?php foreach ($g['items'] as $it) { $renderItem($it); } ?>
-            <?php else:
-                // Grup lipat: grup berisi halaman sekarang selalu terbuka; grup lain mengikuti pilihan pengguna (cookie sb_grup, dibaca
-                // server → tidak berkedip). Menu menciut (desktop) menampilkan semua ikon, judul grup diganti garis tipis.
-                $grupAktif = false;
-                foreach ($g['items'] as $it) {
-                    $grupAktif = $grupAktif || (! ($it[4] ?? false) && $itemAktif($it));
-                }
-                $kunciGrup  = 'sb_g_' . substr(md5((string) $g['title']), 0, 8);
-                $bukaAwal   = $grupAktif || in_array($kunciGrup, $grupBuka, true);
-                $labelGrup  = array_map(static fn (array $it): string => mb_strtolower((string) $it[1]), $g['items']);
-            ?>
-                <div class="sb-grup" x-data="sbGrup" data-kunci="<?= $kunciGrup ?>" data-buka="<?= $bukaAwal ? '1' : '0' ?>"
-                     data-label="<?= esc(json_encode($labelGrup), 'attr') ?>" x-show="cari === '' || grupCocok()">
-                    <button type="button" class="sb-grup-judul"<?= $grupAktif ? ' data-aktif' : '' ?> @click="alih()" :aria-expanded="buka || cari !== ''">
-                        <span><?= esc($g['title']) ?></span>
-                        <span class="transition-transform<?= $bukaAwal ? ' rotate-180' : '' ?>" :class="{ 'rotate-180': buka || cari !== '' }"><?= ikon('chevron-down', 'h-3.5 w-3.5') ?></span>
-                    </button>
-                    <div class="sb-pemisah" aria-hidden="true"></div>
-                    <div class="sb-grup-isi" x-show="buka || cari !== '' || sempit()" x-collapse.duration.200ms<?= $bukaAwal || $ciut ? '' : ' x-cloak' ?>>
-                        <?php foreach ($g['items'] as $it) { $renderItem($it); } ?>
-                    </div>
-                </div>
+    <div class="sb-panel">
+        <nav class="sb-gulir" aria-label="Menu utama" x-data="sbMenu" data-label="<?= esc(json_encode($semuaLabel), 'attr') ?>">
+            <div class="sb-isi">
+                <ul class="sb-daftar">
+                    <li class="lg:hidden">
+                        <label class="sb-cari-wadah" for="cari-menu-samping">
+                            <span class="sr-only">Cari menu</span>
+                            <?= ikon('search', 'sb-cari-ikon', 'solid') ?>
+                            <input type="search" id="cari-menu-samping" class="sb-cari" placeholder="Cari menu…" autocomplete="off" x-model="cari" @keydown.enter.prevent="bukaHasilPertama()">
+                        </label>
+                    </li>
+                    <?php foreach ($groups as $g): ?>
+                        <?php if ($g['title'] === null || count($g['items']) === 1): ?>
+                            <?php foreach ($g['items'] as $it) { $renderItem($it); } ?>
+                        <?php else:
+                            // Grup lipat: grup berisi halaman sekarang selalu terbuka; grup lain mengikuti pilihan pengguna (cookie sb_grup, dibaca
+                            // server → tidak berkedip). Menu menciut (desktop): hanya ikon grup; klik ikon = lebarkan menu + buka grupnya.
+                            $grupAktif = false;
+                            foreach ($g['items'] as $it) {
+                                $grupAktif = $grupAktif || (! ($it[4] ?? false) && $itemAktif($it));
+                            }
+                            $kunciGrup = 'sb_g_' . substr(md5((string) $g['title']), 0, 8);
+                            $bukaAwal  = $grupAktif || in_array($kunciGrup, $grupBuka, true);
+                            $labelGrup = array_map(static fn (array $it): string => mb_strtolower((string) $it[1]), $g['items']);
+                            $judulGrup = $namaGrup((string) $g['title']);
+                        ?>
+                            <li class="sb-grup" x-data="sbGrup" data-kunci="<?= $kunciGrup ?>" data-buka="<?= $bukaAwal ? '1' : '0' ?>"
+                                data-label="<?= esc(json_encode($labelGrup), 'attr') ?>" x-show="cari === '' || grupCocok()">
+                                <button type="button" class="sb-item sb-grup-tombol"<?= $grupAktif ? ' data-aktif' : '' ?> @click="alih()"
+                                        :aria-expanded="buka || cari !== ''" aria-controls="<?= $kunciGrup ?>" title="<?= esc($judulGrup, 'attr') ?>">
+                                    <?= $ikonSb((string) ($g['ikon'] ?? 'grid'), 'sb-ikon') ?>
+                                    <span class="sb-label"><?= esc($judulGrup) ?></span>
+                                    <span class="sb-panah<?= $bukaAwal ? ' rotate-180' : '' ?>" :class="{ 'rotate-180': buka || cari !== '' }"><?= ikon('chevron-down', 'h-5 w-5') ?></span>
+                                </button>
+                                <ul id="<?= $kunciGrup ?>" class="sb-anak-daftar" x-show="(buka || cari !== '') && ! sempit()" x-collapse.duration.200ms<?= $bukaAwal && ! $ciut ? '' : ' x-cloak' ?>>
+                                    <?php foreach ($g['items'] as $it) { $renderItem($it, true); } ?>
+                                </ul>
+                            </li>
+                        <?php endif; ?>
+                    <?php endforeach; ?>
+                    <li class="sb-kosong" x-show="cari !== '' && ! adaHasil()" x-cloak>Menu tidak ditemukan.</li>
+                </ul>
+                <ul class="sb-daftar sb-daftar-kedua">
+                    <?php foreach ($tautanLuar as [$url, $label, $ikon]): ?>
+                        <li<?= $atrCari($label) ?>><a href="<?= esc($url, 'attr') ?>" target="_blank" rel="noopener" class="sb-item" title="<?= esc($label, 'attr') ?> (tab baru)"><?= $ikonSb($ikon, 'sb-ikon') ?><span class="sb-label"><?= esc($label) ?></span></a></li>
+                    <?php endforeach; ?>
+                </ul>
+            </div>
+        </nav>
+        <!-- Deret ikon bawah (template: sidebar-bottom-menu; desktop) -->
+        <div class="sb-bawah">
+            <a href="<?= site_url('admin/profile') ?>" class="sb-bawah-tombol" title="Profil saya" aria-label="Profil saya"><?= $ikonSb('user-circle', 'h-6 w-6') ?></a>
+            <?php if ($bolehPengaturan): ?>
+                <a href="<?= site_url('admin/settings') ?>" class="sb-bawah-tombol" title="Pengaturan sekolah" aria-label="Pengaturan sekolah"><?= $ikonSb('cog', 'h-6 w-6') ?></a>
             <?php endif; ?>
-        <?php endforeach; ?>
-        <p class="sb-kosong" x-show="cari !== '' && ! adaHasil()" x-cloak>Menu tidak ditemukan.</p>
-    </nav>
+            <?php if ($adminUtama): ?>
+                <a href="<?= site_url('admin/settings') ?>#tampilan" class="sb-bawah-tombol" title="Tampilan &amp; tema" aria-label="Tampilan dan tema"><?= $ikonSb('adjustments-horizontal', 'h-6 w-6') ?></a>
+            <?php endif; ?>
+        </div>
+    </div>
 </aside>
 <div class="sb-latar" :data-terbuka="sidebar" @click="tutupLaci()" aria-hidden="true"></div>
 
-<!-- ===================== ISI ===================== -->
+<!-- ===================== ISI (template: main-content) ===================== -->
 <div class="kerangka-isi">
-    <main id="isi" tabindex="-1" class="flex-1 px-4 py-6 focus:outline-hidden lg:px-6"<?= $lihatSaja ? ' data-lihat-saja="1"' : '' ?>>
+    <main id="isi" tabindex="-1" class="flex-1 px-4 pt-6 focus:outline-hidden"<?= $lihatSaja ? ' data-lihat-saja="1"' : '' ?>>
         <?php $adaPesan = $lihatSaja || session('success') || session('error') || session('errors'); ?>
         <?php if ($adaPesan): ?>
             <div class="mb-5 space-y-3">
@@ -263,9 +316,17 @@ $js       = static fn (string $berkas): string => '<script defer src="' . base_u
         <?= $isiHalaman ?>
     </main>
 
-    <footer class="kaki-halaman">
-        <p>&copy; <?= date('Y') ?> &middot; Sistem Informasi Akademik Sekolah (BINUS)</p>
-        <?= view('partials/kredit', ['kreditKelas' => 'mt-1']) ?>
+    <!-- Kaki (template: footer-dashboard) -->
+    <footer class="kaki">
+        <div class="kaki-kartu">
+            <ul class="kaki-tautan">
+                <li><a href="<?= site_url('/') ?>" target="_blank" rel="noopener">Situs sekolah</a></li>
+                <li><a href="<?= site_url('admin/profile') ?>">Profil saya</a></li>
+                <?php if ($bolehPengaturan): ?><li><a href="<?= site_url('admin/settings') ?>">Pengaturan sekolah</a></li><?php endif; ?>
+            </ul>
+            <?= view('partials/kredit', ['kreditKelas' => 'text-sm text-gray-500']) ?>
+        </div>
+        <p class="kaki-hak">&copy; <?= date('Y') ?> &middot; Sistem Informasi Akademik Sekolah (BINUS)</p>
     </footer>
 </div>
 

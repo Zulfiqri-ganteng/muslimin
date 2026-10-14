@@ -10,7 +10,7 @@ $akhir   = count($remah) - 1;
 ?>
 <nav class="remah" aria-label="Remah roti">
     <ol>
-        <li><a href="<?= esc($beranda, 'attr') ?>"><?= ikon('home', 'h-4 w-4') ?>Beranda</a></li>
+        <li><a href="<?= esc($beranda, 'attr') ?>"><?= ikon('home', 'h-4 w-4', 'solid') ?>Beranda</a></li>
         <?php foreach ($remah as $i => $r): $url = $r[1] ?? null; ?>
             <li class="inline-flex items-center gap-1">
                 <?= ikon('chevron-right', 'h-4 w-4 text-gray-400') ?>

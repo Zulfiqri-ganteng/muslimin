@@ -54,14 +54,14 @@ final class MenuAdmin
             ['judul' => null, 'entri' => [
                 'dashboard' => ['Dashboard', self::MENU, [['admin/dashboard', 'Dashboard', 'chart-pie']]],
             ]],
-            ['judul' => 'KESISWAAN', 'entri' => [
+            ['judul' => 'KESISWAAN', 'ikon' => 'users-group', 'entri' => [
                 'master_siswa'   => ['Data Siswa', self::MENU, [['admin/master/siswa', 'Data Siswa', 'user-graduate']]],
                 'master_kelas'   => ['Kelas', self::MENU, [['admin/master/kelas', 'Kelas', 'chalkboard']]],
                 'master_jurusan' => ['Jurusan', self::MENU, [['admin/master/jurusan', 'Jurusan', 'school']]],
                 'biodata'        => ['Isian Biodata Siswa', self::MENU, [['admin/biodata', 'Isian Biodata Siswa', 'profile-card']]],
                 'tahun_ajaran'   => ['Tahun Ajaran', self::MENU, [], ['awalan' => ['admin/master/tahun-ajaran'], 'ket' => 'Halaman tanpa menu samping (admin/master/tahun-ajaran).']],
             ]],
-            ['judul' => 'GURU', 'entri' => [
+            ['judul' => 'GURU', 'ikon' => 'chalkboard-user', 'entri' => [
                 'master_guru'         => ['Guru', self::MENU, [['admin/master/guru', 'Guru', 'users']]],
                 'master_jabatan'      => ['Jabatan', self::MENU, [['admin/master/jabatan', 'Jabatan', 'badge-check']]],
                 'master_ketersediaan' => ['Ketersediaan Guru', self::MENU, [['admin/master/ketersediaan', 'Ketersediaan Guru', 'calendar-edit']]],
@@ -69,7 +69,7 @@ final class MenuAdmin
                 'master_pengampu'     => ['Penugasan', self::MENU, [['admin/master/pengampu', 'Penugasan', 'clipboard-check']]],
                 'skbm'                => ['SKBM', self::MENU, [['admin/skbm', 'SKBM', 'file-lines']], ['ket' => 'Sumber ceklis Koreksi honor (data beban mengajar).']],
             ]],
-            ['judul' => 'JADWAL & ABSENSI', 'entri' => [
+            ['judul' => 'JADWAL & ABSENSI', 'ikon' => 'calendar-month', 'entri' => [
                 'master_mapel'  => ['Mata Pelajaran', self::MENU, [['admin/master/mapel', 'Mata Pelajaran', 'book']]],
                 'master_hari'   => ['Hari', self::MENU, [['admin/master/hari', 'Hari', 'calendar-month']]],
                 'master_jam'    => ['Jam Pelajaran', self::MENU, [['admin/master/jam', 'Jam Pelajaran', 'clock']]],
@@ -82,7 +82,7 @@ final class MenuAdmin
                 'rekap_absensi' => ['Rekap Absensi', self::MENU, [['admin/absensi/rekap', 'Rekap Absensi', 'chart-line-up']]],
                 'fase'          => ['Fase Kurikulum', self::MENU, [], ['awalan' => ['admin/master/fase'], 'ket' => 'Halaman tanpa menu samping (admin/master/fase).']],
             ]],
-            ['judul' => 'UJIAN', 'entri' => [
+            ['judul' => 'UJIAN', 'ikon' => 'file-pen', 'entri' => [
                 'ujian_asts1' => ['ASTS 1', self::MENU, [['admin/ujian/asts1', 'ASTS 1', 'file-pen']]],
                 'ujian_asas'  => ['ASAS', self::MENU, [['admin/ujian/asas', 'ASAS', 'file-pen']]],
                 'ujian_asts2' => ['ASTS 2', self::MENU, [['admin/ujian/asts2', 'ASTS 2', 'file-pen']]],
@@ -96,7 +96,7 @@ final class MenuAdmin
                 ]],
                 'honor_pengaturan' => ['Pengaturan Honor', self::MENU, [['admin/honor/pengaturan', 'Pengaturan Honor', 'adjustments-horizontal']], ['awalan' => ['admin/honor']]],
             ]],
-            ['judul' => 'UJI KOMPETENSI (UKK)', 'entri' => [
+            ['judul' => 'UJI KOMPETENSI (UKK)', 'ikon' => 'award', 'entri' => [
                 'ukk_paket'    => ['Paket Soal', self::MENU, [['admin/master/paket-soal-ukk', 'Paket Soal', 'layers']]],
                 'ukk_tempat'   => ['Tempat Uji', self::MENU, [['admin/master/tempat-uji', 'Tempat Uji', 'map-pin']]],
                 'ukk_penguji'  => ['Penguji Eksternal', self::MENU, [['admin/master/penguji-eksternal', 'Penguji Eksternal', 'address-book']]],
@@ -107,7 +107,7 @@ final class MenuAdmin
                 'ukk_sertifikat' => ['Sertifikat', self::MENU, [['admin/sertifikat-ukk', 'Sertifikat', 'award']]],
                 'ukk_rekap'    => ['Rekap UKK', self::MENU, [['admin/laporan-ukk', 'Rekap UKK', 'chart-mixed']]],
             ]],
-            ['judul' => 'PKL / PRAKERIN', 'entri' => [
+            ['judul' => 'PKL / PRAKERIN', 'ikon' => 'briefcase', 'entri' => [
                 // Modul: isi menu (Laporan, Tanda Tangan, Pengaturan, …) tampil menurut hak rinci PKL (PklHak).
                 'pkl' => ['PKL / Prakerin', self::MODUL, [
                     ['admin/pkl', 'Beranda PKL', 'briefcase', true],
@@ -120,7 +120,7 @@ final class MenuAdmin
                     ['admin/pkl/pengaturan', 'Pengaturan PKL', 'adjustments-horizontal'],
                 ], ['api' => ['pkl'], 'ket' => 'Ajuan PKL siswa, surat izin, biaya, tanda tangan. Aksi di dalamnya diatur di bagian "PKL & Surat".']],
             ]],
-            ['judul' => 'LABORATORIUM', 'entri' => [
+            ['judul' => 'LABORATORIUM', 'ikon' => 'desktop-pc', 'entri' => [
                 'master_lab'       => ['Laboratorium', self::MENU, [['admin/master/lab', 'Laboratorium', 'desktop-pc']], ['awalan' => ['admin/master/lab', 'admin/lab-gambar/lab']]],
                 'master_aset'      => ['Aset / Inventaris', self::MENU, [['admin/master/aset', 'Aset / Inventaris', 'archive']], ['awalan' => ['admin/master/aset', 'admin/lab-gambar/aset']]],
                 'master_sparepart' => ['Sparepart', self::MENU, [['admin/master/sparepart', 'Sparepart', 'tools']], ['awalan' => ['admin/master/sparepart', 'admin/lab-gambar/sparepart']]],
@@ -137,17 +137,17 @@ final class MenuAdmin
             // SURAT SEKOLAH (docs/DESAIN-SURAT-SEKOLAH.md): Daftar Surat + satu menu per jenis surat (dari SuratJenis). Jenis yang
             // halamannya BELUM dibangun (tidak di SuratJenis::SIAP) tampil redup bertanda "Segera". Siapa melihat item jenis =
             // hak rinci per jenis (PklHak).
-            ['judul' => 'SURAT SEKOLAH', 'entri' => [
+            ['judul' => 'SURAT SEKOLAH', 'ikon' => 'envelope', 'entri' => [
                 'surat' => ['Surat Sekolah', self::MODUL, array_merge(
                     [['admin/surat', 'Daftar Surat', 'envelope', true]],
                     $jenisSurat
                 ), ['api' => ['surat'], 'ket' => 'Daftar Surat dan surat per jenis. Buat/ACC/Unduh tiap jenis diatur di bagian "PKL & Surat".']],
             ]],
-            ['judul' => 'ARSIP & INFO', 'entri' => [
+            ['judul' => 'ARSIP & INFO', 'ikon' => 'folder-open', 'entri' => [
                 'dokumen'    => ['Arsip Dokumen', self::MENU, [['admin/dokumen', 'Arsip Dokumen', 'folder-open']]],
                 'pengumuman' => ['Pengumuman', self::MENU, [['admin/pengumuman', 'Pengumuman', 'bullhorn']]],
             ]],
-            ['judul' => 'SISTEM', 'entri' => [
+            ['judul' => 'SISTEM', 'ikon' => 'cog', 'entri' => [
                 'pengaturan_sekolah' => ['Pengaturan Sekolah', self::MENU, [['admin/settings', 'Pengaturan Sekolah', 'cog']]],
                 'akun'      => ['Kelola Akun', self::ADMIN, [['admin/akun', 'Kelola Akun', 'user-settings']], ['ket' => 'Khusus Admin: membuat akun dan memilih perannya.']],
                 'hak_akses' => ['Hak Akses', self::ADMIN, [['admin/hak-akses', 'Hak Akses', 'lock']], ['ket' => 'Khusus Admin: mengatur siapa boleh apa.']],
@@ -239,7 +239,8 @@ final class MenuAdmin
                 }
             }
             if ($items !== []) {
-                $out[] = ['title' => $g['judul'], 'items' => $items];
+                // 'ikon' = ikon grup di menu samping (baris grup ber-ikon + panah, pola template Flowbite Admin).
+                $out[] = ['title' => $g['judul'], 'ikon' => (string) ($g['ikon'] ?? 'grid'), 'items' => $items];
             }
         }
 

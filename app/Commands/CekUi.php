@@ -312,6 +312,12 @@ class CekUi extends BaseCommand
         // Ikon menu samping berasal dari katalog MenuAdmin (bukan teks view) → diperiksa bersama layout (baris 0).
         if ($rel === 'layouts/admin.php') {
             foreach (MenuAdmin::sidebar() as $g) {
+                // Ikon grup (baris grup ber-ikon gaya template): versi solid, cadangan outline.
+                $ikonGrup = (string) ($g['ikon'] ?? '');
+                if ($g['title'] !== null && ! is_file(APPPATH . 'ThirdParty/flowbite-icons/solid/' . $ikonGrup . '.svg')
+                    && ! is_file(APPPATH . 'ThirdParty/flowbite-icons/outline/' . $ikonGrup . '.svg')) {
+                    $hasil[] = ['ikon_hilang', 0, 'ikon grup "' . $g['title'] . '" (' . $ikonGrup . ') → tambahkan ke resources/ikon.json lalu npm run vendor'];
+                }
                 foreach ($g['items'] as $it) {
                     if (! is_file(APPPATH . 'ThirdParty/flowbite-icons/outline/' . (string) $it[2] . '.svg')) {
                         $hasil[] = ['ikon_hilang', 0, 'ikon menu "' . $it[1] . '" (' . $it[2] . ') → tambahkan ke resources/ikon.json lalu npm run vendor'];

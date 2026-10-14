@@ -258,8 +258,8 @@
                 });
                 if (!grup) { return 'tak ada grup tertutup untuk diuji'; }
                 var kunci = grup.getAttribute('data-kunci');
-                var judul = grup.querySelector('.sb-grup-judul');
-                var isi = grup.querySelector('.sb-grup-isi');
+                var judul = grup.querySelector('.sb-grup-tombol');
+                var isi = grup.querySelector('.sb-anak-daftar');
                 if (tampak(isi)) { return 'grup tertutup malah tampil terbuka'; }
                 judul.click();
                 if (!await sampai(function () {

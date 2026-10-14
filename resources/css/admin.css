@@ -93,8 +93,9 @@
     --brand-400: 96 165 250;  --brand-500: 59 130 246;  --brand-600: 37 99 235;   --brand-700: 29 78 216;
     --brand-800: 30 64 175;   --brand-900: 30 58 138;
   }
-  /* Gaya menu samping. --sb-penanda = garis kiri menu aktif (Berwarna: mint, aksen tema Lilac Sekolah). */
-  :root, [data-sidebar="warna"] {
+  /* Gaya menu samping. Tanpa atribut = Terang (persis template Flowbite). --sb-penanda = garis kiri menu aktif (Berwarna: mint,
+     aksen Warna Sekolah). */
+  [data-sidebar="warna"] {
     --sb-bg: rgb(var(--brand-900));            --sb-garis: rgb(255 255 255 / .1);
     --sb-teks: rgb(var(--brand-100));          --sb-ikon: rgb(var(--brand-300));          --sb-redup: rgb(var(--brand-300));
     --sb-judul-aktif: var(--color-white);      --sb-hover-bg: rgb(255 255 255 / .1);      --sb-hover-teks: var(--color-white);
@@ -104,12 +105,13 @@
     --sb-cari-placeholder: rgb(var(--brand-300));
     --sb-segera-bg: rgb(252 196 25 / .2);      --sb-segera-teks: var(--color-gold-400);   --sb-nonaktif: rgb(var(--brand-300) / .7);
   }
-  /* Terang = sidebar Flowbite: putih, garis kanan abu tipis, menu aktif berlatar warna utama muda. */
-  [data-sidebar="terang"] {
+  /* Terang = sidebar template Flowbite (partials/sidebar.html): putih, garis kanan gray-200, teks gray-900, ikon gray-500
+     (gray-900 saat disorot), menu aktif & sorot berlatar gray-100. */
+  :root, [data-sidebar="terang"] {
     --sb-bg: var(--color-white);               --sb-garis: var(--color-gray-200);
     --sb-teks: var(--color-gray-900);          --sb-ikon: var(--color-gray-500);          --sb-redup: var(--color-gray-500);
     --sb-judul-aktif: var(--color-gray-900);   --sb-hover-bg: var(--color-gray-100);      --sb-hover-teks: var(--color-gray-900);
-    --sb-aktif-bg: rgb(var(--brand-50));       --sb-aktif-teks: rgb(var(--brand-700));    --sb-aktif-ikon: rgb(var(--brand-700));
+    --sb-aktif-bg: var(--color-gray-100);      --sb-aktif-teks: var(--color-gray-900);    --sb-aktif-ikon: var(--color-gray-900);
     --sb-penanda: transparent;
     --sb-cari-bg: var(--color-gray-50);        --sb-cari-garis: var(--color-gray-300);    --sb-cari-teks: var(--color-gray-900);
     --sb-cari-placeholder: var(--color-gray-500);
@@ -325,60 +327,83 @@
 
   /* ---- Kepala halaman + remah roti (breadcrumb): helper ui_kepala() / ui_remah() ---- */
   .kepala-halaman { @apply mb-6; }
-  .remah          { @apply mb-3 flex; }
+  .remah          { @apply mb-5 flex; }
   .remah ol       { @apply inline-flex flex-wrap items-center gap-1 text-sm font-medium; }
   .remah a        { @apply inline-flex items-center gap-1.5 text-gray-700 transition-colors hover:text-brand-700; }
-  .remah [aria-current='page'] { @apply text-gray-500; }
-  .judul-halaman  { @apply text-xl font-semibold text-gray-900; }
+  .remah [aria-current='page'] { @apply text-gray-400; }
+  .judul-halaman  { @apply text-xl font-semibold text-gray-900 sm:text-2xl; }
   .ket-halaman    { @apply mt-1 text-sm text-gray-500; }
 
   /* =================================================================================================================
      KERANGKA (F3) — layouts/admin.php: bilah atas putih selebar layar, menu samping di bawahnya (3 gaya lewat token --sb-*),
      isi + kaki. Menciut (desktop) = <html data-ciut> ditulis server dari cookie sb_ciut → tanpa kedipan saat pindah halaman.
      ================================================================================================================= */
-  .navbar        { @apply fixed inset-x-0 top-0 z-40 h-16 border-b border-gray-200 bg-white; }
-  .tombol-navbar { @apply inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-lg text-gray-500 transition hover:bg-gray-100 hover:text-gray-900 focus:outline-hidden focus-visible:ring-2 focus-visible:ring-gray-300; }
-  .sb { @apply fixed bottom-0 left-0 top-16 z-30 flex w-64 flex-col;
-        background-color: var(--sb-bg); border-right: 1px solid var(--sb-garis); translate: -100% 0;
-        transition: translate 200ms, width 200ms; }
+  /* Bilah atas = navbar-dashboard template: putih, garis bawah gray-200, tombol p-2 rounded, merek (logo h-8 + nama text-xl
+     sm:text-2xl semibold), kotak cari lg:w-96 bg-gray-50 garis gray-300 p-2.5 pl-10, avatar bulat 8. Tinggi tetap 4rem = jarak isi. */
+  .navbar        { @apply fixed inset-x-0 top-0 z-40 border-b border-gray-200 bg-white; }
+  .navbar-dalam  { @apply flex h-16 items-center justify-between px-3 lg:px-5 lg:pl-3; }
+  .tombol-navbar { @apply inline-flex shrink-0 cursor-pointer items-center justify-center rounded-sm p-2 text-gray-600 transition hover:bg-gray-100 hover:text-gray-900 focus:bg-gray-100 focus:ring-2 focus:ring-gray-100 focus:outline-hidden; }
+  .navbar-merek  { @apply ml-2 flex min-w-0 items-center md:mr-24; }
+  .navbar-nama   { @apply min-w-0 self-center truncate text-xl font-semibold whitespace-nowrap text-gray-900 sm:text-2xl; }
+  .navbar-cari   { @apply block w-full rounded-lg border border-gray-300 bg-gray-50 p-2.5 pl-10 text-gray-900 sm:text-sm focus:border-brand-500 focus:ring-brand-500; }
+
+  /* Menu samping = sidebar template: panel border-r, gulir pt-5 pb-4, isi px-3 dengan 2 daftar dipisah garis (space-y-2), baris
+     p-2 text-base rounded-lg + ikon 6×6 + label ml-3; GRUP = tombol baris yang sama + panah, isi menjorok pl-11 tanpa ikon;
+     deret ikon bawah (desktop). Warna lewat token --sb-* (tema). */
+  .sb { @apply fixed bottom-0 left-0 top-16 z-30 flex w-64 flex-col font-normal; translate: -100% 0; transition: translate 200ms, width 200ms; }
   .sb[data-terbuka] { translate: 0 0; }
-  .sb-latar { @apply fixed inset-x-0 bottom-0 top-16 z-20 hidden bg-gray-900/50; }
+  .sb-panel { @apply relative flex min-h-0 flex-1 flex-col border-r; background-color: var(--sb-bg); border-color: var(--sb-garis); }
+  .sb-gulir { @apply flex flex-1 flex-col overflow-y-auto pt-5 pb-4 lg:pb-20; }
+  .sb-isi   { @apply flex-1 space-y-1 px-3; }
+  .sb-daftar { @apply space-y-2 pb-2; }
+  .sb-daftar-kedua { @apply pt-2; border-top: 1px solid var(--sb-garis); }
+  .sb-latar { @apply fixed inset-0 z-20 hidden bg-gray-900/50; }
   .sb-latar[data-terbuka] { @apply block lg:hidden; }
-  .sb-nav { @apply flex-1 space-y-1 overflow-y-auto px-3 py-4; }
-  .sb-cari-wadah { @apply relative block pb-2; }
-  .sb-cari { @apply w-full rounded-lg border py-2 pr-3 pl-9 text-sm transition outline-hidden focus:ring-2 focus:ring-brand-500;
+  .sb-cari-wadah { @apply relative block; }
+  .sb-cari { @apply block w-full rounded-lg border p-2.5 pl-10 text-sm transition focus:border-brand-500 focus:ring-brand-500;
              background-color: var(--sb-cari-bg); border-color: var(--sb-cari-garis); color: var(--sb-cari-teks); }
   .sb-cari::placeholder { color: var(--sb-cari-placeholder); }
-  .sb-cari-ikon { @apply pointer-events-none absolute top-[calc(50%-0.25rem)] left-3 h-4 w-4 -translate-y-1/2; color: var(--sb-redup); }
-  .sb-grup { @apply pt-2; }
-  .sb-grup-judul { @apply flex w-full items-center justify-between rounded-lg px-3 py-1.5 text-xs font-semibold tracking-wide uppercase transition-colors focus:outline-hidden focus-visible:ring-2 focus-visible:ring-brand-400;
-                   color: var(--sb-redup); }
-  .sb-grup-judul:hover, .sb-grup-judul[data-aktif] { color: var(--sb-judul-aktif); }
-  .sb-grup-isi { @apply mt-1 space-y-1; }
-  .sb-pemisah { @apply mx-2 my-2 hidden border-t; border-color: var(--sb-garis); }
-  .sb-item { @apply flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors focus:outline-hidden focus-visible:ring-2 focus-visible:ring-brand-400;
+  .sb-cari-ikon { @apply pointer-events-none absolute top-1/2 left-3 h-5 w-5 -translate-y-1/2; color: var(--sb-redup); }
+  .sb-item { @apply flex w-full items-center rounded-lg p-2 text-base transition duration-75 focus:outline-hidden focus-visible:ring-2 focus-visible:ring-brand-400;
              color: var(--sb-teks); }
   .sb-item:hover { background-color: var(--sb-hover-bg); color: var(--sb-hover-teks); }
-  .sb-ikon { @apply h-5 w-5 shrink-0 transition-colors; color: var(--sb-ikon); }
+  .sb-ikon { @apply h-6 w-6 shrink-0 transition duration-75; color: var(--sb-ikon); }
   .sb-item:hover .sb-ikon { color: var(--sb-hover-teks); }
   .sb-item[aria-current='page'] { background-color: var(--sb-aktif-bg); color: var(--sb-aktif-teks); box-shadow: inset 3px 0 0 var(--sb-penanda); }
   .sb-item[aria-current='page'] .sb-ikon { color: var(--sb-aktif-ikon); }
-  .sb-label { @apply min-w-0 flex-1 truncate; }
+  .sb-label { @apply ml-3 min-w-0 flex-1 text-left leading-snug break-words; } /* boleh 2 baris: nama grup/menu panjang tidak terpotong */
+  .sb-anak { @apply pl-11; }
+  .sb-anak .sb-label { @apply ml-0; }
+  .sb-anak-daftar { @apply space-y-2 py-2; }
+  .sb-panah { @apply ml-1 shrink-0 transition-transform duration-200; }
   .sb-item-segera { @apply cursor-not-allowed select-none; color: var(--sb-nonaktif); }
   .sb-item-segera:hover { background-color: transparent; color: var(--sb-nonaktif); }
   .sb-item-segera .sb-ikon, .sb-item-segera:hover .sb-ikon { color: var(--sb-nonaktif); }
   .sb-segera { @apply shrink-0 rounded-md px-1.5 py-0.5 text-[10px] font-semibold uppercase; background-color: var(--sb-segera-bg); color: var(--sb-segera-teks); }
-  .sb-kosong { @apply px-3 py-3 text-xs; color: var(--sb-redup); }
-  .kerangka-isi { @apply flex min-h-screen flex-col pt-16 lg:ml-64; transition: margin-left 200ms; }
-  .kaki-halaman { @apply mt-auto px-4 pt-2 pb-6 text-center text-xs text-gray-500 lg:px-6; }
+  .sb-kosong { @apply px-2 py-2 text-sm; color: var(--sb-redup); }
+  .sb-bawah { @apply absolute bottom-0 left-0 hidden w-full justify-center gap-4 p-4 lg:flex; background-color: var(--sb-bg); }
+  .sb-bawah-tombol { @apply inline-flex cursor-pointer justify-center rounded-sm p-2 transition focus:outline-hidden focus-visible:ring-2 focus-visible:ring-brand-400; color: var(--sb-ikon); }
+  .sb-bawah-tombol:hover { background-color: var(--sb-hover-bg); color: var(--sb-hover-teks); }
+
+  /* Isi = main-content template (bg-gray-50, lg:ml-64); kaki = footer-dashboard (kartu putih rounded-lg shadow, tautan kiri) + baris
+     hak cipta di bawahnya. */
+  .kerangka-isi { @apply relative flex min-h-screen flex-col pt-16 lg:ml-64; transition: margin-left 200ms; }
+  .kaki         { @apply mt-auto; }
+  .kaki-kartu   { @apply mx-4 my-6 rounded-lg bg-white p-4 shadow-sm md:flex md:items-center md:justify-between md:p-6 xl:p-8; }
+  .kaki-tautan  { @apply mb-6 flex flex-wrap items-center gap-y-1 md:mb-0; }
+  .kaki-tautan a { @apply mr-4 text-sm font-normal text-gray-500 hover:underline md:mr-6; }
+  .kaki-hak     { @apply mb-10 text-center text-sm text-gray-500; }
   @media (min-width: 1024px) {
     .sb { translate: 0 0; }
+    /* Menciut = deret ikon (baris menu langsung + ikon grup); isi grup & label disembunyikan. Klik ikon grup = lebarkan + buka. */
     [data-ciut] .sb { width: 4rem; }
-    [data-ciut] .sb .sb-label, [data-ciut] .sb .sb-grup-judul, [data-ciut] .sb .sb-cari-wadah,
-    [data-ciut] .sb .sb-segera, [data-ciut] .sb .sb-kosong { display: none; }
-    [data-ciut] .sb .sb-item { justify-content: center; padding-inline: 0; }
-    [data-ciut] .sb .sb-pemisah { display: block; }
-    [data-ciut] .sb .sb-grup { padding-top: 0; }
+    [data-ciut] .sb .sb-label, [data-ciut] .sb .sb-panah, [data-ciut] .sb .sb-segera, [data-ciut] .sb .sb-kosong,
+    [data-ciut] .sb .sb-daftar-kedua { display: none; }
+    [data-ciut] .sb .sb-item { justify-content: center; }
+    [data-ciut] .sb .sb-grup-tombol[data-aktif] { background-color: var(--sb-aktif-bg); }
+    [data-ciut] .sb .sb-grup-tombol[data-aktif] .sb-ikon { color: var(--sb-aktif-ikon); }
+    [data-ciut] .sb-bawah { flex-direction: column; align-items: center; gap: .5rem; padding-inline: 0; }
+    [data-ciut] .sb-gulir { padding-bottom: 11rem; }
     [data-ciut] .kerangka-isi { margin-left: 4rem; }
   }
 

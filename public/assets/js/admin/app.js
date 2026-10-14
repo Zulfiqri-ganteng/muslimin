@@ -330,11 +330,16 @@
                 sidebar: false,     // laci menu terbuka (HP/tablet)
                 collapsed: false,   // menu menciut jadi ikon (desktop)
                 desktop: DESKTOP ? DESKTOP.matches : true,
+                cari: '',           // teks cari menu — satu nilai untuk kotak di bilah atas (desktop) & di laci (HP)
                 loading: false,
                 pesan: 'Memproses…',
                 init: function () {
                     var self = this;
                     this.collapsed = document.documentElement.hasAttribute('data-ciut');
+                    // Mencari saat menu menciut: lebarkan dulu supaya hasilnya terbaca (label tampil).
+                    this.$watch('cari', function (v) {
+                        if (String(v || '').trim() !== '' && self.sempit()) { self.alihCiut(); }
+                    });
                     // Pindahkan pilihan lama (localStorage sb_collapsed, sebelum F3) ke cookie, sekali saja.
                     try {
                         var lama = localStorage.getItem('sb_collapsed');
@@ -382,8 +387,18 @@
                     }
                     tulisKue('sb_ciut', this.collapsed ? '1' : '');
                 },
-                /* Menu samping sedang tampil sebagai deret ikon (desktop + diciutkan): semua grup dibuka. */
+                /* Menu samping sedang tampil sebagai deret ikon (desktop + diciutkan): isi grup disembunyikan, hanya ikonnya. */
                 sempit: function () { return this.collapsed && this.desktop; },
+                /* Enter di kotak cari menu → buka menu pertama yang cocok (yang sedang tampil). */
+                bukaHasilPertama: function () {
+                    var semua = document.querySelectorAll('#menu-samping a.sb-item[href]');
+                    for (var i = 0; i < semua.length; i++) {
+                        if (semua[i].getClientRects().length > 0) {
+                            if (semua[i].target === '_blank') { window.open(semua[i].href, '_blank', 'noopener'); } else { window.location.href = semua[i].href; }
+                            return;
+                        }
+                    }
+                },
                 /* Daftar menu sidebar panjang (±60 item) dan tiap halaman baru memuatnya dari atas, sehingga
                  * menu yang sedang dibuka sering tersembunyi di bawah. Posisi gulir diingat per tab
                  * (sessionStorage) dan menu aktif dipastikan terlihat; bila di luar layar ditaruh di tengah. */
@@ -445,11 +460,11 @@
             };
         });
 
-        /* 2a. Cari menu (<nav x-data="sbMenu" data-label='["…"]'>): item tampil bila teks cari kosong atau cocok dengan labelnya. */
+        /* 2a. Cari menu (<nav x-data="sbMenu" data-label='["…"]'>): item tampil bila teks cari kosong atau cocok dengan labelnya.
+         *     Nilai `cari` milik adminLayout (induk) — dipakai bersama kotak cari di bilah atas & di laci HP. */
         Alpine.data('sbMenu', function () {
             var semua = [];
             return {
-                cari: '',
                 init: function () { semua = readJson(this.$el, 'label', []); },
                 kata: function () { return String(this.cari || '').trim().toLowerCase(); },
                 sesuai: function (label) {
@@ -476,6 +491,11 @@
                     this.buka = this.$el.getAttribute('data-buka') === '1';
                 },
                 alih: function () {
+                    // Menu menciut (deret ikon): klik ikon grup = lebarkan menu lalu buka grup ini.
+                    if (this.sempit()) {
+                        this.alihCiut();
+                        if (this.buka) { return; }
+                    }
                     this.buka = !this.buka;
                     var daftar = bacaKue('sb_grup').split(',').filter(function (k) {
                         return /^sb_g_[0-9a-f]{8}$/.test(k) && k !== kunci;
@@ -483,7 +503,7 @@
                     if (this.buka) { daftar.push(kunci); }
                     tulisKue('sb_grup', daftar.join(','));
                 },
-                /* Saat mencari: grup tampil bila salah satu menunya cocok (cari = milik sbMenu induk). */
+                /* Saat mencari: grup tampil bila salah satu menunya cocok (cari = milik adminLayout). */
                 grupCocok: function () {
                     var q = String(this.cari || '').trim().toLowerCase();
                     return q === '' || label.some(function (l) { return String(l).indexOf(q) !== -1; });
