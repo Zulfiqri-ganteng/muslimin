@@ -77,6 +77,7 @@ final class PklImpor
     public static function contoh(): string
     {
         $x  = new Spreadsheet();
+        $x->getDefaultStyle()->getFont()->setName('Times New Roman'); // semua keluaran PKL Times New Roman
         $ws = $x->getActiveSheet()->setTitle('Riwayat PKL');
         $ws->fromArray([
             ['NIS', 'Nama', 'Kelas', 'Perusahaan', 'Alamat', 'Kota', 'Telepon', 'Kontak', 'Jabatan', 'Mulai', 'Selesai'],

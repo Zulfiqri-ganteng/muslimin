@@ -353,6 +353,7 @@ class PklBerkas extends BaseController
         $setting = (new SettingModel())->get();
 
         $x  = new Spreadsheet();
+        $x->getDefaultStyle()->getFont()->setName('Times New Roman'); // semua keluaran PKL Times New Roman
         $ws = $x->getActiveSheet()->setTitle('Status PKL Siswa');
         $ws->setCellValue('A1', 'STATUS PKL SISWA — ' . mb_strtoupper((string) ($setting['school_name'] ?? '')));
         $ws->setCellValue('A2', 'Tahun Pelajaran ' . ($setting['academic_year'] ?? '') . ' · tingkat ' . implode('/', $tingkat) . ' · dicetak ' . date('d-m-Y H:i'));

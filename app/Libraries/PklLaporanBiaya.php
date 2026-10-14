@@ -262,6 +262,7 @@ final class PklLaporanBiaya
     {
         $jenis = $hasil['jenis'];
         $x = new Spreadsheet();
+        $x->getDefaultStyle()->getFont()->setName('Times New Roman'); // semua keluaran PKL Times New Roman
         $x->getProperties()->setTitle('Laporan Pembayaran PKL')->setCreator('Sistem Informasi Akademik Sekolah');
 
         // ---------- Rincian ----------
