@@ -50,6 +50,20 @@ final class Tampilan
         return $pilih;
     }
 
+    /**
+     * Halaman alat pengembang (admin/ui-kit) hanya di laptop: CI_ENVIRONMENT development, ATAU app.baseURL menunjuk localhost /
+     * 127.0.0.1 (.env laptop memakai production; aturan sama dengan php spark dev:akun-uji). Di hosting selalu false.
+     */
+    public static function halamanLaptop(): bool
+    {
+        if (ENVIRONMENT === 'development') {
+            return true;
+        }
+        $host = (string) parse_url((string) config('App')->baseURL, PHP_URL_HOST);
+
+        return in_array($host, ['localhost', '127.0.0.1'], true);
+    }
+
     /** Pakai Alpine versi CSP (tanpa eval) di alamat ini? */
     public static function alpineCsp(string $alamat): bool
     {

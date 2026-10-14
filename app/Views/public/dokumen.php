@@ -85,7 +85,7 @@ $warnaKategori = [
     </div>
 
     <?php if ($pager !== null) { ?>
-        <div class="mt-5"><?= $pager->only(['q'])->links('pub', 'admin') ?></div>
+        <div class="mt-5"><?= $pager->only(['q'])->links('pub', 'publik') ?></div>
     <?php } ?>
 </div>
 

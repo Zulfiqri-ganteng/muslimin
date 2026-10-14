@@ -50,7 +50,9 @@ function grupAlamat(alamat) {
     return pilih;
 }
 // Halaman tanpa item menu samping (ikut diuji bila perannya boleh membuka). Halaman detail ber-ID & tab lain: pakai --halaman=…
-const TAMBAHAN = ['admin/master/tahun-ajaran', 'admin/master/fase', 'admin/ujian/asts1/honor', 'admin/dokumen/sampah', 'admin/dokumen/penyimpanan'];
+// admin/ui-kit?uji=1 = halaman kit komponen (F1) yang menguji dirinya sendiri (hanya Admin; peran lain dialihkan).
+const TAMBAHAN = ['admin/master/tahun-ajaran', 'admin/master/fase', 'admin/ujian/asts1/honor', 'admin/dokumen/sampah', 'admin/dokumen/penyimpanan',
+    'admin/ui-kit?uji=1'];
 // Gaya yang dipotret per elemen (urutan = urutan nilai di berkas potret).
 const PROP = ['display', 'position', 'float', 'width', 'height', 'margin-top', 'margin-right', 'margin-bottom', 'margin-left',
     'padding-top', 'padding-right', 'padding-bottom', 'padding-left', 'border-top-width', 'border-right-width', 'border-bottom-width',
@@ -184,6 +186,11 @@ async function buka(c, url) {
     aturUlang();
     await c.kirim('Page.navigate', { url });
     await tungguMuat();
+    // Halaman yang menguji dirinya sendiri (ui-kit ?uji=1) menyalakan window.__ujiSibuk → tunggu sampai selesai (maks 15 detik).
+    for (const batas = Date.now() + 15000; Date.now() < batas;) {
+        if (!(await c.nilai('window.__ujiSibuk === true').catch(() => false))) break;
+        await tidur(100);
+    }
 }
 
 // ---------------------------------------------------------------- fungsi yang dijalankan DI DALAM halaman
@@ -208,6 +215,7 @@ function infoHalaman() {
         inter: [...document.fonts].some((f) => f.family.replace(/["']/g, '') === 'Inter' && f.status === 'loaded'),
         alpine: typeof window.Alpine === 'object' && window.Alpine ? String(window.Alpine.version || 'ada') : null,
         elemen: document.getElementsByTagName('*').length,
+        uji: typeof window.__ujiHasil === 'string' ? window.__ujiHasil : null,
     };
 }
 
@@ -522,6 +530,7 @@ for (const peran of ['-', ...PERAN]) {
         console.log(`  ${dataLokal(p) ? '[DATA] ' : '[GAGAL]'} ${p} — ${di}`);
     }
     for (const h of baris.filter((x) => x.dialihkan)) console.log(`  (dialihkan) ${h.url} → ${h.akhir}`);
+    for (const h of baris.filter((x) => x.uji)) console.log(`  [UJI-DIRI] ${h.url}: ${h.uji}`);
     for (const h of baris) for (const v of h.csp) perArahan.set(v.d, (perArahan.get(v.d) ?? 0) + 1);
     if (buruk.length) process.exitCode = 1;
 }

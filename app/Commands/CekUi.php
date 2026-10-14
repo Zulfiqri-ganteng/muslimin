@@ -54,7 +54,7 @@ class CekUi extends BaseCommand
     ];
 
     private const GLOBAL_JS = 'Math|JSON|window|document|console|parseInt|parseFloat|Number|String|Boolean|Date|Intl|Object|Array|localStorage|'
-        . 'sessionStorage|setTimeout|setInterval|location|navigator|confirm|alert|prompt|fetch|encodeURIComponent|decodeURIComponent|isNaN|isFinite';
+        . 'sessionStorage|setTimeout|setInterval|location|navigator|confirm|alert|prompt|fetch|encodeURIComponent|decodeURIComponent|isNaN|isFinite|Ui';
 
     /** @var array<string, true> */
     private array $alpineData = [];
@@ -92,7 +92,8 @@ class CekUi extends BaseCommand
                 continue;
             }
             $jumlah = array_fill_keys(array_keys(self::KOLOM), 0);
-            $berkas = $this->berkasGrup($g['view']);
+            // Folder bertingkat (admin/partials ⊃ admin/partials/ui): tiap berkas hanya dihitung di grupnya sendiri (cocokan terpanjang).
+            $berkas = array_values(array_filter($this->berkasGrup($g['view']), static fn (string $rel): bool => Tampilan::grupView($rel) === $kunci));
             foreach ($berkas as $rel) {
                 foreach ($this->periksa($rel) as [$jenis, $nomor, $teks]) {
                     $jumlah[$jenis]++;

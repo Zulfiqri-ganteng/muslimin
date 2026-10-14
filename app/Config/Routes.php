@@ -75,6 +75,8 @@ $routes->group('admin', static function ($routes) {
     $routes->group('', ['filter' => 'auth'], static function ($routes) {
         $routes->get('/', 'Admin\Dashboard::index');
         $routes->get('dashboard', 'Admin\Dashboard::index');
+        // Contoh kit komponen rombak tampilan (F1) — khusus laptop (di hosting 404), hanya Admin. ?uji=1 = uji-diri komponen.
+        $routes->get('ui-kit', 'Admin\UiKit::index');
 
         // Submissions
         $routes->get('submissions', 'Admin\Submissions::index');

@@ -13,6 +13,14 @@
 @source "../../app/Models/SuratSekolahModel.php";
 @source "../../public/assets/js/admin";
 
+/* Plugin Flowbite 3 (MIT): gaya dasar formulir (input, select, checkbox, radio, berkas) + gaya tooltip ApexCharts (F4).
+   flowbite.js TIDAK dipakai (tugasnya dikerjakan Alpine), jadi bagian lain plugin dimatikan. Warna birunya ditimpa di @layer base. */
+@plugin "flowbite/plugin" {
+  datatables: false;
+  wysiwyg: false;
+  tooltips: false;
+}
+
 /* Mode gelap seluruh halaman = F11 (ditunda). Varian disiapkan supaya kelas dark: kelak tidak perlu mengubah mesin. */
 @custom-variant dark (&:where(.dark, .dark *));
 
@@ -90,13 +98,30 @@
   /* v3 membiarkan latar kotak isian bawaan peramban (putih); preflight v4 membuatnya transparan. */
   input:where(:not([type="button"], [type="reset"], [type="submit"], [type="image"], [type="checkbox"], [type="radio"], [type="range"], [type="color"], [type="file"])),
   select, textarea { background-color: Field; }
-  /* Preflight v4 menipiskan kotak tanggal/waktu 2px (padding bawaan Chrome dibuang) → kembalikan ke bawaan peramban seperti v3. */
-  ::-webkit-date-and-time-value { min-height: revert; text-align: revert; }
-  ::-webkit-datetime-edit { display: revert; padding-block: revert; }
-  ::-webkit-datetime-edit-fields-wrapper { padding: revert; }
-  ::-webkit-datetime-edit-year-field, ::-webkit-datetime-edit-month-field, ::-webkit-datetime-edit-day-field,
-  ::-webkit-datetime-edit-hour-field, ::-webkit-datetime-edit-minute-field, ::-webkit-datetime-edit-second-field,
-  ::-webkit-datetime-edit-millisecond-field, ::-webkit-datetime-edit-meridiem-field { padding-block: revert; }
+  /* (F1) Kompat kotak tanggal/waktu F0 dibuang: sejak plugin Flowbite menyala, tingginya sama dengan kotak isian lain. */
+
+  /* ---- Penyetelan gaya dasar formulir plugin Flowbite (dicetak SETELAH blok ini, jadi pakai awalan :root agar menang).
+     Warna biru bawaannya → warna merek tema; ukuran huruf ikut induk seperti sebelum plugin (kit selalu memberi text-sm);
+     panah select tidak tertimpa teks walau select memakai px-3. Kelas utilitas di view tetap menang (lapisan utilities). */
+  :root :is([type='text'], [type='email'], [type='url'], [type='password'], [type='number'], [type='date'], [type='datetime-local'],
+    [type='month'], [type='search'], [type='tel'], [type='time'], [type='week'], [multiple], textarea, select) {
+    border-color: var(--color-gray-300);
+    font-size: inherit;
+    line-height: inherit;
+  }
+  :root :is([type='text'], [type='email'], [type='url'], [type='password'], [type='number'], [type='date'], [type='datetime-local'],
+    [type='month'], [type='search'], [type='tel'], [type='time'], [type='week'], [multiple], textarea, select):focus {
+    --tw-ring-color: rgb(var(--brand-600));
+    border-color: rgb(var(--brand-600));
+  }
+  :root select:not([size]):not([multiple]) { padding-right: 2rem !important; }
+  :root [type='checkbox'], :root [type='radio'] { color: rgb(var(--brand-600)); border-color: var(--color-gray-300); }
+  :root [type='checkbox']:focus, :root [type='radio']:focus { --tw-ring-color: rgb(var(--brand-500)); }
+  :root input[type='range']::-webkit-slider-thumb { background: rgb(var(--brand-600)); }
+  :root input[type='range']::-moz-range-thumb { background: rgb(var(--brand-600)); }
+  /* Plugin menyembunyikan ikon jam pada input waktu (Flowbite memasang ikon sendiri) — kembalikan ikon bawaan peramban. */
+  :root input[type='time']::-webkit-calendar-picker-indicator { background: revert; }
+
   button:not(:disabled), [role="button"]:not(:disabled) { cursor: pointer; }
 
   html { scroll-behavior: smooth; }
@@ -107,12 +132,141 @@
 }
 
 @layer components {
-  /* ---- Form (dipakai view admin; nama .inp/.lbl dipertahankan) ---- */
-  .lbl { @apply block text-sm font-medium text-gray-600 mb-1.5; }
-  .inp { @apply w-full rounded-lg border border-gray-300 px-3.5 py-2.5 text-sm text-gray-800 placeholder-gray-400 focus:border-brand-500 focus:ring-2 focus:ring-brand-500/20 outline-hidden transition; }
-  .inp-err { @apply border-red-400 bg-red-50/40 focus:border-red-500 focus:ring-red-500/20; }
-  .err-msg { @apply mt-1 text-xs font-semibold text-red-600; }
-  .hint    { @apply mt-1 text-xs text-gray-500 leading-relaxed; }
+  /* =================================================================================================================
+     KIT KOMPONEN (F1) — pola Flowbite Admin Dashboard. Contoh hidup + cara pakai: /admin/ui-kit (khusus laptop).
+     Aturan (rancangan §4): sudut rounded-lg, bayangan xs/sm (dialog & laci lg), netral gray, warna utama = brand (ikut tema).
+     Komponen Alpine-nya: public/assets/js/admin/ui.js · partial PHP: helper ui_*() (app/Helpers/ui_helper.php).
+     ================================================================================================================= */
+
+  /* ---- Tombol: class="btn btn-utama" · ukuran btn-xs / btn-sm / btn-lg · hanya ikon: + btn-ikon (beri aria-label) ---- */
+  .btn { @apply inline-flex items-center justify-center gap-2 rounded-lg border border-transparent px-5 py-2.5 text-center text-sm font-medium whitespace-nowrap transition focus:outline-hidden focus:ring-4 disabled:cursor-not-allowed disabled:opacity-50; }
+  .btn-utama  { @apply bg-brand-700 text-white hover:bg-brand-800 focus:ring-brand-300; }
+  .btn-netral { @apply border-gray-300 bg-white text-gray-900 hover:bg-gray-100 hover:text-brand-700 focus:ring-gray-100; }
+  .btn-bahaya { @apply bg-red-700 text-white hover:bg-red-800 focus:ring-red-300; }
+  .btn-sukses { @apply bg-green-700 text-white hover:bg-green-800 focus:ring-green-300; }
+  .btn-teks   { @apply text-gray-700 hover:bg-gray-100 hover:text-gray-900 focus:ring-gray-100; }
+  .btn-xs { @apply gap-1.5 px-3 py-2 text-xs; }
+  .btn-sm { @apply px-3 py-2; }
+  .btn-lg { @apply px-5 py-3 text-base; }
+  .btn-ikon { @apply p-2.5; }
+  .btn-ikon.btn-sm, .btn-ikon.btn-xs { @apply p-2; }
+
+  /* ---- Formulir (nama .inp/.lbl/.hint/.err-msg lama dipertahankan → kini gaya Flowbite) ----
+     .inp untuk input/select/textarea; galat: + inp-err; .cek = checkbox/radio; .saklar = tombol geser (checkbox sr-only peer). */
+  .lbl     { @apply mb-2 block text-sm font-medium text-gray-900; }
+  .inp     { @apply w-full rounded-lg border border-gray-300 bg-gray-50 p-2.5 text-sm text-gray-900 placeholder-gray-400 outline-hidden transition focus:border-brand-500 focus:ring-1 focus:ring-brand-500 disabled:cursor-not-allowed disabled:bg-gray-100 disabled:text-gray-500; }
+  .inp-err { @apply border-red-500 bg-red-50 text-red-900 placeholder-red-400 focus:border-red-500 focus:ring-red-500; }
+  .err-msg { @apply mt-2 text-sm text-red-600; }
+  .hint    { @apply mt-2 text-sm text-gray-500; }
+  .inp-berkas { @apply block w-full cursor-pointer rounded-lg border border-gray-300 bg-gray-50 text-sm text-gray-900 focus:outline-hidden; }
+  .cek     { @apply h-4 w-4 shrink-0 rounded-sm border-gray-300 bg-gray-50 text-brand-600 focus:ring-2 focus:ring-brand-500; }
+  .cek[type='radio'] { @apply rounded-full; }
+  .cek-label { @apply ms-2 text-sm font-medium text-gray-900; }
+  .saklar { @apply relative inline-flex cursor-pointer items-center gap-3; }
+  .saklar-jalur { @apply relative h-6 w-11 shrink-0 rounded-full bg-gray-200 transition peer-checked:bg-brand-600 peer-focus-visible:ring-4 peer-focus-visible:ring-brand-300 peer-disabled:cursor-not-allowed peer-disabled:opacity-50 after:absolute after:start-0.5 after:top-0.5 after:h-5 after:w-5 after:rounded-full after:border after:border-gray-300 after:bg-white after:transition-all after:content-[''] peer-checked:after:translate-x-full peer-checked:after:border-white; }
+  .saklar-label { @apply text-sm font-medium text-gray-900; }
+
+  /* ---- Kartu: .kartu (tanpa jarak dalam) + .kartu-isi / .kartu-kepala / .kartu-kaki ---- */
+  .kartu        { @apply rounded-lg border border-gray-200 bg-white shadow-xs; }
+  .kartu-isi    { @apply p-4 sm:p-6; }
+  .kartu-kepala { @apply flex flex-wrap items-center justify-between gap-3 border-b border-gray-200 px-4 py-3 sm:px-6; }
+  .kartu-judul  { @apply text-lg font-semibold text-gray-900; }
+  .kartu-ket    { @apply mt-1 text-sm text-gray-500; }
+  .kartu-kaki   { @apply border-t border-gray-200 px-4 py-3 sm:px-6; }
+
+  /* ---- Tabel: <div class="tabel-bungkus"><table class="tabel"> — kepala abu kapital, baris bergaris, sorot saat disentuh ---- */
+  .tabel-bungkus { @apply relative overflow-x-auto; }
+  .tabel { @apply w-full text-left text-sm text-gray-600; }
+  .tabel thead { @apply bg-gray-50 text-xs text-gray-700 uppercase; }
+  .tabel thead th { @apply px-4 py-3 font-semibold whitespace-nowrap; }
+  .tabel tbody tr { @apply border-b border-gray-200 bg-white transition-colors hover:bg-gray-50; }
+  .tabel tbody tr:last-child { @apply border-b-0; }
+  .tabel tbody td, .tabel tbody th { @apply px-4 py-3 align-middle; }
+  .tabel tbody th { @apply font-medium whitespace-nowrap text-gray-900; }
+
+  /* ---- Lencana (badge): class="lencana lencana-hijau". Warna status tetap: hijau = hadir/disetujui, kuning = menunggu,
+     merah = ditolak/alpa, abu = draf; merek = ikut tema; biru = info. ---- */
+  .lencana        { @apply inline-flex items-center gap-1 rounded-md px-2.5 py-0.5 text-xs font-medium whitespace-nowrap; }
+  .lencana-abu    { @apply bg-gray-100 text-gray-800; }
+  .lencana-merek  { @apply bg-brand-100 text-brand-800; }
+  .lencana-hijau  { @apply bg-green-100 text-green-800; }
+  .lencana-kuning { @apply bg-yellow-100 text-yellow-800; }
+  .lencana-merah  { @apply bg-red-100 text-red-800; }
+  .lencana-biru   { @apply bg-blue-100 text-blue-800; }
+
+  /* ---- Tab (garis bawah): .tab-daftar berisi .tab; tab aktif = aria-current="page" (tautan) / aria-selected="true" (Alpine) ---- */
+  .tab-daftar { @apply flex flex-wrap gap-x-1 border-b border-gray-200 text-center text-sm font-medium text-gray-500; }
+  .tab { @apply -mb-px inline-flex items-center gap-2 rounded-t-lg border-b-2 border-transparent px-4 py-3 transition hover:border-gray-300 hover:text-gray-700 focus:outline-hidden focus-visible:ring-2 focus-visible:ring-brand-300; }
+  .tab[aria-current='page'], .tab[aria-selected='true'] { @apply border-brand-700 text-brand-700; }
+  .tab-jumlah { @apply rounded-md bg-gray-100 px-1.5 py-0.5 text-xs font-medium text-gray-600; }
+
+  /* ---- Dropdown (komponen Alpine "dropdown"): .dropdown-menu (absolut; tambah right-0 bila rata kanan) + .dropdown-item ---- */
+  .dropdown-menu   { @apply absolute z-30 mt-2 w-48 divide-y divide-gray-100 rounded-lg border border-gray-100 bg-white text-sm shadow-sm; }
+  .dropdown-kepala { @apply px-4 py-3 text-gray-900; }
+  .dropdown-item   { @apply flex w-full items-center gap-2 px-4 py-2 text-left text-gray-700 transition-colors hover:bg-gray-100 hover:text-gray-900 focus:bg-gray-100 focus:outline-hidden; }
+  .dropdown-item-bahaya { @apply text-red-600 hover:bg-red-50 hover:text-red-700 focus:bg-red-50; }
+
+  /* ---- Dialog & laci (komponen Alpine "dialog" / "laci" — pakai helper ui_dialog_buka() / ui_laci_buka()) ---- */
+  .dialog        { @apply fixed inset-0 z-50 flex items-start justify-center overflow-y-auto p-4 sm:items-center; }
+  .dialog-latar  { @apply fixed inset-0 bg-gray-900/50; }
+  .dialog-panel  { @apply relative my-auto w-full max-w-lg rounded-lg bg-white shadow-lg focus:outline-hidden; }
+  .dialog-panel-sm { @apply max-w-md; }
+  .dialog-panel-lg { @apply max-w-2xl; }
+  .dialog-panel-xl { @apply max-w-4xl; }
+  .dialog-kepala { @apply flex items-center justify-between gap-4 rounded-t-lg border-b border-gray-200 p-4 md:p-5; }
+  .dialog-judul  { @apply text-lg font-semibold text-gray-900; }
+  .dialog-isi    { @apply space-y-4 p-4 md:p-5; }
+  .dialog-kaki   { @apply flex flex-wrap items-center justify-end gap-3 rounded-b-lg border-t border-gray-200 p-4 md:p-5; }
+  .tombol-tutup  { @apply inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-gray-400 transition hover:bg-gray-200 hover:text-gray-900 focus:outline-hidden focus-visible:ring-2 focus-visible:ring-gray-300; }
+  .laci          { @apply fixed inset-0 z-50; }
+  .laci-panel    { @apply fixed inset-y-0 right-0 flex h-full w-full max-w-md flex-col bg-white shadow-lg focus:outline-hidden; }
+  .laci-kepala   { @apply flex items-center justify-between gap-4 border-b border-gray-200 p-4; }
+  .laci-judul    { @apply text-sm font-semibold text-gray-500 uppercase; }
+  .laci-isi      { @apply flex-1 space-y-4 overflow-y-auto p-4; }
+  .laci-kaki     { @apply flex flex-wrap items-center gap-3 border-t border-gray-200 p-4; }
+
+  /* ---- Toast (wadah: ui_toast(); panggil $toast(pesan, jenis) / Ui.toast(pesan, jenis)) ---- */
+  .toast-wadah { @apply pointer-events-none fixed right-4 bottom-4 z-[60] flex w-[calc(100%-2rem)] max-w-xs flex-col gap-3; }
+  .toast       { @apply pointer-events-auto flex w-full items-center gap-3 rounded-lg border border-gray-100 bg-white p-4 text-gray-500 shadow-sm; }
+  .toast-ikon  { @apply inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-lg; }
+  .toast-pesan { @apply min-w-0 flex-1 text-sm text-gray-700; }
+  .toast-sukses .toast-ikon { @apply bg-green-100 text-green-600; }
+  .toast-galat  .toast-ikon { @apply bg-red-100 text-red-600; }
+  .toast-awas   .toast-ikon { @apply bg-orange-100 text-orange-600; }
+  .toast-info   .toast-ikon { @apply bg-brand-100 text-brand-700; }
+
+  /* ---- Peringatan (alert): helper ui_peringatan() atau class="peringatan peringatan-sukses" ---- */
+  .peringatan        { @apply flex items-start gap-3 rounded-lg border p-4 text-sm; }
+  .peringatan-info   { @apply border-blue-300 bg-blue-50 text-blue-800; }
+  .peringatan-sukses { @apply border-green-300 bg-green-50 text-green-800; }
+  .peringatan-galat  { @apply border-red-300 bg-red-50 text-red-800; }
+  .peringatan-awas   { @apply border-yellow-300 bg-yellow-50 text-yellow-800; }
+  .peringatan-netral { @apply border-gray-300 bg-gray-50 text-gray-800; }
+
+  /* ---- Paginasi (templat pager "admin" + paginasi buatan JS): .paginasi berisi .paginasi-item ---- */
+  .paginasi      { @apply inline-flex flex-wrap -space-x-px text-sm; }
+  .paginasi-item { @apply flex h-9 min-w-9 items-center justify-center border border-gray-300 bg-white px-3 leading-tight text-gray-500 transition-colors hover:bg-gray-100 hover:text-gray-700 focus:z-20 focus:outline-hidden focus-visible:ring-2 focus-visible:ring-brand-300; }
+  .paginasi > li:first-child > .paginasi-item { @apply rounded-s-lg; }
+  .paginasi > li:last-child > .paginasi-item { @apply rounded-e-lg; }
+  .paginasi-item[aria-current='page'] { @apply z-10 border-brand-300 bg-brand-50 text-brand-700 hover:bg-brand-100 hover:text-brand-800; }
+  .paginasi-item[aria-disabled='true'] { @apply pointer-events-none text-gray-300; }
+  .paginasi-info { @apply text-sm text-gray-500; }
+  .paginasi-info b { @apply font-semibold text-gray-900; }
+
+  /* ---- Keadaan kosong: helper ui_kosong() ---- */
+  .kosong       { @apply flex flex-col items-center justify-center px-4 py-12 text-center; }
+  .kosong-ikon  { @apply mb-4 flex h-12 w-12 items-center justify-center rounded-lg bg-gray-100 text-gray-500; }
+  .kosong-judul { @apply text-base font-semibold text-gray-900; }
+  .kosong-teks  { @apply mt-1 max-w-md text-sm text-gray-500; }
+
+  /* ---- Kepala halaman + remah roti (breadcrumb): helper ui_kepala() / ui_remah() ---- */
+  .kepala-halaman { @apply mb-6; }
+  .remah          { @apply mb-3 flex; }
+  .remah ol       { @apply inline-flex flex-wrap items-center gap-1 text-sm font-medium; }
+  .remah a        { @apply inline-flex items-center gap-1.5 text-gray-700 transition-colors hover:text-brand-700; }
+  .remah [aria-current='page'] { @apply text-gray-500; }
+  .judul-halaman  { @apply text-xl font-semibold text-gray-900; }
+  .ket-halaman    { @apply mt-1 text-sm text-gray-500; }
 
   /* ---- Animasi lama halaman PKL staf & dashboard (diganti saat F4/F9 dirombak — termasuk "hiasan" yang dicek dev:cek-ui) ---- */
   .rise   { animation: rise .6s cubic-bezier(.16,.84,.44,1) backwards; }
@@ -145,6 +299,8 @@
 @keyframes donutIn { from { stroke-dasharray: 0 400; } }
 @media (prefers-reduced-motion: reduce) {
   html { scroll-behavior: auto; }
+  /* (F1) Setelan "kurangi gerakan" di Windows: semua transisi & animasi kit langsung selesai (putaran tanda memuat tetap jalan). */
+  *:not(.animate-spin), ::before, ::after { transition-duration: .01ms !important; animation-duration: .01ms !important; animation-iteration-count: 1 !important; }
   .rise, .bar-grow, .donut-seg { animation: none; }
   .lift { transition: none; }
   .lift:hover { transform: none; }

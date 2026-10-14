@@ -59,8 +59,10 @@
         });
     });
 
-    // <a data-confirm="Yakin?"> — batalkan klik bila user menolak.
+    // <a data-confirm="Yakin?"> — batalkan klik bila user menolak. Bila halaman memuat dialog konfirmasi kit (ui.js +
+    // ui_konfirmasi(), rombak tampilan F1/F3), dialog itulah yang bertanya — di sini dilewati agar tidak bertanya dua kali.
     document.addEventListener('click', function (e) {
+        if (window.Ui && window.Ui.adaKonfirmasi()) { return; }
         var el = e.target.closest('[data-confirm]');
         if (el && !window.confirm(el.getAttribute('data-confirm'))) {
             e.preventDefault();

@@ -24,7 +24,8 @@ class Pager extends BaseConfig
         'default_full'   => 'CodeIgniter\Pager\Views\default_full',
         'default_simple' => 'CodeIgniter\Pager\Views\default_simple',
         'default_head'   => 'CodeIgniter\Pager\Views\default_head',
-        'admin'          => 'App\Views\pager\admin',
+        'admin'          => 'App\Views\pager\admin',   // panel admin — gaya Flowbite (kit rombak tampilan F1)
+        'publik'         => 'App\Views\pager\publik',  // halaman publik (Tailwind v3)
     ];
 
     /**

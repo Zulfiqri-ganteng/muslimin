@@ -25,11 +25,16 @@ class Tampilan extends BaseConfig
             'view' => ['admin/login.php'],
             'url'  => ['admin/login'],
         ],
+        'kit' => [
+            'fase' => 'F1', 'label' => 'Kit komponen: partial ui_*(), paginasi admin, halaman ui-kit (khusus laptop)',
+            'view' => ['admin/partials/ui', 'admin/ui_kit', 'pager/admin.php'],
+            'url'  => ['admin/ui-kit'],
+        ],
         'kerangka' => [
-            'fase' => 'F3', 'label' => 'Kerangka: layout, partial bersama, paginasi',
-            'view'    => ['layouts/admin.php', 'admin/partials', 'partials/kredit.php', 'partials/favicon.php', 'pager/admin.php'],
+            'fase' => 'F3', 'label' => 'Kerangka: layout & partial bersama',
+            'view'    => ['layouts/admin.php', 'admin/partials', 'partials/kredit.php', 'partials/favicon.php'],
             'url'     => [],
-            'bersama' => ['partials/kredit.php', 'partials/favicon.php', 'pager/admin.php'],
+            'bersama' => ['partials/kredit.php', 'partials/favicon.php'],
         ],
         'dashboard' => [
             'fase' => 'F4', 'label' => 'Dashboard',
@@ -74,9 +79,10 @@ class Tampilan extends BaseConfig
 
     /**
      * Grup yang halamannya sudah memakai Alpine versi CSP (@alpinejs/csp). Diisi saat fase grup itu selesai; di F12 semua grup
-     * masuk, lalu Alpine biasa dan pemilih ini dibuang. Kosong = semua halaman admin masih Alpine biasa.
+     * masuk, lalu Alpine biasa dan pemilih ini dibuang. ('kit' = halaman ui-kit; halaman itu berdiri sendiri tanpa layout dan selalu
+     * memuat versi CSP — dicantumkan agar dev:cek-ui & uji peramban melaporkannya sebagai grup versi CSP.)
      *
      * @var list<string>
      */
-    public array $alpineCsp = [];
+    public array $alpineCsp = ['kit'];
 }
