@@ -466,11 +466,12 @@ class PklBerkas extends BaseController
     public function prakerin()
     {
         [$semua, $pilih, $tingkat, $kelasId] = $this->pilihPrakerin();
-        $setting = (new SettingModel())->get();
+        $setting  = (new SettingModel())->get();
+        $diterima = $this->request->getGet('isi') === 'diterima';
 
         return view('admin/pkl/prakerin', $this->dasar('Data Siswa Prakerin', 'prakerin') + [
-            'semuaKelas' => $semua, 'rekap' => (new PklPrakerin())->data($pilih), 'tingkatPilih' => $tingkat, 'kelasId' => $kelasId,
-            'sekolah' => (string) ($setting['school_name'] ?? ''), 'tahun' => (string) ($setting['academic_year'] ?? ''),
+            'semuaKelas' => $semua, 'rekap' => (new PklPrakerin())->data($pilih, $diterima), 'tingkatPilih' => $tingkat, 'kelasId' => $kelasId,
+            'hanyaDiterima' => $diterima, 'sekolah' => (string) ($setting['school_name'] ?? ''), 'tahun' => (string) ($setting['academic_year'] ?? ''),
         ]);
     }
 
@@ -483,7 +484,7 @@ class PklBerkas extends BaseController
         }
         $setting = (new SettingModel())->get();
         $tahun   = (string) ($setting['academic_year'] ?? '');
-        $biner   = PklPrakerin::excel((new PklPrakerin())->data($pilih), (string) ($setting['school_name'] ?? ''), $tahun);
+        $biner   = PklPrakerin::excel((new PklPrakerin())->data($pilih, $this->request->getGet('isi') === 'diterima'), (string) ($setting['school_name'] ?? ''), $tahun);
         $nama    = 'Data Siswa Prakerin ' . ($kelasId > 0 ? $pilih[0]['nama_kelas'] : 'Kelas ' . $tingkat) . ($tahun !== '' ? ' ' . str_replace('/', '-', $tahun) : '') . '.xlsx';
         $nama    = preg_replace('/[^A-Za-z0-9 ._-]+/', '-', $nama) ?? 'Data Siswa Prakerin.xlsx';
 

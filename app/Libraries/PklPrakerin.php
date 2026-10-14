@@ -9,26 +9,31 @@ use PhpOffice\PhpSpreadsheet\Spreadsheet;
 use PhpOffice\PhpSpreadsheet\Style\Alignment;
 use PhpOffice\PhpSpreadsheet\Style\Border;
 use PhpOffice\PhpSpreadsheet\Style\Fill;
+use PhpOffice\PhpSpreadsheet\Worksheet\PageSetup;
 use PhpOffice\PhpSpreadsheet\Worksheet\Worksheet;
 use PhpOffice\PhpSpreadsheet\Writer\Xlsx;
 
 /**
  * Rekap "DATA SISWA PRAKERIN" per kelas dari data sistem + unduhan Excel persis format sekolah: satu lembar per kelas
  * (nama lembar = nama kelas), judul 3 baris, kolom NO, NAMA, Mitra DI/DU, Praktek Kerja Lapangan (Mulai, Selesai),
- * Lamanya PKL. Berkas unduhan bisa dilengkapi lalu diimpor balik lewat PklImpor (format sekolah).
+ * Lamanya PKL, + kolom G Keterangan. Seluruh huruf Times New Roman. Berkas unduhan bisa dilengkapi lalu diimpor balik
+ * lewat PklImpor (format sekolah; kolom Keterangan diabaikan).
  *
- * Mitra = perusahaan ajuan PKL siswa yang DISETUJUI (termasuk hasil impor). Mulai/Selesai = periode di ajuan (diisi
- * Surat Balasan atau impor); bila ajuan belum punya tanggal, periode yang dilaporkan siswa (Lapor Diterima, selama tidak
- * dikembalikan). Lamanya = bulan dari Mulai–Selesai (SuratPkl::lamaBulan). Urutan kelas & siswa = urutan data di sistem
- * (sama dengan daftar sekolah).
+ * Mitra = perusahaan ajuan aktif siswa; Keterangan menjelaskan posisinya (sudah diterima, belum lapor, belum ACC, …;
+ * lihat baris()). Mulai/Selesai = periode di ajuan (diisi Surat Balasan atau impor); bila ajuan belum punya tanggal,
+ * periode yang dilaporkan siswa (Lapor Diterima, selama tidak dikembalikan). Lamanya = bulan dari Mulai–Selesai
+ * (SuratPkl::lamaBulan). Urutan kelas & siswa = urutan data di sistem (sama dengan daftar sekolah).
  */
 final class PklPrakerin
 {
     /** Format tanggal sel Mulai/Selesai di berkas sekolah: "28 Juli 2026". */
     private const FORMAT_TANGGAL = '[$-421]dd\ mmmm\ yyyy;@';
 
-    /** Lebar kolom A–F berkas sekolah. */
-    private const LEBAR = ['A' => 7.5703125, 'B' => 29.42578125, 'C' => 28.7109375, 'D' => 19.85546875, 'E' => 17.5703125, 'F' => 15];
+    /** Lebar kolom A–F berkas sekolah + G Keterangan (tambahan: siswa yang belum pasti diterima). */
+    private const LEBAR = ['A' => 7.5703125, 'B' => 29.42578125, 'C' => 28.7109375, 'D' => 19.85546875, 'E' => 17.5703125, 'F' => 15, 'G' => 55];
+
+    /** Keterangan lebih panjang dari ini dibungkus jadi dua baris. */
+    private const KET_SEBARIS = 62;
 
     private BaseConnection $db;
 
@@ -57,10 +62,11 @@ final class PklPrakerin
      * Isi rekap untuk kelas terpilih (urutan $kelas dipertahankan). Kelas tanpa siswa aktif tetap tampil (kosong).
      *
      * @param list<array{id: int, nama_kelas: string, tingkat: string}> $kelas
+     * @param bool $hanyaDiterima true = hanya siswa yang sudah pasti diterima perusahaan (nomor urut diulang)
      *
-     * @return list<array{kelas: array, siswa: list<array{no: int, nama: string, mitra: string, mulai: ?string, selesai: ?string, lama: ?int, catatan: ?string}>, ringkas: array{siswa: int, mitra: int, tanggal: int}}>
+     * @return list<array{kelas: array, siswa: list<array{no: int, nama: string, mitra: string, mulai: ?string, selesai: ?string, lama: ?int, tahap: string, catatan: string}>, ringkas: array{siswa: int, diterima: int, tanggal: int, tunggu: int, belum: int}}>
      */
-    public function data(array $kelas): array
+    public function data(array $kelas, bool $hanyaDiterima = false): array
     {
         if ($kelas === []) {
             return [];
@@ -68,12 +74,14 @@ final class PklPrakerin
         $ids   = array_map(static fn (array $k): int => (int) $k['id'], $kelas);
         $lapor = PklLapor::tabelAda();
         $q     = $this->db->table('siswa s')
-            ->select('s.id, s.nama, s.kelas_id, p.status, p.perusahaan_nama, p.tanggal_mulai, p.tanggal_selesai')
+            ->select('s.id, s.nama, s.kelas_id, p.status, p.sumber, p.perusahaan_nama, p.tanggal_mulai, p.tanggal_selesai')
+            // Tanpa ajuan aktif: ajuan terakhir yang ditolak (bila ada), untuk keterangan.
+            ->select("(SELECT p2.perusahaan_nama FROM pkl_anggota a2 JOIN pkl_pengajuan p2 ON p2.id = a2.pengajuan_id WHERE a2.siswa_id = s.id AND p2.status = 'ditolak' ORDER BY p2.id DESC LIMIT 1) AS ditolak_pt", false)
             ->join('pkl_anggota a', 'a.siswa_aktif = s.id', 'left')
             ->join('pkl_pengajuan p', 'p.id = a.pengajuan_id', 'left');
         if ($lapor) {
-            $q->select('l.tanggal_mulai AS lapor_mulai, l.tanggal_selesai AS lapor_selesai')
-                ->join('pkl_lapor l', "l.pengajuan_id = p.id AND l.status != 'dikembalikan'", 'left');
+            $q->select('l.status AS lapor_status, l.tanggal_mulai AS lapor_mulai, l.tanggal_selesai AS lapor_selesai')
+                ->join('pkl_lapor l', 'l.pengajuan_id = p.id', 'left');
         }
         $rows = $q->whereIn('s.kelas_id', $ids)->where('s.status', 'aktif')->where('s.deleted_at', null)
             ->orderBy('s.id', 'ASC')->get()->getResultArray();
@@ -85,7 +93,8 @@ final class PklPrakerin
 
         $out = [];
         foreach ($kelas as $k) {
-            $siswa = $per[(int) $k['id']] ?? [];
+            $semua = $per[(int) $k['id']] ?? [];
+            $siswa = $hanyaDiterima ? array_values(array_filter($semua, static fn (array $s): bool => $s['tahap'] === 'diterima')) : $semua;
             foreach ($siswa as $i => $s) {
                 $siswa[$i]['no'] = $i + 1;
             }
@@ -93,9 +102,11 @@ final class PklPrakerin
                 'kelas'   => $k,
                 'siswa'   => $siswa,
                 'ringkas' => [
-                    'siswa'   => count($siswa),
-                    'mitra'   => count(array_filter($siswa, static fn (array $s): bool => $s['mitra'] !== '')),
-                    'tanggal' => count(array_filter($siswa, static fn (array $s): bool => $s['mulai'] !== null)),
+                    'siswa'    => count($semua),
+                    'diterima' => count(array_filter($semua, static fn (array $s): bool => $s['tahap'] === 'diterima')),
+                    'tanggal' => count(array_filter($semua, static fn (array $s): bool => $s['mulai'] !== null)),
+                    'tunggu'  => count(array_filter($semua, static fn (array $s): bool => $s['tahap'] === 'proses')),
+                    'belum'   => count(array_filter($semua, static fn (array $s): bool => $s['tahap'] === 'belum')),
                 ],
             ];
         }
@@ -111,7 +122,7 @@ final class PklPrakerin
     public static function excel(array $rekap, string $sekolah, string $tahun): string
     {
         $x = new Spreadsheet();
-        $x->getDefaultStyle()->getFont()->setName('Calibri')->setSize(11);
+        $x->getDefaultStyle()->getFont()->setName('Times New Roman')->setSize(11);
         $dipakai = [];
         foreach (array_values($rekap) as $i => $r) {
             $ws = $i === 0 ? $x->getActiveSheet() : $x->createSheet();
@@ -135,30 +146,45 @@ final class PklPrakerin
     // Pembantu
     // =================================================================
 
-    /** Satu siswa → baris rekap. Hanya ajuan Disetujui yang mengisi Mitra & tanggal. */
+    /**
+     * Satu siswa → baris rekap. Mitra terisi untuk SEMUA ajuan aktif (menunggu, perbaikan, disetujui); Keterangan
+     * selalu menjelaskan posisinya. "Sudah diterima" = ajuan disetujui DAN (Lapor Diterima yang tidak dikembalikan,
+     * ATAU periode tercatat di ajuan — dari Surat Balasan, ATAU hasil impor Excel sekolah); ACC Hubin saja belum.
+     * Tanggal hanya bila sudah diketahui. 'tahap' = diterima | proses (sudah mengajukan, belum diterima) | belum.
+     */
     private static function baris(array $r): array
     {
         $status = (string) ($r['status'] ?? '');
-        $mitra  = '';
-        $mulai  = null;
-        $akhir  = null;
-        if ($status === 'disetujui') {
-            $mitra = IsianBantu::rapikan((string) $r['perusahaan_nama']);
-            $mulai = ($r['tanggal_mulai'] ?? '') ?: null;
-            $akhir = ($r['tanggal_selesai'] ?? '') ?: null;
-            if ($mulai === null && $akhir === null && ! empty($r['lapor_mulai'])) {
-                $mulai = (string) $r['lapor_mulai'];
-                $akhir = ($r['lapor_selesai'] ?? '') ?: null;
-            }
+        $aktif  = in_array($status, ['menunggu', 'perbaikan', 'disetujui'], true);
+        $lst    = (string) ($r['lapor_status'] ?? '');
+        $lapor  = $lst !== '' && $lst !== 'dikembalikan' && ! empty($r['lapor_mulai']);
+        $tglAj  = ! empty($r['tanggal_mulai']) || ! empty($r['tanggal_selesai']);
+        $pasti  = $status === 'disetujui' && ($lapor || $tglAj || ($r['sumber'] ?? '') === 'impor');
+        $mulai  = ($r['tanggal_mulai'] ?? '') ?: null;
+        $akhir  = ($r['tanggal_selesai'] ?? '') ?: null;
+        if ($mulai === null && $akhir === null && $lapor) {
+            $mulai = (string) $r['lapor_mulai'];
+            $akhir = ($r['lapor_selesai'] ?? '') ?: null;
+        }
+        if (! $aktif) {
+            $mulai = $akhir = null;
         }
         $lama = $mulai !== null && $akhir !== null ? SuratPkl::lamaBulan($mulai, $akhir) : 0;
 
         return [
-            'no' => 0, 'nama' => (string) $r['nama'], 'mitra' => $mitra, 'mulai' => $mulai, 'selesai' => $akhir, 'lama' => $lama > 0 ? $lama : null,
-            'catatan' => match ($status) {
-                'menunggu'  => 'ajuan menunggu ACC',
-                'perbaikan' => 'ajuan perlu perbaikan',
-                default     => null,
+            'no' => 0, 'nama' => (string) $r['nama'], 'mitra' => $aktif ? IsianBantu::rapikan((string) $r['perusahaan_nama']) : '',
+            'mulai' => $mulai, 'selesai' => $akhir, 'lama' => $lama > 0 ? $lama : null,
+            'tahap'   => $pasti ? 'diterima' : ($aktif ? 'proses' : 'belum'),
+            'catatan' => match (true) {
+                $pasti && $mulai === null                 => 'Sudah diterima (tanggal belum diisi)',
+                $pasti && $lst === 'baru' && ! $tglAj     => 'Sudah lapor diterima (Surat Balasan belum dibuat)',
+                $pasti                                    => 'Sudah diterima',
+                $status === 'disetujui' && $lst === 'dikembalikan' => 'Lapor Diterima dikembalikan petugas, perlu lapor ulang',
+                $status === 'disetujui'                   => 'Belum diterima perusahaan (belum isi Lapor Diterima)',
+                $status === 'menunggu'                    => 'Belum di-ACC Hubin (ajuan menunggu)',
+                $status === 'perbaikan'                   => 'Ajuan dikembalikan Hubin untuk diperbaiki',
+                ! empty($r['ditolak_pt'])                 => 'Ajuan ke ' . IsianBantu::rapikan((string) $r['ditolak_pt']) . ' ditolak, belum mengajukan ulang',
+                default                                   => 'Belum mengajukan PKL',
             },
         ];
     }
@@ -172,25 +198,33 @@ final class PklPrakerin
         $ws->setCellValue('A1', 'DATA SISWA PRAKERIN');
         $ws->setCellValue('A2', mb_strtoupper($sekolah));
         $ws->setCellValue('A3', 'TAHUN PELAJARAN ' . $tahun);
-        foreach (['A1:H1', 'A2:H2', 'A3:H3', 'A6:A7', 'B6:B7', 'C6:C7', 'D6:E6', 'F6:F7'] as $gabung) {
+        foreach (['A1:G1', 'A2:G2', 'A3:G3', 'A6:A7', 'B6:B7', 'C6:C7', 'D6:E6', 'F6:F7', 'G6:G7'] as $gabung) {
             $ws->mergeCells($gabung);
         }
-        $ws->getStyle('A1:H3')->getFont()->setName('Times New Roman')->setSize(12)->setBold(true);
-        $ws->getStyle('A1:H3')->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER);
+        $ws->getStyle('A1:G3')->getFont()->setName('Times New Roman')->setSize(12)->setBold(true);
+        $ws->getStyle('A1:G3')->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER);
 
         $ws->setCellValue('A6', 'NO');
         $ws->setCellValue('B6', 'NAMA');
         $ws->setCellValue('C6', 'Mitra DI/DU');
         $ws->setCellValue('D6', 'Praktek Kerja Lapangan');
         $ws->setCellValue('F6', 'Lamanya PKL');
+        $ws->setCellValue('G6', 'Keterangan');
         $ws->setCellValue('D7', 'Mulai ');
         $ws->setCellValue('E7', 'Selesai');
-        $ws->getStyle('A6:F7')->getFont()->setName('Times New Roman')->setSize(12)->setBold(true);
-        $ws->getStyle('A6:F6')->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER);
-        $ws->getStyle('A6:F7')->getBorders()->getAllBorders()->setBorderStyle(Border::BORDER_THIN);
+        $ws->getStyle('A6:G7')->getFont()->setName('Times New Roman')->setSize(12)->setBold(true);
+        $ws->getStyle('A6:G6')->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER);
+        $ws->getStyle('A6:G7')->getBorders()->getAllBorders()->setBorderStyle(Border::BORDER_THIN);
 
         $baris = 8;
+        $tinggi = [];
         foreach ($siswa as $s) {
+            if ($s['catatan'] !== null) {
+                $ws->setCellValueExplicit('G' . $baris, (string) $s['catatan'], DataType::TYPE_STRING);
+                if (mb_strlen((string) $s['catatan']) > self::KET_SEBARIS) {
+                    $tinggi[$baris] = 31.5; // dua baris
+                }
+            }
             $ws->setCellValue('A' . $baris, (int) $s['no']);
             $ws->setCellValueExplicit('B' . $baris, (string) $s['nama'], DataType::TYPE_STRING);
             if ($s['mitra'] !== '') {
@@ -215,11 +249,13 @@ final class PklPrakerin
         $ws->getStyle('B8:B' . $akhir)->getAlignment()->setVertical(Alignment::VERTICAL_CENTER);
         $ws->getStyle('A8:B' . $akhir)->getFill()->setFillType(Fill::FILL_SOLID)->getStartColor()->setRGB('FFFFFF');
         $ws->getStyle('D8:E' . $akhir)->getNumberFormat()->setFormatCode(self::FORMAT_TANGGAL);
-        $ws->getStyle('A8:F' . $akhir)->getBorders()->getAllBorders()->setBorderStyle(Border::BORDER_THIN);
+        $ws->getStyle('G8:G' . $akhir)->getAlignment()->setWrapText(true)->setVertical(Alignment::VERTICAL_CENTER);
+        $ws->getStyle('A8:G' . $akhir)->getBorders()->getAllBorders()->setBorderStyle(Border::BORDER_THIN);
         for ($r = 1; $r <= $akhir; $r++) {
-            $ws->getRowDimension($r)->setRowHeight(15.75);
+            $ws->getRowDimension($r)->setRowHeight($tinggi[$r] ?? 15.75);
         }
-        $ws->getPageSetup()->setFitToWidth(1)->setFitToHeight(0);
+        // Kolom Keterangan menambah lebar → cetak mendatar, muat satu halaman lebar.
+        $ws->getPageSetup()->setOrientation(PageSetup::ORIENTATION_LANDSCAPE)->setFitToWidth(1)->setFitToHeight(0);
         $ws->setSelectedCell('A1');
     }
 

@@ -7,6 +7,7 @@
  * @var list<array>  $rekap         PklPrakerin::data()
  * @var string       $tingkatPilih
  * @var int          $kelasId       0 = semua kelas di tingkat terpilih
+ * @var bool         $hanyaDiterima true = hanya siswa yang sudah pasti diterima perusahaan (?isi=diterima)
  * @var string       $sekolah
  * @var string       $tahun
  * @var bool         $bolehPengaturan
@@ -18,15 +19,17 @@ $perTingkat = [];
 foreach ($semuaKelas as $k) {
     $perTingkat[$k['tingkat']][] = $k;
 }
-$tot = ['siswa' => 0, 'mitra' => 0, 'tanggal' => 0];
+$tot = ['siswa' => 0, 'diterima' => 0, 'tanggal' => 0, 'tunggu' => 0, 'belum' => 0];
 foreach ($rekap as $r) {
     foreach ($tot as $kunci => $n) {
         $tot[$kunci] = $n + $r['ringkas'][$kunci];
     }
 }
-$urlHal   = static fn (array $q): string => site_url('admin/pkl/prakerin') . '?' . http_build_query($q);
-$urlExcel = static fn (array $q): string => site_url('admin/pkl/prakerin/excel') . '?' . http_build_query($q);
+$isiQ     = $hanyaDiterima ? ['isi' => 'diterima'] : [];
+$urlHal   = static fn (array $q): string => site_url('admin/pkl/prakerin') . '?' . http_build_query($q + $isiQ);
+$urlExcel = static fn (array $q): string => site_url('admin/pkl/prakerin/excel') . '?' . http_build_query($q + $isiQ);
 $saringan = $kelasId > 0 ? ['kelas_id' => $kelasId] : ['tingkat' => $tingkatPilih];
+$urlIsi   = static fn (bool $diterima): string => site_url('admin/pkl/prakerin') . '?' . http_build_query($saringan + ($diterima ? ['isi' => 'diterima'] : []));
 $pil      = static fn (bool $aktif): string => $aktif
     ? 'border-brand-600 bg-brand-50 text-brand-700'
     : 'border-slate-200 bg-white text-slate-600 hover:bg-slate-50';
@@ -39,8 +42,10 @@ $pil      = static fn (bool $aktif): string => $aktif
     'helpTitle' => 'Data Siswa Prakerin',
     'helpBody'  => '<p>Rekap tempat PKL siswa per kelas, <b>diambil otomatis dari sistem</b>. Tombol <b>Unduh Excel</b> menghasilkan berkas format sekolah "DATA SISWA PRAKERIN" (satu lembar per kelas) — isinya sama dengan tabel di halaman ini.</p>'
         . '<ul class="mt-2 list-disc pl-5 space-y-1">'
-        . '<li><b>Mitra DI/DU</b> terisi bila ajuan PKL siswa sudah <b>Disetujui</b> (termasuk hasil impor). Ajuan yang masih menunggu ACC belum ditulis.</li>'
+        . '<li><b>Mitra DI/DU</b> = perusahaan yang dituju siswa (ajuan aktif). Kolom <b>Keterangan</b> menjelaskan posisinya: <b>Sudah diterima</b> (sudah Lapor Diterima, ada Surat Balasan, atau hasil impor Excel sekolah), belum diterima perusahaan / belum lapor, belum di-ACC Hubin, perlu perbaikan, ditolak, atau belum mengajukan.</li>'
+        . '<li>ACC Hubin saja <b>belum berarti diterima</b> perusahaan — siswa harus mengisi <b>Lapor Diterima</b>. Keterangan ikut tercetak di Excel.</li>'
         . '<li><b>Mulai &amp; Selesai</b> diambil dari periode di Surat Balasan / hasil impor, atau dari laporan "Lapor Diterima" siswa. <b>Lamanya PKL</b> dihitung dalam bulan.</li>'
+        . '<li>Pilih <b>Hanya yang sudah diterima</b> bila Excel cukup berisi siswa yang sudah pasti (nomor urut menyesuaikan).</li>'
         . ($bolehPengaturan ? '<li>Punya data di Excel format ini? Pakai <b>Impor dari Excel</b> — pratinjau tampil dulu sebelum ada yang disimpan.</li>' : '')
         . '</ul>',
 ]) ?>
@@ -53,7 +58,7 @@ $pil      = static fn (bool $aktif): string => $aktif
             <div>
                 <p class="text-xs font-bold uppercase tracking-wide text-slate-400">Data Siswa Prakerin</p>
                 <h2 class="mt-0.5 font-bold text-slate-800"><?= esc(mb_strtoupper($sekolah)) ?><?= $tahun !== '' ? ' · Tahun Pelajaran ' . esc($tahun) : '' ?></h2>
-                <p class="mt-1 text-sm text-slate-500"><?= count($rekap) ?> kelas · <?= (int) $tot['siswa'] ?> siswa · <b class="text-slate-700"><?= (int) $tot['mitra'] ?></b> sudah ada mitra · <?= (int) $tot['tanggal'] ?> bertanggal</p>
+                <p class="mt-1 text-sm text-slate-500"><?= count($rekap) ?> kelas · <?= (int) $tot['siswa'] ?> siswa · <b class="text-slate-700"><?= (int) $tot['diterima'] ?></b> sudah diterima · <?= (int) $tot['tunggu'] ?> mengajukan, belum diterima · <?= (int) $tot['belum'] ?> belum mengajukan</p>
             </div>
             <div class="flex flex-col gap-2 sm:flex-row">
                 <?php if ($rekap !== []): ?>
@@ -81,6 +86,11 @@ $pil      = static fn (bool $aktif): string => $aktif
                     <?php endforeach; ?>
                 </div>
             <?php endif; ?>
+            <div class="flex flex-wrap items-center gap-2">
+                <span class="w-14 text-xs font-semibold text-slate-400">Isi</span>
+                <a href="<?= esc($urlIsi(false), 'attr') ?>" class="rounded-full border px-3 py-1.5 text-xs font-semibold transition <?= $pil(! $hanyaDiterima) ?>">Semua siswa (dengan keterangan)</a>
+                <a href="<?= esc($urlIsi(true), 'attr') ?>" class="rounded-full border px-3 py-1.5 text-xs font-semibold transition <?= $pil($hanyaDiterima) ?>">Hanya yang sudah diterima</a>
+            </div>
         </div>
     </section>
 
@@ -93,14 +103,14 @@ $pil      = static fn (bool $aktif): string => $aktif
             <div class="flex flex-wrap items-center justify-between gap-2 border-b border-slate-100 px-5 py-3">
                 <div>
                     <h3 class="font-bold text-slate-800"><?= esc($k['nama_kelas']) ?></h3>
-                    <p class="text-xs text-slate-400"><?= (int) $r['ringkas']['siswa'] ?> siswa · <?= (int) $r['ringkas']['mitra'] ?> ada mitra · <?= (int) $r['ringkas']['tanggal'] ?> bertanggal</p>
+                    <p class="text-xs text-slate-400"><?= (int) $r['ringkas']['siswa'] ?> siswa · <?= (int) $r['ringkas']['diterima'] ?> sudah diterima · <?= (int) $r['ringkas']['tunggu'] ?> belum diterima · <?= (int) $r['ringkas']['belum'] ?> belum mengajukan</p>
                 </div>
                 <?php if (count($rekap) > 1): ?>
                     <a href="<?= esc($urlExcel(['kelas_id' => $k['id']]), 'attr') ?>" class="text-xs font-bold text-brand-700 hover:underline">⬇ Unduh kelas ini</a>
                 <?php endif; ?>
             </div>
             <?php if ($r['siswa'] === []): ?>
-                <p class="px-5 py-8 text-center text-sm text-slate-500">Belum ada siswa aktif di kelas ini.</p>
+                <p class="px-5 py-8 text-center text-sm text-slate-500"><?= $hanyaDiterima ? 'Belum ada siswa yang sudah diterima perusahaan di kelas ini.' : 'Belum ada siswa aktif di kelas ini.' ?></p>
             <?php else: ?>
                 <div class="overflow-x-auto">
                     <table class="w-full min-w-[44rem] text-sm">
@@ -111,7 +121,8 @@ $pil      = static fn (bool $aktif): string => $aktif
                                 <th class="px-3 py-2.5 font-semibold">Mitra DI/DU</th>
                                 <th class="px-3 py-2.5 font-semibold">Mulai</th>
                                 <th class="px-3 py-2.5 font-semibold">Selesai</th>
-                                <th class="px-4 py-2.5 font-semibold">Lamanya PKL</th>
+                                <th class="px-3 py-2.5 font-semibold">Lamanya PKL</th>
+                                <th class="px-4 py-2.5 font-semibold">Keterangan</th>
                             </tr>
                         </thead>
                         <tbody class="divide-y divide-slate-100">
@@ -119,14 +130,11 @@ $pil      = static fn (bool $aktif): string => $aktif
                                 <tr class="hover:bg-slate-50">
                                     <td class="px-4 py-2 text-center text-slate-400"><?= (int) $s['no'] ?></td>
                                     <td class="px-3 py-2 font-medium text-slate-800"><?= esc($s['nama']) ?></td>
-                                    <td class="px-3 py-2 text-slate-700">
-                                        <?php if ($s['mitra'] !== ''): ?><?= esc($s['mitra']) ?>
-                                        <?php elseif ($s['catatan'] !== null): ?><span class="text-xs font-semibold text-amber-600"><?= esc($s['catatan']) ?></span>
-                                        <?php else: ?><span class="text-slate-300">—</span><?php endif; ?>
-                                    </td>
+                                    <td class="px-3 py-2 text-slate-700"><?= $s['mitra'] !== '' ? esc($s['mitra']) : '<span class="text-slate-300">—</span>' ?></td>
                                     <td class="whitespace-nowrap px-3 py-2 text-slate-600"><?= $s['mulai'] !== null ? esc(IsianBantu::tanggalIndo($s['mulai'])) : '' ?></td>
                                     <td class="whitespace-nowrap px-3 py-2 text-slate-600"><?= $s['selesai'] !== null ? esc(IsianBantu::tanggalIndo($s['selesai'])) : '' ?></td>
-                                    <td class="whitespace-nowrap px-4 py-2 text-slate-600"><?= $s['lama'] !== null ? (int) $s['lama'] . ' bulan' : '' ?></td>
+                                    <td class="whitespace-nowrap px-3 py-2 text-slate-600"><?= $s['lama'] !== null ? (int) $s['lama'] . ' bulan' : '' ?></td>
+                                    <td class="px-4 py-2 text-xs <?= match ($s['tahap']) { 'diterima' => 'text-green-700', 'proses' => 'font-semibold text-amber-600', default => 'text-slate-400' } ?>"><?= esc((string) $s['catatan']) ?></td>
                                 </tr>
                             <?php endforeach; ?>
                         </tbody>
