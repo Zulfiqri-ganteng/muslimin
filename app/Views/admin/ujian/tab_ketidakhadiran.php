@@ -1,6 +1,7 @@
 <?php
 /**
- * Tab Ketidakhadiran — inti modul.
+ * Tab Ketidakhadiran — inti modul. Rombak tampilan F7: kartu pemilih kit, lencana sesi, tabel kit, ui_kosong; komponen Alpine
+ * takHadirKelas / takHadirBaris di assets/js/admin/ujian/ketidakhadiran.js (tanpa objek sebaris di x-data) → siap CSP.
  *
  * Alur tiga langkah: pilih sesi ujian → pilih kelas (otomatis disaring sesuai
  * tingkat/jurusan/shift sesi itu) → centang siswa yang TIDAK hadir.
@@ -31,196 +32,147 @@ $labelStatusSusulan = [
     'selesai'     => 'Selesai',
     'batal'       => 'Batal',
 ];
-$warnaStatusSusulan = [
-    'belum'       => 'bg-amber-50 text-amber-700 border-amber-200',
-    'dijadwalkan' => 'bg-brand-50 text-brand-700 border-brand-200',
-    'selesai'     => 'bg-emerald-50 text-emerald-700 border-emerald-200',
-    'batal'       => 'bg-gray-100 text-gray-500 border-gray-200',
-];
+$warnaStatusSusulan = ['belum' => 'lencana-kuning', 'dijadwalkan' => 'lencana-merek', 'selesai' => 'lencana-hijau', 'batal' => 'lencana-abu'];
 ?>
 
-<!-- Langkah 1 & 2: pilih sesi lalu kelas -->
-<div class="bg-white rounded-2xl border border-gray-200 shadow-xs p-4 sm:p-5 mb-5">
-    <form method="get" action="<?= $base ?>/ketidakhadiran" class="grid sm:grid-cols-2 gap-4">
-        <input type="hidden" name="tp" value="<?= esc($tp, 'attr') ?>">
-        <div>
-            <label class="block text-sm font-semibold text-gray-700 mb-1.5">1. Sesi Ujian</label>
-            <select name="jadwal_id" data-autosubmit class="w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm focus:border-brand-500 outline-hidden">
-                <option value="">— Pilih sesi ujian —</option>
-                <?php foreach ($jadwalOpts as $id => $lbl): ?>
-                    <option value="<?= (int) $id ?>" <?= $jadwalId === (int) $id ? 'selected' : '' ?>><?= esc($lbl) ?></option>
-                <?php endforeach; ?>
-            </select>
-        </div>
-        <div>
-            <label class="block text-sm font-semibold text-gray-700 mb-1.5">2. Kelas</label>
-            <select name="kelas_id" data-autosubmit <?= $jadwalPilih ? '' : 'disabled' ?>
-                    class="w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm focus:border-brand-500 outline-hidden disabled:bg-gray-50 disabled:text-gray-400">
-                <option value="">— Pilih kelas —</option>
-                <?php foreach ($kelasSasaran as $k): ?>
-                    <option value="<?= (int) $k['id'] ?>" <?= $kelasId === (int) $k['id'] ? 'selected' : '' ?>>
-                        <?= esc($k['nama_kelas']) ?> (<?= esc($k['shift']) ?>)
-                    </option>
-                <?php endforeach; ?>
-            </select>
-            <?php if ($jadwalPilih && $kelasSasaran === []): ?>
-                <p class="text-xs text-amber-700 mt-1.5">
-                    Tidak ada kelas yang cocok dengan tingkat/jurusan/shift sesi ini.
-                </p>
-            <?php endif; ?>
-        </div>
-    </form>
+<div class="space-y-4">
+    <!-- Langkah 1 & 2: pilih sesi lalu kelas -->
+    <section class="kartu" aria-label="Pilih sesi & kelas">
+        <form method="get" action="<?= $base ?>/ketidakhadiran" class="kartu-isi grid gap-4 sm:grid-cols-2">
+            <input type="hidden" name="tp" value="<?= esc($tp, 'attr') ?>">
+            <div>
+                <label class="lbl" for="th-sesi">1. Sesi ujian</label>
+                <select id="th-sesi" name="jadwal_id" data-autosubmit class="inp">
+                    <option value="">— Pilih sesi ujian —</option>
+                    <?php foreach ($jadwalOpts as $id => $lbl): ?>
+                        <option value="<?= (int) $id ?>"<?= $jadwalId === (int) $id ? ' selected' : '' ?>><?= esc($lbl) ?></option>
+                    <?php endforeach; ?>
+                </select>
+            </div>
+            <div>
+                <label class="lbl" for="th-kelas">2. Kelas</label>
+                <select id="th-kelas" name="kelas_id" data-autosubmit<?= $jadwalPilih ? '' : ' disabled' ?> class="inp">
+                    <option value="">— Pilih kelas —</option>
+                    <?php foreach ($kelasSasaran as $k): ?>
+                        <option value="<?= (int) $k['id'] ?>"<?= $kelasId === (int) $k['id'] ? ' selected' : '' ?>><?= esc($k['nama_kelas']) ?> (<?= esc($k['shift']) ?>)</option>
+                    <?php endforeach; ?>
+                </select>
+                <?php if ($jadwalPilih && $kelasSasaran === []): ?>
+                    <p class="hint text-yellow-700 dark:text-yellow-400">Tidak ada kelas yang cocok dengan tingkat/jurusan/shift sesi ini.</p>
+                <?php endif; ?>
+            </div>
+        </form>
 
-    <?php if ($jadwalPilih): ?>
-        <?php $ts = strtotime((string) $jadwalPilih['tanggal']); ?>
-        <div class="border-t border-gray-100 mt-4 pt-3 flex flex-wrap items-center gap-2 text-xs">
-            <span class="inline-flex items-center rounded-full bg-gray-100 text-gray-600 font-semibold px-3 py-1.5">
-                <?= esc($jadwalPilih['nama_mapel'] ?? 'Tanpa mapel') ?>
-            </span>
-            <span class="inline-flex items-center rounded-full bg-gray-100 text-gray-600 font-semibold px-3 py-1.5">
-                <?= esc($HARI[(int) date('N', $ts)] ?? '') ?>, <?= date('d/m/Y', $ts) ?>
-            </span>
-            <span class="inline-flex items-center rounded-full bg-gray-100 text-gray-600 font-semibold px-3 py-1.5">
-                Tingkat <?= esc($jadwalPilih['tingkat']) ?><?= $jadwalPilih['jurusan_kode'] ? ' ' . esc($jadwalPilih['jurusan_kode']) : '' ?>
-                · <?= esc($jadwalPilih['shift']) ?>
-            </span>
-            <span class="inline-flex items-center rounded-full <?= $jmlTakHadirSesi > 0 ? 'bg-amber-50 text-amber-700' : 'bg-gray-100 text-gray-600' ?> font-semibold px-3 py-1.5">
-                Tidak hadir di sesi ini: <?= (int) $jmlTakHadirSesi ?>
-            </span>
-            <span class="inline-flex items-center rounded-full bg-gray-100 text-gray-600 font-semibold px-3 py-1.5">
-                <?= count($kelasSasaran) ?> kelas sasaran
-            </span>
-        </div>
-    <?php endif; ?>
-</div>
+        <?php if ($jadwalPilih): ?>
+            <?php $ts = strtotime((string) $jadwalPilih['tanggal']); ?>
+            <div class="kartu-kaki flex flex-wrap items-center gap-2">
+                <span class="lencana lencana-abu"><?= esc($jadwalPilih['nama_mapel'] ?? 'Tanpa mapel') ?></span>
+                <span class="lencana lencana-abu"><?= ikon('calendar-month', 'h-3.5 w-3.5') ?><?= esc($HARI[(int) date('N', $ts)] ?? '') ?>, <?= date('d/m/Y', $ts) ?></span>
+                <span class="lencana lencana-abu">Tingkat <?= esc($jadwalPilih['tingkat']) ?><?= $jadwalPilih['jurusan_kode'] ? ' ' . esc($jadwalPilih['jurusan_kode']) : '' ?> · <?= esc($jadwalPilih['shift']) ?></span>
+                <span class="lencana <?= $jmlTakHadirSesi > 0 ? 'lencana-kuning' : 'lencana-abu' ?>">Tidak hadir di sesi ini: <?= (int) $jmlTakHadirSesi ?></span>
+                <span class="lencana lencana-abu"><?= count($kelasSasaran) ?> kelas sasaran</span>
+            </div>
+        <?php endif; ?>
+    </section>
 
-<?php if (! $jadwalPilih): ?>
+    <?php if (! $jadwalPilih): ?>
 
-    <div class="bg-white rounded-2xl border border-gray-200 shadow-xs p-10 text-center">
-        <span class="mx-auto flex h-12 w-12 items-center justify-center rounded-xl bg-gray-100 text-gray-400">
-            <svg class="w-6 h-6" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"/></svg>
-        </span>
-        <p class="font-bold text-gray-700 mt-3">Pilih sesi ujian dulu</p>
-        <p class="text-sm text-gray-500 mt-1 max-w-md mx-auto">
-            Setelah sesi dipilih, daftar kelas sasarannya muncul otomatis sesuai tingkat, jurusan, dan shift sesi itu.
-            <?php if ($jadwalOpts === []): ?>
-                <br>Belum ada sesi ujian — susun dulu di <a href="<?= $base ?>/jadwal<?= $qtp ?>" class="text-brand-600 font-semibold hover:underline">tab Jadwal Ujian</a>.
-            <?php endif; ?>
-        </p>
-    </div>
+        <div class="kartu"><?= ui_kosong([
+            'ikon'  => 'clipboard-check',
+            'judul' => 'Pilih sesi ujian dulu',
+            'teks'  => 'Setelah sesi dipilih, daftar kelas sasarannya muncul otomatis sesuai tingkat, jurusan, dan shift sesi itu.' . ($jadwalOpts === [] ? ' Belum ada sesi ujian — susun dulu di tab Jadwal Ujian.' : ''),
+            'aksi'  => $jadwalOpts === [] ? '<a href="' . $base . '/jadwal' . $qtp . '" class="btn btn-netral">' . ikon('calendar-week', 'h-4 w-4') . 'Buka tab Jadwal Ujian</a>' : '',
+        ]) ?></div>
 
-<?php elseif (! $kelasPilih): ?>
+    <?php elseif (! $kelasPilih): ?>
 
-    <div class="bg-white rounded-2xl border border-gray-200 shadow-xs p-10 text-center">
-        <p class="font-bold text-gray-700">Pilih kelas</p>
-        <p class="text-sm text-gray-500 mt-1">Daftar siswa muncul setelah kelas dipilih.</p>
-    </div>
+        <div class="kartu"><?= ui_kosong(['ikon' => 'school', 'judul' => 'Pilih kelas', 'teks' => 'Daftar siswa muncul setelah kelas dipilih.']) ?></div>
 
-<?php elseif ($siswa === []): ?>
+    <?php elseif ($siswa === []): ?>
 
-    <div class="bg-white rounded-2xl border border-gray-200 shadow-xs p-10 text-center">
-        <p class="font-bold text-gray-700">Kelas <?= esc($kelasPilih['nama_kelas']) ?> belum punya siswa aktif</p>
-        <p class="text-sm text-gray-500 mt-1">Tambahkan siswanya lebih dulu di Master Data → Siswa.</p>
-    </div>
+        <div class="kartu"><?= ui_kosong(['ikon' => 'users', 'judul' => 'Kelas ' . $kelasPilih['nama_kelas'] . ' belum punya siswa aktif', 'teks' => 'Tambahkan siswanya lebih dulu di Master Data → Siswa.']) ?></div>
 
-<?php else: ?>
+    <?php else: ?>
 
-    <form method="post" action="<?= $base ?>/ketidakhadiran">
-        <?= csrf_field() ?>
-        <input type="hidden" name="periode_id" value="<?= (int) $periode['id'] ?>">
-        <input type="hidden" name="jadwal_id" value="<?= (int) $jadwalId ?>">
-        <input type="hidden" name="kelas_id" value="<?= (int) $kelasId ?>">
+        <form method="post" action="<?= $base ?>/ketidakhadiran">
+            <?= csrf_field() ?>
+            <input type="hidden" name="periode_id" value="<?= (int) $periode['id'] ?>">
+            <input type="hidden" name="jadwal_id" value="<?= (int) $jadwalId ?>">
+            <input type="hidden" name="kelas_id" value="<?= (int) $kelasId ?>">
 
-        <?php // x-data dipasang di kartu (bukan di tabel) supaya penghitung di
-              // kepala kartu ikut masuk cakupan Alpine yang sama. ?>
-        <div class="bg-white rounded-2xl border border-gray-200 shadow-xs overflow-hidden"
-             x-data="{ jumlah: <?= count(array_intersect_key($tercatat, array_column($siswa, null, 'id'))) ?>,
-                 hitung(){ this.jumlah = this.$root.querySelectorAll('input[name=\'tidak_hadir[]\']:checked').length; } }">
-            <div class="px-6 py-4 border-b border-gray-100 flex flex-wrap items-center justify-between gap-2">
-                <div>
-                    <h2 class="font-bold text-gray-800">3. Centang siswa yang TIDAK hadir</h2>
-                    <p class="text-xs text-gray-500 mt-0.5">
-                        Kelas <?= esc($kelasPilih['nama_kelas']) ?> — <?= count($siswa) ?> siswa aktif.
-                        Siswa yang hadir tidak perlu diapa-apakan.
+            <?php // x-data dipasang di kartu (bukan di tabel) supaya penghitung di
+                  // kepala kartu ikut masuk cakupan Alpine yang sama. ?>
+            <section class="kartu overflow-hidden" x-data="takHadirKelas" aria-labelledby="judul-centang">
+                <div class="kartu-kepala">
+                    <div>
+                        <h2 id="judul-centang" class="kartu-judul">3. Centang siswa yang TIDAK hadir</h2>
+                        <p class="kartu-ket">Kelas <?= esc($kelasPilih['nama_kelas']) ?> — <?= count($siswa) ?> siswa aktif. Siswa yang hadir tidak perlu diapa-apakan.</p>
+                    </div>
+                    <span class="lencana lencana-kuning">Tercentang: <span x-text="jumlah">0</span></span>
+                </div>
+
+                <div class="tabel-bungkus">
+                    <table class="tabel">
+                        <thead>
+                            <tr>
+                                <th scope="col" class="w-16 text-center">Tidak<br>hadir</th>
+                                <th scope="col">Siswa</th>
+                                <th scope="col" class="w-40">Alasan</th>
+                                <th scope="col">Keterangan</th>
+                                <th scope="col" class="w-44">Status susulan</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <?php foreach ($siswa as $s): ?>
+                                <?php
+                                $sid  = (int) $s['id'];
+                                $lama = $tercatat[$sid] ?? null;
+                                $on   = $lama !== null;
+                                ?>
+                                <tr x-data="takHadirBaris" data-on="<?= $on ? '1' : '0' ?>" :class="on ? 'bg-yellow-50 dark:bg-yellow-900/20' : ''">
+                                    <td class="text-center">
+                                        <input type="checkbox" name="tidak_hadir[]" value="<?= $sid ?>"<?= $on ? ' checked' : '' ?> x-model="on" @change="hitung()" class="cek" aria-label="<?= esc($s['nama'], 'attr') ?> tidak hadir">
+                                    </td>
+                                    <td>
+                                        <p class="font-semibold text-gray-900 dark:text-white"><?= esc($s['nama']) ?></p>
+                                        <p class="text-xs text-gray-500 dark:text-gray-400">NIS <?= esc($s['nis']) ?></p>
+                                    </td>
+                                    <td>
+                                        <select name="alasan[<?= $sid ?>]" :disabled="hadir()"<?= $on ? '' : ' disabled' ?> class="inp py-1.5" aria-label="Alasan">
+                                            <?php foreach ($alasanList as $a): ?>
+                                                <option value="<?= esc($a, 'attr') ?>"<?= ($lama['alasan'] ?? 'alpa') === $a ? ' selected' : '' ?>><?= esc($labelAlasan[$a] ?? $a) ?></option>
+                                            <?php endforeach; ?>
+                                        </select>
+                                    </td>
+                                    <td>
+                                        <input type="text" name="keterangan[<?= $sid ?>]" maxlength="255" :disabled="hadir()"<?= $on ? '' : ' disabled' ?> value="<?= esc($lama['keterangan'] ?? '', 'attr') ?>" placeholder="mis. surat dokter" class="inp py-1.5" aria-label="Keterangan">
+                                    </td>
+                                    <td>
+                                        <?php if ($lama): ?>
+                                            <span class="lencana <?= $warnaStatusSusulan[$lama['status']] ?? $warnaStatusSusulan['belum'] ?>"><?= esc($labelStatusSusulan[$lama['status']] ?? $lama['status']) ?></span>
+                                            <?php if ($lama['status'] === 'selesai'): ?>
+                                                <p class="mt-1 text-[11px] text-gray-500 dark:text-gray-400">Dikunci — tak bisa dibatalkan dari sini.</p>
+                                            <?php endif; ?>
+                                        <?php else: ?>
+                                            <span class="text-gray-300 dark:text-gray-600">—</span>
+                                        <?php endif; ?>
+                                    </td>
+                                </tr>
+                            <?php endforeach; ?>
+                        </tbody>
+                    </table>
+                </div>
+
+                <div class="kartu-kaki flex flex-wrap items-center gap-3">
+                    <button type="submit" class="btn btn-utama"><?= ikon('check', 'h-4 w-4') ?>Simpan pendataan</button>
+                    <p class="text-xs text-gray-500 dark:text-gray-400">
+                        Centangan yang dilepas berarti siswa ternyata hadir — catatannya dihapus.
+                        Susulan yang sudah <b>Selesai</b> tetap dipertahankan.
                     </p>
                 </div>
-                <span class="inline-flex items-center rounded-full bg-gray-100 text-gray-600 text-xs font-semibold px-3 py-1.5">
-                    Tercentang: <span class="ml-1" x-text="jumlah"></span>
-                </span>
-            </div>
+            </section>
+        </form>
+        <script defer src="<?= base_url('assets/js/admin/ujian/ketidakhadiran.js') ?>?v=<?= @filemtime(FCPATH . 'assets/js/admin/ujian/ketidakhadiran.js') ?>" <?= csp_script_nonce() ?>></script>
 
-            <div class="overflow-x-auto">
-                <table class="w-full text-sm">
-                    <thead class="bg-gray-50 text-gray-500">
-                        <tr>
-                            <th class="text-center font-semibold px-4 py-3 w-16">Tidak<br>Hadir</th>
-                            <th class="text-left font-semibold px-4 py-3">Siswa</th>
-                            <th class="text-left font-semibold px-4 py-3 w-40">Alasan</th>
-                            <th class="text-left font-semibold px-4 py-3">Keterangan</th>
-                            <th class="text-left font-semibold px-4 py-3 w-44">Status Susulan</th>
-                        </tr>
-                    </thead>
-                    <tbody class="divide-y divide-gray-100">
-                        <?php foreach ($siswa as $s): ?>
-                            <?php
-                            $sid  = (int) $s['id'];
-                            $lama = $tercatat[$sid] ?? null;
-                            $on   = $lama !== null;
-                            ?>
-                            <tr x-data="{ on: <?= $on ? 'true' : 'false' ?> }" :class="on ? 'bg-amber-50/50' : ''">
-                                <td class="px-4 py-2.5 text-center">
-                                    <input type="checkbox" name="tidak_hadir[]" value="<?= $sid ?>"
-                                           x-model="on" @change="hitung()"
-                                           class="h-4 w-4 rounded-sm border-gray-300 text-brand-600 focus:ring-brand-500">
-                                </td>
-                                <td class="px-4 py-2.5">
-                                    <p class="font-semibold text-gray-700"><?= esc($s['nama']) ?></p>
-                                    <p class="text-xs text-gray-400">NIS <?= esc($s['nis']) ?></p>
-                                </td>
-                                <td class="px-4 py-2.5">
-                                    <select name="alasan[<?= $sid ?>]" :disabled="!on"
-                                            class="w-full rounded-lg border border-gray-300 px-2 py-1.5 text-sm focus:border-brand-500 outline-hidden disabled:bg-gray-50 disabled:text-gray-400">
-                                        <?php foreach ($alasanList as $a): ?>
-                                            <option value="<?= esc($a, 'attr') ?>" <?= ($lama['alasan'] ?? 'alpa') === $a ? 'selected' : '' ?>>
-                                                <?= esc($labelAlasan[$a] ?? $a) ?>
-                                            </option>
-                                        <?php endforeach; ?>
-                                    </select>
-                                </td>
-                                <td class="px-4 py-2.5">
-                                    <input type="text" name="keterangan[<?= $sid ?>]" maxlength="255" :disabled="!on"
-                                           value="<?= esc($lama['keterangan'] ?? '', 'attr') ?>"
-                                           placeholder="mis. surat dokter"
-                                           class="w-full rounded-lg border border-gray-300 px-2 py-1.5 text-sm focus:border-brand-500 outline-hidden disabled:bg-gray-50">
-                                </td>
-                                <td class="px-4 py-2.5">
-                                    <?php if ($lama): ?>
-                                        <span class="inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-semibold <?= $warnaStatusSusulan[$lama['status']] ?? $warnaStatusSusulan['belum'] ?>">
-                                            <?= esc($labelStatusSusulan[$lama['status']] ?? $lama['status']) ?>
-                                        </span>
-                                        <?php if ($lama['status'] === 'selesai'): ?>
-                                            <p class="text-[11px] text-gray-400 mt-1">Dikunci — tak bisa dibatalkan dari sini.</p>
-                                        <?php endif; ?>
-                                    <?php else: ?>
-                                        <span class="text-gray-300">—</span>
-                                    <?php endif; ?>
-                                </td>
-                            </tr>
-                        <?php endforeach; ?>
-                    </tbody>
-                </table>
-            </div>
-
-            <div class="px-6 py-4 border-t border-gray-100 flex flex-wrap items-center gap-3">
-                <button class="rounded-lg bg-brand-700 hover:bg-brand-800 text-white text-sm font-semibold px-5 py-2.5 transition">
-                    Simpan Pendataan
-                </button>
-                <p class="text-xs text-gray-500">
-                    Centangan yang dilepas berarti siswa ternyata hadir — catatannya dihapus.
-                    Susulan yang sudah <b>Selesai</b> tetap dipertahankan.
-                </p>
-            </div>
-        </div>
-    </form>
-
-<?php endif; ?>
+    <?php endif; ?>
+</div>
