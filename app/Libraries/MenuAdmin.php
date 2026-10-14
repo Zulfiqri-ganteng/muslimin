@@ -114,6 +114,7 @@ final class MenuAdmin
                     ['admin/pkl/daftar', 'Kotak Masuk', 'inbox'],
                     ['admin/pkl/baru', 'Isi atas Nama', 'user-edit'],
                     ['admin/pkl/siswa', 'Status Siswa', 'user-circle'],
+                    ['admin/pkl/prakerin', 'Data Prakerin', 'address-book'],
                     ['admin/pkl/laporan', 'Laporan Pembayaran', 'receipt'],
                     ['admin/pkl/ttd', 'Tanda Tangan', 'pen-nib'],
                     ['admin/pkl/pengaturan', 'Pengaturan PKL', 'adjustments-horizontal'],

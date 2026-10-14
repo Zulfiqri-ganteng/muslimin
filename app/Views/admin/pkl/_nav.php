@@ -2,7 +2,7 @@
 /**
  * Tab navigasi PKL (dipakai semua halaman staf PKL).
  *
- * @var string                $tab        beranda | daftar_{status} | siswa | baru | laporan | pengaturan | ttd | hak_akses
+ * @var string                $tab        beranda | daftar_{status} | siswa | prakerin | baru | laporan | pengaturan | ttd | hak_akses
  * @var array<string, int>    $hitungTab  jumlah ajuan per status
  */
 $tabs = [
@@ -12,6 +12,7 @@ $tabs = [
     ['daftar_disetujui', 'Disetujui', site_url('admin/pkl/daftar/disetujui'), $hitungTab['disetujui'] ?? 0],
     ['daftar_ditolak', 'Ditolak', site_url('admin/pkl/daftar/ditolak'), $hitungTab['ditolak'] ?? 0],
     ['siswa', 'Status Siswa', site_url('admin/pkl/siswa'), null],
+    ['prakerin', 'Data Prakerin', site_url('admin/pkl/prakerin'), null],
 ];
 // Menu bersyarat: mengikuti hak yang diatur Admin (Sistem → Hak Akses).
 $peranNav = (string) (session('admin')['role'] ?? '');
