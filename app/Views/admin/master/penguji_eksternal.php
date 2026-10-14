@@ -1,6 +1,6 @@
 <?php
 /**
- * Halaman Master Penguji Eksternal UKK — pola tampilan mengikuti Master Teknisi.
+ * Halaman Master Penguji Eksternal UKK — pola halaman data template Flowbite (rombak tampilan F5).
  *
  * @var string                        $q     Kata kunci pencarian
  * @var int                           $per   Baris per halaman
@@ -10,149 +10,122 @@
  */
 ?>
 <?= $this->extend('layouts/admin') ?>
-<?= $this->section('content') ?>
+<?= $this->section('tata') ?>crud<?= $this->endSection() ?>
 
+<?= $this->section('bantuan') ?>
 <?= view('admin/partials/help', [
     'helpKey'   => 'penguji_eksternal',
     'helpTitle' => 'Master Penguji Eksternal',
+    'helpKelas' => '',
     'helpBody'  => '<p>Penguji UKK dari <b>luar sekolah</b> (DUDI/industri/asosiasi profesi) — bukan guru, jadi disimpan di tabel tersendiri.</p>
         <p class="mt-1">Penguji internal (guru sekolah) diambil langsung dari <b>Master Guru</b> saat penugasan di <b>Jadwal UKK</b> — tidak perlu didaftarkan di sini.</p>',
 ]) ?>
+<?= $this->endSection() ?>
 
-<div x-data="masterList"
-     data-base="<?= site_url('admin/master/penguji-eksternal') ?>"
-     data-entity="penguji_eksternal"
+<?= $this->section('content') ?>
+<div x-data="masterList" data-base="<?= site_url('admin/master/penguji-eksternal') ?>" data-entity="penguji eksternal"
      data-defaults="<?= esc(json_encode([
          'id' => '', 'kode' => '', 'nama' => '', 'instansi' => '',
          'jabatan' => '', 'no_hp' => '', 'email' => '', 'keterangan' => '',
      ]), 'attr') ?>">
 
-    <?= view('admin/master/partials/toolbar', [
-        'baseUrl'           => site_url('admin/master/penguji-eksternal'),
-        'searchPlaceholder' => 'Cari kode, nama, atau instansi...',
-        'q'                 => $q,
-        'per'               => $per,
-        'exportUrl'         => site_url('admin/master/penguji-eksternal/export'),
-        'exportTitle'       => 'Keluarkan semua penguji eksternal ke file Excel',
-        'bulkUrl'           => site_url('admin/master/penguji-eksternal/bulk-delete'),
-        'bulkLabel'         => 'penguji eksternal',
+    <?= ui_crud_alat([
+        'baseUrl'     => site_url('admin/master/penguji-eksternal'),
+        'cari'        => 'Cari kode, nama, atau instansi…',
+        'q'           => $q,
+        'per'         => $per,
+        'eksporUrl'   => site_url('admin/master/penguji-eksternal/export'),
+        'eksporTitle' => 'Keluarkan semua penguji eksternal ke file Excel',
+        'massalUrl'   => site_url('admin/master/penguji-eksternal/bulk-delete'),
+        'massalLabel' => 'penguji eksternal',
     ]) ?>
 
-    <div class="bg-white rounded-2xl border border-gray-200 shadow-xs overflow-hidden">
-        <div class="px-6 py-4 border-b border-gray-100 flex items-center justify-between">
-            <h2 class="font-bold text-gray-800">Daftar Penguji Eksternal <span class="text-gray-400 font-normal">(<?= $total ?>)</span></h2>
-        </div>
-        <div class="overflow-x-auto">
-            <table class="w-full text-sm">
-                <thead class="bg-gray-50 text-gray-500 text-left">
+    <div class="tabel-bungkus">
+        <table class="tabel-crud">
+            <thead>
+                <tr>
+                    <th scope="col" class="kolom-cek"><input type="checkbox" class="cek js-check-all" aria-label="Pilih semua penguji di halaman ini"></th>
+                    <th scope="col">Kode</th>
+                    <th scope="col">Nama</th>
+                    <th scope="col">Instansi / jabatan</th>
+                    <th scope="col">Kontak</th>
+                    <th scope="col" class="kolom-aksi">Aksi</th>
+                </tr>
+            </thead>
+            <tbody>
+                <?php if (empty($rows)): ?>
                     <tr>
-                        <th class="pl-6 pr-2 py-3 w-10"><input type="checkbox" title="Pilih semua di halaman ini" class="js-check-all rounded-sm border-gray-300 text-brand-600 focus:ring-brand-500"></th>
-                        <th class="px-4 py-3 font-semibold w-24">Kode</th>
-                        <th class="px-4 py-3 font-semibold">Nama</th>
-                        <th class="px-4 py-3 font-semibold">Instansi / Jabatan</th>
-                        <th class="px-4 py-3 font-semibold w-36">Kontak</th>
-                        <th class="px-4 py-3 font-semibold w-28 text-right">Aksi</th>
+                        <td colspan="6">
+                            <?= ui_kosong(['ikon' => 'user-graduate', 'judul' => $q !== '' ? 'Penguji tidak ditemukan' : 'Belum ada data penguji eksternal',
+                                'teks' => $q !== '' ? 'Tidak ada penguji eksternal yang cocok dengan pencarian ini. Tekan Reset.' : 'Tambah penguji satu per satu, atau Import dari Excel.']) ?>
+                        </td>
                     </tr>
-                </thead>
-                <tbody class="divide-y divide-gray-100">
-                    <?php if (empty($rows)): ?>
-                        <tr><td colspan="6" class="px-6 py-10 text-center text-gray-400">
-                            <?= $q !== '' ? 'Tidak ada penguji eksternal yang cocok dengan pencarian ini.' : 'Belum ada data penguji eksternal. Tambah manual atau import Excel.' ?>
-                        </td></tr>
-                    <?php else: foreach ($rows as $r): ?>
-                        <tr class="hover:bg-gray-50">
-                            <td class="pl-6 pr-2 py-3"><input type="checkbox" class="row-check rounded-sm border-gray-300 text-brand-600 focus:ring-brand-500" value="<?= (int) $r['id'] ?>"></td>
-                            <td class="px-4 py-3 font-bold text-brand-700"><?= esc($r['kode']) ?></td>
-                            <td class="px-4 py-3 font-medium text-gray-800"><?= esc($r['nama']) ?></td>
-                            <td class="px-4 py-3">
-                                <div class="text-gray-700"><?= $r['instansi'] !== null && $r['instansi'] !== '' ? esc($r['instansi']) : '<span class="text-gray-300">—</span>' ?></div>
-                                <?php if (! empty($r['jabatan'])): ?>
-                                    <div class="text-xs text-gray-400"><?= esc($r['jabatan']) ?></div>
-                                <?php endif; ?>
-                            </td>
-                            <td class="px-4 py-3 text-gray-600">
-                                <?= $r['no_hp'] !== null && $r['no_hp'] !== '' ? esc($r['no_hp']) : '<span class="text-gray-300">—</span>' ?>
-                                <?php if (! empty($r['email'])): ?>
-                                    <div class="text-xs text-gray-400"><?= esc($r['email']) ?></div>
-                                <?php endif; ?>
-                            </td>
-                            <td class="px-4 py-3 text-right whitespace-nowrap">
-                                <?= view('admin/master/partials/row_actions', [
-                                    'row'       => $r,
-                                    'deleteUrl' => site_url('admin/master/penguji-eksternal/delete/' . $r['id']),
-                                    'confirm'   => 'Hapus data penguji eksternal ini?',
-                                ]) ?>
-                            </td>
-                        </tr>
-                    <?php endforeach; endif; ?>
-                </tbody>
-            </table>
-        </div>
-        <?php if ($pager): ?>
-            <div class="px-6 py-4 border-t border-gray-100">
-                <?= $pager->only(['q', 'per'])->links('default', 'admin') ?>
+                <?php else: foreach ($rows as $r): ?>
+                    <tr>
+                        <td class="kolom-cek"><input type="checkbox" class="cek row-check" value="<?= (int) $r['id'] ?>" aria-label="Pilih penguji <?= esc($r['kode'], 'attr') ?>"></td>
+                        <td class="sel-judul whitespace-nowrap"><?= esc($r['kode']) ?></td>
+                        <td class="font-medium"><?= esc($r['nama']) ?></td>
+                        <td>
+                            <div><?= $r['instansi'] !== null && $r['instansi'] !== '' ? esc($r['instansi']) : '<span class="sel-ket">—</span>' ?></div>
+                            <?php if (! empty($r['jabatan'])): ?><div class="sel-ket"><?= esc($r['jabatan']) ?></div><?php endif; ?>
+                        </td>
+                        <td>
+                            <div class="whitespace-nowrap"><?= $r['no_hp'] !== null && $r['no_hp'] !== '' ? esc($r['no_hp']) : '<span class="sel-ket">—</span>' ?></div>
+                            <?php if (! empty($r['email'])): ?><div class="sel-ket"><?= esc($r['email']) ?></div><?php endif; ?>
+                        </td>
+                        <td class="kolom-aksi">
+                            <?= ui_crud_aksi([
+                                'row'        => $r,
+                                'hapusUrl'   => site_url('admin/master/penguji-eksternal/delete/' . $r['id']),
+                                'konfirmasi' => 'Hapus data penguji eksternal ' . $r['nama'] . '?',
+                            ]) ?>
+                        </td>
+                    </tr>
+                <?php endforeach; endif; ?>
+            </tbody>
+        </table>
+    </div>
+
+    <?= ui_crud_kaki(['pager' => $pager, 'total' => (int) $total, 'satuan' => 'penguji eksternal']) ?>
+
+    <?= ui_crud_form_buka(['benda' => 'Penguji Eksternal', 'ukuran' => 'lg']) ?>
+        <div class="grid gap-4 sm:grid-cols-2">
+            <div>
+                <label class="lbl" for="pe-kode">Kode <span class="text-red-600">*</span></label>
+                <input type="text" id="pe-kode" name="kode" x-model="form.kode" maxlength="30" required class="inp uppercase">
             </div>
-        <?php endif; ?>
-    </div>
-
-    <!-- Modal Tambah/Edit -->
-    <div x-show="open" x-cloak x-transition.opacity.duration.200ms class="fixed inset-0 z-50 flex items-center justify-center p-4">
-        <div class="absolute inset-0 bg-black/40" @click="open=false"></div>
-        <div class="relative bg-white rounded-2xl shadow-xl w-full max-w-lg p-6 max-h-[90vh] overflow-y-auto">
-            <h3 class="font-bold text-lg text-gray-800 mb-4" x-text="mode==='add' ? 'Tambah Penguji Eksternal' : 'Edit Penguji Eksternal'"></h3>
-            <form method="post" :action="actionUrl">
-                <?= csrf_field() ?>
-                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                    <div>
-                        <label class="block text-sm font-medium text-gray-600 mb-1">Kode *</label>
-                        <input type="text" name="kode" x-model="form.kode" maxlength="30" required
-                               class="w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm uppercase focus:border-brand-500 focus:ring-2 focus:ring-brand-500/20 outline-hidden">
-                    </div>
-                    <div>
-                        <label class="block text-sm font-medium text-gray-600 mb-1">No HP</label>
-                        <input type="text" name="no_hp" x-model="form.no_hp" maxlength="25"
-                               class="w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm focus:border-brand-500 outline-hidden">
-                    </div>
-                    <div class="sm:col-span-2">
-                        <label class="block text-sm font-medium text-gray-600 mb-1">Nama *</label>
-                        <input type="text" name="nama" x-model="form.nama" maxlength="150" required
-                               class="w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm focus:border-brand-500 focus:ring-2 focus:ring-brand-500/20 outline-hidden">
-                    </div>
-                    <div>
-                        <label class="block text-sm font-medium text-gray-600 mb-1">Instansi</label>
-                        <input type="text" name="instansi" x-model="form.instansi" maxlength="150"
-                               class="w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm focus:border-brand-500 outline-hidden">
-                    </div>
-                    <div>
-                        <label class="block text-sm font-medium text-gray-600 mb-1">Jabatan</label>
-                        <input type="text" name="jabatan" x-model="form.jabatan" maxlength="100"
-                               class="w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm focus:border-brand-500 outline-hidden">
-                    </div>
-                    <div class="sm:col-span-2">
-                        <label class="block text-sm font-medium text-gray-600 mb-1">Email</label>
-                        <input type="email" name="email" x-model="form.email" maxlength="100"
-                               class="w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm focus:border-brand-500 outline-hidden">
-                    </div>
-                    <div class="sm:col-span-2">
-                        <label class="block text-sm font-medium text-gray-600 mb-1">Keterangan</label>
-                        <input type="text" name="keterangan" x-model="form.keterangan" maxlength="255"
-                               class="w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm focus:border-brand-500 outline-hidden">
-                    </div>
-                </div>
-                <div class="flex justify-end gap-2 mt-6">
-                    <button type="button" @click="open=false" class="rounded-lg border border-gray-300 text-gray-600 text-sm font-semibold px-4 py-2.5 hover:bg-gray-50">Batal</button>
-                    <button class="rounded-lg bg-brand-700 hover:bg-brand-800 text-white text-sm font-semibold px-5 py-2.5">Simpan</button>
-                </div>
-            </form>
+            <div>
+                <label class="lbl" for="pe-hp">No HP</label>
+                <input type="text" id="pe-hp" name="no_hp" x-model="form.no_hp" maxlength="25" class="inp" inputmode="tel">
+            </div>
+            <div class="sm:col-span-2">
+                <label class="lbl" for="pe-nama">Nama <span class="text-red-600">*</span></label>
+                <input type="text" id="pe-nama" name="nama" x-model="form.nama" maxlength="150" required class="inp">
+            </div>
+            <div>
+                <label class="lbl" for="pe-instansi">Instansi</label>
+                <input type="text" id="pe-instansi" name="instansi" x-model="form.instansi" maxlength="150" class="inp">
+            </div>
+            <div>
+                <label class="lbl" for="pe-jabatan">Jabatan</label>
+                <input type="text" id="pe-jabatan" name="jabatan" x-model="form.jabatan" maxlength="100" class="inp">
+            </div>
+            <div class="sm:col-span-2">
+                <label class="lbl" for="pe-email">Email</label>
+                <input type="email" id="pe-email" name="email" x-model="form.email" maxlength="100" class="inp">
+            </div>
+            <div class="sm:col-span-2">
+                <label class="lbl" for="pe-ket">Keterangan</label>
+                <input type="text" id="pe-ket" name="keterangan" x-model="form.keterangan" maxlength="255" class="inp">
+            </div>
         </div>
-    </div>
+    <?= ui_crud_form_tutup() ?>
 
-    <?= view('admin/master/partials/modal_import', [
-        'importTitle'  => 'Import Penguji Eksternal',
-        'importAction' => site_url('admin/master/penguji-eksternal/import-preview'),
-        'templateUrl'  => site_url('admin/master/penguji-eksternal/template'),
-        'importNote'   => '<b>Import = memasukkan data.</b> Unggah Excel sesuai template. Data tampil dalam <b>pratinjau yang bisa diedit</b> sebelum disimpan. Kode yang sudah ada akan diperbarui.',
+    <?= ui_crud_impor([
+        'judul'       => 'Import Penguji Eksternal',
+        'aksi'        => site_url('admin/master/penguji-eksternal/import-preview'),
+        'templateUrl' => site_url('admin/master/penguji-eksternal/template'),
+        'catatan'     => '<b>Import = memasukkan data.</b> Unggah Excel sesuai template. Data tampil dalam <b>pratinjau yang bisa diedit</b> sebelum disimpan. Kode yang sudah ada akan diperbarui.',
     ]) ?>
 </div>
-
 <?= $this->endSection() ?>

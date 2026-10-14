@@ -1,0 +1,13 @@
+{
+  "prefetch": [
+    {
+      "where": {
+        "and": [
+          { "selector_matches": ".sb-item[href], .sb-bawah-tombol[href], .remah a[href], .kartu-tautan[href], .tautan-kartu[href]" },
+          { "not": { "selector_matches": "[target], [download], [data-method], [data-no-prefetch]" } }
+        ]
+      },
+      "eagerness": "moderate"
+    }
+  ]
+}

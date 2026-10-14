@@ -1,172 +1,126 @@
 <?php
 /**
- * Halaman Master Jam Pelajaran — pola tampilan mengikuti Master Guru
- * (sisi kiri toolbar berupa tab shift, bukan kolom pencarian).
+ * Halaman Master Jam Pelajaran — pola halaman data template Flowbite (rombak tampilan F5). Kiri bilah alat = grup tombol shift
+ * Pagi/Siang (bukan kotak cari). Baris ISTIRAHAT berlatar kuning muda + lencana "Istirahat". Komponen "jamPage" (master/jam.js).
  *
  * @var string $shift Shift aktif (pagi/siang)
  * @var array  $rows  Slot jam shift aktif
  */
 ob_start(); ?>
-<div class="inline-flex rounded-lg border border-gray-300 bg-white p-1 text-sm font-semibold">
-    <?php foreach (['pagi' => 'Pagi', 'siang' => 'Siang'] as $key => $label): ?>
-        <a href="<?= site_url('admin/master/jam?shift=' . $key) ?>"
-           class="px-4 py-1.5 rounded-md transition <?= $shift === $key ? 'bg-brand-700 text-white' : 'text-gray-600 hover:bg-gray-100' ?>">
-            <?= $label ?>
-        </a>
+<div class="grup-tombol" role="group" aria-label="Pilih shift">
+    <?php foreach (['pagi' => 'Shift pagi', 'siang' => 'Shift siang'] as $key => $label): ?>
+        <a href="<?= site_url('admin/master/jam?shift=' . $key) ?>"<?= $shift === $key ? ' aria-current="page"' : '' ?>><?= $label ?></a>
     <?php endforeach; ?>
 </div>
-<?php $leftHtml = ob_get_clean(); ?>
+<?php $kiriHtml = (string) ob_get_clean(); ?>
 <?= $this->extend('layouts/admin') ?>
-<?= $this->section('content') ?>
+<?= $this->section('tata') ?>crud<?= $this->endSection() ?>
 
+<?= $this->section('bantuan') ?>
 <?= view('admin/partials/help', [
     'helpKey'   => 'jam',
     'helpTitle' => 'Master Jam Pelajaran',
-    'helpBody'  => '<p>Slot waktu KBM per <b>shift</b> (Pagi &amp; Siang dikelola terpisah lewat tab di kiri atas). Durasi dihitung otomatis dari selisih waktu mulai–selesai.</p>
+    'helpKelas' => '',
+    'helpBody'  => '<p>Slot waktu KBM per <b>shift</b> (Pagi &amp; Siang dikelola terpisah lewat tombol shift di kiri atas). Durasi dihitung otomatis dari selisih waktu mulai–selesai.</p>
         <p class="mt-1">Centang <b>ISTIRAHAT</b> untuk baris jeda — baris ini muncul di jadwal tapi <b>tidak dihitung</b> sebagai jam mengajar.</p>
-        <p class="mt-1">• <b>Import</b> — unggah Excel (shift + jam ke yang sama diperbarui). • <b>Export</b> — unduh seluruh jam (kedua shift). • <b>Hapus Terpilih / Hapus Semua</b> berlaku untuk shift yang sedang tampil.</p>',
+        <p class="mt-1">• <b>Import</b> — unggah Excel (shift + jam ke yang sama diperbarui). • <b>Export</b> — unduh seluruh jam (kedua shift). • <b>Hapus terpilih / Hapus semua</b> berlaku untuk shift yang sedang tampil.</p>',
 ]) ?>
+<?= $this->endSection() ?>
 
-<div x-data="jamPage"
-     data-base="<?= site_url('admin/master/jam') ?>"
-     data-entity="jam pelajaran (shift <?= esc($shift, 'attr') ?>)"
+<?= $this->section('content') ?>
+<div x-data="jamPage" data-base="<?= site_url('admin/master/jam') ?>" data-entity="jam pelajaran (shift <?= esc($shift, 'attr') ?>)"
      data-defaults="<?= esc(json_encode(['shift' => $shift, 'jam_ke' => 1, 'waktu_mulai' => '', 'waktu_selesai' => '', 'is_istirahat' => false]), 'attr') ?>">
 
-    <?= view('admin/master/partials/toolbar', [
-        'baseUrl'     => site_url('admin/master/jam'),
-        'leftHtml'    => $leftHtml,
-        'exportUrl'   => site_url('admin/master/jam/export'),
-        'exportTitle' => 'Keluarkan seluruh jam pelajaran (kedua shift) ke file Excel',
-        'bulkUrl'     => site_url('admin/master/jam/bulk-delete'),
-        'bulkHidden'  => ['shift' => $shift],
-        'bulkLabel'   => 'jam pelajaran shift ' . $shift,
-        'bulkWarn'    => 'Jadwal pada slot tersebut ikut terhapus.',
+    <?= ui_crud_alat([
+        'baseUrl'          => site_url('admin/master/jam'),
+        'kiriHtml'         => $kiriHtml,
+        'eksporUrl'        => site_url('admin/master/jam/export'),
+        'eksporTitle'      => 'Keluarkan seluruh jam pelajaran (kedua shift) ke file Excel',
+        'massalUrl'        => site_url('admin/master/jam/bulk-delete'),
+        'massalHidden'     => ['shift' => $shift],
+        'massalLabel'      => 'jam pelajaran shift ' . $shift,
+        'massalPeringatan' => 'Jadwal pada slot tersebut ikut terhapus.',
     ]) ?>
 
-    <!-- Tabel -->
-    <div class="bg-white rounded-2xl border border-gray-200 shadow-xs overflow-hidden">
-        <div class="px-6 py-4 border-b border-gray-100 flex items-center justify-between">
-            <h2 class="font-bold text-gray-800">Daftar Jam — Shift <?= ucfirst($shift) ?> <span class="text-gray-400 font-normal">(<?= count($rows) ?>)</span></h2>
-        </div>
-        <div class="overflow-x-auto">
-            <table class="w-full text-sm">
-                <thead class="bg-gray-50 text-gray-500 text-left">
+    <div class="tabel-bungkus">
+        <table class="tabel-crud">
+            <thead>
+                <tr>
+                    <th scope="col" class="kolom-cek"><input type="checkbox" class="cek js-check-all" aria-label="Pilih semua jam di shift ini"></th>
+                    <th scope="col">Jam ke</th>
+                    <th scope="col">Waktu</th>
+                    <th scope="col">Durasi</th>
+                    <th scope="col">Jenis</th>
+                    <th scope="col" class="kolom-aksi">Aksi</th>
+                </tr>
+            </thead>
+            <tbody>
+                <?php if (empty($rows)): ?>
                     <tr>
-                        <th class="pl-6 pr-2 py-3 w-10"><input type="checkbox" title="Pilih semua di halaman ini" class="js-check-all rounded-sm border-gray-300 text-brand-600 focus:ring-brand-500"></th>
-                        <th class="px-6 py-3 font-semibold w-24">Jam Ke</th>
-                        <th class="px-6 py-3 font-semibold">Waktu</th>
-                        <th class="px-6 py-3 font-semibold w-28">Durasi</th>
-                        <th class="px-6 py-3 font-semibold w-32">Jenis</th>
-                        <th class="px-6 py-3 font-semibold w-28 text-right">Aksi</th>
+                        <td colspan="6">
+                            <?= ui_kosong(['ikon' => 'clock', 'judul' => 'Belum ada jam untuk shift ' . $shift, 'teks' => 'Tambah jam satu per satu, atau Import dari Excel.']) ?>
+                        </td>
                     </tr>
-                </thead>
-                <tbody class="divide-y divide-gray-100">
-                    <?php if (empty($rows)): ?>
-                        <tr><td colspan="6" class="px-6 py-10 text-center text-gray-400">Belum ada jam untuk shift ini. Tambah manual atau import Excel.</td></tr>
-                    <?php else: foreach ($rows as $r): ?>
-                        <?php if ($r['is_istirahat']): ?>
-                            <!-- Baris ISTIRAHAT: tampil sebagai pemisah di tengah -->
-                            <tr class="bg-amber-50">
-                                <td class="pl-6 pr-2 py-2.5"><input type="checkbox" class="row-check rounded-sm border-gray-300 text-brand-600 focus:ring-brand-500" value="<?= (int) $r['id'] ?>"></td>
-                                <td colspan="5" class="px-6 py-2.5">
-                                    <div class="flex items-center justify-center gap-3">
-                                        <span class="hidden sm:block flex-1 border-t border-dashed border-amber-300"></span>
-                                        <span class="inline-flex items-center gap-1.5 rounded-full bg-amber-100 text-amber-700 px-3 py-1 text-xs font-bold tracking-wide whitespace-nowrap">
-                                            ISTIRAHAT · <?= esc(substr($r['waktu_mulai'], 0, 5)) ?> – <?= esc(substr($r['waktu_selesai'], 0, 5)) ?>
-                                            <span class="font-normal text-amber-600">(<?= esc($r['durasi']) ?> menit)</span>
-                                        </span>
-                                        <button type="button" @click="openEditEl($el)" data-row="<?= esc(json_encode($r), 'attr') ?>" title="Edit"
-                                                class="inline-flex h-7 w-7 items-center justify-center rounded-lg text-amber-600 hover:bg-amber-100 transition">
-                                            <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/></svg>
-                                        </button>
-                                        <a href="<?= site_url('admin/master/jam/delete/' . $r['id']) ?>" data-method="post" data-confirm="Hapus jam istirahat ini?" title="Hapus"
-                                           class="inline-flex h-7 w-7 items-center justify-center rounded-lg text-red-500 hover:bg-red-50 transition">
-                                            <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
-                                        </a>
-                                        <span class="hidden sm:block flex-1 border-t border-dashed border-amber-300"></span>
-                                    </div>
-                                </td>
-                            </tr>
-                        <?php else: ?>
-                            <tr class="hover:bg-gray-50">
-                                <td class="pl-6 pr-2 py-3"><input type="checkbox" class="row-check rounded-sm border-gray-300 text-brand-600 focus:ring-brand-500" value="<?= (int) $r['id'] ?>"></td>
-                                <td class="px-6 py-3 font-bold text-brand-700"><?= esc($r['jam_ke']) ?></td>
-                                <td class="px-6 py-3"><?= esc(substr($r['waktu_mulai'], 0, 5)) ?> – <?= esc(substr($r['waktu_selesai'], 0, 5)) ?></td>
-                                <td class="px-6 py-3 text-gray-500"><?= esc($r['durasi']) ?> menit</td>
-                                <td class="px-6 py-3">
-                                    <span class="inline-flex rounded-full bg-gray-100 text-gray-600 px-2.5 py-0.5 text-xs font-semibold">KBM</span>
-                                </td>
-                                <td class="px-6 py-3 text-right whitespace-nowrap">
-                                    <?= view('admin/master/partials/row_actions', [
-                                        'row'       => $r,
-                                        'deleteUrl' => site_url('admin/master/jam/delete/' . $r['id']),
-                                        'confirm'   => 'Hapus jam ini? Jadwal pada slot tersebut ikut terhapus.',
-                                    ]) ?>
-                                </td>
-                            </tr>
-                        <?php endif; ?>
-                    <?php endforeach; endif; ?>
-                </tbody>
-            </table>
-        </div>
+                <?php else: foreach ($rows as $r): $istirahat = (bool) $r['is_istirahat']; $waktu = substr($r['waktu_mulai'], 0, 5) . ' – ' . substr($r['waktu_selesai'], 0, 5); ?>
+                    <tr<?= $istirahat ? ' class="bg-yellow-50 dark:bg-yellow-500/10"' : '' ?>>
+                        <td class="kolom-cek"><input type="checkbox" class="cek row-check" value="<?= (int) $r['id'] ?>" aria-label="Pilih jam <?= esc($waktu, 'attr') ?>"></td>
+                        <td class="sel-judul"><?= $istirahat ? '<span class="sel-ket">—</span>' : esc($r['jam_ke']) ?></td>
+                        <td class="whitespace-nowrap font-medium"><?= esc($waktu) ?></td>
+                        <td class="sel-ket whitespace-nowrap"><?= esc($r['durasi']) ?> menit</td>
+                        <td><?= $istirahat ? '<span class="lencana lencana-kuning">Istirahat</span>' : '<span class="lencana lencana-abu">KBM</span>' ?></td>
+                        <td class="kolom-aksi">
+                            <?= ui_crud_aksi([
+                                'row'        => $r,
+                                'hapusUrl'   => site_url('admin/master/jam/delete/' . $r['id']),
+                                'konfirmasi' => $istirahat ? 'Hapus jam istirahat ' . $waktu . '?' : 'Hapus jam ke-' . $r['jam_ke'] . ' (' . $waktu . ')? Jadwal pada slot tersebut ikut terhapus.',
+                            ]) ?>
+                        </td>
+                    </tr>
+                <?php endforeach; endif; ?>
+            </tbody>
+        </table>
     </div>
 
-    <!-- Modal Tambah/Edit -->
-    <div x-show="open" x-cloak x-transition.opacity.duration.200ms class="fixed inset-0 z-50 flex items-center justify-center p-4">
-        <div class="absolute inset-0 bg-black/40" @click="open=false"></div>
-        <div class="relative bg-white rounded-2xl shadow-xl w-full max-w-md p-6">
-            <h3 class="font-bold text-lg text-gray-800 mb-4" x-text="mode==='add' ? 'Tambah Jam Pelajaran' : 'Edit Jam Pelajaran'"></h3>
-            <form method="post" :action="actionUrl">
-                <?= csrf_field() ?>
-                <div class="space-y-4">
-                    <div>
-                        <label class="block text-sm font-medium text-gray-600 mb-1">Shift</label>
-                        <select name="shift" x-model="form.shift" class="w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm focus:border-brand-500 outline-hidden">
-                            <option value="pagi">Pagi</option>
-                            <option value="siang">Siang</option>
-                        </select>
-                    </div>
-                    <div>
-                        <label class="block text-sm font-medium text-gray-600 mb-1">Jam Ke</label>
-                        <input type="number" name="jam_ke" x-model="form.jam_ke" min="1" required
-                               class="w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm focus:border-brand-500 outline-hidden">
-                    </div>
-                    <div class="grid grid-cols-2 gap-3">
-                        <div>
-                            <label class="block text-sm font-medium text-gray-600 mb-1">Mulai</label>
-                            <input type="time" name="waktu_mulai" x-model="form.waktu_mulai" required
-                                   class="w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm focus:border-brand-500 outline-hidden">
-                        </div>
-                        <div>
-                            <label class="block text-sm font-medium text-gray-600 mb-1">Selesai</label>
-                            <input type="time" name="waktu_selesai" x-model="form.waktu_selesai" required
-                                   class="w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm focus:border-brand-500 outline-hidden">
-                        </div>
-                    </div>
-                    <label class="flex items-center gap-2 text-sm text-gray-600">
-                        <input type="checkbox" name="is_istirahat" value="1" x-model="form.is_istirahat" class="rounded-sm border-gray-300 text-brand-600 focus:ring-brand-500">
-                        Tandai sebagai jam ISTIRAHAT
-                    </label>
-                    <p class="text-xs text-gray-400">Durasi dihitung otomatis dari selisih waktu.</p>
-                </div>
-                <div class="flex justify-end gap-2 mt-6">
-                    <button type="button" @click="open=false" class="rounded-lg border border-gray-300 text-gray-600 text-sm font-semibold px-4 py-2.5 hover:bg-gray-50">Batal</button>
-                    <button class="rounded-lg bg-brand-700 hover:bg-brand-800 text-white text-sm font-semibold px-5 py-2.5">Simpan</button>
-                </div>
-            </form>
-        </div>
-    </div>
+    <?= ui_crud_kaki(['pager' => null, 'total' => count($rows), 'satuan' => 'jam pelajaran (shift ' . $shift . ')']) ?>
 
-    <?= view('admin/master/partials/modal_import', [
-        'importTitle'  => 'Import Jam Pelajaran',
-        'importAction' => site_url('admin/master/jam/import-preview'),
-        'templateUrl'  => site_url('admin/master/jam/template'),
-        'importNote'   => '<b>Import = memasukkan data.</b> Unggah Excel sesuai template. Data tampil dalam <b>pratinjau yang bisa diedit</b> sebelum disimpan. Kombinasi shift + jam ke yang sudah ada akan diperbarui.',
+    <?= ui_crud_form_buka(['benda' => 'Jam Pelajaran']) ?>
+        <div class="grid gap-4 sm:grid-cols-2">
+            <div>
+                <label class="lbl" for="jam-shift">Shift</label>
+                <select id="jam-shift" name="shift" x-model="form.shift" class="inp">
+                    <option value="pagi">Pagi</option>
+                    <option value="siang">Siang</option>
+                </select>
+            </div>
+            <div>
+                <label class="lbl" for="jam-ke">Jam ke <span class="text-red-600">*</span></label>
+                <input type="number" id="jam-ke" name="jam_ke" x-model="form.jam_ke" min="1" required class="inp">
+            </div>
+            <div>
+                <label class="lbl" for="jam-mulai">Mulai <span class="text-red-600">*</span></label>
+                <input type="time" id="jam-mulai" name="waktu_mulai" x-model="form.waktu_mulai" required class="inp">
+            </div>
+            <div>
+                <label class="lbl" for="jam-selesai">Selesai <span class="text-red-600">*</span></label>
+                <input type="time" id="jam-selesai" name="waktu_selesai" x-model="form.waktu_selesai" required class="inp">
+            </div>
+        </div>
+        <label class="flex items-center">
+            <input type="checkbox" name="is_istirahat" value="1" x-model="form.is_istirahat" class="cek">
+            <span class="cek-label">Tandai sebagai jam ISTIRAHAT</span>
+        </label>
+        <p class="hint">Durasi dihitung otomatis dari selisih waktu.</p>
+    <?= ui_crud_form_tutup() ?>
+
+    <?= ui_crud_impor([
+        'judul'       => 'Import Jam Pelajaran',
+        'aksi'        => site_url('admin/master/jam/import-preview'),
+        'templateUrl' => site_url('admin/master/jam/template'),
+        'catatan'     => '<b>Import = memasukkan data.</b> Unggah Excel sesuai template. Data tampil dalam <b>pratinjau yang bisa diedit</b> sebelum disimpan. Kombinasi shift + jam ke yang sudah ada akan diperbarui.',
     ]) ?>
 </div>
-
 <?= $this->endSection() ?>
 
 <?= $this->section('scripts') ?>
-<script defer src="<?= base_url('assets/js/admin/master/jam.js') ?>?v=<?= @filemtime(FCPATH . 'assets/js/admin/master/jam.js') ?>"></script>
+<script defer src="<?= base_url('assets/js/admin/master/jam.js') ?>?v=<?= @filemtime(FCPATH . 'assets/js/admin/master/jam.js') ?>" <?= csp_script_nonce() ?>></script>
 <?= $this->endSection() ?>

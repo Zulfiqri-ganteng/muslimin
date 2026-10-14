@@ -425,7 +425,7 @@ $ariaDaftar = static fn (string $judul, array $daftar, string $satuan): string =
         <?php if ($beban === []): ?>
             <?= ui_kosong(['ikon' => 'chalkboard-user', 'judul' => 'Belum ada data beban', 'teks' => 'Atur Penugasan guru terlebih dahulu.']) ?>
         <?php else: ?>
-            <div class="grafik" data-grafik="beban" data-isi="<?= $json($beban) ?>" role="img"
+            <div class="grafik<?= count($beban) >= 12 ? ' min-h-[408px]' : '' ?>" data-grafik="beban" data-isi="<?= $json($beban) ?>" role="img"
                  aria-label="<?= esc('Beban mengajar 12 guru terbanyak: ' . implode(', ', array_map(static fn (array $b): string => $b['kode'] . ' ' . $b['jp'] . ' dari ' . $b['max'] . ' JP', $beban)), 'attr') ?>"></div>
             <div class="kaki-grafik flex-wrap justify-start gap-x-5 gap-y-1 text-xs text-gray-500 dark:text-gray-400">
                 <span class="inline-flex items-center gap-1.5"><span class="titik-legenda warna-grafik-1"></span>JP penugasan</span>

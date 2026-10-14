@@ -1,6 +1,6 @@
 <?php
 /**
- * Halaman Master Laboratorium — pola tampilan mengikuti Master Jurusan (masterList).
+ * Halaman Master Laboratorium — pola halaman data template Flowbite (rombak tampilan F5). Tombol "Foto" per baris (galeri lab).
  *
  * @var string                        $q           Kata kunci pencarian
  * @var string                        $jenis       Filter jenis aktif
@@ -15,169 +15,136 @@ $opsiJenis = [];
 foreach ($jenisList as $j) {
     $opsiJenis[$j] = ucfirst($j);
 }
-$warnaJenis = [
-    'komputer'   => 'bg-brand-50 text-brand-700 border-brand-200',
-    'jaringan'   => 'bg-teal-50 text-teal-700 border-teal-200',
-    'multimedia' => 'bg-pink-50 text-pink-700 border-pink-200',
-    'lainnya'    => 'bg-gray-100 text-gray-500 border-gray-200',
-];
+$lencanaJenis = ['komputer' => 'lencana-merek', 'jaringan' => 'lencana-biru', 'multimedia' => 'lencana-pink', 'lainnya' => 'lencana-abu'];
+$adaSaring    = $q !== '' || $jenis !== '';
 ?>
 <?= $this->extend('layouts/admin') ?>
-<?= $this->section('content') ?>
+<?= $this->section('tata') ?>crud<?= $this->endSection() ?>
 
+<?= $this->section('bantuan') ?>
 <?= view('admin/partials/help', [
     'helpKey'   => 'lab',
     'helpTitle' => 'Master Laboratorium',
+    'helpKelas' => '',
     'helpBody'  => '<p>Data laboratorium sekolah (mis. Lab Komputer 1, Lab Jaringan). Tiap lab bisa punya <b>penanggung jawab</b> dari Master Teknisi.</p>
-        <p class="mt-1">Lab menjadi <b>lokasi</b> bagi Aset/Inventaris dan acuan <b>Jadwal</b> serta <b>Jurnal</b> pemakaian lab. Tambahkan <b>Teknisi</b> lebih dulu bila ingin mengisi penanggung jawab.</p>',
+        <p class="mt-1">Lab menjadi <b>lokasi</b> bagi Aset/Inventaris dan acuan <b>Jadwal</b> serta <b>Jurnal</b> pemakaian lab. Tambahkan <b>Teknisi</b> lebih dulu bila ingin mengisi penanggung jawab. Tombol <b>Foto</b> membuka galeri foto lab.</p>',
 ]) ?>
+<?= $this->endSection() ?>
 
-<div x-data="masterList"
-     data-base="<?= site_url('admin/master/lab') ?>"
-     data-entity="lab"
+<?= $this->section('content') ?>
+<div x-data="masterList" data-base="<?= site_url('admin/master/lab') ?>" data-entity="lab"
      data-defaults="<?= esc(json_encode([
          'id' => '', 'kode' => '', 'nama' => '', 'jenis' => 'komputer',
          'ruang' => '', 'kapasitas' => '', 'teknisi_id' => '', 'keterangan' => '',
      ]), 'attr') ?>">
 
-    <?= view('admin/master/partials/toolbar', [
-        'baseUrl'           => site_url('admin/master/lab'),
-        'searchPlaceholder' => 'Cari kode, nama, atau ruang lab...',
-        'q'                 => $q,
-        'per'               => $per,
-        'filters'           => [
-            ['name' => 'jenis', 'value' => $jenis, 'all' => 'Semua jenis', 'options' => $opsiJenis],
-        ],
-        'exportUrl'   => site_url('admin/master/lab/export'),
-        'exportTitle' => 'Keluarkan semua laboratorium ke file Excel',
-        'bulkUrl'     => site_url('admin/master/lab/bulk-delete'),
-        'bulkLabel'   => 'laboratorium',
+    <?= ui_crud_alat([
+        'baseUrl'     => site_url('admin/master/lab'),
+        'cari'        => 'Cari kode, nama, atau ruang lab…',
+        'q'           => $q,
+        'per'         => $per,
+        'filter'      => [['name' => 'jenis', 'value' => $jenis, 'all' => 'Semua jenis', 'options' => $opsiJenis]],
+        'eksporUrl'   => site_url('admin/master/lab/export'),
+        'eksporTitle' => 'Keluarkan semua laboratorium ke file Excel',
+        'massalUrl'   => site_url('admin/master/lab/bulk-delete'),
+        'massalLabel' => 'laboratorium',
     ]) ?>
 
-    <div class="bg-white rounded-2xl border border-gray-200 shadow-xs overflow-hidden">
-        <div class="px-6 py-4 border-b border-gray-100 flex items-center justify-between">
-            <h2 class="font-bold text-gray-800">Daftar Laboratorium <span class="text-gray-400 font-normal">(<?= $total ?>)</span></h2>
-        </div>
-        <div class="overflow-x-auto">
-            <table class="w-full text-sm">
-                <thead class="bg-gray-50 text-gray-500 text-left">
+    <div class="tabel-bungkus">
+        <table class="tabel-crud">
+            <thead>
+                <tr>
+                    <th scope="col" class="kolom-cek"><input type="checkbox" class="cek js-check-all" aria-label="Pilih semua lab di halaman ini"></th>
+                    <th scope="col">Kode</th>
+                    <th scope="col">Nama lab</th>
+                    <th scope="col">Jenis</th>
+                    <th scope="col">Ruang</th>
+                    <th scope="col" class="text-center">Kapasitas</th>
+                    <th scope="col">Penanggung jawab</th>
+                    <th scope="col" class="kolom-aksi">Aksi</th>
+                </tr>
+            </thead>
+            <tbody>
+                <?php if (empty($rows)): ?>
                     <tr>
-                        <th class="pl-6 pr-2 py-3 w-10"><input type="checkbox" title="Pilih semua di halaman ini" class="js-check-all rounded-sm border-gray-300 text-brand-600 focus:ring-brand-500"></th>
-                        <th class="px-4 py-3 font-semibold w-24">Kode</th>
-                        <th class="px-4 py-3 font-semibold">Nama Lab</th>
-                        <th class="px-4 py-3 font-semibold w-28">Jenis</th>
-                        <th class="px-4 py-3 font-semibold w-24">Ruang</th>
-                        <th class="px-4 py-3 font-semibold w-20 text-center">Kapasitas</th>
-                        <th class="px-4 py-3 font-semibold w-40">Penanggung Jawab</th>
-                        <th class="px-4 py-3 font-semibold w-28 text-right">Aksi</th>
+                        <td colspan="8">
+                            <?= ui_kosong(['ikon' => 'desktop-pc', 'judul' => $adaSaring ? 'Lab tidak ditemukan' : 'Belum ada data laboratorium',
+                                'teks' => $adaSaring ? 'Tidak ada lab yang cocok dengan pencarian/filter ini. Tekan Reset.' : 'Tambah lab satu per satu, atau Import dari Excel.']) ?>
+                        </td>
                     </tr>
-                </thead>
-                <tbody class="divide-y divide-gray-100">
-                    <?php if (empty($rows)): ?>
-                        <tr><td colspan="8" class="px-6 py-10 text-center text-gray-400">
-                            <?= $q !== '' || $jenis !== '' ? 'Tidak ada lab yang cocok dengan filter ini.' : 'Belum ada data laboratorium. Tambah manual atau import Excel.' ?>
-                        </td></tr>
-                    <?php else: foreach ($rows as $r): ?>
-                        <tr class="hover:bg-gray-50">
-                            <td class="pl-6 pr-2 py-3"><input type="checkbox" class="row-check rounded-sm border-gray-300 text-brand-600 focus:ring-brand-500" value="<?= (int) $r['id'] ?>"></td>
-                            <td class="px-4 py-3 font-bold text-brand-700"><?= esc($r['kode']) ?></td>
-                            <td class="px-4 py-3 font-medium text-gray-800"><?= esc($r['nama']) ?></td>
-                            <td class="px-4 py-3">
-                                <span class="rounded-full border px-2.5 py-1 text-xs font-semibold <?= $warnaJenis[$r['jenis']] ?? 'bg-gray-100 text-gray-500 border-gray-200' ?>"><?= esc(ucfirst($r['jenis'])) ?></span>
-                            </td>
-                            <td class="px-4 py-3 text-gray-600"><?= $r['ruang'] !== null && $r['ruang'] !== '' ? esc($r['ruang']) : '<span class="text-gray-300">—</span>' ?></td>
-                            <td class="px-4 py-3 text-center text-gray-600"><?= $r['kapasitas'] !== null ? (int) $r['kapasitas'] : '<span class="text-gray-300">—</span>' ?></td>
-                            <td class="px-4 py-3 text-gray-600"><?= $r['teknisi_nama'] !== null ? esc($r['teknisi_nama']) : '<span class="text-gray-300">Belum ditentukan</span>' ?></td>
-                            <td class="px-4 py-3 text-right whitespace-nowrap">
-                                <a href="<?= site_url('admin/lab-gambar/lab/' . $r['id']) ?>" title="Foto" class="inline-flex h-8 w-8 items-center justify-center rounded-lg text-gray-500 hover:bg-gray-100 transition align-middle">
-                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
-                                </a>
-                                <?= view('admin/master/partials/row_actions', [
-                                    'row'       => $r,
-                                    'deleteUrl' => site_url('admin/master/lab/delete/' . $r['id']),
-                                    'confirm'   => 'Hapus data laboratorium ini? Aset di dalamnya akan dilepas dari lab (tidak ikut terhapus).',
-                                ]) ?>
-                            </td>
-                        </tr>
-                    <?php endforeach; endif; ?>
-                </tbody>
-            </table>
-        </div>
-        <?php if ($pager): ?>
-            <div class="px-6 py-4 border-t border-gray-100">
-                <?= $pager->only(['q', 'jenis', 'per'])->links('default', 'admin') ?>
+                <?php else: foreach ($rows as $r): ?>
+                    <tr>
+                        <td class="kolom-cek"><input type="checkbox" class="cek row-check" value="<?= (int) $r['id'] ?>" aria-label="Pilih lab <?= esc($r['kode'], 'attr') ?>"></td>
+                        <td class="sel-judul whitespace-nowrap"><?= esc($r['kode']) ?></td>
+                        <td class="font-medium"><?= esc($r['nama']) ?></td>
+                        <td><span class="lencana <?= $lencanaJenis[$r['jenis']] ?? 'lencana-abu' ?>"><?= esc(ucfirst($r['jenis'])) ?></span></td>
+                        <td class="sel-ket"><?= $r['ruang'] !== null && $r['ruang'] !== '' ? esc($r['ruang']) : '—' ?></td>
+                        <td class="sel-ket text-center"><?= $r['kapasitas'] !== null ? (int) $r['kapasitas'] : '—' ?></td>
+                        <td><?= $r['teknisi_nama'] !== null ? esc($r['teknisi_nama']) : '<span class="sel-ket">Belum ditentukan</span>' ?></td>
+                        <td class="kolom-aksi">
+                            <?= ui_crud_aksi([
+                                'row'          => $r,
+                                'hapusUrl'     => site_url('admin/master/lab/delete/' . $r['id']),
+                                'konfirmasi'   => 'Hapus laboratorium ' . $r['nama'] . '? Aset di dalamnya akan dilepas dari lab (tidak ikut terhapus).',
+                                'tambahanHtml' => '<a href="' . site_url('admin/lab-gambar/lab/' . $r['id']) . '" class="btn btn-netral btn-sm">' . ikon('image', 'h-4 w-4') . 'Foto</a>',
+                            ]) ?>
+                        </td>
+                    </tr>
+                <?php endforeach; endif; ?>
+            </tbody>
+        </table>
+    </div>
+
+    <?= ui_crud_kaki(['pager' => $pager, 'total' => (int) $total, 'kunci' => ['q', 'jenis', 'per'], 'satuan' => 'laboratorium']) ?>
+
+    <?= ui_crud_form_buka(['benda' => 'Laboratorium', 'ukuran' => 'lg']) ?>
+        <div class="grid gap-4 sm:grid-cols-2">
+            <div>
+                <label class="lbl" for="lab-kode">Kode <span class="text-red-600">*</span></label>
+                <input type="text" id="lab-kode" name="kode" x-model="form.kode" maxlength="30" required class="inp uppercase">
             </div>
-        <?php endif; ?>
-    </div>
-
-    <!-- Modal Tambah/Edit -->
-    <div x-show="open" x-cloak x-transition.opacity.duration.200ms class="fixed inset-0 z-50 flex items-center justify-center p-4">
-        <div class="absolute inset-0 bg-black/40" @click="open=false"></div>
-        <div class="relative bg-white rounded-2xl shadow-xl w-full max-w-lg p-6 max-h-[90vh] overflow-y-auto">
-            <h3 class="font-bold text-lg text-gray-800 mb-4" x-text="mode==='add' ? 'Tambah Laboratorium' : 'Edit Laboratorium'"></h3>
-            <form method="post" :action="actionUrl">
-                <?= csrf_field() ?>
-                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                    <div>
-                        <label class="block text-sm font-medium text-gray-600 mb-1">Kode *</label>
-                        <input type="text" name="kode" x-model="form.kode" maxlength="30" required
-                               class="w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm uppercase focus:border-brand-500 focus:ring-2 focus:ring-brand-500/20 outline-hidden">
-                    </div>
-                    <div>
-                        <label class="block text-sm font-medium text-gray-600 mb-1">Jenis</label>
-                        <select name="jenis" x-model="form.jenis"
-                                class="w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm focus:border-brand-500 outline-hidden">
-                            <?php foreach ($opsiJenis as $val => $label): ?>
-                                <option value="<?= esc($val, 'attr') ?>"><?= esc($label) ?></option>
-                            <?php endforeach; ?>
-                        </select>
-                    </div>
-                    <div class="sm:col-span-2">
-                        <label class="block text-sm font-medium text-gray-600 mb-1">Nama Lab *</label>
-                        <input type="text" name="nama" x-model="form.nama" maxlength="150" required
-                               class="w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm focus:border-brand-500 focus:ring-2 focus:ring-brand-500/20 outline-hidden">
-                    </div>
-                    <div>
-                        <label class="block text-sm font-medium text-gray-600 mb-1">Ruang</label>
-                        <input type="text" name="ruang" x-model="form.ruang" maxlength="100"
-                               class="w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm focus:border-brand-500 outline-hidden">
-                    </div>
-                    <div>
-                        <label class="block text-sm font-medium text-gray-600 mb-1">Kapasitas</label>
-                        <input type="number" name="kapasitas" x-model="form.kapasitas" min="0" max="1000"
-                               class="w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm focus:border-brand-500 outline-hidden">
-                    </div>
-                    <div class="sm:col-span-2">
-                        <label class="block text-sm font-medium text-gray-600 mb-1">Penanggung Jawab</label>
-                        <select name="teknisi_id" x-model="form.teknisi_id"
-                                class="w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm focus:border-brand-500 outline-hidden">
-                            <option value="">— Belum ditentukan —</option>
-                            <?php foreach ($teknisiOpts as $id => $nama): ?>
-                                <option value="<?= (int) $id ?>"><?= esc($nama) ?></option>
-                            <?php endforeach; ?>
-                        </select>
-                        <p class="text-xs text-gray-400 mt-1">Diambil dari Master Teknisi.</p>
-                    </div>
-                    <div class="sm:col-span-2">
-                        <label class="block text-sm font-medium text-gray-600 mb-1">Keterangan</label>
-                        <input type="text" name="keterangan" x-model="form.keterangan" maxlength="255"
-                               class="w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm focus:border-brand-500 outline-hidden">
-                    </div>
-                </div>
-                <div class="flex justify-end gap-2 mt-6">
-                    <button type="button" @click="open=false" class="rounded-lg border border-gray-300 text-gray-600 text-sm font-semibold px-4 py-2.5 hover:bg-gray-50">Batal</button>
-                    <button class="rounded-lg bg-brand-700 hover:bg-brand-800 text-white text-sm font-semibold px-5 py-2.5">Simpan</button>
-                </div>
-            </form>
+            <div>
+                <label class="lbl" for="lab-jenis">Jenis</label>
+                <select id="lab-jenis" name="jenis" x-model="form.jenis" class="inp">
+                    <?php foreach ($opsiJenis as $val => $label): ?>
+                        <option value="<?= esc($val, 'attr') ?>"><?= esc($label) ?></option>
+                    <?php endforeach; ?>
+                </select>
+            </div>
+            <div class="sm:col-span-2">
+                <label class="lbl" for="lab-nama">Nama lab <span class="text-red-600">*</span></label>
+                <input type="text" id="lab-nama" name="nama" x-model="form.nama" maxlength="150" required class="inp">
+            </div>
+            <div>
+                <label class="lbl" for="lab-ruang">Ruang</label>
+                <input type="text" id="lab-ruang" name="ruang" x-model="form.ruang" maxlength="100" class="inp">
+            </div>
+            <div>
+                <label class="lbl" for="lab-kapasitas">Kapasitas</label>
+                <input type="number" id="lab-kapasitas" name="kapasitas" x-model="form.kapasitas" min="0" max="1000" class="inp">
+            </div>
+            <div class="sm:col-span-2">
+                <label class="lbl" for="lab-teknisi">Penanggung jawab</label>
+                <select id="lab-teknisi" name="teknisi_id" x-model="form.teknisi_id" class="inp">
+                    <option value="">— Belum ditentukan —</option>
+                    <?php foreach ($teknisiOpts as $id => $nama): ?>
+                        <option value="<?= (int) $id ?>"><?= esc($nama) ?></option>
+                    <?php endforeach; ?>
+                </select>
+                <p class="hint mt-1">Diambil dari Master Teknisi.</p>
+            </div>
+            <div class="sm:col-span-2">
+                <label class="lbl" for="lab-ket">Keterangan</label>
+                <input type="text" id="lab-ket" name="keterangan" x-model="form.keterangan" maxlength="255" class="inp">
+            </div>
         </div>
-    </div>
+    <?= ui_crud_form_tutup() ?>
 
-    <?= view('admin/master/partials/modal_import', [
-        'importTitle'  => 'Import Laboratorium',
-        'importAction' => site_url('admin/master/lab/import-preview'),
-        'templateUrl'  => site_url('admin/master/lab/template'),
-        'importNote'   => '<b>Import = memasukkan data.</b> Unggah Excel sesuai template. Kolom <b>Kode Teknisi</b> diisi kode dari Master Teknisi (boleh dikosongkan). Kode lab yang sudah ada akan diperbarui.',
+    <?= ui_crud_impor([
+        'judul'       => 'Import Laboratorium',
+        'aksi'        => site_url('admin/master/lab/import-preview'),
+        'templateUrl' => site_url('admin/master/lab/template'),
+        'catatan'     => '<b>Import = memasukkan data.</b> Unggah Excel sesuai template. Kolom <b>Kode Teknisi</b> diisi kode dari Master Teknisi (boleh dikosongkan). Kode lab yang sudah ada akan diperbarui.',
     ]) ?>
 </div>
-
 <?= $this->endSection() ?>

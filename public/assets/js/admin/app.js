@@ -437,7 +437,9 @@
                 },
                 /* Daftar menu sidebar panjang (±60 item) dan tiap halaman baru memuatnya dari atas, sehingga
                  * menu yang sedang dibuka sering tersembunyi di bawah. Posisi gulir diingat per tab
-                 * (sessionStorage) dan menu aktif dipastikan terlihat; bila di luar layar ditaruh di tengah. */
+                 * (sessionStorage) dan menu aktif dipastikan terlihat; bila di luar layar ditaruh di tengah.
+                 * (F5) Pengembaliannya kini dikerjakan kerangka-awal.js SEBELUM halaman digambar (tanpa loncatan);
+                 * di sini cukup menyimpan posisi saat pindah halaman — cadangan lama hanya bila skrip awal tak jalan. */
                 aturGulirMenu: function () {
                     var nav = document.querySelector('aside nav[aria-label="Menu utama"]');
                     if (!nav) { return; }
@@ -445,6 +447,7 @@
                     window.addEventListener('pagehide', function () {
                         try { sessionStorage.setItem(kunci, String(nav.scrollTop)); } catch (e) {}
                     });
+                    if (nav.hasAttribute('data-gulir-siap')) { return; }
                     try { nav.scrollTop = parseInt(sessionStorage.getItem(kunci) || '0', 10) || 0; } catch (e) {}
                     var aktif = nav.querySelector('a[aria-current="page"]');
                     if (!aktif) { return; }
@@ -555,10 +558,10 @@
                 show: false,
                 init: function () {
                     this.key  = 'help_' + (this.$el.getAttribute('data-help-key') || '');
-                    this.show = localStorage.getItem(this.key) === '1';
+                    try { this.show = window.localStorage.getItem(this.key) === '1'; } catch (e) { this.show = false; }
                 },
-                openHelp: function ()  { this.show = true;  localStorage.setItem(this.key, '1'); },
-                closeHelp: function () { this.show = false; localStorage.removeItem(this.key); },
+                openHelp: function ()  { this.show = true;  try { window.localStorage.setItem(this.key, '1'); } catch (e) {} },
+                closeHelp: function () { this.show = false; try { window.localStorage.removeItem(this.key); } catch (e) {} },
             };
         });
 

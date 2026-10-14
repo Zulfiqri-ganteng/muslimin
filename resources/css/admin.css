@@ -272,6 +272,17 @@
   .tabel-crud .kolom-aksi { @apply text-right whitespace-nowrap; }
   .sel-judul { @apply text-base font-semibold text-gray-900 dark:text-white; }
   .sel-ket   { @apply text-sm font-normal text-gray-500 dark:text-gray-400; }
+  /* Status bertitik (template: titik hijau "Active" / merah "Offline"): <span class="titik-status titik-status-hijau">Aktif</span> */
+  /* Grup tombol (Flowbite "button group"): <div class="grup-tombol"><a aria-current="page">Pagi</a><a>Siang</a></div> — pilihan aktif = warna merek. */
+  .grup-tombol { @apply inline-flex rounded-lg shadow-xs; }
+  .grup-tombol > a, .grup-tombol > button { @apply -ms-px border border-gray-200 bg-white px-4 py-2 text-sm font-medium text-gray-900 transition-colors first:ms-0 first:rounded-s-lg last:rounded-e-lg hover:bg-gray-100 hover:text-brand-700 focus:z-10 focus:outline-hidden focus-visible:ring-2 focus-visible:ring-brand-300 dark:border-gray-700 dark:bg-gray-800 dark:text-white dark:hover:bg-gray-700; }
+  .grup-tombol > [aria-current="page"] { @apply z-10 border-brand-700 bg-brand-700 text-white hover:bg-brand-800 hover:text-white dark:border-brand-600 dark:bg-brand-600; }
+  .titik-status { @apply inline-flex items-center gap-2 whitespace-nowrap; }
+  .titik-status::before { content: ""; @apply h-2.5 w-2.5 shrink-0 rounded-full bg-gray-400; }
+  .titik-status-hijau::before { @apply bg-green-400; }
+  .titik-status-merah::before { @apply bg-red-500; }
+  .titik-status-kuning::before { @apply bg-yellow-300; }
+  .titik-status-biru::before { @apply bg-blue-500; }
   .kaki-crud { @apply sticky right-0 bottom-0 z-10 w-full border-t border-gray-200 bg-white p-4 dark:border-gray-700 dark:bg-gray-800; }
 
   /* ---- Lencana (badge): class="lencana lencana-hijau". Warna status tetap: hijau = hadir/disetujui, kuning = menunggu,
@@ -283,6 +294,8 @@
   .lencana-kuning { @apply bg-yellow-100 text-yellow-800; }
   .lencana-merah  { @apply bg-red-100 text-red-800; }
   .lencana-biru   { @apply bg-blue-100 text-blue-800; }
+  .lencana-pink   { @apply bg-pink-100 text-pink-800; }
+  .lencana-ungu   { @apply bg-purple-100 text-purple-800; }
 
   /* ---- Tab (garis bawah): .tab-daftar berisi .tab; tab aktif = aria-current="page" (tautan) / aria-selected="true" (Alpine) ---- */
   .tab-daftar { @apply flex flex-wrap gap-x-1 border-b border-gray-200 text-center text-sm font-medium text-gray-500; }
@@ -488,6 +501,10 @@
   .daftar-kartu > li { @apply py-3 sm:py-4; }
   .ubin-ikon    { @apply flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-300; }
   .grafik       { @apply w-full; }
+  /* Tinggi dicadangkan sebelum ApexCharts menggambar (= tinggi grafik di dashboard.js) → halaman tidak melompat saat grafik muncul. */
+  .grafik[data-grafik="donat"] { min-height: 260px; }
+  .grafik[data-grafik="radial"] { min-height: 130px; }
+  .grafik[data-grafik="tingkat"], .grafik[data-grafik="batas"] { min-height: 120px; }
   .grafik-kecil { @apply w-full max-w-36 shrink-0 sm:max-w-44; }
   /* Kartu angka yang seluruhnya tautan (Siswa → Data Siswa, dst.). */
   .kartu-tautan { @apply transition-colors hover:border-gray-300 hover:bg-gray-50 focus:outline-hidden focus-visible:ring-4 focus-visible:ring-brand-300 dark:hover:border-gray-600 dark:hover:bg-gray-700/60 dark:focus-visible:ring-brand-800; }
@@ -546,7 +563,15 @@
 /* (F3) Pindah halaman yang halus: View Transitions lintas dokumen — murni CSS, tanpa skrip (Chrome/Edge 126+; peramban lain = pindah
    biasa). Pudar singkat 160 md; "kurangi gerakan" = tanpa transisi. Halaman masuk ikut (sama-sama memuat admin.css). */
 @view-transition { navigation: auto; }
-::view-transition-old(root), ::view-transition-new(root) { animation-duration: 160ms; }
+::view-transition-old(root), ::view-transition-new(root) { animation-duration: 160ms; animation-timing-function: ease-out; }
+/* (F5) Bilah atas & menu samping DIAM saat pindah menu (seperti aplikasi): diberi nama sendiri, tanpa animasi, dan cuplikan lama
+   langsung diganti yang baru — hanya isi halaman yang memudar. Posisi gulir menu samping sudah dikembalikan kerangka-awal.js
+   sebelum halaman digambar, jadi cuplikan lama & baru sama persis (tanpa loncatan). */
+.navbar { view-transition-name: bilah-atas; }
+#menu-samping { view-transition-name: menu-samping; }
+::view-transition-group(bilah-atas), ::view-transition-group(menu-samping) { animation: none; }
+::view-transition-old(bilah-atas), ::view-transition-old(menu-samping) { display: none; }
+::view-transition-new(bilah-atas), ::view-transition-new(menu-samping) { animation: none; }
 @media (prefers-reduced-motion: reduce) {
   @view-transition { navigation: none; }
 }
@@ -598,6 +623,8 @@
   .lencana-kuning { @apply dark:bg-yellow-900 dark:text-yellow-300; }
   .lencana-merah  { @apply dark:bg-red-900 dark:text-red-300; }
   .lencana-biru   { @apply dark:bg-blue-900 dark:text-blue-300; }
+  .lencana-pink   { @apply dark:bg-pink-900 dark:text-pink-300; }
+  .lencana-ungu   { @apply dark:bg-purple-900 dark:text-purple-300; }
   .tab-daftar  { @apply dark:border-gray-700 dark:text-gray-400; }
   .tab         { @apply dark:hover:text-gray-300; }
   .tab[aria-current='page'], .tab[aria-selected='true'] { @apply dark:border-brand-500 dark:text-brand-400; }

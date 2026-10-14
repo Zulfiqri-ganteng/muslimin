@@ -26,6 +26,11 @@ Options -Indexes
 	RewriteCond %{HTTP_HOST} ^www\.(.+)$ [NC]
 	RewriteRule ^ http://%1%{REQUEST_URI} [R=301,L]
 
+	# (Rombak tampilan F5) CSS/JS yang dimuat dengan penanda versi ?v=<waktu ubah berkas> ditandai ASET_BERVERSI
+	# → boleh disimpan peramban lama (lihat blok "Cache aset statis" di bawah). Tanpa substitusi, tidak mengalihkan.
+	RewriteCond %{QUERY_STRING} (^|&)v=[0-9]+
+	RewriteRule \.(css|js)$ - [E=ASET_BERVERSI:1]
+
 	# Checks to see if the user is attempting to access a valid file,
 	# such as an image or css document, if this isn't true it sends the
 	# request to the front controller, index.php
@@ -43,6 +48,32 @@ Options -Indexes
 	# can be sent to index.php, and everything works as normal.
 	ErrorDocument 404 index.php
 </IfModule>
+
+# ----------------------------------------------------------------------
+# Cache aset statis & kompresi (rombak tampilan F5) — pindah halaman lebih cepat, tanpa data basi.
+#  - CSS/JS BERVERSI (?v=… dari layout admin/publik): disimpan peramban 1 tahun. Aman: bila berkas berubah, ?v ikut berubah.
+#  - CSS/JS TANPA ?v: selalu diperiksa ulang ke server (no-cache → cukup jawaban 304 bila tidak berubah).
+#  - Font (Inter): 1 tahun. Gambar & berkas unggahan TIDAK diatur di sini (foto yang diganti langsung terlihat baru).
+#  - Halaman PHP tidak tersentuh (tetap no-store dari CodeIgniter — aman di komputer bersama).
+# ----------------------------------------------------------------------
+<IfModule mod_headers.c>
+	<FilesMatch "\.(css|js)$">
+		Header set Cache-Control "public, max-age=31536000, immutable" env=ASET_BERVERSI
+		Header set Cache-Control "no-cache" env=!ASET_BERVERSI
+	</FilesMatch>
+	<FilesMatch "\.(woff2|woff)$">
+		Header set Cache-Control "public, max-age=31536000, immutable"
+	</FilesMatch>
+</IfModule>
+<IfModule mod_deflate.c>
+	<IfModule mod_filter.c>
+		AddOutputFilterByType DEFLATE text/html text/plain text/css text/javascript application/javascript application/json image/svg+xml
+	</IfModule>
+</IfModule>
+# Aturan prefetch menu (Speculation Rules, dipasang lewat header oleh layouts/admin.php) — wajib bertipe MIME ini agar dibaca Chrome.
+<Files "aturan-prefetch.json">
+	ForceType application/speculationrules+json
+</Files>
 
 # Disable server signature start
 ServerSignature Off

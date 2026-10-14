@@ -23,6 +23,11 @@
 $cur   = uri_string();
 $admin = session('admin') ?? [];
 
+// (F5) Pindah menu terasa instan: Chrome memuat halaman tujuan lebih dulu saat kursor berhenti di menu (± 200 md, Speculation Rules
+// lewat header — siap CSP, tanpa skrip sebaris). Aturan: public/assets/aturan-prefetch.json — hanya tautan menu samping, remah, kartu
+// dashboard; tanpa unduhan, tautan POST (data-method), tab baru. Peramban lain mengabaikannya.
+service('response')->setHeader('Speculation-Rules', '"' . base_url('assets/aturan-prefetch.json') . '"');
+
 // Menu samping dari katalog Libraries\MenuAdmin (SATU sumber dengan penjaga rute & halaman Sistem → Hak Akses).
 // Item: [url, label, ikon (nama Flowbite Icons), persis?, segera?]. Urutan grup & item mengikuti aturan urutan sidebar.
 // Menu tiap peran disaring HakAkses::boleh — aturan yang sama dengan penjaga rute, jadi menu & akses tak mungkin berselisih.
@@ -293,6 +298,8 @@ $js       = static fn (string $berkas): string => '<script defer src="' . base_u
         </div>
     </div>
 </aside>
+<?php // SINKRON (tanpa defer): posisi gulir menu samping dikembalikan sebelum halaman digambar → pindah menu tanpa loncatan. ?>
+<script src="<?= base_url('assets/js/admin/kerangka-awal.js') ?>?v=<?= @filemtime(FCPATH . 'assets/js/admin/kerangka-awal.js') ?>" <?= csp_script_nonce() ?>></script>
 <div class="sb-latar" :data-terbuka="sidebar" @click="tutupLaci()" aria-hidden="true"></div>
 
 <!-- ===================== ISI (template: main-content) ===================== -->

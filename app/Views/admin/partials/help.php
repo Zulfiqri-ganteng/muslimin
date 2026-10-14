@@ -1,7 +1,8 @@
 <?php
 /**
  * Kartu panduan ringkas untuk tiap halaman (gaya kit F3: sudut rounded-lg, ikon Flowbite, tombol tutup kit).
- * Default TERTUTUP — user menekan "Baca panduan halaman" untuk membuka,
+ * Default TERTUTUP — user menekan "Baca panduan halaman" untuk membuka. Tautannya tampil sejak HTML dimuat (tanpa x-cloak di
+ * pembungkus) supaya isi halaman tidak bergeser saat Alpine siap; hanya panel isinya yang ber-x-cloak.
  * pilihan tersimpan di localStorage (komponen `helpCard` di assets/js/admin/app.js).
  *
  * Pakai:  <?= view('admin/partials/help', ['helpKey'=>'guru', 'helpTitle'=>'...', 'helpBody'=>'<p>...</p>']) ?>
@@ -12,13 +13,13 @@
  * @var string $helpKelas (opsional) kelas jarak pembungkus; bawaan mb-5 (mode CRUD: "" karena sudah di kepala halaman)
  */
 ?>
-<div x-data="helpCard" data-help-key="<?= esc($helpKey, 'attr') ?>" x-cloak class="<?= esc($helpKelas ?? 'mb-5', 'attr') ?>">
+<div x-data="helpCard" data-help-key="<?= esc($helpKey, 'attr') ?>" class="<?= esc($helpKelas ?? 'mb-5', 'attr') ?>">
     <button type="button" x-show="!show" @click="openHelp()"
             class="inline-flex items-center gap-1.5 rounded-lg text-xs font-semibold text-brand-600 hover:text-brand-800 dark:text-brand-400 dark:hover:text-brand-300 focus:outline-hidden focus-visible:ring-2 focus-visible:ring-brand-300">
         <?= ikon('info-circle', 'h-4 w-4') ?>
         Baca panduan halaman
     </button>
-    <div x-show="show" x-transition class="rounded-lg border border-brand-200 bg-brand-50 p-4 sm:p-5 dark:border-gray-700 dark:bg-gray-800">
+    <div x-show="show" x-cloak x-transition class="rounded-lg border border-brand-200 bg-brand-50 p-4 sm:p-5 dark:border-gray-700 dark:bg-gray-800">
         <div class="flex items-start gap-3">
             <span class="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-brand-600 text-white">
                 <?= ikon('info-circle', 'h-5 w-5') ?>
