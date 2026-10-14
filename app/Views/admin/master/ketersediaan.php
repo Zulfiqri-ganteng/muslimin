@@ -1,6 +1,8 @@
 <?php
 /**
- * Halaman Ketersediaan Guru — grid toggle slot "tidak tersedia".
+ * Halaman Ketersediaan Guru — grid sel "tidak tersedia" per hari × jam (rombak tampilan F5: kartu template Flowbite; pemilih guru +
+ * grup tombol shift; sel hijau = tersedia, merah = tidak tersedia). Komponen "ketPage" (master/ketersediaan.js) — isian Alpine hanya
+ * panggilan metode berargumen teks/angka → siap Alpine versi CSP.
  *
  * @var array  $guruOpts    Opsi guru (id => label)
  * @var int    $guruId      Guru terpilih
@@ -17,106 +19,93 @@ $jamIds = array_map(static fn ($j) => (int) $j['id'], $jam);
 <?= view('admin/partials/help', [
     'helpKey'   => 'ketersediaan',
     'helpTitle' => 'Ketersediaan Guru',
-    'helpBody'  => '<p>Tandai jam/hari di mana guru <b>TIDAK dapat</b> mengajar (mis. sedang kuliah, tugas lain). Pilih guru &amp; shift, lalu klik sel untuk men-toggle. Sel hijau = tersedia, merah = tidak tersedia.</p>
-        <p class="mt-1">Klik nama <b>hari</b> untuk menandai/menghapus satu kolom sekaligus. Data ini dipakai sistem agar tidak menempatkan guru pada jam yang tak tersedia (aturan bentrok R3). Jangan lupa <b>Simpan</b>.</p>',
+    'helpBody'  => '<p>Tandai jam/hari di mana guru <b>TIDAK dapat</b> mengajar (mis. sedang kuliah, tugas lain). Pilih guru &amp; shift, lalu klik sel untuk mengubahnya. Sel hijau = tersedia, merah = tidak tersedia.</p>
+        <p class="mt-1">Klik nama <b>hari</b> untuk menandai/menghapus satu kolom sekaligus. Data ini dipakai sistem agar tidak menempatkan guru pada jam yang tak tersedia (aturan bentrok). Jangan lupa <b>Simpan</b>.</p>',
 ]) ?>
 
-<div x-data="ketPage"
-     data-selected="<?= esc(json_encode(array_keys($unavailable)), 'attr') ?>"
-     data-jam-ids="<?= esc(json_encode($jamIds), 'attr') ?>">
+<div x-data="ketPage" data-selected="<?= esc(json_encode(array_keys($unavailable)), 'attr') ?>" data-jam-ids="<?= esc(json_encode($jamIds), 'attr') ?>" class="space-y-4">
 
     <!-- Pemilih guru + shift -->
-    <div class="bg-white rounded-2xl border border-gray-200 shadow-xs p-4 mb-5">
-        <form method="get" class="flex flex-col sm:flex-row sm:items-center gap-3">
-            <div class="flex items-center gap-2 flex-1">
-                <label class="text-sm font-semibold text-gray-600 shrink-0">Guru:</label>
-                <select name="guru_id" data-autosubmit class="rounded-lg border border-gray-300 px-3 py-2.5 text-sm focus:border-brand-500 outline-hidden flex-1 min-w-[200px]">
-                    <?php if (empty($guruOpts)): ?>
-                        <option value="">— belum ada guru —</option>
-                    <?php else: foreach ($guruOpts as $id => $label): ?>
-                        <option value="<?= $id ?>" <?= $guruId === (int) $id ? 'selected' : '' ?>><?= esc($label) ?></option>
-                    <?php endforeach; endif; ?>
-                </select>
-            </div>
-            <div class="inline-flex rounded-lg border border-gray-300 bg-white p-1 text-sm font-semibold">
-                <?php foreach (['pagi' => 'Pagi', 'siang' => 'Siang'] as $key => $label): ?>
-                    <button type="submit" name="shift" value="<?= $key ?>"
-                            class="px-4 py-1.5 rounded-md transition <?= $shift === $key ? 'bg-brand-700 text-white' : 'text-gray-600 hover:bg-gray-100' ?>"><?= $label ?></button>
-                <?php endforeach; ?>
-            </div>
-        </form>
-    </div>
+    <form method="get" class="kartu kartu-isi flex flex-col gap-3 sm:flex-row sm:items-center">
+        <label class="text-sm font-medium text-gray-900 dark:text-white" for="ket-guru">Guru</label>
+        <select id="ket-guru" name="guru_id" data-autosubmit class="inp sm:max-w-md">
+            <?php if (empty($guruOpts)): ?>
+                <option value="">— belum ada guru —</option>
+            <?php else: foreach ($guruOpts as $id => $label): ?>
+                <option value="<?= (int) $id ?>"<?= $guruId === (int) $id ? ' selected' : '' ?>><?= esc($label) ?></option>
+            <?php endforeach; endif; ?>
+        </select>
+        <div class="grup-tombol sm:ms-auto" role="group" aria-label="Pilih shift">
+            <?php foreach (['pagi' => 'Shift pagi', 'siang' => 'Shift siang'] as $key => $label): ?>
+                <button type="submit" name="shift" value="<?= $key ?>" aria-pressed="<?= $shift === $key ? 'true' : 'false' ?>"><?= $label ?></button>
+            <?php endforeach; ?>
+        </div>
+    </form>
 
     <?php if (! $guruId): ?>
-        <div class="bg-white rounded-2xl border border-gray-200 shadow-xs p-10 text-center text-gray-400">Pilih guru terlebih dahulu (atau tambahkan guru di menu Guru).</div>
+        <div class="kartu"><?= ui_kosong(['ikon' => 'users', 'judul' => 'Pilih guru terlebih dahulu', 'teks' => 'Pilih guru di atas (atau tambahkan guru di menu Master Guru).']) ?></div>
     <?php elseif (empty($jam) || empty($hari)): ?>
-        <div class="bg-white rounded-2xl border border-gray-200 shadow-xs p-10 text-center text-gray-400">Belum ada data hari aktif atau jam pelajaran untuk shift <?= esc($shift) ?>.</div>
+        <div class="kartu"><?= ui_kosong(['ikon' => 'clock', 'judul' => 'Belum ada hari aktif atau jam pelajaran', 'teks' => 'Atur Master Hari dan Master Jam untuk shift ' . $shift . ' terlebih dahulu.']) ?></div>
     <?php else: ?>
-        <form method="post" action="<?= site_url('admin/master/ketersediaan') ?>">
+        <form method="post" action="<?= site_url('admin/master/ketersediaan') ?>" class="kartu">
             <?= csrf_field() ?>
-            <input type="hidden" name="guru_id" value="<?= $guruId ?>">
-            <input type="hidden" name="shift" value="<?= $shift ?>">
+            <input type="hidden" name="guru_id" value="<?= (int) $guruId ?>">
+            <input type="hidden" name="shift" value="<?= esc($shift, 'attr') ?>">
 
-            <div class="bg-white rounded-2xl border border-gray-200 shadow-xs overflow-hidden">
-                <div class="px-5 py-4 border-b border-gray-100 flex flex-wrap items-center justify-between gap-3">
-                    <div class="flex items-center gap-4 text-xs">
-                        <span class="inline-flex items-center gap-1.5"><span class="h-3.5 w-3.5 rounded-sm bg-emerald-100 border border-emerald-300"></span> Tersedia</span>
-                        <span class="inline-flex items-center gap-1.5"><span class="h-3.5 w-3.5 rounded-sm bg-red-100 border border-red-300"></span> Tidak tersedia</span>
-                        <span class="text-gray-400">(<span x-text="sel.length"></span> slot ditandai)</span>
-                    </div>
-                    <button type="button" @click="clearAll()" class="text-xs font-semibold text-gray-500 hover:text-gray-700">Kosongkan semua</button>
+            <div class="kartu-kepala">
+                <div class="flex flex-wrap items-center gap-4 text-sm text-gray-600 dark:text-gray-300">
+                    <span class="inline-flex items-center gap-1.5"><span class="h-3.5 w-3.5 rounded-sm border border-green-300 bg-green-100 dark:border-green-500/40 dark:bg-green-500/20"></span>Tersedia</span>
+                    <span class="inline-flex items-center gap-1.5"><span class="h-3.5 w-3.5 rounded-sm border border-red-300 bg-red-100 dark:border-red-500/40 dark:bg-red-500/20"></span>Tidak tersedia</span>
+                    <span class="text-gray-500 dark:text-gray-400">(<b class="text-gray-900 dark:text-white" x-text="sel.length"></b> slot ditandai)</span>
                 </div>
+                <button type="button" class="btn btn-teks btn-sm" @click="clearAll()"><?= ikon('close', 'h-4 w-4') ?>Kosongkan semua</button>
+            </div>
 
-                <div class="overflow-x-auto">
-                    <table class="w-full text-sm border-collapse">
-                        <thead>
-                            <tr class="bg-gray-50 text-gray-500">
-                                <th class="px-3 py-3 text-left font-semibold w-40 border-b border-gray-100">Jam</th>
-                                <?php foreach ($hari as $h): ?>
-                                    <th class="px-2 py-3 text-center font-semibold border-b border-l border-gray-100">
-                                        <button type="button" @click="toggleDay(<?= (int) $h['id'] ?>)" class="hover:text-brand-700 transition" title="Toggle satu hari"><?= esc($h['nama']) ?></button>
-                                    </th>
+            <div class="tabel-bungkus">
+                <table class="w-full border-collapse text-sm">
+                    <thead class="bg-gray-100 text-xs font-medium text-gray-500 uppercase dark:bg-gray-700 dark:text-gray-400">
+                        <tr>
+                            <th scope="col" class="w-40 p-3 text-left">Jam</th>
+                            <?php foreach ($hari as $h): ?>
+                                <th scope="col" class="border-l border-gray-200 p-2 text-center dark:border-gray-600">
+                                    <button type="button" class="rounded-md px-2 py-1 font-medium uppercase transition-colors hover:bg-gray-200 hover:text-gray-900 dark:hover:bg-gray-600 dark:hover:text-white" @click="toggleDay(<?= (int) $h['id'] ?>)" title="Tandai / hapus satu hari"><?= esc($h['nama']) ?></button>
+                                </th>
+                            <?php endforeach; ?>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-gray-200 dark:divide-gray-700">
+                        <?php foreach ($jam as $j): ?>
+                            <tr>
+                                <td class="p-3 whitespace-nowrap">
+                                    <span class="font-semibold text-gray-900 dark:text-white">Jam <?= esc($j['jam_ke']) ?></span>
+                                    <span class="ms-1 text-xs text-gray-500 dark:text-gray-400"><?= esc(substr($j['waktu_mulai'], 0, 5)) ?>–<?= esc(substr($j['waktu_selesai'], 0, 5)) ?></span>
+                                </td>
+                                <?php foreach ($hari as $h): $key = $h['id'] . '-' . $j['id']; ?>
+                                    <td class="border-l border-gray-200 p-1 text-center dark:border-gray-700">
+                                        <button type="button" @click="toggle('<?= $key ?>')" aria-label="<?= esc($h['nama'] . ' jam ' . $j['jam_ke'], 'attr') ?>"
+                                                :class="has('<?= $key ?>') ? 'bg-red-100 text-red-700 ring-1 ring-red-300 dark:bg-red-500/20 dark:text-red-400 dark:ring-red-500/40' : 'bg-green-50 text-green-700 hover:bg-green-100 dark:bg-green-500/10 dark:text-green-400 dark:hover:bg-green-500/20'"
+                                                class="flex h-9 w-full items-center justify-center rounded-md transition-colors">
+                                            <span x-show="!has('<?= $key ?>')"><?= ikon('check', 'h-4 w-4') ?></span>
+                                            <span x-show="has('<?= $key ?>')" x-cloak><?= ikon('close', 'h-4 w-4') ?></span>
+                                        </button>
+                                    </td>
                                 <?php endforeach; ?>
                             </tr>
-                        </thead>
-                        <tbody>
-                            <?php foreach ($jam as $j): ?>
-                                <tr class="hover:bg-gray-50/50">
-                                    <td class="px-3 py-2 border-b border-gray-100 whitespace-nowrap">
-                                        <span class="font-bold text-brand-700">Jam <?= esc($j['jam_ke']) ?></span>
-                                        <span class="text-gray-400 text-xs ml-1"><?= esc(substr($j['waktu_mulai'], 0, 5)) ?>–<?= esc(substr($j['waktu_selesai'], 0, 5)) ?></span>
-                                    </td>
-                                    <?php foreach ($hari as $h): $key = $h['id'] . '-' . $j['id']; ?>
-                                        <td class="p-1 border-b border-l border-gray-100 text-center">
-                                            <button type="button" @click="toggle('<?= $key ?>')"
-                                                    :class="has('<?= $key ?>') ? 'bg-red-100 text-red-600 ring-1 ring-red-300' : 'bg-emerald-50 text-emerald-600 hover:bg-emerald-100'"
-                                                    class="w-full h-9 rounded-md text-xs font-semibold transition flex items-center justify-center">
-                                                <span x-show="!has('<?= $key ?>')">✓</span>
-                                                <span x-show="has('<?= $key ?>')" x-cloak>✕</span>
-                                            </button>
-                                        </td>
-                                    <?php endforeach; ?>
-                                </tr>
-                            <?php endforeach; ?>
-                        </tbody>
-                    </table>
-                </div>
+                        <?php endforeach; ?>
+                    </tbody>
+                </table>
+            </div>
 
-                <div class="px-5 py-4 border-t border-gray-100 flex justify-end gap-2">
-                    <!-- hidden input untuk tiap slot tidak-tersedia -->
-                    <template x-for="key in sel" :key="key"><input type="hidden" name="unavailable[]" :value="key"></template>
-                    <button class="inline-flex items-center gap-1.5 rounded-lg bg-brand-700 hover:bg-brand-800 text-white text-sm font-semibold px-5 py-2.5 transition">
-                        <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/></svg>
-                        Simpan Ketersediaan
-                    </button>
-                </div>
+            <div class="kartu-kaki flex justify-end">
+                <!-- input tersembunyi untuk tiap slot tidak-tersedia -->
+                <template x-for="key in sel" :key="key"><input type="hidden" name="unavailable[]" :value="key"></template>
+                <button type="submit" class="btn btn-utama"><?= ikon('check', 'h-4 w-4') ?>Simpan ketersediaan</button>
             </div>
         </form>
     <?php endif; ?>
 </div>
-
 <?= $this->endSection() ?>
 
 <?= $this->section('scripts') ?>
-<script defer src="<?= base_url('assets/js/admin/master/ketersediaan.js') ?>?v=<?= @filemtime(FCPATH . 'assets/js/admin/master/ketersediaan.js') ?>"></script>
+<script defer src="<?= base_url('assets/js/admin/master/ketersediaan.js') ?>?v=<?= @filemtime(FCPATH . 'assets/js/admin/master/ketersediaan.js') ?>" <?= csp_script_nonce() ?>></script>
 <?= $this->endSection() ?>

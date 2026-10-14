@@ -1,7 +1,9 @@
 <?php
 /**
- * Pratinjau impor yang dapat diedit — dipakai semua modul master.
- * Logika JavaScript ada di komponen `importPreview` (assets/js/admin/app.js).
+ * Pratinjau impor yang dapat diedit — dipakai semua modul master (+ Jadwal KBM & Jadwal Ujian). Rombak tampilan F5: kartu + tabel
+ * gaya template Flowbite; logika di komponen `importPreview` (assets/js/admin/app.js).
+ * Siap Alpine versi CSP (dan tetap jalan di Alpine biasa — halaman Jadwal/Ujian belum versi CSP): sel diikat x-model="row.<kunci>"
+ * (notasi titik; semua kunci kolom = nama sah), lebar kolom lewat kelas min-w-* (bukan atribut style).
  *
  * @var string $subtitle  Nama master (mis. "Master Guru")
  * @var array  $cols      Daftar kolom: ['key','label','type'(text|number|select|datalist),'options'?,'required'?,'width'?]
@@ -24,113 +26,109 @@ foreach ($cols as &$c) {
     }
 }
 unset($c);
+
+// Lebar minimum kolom (px dari pengendali) → kelas Tailwind TERTULIS LENGKAP (dibaca saat build); nilai lain = yang terdekat.
+$kelasLebar = [70 => 'min-w-18', 80 => 'min-w-20', 90 => 'min-w-23', 100 => 'min-w-25', 110 => 'min-w-28', 120 => 'min-w-30', 130 => 'min-w-33',
+    140 => 'min-w-35', 150 => 'min-w-38', 160 => 'min-w-40', 180 => 'min-w-45', 200 => 'min-w-50', 220 => 'min-w-55', 240 => 'min-w-60',
+    260 => 'min-w-65', 280 => 'min-w-70', 320 => 'min-w-80'];
+$lebar = static function (?int $px) use ($kelasLebar): string {
+    if ($px === null || $px <= 0) {
+        return '';
+    }
+    $terdekat = 70;
+    foreach (array_keys($kelasLebar) as $k) {
+        if (abs($k - $px) < abs($terdekat - $px)) {
+            $terdekat = $k;
+        }
+    }
+
+    return $kelasLebar[$terdekat];
+};
+// Ikatan x-model ke kolom baris: notasi titik bila kunci = nama sah (selalu, untuk kolom kita), cadangan kurung siku.
+$ikat = static fn (string $key): string => preg_match('/^[A-Za-z_$][A-Za-z0-9_$]*$/', $key) ? 'row.' . $key : "row['" . esc($key, 'js') . "']";
 ?>
 <?= $this->extend('layouts/admin') ?>
 <?= $this->section('content') ?>
 
-<div x-data="importPreview" class="space-y-5"
-     data-cols="<?= esc(json_encode(array_column($cols, 'key')), 'attr') ?>"
-     data-rows="<?= esc(json_encode(array_values($rows)), 'attr') ?>">
-    <!-- Header -->
-    <div class="bg-white rounded-2xl border border-gray-200 shadow-xs p-5">
-        <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-            <div>
-                <h2 class="font-bold text-lg text-gray-800">Pratinjau Impor — <?= esc($subtitle) ?></h2>
-                <p class="text-sm text-gray-500 mt-1">Periksa &amp; <b>edit langsung</b> data di bawah sebelum disimpan. Anda bisa mengubah sel, menghapus baris, atau menambah baris baru. Klik <b>Simpan</b> bila sudah benar.</p>
-            </div>
-            <div class="flex items-center gap-2 text-sm">
-                <span class="inline-flex items-center gap-1.5 rounded-lg bg-emerald-50 text-emerald-700 px-3 py-1.5 font-semibold">
-                    <span x-text="rows.length"></span> baris
-                </span>
-            </div>
-        </div>
-    </div>
-
-    <!-- Tabel editor -->
-    <form method="post" action="<?= esc($commitUrl) ?>" @submit="prepare()">
+<div x-data="importPreview" data-cols="<?= esc(json_encode(array_column($cols, 'key')), 'attr') ?>" data-rows="<?= esc(json_encode(array_values($rows)), 'attr') ?>">
+    <form method="post" action="<?= esc($commitUrl, 'attr') ?>" @submit="prepare()" class="space-y-4">
         <?= csrf_field() ?>
         <?php foreach ($cols as $c): if (($c['type'] ?? '') === 'datalist'): ?>
             <datalist id="dl_<?= esc($c['key'], 'attr') ?>">
                 <?php foreach (($c['options'] ?? []) as $opt): ?><option value="<?= esc($opt, 'attr') ?>"></option><?php endforeach; ?>
             </datalist>
         <?php endif; endforeach; ?>
-        <div class="bg-white rounded-2xl border border-gray-200 shadow-xs overflow-hidden">
-            <div class="overflow-x-auto">
-                <table class="w-full text-sm">
-                    <thead class="bg-gray-50 text-gray-500 text-left">
+
+        <div class="kartu">
+            <div class="kartu-kepala">
+                <div class="min-w-0">
+                    <h2 class="kartu-judul"><?= esc($subtitle) ?></h2>
+                    <p class="kartu-ket">Periksa &amp; <b>ubah langsung</b> data di bawah sebelum disimpan: ubah sel, hapus baris, atau tambah baris baru. Tekan <b>Simpan</b> bila sudah benar.</p>
+                </div>
+                <span class="lencana lencana-hijau text-sm"><b x-text="rows.length"></b>&nbsp;baris</span>
+            </div>
+
+            <div class="tabel-bungkus">
+                <table class="tabel-crud">
+                    <thead>
                         <tr>
-                            <th class="px-3 py-3 font-semibold w-12 text-center">#</th>
-                            <th class="px-3 py-3 font-semibold w-28">Status</th>
+                            <th scope="col" class="w-12 text-center">#</th>
+                            <th scope="col">Status</th>
                             <?php foreach ($cols as $c): ?>
-                                <th class="px-3 py-3 font-semibold" <?= isset($c['width']) ? 'style="min-width:' . (int) $c['width'] . 'px"' : '' ?>>
-                                    <?= esc($c['label']) ?><?= ! empty($c['required']) ? ' <span class="text-red-500">*</span>' : '' ?>
+                                <th scope="col" class="<?= $lebar(isset($c['width']) ? (int) $c['width'] : null) ?>">
+                                    <?= esc($c['label']) ?><?= ! empty($c['required']) ? ' <span class="text-red-600">*</span>' : '' ?>
                                 </th>
                             <?php endforeach; ?>
-                            <th class="px-3 py-3 font-semibold w-14 text-center">Aksi</th>
+                            <th scope="col" class="kolom-aksi">Aksi</th>
                         </tr>
                     </thead>
-                    <tbody class="divide-y divide-gray-100">
+                    <tbody>
                         <template x-for="(row, idx) in rows" :key="row._uid">
-                            <tr class="hover:bg-gray-50 align-top">
-                                <td class="px-3 py-2 text-center text-gray-400" x-text="idx + 1"></td>
-                                <td class="px-3 py-2">
-                                    <span class="inline-flex rounded-full px-2 py-0.5 text-xs font-semibold"
-                                          :class="row._status === 'perbarui' ? 'bg-amber-100 text-amber-700' : 'bg-emerald-100 text-emerald-700'"
-                                          x-text="row._status === 'perbarui' ? 'Perbarui' : 'Baru'"></span>
+                            <tr class="align-top">
+                                <td class="sel-ket text-center" x-text="idx + 1"></td>
+                                <td>
+                                    <span class="lencana" :class="row._status === 'perbarui' ? 'lencana-kuning' : 'lencana-hijau'" x-text="row._status === 'perbarui' ? 'Perbarui' : 'Baru'"></span>
                                 </td>
-                                <?php foreach ($cols as $c): $key = $c['key']; $type = $c['type'] ?? 'text'; ?>
-                                    <td class="px-3 py-2">
+                                <?php foreach ($cols as $c): $key = (string) $c['key']; $type = $c['type'] ?? 'text'; ?>
+                                    <td class="px-2 py-2">
                                         <?php if ($type === 'select'): ?>
-                                            <select x-model="row['<?= esc($key, 'js') ?>']"
-                                                    class="w-full rounded-lg border border-gray-300 px-2 py-1.5 text-sm focus:border-brand-500 outline-hidden">
+                                            <select x-model="<?= $ikat($key) ?>" class="inp py-1.5" aria-label="<?= esc($c['label'], 'attr') ?>">
                                                 <option value="">—</option>
                                                 <?php foreach (($c['options'] ?? []) as $opt): ?>
                                                     <option value="<?= esc($opt, 'attr') ?>"><?= esc($opt) ?></option>
                                                 <?php endforeach; ?>
                                             </select>
                                         <?php elseif ($type === 'datalist'): ?>
-                                            <input type="text" list="dl_<?= esc($key, 'attr') ?>"
-                                                   x-model="row['<?= esc($key, 'js') ?>']"
-                                                   class="w-full rounded-lg border border-gray-300 px-2 py-1.5 text-sm focus:border-brand-500 outline-hidden">
+                                            <input type="text" list="dl_<?= esc($key, 'attr') ?>" x-model="<?= $ikat($key) ?>" class="inp py-1.5" aria-label="<?= esc($c['label'], 'attr') ?>">
                                         <?php else: ?>
-                                            <input type="<?= $type === 'number' ? 'number' : 'text' ?>"
-                                                   x-model="row['<?= esc($key, 'js') ?>']"
-                                                   class="w-full rounded-lg border border-gray-300 px-2 py-1.5 text-sm focus:border-brand-500 outline-hidden">
+                                            <input type="<?= $type === 'number' ? 'number' : 'text' ?>" x-model="<?= $ikat($key) ?>" class="inp py-1.5" aria-label="<?= esc($c['label'], 'attr') ?>">
                                         <?php endif; ?>
                                     </td>
                                 <?php endforeach; ?>
-                                <td class="px-3 py-2 text-center">
-                                    <button type="button" @click="removeRow(idx)" title="Hapus baris" class="inline-flex h-8 w-8 items-center justify-center rounded-lg text-red-500 hover:bg-red-50 transition">
-                                        <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
-                                    </button>
+                                <td class="kolom-aksi">
+                                    <button type="button" class="btn btn-bahaya btn-sm" @click="removeRow(idx)" aria-label="Hapus baris ini"><?= ikon('trash-bin', 'h-4 w-4') ?></button>
                                 </td>
                             </tr>
                         </template>
-                        <tr x-show="rows.length === 0">
-                            <td colspan="<?= count($cols) + 3 ?>" class="px-6 py-10 text-center text-gray-400">Tidak ada baris. Tambah baris atau batalkan.</td>
+                        <tr x-show="rows.length === 0" x-cloak>
+                            <td colspan="<?= count($cols) + 3 ?>"><?= ui_kosong(['ikon' => 'file-lines', 'judul' => 'Tidak ada baris', 'teks' => 'Tambah baris, atau batalkan impor.']) ?></td>
                         </tr>
                     </tbody>
                 </table>
             </div>
-            <div class="px-4 py-3 border-t border-gray-100">
-                <button type="button" @click="addRow()" class="inline-flex items-center gap-1.5 rounded-lg border border-gray-300 text-gray-600 text-sm font-semibold px-3.5 py-2 hover:bg-gray-50 transition">
-                    <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4"/></svg>
-                    Tambah Baris
-                </button>
+
+            <div class="kartu-kaki">
+                <button type="button" class="btn btn-netral btn-sm" @click="addRow()"><?= ikon('plus', 'h-4 w-4') ?>Tambah baris</button>
             </div>
         </div>
 
         <!-- payload tersembunyi (diisi saat submit) -->
         <div x-ref="payload"></div>
 
-        <div class="flex flex-wrap justify-end gap-2 mt-5">
-            <a href="<?= esc($backUrl) ?>" class="rounded-lg border border-gray-300 text-gray-600 text-sm font-semibold px-5 py-2.5 hover:bg-gray-50 transition">Batal</a>
-            <button type="submit" class="inline-flex items-center gap-1.5 rounded-lg bg-brand-700 hover:bg-brand-800 text-white text-sm font-semibold px-6 py-2.5 transition">
-                <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/></svg>
-                Simpan <span x-text="rows.length"></span> Data
-            </button>
+        <div class="flex flex-wrap justify-end gap-3">
+            <a href="<?= esc($backUrl, 'attr') ?>" class="btn btn-netral">Batal</a>
+            <button type="submit" class="btn btn-utama"><?= ikon('check', 'h-4 w-4') ?>Simpan <span x-text="rows.length"></span> data</button>
         </div>
     </form>
 </div>
-
 <?= $this->endSection() ?>

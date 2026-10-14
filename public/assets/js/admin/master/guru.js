@@ -1,8 +1,9 @@
 /**
  * Halaman Master Guru.
- * Perluasan masterList: modal "Atur Jabatan" (jabatan per guru, boleh lebih
- * dari satu dengan satu penanda utama).
+ * Perluasan masterList: dialog "Atur jabatan" (jabatan per guru, boleh lebih dari satu dengan satu penanda utama).
  * Data dioper lewat atribut: data-all-jabatan, data-jabatan-map (JSON).
+ * Siap Alpine versi CSP (rombak tampilan F5): tombol "Atur jabatan" = <button data-atur-jabatan data-id data-nama> lewat delegasi
+ * klik (tanpa $el di isian); pemeriksaan di isian memakai metode komponen (dipilih, bukanDiriSendiri), bukan global String / .includes.
  */
 document.addEventListener('alpine:init', function () {
     Alpine.data('guruPage', function () {
@@ -30,11 +31,22 @@ document.addEventListener('alpine:init', function () {
             },
 
             onInit: function () {
-                this.allJabatan = window.readJson(this.$el, 'all-jabatan', []);
-                this.jabatanMap = window.readJson(this.$el, 'jabatan-map', {});
+                var self = this;
+                var akar = this.$el;
+                this.allJabatan = window.readJson(akar, 'all-jabatan', []);
+                this.jabatanMap = window.readJson(akar, 'jabatan-map', {});
+                akar.addEventListener('click', function (e) {
+                    var b = e.target.closest ? e.target.closest('[data-atur-jabatan]') : null;
+                    if (b && akar.contains(b)) { self.openJabatanEl(b); }
+                });
             },
 
-            // Dipanggil dari tombol "Atur Jabatan" (id & nama di atribut data-*).
+            // Pilihan "Data ganda dari": guru yang sedang diubah tidak boleh memilih dirinya sendiri.
+            bukanDiriSendiri: function (id) {
+                return String(this.form.id === undefined || this.form.id === null ? '' : this.form.id) !== String(id);
+            },
+
+            // Dipanggil dari tombol "Atur jabatan" (id & nama di atribut data-*).
             openJabatanEl: function (el) {
                 var id = parseInt(el.getAttribute('data-id'), 10);
                 var punya = this.jabatanMap[id] || [];
@@ -47,7 +59,12 @@ document.addEventListener('alpine:init', function () {
                 this.utamaId = utama ? Number(utama.id) : (this.selectedJabatan[0] || null);
 
                 this.jabatanOpen = true;
+                this.fokusDialog();
             },
+            tutupJabatan: function () { this.jabatanOpen = false; },
+
+            // Jabatan ini sedang dicentang?
+            dipilih: function (id) { return this.selectedJabatan.indexOf(Number(id)) !== -1; },
 
             /**
              * Jaga agar penanda "utama" selalu menunjuk jabatan yang tercentang:

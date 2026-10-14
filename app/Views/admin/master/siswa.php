@@ -1,6 +1,8 @@
 <?php
 /**
- * Halaman Master Siswa — pola tampilan mengikuti Master Guru/Jabatan.
+ * Halaman Master Siswa — pola halaman data template Flowbite (rombak tampilan F5). Saringan langsung (kelas/tingkat/status/biodata),
+ * Export ikut saringan yang tampil, tombol "Format 8355" (Daftar Nama Siswa resmi), Detail per siswa, formulir buku induk lengkap
+ * dalam dialog. Komponen "siswaPage" (master/siswa.js). Siap Alpine versi CSP.
  *
  * @var string                        $q           Kata kunci pencarian
  * @var int                           $kelasId     Filter kelas aktif
@@ -15,41 +17,36 @@
  * @var array                         $tingkatList Daftar tingkat sah
  * @var array                         $statusList  Daftar status sah
  */
-$warnaStatus = [
-    'aktif'  => 'bg-emerald-50 text-emerald-700 border-emerald-200',
-    'lulus'  => 'bg-brand-50 text-brand-700 border-brand-200',
-    'pindah' => 'bg-amber-50 text-amber-700 border-amber-200',
-    'keluar' => 'bg-gray-100 text-gray-500 border-gray-200',
-];
-$opsiStatus  = array_combine($statusList, array_map('ucfirst', $statusList));
-$opsiTingkat = array_combine($tingkatList, array_map(static fn ($t) => 'Kelas ' . $t, $tingkatList));
-$opsiBiodata = ['lengkap' => 'Biodata lengkap', 'belum' => 'Biodata belum'];
+use App\Models\SiswaModel;
 
-// URL export ikut membawa filter yang sedang aktif.
+$lencanaStatus = ['aktif' => 'lencana-hijau', 'lulus' => 'lencana-merek', 'pindah' => 'lencana-kuning', 'keluar' => 'lencana-abu'];
+$opsiStatus    = array_combine($statusList, array_map('ucfirst', $statusList));
+$opsiTingkat   = array_combine($tingkatList, array_map(static fn ($t) => 'Kelas ' . $t, $tingkatList));
+$opsiBiodata   = ['lengkap' => 'Biodata lengkap', 'belum' => 'Biodata belum'];
+$adaSaring     = $q !== '' || $kelasId || $tingkat !== '' || $status !== '' || $biodata !== '';
+
+// URL export ikut membawa filter yang sedang aktif (app.js memperbaruinya dari pilihan yang TAMPIL saat diklik).
 $nilaiKelas = $kelasId === -1 ? 'tanpa' : ($kelasId ?: ''); // -1 = saringan "Tanpa kelas"
-$qsExport = array_filter([
+$qsExport   = array_filter([
     'kelas_id' => $nilaiKelas,
     'tingkat'  => $tingkat,
     'status'   => $status,
     'biodata'  => $biodata,
 ], static fn ($v) => $v !== '');
 
-$label  = \App\Libraries\BiodataForm::LABEL;
-$kelasInput = 'w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm focus:border-brand-500 outline-hidden';
+$label = \App\Libraries\BiodataForm::LABEL;
 
-/**
- * Satu kolom isian modal (gaya sama dengan kolom lain di form ini).
- * $o: type, max, span (kelas grid), list (id datalist), mode (inputmode).
- */
-$kolom = static function (string $nama, string $judul, array $o = []) use ($kelasInput): void {
-    echo '<div class="' . ($o['span'] ?? '') . '">'
-        . '<label class="block text-sm font-medium text-gray-600 mb-1">' . esc($judul) . '</label>'
-        . '<input type="' . ($o['type'] ?? 'text') . '" name="' . $nama . '" x-model="form.' . $nama . '"'
+/** Satu kolom isian dialog. $o: type, max, span (kelas grid), list (id datalist), mode (inputmode). */
+$kolom = static function (string $nama, string $judul, array $o = []): void {
+    $id = 'siswa-' . str_replace('_', '-', $nama);
+    echo '<div' . (isset($o['span']) ? ' class="' . $o['span'] . '"' : '') . '>'
+        . '<label class="lbl" for="' . $id . '">' . esc($judul) . '</label>'
+        . '<input type="' . ($o['type'] ?? 'text') . '" id="' . $id . '" name="' . $nama . '" x-model="form.' . $nama . '"'
         . (isset($o['max']) ? ' maxlength="' . (int) $o['max'] . '"' : '')
         . (isset($o['list']) ? ' list="' . $o['list'] . '"' : '')
         . (isset($o['mode']) ? ' inputmode="' . $o['mode'] . '"' : '')
         . (($o['type'] ?? '') === 'number' ? ' min="1" max="99"' : '')
-        . ' class="' . $kelasInput . '"></div>';
+        . ' class="inp"></div>';
 };
 
 /** Blok alamat terstruktur (siswa: $p = '', orang tua: $p = 'ortu_'). */
@@ -60,29 +57,35 @@ $blokAlamat = static function (string $p) use ($kolom, $label): void {
     $kolom($p . 'kecamatan', $label[$p . 'kecamatan'], ['max' => 100]);
     $kolom($p . 'kota', $label[$p . 'kota'], ['max' => 100, 'span' => 'sm:col-span-2']);
 };
+
+/** Judul bagian di dalam dialog. */
+$bagian = static fn (string $judul, string $ket = ''): string => '<p class="border-t border-gray-200 pt-4 text-xs font-semibold tracking-wide text-gray-500 uppercase first:border-t-0 first:pt-0 dark:border-gray-600 dark:text-gray-400">'
+    . $judul . ($ket !== '' ? ' <span class="font-normal normal-case">' . $ket . '</span>' : '') . '</p>';
 ?>
 <?= $this->extend('layouts/admin') ?>
-<?= $this->section('content') ?>
+<?= $this->section('tata') ?>crud<?= $this->endSection() ?>
 
+<?= $this->section('bantuan') ?>
 <?= view('admin/partials/help', [
     'helpKey'   => 'siswa_v5',
     'helpTitle' => 'Master Siswa',
+    'helpKelas' => '',
     'helpBody'  => '<p>Data siswa lengkap sesuai buku induk: identitas, alamat, sekolah asal, orang tua, wali, dan kelas. Tingkat dan jurusan <b>mengikuti kelas</b> siswa, jadi cukup pilih kelasnya saja.</p>
-        <p class="mt-1">• <b>Biodata dari siswa</b> — siswa bisa mengisi biodatanya sendiri lewat menu <b>Isian Biodata Siswa</b>. Setelah admin menyetujui isiannya, datanya otomatis masuk ke sini dan siswa ditandai <span class="font-semibold text-emerald-700">Biodata ✓</span>. Pakai saringan <b>Biodata lengkap / belum</b> untuk melihat siapa yang belum.<br>
-        • Data yang sudah masuk tetap bisa <b>diubah manual</b> lewat tombol edit.</p>
+        <p class="mt-1">• <b>Biodata dari siswa</b> — siswa bisa mengisi biodatanya sendiri lewat menu <b>Isian Biodata Siswa</b>. Setelah admin menyetujui isiannya, datanya otomatis masuk ke sini dan siswa ditandai lencana hijau <b>Biodata</b>. Pakai saringan <b>Biodata lengkap / belum</b> untuk melihat siapa yang belum.<br>
+        • Data yang sudah masuk tetap bisa <b>diubah manual</b> lewat tombol Ubah.</p>
         <p class="mt-1">• <b>Import</b> — unduh template, isi di Excel, unggah, periksa di pratinjau, simpan. NIS yang sudah ada akan <b>diperbarui</b>, bukan diduplikat. <b>Sel yang dikosongkan tidak mengubah data lama</b>, jadi aman mengimpor ulang daftar yang hanya berisi NIS, nama, dan kelas.<br>
         • Kolom <b>Kelas</b> pada file impor diisi <b>nama kelas</b> persis seperti di Master Kelas (mis. <i>X TKJ 1</i>).<br>
         • <b>Penting:</b> NIS bisa berganti ke NIS asli setelah biodata disetujui. Untuk impor ulang, pakai file hasil <b>Export terbaru</b>, bukan file lama — NIS lama akan dianggap siswa baru.<br>
         • <b>Filter</b> — memilih kelas/tingkat/status/biodata langsung menyaring tabel (tanpa klik Cari). Pilihan <b>— Tanpa kelas —</b> menampilkan siswa yang belum ditempatkan di kelas.<br>
-        • <b>Detail</b> — klik <b>nama siswa</b> atau ikon <b>mata</b> di kolom Aksi untuk melihat SEMUA data satu siswa (identitas, kelas, alamat, orang tua, wali, STTB, status biodata &amp; PKL). Dari sana tombol <b>Edit data</b> membuka form ubah.<br>
+        • <b>Detail</b> — klik <b>nama siswa</b> atau tombol <b>Detail</b> di kolom Aksi untuk melihat SEMUA data satu siswa (identitas, kelas, alamat, orang tua, wali, STTB, status biodata &amp; PKL). Dari sana tombol <b>Ubah data</b> membuka form ubah.<br>
         • <b>Data Sekolah</b> — nama orang tua versi sekolah, nomor &amp; tahun STTB (ijazah SMP) sesuai Daftar Nama Siswa resmi (Format 8355). Kolom ini ada di <b>paling kanan</b> template impor.<br>
         • <b>Export</b> — mengunduh sesuai pilihan filter (pilih satu kelas = hanya kelas itu), berisi seluruh kolom biodata. Bila isinya lebih dari satu kelas, file Excel berisi tab <b>Semua Kelas</b> + <b>satu tab per kelas</b> (klik nama kelas di bawah layar Excel).</p>
         <p class="mt-1">• Status <b>Aktif</b> yang dihitung pada grafik jumlah siswa di halaman publik. Siswa lulus/pindah/keluar tetap tersimpan sebagai arsip.</p>',
 ]) ?>
+<?= $this->endSection() ?>
 
-<div x-data="siswaPage"
-     data-base="<?= site_url('admin/master/siswa') ?>"
-     data-entity="siswa"
+<?= $this->section('content') ?>
+<div x-data="siswaPage" data-base="<?= site_url('admin/master/siswa') ?>" data-entity="siswa"
      data-defaults="<?= esc(json_encode([
          'id' => '', 'nis' => '', 'nisn' => '', 'nama' => '', 'jenis_kelamin' => '',
          'tempat_lahir' => '', 'tanggal_lahir' => '', 'agama' => '', 'alamat' => '',
@@ -99,256 +102,219 @@ $blokAlamat = static function (string $p) use ($kolom, $label): void {
          'nama_orang_tua' => '', 'sttb_nomor' => '', 'sttb_tahun' => '',
      ]), 'attr') ?>">
 
-    <?= view('admin/master/partials/toolbar', [
-        'baseUrl'           => site_url('admin/master/siswa'),
-        'searchPlaceholder' => 'Cari nama, NIS, atau NISN...',
-        'q'                 => $q,
-        'per'               => $per,
-        'filters'           => [
-            ['name' => 'kelas_id', 'value' => (string) $nilaiKelas,      'all' => 'Semua kelas',   'options' => ['tanpa' => '— Tanpa kelas —'] + $kelasOpts],
-            ['name' => 'tingkat',  'value' => $tingkat,                  'all' => 'Semua tingkat', 'options' => $opsiTingkat],
-            ['name' => 'status',   'value' => $status,                   'all' => 'Semua status',  'options' => $opsiStatus],
-            ['name' => 'biodata',  'value' => $biodata,                  'all' => 'Semua biodata', 'options' => $opsiBiodata],
+    <?= ui_crud_alat([
+        'baseUrl'        => site_url('admin/master/siswa'),
+        'cari'           => 'Cari nama, NIS, atau NISN…',
+        'q'              => $q,
+        'per'            => $per,
+        'filter'         => [
+            ['name' => 'kelas_id', 'value' => (string) $nilaiKelas, 'all' => 'Semua kelas', 'options' => ['tanpa' => '— Tanpa kelas —'] + $kelasOpts],
+            ['name' => 'tingkat', 'value' => $tingkat, 'all' => 'Semua tingkat', 'options' => $opsiTingkat],
+            ['name' => 'status', 'value' => $status, 'all' => 'Semua status', 'options' => $opsiStatus],
+            ['name' => 'biodata', 'value' => $biodata, 'all' => 'Semua biodata', 'options' => $opsiBiodata],
         ],
-        'exportUrl'   => site_url('admin/master/siswa/export') . ($qsExport !== [] ? '?' . http_build_query($qsExport) : ''),
-        'exportTitle' => 'Unduh data siswa sesuai filter yang dipilih (mis. satu kelas saja) ke file Excel',
-        'extraActions' => '<a href="' . site_url('admin/master/siswa/export-resmi') . '" title="Unduh Daftar Nama Siswa Kelas X, XI, XII dengan format persis berkas sekolah (Format 8355): semua siswa aktif per jurusan, lengkap dengan tanda tangan" class="inline-flex items-center gap-1.5 rounded-lg border border-emerald-300 bg-emerald-50 text-emerald-700 hover:bg-emerald-100 text-sm font-semibold px-3.5 py-2.5 transition"><svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>Format 8355</a>',
         'filterLangsung' => true,
-        'bulkUrl'     => site_url('admin/master/siswa/bulk-delete'),
-        'bulkLabel'   => 'siswa',
+        'eksporUrl'      => site_url('admin/master/siswa/export') . ($qsExport !== [] ? '?' . http_build_query($qsExport) : ''),
+        'eksporTitle'    => 'Unduh data siswa sesuai filter yang dipilih (mis. satu kelas saja) ke file Excel',
+        'tambahanHtml'   => '<a href="' . site_url('admin/master/siswa/export-resmi') . '" class="btn btn-netral" title="Unduh Daftar Nama Siswa Kelas X, XI, XII dengan format persis berkas sekolah (Format 8355): semua siswa aktif per jurusan, lengkap dengan tanda tangan">'
+            . '<span class="text-green-600 dark:text-green-400">' . ikon('file-lines', 'h-4 w-4') . '</span>Format 8355</a>',
+        'massalUrl'      => site_url('admin/master/siswa/bulk-delete'),
+        'massalLabel'    => 'siswa',
     ]) ?>
 
-    <!-- Tabel -->
-    <div class="bg-white rounded-2xl border border-gray-200 shadow-xs overflow-hidden">
-        <div class="px-6 py-4 border-b border-gray-100 flex items-center justify-between">
-            <h2 class="font-bold text-gray-800">Daftar Siswa <span class="text-gray-400 font-normal">(<?= $total ?>)</span></h2>
-        </div>
-        <div class="overflow-x-auto">
-            <table class="w-full text-sm">
-                <thead class="bg-gray-50 text-gray-500 text-left">
+    <div class="tabel-bungkus">
+        <table class="tabel-crud">
+            <thead>
+                <tr>
+                    <th scope="col" class="kolom-cek"><input type="checkbox" class="cek js-check-all" aria-label="Pilih semua siswa di halaman ini"></th>
+                    <th scope="col">NIS</th>
+                    <th scope="col">Nama siswa</th>
+                    <th scope="col" class="text-center">JK</th>
+                    <th scope="col">Kelas</th>
+                    <th scope="col">Jurusan</th>
+                    <th scope="col">Status</th>
+                    <th scope="col" class="kolom-aksi">Aksi</th>
+                </tr>
+            </thead>
+            <tbody>
+                <?php if (empty($rows)): ?>
                     <tr>
-                        <th class="pl-6 pr-2 py-3 w-10"><input type="checkbox" title="Pilih semua di halaman ini" class="js-check-all rounded-sm border-gray-300 text-brand-600 focus:ring-brand-500"></th>
-                        <th class="px-4 py-3 font-semibold w-32">NIS</th>
-                        <th class="px-4 py-3 font-semibold">Nama Siswa</th>
-                        <th class="px-4 py-3 font-semibold w-14 text-center">JK</th>
-                        <th class="px-4 py-3 font-semibold w-32">Kelas</th>
-                        <th class="px-4 py-3 font-semibold w-24">Jurusan</th>
-                        <th class="px-4 py-3 font-semibold w-24">Status</th>
-                        <th class="px-4 py-3 font-semibold w-28 text-right">Aksi</th>
+                        <td colspan="8">
+                            <?= ui_kosong(['ikon' => 'user-graduate', 'judul' => $adaSaring ? 'Siswa tidak ditemukan' : 'Belum ada data siswa',
+                                'teks' => $adaSaring ? 'Tidak ada siswa yang cocok dengan saringan ini. Tekan Reset.' : 'Tambah siswa satu per satu, atau Import Excel (lebih cepat untuk satu kelas sekaligus).']) ?>
+                        </td>
                     </tr>
-                </thead>
-                <tbody class="divide-y divide-gray-100">
-                    <?php if (empty($rows)): ?>
-                        <tr><td colspan="8" class="px-6 py-10 text-center text-gray-400">
-                            <?= $q !== '' || $kelasId || $tingkat !== '' || $status !== '' || $biodata !== ''
-                                ? 'Tidak ada siswa yang cocok dengan filter ini.'
-                                : 'Belum ada data siswa. Tambah manual atau import Excel (lebih cepat untuk satu kelas sekaligus).' ?>
-                        </td></tr>
-                    <?php else: foreach ($rows as $r): ?>
-                        <tr class="hover:bg-gray-50">
-                            <td class="pl-6 pr-2 py-3"><input type="checkbox" class="row-check rounded-sm border-gray-300 text-brand-600 focus:ring-brand-500" value="<?= (int) $r['id'] ?>"></td>
-                            <td class="px-4 py-3 font-semibold text-brand-700"><?= esc($r['nis']) ?></td>
-                            <td class="px-4 py-3">
-                                <a href="<?= site_url('admin/master/siswa/' . (int) $r['id']) ?>" class="font-medium text-gray-800 hover:text-brand-700 hover:underline" title="Lihat detail siswa"><?= esc($r['nama']) ?></a>
-                                <?php if (! empty($r['nisn']) || ! empty($r['biodata_at'])): ?>
-                                    <div class="text-xs text-gray-400">
-                                        <?php if (! empty($r['nisn'])): ?>NISN <?= esc($r['nisn']) ?><?php endif; ?>
-                                        <?php if (! empty($r['biodata_at'])): ?>
-                                            <span class="ml-1 font-semibold text-emerald-700" title="Biodata disahkan <?= esc(date('d/m/Y H:i', strtotime($r['biodata_at'])), 'attr') ?>">Biodata ✓</span>
-                                        <?php endif; ?>
-                                    </div>
-                                <?php endif; ?>
-                            </td>
-                            <td class="px-4 py-3 text-center text-gray-600"><?= $r['jenis_kelamin'] !== null ? esc($r['jenis_kelamin']) : '<span class="text-gray-300">—</span>' ?></td>
-                            <td class="px-4 py-3 text-gray-700"><?= $r['nama_kelas'] !== null ? esc($r['nama_kelas']) : '<span class="text-gray-300">Belum ada kelas</span>' ?></td>
-                            <td class="px-4 py-3 text-gray-600"><?= $r['jurusan_kode'] !== null ? esc($r['jurusan_kode']) : '<span class="text-gray-300">—</span>' ?></td>
-                            <td class="px-4 py-3">
-                                <span class="rounded-full border px-2.5 py-1 text-xs font-semibold <?= $warnaStatus[$r['status']] ?? 'bg-gray-100 text-gray-500 border-gray-200' ?>"><?= esc(ucfirst($r['status'])) ?></span>
-                            </td>
-                            <td class="px-4 py-3 text-right whitespace-nowrap">
-                                <?= view('admin/master/partials/row_actions', [
-                                    'row'       => $r,
-                                    'detailUrl' => site_url('admin/master/siswa/' . (int) $r['id']),
-                                    'deleteUrl' => site_url('admin/master/siswa/delete/' . $r['id']),
-                                    'confirm'   => 'Hapus data siswa ini?',
-                                ]) ?>
-                            </td>
-                        </tr>
-                    <?php endforeach; endif; ?>
-                </tbody>
-            </table>
-        </div>
-        <?php if ($pager): ?>
-            <div class="px-6 py-4 border-t border-gray-100">
-                <?= $pager->only(['q', 'kelas_id', 'tingkat', 'status', 'biodata', 'per'])->links('default', 'admin') ?>
+                <?php else: foreach ($rows as $r): $urlDetail = site_url('admin/master/siswa/' . (int) $r['id']); ?>
+                    <tr>
+                        <td class="kolom-cek"><input type="checkbox" class="cek row-check" value="<?= (int) $r['id'] ?>" aria-label="Pilih siswa <?= esc($r['nis'], 'attr') ?>"></td>
+                        <td class="sel-judul whitespace-nowrap"><?= esc($r['nis']) ?></td>
+                        <td class="min-w-48">
+                            <a href="<?= $urlDetail ?>" class="font-medium hover:text-brand-700 hover:underline dark:hover:text-brand-400" title="Lihat detail siswa"><?= esc($r['nama']) ?></a>
+                            <?php if (! empty($r['nisn']) || ! empty($r['biodata_at'])): ?>
+                                <div class="sel-ket">
+                                    <?php if (! empty($r['nisn'])): ?>NISN <?= esc($r['nisn']) ?><?php endif; ?>
+                                    <?php if (! empty($r['biodata_at'])): ?>
+                                        <span class="lencana lencana-hijau ms-1" title="Biodata disahkan <?= esc(date('d/m/Y H:i', strtotime($r['biodata_at'])), 'attr') ?>"><?= ikon('check', 'h-3 w-3') ?>Biodata</span>
+                                    <?php endif; ?>
+                                </div>
+                            <?php endif; ?>
+                        </td>
+                        <td class="text-center"><?= $r['jenis_kelamin'] !== null ? esc($r['jenis_kelamin']) : '<span class="sel-ket">—</span>' ?></td>
+                        <td class="whitespace-nowrap"><?= $r['nama_kelas'] !== null ? esc($r['nama_kelas']) : '<span class="sel-ket">Belum ada kelas</span>' ?></td>
+                        <td class="sel-ket"><?= $r['jurusan_kode'] !== null ? esc($r['jurusan_kode']) : '—' ?></td>
+                        <td><span class="lencana <?= $lencanaStatus[$r['status']] ?? 'lencana-abu' ?>"><?= esc(ucfirst($r['status'])) ?></span></td>
+                        <td class="kolom-aksi">
+                            <?= ui_crud_aksi([
+                                'row'        => $r,
+                                'detailUrl'  => $urlDetail,
+                                'hapusUrl'   => site_url('admin/master/siswa/delete/' . $r['id']),
+                                'konfirmasi' => 'Hapus data siswa ' . $r['nama'] . ' (NIS ' . $r['nis'] . ')?',
+                            ]) ?>
+                        </td>
+                    </tr>
+                <?php endforeach; endif; ?>
+            </tbody>
+        </table>
+    </div>
+
+    <?= ui_crud_kaki(['pager' => $pager, 'total' => (int) $total, 'kunci' => ['q', 'kelas_id', 'tingkat', 'status', 'biodata', 'per'], 'satuan' => 'siswa']) ?>
+
+    <?= ui_crud_form_buka(['benda' => 'Siswa', 'ukuran' => 'lg']) ?>
+        <?= $bagian('Identitas') ?>
+        <div class="grid gap-4 sm:grid-cols-2">
+            <div>
+                <label class="lbl" for="siswa-nis">NIS <span class="text-red-600">*</span></label>
+                <input type="text" id="siswa-nis" name="nis" x-model="form.nis" maxlength="30" required class="inp">
             </div>
-        <?php endif; ?>
-    </div>
-
-    <!-- Modal Tambah/Edit -->
-    <div x-show="open" x-cloak x-transition.opacity.duration.200ms class="fixed inset-0 z-50 flex items-center justify-center p-4">
-        <div class="absolute inset-0 bg-black/40" @click="open=false"></div>
-        <div class="relative bg-white rounded-2xl shadow-xl w-full max-w-2xl p-6 max-h-[90vh] overflow-y-auto">
-            <h3 class="font-bold text-lg text-gray-800 mb-4" x-text="mode==='add' ? 'Tambah Siswa' : 'Edit Siswa'"></h3>
-            <form method="post" :action="actionUrl">
-                <?= csrf_field() ?>
-
-                <p class="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-2">Identitas</p>
-                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                    <div>
-                        <label class="block text-sm font-medium text-gray-600 mb-1">NIS *</label>
-                        <input type="text" name="nis" x-model="form.nis" maxlength="30" required
-                               class="w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm focus:border-brand-500 focus:ring-2 focus:ring-brand-500/20 outline-hidden">
-                    </div>
-                    <div>
-                        <label class="block text-sm font-medium text-gray-600 mb-1">NISN</label>
-                        <input type="text" name="nisn" x-model="form.nisn" maxlength="30"
-                               class="w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm focus:border-brand-500 outline-hidden">
-                    </div>
-                    <div class="sm:col-span-2">
-                        <label class="block text-sm font-medium text-gray-600 mb-1">Nama Lengkap *</label>
-                        <input type="text" name="nama" x-model="form.nama" maxlength="150" required
-                               class="w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm focus:border-brand-500 focus:ring-2 focus:ring-brand-500/20 outline-hidden">
-                    </div>
-                    <div>
-                        <label class="block text-sm font-medium text-gray-600 mb-1">Jenis Kelamin</label>
-                        <select name="jenis_kelamin" x-model="form.jenis_kelamin"
-                                class="w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm focus:border-brand-500 outline-hidden">
-                            <option value="">— Pilih —</option>
-                            <option value="L">Laki-laki</option>
-                            <option value="P">Perempuan</option>
-                        </select>
-                    </div>
-                    <div>
-                        <label class="block text-sm font-medium text-gray-600 mb-1">Agama</label>
-                        <input type="text" name="agama" x-model="form.agama" maxlength="25" list="daftar-agama"
-                               class="w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm focus:border-brand-500 outline-hidden">
-                        <datalist id="daftar-agama">
-                            <?php foreach (\App\Models\SiswaModel::AGAMA as $a): ?>
-                                <option value="<?= $a ?>"></option>
-                            <?php endforeach; ?>
-                        </datalist>
-                    </div>
-                    <div>
-                        <label class="block text-sm font-medium text-gray-600 mb-1">Tempat Lahir</label>
-                        <input type="text" name="tempat_lahir" x-model="form.tempat_lahir" maxlength="100"
-                               class="w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm focus:border-brand-500 outline-hidden">
-                    </div>
-                    <div>
-                        <label class="block text-sm font-medium text-gray-600 mb-1">Tanggal Lahir</label>
-                        <input type="date" name="tanggal_lahir" x-model="form.tanggal_lahir"
-                               class="w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm focus:border-brand-500 outline-hidden">
-                    </div>
-                    <div>
-                        <label class="block text-sm font-medium text-gray-600 mb-1"><?= esc($label['status_keluarga']) ?></label>
-                        <select name="status_keluarga" x-model="form.status_keluarga" class="<?= $kelasInput ?>">
-                            <option value="">— Pilih —</option>
-                            <?php foreach (\App\Models\SiswaModel::STATUS_KELUARGA as $sk): ?>
-                                <option value="<?= esc($sk, 'attr') ?>"><?= esc($sk) ?></option>
-                            <?php endforeach; ?>
-                        </select>
-                    </div>
-                    <?php $kolom('anak_ke', $label['anak_ke'], ['type' => 'number']) ?>
-                </div>
-
-                <p class="text-xs font-semibold text-gray-400 uppercase tracking-wide mt-5 mb-2">Alamat &amp; Kontak Siswa</p>
-                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                    <?php $kolom('alamat', 'Alamat (jalan / perumahan, blok, nomor)', ['max' => 255, 'span' => 'sm:col-span-2']) ?>
-                    <?php $blokAlamat('') ?>
-                    <?php $kolom('no_hp', 'No HP Siswa', ['max' => 25, 'mode' => 'tel']) ?>
-                </div>
-
-                <p class="text-xs font-semibold text-gray-400 uppercase tracking-wide mt-5 mb-2">Riwayat Masuk</p>
-                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                    <?php $kolom('sekolah_asal', $label['sekolah_asal'], ['max' => 150, 'span' => 'sm:col-span-2']) ?>
-                    <?php $kolom('diterima_kelas', $label['diterima_kelas'], ['max' => 50, 'list' => 'daftar-kelas-siswa']) ?>
-                    <?php $kolom('diterima_tanggal', $label['diterima_tanggal'], ['type' => 'date']) ?>
-                    <datalist id="daftar-kelas-siswa">
-                        <?php foreach ($kelasOpts as $namaKelas): ?><option value="<?= esc($namaKelas, 'attr') ?>"></option><?php endforeach; ?>
-                    </datalist>
-                </div>
-
-                <p class="text-xs font-semibold text-gray-400 uppercase tracking-wide mt-5 mb-2">Orang Tua</p>
-                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                    <?php $kolom('nama_ayah', $label['nama_ayah'], ['max' => 150]) ?>
-                    <?php $kolom('pekerjaan_ayah', $label['pekerjaan_ayah'], ['max' => 100, 'list' => 'daftar-pekerjaan']) ?>
-                    <?php $kolom('nama_ibu', $label['nama_ibu'], ['max' => 150]) ?>
-                    <?php $kolom('pekerjaan_ibu', $label['pekerjaan_ibu'], ['max' => 100, 'list' => 'daftar-pekerjaan']) ?>
-                    <?php $kolom('ortu_alamat', $label['ortu_alamat'], ['max' => 255, 'span' => 'sm:col-span-2']) ?>
-                    <?php $blokAlamat('ortu_') ?>
-                    <?php $kolom('ortu_telepon', $label['ortu_telepon'] . ' (bisa 2 nomor, pisahkan dengan /)', ['max' => 60, 'mode' => 'tel', 'span' => 'sm:col-span-2']) ?>
-                    <datalist id="daftar-pekerjaan">
-                        <?php foreach (\App\Models\SiswaModel::PEKERJAAN as $pk): ?><option value="<?= esc($pk, 'attr') ?>"></option><?php endforeach; ?>
-                    </datalist>
-                </div>
-
-                <p class="text-xs font-semibold text-gray-400 uppercase tracking-wide mt-5 mb-2">Wali <span class="normal-case font-normal">(kosongkan bila tidak ada wali selain orang tua)</span></p>
-                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                    <?php $kolom('nama_wali', $label['nama_wali'], ['max' => 150]) ?>
-                    <?php $kolom('no_hp_wali', 'No HP Wali', ['max' => 25, 'mode' => 'tel']) ?>
-                    <?php $kolom('alamat_wali', $label['alamat_wali'], ['max' => 255, 'span' => 'sm:col-span-2']) ?>
-                    <?php $kolom('pekerjaan_wali', $label['pekerjaan_wali'], ['max' => 100, 'list' => 'daftar-pekerjaan']) ?>
-                </div>
-
-                <p class="text-xs font-semibold text-gray-400 uppercase tracking-wide mt-5 mb-2">Data Sekolah <span class="normal-case font-normal">(sesuai Daftar Nama Siswa resmi — Format 8355)</span></p>
-                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                    <?php $kolom('nama_orang_tua', \App\Models\SiswaModel::LABEL_SEKOLAH['nama_orang_tua'], ['max' => 150, 'span' => 'sm:col-span-2']) ?>
-                    <?php $kolom('sttb_nomor', \App\Models\SiswaModel::LABEL_SEKOLAH['sttb_nomor'] . ' (ijazah SMP/MTs)', ['max' => 60]) ?>
-                    <?php $kolom('sttb_tahun', \App\Models\SiswaModel::LABEL_SEKOLAH['sttb_tahun'], ['max' => 4, 'mode' => 'numeric']) ?>
-                </div>
-
-                <p class="text-xs font-semibold text-gray-400 uppercase tracking-wide mt-5 mb-2">Kelas &amp; Status</p>
-                <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                    <div>
-                        <label class="block text-sm font-medium text-gray-600 mb-1">Kelas</label>
-                        <select name="kelas_id" x-model="form.kelas_id"
-                                class="w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm focus:border-brand-500 outline-hidden">
-                            <option value="">— Belum ada kelas —</option>
-                            <?php foreach ($kelasOpts as $id => $nama): ?>
-                                <option value="<?= (int) $id ?>"><?= esc($nama) ?></option>
-                            <?php endforeach; ?>
-                        </select>
-                        <p class="text-xs text-gray-400 mt-1">Tingkat &amp; jurusan mengikuti kelas.</p>
-                    </div>
-                    <div>
-                        <label class="block text-sm font-medium text-gray-600 mb-1">Tahun Masuk</label>
-                        <input type="number" name="tahun_masuk" x-model="form.tahun_masuk" min="1990" max="2100"
-                               class="w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm focus:border-brand-500 outline-hidden">
-                    </div>
-                    <div>
-                        <label class="block text-sm font-medium text-gray-600 mb-1">Status</label>
-                        <select name="status" x-model="form.status"
-                                class="w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm focus:border-brand-500 outline-hidden">
-                            <?php foreach ($opsiStatus as $val => $label): ?>
-                                <option value="<?= esc($val, 'attr') ?>"><?= esc($label) ?></option>
-                            <?php endforeach; ?>
-                        </select>
-                    </div>
-                    <div class="sm:col-span-3">
-                        <label class="block text-sm font-medium text-gray-600 mb-1">Keterangan</label>
-                        <input type="text" name="keterangan" x-model="form.keterangan" maxlength="255"
-                               class="w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm focus:border-brand-500 outline-hidden">
-                    </div>
-                </div>
-
-                <div class="flex justify-end gap-2 mt-6">
-                    <button type="button" @click="open=false" class="rounded-lg border border-gray-300 text-gray-600 text-sm font-semibold px-4 py-2.5 hover:bg-gray-50">Batal</button>
-                    <button class="rounded-lg bg-brand-700 hover:bg-brand-800 text-white text-sm font-semibold px-5 py-2.5">Simpan</button>
-                </div>
-            </form>
+            <div>
+                <label class="lbl" for="siswa-nisn">NISN</label>
+                <input type="text" id="siswa-nisn" name="nisn" x-model="form.nisn" maxlength="30" class="inp">
+            </div>
+            <div class="sm:col-span-2">
+                <label class="lbl" for="siswa-nama">Nama lengkap <span class="text-red-600">*</span></label>
+                <input type="text" id="siswa-nama" name="nama" x-model="form.nama" maxlength="150" required class="inp">
+            </div>
+            <div>
+                <label class="lbl" for="siswa-jk">Jenis kelamin</label>
+                <select id="siswa-jk" name="jenis_kelamin" x-model="form.jenis_kelamin" class="inp">
+                    <option value="">— Pilih —</option>
+                    <option value="L">Laki-laki</option>
+                    <option value="P">Perempuan</option>
+                </select>
+            </div>
+            <div>
+                <label class="lbl" for="siswa-agama">Agama</label>
+                <input type="text" id="siswa-agama" name="agama" x-model="form.agama" maxlength="25" list="daftar-agama" class="inp">
+                <datalist id="daftar-agama">
+                    <?php foreach (SiswaModel::AGAMA as $a): ?><option value="<?= esc($a, 'attr') ?>"></option><?php endforeach; ?>
+                </datalist>
+            </div>
+            <div>
+                <label class="lbl" for="siswa-tempat-lahir">Tempat lahir</label>
+                <input type="text" id="siswa-tempat-lahir" name="tempat_lahir" x-model="form.tempat_lahir" maxlength="100" class="inp">
+            </div>
+            <div>
+                <label class="lbl" for="siswa-tanggal-lahir">Tanggal lahir</label>
+                <input type="date" id="siswa-tanggal-lahir" name="tanggal_lahir" x-model="form.tanggal_lahir" class="inp">
+            </div>
+            <div>
+                <label class="lbl" for="siswa-status-keluarga"><?= esc($label['status_keluarga']) ?></label>
+                <select id="siswa-status-keluarga" name="status_keluarga" x-model="form.status_keluarga" class="inp">
+                    <option value="">— Pilih —</option>
+                    <?php foreach (SiswaModel::STATUS_KELUARGA as $sk): ?>
+                        <option value="<?= esc($sk, 'attr') ?>"><?= esc($sk) ?></option>
+                    <?php endforeach; ?>
+                </select>
+            </div>
+            <?php $kolom('anak_ke', $label['anak_ke'], ['type' => 'number']) ?>
         </div>
-    </div>
 
-    <?= view('admin/master/partials/modal_import', [
-        'importTitle'  => 'Import Siswa',
-        'importAction' => site_url('admin/master/siswa/import-preview'),
-        'templateUrl'  => site_url('admin/master/siswa/template'),
-        'importNote'   => '<b>Import = memasukkan data.</b> Unggah Excel sesuai template — cocok untuk memasukkan satu kelas (mis. 50 siswa) sekaligus. Data tampil dalam <b>pratinjau yang bisa diedit</b> sebelum disimpan. <b>NIS</b> yang sudah ada akan diperbarui, bukan diduplikat — dan <b>sel yang kosong tidak mengubah data lama</b> (biodata yang sudah diisi siswa aman). Kolom <b>Kelas</b> diisi nama kelas persis seperti di Master Kelas. Kolom biodata (orang tua, wali, dsb.) ada di <b>bagian kanan</b> template.',
+        <?= $bagian('Alamat &amp; kontak siswa') ?>
+        <div class="grid gap-4 sm:grid-cols-2">
+            <?php $kolom('alamat', 'Alamat (jalan / perumahan, blok, nomor)', ['max' => 255, 'span' => 'sm:col-span-2']) ?>
+            <?php $blokAlamat('') ?>
+            <?php $kolom('no_hp', 'No HP siswa', ['max' => 25, 'mode' => 'tel']) ?>
+        </div>
+
+        <?= $bagian('Riwayat masuk') ?>
+        <div class="grid gap-4 sm:grid-cols-2">
+            <?php $kolom('sekolah_asal', $label['sekolah_asal'], ['max' => 150, 'span' => 'sm:col-span-2']) ?>
+            <?php $kolom('diterima_kelas', $label['diterima_kelas'], ['max' => 50, 'list' => 'daftar-kelas-siswa']) ?>
+            <?php $kolom('diterima_tanggal', $label['diterima_tanggal'], ['type' => 'date']) ?>
+            <datalist id="daftar-kelas-siswa">
+                <?php foreach ($kelasOpts as $namaKelas): ?><option value="<?= esc($namaKelas, 'attr') ?>"></option><?php endforeach; ?>
+            </datalist>
+        </div>
+
+        <?= $bagian('Orang tua') ?>
+        <div class="grid gap-4 sm:grid-cols-2">
+            <?php $kolom('nama_ayah', $label['nama_ayah'], ['max' => 150]) ?>
+            <?php $kolom('pekerjaan_ayah', $label['pekerjaan_ayah'], ['max' => 100, 'list' => 'daftar-pekerjaan']) ?>
+            <?php $kolom('nama_ibu', $label['nama_ibu'], ['max' => 150]) ?>
+            <?php $kolom('pekerjaan_ibu', $label['pekerjaan_ibu'], ['max' => 100, 'list' => 'daftar-pekerjaan']) ?>
+            <?php $kolom('ortu_alamat', $label['ortu_alamat'], ['max' => 255, 'span' => 'sm:col-span-2']) ?>
+            <?php $blokAlamat('ortu_') ?>
+            <?php $kolom('ortu_telepon', $label['ortu_telepon'] . ' (bisa 2 nomor, pisahkan dengan /)', ['max' => 60, 'mode' => 'tel', 'span' => 'sm:col-span-2']) ?>
+            <datalist id="daftar-pekerjaan">
+                <?php foreach (SiswaModel::PEKERJAAN as $pk): ?><option value="<?= esc($pk, 'attr') ?>"></option><?php endforeach; ?>
+            </datalist>
+        </div>
+
+        <?= $bagian('Wali', '(kosongkan bila tidak ada wali selain orang tua)') ?>
+        <div class="grid gap-4 sm:grid-cols-2">
+            <?php $kolom('nama_wali', $label['nama_wali'], ['max' => 150]) ?>
+            <?php $kolom('no_hp_wali', 'No HP wali', ['max' => 25, 'mode' => 'tel']) ?>
+            <?php $kolom('alamat_wali', $label['alamat_wali'], ['max' => 255, 'span' => 'sm:col-span-2']) ?>
+            <?php $kolom('pekerjaan_wali', $label['pekerjaan_wali'], ['max' => 100, 'list' => 'daftar-pekerjaan']) ?>
+        </div>
+
+        <?= $bagian('Data sekolah', '(sesuai Daftar Nama Siswa resmi — Format 8355)') ?>
+        <div class="grid gap-4 sm:grid-cols-2">
+            <?php $kolom('nama_orang_tua', SiswaModel::LABEL_SEKOLAH['nama_orang_tua'], ['max' => 150, 'span' => 'sm:col-span-2']) ?>
+            <?php $kolom('sttb_nomor', SiswaModel::LABEL_SEKOLAH['sttb_nomor'] . ' (ijazah SMP/MTs)', ['max' => 60]) ?>
+            <?php $kolom('sttb_tahun', SiswaModel::LABEL_SEKOLAH['sttb_tahun'], ['max' => 4, 'mode' => 'numeric']) ?>
+        </div>
+
+        <?= $bagian('Kelas &amp; status') ?>
+        <div class="grid gap-4 sm:grid-cols-3">
+            <div>
+                <label class="lbl" for="siswa-kelas">Kelas</label>
+                <select id="siswa-kelas" name="kelas_id" x-model="form.kelas_id" class="inp">
+                    <option value="">— Belum ada kelas —</option>
+                    <?php foreach ($kelasOpts as $id => $nama): ?>
+                        <option value="<?= (int) $id ?>"><?= esc($nama) ?></option>
+                    <?php endforeach; ?>
+                </select>
+                <p class="hint mt-1">Tingkat &amp; jurusan mengikuti kelas.</p>
+            </div>
+            <div>
+                <label class="lbl" for="siswa-tahun-masuk">Tahun masuk</label>
+                <input type="number" id="siswa-tahun-masuk" name="tahun_masuk" x-model="form.tahun_masuk" min="1990" max="2100" class="inp">
+            </div>
+            <div>
+                <label class="lbl" for="siswa-status">Status</label>
+                <select id="siswa-status" name="status" x-model="form.status" class="inp">
+                    <?php foreach ($opsiStatus as $val => $lbl): ?>
+                        <option value="<?= esc($val, 'attr') ?>"><?= esc($lbl) ?></option>
+                    <?php endforeach; ?>
+                </select>
+            </div>
+            <div class="sm:col-span-3">
+                <label class="lbl" for="siswa-keterangan">Keterangan</label>
+                <input type="text" id="siswa-keterangan" name="keterangan" x-model="form.keterangan" maxlength="255" class="inp">
+            </div>
+        </div>
+    <?= ui_crud_form_tutup() ?>
+
+    <?= ui_crud_impor([
+        'judul'       => 'Import Siswa',
+        'aksi'        => site_url('admin/master/siswa/import-preview'),
+        'templateUrl' => site_url('admin/master/siswa/template'),
+        'catatan'     => '<b>Import = memasukkan data.</b> Unggah Excel sesuai template — cocok untuk memasukkan satu kelas (mis. 50 siswa) sekaligus. Data tampil dalam <b>pratinjau yang bisa diedit</b> sebelum disimpan. <b>NIS</b> yang sudah ada akan diperbarui, bukan diduplikat — dan <b>sel yang kosong tidak mengubah data lama</b> (biodata yang sudah diisi siswa aman). Kolom <b>Kelas</b> diisi nama kelas persis seperti di Master Kelas. Kolom biodata (orang tua, wali, dsb.) ada di <b>bagian kanan</b> template.',
     ]) ?>
 </div>
-
 <?= $this->endSection() ?>
 
 <?= $this->section('scripts') ?>
-<script defer src="<?= base_url('assets/js/admin/master/siswa.js') ?>?v=<?= @filemtime(FCPATH . 'assets/js/admin/master/siswa.js') ?>"></script>
+<script defer src="<?= base_url('assets/js/admin/master/siswa.js') ?>?v=<?= @filemtime(FCPATH . 'assets/js/admin/master/siswa.js') ?>" <?= csp_script_nonce() ?>></script>
 <?= $this->endSection() ?>

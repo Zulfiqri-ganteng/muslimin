@@ -292,6 +292,8 @@
                 fokusIsian();
             },
             tutupForm: function () { this.open = false; },
+            // Untuk dialog tambahan halaman (mis. Atur jabatan/Atur guru): fokus ke isian pertama → Esc & Tab langsung bekerja.
+            fokusDialog: function () { fokusIsian(); },
             bukaImpor: function () { this.importOpen = true; fokusIsian(); },
             tutupImpor: function () { this.importOpen = false; },
             // Dipanggil dari tombol edit: data baris ada di atribut data-row (JSON).

@@ -362,7 +362,7 @@ $adaFilter = $filter['q'] !== '' || $filter['tingkat'] !== '' || $filter['jurusa
         </div>
     </div>
 
-    <?= view('admin/master/partials/modal_import', [
+    <?= view('admin/ujian/partials/modal_import', [
         'importTitle'  => 'Import Jadwal Ujian',
         'importAction' => $base . '/jadwal/import-preview' . $qtp,
         'templateUrl'  => $base . '/jadwal/template' . $qtp,

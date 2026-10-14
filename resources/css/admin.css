@@ -276,7 +276,7 @@
   /* Grup tombol (Flowbite "button group"): <div class="grup-tombol"><a aria-current="page">Pagi</a><a>Siang</a></div> — pilihan aktif = warna merek. */
   .grup-tombol { @apply inline-flex rounded-lg shadow-xs; }
   .grup-tombol > a, .grup-tombol > button { @apply -ms-px border border-gray-200 bg-white px-4 py-2 text-sm font-medium text-gray-900 transition-colors first:ms-0 first:rounded-s-lg last:rounded-e-lg hover:bg-gray-100 hover:text-brand-700 focus:z-10 focus:outline-hidden focus-visible:ring-2 focus-visible:ring-brand-300 dark:border-gray-700 dark:bg-gray-800 dark:text-white dark:hover:bg-gray-700; }
-  .grup-tombol > [aria-current="page"] { @apply z-10 border-brand-700 bg-brand-700 text-white hover:bg-brand-800 hover:text-white dark:border-brand-600 dark:bg-brand-600; }
+  .grup-tombol > [aria-current="page"], .grup-tombol > [aria-pressed="true"] { @apply z-10 border-brand-700 bg-brand-700 text-white hover:bg-brand-800 hover:text-white dark:border-brand-600 dark:bg-brand-600; }
   .titik-status { @apply inline-flex items-center gap-2 whitespace-nowrap; }
   .titik-status::before { content: ""; @apply h-2.5 w-2.5 shrink-0 rounded-full bg-gray-400; }
   .titik-status-hijau::before { @apply bg-green-400; }

@@ -2,7 +2,8 @@
  * Halaman Master Jabatan.
  * Perluasan masterList: `is_struktural` (0/1 dari DB) dipetakan ke boolean agar
  * checkbox tercentang benar saat edit, dan `id` ikut dibawa ke form supaya
- * jabatan tidak bisa dipilih sebagai induk bagi dirinya sendiri.
+ * jabatan tidak bisa dipilih sebagai induk bagi dirinya sendiri (bukanDiriSendiri — metode komponen, bukan global String di
+ * isian Alpine → siap Alpine versi CSP, rombak tampilan F5).
  */
 document.addEventListener('alpine:init', function () {
     Alpine.data('jabatanPage', function () {
@@ -21,6 +22,10 @@ document.addEventListener('alpine:init', function () {
                     hadir_harian: Number(r.hadir_harian) === 1,
                     keterangan: r.keterangan || '',
                 };
+            },
+            // Pilihan "Induk jabatan": jabatan yang sedang diubah tidak boleh menjadi induk bagi dirinya sendiri.
+            bukanDiriSendiri: function (id) {
+                return String(this.form.id === undefined || this.form.id === null ? '' : this.form.id) !== String(id);
             },
         });
     });

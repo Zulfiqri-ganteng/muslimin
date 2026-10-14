@@ -1,7 +1,7 @@
 <?php
 /**
  * Dialog Import Excel halaman data (kit F5; tampilan dialog kit, keadaan = importOpen milik komponen "masterList"): keterangan,
- * pilih berkas, tautan unduh template, tombol Batal / Unggah & Pratinjau. Sama fungsinya dengan admin/master/partials/modal_import.php.
+ * pilih berkas, tautan unduh template, tombol Batal / Unggah & Pratinjau. Sama fungsinya dengan modal impor lama (kini admin/ujian/partials/modal_import.php, dirombak di F7).
  * Panggil: ui_crud_impor(['judul' => 'Import Jurusan', 'aksi' => …, 'templateUrl' => …, 'catatan' => '<b>…</b>', 'tambahanHtml' => …]).
  *
  * @var array{judul: string, aksi: string, templateUrl: string, catatan?: string, tambahanHtml?: string|null} $ui

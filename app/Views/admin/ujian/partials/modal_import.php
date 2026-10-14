@@ -1,6 +1,7 @@
 <?php
 /**
- * Modal Import Excel — identik untuk semua halaman master.
+ * Modal Import Excel GAYA LAMA — dulu admin/master/partials (semua halaman master); sejak F5 hanya dipakai Jadwal Ujian
+ * (ujian/tab_jadwal.php) dan ikut dirombak di F7 (ganti ui_crud_impor).
  *
  * @var string      $importTitle  Judul modal, mis. "Import Guru"
  * @var string      $importAction URL tujuan unggah (import-preview)

@@ -3,7 +3,7 @@
  * Bilah alat halaman data (kit F5, pola template content/crud/users.html): kiri = kotak cari ber-ikon + filter + "Tampilkan N" +
  * Cari/Reset + tombol hapus massal (muncul saat ada baris dicentang); kanan = Tambah (biru, ikon +), Import & Export (putih, ikon).
  * Dipakai di dalam komponen Alpine "masterList" (Tambah → openAdd(), Import → bukaImpor()). Menyambung dengan kepala halaman mode
- * CRUD (layout: section 'tata' = crud). Fitur sama dengan toolbar master lama (admin/master/partials/toolbar.php).
+ * CRUD (layout: section 'tata' = crud). Fitur sama dengan toolbar master lama (dibuang di F5 Langkah 4).
  * Panggil: ui_crud_alat([...]).
  *
  * @var array{

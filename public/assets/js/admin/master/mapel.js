@@ -32,6 +32,7 @@ document.addEventListener('alpine:init', function () {
                 this.kompUrl   = this.base + '/kompetensi/' + id;
                 this.selected  = (this.kompMap[id] || []).map(Number);
                 this.kompOpen  = true;
+                this.fokusDialog();
             },
             tutupKompetensi: function () { this.kompOpen = false; },
         });
