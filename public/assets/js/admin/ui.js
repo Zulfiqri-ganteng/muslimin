@@ -250,6 +250,21 @@
         kirimAcara(el.getAttribute('data-buka-dialog'), 'buka-dialog');
     });
 
+    // (F5) Kotak peringatan ber-data-hilang="ms" (ui_peringatan … ['hilang' => ms]) memudar lalu hilang sendiri — aturan user:
+    // semua pesan sesudah aksi hilang otomatis (di layout admin lewat toast; ini untuk halaman di luar layout, mis. halaman masuk).
+    var hilangkan = function () {
+        Array.prototype.forEach.call(document.querySelectorAll('[data-hilang]'), function (el) {
+            var ms = parseInt(el.getAttribute('data-hilang'), 10) || 0;
+            el.removeAttribute('data-hilang');
+            if (ms <= 0) { return; }
+            setTimeout(function () {
+                el.classList.add('peringatan-pudar');
+                setTimeout(function () { if (el.parentNode) { el.parentNode.removeChild(el); } }, 350);
+            }, ms);
+        });
+    };
+    if (document.readyState === 'loading') { document.addEventListener('DOMContentLoaded', hilangkan); } else { hilangkan(); }
+
     window.Ui = {
         format: Format,
         toast: toast,

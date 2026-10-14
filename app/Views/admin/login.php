@@ -49,8 +49,8 @@ $tema        = \App\Libraries\Tampilan::tema($setting ?? null);
                 <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">Gunakan username atau email akun sekolah Anda.</p>
             </div>
 
-            <?php if (session('error')): ?><?= ui_peringatan('galat', (string) session('error')) ?><?php endif; ?>
-            <?php if (session('success')): ?><?= ui_peringatan('sukses', (string) session('success')) ?><?php endif; ?>
+            <?php if (session('error')): ?><?= ui_peringatan('galat', (string) session('error'), ['hilang' => 10000]) ?><?php endif; ?>
+            <?php if (session('success')): ?><?= ui_peringatan('sukses', (string) session('success'), ['hilang' => 6000]) ?><?php endif; ?>
 
             <form action="<?= site_url('admin/login') ?>" method="post" class="space-y-5" x-data="formMasuk" @submit="kirimForm()">
                 <?= csrf_field() ?>
