@@ -179,12 +179,20 @@
         };
     };
 
+    // Aksi POST di halaman "Lihat saja" (<main data-lihat-saja>, kecuali [data-lihat-boleh]) pasti ditolak — jangan ditanyakan dulu;
+    // app.js yang mencegatnya dan memberi tahu lewat toast.
+    var lihatSajaPost = function (el) {
+        if (!el.closest || !el.closest('[data-lihat-saja]') || el.closest('[data-lihat-boleh]')) { return false; }
+        if (el.matches && el.matches('a[data-method="post"]')) { return true; }
+        var f = el.tagName === 'FORM' ? el : (el.form || null);
+        return f !== null && String(f.getAttribute('method') || 'get').toLowerCase() === 'post';
+    };
     // Klik pada pemicu ber-data-confirm: ditahan di fase tangkap (window → sebelum penangan lain, termasuk @click Alpine & tautan
     // POST app.js), ditanyakan lewat dialog, lalu bila "Ya" diklik ulang dengan tanda lolos sehingga aksi aslinya berjalan.
     var PEMICU = 'a[data-confirm], button[data-confirm], input[type="submit"][data-confirm], input[type="button"][data-confirm], [role="button"][data-confirm]';
     window.addEventListener('click', function (e) {
         var el = e.target && e.target.closest ? e.target.closest(PEMICU) : null;
-        if (!el || !adaKonfirmasi()) { return; }
+        if (!el || !adaKonfirmasi() || lihatSajaPost(el)) { return; }
         if (el.__uiLolos) { el.__uiLolos = false; return; }
         if (el.disabled) { return; }
         e.preventDefault();
@@ -198,7 +206,7 @@
     // <form data-confirm="…">: ditanyakan saat dikirim; tombol pengirim (name/value) tetap ikut terkirim.
     window.addEventListener('submit', function (e) {
         var f = e.target;
-        if (!f || f.tagName !== 'FORM' || !f.hasAttribute('data-confirm') || !adaKonfirmasi()) { return; }
+        if (!f || f.tagName !== 'FORM' || !f.hasAttribute('data-confirm') || !adaKonfirmasi() || lihatSajaPost(f)) { return; }
         if (f.__uiLolos) { f.__uiLolos = false; return; }
         e.preventDefault();
         e.stopImmediatePropagation();

@@ -6,8 +6,9 @@
  * terdaftar saat event `alpine:init` berjalan.
  *
  * Isi:
- *  1. Delegasi global : [data-confirm], [data-autosubmit], [data-lihat-saja] (menu "Lihat saja")
- *  2. adminLayout     : sidebar, ciutkan menu, overlay loading
+ *  1. Delegasi global : [data-confirm], [data-autosubmit], [data-lihat-saja] (menu "Lihat saja", pesan lewat toast kit)
+ *  2. adminLayout     : laci menu (HP), ciutkan menu (cookie sb_ciut), overlay loading
+ *     sbMenu / sbGrup : cari menu, grup menu lipat (cookie sb_grup)
  *  3. helpCard        : kartu panduan halaman (default TERTUTUP)
  *  4. masterList      : pabrik komponen halaman daftar master data
  *  5. importPreview   : editor pratinjau impor Excel
@@ -30,12 +31,16 @@
         return String(form.getAttribute('method') || 'get').toLowerCase() === 'post';
     }
     var PESAN_LIHAT = 'Mode lihat saja: akun Anda hanya bisa melihat halaman ini, tidak bisa mengubah data. Admin bisa mengubahnya di Sistem → Hak Akses.';
+    // Pesan lewat toast kit (ui.js) bila ada; halaman tanpa kit tetap memakai alert.
+    var beritahuLihat = function () {
+        if (window.Ui && window.Ui.toast) { window.Ui.toast(PESAN_LIHAT, 'awas', 6000); } else { window.alert(PESAN_LIHAT); }
+    };
     document.addEventListener('submit', function (e) {
         var f = e.target;
         if (f && f.tagName === 'FORM' && isPost(f) && lihatSaja(f)) {
             e.preventDefault();
             e.stopImmediatePropagation();
-            window.alert(PESAN_LIHAT);
+            beritahuLihat();
         }
     }, true);
     document.addEventListener('click', function (e) {
@@ -43,7 +48,7 @@
         if (a && lihatSaja(a)) {
             e.preventDefault();
             e.stopImmediatePropagation();
-            window.alert(PESAN_LIHAT);
+            beritahuLihat();
         }
     }, true);
     document.addEventListener('DOMContentLoaded', function () {
@@ -143,6 +148,17 @@
         try { return JSON.parse(raw); } catch (err) { return fallback; }
     }
     window.readJson = readJson;
+
+    /* Cookie status menu samping (sb_ciut, sb_grup) — dibaca server (Libraries\Tampilan) agar menu tak berkedip saat pindah halaman. */
+    var bacaKue = function (nama) {
+        var m = document.cookie.match(new RegExp('(?:^|; )' + nama + '=([^;]*)'));
+        if (!m) { return ''; }
+        try { return decodeURIComponent(m[1]); } catch (err) { return ''; }
+    };
+    var tulisKue = function (nama, nilai) {
+        document.cookie = nama + '=' + encodeURIComponent(nilai) + '; Path=/; Max-Age=' + (nilai === '' ? 0 : 31536000) + '; SameSite=Lax';
+    };
+    var DESKTOP = window.matchMedia ? window.matchMedia('(min-width: 1024px)') : null;
 
     /* ---------------------------------------------------------------
      * Pilih baris & hapus massal (SEMUA halaman master) — plain JS
@@ -306,19 +322,39 @@
      * ------------------------------------------------------------- */
     document.addEventListener('alpine:init', function () {
 
-        /* 2. Layout admin: sidebar + overlay loading semua form. */
+        /* 2. Layout admin (layouts/admin.php, rombak F3): laci menu di HP, ciutkan menu di desktop (<html data-ciut> + cookie
+         *    sb_ciut), layar "Memproses…" saat formulir dikirim. Siap Alpine versi CSP: metode tanpa argumen rumit, dan
+         *    `this.$el` tidak dipakai di metode (di versi CSP itu = elemen pemicu). */
         Alpine.data('adminLayout', function () {
             return {
-                sidebar: false,
-                collapsed: JSON.parse(localStorage.getItem('sb_collapsed') || 'false'),
+                sidebar: false,     // laci menu terbuka (HP/tablet)
+                collapsed: false,   // menu menciut jadi ikon (desktop)
+                desktop: DESKTOP ? DESKTOP.matches : true,
                 loading: false,
                 pesan: 'Memproses…',
                 init: function () {
                     var self = this;
-                    this.$watch('collapsed', function (v) { localStorage.setItem('sb_collapsed', v); });
+                    this.collapsed = document.documentElement.hasAttribute('data-ciut');
+                    // Pindahkan pilihan lama (localStorage sb_collapsed, sebelum F3) ke cookie, sekali saja.
+                    try {
+                        var lama = localStorage.getItem('sb_collapsed');
+                        if (lama !== null) {
+                            localStorage.removeItem('sb_collapsed');
+                            if (lama === 'true' && !this.collapsed) { this.alihCiut(); }
+                        }
+                    } catch (err) { /* penyimpanan diblokir: abaikan */ }
+                    if (DESKTOP) {
+                        var ubah = function (e) {
+                            self.desktop = e.matches;
+                            if (e.matches) { self.sidebar = false; }
+                        };
+                        if (DESKTOP.addEventListener) { DESKTOP.addEventListener('change', ubah); } else { DESKTOP.addListener(ubah); }
+                    }
                     document.addEventListener('submit', function (e) {
                         var f = e.target;
-                        if (f.tagName !== 'FORM' || f.hasAttribute('data-noload')) { return; }
+                        // Formulir yang dibatalkan penangan lain (@submit.prevent, validasi, lihat saja) atau dibuka di tab baru
+                        // tidak memuat ulang halaman → layar Memproses tak boleh muncul (bisa menutupi halaman selamanya).
+                        if (!f || f.tagName !== 'FORM' || e.defaultPrevented || f.hasAttribute('data-noload') || f.target === '_blank') { return; }
                         if (f.hasAttribute('data-unduh')) { self.mulaiUnduh(f); return; }
                         self.pesan = 'Memproses…';
                         self.loading = true;
@@ -326,6 +362,28 @@
                     window.addEventListener('pageshow', function () { self.loading = false; });
                     this.$nextTick(function () { self.aturGulirMenu(); });
                 },
+                alihLaci: function () {
+                    this.sidebar = !this.sidebar;
+                    if (this.sidebar) {
+                        // Fokus ke kotak cari menu supaya bisa langsung mengetik / Tab ke menu.
+                        this.$nextTick(function () {
+                            var cari = document.querySelector('#menu-samping .sb-cari');
+                            if (cari) { cari.focus({ preventScroll: true }); }
+                        });
+                    }
+                },
+                tutupLaci: function () { this.sidebar = false; },
+                alihCiut: function () {
+                    this.collapsed = !this.collapsed;
+                    if (this.collapsed) {
+                        document.documentElement.setAttribute('data-ciut', '');
+                    } else {
+                        document.documentElement.removeAttribute('data-ciut');
+                    }
+                    tulisKue('sb_ciut', this.collapsed ? '1' : '');
+                },
+                /* Menu samping sedang tampil sebagai deret ikon (desktop + diciutkan): semua grup dibuka. */
+                sempit: function () { return this.collapsed && this.desktop; },
                 /* Daftar menu sidebar panjang (±60 item) dan tiap halaman baru memuatnya dari atas, sehingga
                  * menu yang sedang dibuka sering tersembunyi di bawah. Posisi gulir diingat per tab
                  * (sessionStorage) dan menu aktif dipastikan terlihat; bila di luar layar ditaruh di tengah. */
@@ -383,6 +441,52 @@
                             }
                         }
                     }, 300);
+                },
+            };
+        });
+
+        /* 2a. Cari menu (<nav x-data="sbMenu" data-label='["…"]'>): item tampil bila teks cari kosong atau cocok dengan labelnya. */
+        Alpine.data('sbMenu', function () {
+            var semua = [];
+            return {
+                cari: '',
+                init: function () { semua = readJson(this.$el, 'label', []); },
+                kata: function () { return String(this.cari || '').trim().toLowerCase(); },
+                sesuai: function (label) {
+                    var q = this.kata();
+                    return q === '' || String(label).indexOf(q) !== -1;
+                },
+                adaHasil: function () {
+                    var q = this.kata();
+                    return q === '' || semua.some(function (l) { return String(l).indexOf(q) !== -1; });
+                },
+            };
+        });
+
+        /* 2b. Grup menu lipat (<div x-data="sbGrup" data-kunci data-buka data-label>). Grup yang dibuka pengguna disimpan di
+         *     cookie sb_grup (dibaca server → grup tetap terbuka saat pindah halaman, tanpa kedipan). */
+        Alpine.data('sbGrup', function () {
+            var kunci = '';
+            var label = [];
+            return {
+                buka: false,
+                init: function () {
+                    kunci = this.$el.getAttribute('data-kunci') || '';
+                    label = readJson(this.$el, 'label', []);
+                    this.buka = this.$el.getAttribute('data-buka') === '1';
+                },
+                alih: function () {
+                    this.buka = !this.buka;
+                    var daftar = bacaKue('sb_grup').split(',').filter(function (k) {
+                        return /^sb_g_[0-9a-f]{8}$/.test(k) && k !== kunci;
+                    });
+                    if (this.buka) { daftar.push(kunci); }
+                    tulisKue('sb_grup', daftar.join(','));
+                },
+                /* Saat mencari: grup tampil bila salah satu menunya cocok (cari = milik sbMenu induk). */
+                grupCocok: function () {
+                    var q = String(this.cari || '').trim().toLowerCase();
+                    return q === '' || label.some(function (l) { return String(l).indexOf(q) !== -1; });
                 },
             };
         });

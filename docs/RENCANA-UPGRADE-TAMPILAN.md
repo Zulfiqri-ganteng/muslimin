@@ -153,7 +153,7 @@ Setiap fase: lapor hasil + cara cek; uji = `dev:cek-ui` grup itu (tampilan + CSP
 ### F3 Kerangka + pemilih tema
 - [ ] Token tema 6 kombinasi (`data-warna` biru|lilac × `data-sidebar` terang|gelap|warna — dipindah dari F0) menggantikan `.tema-lilac`.
 - [ ] Navbar, sidebar 3 gaya, kepala halaman, transisi pindah halaman (View Transitions), footer.
-- [ ] Komponen `adminLayout` + `app.js` dirapikan gaya CSP (jalan di kedua versi Alpine).
+- [x] Komponen `adminLayout` + `app.js` dirapikan gaya CSP (jalan di kedua versi Alpine). *(2026-10-14, Langkah 2)* `adminLayout` (laci HP + Esc/latar, ciutkan menu → `<html data-ciut>` + cookie `sb_ciut`, pilihan lama localStorage `sb_collapsed` dipindah sekali, layar "Memproses…" tidak muncul untuk formulir yang `defaultPrevented`/`target=_blank`), `sbMenu` (cari menu, tak peka huruf besar/spasi), `sbGrup` (grup lipat + cookie `sb_grup`, dibaca server → tanpa kedipan). Pesan "lihat saja" → toast kit; `ui.js` tidak menanyakan `data-confirm` untuk aksi POST di halaman lihat saja. Uji interaksi 25/25 di Alpine biasa **dan** Alpine versi CSP (CSP 0, galat JS 0); uji peramban admin 73 / operator 25 / hubin 14 halaman: bermasalah 0; `dev:cek-ui --grup kerangka` siap-CSP 0.
 - [ ] Migrasi `tema_warna`/`tema_sidebar`; `<html data-warna data-sidebar>` ditulis server (tanpa skrip sebaris, tanpa kedipan).
 - [ ] Bagian "Tampilan" di Pengaturan Sekolah (Admin, pratinjau langsung). **Mulai fase ini Admin bisa mengganti tema.**
 
