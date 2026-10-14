@@ -60,4 +60,26 @@ document.addEventListener('alpine:init', function () {
             },
         };
     });
+
+    /**
+     * Halaman Periksa Biodata (detail) — rombak tampilan F6: dulu x-data objek sebaris + penugasan di @click (tidak didukung
+     * Alpine versi CSP). Saklar "Tampilkan yang berubah saja" (x-model hanyaBeda) & formulir "Kembalikan untuk diperbaiki".
+     */
+    Alpine.data('periksaBiodata', function () {
+        return {
+            formKembali: false,
+            hanyaBeda: false,
+
+            /** Buka/tutup formulir Kembalikan; saat terbuka, kursor langsung di kotak catatan. */
+            alihKembali: function () {
+                var self = this;
+                this.formKembali = !this.formKembali;
+                if (this.formKembali) {
+                    this.$nextTick(function () { if (self.$refs.catatan) { self.$refs.catatan.focus(); } });
+                }
+            },
+
+            tutupKembali: function () { this.formKembali = false; },
+        };
+    });
 });
