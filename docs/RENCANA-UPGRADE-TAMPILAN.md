@@ -1,6 +1,10 @@
 # Rencana: Upgrade Tampilan Admin + Halaman Login (gaya Flowbite)
 
-Dibuat 2026-10-13. **Status: F0 SELESAI (2026-10-13) · F1, F2 & F3 SELESAI (2026-10-14) → berikutnya F4, tunggu aba-aba.**
+Dibuat 2026-10-13. **Status: F0 SELESAI (2026-10-13) · F1, F2 & F3 SELESAI (2026-10-14) · R1 bingkai persis template SELESAI → berikutnya R2 (3 mode tema), lalu F4.**
+
+> **Koreksi user 2026-10-14 (wajib):** hasil akhir harus PERSIS template Flowbite Admin Dashboard (bukan "terinspirasi"), ada cara
+> ganti tema — mode **Terang** (Flowbite asli, bawaan), **Gelap** (dark mode), **Warna Sekolah** (lilac) — siap CSP (JS/CSS terpisah),
+> tombol berwarna + ber-ikon, tanpa fitur hilang, UI mudah. Halaman publik juga wajib dirombak (seri terpisah setelah admin).
 Diperbarui 2026-10-13 malam: semua usulan disetujui user → aturan **SIAP CSP** (bagian 5a) + daftar pekerjaan rinci per fase (bagian 7).
 Kerja per fase: selesai satu fase → centang di bagian 7 → lapor → BERHENTI menunggu aba-aba. Pekerjaan rombak di-commit Claude di cabang
 git `upgrade-tampilan` (bukan `main`); push & deploy oleh user setelah semua fase selesai.
@@ -160,6 +164,12 @@ Setiap fase: lapor hasil + cara cek; uji = `dev:cek-ui` grup itu (tampilan + CSP
 - **Hasil uji F3:** `dev:cek-ui` grup `kerangka` = **0**, `kit` = **0**, `login` = **0** (ketiganya versi CSP) · uji-diri `admin/ui-kit?uji=1` **19/19 lulus 3× berturut-turut, CSP 0** · uji peramban 3 peran: admin 73, operator 25, hubin 14 halaman — bermasalah 0 · uji interaksi kerangka 25/25 (Alpine biasa & versi CSP) · pemilih tema (Alpine biasa & versi CSP) lulus, Operator ditolak · regresi `dev:uji-hak` 67/0, `dev:uji-pkl` 324/0, `dev:uji-lapor` 114/0, `dev:uji-pkl-biaya` 130/0 (di `main`, fitur yang ikut digabung).
 - **Deploy (saat semua fase selesai):** F3 membawa **1 migrasi** (`2026-10-19-000001_TemaTampilan`: kolom `settings.tema_warna`/`tema_sidebar`) → `phpm spark migrate`. Tanpa migrasi pun panel tetap jalan dengan tema bawaan (Lilac Sekolah); bagian Tampilan memberi tahu bila kolomnya belum ada.
 - **Bawaan untuk F4–F10:** halaman lama yang masih memakai objek bermetode di `x-data` (mis. `admin/pkl/index.php` baris 128 `x-data="{ …, salin() {…} }"`) gagal diurai Alpine versi CSP — pindahkan ke komponen berkas JS saat fase grupnya. Tombol "⬇ Unduh Excel (11 lembar)" di Data Prakerin terbungkus 2 baris di layar 1280 px (isi kini lebih sempit karena menu samping) — rapikan di F9.
+
+### R1 Revisi bingkai = PERSIS template Flowbite — ✅ SELESAI 2026-10-14/15
+- [x] `layouts/admin.php` mengikuti `resources/flowbite` (`layouts/_default/dashboard.html`, `partials/navbar-dashboard.html`, `partials/sidebar.html`, `partials/footer-dashboard.html`): bilah atas putih bergaris bawah (tombol menu, logo h-8 + nama `text-xl sm:text-2xl`, kotak cari `lg:w-96`, avatar bulat + dropdown akun); menu samping putih bergaris kanan — baris `p-2 text-base` + ikon **solid** 6×6, **grup = baris ber-ikon + panah ▾**, isi menjorok `pl-11` tanpa ikon, aktif/sorot `bg-gray-100`, daftar kedua (tautan luar: Situs sekolah, Form kesediaan guru) dipisah garis, deret ikon bawah (Profil, Pengaturan, Tampilan — sesuai hak); isi `bg-gray-50`; kaki = kartu putih bertautan + baris hak cipta.
+- [x] Semua fitur tetap: menu disaring hak peran, cari menu (satu nilai `cari` di `adminLayout` untuk kotak bilah atas & laci HP; **Enter = buka hasil pertama**), grup lipat + cookie `sb_grup`, ciutkan menu (deret ikon; **klik ikon grup = lebarkan + buka grup**, mencari saat menciut = melebar otomatis), laci HP + latar gelap + Esc, kepala halaman + remah (nama grup = nama menu tidak diulang; ikon rumah solid; judul `sm:text-2xl`; menu aktif `aria-current`).
+- [x] Token tema: tanpa atribut = **Terang (template)**; `data-sidebar="warna"` (lilac) & `"gelap"` tetap ada (R2 menata 3 mode). Ikon grup di katalog `MenuAdmin` ('ikon' per grup); 53 ikon solid (`resources/ikon.json` → `npm run vendor`); `dev:cek-ui` ikut memeriksa ikon grup. Label menu/grup boleh 2 baris (nama panjang tidak terpotong).
+- **Hasil uji R1:** `dev:cek-ui --grup kerangka` = 0 · uji interaksi bingkai (skrip sekali pakai) **28/28** Alpine biasa & versi CSP (CSP 0) + Operator 28/28 · uji-diri ui-kit **19/19 ×3, CSP 0** · uji peramban admin 73 / operator 25 / hubin 14 halaman bermasalah 0 · foto banding dengan demo resmi template (flowbite-admin-dashboard.vercel.app/crud/users/) — bingkai sama polanya; isi halaman lama menunggu F5–F10.
 
 ### F4 Dashboard + ApexCharts
 - [ ] Kartu angka utama; grafik: siswa aktif per jurusan (donat) & per tingkat (batang), beban mengajar guru (batang mendatar), kesediaan guru (donat), absensi guru hari ini (radial); tren kehadiran 30 hari (area) bila datanya tersedia; daftar "Perlu tindakan" & "Aktivitas terbaru" gaya list Flowbite; animasi grafik tumbuh halus, angka format Indonesia, keadaan kosong.
