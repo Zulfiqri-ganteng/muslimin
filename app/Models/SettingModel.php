@@ -19,6 +19,7 @@ class SettingModel extends Model
         'wa_template_absensi', 'absensi_potongan_jp', 'absensi_transport',
         'biodata_open', 'biodata_tutup',
         'school_postal_code', 'school_accreditation', 'supervisor_name', 'supervisor_nip',
+        'tema_warna', 'tema_sidebar', // tema tampilan admin (rombak tampilan F3; Libraries\Tampilan)
     ];
 
     protected $useTimestamps = true;

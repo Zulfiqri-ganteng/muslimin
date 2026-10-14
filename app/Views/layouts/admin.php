@@ -1,261 +1,283 @@
+<?php
+/**
+ * Kerangka panel admin (rombak tampilan F3 — docs/RENCANA-UPGRADE-TAMPILAN.md §3–§5a), pola Flowbite Admin Dashboard:
+ * bilah atas putih selebar layar (tombol menu, logo + nama sekolah, menu akun), menu samping di bawahnya (3 gaya tema, cari menu,
+ * grup lipat, bisa diciutkan jadi ikon, laci di HP), kepala halaman seragam (remah roti otomatis dari katalog menu + judul), pesan,
+ * isi, kaki. Tema (<html data-warna data-sidebar>) & status menu (ciut, grup terbuka — cookie) ditulis server: tanpa kedipan.
+ * SIAP CSP: tanpa skrip/gaya sebaris; atribut Alpine hanya isian sederhana (adminLayout / sbMenu / sbGrup di app.js, kit di ui.js),
+ * jadi jalan di Alpine biasa maupun versi CSP (dipilih per grup: Config\Tampilan::$alpineCsp).
+ *
+ * Dipakai halaman: $title (judul); section 'content'; opsional section 'aksi' (tombol di kanan judul), 'kepala' (mengganti kepala
+ * halaman bawaan, mis. ui_kepala() dengan tab), 'scripts' (berkas JS halaman). Halaman yang isinya sudah punya <h1> sendiri
+ * (belum dirombak) hanya mendapat remah roti, supaya judul tidak ganda.
+ */
+$cur   = uri_string();
+$admin = session('admin') ?? [];
+
+// Menu samping dari katalog Libraries\MenuAdmin (SATU sumber dengan penjaga rute & halaman Sistem → Hak Akses).
+// Item: [url, label, ikon (nama Flowbite Icons), persis?, segera?]. Urutan grup & item mengikuti aturan urutan sidebar.
+// Menu tiap peran disaring HakAkses::boleh — aturan yang sama dengan penjaga rute, jadi menu & akses tak mungkin berselisih.
+$peranKini = (string) ($admin['role'] ?? '');
+$groups    = array_values(array_filter(array_map(static function (array $g) use ($peranKini): array {
+    $g['items'] = array_values(array_filter(
+        $g['items'],
+        static fn (array $it): bool => \App\Libraries\HakAkses::boleh($peranKini, $it[0])
+    ));
+
+    return $g;
+}, \App\Libraries\MenuAdmin::sidebar()), static fn (array $g): bool => $g['items'] !== []));
+$labelPeranKini = \App\Libraries\HakAkses::label($peranKini);
+$beranda        = \App\Libraries\HakAkses::beranda($peranKini);
+// Menu yang diberi Admin level "Lihat saja": pita penjelas + tombol kirim (POST) di isi halaman dinonaktifkan (app.js). Penjaga
+// rute tetap menolak POST di halaman itu; ini hanya supaya pengguna tidak mengisi formulir yang pasti ditolak.
+$lihatSaja       = \App\Libraries\HakAkses::levelAlamat($peranKini, $cur) === \App\Libraries\MenuAdmin::LIHAT;
+$bolehFormPublik = \App\Libraries\HakAkses::boleh($peranKini, 'admin/submissions');
+
+$setting    = (new \App\Models\SettingModel())->get();
+$schoolName = trim((string) ($setting['school_name'] ?? '')) ?: 'Panel Admin';
+$logo       = (string) ($setting['logo'] ?? '');
+$schoolLogo = $logo !== '' && is_file(FCPATH . 'uploads/' . $logo) ? base_url('uploads/' . rawurlencode($logo)) : null;
+$tema       = \App\Libraries\Tampilan::tema($setting);
+$ciut       = \App\Libraries\Tampilan::sidebarCiut();
+$grupBuka   = \App\Libraries\Tampilan::grupTerbuka();
+$namaAkun   = (string) ($admin['full_name'] ?? 'Admin');
+$awalAkun   = mb_strtoupper(mb_substr($namaAkun, 0, 1));
+
+// Item menu menyala bila alamat sekarang sama persis, atau (kecuali $it[3] = persis) berada di bawahnya.
+// Dicocokkan sebagai prefiks SEGMEN agar 'admin/jadwal' tidak ikut menyala saat membuka 'admin/jadwal-guru'.
+// Bila beberapa item cocok (mis. 'admin/absensi' & 'admin/absensi/piket'), hanya yang alamatnya TERPANJANG yang menyala.
+$cocokItem = static function (array $it) use ($cur): bool {
+    $persis = (bool) ($it[3] ?? false);
+
+    return $cur === $it[0] || (! $persis && str_starts_with($cur, $it[0] . '/'));
+};
+$urlAktif = '';
+foreach ($groups as $g) {
+    foreach ($g['items'] as $it) {
+        if (! ($it[4] ?? false) && strlen($it[0]) > strlen($urlAktif) && $cocokItem($it)) {
+            $urlAktif = $it[0];
+        }
+    }
+}
+$itemAktif = static fn (array $it): bool => $urlAktif !== '' && $it[0] === $urlAktif;
+
+// Remah roti otomatis: Beranda (di ui_remah) › Grup › Menu › judul halaman (bila beda dengan nama menunya). Halaman beranda: tanpa remah.
+$judulHalaman = (string) ($title ?? 'Panel Admin');
+$namaGrup     = static fn (string $t): string => strtr(mb_convert_case(mb_strtolower($t), MB_CASE_TITLE), ['(Ukk)' => '(UKK)', 'Pkl ' => 'PKL ']);
+$remah        = [];
+foreach ($groups as $g) {
+    foreach ($g['items'] as $it) {
+        if (! ($it[4] ?? false) && $itemAktif($it)) {
+            if ($g['title'] !== null) {
+                $remah[] = [$namaGrup((string) $g['title'])];
+            }
+            if (mb_strtolower((string) $it[1]) === mb_strtolower($judulHalaman)) {
+                $remah[] = [(string) $it[1]];
+            } else {
+                $remah[] = [(string) $it[1], site_url($it[0])];
+                $remah[] = [$judulHalaman];
+            }
+        }
+    }
+}
+if ($remah === [] && $cur !== $beranda) {
+    $remah[] = [$judulHalaman];
+}
+if ($cur === $beranda) {
+    $remah = [];
+}
+
+// Isi halaman dirender lebih dulu: halaman lama yang sudah punya <h1> sendiri cukup diberi remah roti (tanpa judul ganda).
+$isiHalaman   = $this->renderSection('content');
+$kepalaKhusus = trim($this->renderSection('kepala'));
+$aksiHalaman  = trim($this->renderSection('aksi'));
+$punyaJudul   = str_contains($isiHalaman, '<h1');
+
+// Pencarian menu: item tampil bila teks cari kosong atau cocok dengan labelnya (sbMenu.sesuai di app.js).
+$atrCari = static fn (string $label): string => ' x-show="sesuai(' . esc(json_encode(mb_strtolower($label)), 'attr') . ')"';
+$renderItem = static function (array $it) use ($itemAktif, $atrCari): void {
+    [$url, $label, $ikon] = $it;
+    if ($it[4] ?? false) {
+        // Menu rancangan (fitur belum jadi): redup, tak bisa diklik, bertanda "Segera".
+        echo '<div class="sb-item sb-item-segera" title="' . esc($label, 'attr') . ' — segera hadir" aria-disabled="true"' . $atrCari($label) . '>'
+            . ikon((string) $ikon, 'sb-ikon') . '<span class="sb-label">' . esc($label) . '</span><span class="sb-segera">Segera</span></div>';
+
+        return;
+    }
+    echo '<a href="' . site_url($url) . '" class="sb-item" title="' . esc($label, 'attr') . '"' . ($itemAktif($it) ? ' aria-current="page"' : '')
+        . $atrCari($label) . '>' . ikon((string) $ikon, 'sb-ikon') . '<span class="sb-label">' . esc($label) . '</span></a>';
+};
+$semuaLabel = [];
+foreach ($groups as $g) {
+    foreach ($g['items'] as $it) {
+        $semuaLabel[] = mb_strtolower((string) $it[1]);
+    }
+}
+$alpineJs = \App\Libraries\Tampilan::alpineCsp($cur) ? 'assets/js/vendor/alpine-csp.min.js' : 'assets/js/vendor/alpine.min.js';
+$js       = static fn (string $berkas): string => '<script defer src="' . base_url($berkas) . '?v=' . @filemtime(FCPATH . $berkas) . '" ' . csp_script_nonce() . '></script>';
+?>
 <!DOCTYPE html>
-<?php // tema-lilac: warna brand akun admin = ungu lilac + aksen mint (variabel di resources/css/admin.css). ?>
-<html lang="id" class="tema-lilac">
+<html lang="id" data-warna="<?= $tema['warna'] ?>" data-sidebar="<?= $tema['sidebar'] ?>"<?= $ciut ? ' data-ciut' : '' ?>>
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title><?= esc($title ?? 'Admin') ?> &mdash; Panel Admin</title>
+    <title><?= esc($judulHalaman) ?> &mdash; Panel Admin</title>
     <meta name="robots" content="noindex">
     <?php // Token CSRF untuk admin/app.js (tombol hapus via POST + header fetch). ?>
     <meta name="csrf-name" content="<?= csrf_token() ?>">
     <meta name="csrf-header" content="<?= csrf_header() ?>">
     <meta name="csrf-token" content="<?= csrf_hash() ?>">
     <?= view('partials/favicon') ?>
-    <?php // admin.css = Tailwind v4 khusus admin (resources/css/admin.css, npm run build:admin); font Inter disimpan sendiri (tanpa Google Fonts).
-          // Penanda nonce = persiapan CSP (teks kosong selama CSP mati; lihat docs/RENCANA-UPGRADE-TAMPILAN.md §5a). ?>
+    <?php // admin.css = Tailwind v4 khusus admin (npm run build:admin); font Inter disimpan sendiri; penanda nonce = persiapan CSP (§5a). ?>
     <link rel="preload" href="<?= base_url('assets/fonts/inter/inter-latin-wght-normal.woff2') ?>" as="font" type="font/woff2" crossorigin>
     <link rel="stylesheet" href="<?= base_url('assets/css/admin.css') ?>?v=<?= @filemtime(FCPATH . 'assets/css/admin.css') ?>" <?= csp_style_nonce() ?>>
 </head>
-<body class="bg-gray-100 text-gray-800 antialiased" x-data="adminLayout">
+<body class="bg-gray-50 text-gray-800 antialiased" x-data="adminLayout" @keydown.escape.window="tutupLaci()">
+<a href="#isi" class="sr-only focus:not-sr-only focus:fixed focus:top-3 focus:left-3 focus:z-[80] focus:rounded-lg focus:bg-white focus:px-4 focus:py-2 focus:text-sm focus:font-medium focus:text-brand-700 focus:shadow-sm">Lewati ke isi halaman</a>
 
-<!-- ===================== LOADING OVERLAY (global, semua form) ===================== -->
-<div x-show="loading" x-cloak x-transition.opacity.duration.150ms class="fixed inset-0 z-[70] flex items-center justify-center bg-white/60 backdrop-blur-xs">
+<!-- Layar "Memproses…" saat formulir dikirim (semua formulir, kecuali data-noload). -->
+<div x-show="loading" x-cloak x-transition.opacity.duration.150ms class="fixed inset-0 z-[70] flex items-center justify-center bg-white/70" role="status" aria-live="polite">
     <div class="flex flex-col items-center gap-3">
-        <svg class="animate-spin h-10 w-10 text-brand-600" fill="none" viewBox="0 0 24 24">
-            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path>
-        </svg>
-        <p class="text-sm font-semibold text-brand-700" x-text="pesan">Memproses…</p>
+        <span class="pemutar h-10 w-10 border-4 text-brand-600" aria-hidden="true"></span>
+        <p class="text-sm font-medium text-brand-700" x-text="pesan">Memproses…</p>
     </div>
 </div>
 
-<?php
-    $cur = uri_string();
-    // Menu samping dari katalog Libraries\MenuAdmin (SATU sumber dengan penjaga rute & halaman Sistem → Hak Akses).
-    // Item: [url, label, ikon, persis?, segera?]. Urutan grup & item mengikuti aturan urutan sidebar (lihat MenuAdmin).
-    // Menu tiap peran disaring HakAkses::boleh di bawah — aturan yang sama dengan penjaga rute.
-    $groups = \App\Libraries\MenuAdmin::sidebar();
-    $admin = session('admin') ?? [];
+<!-- ===================== BILAH ATAS ===================== -->
+<header class="navbar">
+    <div class="flex h-full items-center justify-between gap-3 px-3 lg:px-4">
+        <div class="flex min-w-0 items-center gap-2">
+            <button type="button" class="tombol-navbar lg:hidden" @click="alihLaci()" aria-controls="menu-samping" :aria-expanded="sidebar" aria-label="Buka atau tutup menu"><?= ikon('bars', 'h-6 w-6') ?></button>
+            <button type="button" class="tombol-navbar hidden lg:inline-flex" @click="alihCiut()" aria-controls="menu-samping" :aria-pressed="collapsed"
+                    aria-label="Ciutkan menu samping" :title="collapsed ? 'Lebarkan menu samping' : 'Ciutkan menu samping'"><?= ikon('bars', 'h-6 w-6') ?></button>
+            <a href="<?= site_url($beranda) ?>" class="flex min-w-0 items-center gap-2.5 rounded-lg focus:outline-hidden focus-visible:ring-2 focus-visible:ring-brand-300">
+                <?php if ($schoolLogo !== null): ?>
+                    <img src="<?= esc($schoolLogo, 'attr') ?>" alt="" class="h-9 w-9 shrink-0 rounded-lg object-contain">
+                <?php else: ?>
+                    <span class="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-brand-700 font-semibold text-white" aria-hidden="true"><?= esc(mb_strtoupper(mb_substr($schoolName, 0, 1))) ?></span>
+                <?php endif; ?>
+                <span class="hidden min-w-0 leading-tight sm:block">
+                    <span class="block truncate text-sm font-semibold text-gray-900" title="<?= esc($schoolName, 'attr') ?>"><?= esc($schoolName) ?></span>
+                    <span class="block text-xs text-gray-500">Sistem Informasi Akademik Sekolah</span>
+                </span>
+            </a>
+        </div>
 
-    // Menu per peran: hanya tampilkan yang boleh dibuka (sumber aturan SAMA dengan
-    // penjaga rute — Config\Peran — jadi menu & akses tak mungkin berselisih).
-    $peranKini = (string) ($admin['role'] ?? '');
-    $groups    = array_values(array_filter(array_map(static function (array $g) use ($peranKini): array {
-        $g['items'] = array_values(array_filter(
-            $g['items'],
-            static fn (array $it): bool => \App\Libraries\HakAkses::boleh($peranKini, $it[0])
-        ));
-        return $g;
-    }, $groups), static fn (array $g): bool => $g['items'] !== []));
-    $labelPeranKini  = \App\Libraries\HakAkses::label($peranKini);
-    // Menu yang diberi Admin level "Lihat saja": pita penjelas + tombol kirim (POST) di isi halaman dinonaktifkan (app.js). Penjaga
-    // rute tetap menolak POST di halaman itu; ini hanya supaya pengguna tidak mengisi formulir yang pasti ditolak.
-    $lihatSaja = \App\Libraries\HakAkses::levelAlamat($peranKini, $cur) === \App\Libraries\MenuAdmin::LIHAT;
-    $bolehFormPublik = \App\Libraries\HakAkses::boleh($peranKini, 'admin/submissions');
-
-    $setting = (new \App\Models\SettingModel())->get();
-    $schoolName = $setting['school_name'] ?? 'Panel Admin';
-    $schoolLogo = ! empty($setting['logo']) ? base_url('uploads/' . $setting['logo']) : null;
-
-    // Item menu menyala bila alamat sekarang sama persis, atau (kecuali $it[3] = persis) berada di bawahnya.
-    // Dicocokkan sebagai prefiks SEGMEN agar 'admin/jadwal' tidak ikut menyala saat membuka 'admin/jadwal-guru'.
-    // Bila beberapa item cocok (mis. 'admin/absensi' & 'admin/absensi/piket'), hanya yang alamatnya TERPANJANG yang menyala.
-    $cocokItem = static function (array $it) use ($cur): bool {
-        $persis = (bool) ($it[3] ?? false);
-
-        return $cur === $it[0] || (! $persis && str_starts_with($cur, $it[0] . '/'));
-    };
-    $urlAktif = '';
-    foreach ($groups as $g) {
-        foreach ($g['items'] as $it) {
-            if (! ($it[4] ?? false) && strlen($it[0]) > strlen($urlAktif) && $cocokItem($it)) {
-                $urlAktif = $it[0];
-            }
-        }
-    }
-    $itemAktif = static fn (array $it): bool => $urlAktif !== '' && $it[0] === $urlAktif;
-    // Atribut pencarian menu: item tampil bila teks cari kosong atau cocok dengan labelnya.
-    $atrCari = static fn (string $label): string => ' x-show="cari === \'\' || ' . esc(json_encode(mb_strtolower($label)), 'attr') . '.includes(cari.toLowerCase())"';
-
-    // helper render satu link menu
-    $renderLink = static function (array $it) use ($itemAktif, $atrCari) {
-        [$url, $label, $icon] = $it;
-        $active = $itemAktif($it);
-        // Menu aktif: latar terang + garis mint di kiri (aksen tema lilac).
-        $cls = $active ? 'bg-white/15 text-white shadow-[inset_3px_0_0_var(--color-emerald-300)]' : 'text-brand-100 hover:bg-white/10 hover:text-white';
-        echo '<a href="' . site_url($url) . '" title="' . esc($label) . '" ' . ($active ? 'aria-current="page" ' : '') . ltrim($atrCari($label)) . ' '
-            . ':class="collapsed && !sidebar ? \'lg:justify-center\' : \'\'" '
-            . 'class="flex items-center gap-3 rounded-lg px-3.5 py-2.5 text-sm font-medium transition ' . $cls . '">'
-            . '<svg class="w-5 h-5 shrink-0" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="' . $icon . '"/></svg>'
-            . '<span x-show="!collapsed || sidebar">' . esc($label) . '</span>'
-            . '</a>';
-    };
-
-    // Menu rancangan (fitur belum jadi; item bertanda $it[4] = true): redup, tak bisa diklik, bertanda "Segera".
-    $renderSegera = static function (array $it) use ($atrCari) {
-        [, $label, $icon] = $it;
-        echo '<div title="' . esc($label) . ' — segera hadir" aria-disabled="true"' . $atrCari($label) . ' '
-            . ':class="collapsed && !sidebar ? \'lg:justify-center\' : \'\'" '
-            . 'class="flex cursor-not-allowed select-none items-center gap-3 rounded-lg px-3.5 py-2 text-sm font-medium text-brand-300/70">'
-            . '<svg class="w-5 h-5 shrink-0" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="' . $icon . '"/></svg>'
-            . '<span class="min-w-0 flex-1 leading-snug" x-show="!collapsed || sidebar">' . esc($label) . '</span>'
-            . '<span class="shrink-0 rounded-full bg-gold-400/20 px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wide text-gold-400" x-show="!collapsed || sidebar">Segera</span>'
-            . '</div>';
-    };
-    $renderItem = static fn (array $g, array $it) => ($it[4] ?? false) ? $renderSegera($it) : $renderLink($it);
-?>
-
-<!-- Overlay mobile -->
-<div x-show="sidebar" x-cloak @click="sidebar=false" class="fixed inset-0 bg-black/40 z-30 lg:hidden"></div>
-
-<!-- ===================== SIDEBAR ===================== -->
-<aside class="fixed inset-y-0 left-0 z-40 flex flex-col w-64 bg-linear-to-b from-brand-700 via-brand-800 to-brand-900 text-white transform transition-all duration-200 lg:translate-x-0"
-       :class="{ 'translate-x-0': sidebar, '-translate-x-full': !sidebar, 'lg:w-20': collapsed, 'lg:w-64': !collapsed }">
-    <!-- Brand -->
-    <div class="h-16 flex items-center gap-2.5 px-5 border-b border-white/10 shrink-0"
-         :class="collapsed && !sidebar ? 'lg:px-0 lg:justify-center' : ''">
-        <?php if ($schoolLogo): ?>
-            <img src="<?= esc($schoolLogo) ?>" alt="Logo" class="h-9 w-9 rounded-lg object-contain shrink-0">
-        <?php else: ?>
-            <div class="flex h-9 w-9 items-center justify-center rounded-lg bg-emerald-300 text-brand-900 font-extrabold shrink-0"><?= strtoupper(substr($schoolName, 0, 1)) ?></div>
-        <?php endif; ?>
-        <div class="leading-tight overflow-hidden" x-show="!collapsed || sidebar">
-            <p class="font-bold text-sm truncate" title="<?= esc($schoolName) ?>"><?= esc($schoolName) ?></p>
-            <p class="text-[11px] text-brand-200">Sistem Akademik Sekolah</p>
+        <!-- Menu akun -->
+        <div class="relative" x-data="dropdown" @click.outside="tutup()" @keydown.escape="tutup(true)" @keydown.down.prevent="gerak(1)" @keydown.up.prevent="gerak(-1)">
+            <button type="button" x-ref="pemicu" @click="alih()" :aria-expanded="buka" aria-haspopup="true" aria-label="Menu akun <?= esc($namaAkun, 'attr') ?>"
+                    class="flex items-center gap-2 rounded-lg p-1 text-left transition hover:bg-gray-100 focus:outline-hidden focus-visible:ring-2 focus-visible:ring-gray-300">
+                <span class="hidden text-right leading-tight sm:block">
+                    <span class="block max-w-48 truncate text-sm font-medium text-gray-900"><?= esc($namaAkun) ?></span>
+                    <span class="block text-xs text-gray-500"><?= esc($labelPeranKini) ?></span>
+                </span>
+                <?php if (! empty($admin['photo'])): ?>
+                    <img src="<?= base_url('uploads/' . esc($admin['photo'], 'url')) ?>" alt="" class="h-9 w-9 shrink-0 rounded-full object-cover">
+                <?php else: ?>
+                    <span class="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-brand-100 text-sm font-semibold text-brand-700" aria-hidden="true"><?= esc($awalAkun) ?></span>
+                <?php endif; ?>
+                <?= ikon('chevron-down', 'hidden h-4 w-4 text-gray-500 sm:block') ?>
+            </button>
+            <div class="dropdown-menu right-0 w-60" x-show="buka" x-cloak x-transition.origin.top.right.duration.150ms>
+                <div class="dropdown-kepala">
+                    <p class="truncate text-sm font-semibold"><?= esc($namaAkun) ?></p>
+                    <p class="truncate text-xs text-gray-500"><?= esc($labelPeranKini) ?> &middot; @<?= esc((string) ($admin['username'] ?? '')) ?></p>
+                </div>
+                <ul class="py-1">
+                    <li><a href="<?= site_url('admin/profile') ?>" class="dropdown-item"><?= ikon('user', 'h-4 w-4') ?>Profil Saya</a></li>
+                    <?php if ($bolehFormPublik): // tautan form kesediaan guru — tak relevan bagi Operator/Hubin ?>
+                        <li><a href="<?= site_url('isi') ?>" target="_blank" rel="noopener" class="dropdown-item"><?= ikon('arrow-up-right-from-square', 'h-4 w-4') ?>Lihat Form Publik</a></li>
+                    <?php endif; ?>
+                </ul>
+                <ul class="py-1">
+                    <li><a href="<?= site_url('admin/logout') ?>" class="dropdown-item dropdown-item-bahaya"><?= ikon('arrow-right-to-bracket', 'h-4 w-4') ?>Keluar</a></li>
+                </ul>
+            </div>
         </div>
     </div>
+</header>
 
-    <!-- Menu -->
-    <nav class="flex-1 overflow-y-auto p-3 space-y-1" x-data="{ cari: '' }" aria-label="Menu utama">
-        <!-- Cari menu: ±60 menu, jadi ada kotak pencarian (hanya saat sidebar lebar) -->
-        <div class="px-0.5 pb-2" x-show="!collapsed || sidebar">
-            <label class="relative block">
-                <span class="sr-only">Cari menu</span>
-                <svg class="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-brand-300" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-4.35-4.35M11 18a7 7 0 100-14 7 7 0 000 14z"/></svg>
-                <input type="search" x-model="cari" placeholder="Cari menu…" autocomplete="off"
-                       class="w-full rounded-lg border-0 bg-white/10 py-2 pl-9 pr-3 text-sm text-white placeholder-brand-300 transition focus:bg-white/15 focus:outline-hidden focus:ring-2 focus:ring-white/30">
-            </label>
-        </div>
+<!-- ===================== MENU SAMPING ===================== -->
+<aside id="menu-samping" class="sb" :data-terbuka="sidebar" aria-label="Menu samping">
+    <nav class="sb-nav" aria-label="Menu utama" x-data="sbMenu" data-label="<?= esc(json_encode($semuaLabel), 'attr') ?>">
+        <label class="sb-cari-wadah">
+            <span class="sr-only">Cari menu</span>
+            <?= ikon('search', 'sb-cari-ikon') ?>
+            <input type="search" x-model="cari" class="sb-cari" placeholder="Cari menu…" autocomplete="off">
+        </label>
         <?php foreach ($groups as $g): ?>
             <?php if ($g['title'] === null): ?>
-                <?php foreach ($g['items'] as $it) { $renderItem($g, $it); } ?>
+                <?php foreach ($g['items'] as $it) { $renderItem($it); } ?>
             <?php else:
-                // Akordeon: grup yang berisi halaman sekarang selalu terbuka; grup lain terlipat dan ingatan buka/tutupnya
-                // disimpan per peramban (localStorage). Saat mencari, semua grup yang cocok terbuka.
+                // Grup lipat: grup berisi halaman sekarang selalu terbuka; grup lain mengikuti pilihan pengguna (cookie sb_grup, dibaca
+                // server → tidak berkedip). Menu menciut (desktop) menampilkan semua ikon, judul grup diganti garis tipis.
                 $grupAktif = false;
                 foreach ($g['items'] as $it) {
                     $grupAktif = $grupAktif || (! ($it[4] ?? false) && $itemAktif($it));
                 }
-                $labelGrup = array_map(static fn (array $it): string => mb_strtolower($it[1]), $g['items']);
-                $kunciGrup = 'sb_g_' . substr(md5((string) $g['title']), 0, 8);
+                $kunciGrup  = 'sb_g_' . substr(md5((string) $g['title']), 0, 8);
+                $bukaAwal   = $grupAktif || in_array($kunciGrup, $grupBuka, true);
+                $labelGrup  = array_map(static fn (array $it): string => mb_strtolower((string) $it[1]), $g['items']);
             ?>
-                <div x-data="{ open: <?= $grupAktif ? 'true' : 'false' ?>, kunci: '<?= $kunciGrup ?>',
-                               init() { if (! <?= $grupAktif ? 'true' : 'false' ?>) { try { this.open = localStorage.getItem(this.kunci) === '1'; } catch (e) {} } },
-                               ganti() { this.open = ! this.open; try { localStorage.setItem(this.kunci, this.open ? '1' : '0'); } catch (e) {} } }"
-                     x-show="cari === '' || <?= esc(json_encode($labelGrup), 'attr') ?>.some(l => l.includes(cari.toLowerCase()))" class="pt-2">
-                    <!-- Judul grup (klik untuk buka/tutup) - hanya saat lebar -->
-                    <button type="button" @click="ganti()" x-show="!collapsed || sidebar" :aria-expanded="open || cari !== ''"
-                            class="flex w-full items-center justify-between rounded-md px-3.5 py-1.5 text-[10px] font-bold uppercase tracking-wider transition hover:text-white <?= $grupAktif ? 'text-white' : 'text-brand-300' ?>">
-                        <span class="flex items-center gap-1.5"><?= esc($g['title']) ?><?php if ($grupAktif): ?><span class="h-1.5 w-1.5 rounded-full bg-emerald-300" aria-hidden="true"></span><?php endif; ?></span>
-                        <svg class="h-3.5 w-3.5 transition-transform" :class="(open || cari !== '') ? 'rotate-180' : ''" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7"/></svg>
+                <div class="sb-grup" x-data="sbGrup" data-kunci="<?= $kunciGrup ?>" data-buka="<?= $bukaAwal ? '1' : '0' ?>"
+                     data-label="<?= esc(json_encode($labelGrup), 'attr') ?>" x-show="cari === '' || grupCocok()">
+                    <button type="button" class="sb-grup-judul"<?= $grupAktif ? ' data-aktif' : '' ?> @click="alih()" :aria-expanded="buka || cari !== ''">
+                        <span><?= esc($g['title']) ?></span>
+                        <span class="transition-transform<?= $bukaAwal ? ' rotate-180' : '' ?>" :class="{ 'rotate-180': buka || cari !== '' }"><?= ikon('chevron-down', 'h-3.5 w-3.5') ?></span>
                     </button>
-                    <!-- Saat menciut: garis pemisah tipis pengganti judul -->
-                    <div x-show="collapsed && !sidebar" class="mx-3 my-1 border-t border-white/10"></div>
-                    <div class="space-y-1 mt-1" x-show="open || cari !== '' || (collapsed && !sidebar)" x-collapse.duration.200ms>
-                        <?php foreach ($g['items'] as $it) { $renderItem($g, $it); } ?>
+                    <div class="sb-pemisah" aria-hidden="true"></div>
+                    <div class="sb-grup-isi" x-show="buka || cari !== '' || sempit()" x-collapse.duration.200ms<?= $bukaAwal || $ciut ? '' : ' x-cloak' ?>>
+                        <?php foreach ($g['items'] as $it) { $renderItem($it); } ?>
                     </div>
                 </div>
             <?php endif; ?>
         <?php endforeach; ?>
-        <?php $semuaLabel = []; foreach ($groups as $g) { foreach ($g['items'] as $it) { $semuaLabel[] = mb_strtolower($it[1]); } } ?>
-        <p x-cloak x-show="cari !== '' && ! <?= esc(json_encode($semuaLabel), 'attr') ?>.some(l => l.includes(cari.toLowerCase()))" class="px-3.5 py-3 text-xs text-brand-300">Menu tidak ditemukan.</p>
-
-        <?php if ($bolehFormPublik): // tautan form kesediaan guru — tak relevan bagi Operator/Hubin ?>
-        <div class="pt-2" x-show="cari === ''">
-            <a href="<?= site_url('isi') ?>" target="_blank" title="Lihat Form Publik"
-               :class="collapsed && !sidebar ? 'lg:justify-center' : ''"
-               class="flex items-center gap-3 rounded-lg px-3.5 py-2.5 text-sm font-medium text-brand-100 hover:bg-white/10 transition">
-                <svg class="w-5 h-5 shrink-0" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"/></svg>
-                <span x-show="!collapsed || sidebar">Lihat Form Publik</span>
-            </a>
-        </div>
-        <?php endif; ?>
+        <p class="sb-kosong" x-show="cari !== '' && ! adaHasil()" x-cloak>Menu tidak ditemukan.</p>
     </nav>
-
-    <!-- Footer: tombol keluar (flex, tidak lagi absolute → tak menumpuk) -->
-    <div class="p-3 border-t border-white/10 shrink-0">
-        <a href="<?= site_url('admin/logout') ?>" title="Keluar"
-           :class="collapsed && !sidebar ? 'lg:justify-center' : ''"
-           class="flex items-center gap-3 rounded-lg px-3.5 py-2.5 text-sm font-medium text-red-200 hover:bg-red-500/20 transition">
-            <svg class="w-5 h-5 shrink-0" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"/></svg>
-            <span x-show="!collapsed || sidebar">Keluar</span>
-        </a>
-    </div>
 </aside>
+<div class="sb-latar" :data-terbuka="sidebar" @click="tutupLaci()" aria-hidden="true"></div>
 
-<!-- ===================== MAIN ===================== -->
-<div class="min-h-screen flex flex-col transition-all duration-200" :class="collapsed ? 'lg:ml-20' : 'lg:ml-64'">
-    <!-- Topbar -->
-    <header class="h-16 bg-white border-b border-gray-200 flex items-center justify-between px-4 sm:px-6 sticky top-0 z-20">
-        <div class="flex items-center gap-3">
-            <!-- Mobile: buka drawer -->
-            <button @click="sidebar=true" class="lg:hidden text-gray-500 hover:text-gray-700"><svg class="w-6 h-6" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M4 6h16M4 12h16M4 18h16"/></svg></button>
-            <!-- Desktop: ciutkan/lebarkan sidebar -->
-            <button @click="collapsed=!collapsed" class="hidden lg:inline-flex text-gray-500 hover:text-gray-700" :title="collapsed ? 'Lebarkan menu' : 'Ciutkan menu'"><svg class="w-6 h-6" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M4 6h16M4 12h16M4 18h16"/></svg></button>
-            <h1 class="font-bold text-gray-800 text-lg"><?= esc($title ?? 'Dashboard') ?></h1>
-        </div>
-        <div class="flex items-center gap-3">
-            <div class="text-right hidden sm:block leading-tight">
-                <p class="text-sm font-semibold text-gray-700"><?= esc($admin['full_name'] ?? 'Admin') ?></p>
-                <p class="text-xs text-gray-400"><span class="font-semibold text-brand-600"><?= esc($labelPeranKini) ?></span> · @<?= esc($admin['username'] ?? '') ?></p>
-            </div>
-            <a href="<?= site_url('admin/profile') ?>" class="block h-9 w-9 rounded-full overflow-hidden bg-brand-100 ring-2 ring-brand-200">
-                <?php if (! empty($admin['photo'])): ?>
-                    <img src="<?= base_url('uploads/' . esc($admin['photo'])) ?>" class="h-full w-full object-cover" alt="">
-                <?php else: ?>
-                    <span class="flex h-full w-full items-center justify-center text-brand-700 font-bold text-sm"><?= strtoupper(substr($admin['full_name'] ?? 'A', 0, 1)) ?></span>
+<!-- ===================== ISI ===================== -->
+<div class="kerangka-isi">
+    <main id="isi" tabindex="-1" class="flex-1 px-4 py-6 focus:outline-hidden lg:px-6"<?= $lihatSaja ? ' data-lihat-saja="1"' : '' ?>>
+        <?php $adaPesan = $lihatSaja || session('success') || session('error') || session('errors'); ?>
+        <?php if ($adaPesan): ?>
+            <div class="mb-5 space-y-3">
+                <?php if ($lihatSaja): ?>
+                    <?= ui_peringatan('info', 'Akun ' . $labelPeranKini . ' bisa membuka dan mengunduh dari halaman ini, tetapi tidak bisa mengubah datanya. Admin bisa mengubahnya di Sistem → Hak Akses.', ['judul' => 'Mode lihat saja']) ?>
                 <?php endif; ?>
-            </a>
-        </div>
-    </header>
-
-    <main class="flex-1 p-4 sm:p-6"<?= $lihatSaja ? ' data-lihat-saja="1"' : '' ?>>
-        <?php if ($lihatSaja): ?>
-            <div class="mb-5 flex items-start gap-2 rounded-xl border border-sky-200 bg-sky-50 px-5 py-3 text-sm text-sky-900">
-                <span aria-hidden="true">👁</span>
-                <span><b>Mode lihat saja.</b> Akun <?= esc($labelPeranKini) ?> bisa membuka dan mengunduh dari halaman ini, tetapi tidak bisa mengubah datanya. Admin bisa mengubahnya di Sistem → Hak Akses.</span>
-            </div>
-        <?php endif; ?>
-        <?php if (session('success')): ?>
-            <div class="mb-5 rounded-xl bg-green-50 border border-green-200 px-5 py-3.5 text-sm text-green-700 flex items-center gap-2">
-                <svg class="w-5 h-5 shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/></svg>
-                <?= esc(session('success')) ?>
-            </div>
-        <?php endif; ?>
-        <?php if (session('error')): ?>
-            <div class="mb-5 rounded-xl bg-red-50 border border-red-200 px-5 py-3.5 text-sm text-red-700"><?= esc(session('error')) ?></div>
-        <?php endif; ?>
-        <?php if (session('errors')): ?>
-            <div class="mb-5 rounded-xl bg-red-50 border border-red-200 px-5 py-3.5 text-sm text-red-700">
-                <ul class="list-disc list-inside space-y-0.5"><?php foreach (session('errors') as $e): ?><li><?= esc($e) ?></li><?php endforeach; ?></ul>
+                <?php if (session('success')): ?><?= ui_peringatan('sukses', (string) session('success'), ['tutup' => true]) ?><?php endif; ?>
+                <?php if (session('error')): ?><?= ui_peringatan('galat', (string) session('error'), ['tutup' => true]) ?><?php endif; ?>
+                <?php if (session('errors')): ?><?= ui_peringatan('galat', array_map('strval', array_values((array) session('errors'))), ['tutup' => true]) ?><?php endif; ?>
             </div>
         <?php endif; ?>
 
-        <?= $this->renderSection('content') ?>
+        <?php if ($kepalaKhusus !== ''): ?>
+            <?= $kepalaKhusus ?>
+        <?php elseif ($punyaJudul): ?>
+            <?php if ($remah !== []): ?><div class="mb-4"><?= ui_remah($remah) ?></div><?php endif; ?>
+        <?php else: ?>
+            <?= ui_kepala(['judul' => $judulHalaman, 'remah' => $remah, 'aksi' => $aksiHalaman]) ?>
+        <?php endif; ?>
+
+        <?= $isiHalaman ?>
     </main>
 
-    <footer class="px-4 sm:px-6 pb-5 text-center text-xs text-gray-400">
+    <footer class="kaki-halaman">
         <p>&copy; <?= date('Y') ?> &middot; Sistem Informasi Akademik Sekolah (BINUS)</p>
-        <?= view('partials/kredit', ['kreditKelas' => '']) ?>
+        <?= view('partials/kredit', ['kreditKelas' => 'mt-1']) ?>
     </footer>
 </div>
 
-<?php // Skrip halaman dimuat lebih dulu (defer = urut dokumen), lalu util global, terakhir Alpine.
-      // Masa transisi rombak tampilan: grup yang sudah selesai (Config\Tampilan::$alpineCsp) memakai Alpine versi CSP (tanpa eval).
-      $alpineJs = \App\Libraries\Tampilan::alpineCsp(uri_string()) ? 'assets/js/vendor/alpine-csp.min.js' : 'assets/js/vendor/alpine.min.js'; ?>
+<?= ui_toast() ?>
+<?= ui_konfirmasi() ?>
+
+<?php // Urutan defer: kit (ui.js) → skrip halaman → app.js → plugin collapse → Alpine (komponen terdaftar sebelum Alpine berjalan).
+      // Masa transisi rombak tampilan: grup yang sudah selesai (Config\Tampilan::$alpineCsp) memakai Alpine versi CSP (tanpa eval). ?>
+<?= $js('assets/js/admin/ui.js') ?>
 <?= $this->renderSection('scripts') ?>
-<script defer src="<?= base_url('assets/js/admin/app.js') ?>?v=<?= @filemtime(FCPATH . 'assets/js/admin/app.js') ?>" <?= csp_script_nonce() ?>></script>
-<script defer src="<?= base_url('assets/js/vendor/alpine-collapse.min.js') ?>?v=<?= @filemtime(FCPATH . 'assets/js/vendor/alpine-collapse.min.js') ?>" <?= csp_script_nonce() ?>></script>
-<script defer src="<?= base_url($alpineJs) ?>?v=<?= @filemtime(FCPATH . $alpineJs) ?>" <?= csp_script_nonce() ?>></script>
+<?= $js('assets/js/admin/app.js') ?>
+<?= $js('assets/js/vendor/alpine-collapse.min.js') ?>
+<?= $js($alpineJs) ?>
 </body>
 </html>

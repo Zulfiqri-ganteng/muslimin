@@ -2,6 +2,7 @@
 
 namespace App\Commands;
 
+use App\Libraries\MenuAdmin;
 use App\Libraries\Tampilan;
 use CodeIgniter\CLI\BaseCommand;
 use CodeIgniter\CLI\CLI;
@@ -307,6 +308,16 @@ class CekUi extends BaseCommand
         }
         foreach ($cocok('/<svg\b/i') as [$t, $p]) {
             $catat('svg', $p, '<svg> tulisan tangan (ganti ikon() bila ikon biasa)');
+        }
+        // Ikon menu samping berasal dari katalog MenuAdmin (bukan teks view) → diperiksa bersama layout (baris 0).
+        if ($rel === 'layouts/admin.php') {
+            foreach (MenuAdmin::sidebar() as $g) {
+                foreach ($g['items'] as $it) {
+                    if (! is_file(APPPATH . 'ThirdParty/flowbite-icons/outline/' . (string) $it[2] . '.svg')) {
+                        $hasil[] = ['ikon_hilang', 0, 'ikon menu "' . $it[1] . '" (' . $it[2] . ') → tambahkan ke resources/ikon.json lalu npm run vendor'];
+                    }
+                }
+            }
         }
 
         usort($hasil, static fn (array $a, array $b): int => $a[1] <=> $b[1]);
