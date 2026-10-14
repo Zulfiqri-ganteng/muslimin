@@ -298,7 +298,8 @@ $js       = static fn (string $berkas): string => '<script defer src="' . base_u
 <!-- ===================== ISI (template: main-content) ===================== -->
 <div class="kerangka-isi">
     <main id="isi" tabindex="-1" class="flex-1 <?= $modeCrud ? '' : 'px-4 pt-6 ' ?>focus:outline-hidden"<?= $lihatSaja ? ' data-lihat-saja="1"' : '' ?>>
-        <?php $adaPesan = $lihatSaja || session('success') || session('error') || session('errors'); ?>
+        <?php // Pesan sukses = toast yang hilang sendiri (di bawah); kotak tetap hanya untuk galat & mode lihat saja. ?>
+        <?php $adaPesan = $lihatSaja || session('error') || session('errors'); ?>
         <?php if ($modeCrud): ?>
             <?php // Kepala CRUD: bilah putih selebar layar, menyambung dengan bilah alat (ui_crud_alat) di awal isi halaman. ?>
             <div class="kepala-crud">
@@ -306,12 +307,12 @@ $js       = static fn (string $berkas): string => '<script defer src="' . base_u
                 <h1 class="judul-halaman"><?= esc($judulHalaman) ?></h1>
                 <?php if ($bantuan !== ''): ?><div class="mt-3"><?= $bantuan ?></div><?php endif; ?>
                 <?php $adaPesan = false; ?>
-                <?php if ($lihatSaja || session('success') || session('error') || session('errors')): ?>
+                <?php if ($lihatSaja || session('error') || session('errors')): ?>
                     <div class="mt-4 space-y-3">
                         <?php if ($lihatSaja): ?>
                             <?= ui_peringatan('info', 'Akun ' . $labelPeranKini . ' bisa membuka dan mengunduh dari halaman ini, tetapi tidak bisa mengubah datanya. Admin bisa mengubahnya di Sistem → Hak Akses.', ['judul' => 'Mode lihat saja']) ?>
                         <?php endif; ?>
-                        <?php if (session('success')): ?><?= ui_peringatan('sukses', (string) session('success'), ['tutup' => true]) ?><?php endif; ?>
+                        
                         <?php if (session('error')): ?><?= ui_peringatan('galat', (string) session('error'), ['tutup' => true]) ?><?php endif; ?>
                         <?php if (session('errors')): ?><?= ui_peringatan('galat', array_map('strval', array_values((array) session('errors'))), ['tutup' => true]) ?><?php endif; ?>
                     </div>
@@ -323,7 +324,7 @@ $js       = static fn (string $berkas): string => '<script defer src="' . base_u
                 <?php if ($lihatSaja): ?>
                     <?= ui_peringatan('info', 'Akun ' . $labelPeranKini . ' bisa membuka dan mengunduh dari halaman ini, tetapi tidak bisa mengubah datanya. Admin bisa mengubahnya di Sistem → Hak Akses.', ['judul' => 'Mode lihat saja']) ?>
                 <?php endif; ?>
-                <?php if (session('success')): ?><?= ui_peringatan('sukses', (string) session('success'), ['tutup' => true]) ?><?php endif; ?>
+                
                 <?php if (session('error')): ?><?= ui_peringatan('galat', (string) session('error'), ['tutup' => true]) ?><?php endif; ?>
                 <?php if (session('errors')): ?><?= ui_peringatan('galat', array_map('strval', array_values((array) session('errors'))), ['tutup' => true]) ?><?php endif; ?>
             </div>
@@ -356,7 +357,9 @@ $js       = static fn (string $berkas): string => '<script defer src="' . base_u
     </footer>
 </div>
 
-<?= ui_toast() ?>
+<?php // Pesan sukses dari server = toast (pola Flowbite): hilang sendiri; lama tampil ikut panjang pesan (5–15 detik), bisa ditutup. ?>
+<?php $suksesFlash = trim((string) session('success')); ?>
+<?= ui_toast($suksesFlash === '' ? [] : [['pesan' => $suksesFlash, 'jenis' => 'sukses', 'lama' => max(5000, min(15000, mb_strlen($suksesFlash) * 70))]]) ?>
 <?= ui_konfirmasi() ?>
 
 <?php // Urutan defer: kit (ui.js) → skrip halaman → app.js → plugin collapse → Alpine (komponen terdaftar sebelum Alpine berjalan).

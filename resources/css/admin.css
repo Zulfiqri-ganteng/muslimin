@@ -336,7 +336,7 @@
   .laci-kaki     { @apply flex flex-wrap items-center gap-3 border-t border-gray-200 p-4; }
 
   /* ---- Toast (wadah: ui_toast(); panggil $toast(pesan, jenis) / Ui.toast(pesan, jenis)) ---- */
-  .toast-wadah { @apply pointer-events-none fixed right-4 bottom-4 z-[60] flex w-[calc(100%-2rem)] max-w-xs flex-col gap-3; }
+  .toast-wadah { @apply pointer-events-none fixed top-20 right-4 z-[60] flex w-[calc(100%-2rem)] max-w-xs flex-col gap-3; }
   .toast       { @apply pointer-events-auto flex w-full items-center gap-3 rounded-lg border border-gray-100 bg-white p-4 text-gray-500 shadow-sm; }
   .toast-ikon  { @apply inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-lg; }
   .toast-pesan { @apply min-w-0 flex-1 text-sm text-gray-700; }
