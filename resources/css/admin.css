@@ -283,6 +283,22 @@
   .titik-status-merah::before { @apply bg-red-500; }
   .titik-status-kuning::before { @apply bg-yellow-300; }
   .titik-status-biru::before { @apply bg-blue-500; }
+  .titik-status-merek::before { @apply bg-brand-500; }
+
+  /* ---- (F6) Bilah progres siap CSP: <progress class="progres progres-hijau" value="45" max="100"> — tanpa style= sebaris.
+     Warna isi lewat variabel --progres-isi (bawaan: merek); jalur abu ikut mode gelap. ---- */
+  .progres { @apply block h-2.5 w-full min-w-0 appearance-none overflow-hidden rounded-full border-0 [--progres-isi:var(--color-brand-600)] [--progres-jalur:var(--color-gray-200)] dark:[--progres-jalur:var(--color-gray-700)]; background-color: var(--progres-jalur); }
+  .progres::-webkit-progress-bar { background-color: var(--progres-jalur); border-radius: 9999px; }
+  .progres::-webkit-progress-value { background-color: var(--progres-isi); border-radius: 9999px; }
+  .progres::-moz-progress-bar { background-color: var(--progres-isi); border-radius: 9999px; }
+  .progres-hijau  { @apply [--progres-isi:var(--color-green-500)]; }
+  .progres-kuning { @apply [--progres-isi:var(--color-yellow-400)]; }
+  .progres-merah  { @apply [--progres-isi:var(--color-red-500)]; }
+
+  /* ---- (F6) Saklar berupa tombol kirim (satu klik langsung tersimpan), tampilan sama dengan .saklar-jalur:
+     <button class="saklar-tombol bg-…" role="switch"><span class="saklar-kenop translate-x-…"></span></button> ---- */
+  .saklar-tombol { @apply relative inline-flex h-6 w-11 shrink-0 items-center rounded-full p-0.5 transition-colors focus:outline-hidden focus-visible:ring-4 focus-visible:ring-brand-300 dark:focus-visible:ring-brand-800; }
+  .saklar-kenop  { @apply inline-block h-5 w-5 rounded-full border border-gray-300 bg-white transition-transform; }
   .kaki-crud { @apply sticky right-0 bottom-0 z-10 w-full border-t border-gray-200 bg-white p-4 dark:border-gray-700 dark:bg-gray-800; }
 
   /* ---- Lencana (badge): class="lencana lencana-hijau". Warna status tetap: hijau = hadir/disetujui, kuning = menunggu,

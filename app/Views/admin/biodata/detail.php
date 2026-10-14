@@ -165,13 +165,13 @@ $v = static fn (string $p): string => base_url($p) . '?v=' . @filemtime(FCPATH .
                         <input type="hidden" name="kelas_id" value="<?= $kelasId ?: '' ?>">
                         <button type="submit" class="btn btn-sukses w-full"
                                 data-confirm="Setujui biodata <?= esc($nama, 'attr') ?>? <?= $jmlBeda > 0 ? $jmlBeda . ' kolom akan diperbarui di Master Siswa.' : 'Data di Master Siswa tidak berubah.' ?>">
-                            <?= ikon('check', 'h-4 w-4') ?>Setujui<span class="-ms-1 hidden sm:inline">&nbsp;&amp; masukkan ke Master Siswa</span>
+                            <?= ikon('check', 'h-4 w-4') ?><span>Setujui<span class="hidden sm:inline"> &amp; masukkan ke Master Siswa</span></span>
                         </button>
                     </form>
                 <?php endif; ?>
                 <?php if ($status !== 'perbaikan'): ?>
                     <button type="button" class="btn btn-netral flex-1 sm:flex-none" @click="alihKembali()" :aria-expanded="formKembali" aria-controls="form-kembalikan">
-                        <?= ikon('file-pen', 'h-4 w-4 text-yellow-600 dark:text-yellow-400') ?>Kembalikan<span class="-ms-1 hidden sm:inline">&nbsp;untuk diperbaiki</span>
+                        <?= ikon('file-pen', 'h-4 w-4 text-yellow-600 dark:text-yellow-400') ?><span>Kembalikan<span class="hidden sm:inline"> untuk diperbaiki</span></span>
                     </button>
                 <?php endif; ?>
                 <?php if ($status === 'menunggu' && $urlLewati !== ''): ?>

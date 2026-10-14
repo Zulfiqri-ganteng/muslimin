@@ -46,6 +46,9 @@ document.addEventListener('alpine:init', function () {
                 document.body.removeChild(ta);
             },
 
+            /** Fokus ke kotak tautan → seluruh teks terpilih (siap disalin manual). */
+            pilihTeks: function (e) { e.target.select(); },
+
             wa: function (teks) {
                 window.open('https://wa.me/?text=' + encodeURIComponent(teks), '_blank', 'noopener');
             },
