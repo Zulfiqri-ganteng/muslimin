@@ -8,6 +8,7 @@
 //   node tools/uji-peramban.mjs --halaman=admin/biodata/1,…     daftar alamat sendiri (menggantikan menu samping; login tak ikut)
 //   node tools/uji-peramban.mjs --grup=master --wajib-csp-nol   halaman satu grup rombak (peta: app/Config/Tampilan.php) — uji akhir fase
 //   node tools/uji-peramban.mjs --wajib-csp-nol                 gagal bila masih ada pelanggaran CSP
+//   node tools/uji-peramban.mjs --progres                       cetak posisi uji per halaman ke stderr (untuk uji yang lama)
 //   node tools/uji-peramban.mjs --potret=sebelum.json.gz        simpan potret gaya (peran pertama saja)
 //   node tools/uji-peramban.mjs --banding=sebelum.json.gz [--rinci=beda.json]   potret ulang lalu bandingkan
 //
@@ -105,19 +106,28 @@ class Cdp {
         ws.onmessage = (e) => {
             const m = JSON.parse(e.data);
             if (m.id !== undefined && this.janji.has(m.id)) {
-                const { ok, gagal } = this.janji.get(m.id);
+                const { ok, gagal, waktu } = this.janji.get(m.id);
+                clearTimeout(waktu);
                 this.janji.delete(m.id);
                 if (m.error) gagal(new Error(m.error.message)); else ok(m.result);
             } else if (m.method) {
                 for (const f of this.pendengar) f(m.method, m.params);
             }
         };
+        // Sambungan ke Chrome putus → semua perintah yang menunggu langsung gagal (jangan menggantung selamanya).
+        ws.onclose = () => {
+            for (const [id, { gagal, waktu }] of this.janji) { clearTimeout(waktu); gagal(new Error('sambungan CDP ke Chrome terputus')); this.janji.delete(id); }
+        };
     }
 
+    // Tiap perintah CDP dibatasi 30 detik (2026-10-14: alat sempat menunggu jawaban Chrome yang tak pernah datang, 9+ menit tanpa kabar).
     kirim(method, params = {}) {
         return new Promise((ok, gagal) => {
             const id = ++this.n;
-            this.janji.set(id, { ok, gagal });
+            const waktu = setTimeout(() => {
+                if (this.janji.has(id)) { this.janji.delete(id); gagal(new Error(`perintah CDP ${method} tidak dijawab Chrome dalam 30 detik`)); }
+            }, 30000);
+            this.janji.set(id, { ok, gagal, waktu });
             this.ws.send(JSON.stringify({ id, method, params }));
         });
     }
@@ -491,12 +501,19 @@ try {
             .filter((t) => t.startsWith(BASE + '/admin/') && !/\/logout\b/.test(t))
             .filter((t) => !AWALAN.length || AWALAN.some((a) => (t.slice(BASE.length + 1).split('?')[0] + '/').startsWith(a + '/')))
             .filter((t) => !GRUP || PETA_GRUP[GRUP].url.length === 0 || grupAlamat(t.slice(BASE.length + 1).split('?')[0]) === GRUP);
-        for (const url of semua) {
-            await buka(c, url);
-            const info = await c.nilai(`(${infoHalaman})()`);
-            const dialihkan = jalur(info.url) !== jalur(url);
-            hasil.push({ ...info, peran, url: pendek(url), akhir: pendek(info.url), galat: [...kj.galat], dialog: [...kj.dialog], dialihkan });
-            if (butuhPotret && i === 0 && !dialihkan) potret[pendek(url)] = await c.nilai(`(${potretHalaman})(${JSON.stringify(PROP)})`);
+        for (const [k, url] of semua.entries()) {
+            if (ARG.progres) process.stderr.write(`[${peran}] ${k + 1}/${semua.length} ${pendek(url)}\n`);
+            try {
+                await buka(c, url);
+                const info = await c.nilai(`(${infoHalaman})()`);
+                const dialihkan = jalur(info.url) !== jalur(url);
+                hasil.push({ ...info, peran, url: pendek(url), akhir: pendek(info.url), galat: [...kj.galat], dialog: [...kj.dialog], dialihkan });
+                if (butuhPotret && i === 0 && !dialihkan) potret[pendek(url)] = await c.nilai(`(${potretHalaman})(${JSON.stringify(PROP)})`);
+            } catch (e) {
+                // Satu halaman bermasalah (mis. Chrome tak menjawab) → dicatat GAGAL, uji lanjut ke halaman berikutnya.
+                hasil.push({ url: pendek(url), akhir: pendek(url), peran, status: 0, php: false, csp: [], inter: false, alpine: null, uji: null,
+                    galat: [...kj.galat, 'ALAT: ' + e.message], dialog: [...kj.dialog], dialihkan: false });
+            }
         }
     }
 } finally {

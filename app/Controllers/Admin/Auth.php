@@ -6,6 +6,7 @@ use App\Controllers\BaseController;
 use App\Libraries\HakAkses;
 use App\Libraries\LoginThrottle;
 use App\Models\AdminModel;
+use App\Models\SettingModel;
 
 class Auth extends BaseController
 {
@@ -14,7 +15,8 @@ class Auth extends BaseController
         if (session('isLoggedIn')) {
             return redirect()->to(site_url(HakAkses::beranda(session('admin')['role'] ?? null)));
         }
-        return view('admin/login', ['title' => 'Login Admin']);
+        // Nama & logo sekolah untuk kepala halaman masuk (rombak tampilan F2); pengaturan sudah ter-cache (SettingModel::get).
+        return view('admin/login', ['title' => 'Masuk', 'setting' => (new SettingModel())->get()]);
     }
 
     public function attemptLogin()

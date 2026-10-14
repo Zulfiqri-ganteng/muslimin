@@ -1,52 +1,99 @@
+<?php
+/**
+ * Halaman masuk panel admin (rombak tampilan F2) — pola halaman "Sign in" Flowbite: latar abu muda, logo + nama sekolah, kartu putih
+ * di tengah, isian akun & kata sandi (tombol lihat sandi + peringatan Caps Lock), tombol penuh warna utama, tanpa gradasi.
+ * Logika masuk TIDAK diubah (Admin\Auth::attemptLogin: isian "login" & "password" + token CSRF; pesan lewat flash error/success).
+ * SIAP CSP: Alpine versi CSP + ui.js (komponen isianSandi) + login.js (formMasuk); tanpa skrip/gaya sebaris.
+ * Tema: kelas tema-lilac seperti layout admin — pemilih tema dari pengaturan sekolah menyusul di F3.
+ *
+ * @var array<string, mixed> $setting baris pengaturan sekolah (school_name, logo)
+ */
+$namaSekolah = trim((string) ($setting['school_name'] ?? ''));
+$namaSekolah = $namaSekolah !== '' ? $namaSekolah : 'Panel Admin';
+$logo        = (string) ($setting['logo'] ?? '');
+// Berkas logo yang hilang (mis. data laptop belum lengkap) → kotak huruf awal, bukan gambar rusak.
+$adaLogo     = $logo !== '' && is_file(FCPATH . 'uploads/' . $logo);
+// Gagal masuk (isian akun dikembalikan) → kursor langsung di kotak kata sandi.
+$fokusSandi  = (string) old('login') !== '';
+?>
 <!DOCTYPE html>
 <html lang="id" class="tema-lilac">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Login Admin &mdash; Kesediaan Guru</title>
+    <title>Masuk &mdash; Panel Admin</title>
     <meta name="robots" content="noindex">
     <?= view('partials/favicon') ?>
-    <?php // Sama dengan layouts/admin.php: admin.css (Tailwind v4) + font Inter lokal + penanda nonce (persiapan CSP). ?>
     <link rel="preload" href="<?= base_url('assets/fonts/inter/inter-latin-wght-normal.woff2') ?>" as="font" type="font/woff2" crossorigin>
     <link rel="stylesheet" href="<?= base_url('assets/css/admin.css') ?>?v=<?= @filemtime(FCPATH . 'assets/css/admin.css') ?>" <?= csp_style_nonce() ?>>
 </head>
-<body class="min-h-screen bg-linear-to-br from-brand-700 to-brand-900 flex items-center justify-center p-4">
-    <div class="w-full max-w-md">
-        <div class="text-center mb-6">
-            <div class="inline-flex h-14 w-14 items-center justify-center rounded-2xl bg-emerald-300 text-brand-900 text-2xl font-extrabold shadow-lg">K</div>
-            <h1 class="mt-4 text-white text-2xl font-bold">Panel Admin</h1>
-            <p class="text-brand-200 text-sm">Sistem Informasi Akademik Sekolah (BINUS)</p>
-        </div>
+<body class="bg-gray-50 text-gray-800 antialiased">
+<main class="flex min-h-screen flex-col items-center justify-center px-4 py-10">
+    <a href="<?= site_url('/') ?>" class="mb-6 flex max-w-md items-center gap-3 rounded-lg focus:outline-hidden focus-visible:ring-2 focus-visible:ring-brand-300" title="Ke beranda situs sekolah">
+        <?php if ($adaLogo): ?>
+            <img src="<?= base_url('uploads/' . rawurlencode($logo)) ?>" alt="" class="h-11 w-11 shrink-0 rounded-lg object-contain">
+        <?php else: ?>
+            <span class="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg bg-brand-700 text-lg font-semibold text-white" aria-hidden="true"><?= esc(mb_strtoupper(mb_substr($namaSekolah, 0, 1))) ?></span>
+        <?php endif; ?>
+        <span class="min-w-0 leading-tight">
+            <span class="block text-lg font-semibold break-words text-gray-900 sm:text-xl"><?= esc($namaSekolah) ?></span>
+            <span class="block text-sm text-gray-500">Sistem Informasi Akademik Sekolah</span>
+        </span>
+    </a>
 
-        <div class="bg-white rounded-2xl shadow-2xl p-7">
-            <?php if (session('error')): ?>
-                <div class="mb-4 rounded-lg bg-red-50 border border-red-200 px-4 py-3 text-sm text-red-700"><?= esc(session('error')) ?></div>
-            <?php endif; ?>
-            <?php if (session('success')): ?>
-                <div class="mb-4 rounded-lg bg-green-50 border border-green-200 px-4 py-3 text-sm text-green-700"><?= esc(session('success')) ?></div>
-            <?php endif; ?>
+    <div class="kartu w-full max-w-md shadow-sm">
+        <div class="space-y-6 p-6 sm:p-8">
+            <div>
+                <h1 class="text-xl font-semibold text-gray-900 sm:text-2xl">Masuk ke panel admin</h1>
+                <p class="mt-1 text-sm text-gray-500">Gunakan username atau email akun sekolah Anda.</p>
+            </div>
 
-            <form action="<?= site_url('admin/login') ?>" method="post" class="space-y-4">
+            <?php if (session('error')): ?><?= ui_peringatan('galat', (string) session('error')) ?><?php endif; ?>
+            <?php if (session('success')): ?><?= ui_peringatan('sukses', (string) session('success')) ?><?php endif; ?>
+
+            <form action="<?= site_url('admin/login') ?>" method="post" class="space-y-5" x-data="formMasuk" @submit="kirimForm()">
                 <?= csrf_field() ?>
                 <div>
-                    <label class="block text-sm font-medium text-gray-600 mb-1.5">Username atau Email</label>
-                    <input type="text" name="login" value="<?= old('login') ?>" required autofocus
-                           class="w-full rounded-lg border border-gray-300 px-3.5 py-2.5 text-sm focus:border-brand-500 focus:ring-2 focus:ring-brand-500/20 outline-hidden"
-                           placeholder="admin">
+                    <label for="login" class="lbl">Username atau email</label>
+                    <input type="text" id="login" name="login" value="<?= old('login') ?>" class="inp" required
+                           autocomplete="username" autocapitalize="none" spellcheck="false"<?= $fokusSandi ? '' : ' autofocus' ?>>
                 </div>
-                <div x-data="{show:false}">
-                    <label class="block text-sm font-medium text-gray-600 mb-1.5">Password</label>
-                    <input type="password" name="password" required
-                           class="w-full rounded-lg border border-gray-300 px-3.5 py-2.5 text-sm focus:border-brand-500 focus:ring-2 focus:ring-brand-500/20 outline-hidden"
-                           placeholder="••••••••">
+                <div x-data="isianSandi">
+                    <label for="password" class="lbl">Kata sandi</label>
+                    <div class="isian-sandi">
+                        <input type="password" :type="lihat ? 'text' : 'password'" id="password" name="password" class="inp" required
+                               autocomplete="current-password"<?= $fokusSandi ? ' autofocus' : '' ?>
+                               @keydown="cekCapsLock($event)" @keyup="cekCapsLock($event)" @blur="capsLock = false">
+                        <button type="button" class="tombol-sandi" x-cloak @mousedown.prevent @click="alih()"
+                                aria-controls="password" aria-label="Tampilkan kata sandi" :aria-pressed="lihat"
+                                :title="lihat ? 'Sembunyikan kata sandi' : 'Tampilkan kata sandi'">
+                            <span x-show="!lihat"><?= ikon('eye', 'h-5 w-5') ?></span>
+                            <span x-show="lihat"><?= ikon('eye-slash', 'h-5 w-5') ?></span>
+                        </button>
+                    </div>
+                    <p class="hint flex items-center gap-1.5 font-medium text-yellow-700" x-show="capsLock" x-cloak role="status">
+                        <?= ikon('exclamation-circle', 'h-4 w-4 shrink-0') ?>Caps Lock sedang menyala.
+                    </p>
                 </div>
-                <button type="submit" class="w-full bg-brand-700 hover:bg-brand-800 text-white font-semibold py-3 rounded-lg transition active:scale-95">
-                    Masuk
+                <button type="submit" class="btn btn-utama btn-lg w-full" :disabled="kirim">
+                    <span class="pemutar" x-show="kirim" x-cloak aria-hidden="true"></span>
+                    <span x-text="kirim ? 'Memproses…' : 'Masuk'">Masuk</span>
                 </button>
             </form>
+
+            <p class="text-sm text-gray-500">Lupa kata sandi? Hubungi Admin sekolah untuk dibuatkan sandi sementara.</p>
         </div>
-        <p class="text-center text-brand-200 text-xs mt-6">&copy; <?= date('Y') ?> &middot; Sistem Informasi Akademik Sekolah (BINUS)</p>
-        <?= view('partials/kredit', ['kreditKelas' => 'mt-1 text-center text-brand-200 text-xs']) ?>
     </div>
+
+    <footer class="mt-8 text-center text-xs text-gray-500">
+        <p>&copy; <?= date('Y') ?> &middot; Sistem Informasi Akademik Sekolah (BINUS)</p>
+        <?= view('partials/kredit', ['kreditKelas' => 'mt-1']) ?>
+    </footer>
+</main>
+
+<?php // Urutan defer: komponen kit & halaman terdaftar sebelum Alpine versi CSP berjalan (penanda nonce = persiapan CSP). ?>
+<script defer src="<?= base_url('assets/js/admin/ui.js') ?>?v=<?= @filemtime(FCPATH . 'assets/js/admin/ui.js') ?>" <?= csp_script_nonce() ?>></script>
+<script defer src="<?= base_url('assets/js/admin/login.js') ?>?v=<?= @filemtime(FCPATH . 'assets/js/admin/login.js') ?>" <?= csp_script_nonce() ?>></script>
+<script defer src="<?= base_url('assets/js/vendor/alpine-csp.min.js') ?>?v=<?= @filemtime(FCPATH . 'assets/js/vendor/alpine-csp.min.js') ?>" <?= csp_script_nonce() ?>></script>
 </body>
 </html>

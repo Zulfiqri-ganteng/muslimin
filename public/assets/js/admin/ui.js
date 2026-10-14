@@ -17,6 +17,9 @@
  *   toastWadah  wadah notifikasi kecil — sekali per halaman (ui_toast()).
  *   konfirmasi  dialog konfirmasi — sekali per halaman (ui_konfirmasi()).
  *   salinTeks   tombol salin — data-teks="…" atau data-sasaran="#id"; @click="salin()"; x-show="tersalin".
+ *   isianSandi  kata sandi + tombol lihat (F2) — pada pembungkus label+isian: input :type="lihat ? 'text' : 'password'"
+ *               @keydown/@keyup="cekCapsLock($event)" @blur="capsLock = false"; tombol .tombol-sandi @mousedown.prevent
+ *               @click="alih()" :aria-pressed="lihat"; peringatan x-show="capsLock". Saat formulir dikirim kembali tersembunyi.
  *
  * Magic Alpine (boleh dipanggil dari atribut, pengganti fungsi global): $rupiah(n), $angka(n, desimal), $tglIndo('2026-10-14'),
  *   $hariTanggal('2026-10-14'), $periodeTeks(mulai, selesai), $bulanTahun('2026-10'), $toast(pesan, jenis).
@@ -118,10 +121,25 @@
             pertama.focus();
         }
     };
-    var kembalikanFokus = function (el) {
+    // Fokus ke elemen di dialog yang baru dibuka. Isian & tombol berkelas "transition" (Tailwind v4 ikut mentransisikan visibility)
+    // masih "hidden" sesaat setelah dialog tampil, sehingga focus() ditolak peramban → ulangi tiap 20 md (maks ±200 md).
+    // Berhasil = elemen itu yang aktif DAN sudah terlihat (fokus lama yang tertinggal di tombol tersembunyi tidak dihitung).
+    var fokuskan = function (el, masihBuka, sisa) {
+        if (!el || !masihBuka()) { return; }
+        el.focus();
+        var berhasil = document.activeElement === el && getComputedStyle(el).visibility !== 'hidden';
+        if (!berhasil && sisa > 0) {
+            setTimeout(function () { fokuskan(el, masihBuka, sisa - 1); }, 20);
+        }
+    };
+    // Setelah dialog ditutup: fokus kembali ke elemen asal (tombol pembuka). Bila asalnya tak bisa difokus (mis. <body> karena
+    // dialog dibuka dari skrip) dan fokus masih tertinggal di dalam dialog yang kini tersembunyi → lepaskan.
+    var kembalikanFokus = function (el, wadah) {
         if (el && el.focus && document.contains(el)) {
             try { el.focus(); } catch (e) { /* elemen tak bisa difokus lagi */ }
         }
+        var aktif = document.activeElement;
+        if (wadah && aktif && wadah.contains(aktif) && aktif.blur) { aktif.blur(); }
     };
 
     /* ---------------------------------------------------------------
@@ -247,9 +265,13 @@
         Alpine.magic('toast', function () { return toast; });
 
         /* Menu tarik-turun. Menu = elemen .dropdown-menu (x-show="buka"); butir = .dropdown-item. */
+        /* CATATAN Alpine versi CSP: di dalam metode, this.$el = elemen yang MEMICU (mis. tombol yang diklik), bukan akar komponen.
+         * Karena itu akar disimpan sekali di init() (variabel "akar") dan dipakai di semua metode. */
         Alpine.data('dropdown', function () {
+            var akar = null;
             return {
                 buka: false,
+                init: function () { akar = this.$el; },
                 alih: function () { this.buka = !this.buka; },
                 tutup: function (fokusKePemicu) {
                     if (!this.buka) { return; }
@@ -261,7 +283,7 @@
                     var self = this;
                     this.buka = true;
                     this.$nextTick(function () {
-                        var butir = Array.prototype.filter.call(self.$el.querySelectorAll('.dropdown-item'), function (x) {
+                        var butir = Array.prototype.filter.call(akar.querySelectorAll('.dropdown-item'), function (x) {
                             return !x.disabled && x.getClientRects().length > 0;
                         });
                         if (butir.length === 0) { return; }
@@ -272,13 +294,17 @@
             };
         });
 
-        /* Dialog & laci: satu logika, beda tampilan (partial ui/dialog_buka & ui/laci_buka). Panel = x-ref="panel". */
+        /* Dialog & laci: satu logika, beda tampilan (partial ui/dialog_buka & ui/laci_buka). Panel = x-ref="panel".
+         * Tampil lewat :data-buka="buka" + CSS (bukan x-show beranimasi, yang menyembunyikan tertunda satu frame dan bisa
+         * menelan dialog yang dibuka lagi tepat setelah ditutup) — begitu buka = true, panel langsung terlihat & bisa difokus. */
         var pabrikDialog = function () {
             var asal = null;   // elemen yang difokus sebelum dibuka → dikembalikan saat ditutup
+            var akar = null;
             return {
                 buka: false,
                 nama: '',
                 init: function () {
+                    akar = this.$el;
                     this.nama = this.$el.getAttribute('data-nama') || '';
                     if (this.$el.getAttribute('data-awal-buka') === '1') { this.bukaDialog(); }
                 },
@@ -290,11 +316,11 @@
                     kunciGulir(1);
                     this.$nextTick(function () {
                         if (!self.buka) { return; }   // sudah ditutup lagi sebelum sempat difokus
-                        var panel = self.$refs.panel || self.$el;
+                        var panel = self.$refs.panel || akar;
                         var sasaran = panel.querySelector('[autofocus]') || bisaFokus(panel).filter(function (x) {
                             return !x.hasAttribute('data-tutup');
                         })[0] || panel;
-                        sasaran.focus();
+                        fokuskan(sasaran, function () { return self.buka; }, 10);
                     });
                     this.$dispatch('dialog-terbuka', { nama: this.nama });
                 },
@@ -302,7 +328,7 @@
                     if (!this.buka) { return; }
                     this.buka = false;
                     kunciGulir(-1);
-                    kembalikanFokus(asal);
+                    kembalikanFokus(asal, akar);
                     asal = null;
                     this.$dispatch('dialog-tertutup', { nama: this.nama });
                 },
@@ -320,13 +346,15 @@
 
         /* Tab di sisi peramban. Hanya tombol tab milik komponen ini (bukan tab bersarang) yang dihitung. */
         Alpine.data('tab', function () {
+            var akar = null;
             return {
                 aktif: '',
                 init: function () {
                     var self = this;
+                    akar = this.$el;
                     var nama = this.daftarTab().map(function (b) { return b.getAttribute('data-tab'); });
-                    var awal = this.$el.getAttribute('data-awal') || nama[0] || '';
-                    if (this.$el.getAttribute('data-hash') === '1') {
+                    var awal = akar.getAttribute('data-awal') || nama[0] || '';
+                    if (akar.getAttribute('data-hash') === '1') {
                         var dariHash = function () {
                             var h = '';
                             try { h = decodeURIComponent(location.hash.replace(/^#/, '')); } catch (e) { h = ''; }
@@ -338,14 +366,13 @@
                     this.aktif = awal;
                 },
                 daftarTab: function () {
-                    var akar = this.$el;
                     return Array.prototype.filter.call(akar.querySelectorAll('[role="tab"][data-tab]'), function (b) {
                         return b.closest('[x-data]') === akar;
                     });
                 },
                 pilih: function (nama) {
                     this.aktif = String(nama);
-                    if (this.$el.getAttribute('data-hash') === '1' && window.history && history.replaceState) {
+                    if (akar.getAttribute('data-hash') === '1' && window.history && history.replaceState) {
                         history.replaceState(null, '', '#' + encodeURIComponent(this.aktif));
                     }
                 },
@@ -404,6 +431,7 @@
         Alpine.data('konfirmasi', function () {
             var jawab = null;   // resolve Promise pertanyaan yang sedang tampil
             var asal = null;
+            var akar = null;
             return {
                 buka: false,
                 judul: '',
@@ -412,6 +440,7 @@
                 batal: '',
                 bahaya: false,
                 init: function () {
+                    akar = this.$el;
                     dialogKonfirmasi = this;
                     elKonfirmasi = this.$el;
                 },
@@ -428,9 +457,7 @@
                     kunciGulir(1);
                     // Aksi berbahaya: fokus awal di "Batal" (Enter tidak langsung menjalankan aksinya).
                     this.$nextTick(function () {
-                        if (!self.buka) { return; }
-                        var t = self.$refs[self.bahaya ? 'tombolBatal' : 'tombolYa'];
-                        if (t) { t.focus(); }
+                        fokuskan(self.$refs[self.bahaya ? 'tombolBatal' : 'tombolYa'], function () { return self.buka; }, 10);
                     });
                     return new Promise(function (ok) { jawab = ok; });
                 },
@@ -440,7 +467,7 @@
                     if (!this.buka) { return; }
                     this.buka = false;
                     kunciGulir(-1);
-                    kembalikanFokus(asal);
+                    kembalikanFokus(asal, akar);
                     asal = null;
                     var j = jawab;
                     jawab = null;
@@ -450,14 +477,35 @@
             };
         });
 
+        /* Isian kata sandi: tombol lihat/sembunyikan + peringatan Caps Lock. */
+        Alpine.data('isianSandi', function () {
+            return {
+                lihat: false,
+                capsLock: false,
+                init: function () {
+                    var self = this;
+                    // Sandi kembali tersembunyi saat formulir dikirim (tidak terlihat selama "Memproses…", dan pengelola
+                    // sandi peramban tetap mengenali isiannya sebagai kata sandi).
+                    var form = this.$el.closest('form');
+                    if (form) { form.addEventListener('submit', function () { self.lihat = false; }); }
+                },
+                alih: function () { this.lihat = !this.lihat; },
+                cekCapsLock: function (e) {
+                    if (e && typeof e.getModifierState === 'function') { this.capsLock = e.getModifierState('CapsLock'); }
+                },
+            };
+        });
+
         /* Tombol salin. */
         Alpine.data('salinTeks', function () {
             var waktu = null;
+            var akar = null;
             return {
                 tersalin: false,
+                init: function () { akar = this.$el; },
                 salin: function () {
                     var self = this;
-                    var el = this.$el;
+                    var el = akar;   // atribut data-teks / data-sasaran ada di akar komponen
                     var teks = el.getAttribute('data-teks');
                     var sasaran = el.getAttribute('data-sasaran');
                     if (teks === null && sasaran) {

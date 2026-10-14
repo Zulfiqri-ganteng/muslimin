@@ -5,10 +5,10 @@
  * Panggil: ui_konfirmasi().
  */
 ?>
-<div x-data="konfirmasi" id="ui-konfirmasi" x-show="buka" x-cloak x-transition.opacity.duration.150ms @keydown.escape.stop="tolak()"
+<div x-data="konfirmasi" id="ui-konfirmasi" :data-buka="buka" @keydown.escape.stop="tolak()"
      class="dialog z-[55]" role="alertdialog" aria-modal="true" aria-labelledby="ui-konfirmasi-judul" aria-describedby="ui-konfirmasi-pesan">
     <div class="dialog-latar" @click="tolak()" aria-hidden="true"></div>
-    <div class="dialog-panel dialog-panel-sm" x-ref="panel" tabindex="-1" @keydown.tab="jebakFokus($event)" x-show="buka" x-transition.duration.150ms>
+    <div class="dialog-panel dialog-panel-sm" x-ref="panel" tabindex="-1" @keydown.tab="jebakFokus($event)">
         <div class="p-4 text-center md:p-6">
             <div class="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-lg" :class="bahaya ? 'bg-red-100 text-red-600' : 'bg-brand-100 text-brand-700'">
                 <span x-show="bahaya"><?= ikon('exclamation-circle', 'h-6 w-6') ?></span>

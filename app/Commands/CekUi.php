@@ -239,7 +239,9 @@ class CekUi extends BaseCommand
         };
 
         // ---- siap CSP
-        preg_match_all('#<script\b([^>]*)>(.*?)</script>#si', $isi, $m, PREG_OFFSET_CAPTURE | PREG_SET_ORDER);
+        // Atribut tag boleh berisi blok kode PHP (src dari base_url(), penanda csp_script_nonce()): tanda penutup PHP di dalamnya
+        // bukan akhir tag <script>.
+        preg_match_all('#<script\b((?:<\?(?:php|=).*?\?>|[^>])*)>(.*?)</script>#si', $isi, $m, PREG_OFFSET_CAPTURE | PREG_SET_ORDER);
         foreach ($m as $s) {
             $atr = $s[1][0];
             if (preg_match('/\bsrc\s*=/', $atr) === 1) {

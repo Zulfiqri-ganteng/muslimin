@@ -97,6 +97,7 @@ $js   = static fn (string $berkas): string => '<script defer src="' . base_url($
                 <button type="button" class="btn btn-teks">Lewati</button>
                 <a href="#tombol" class="btn btn-netral">Tautan bergaya tombol</a>
                 <button type="button" class="btn btn-utama" disabled>Nonaktif</button>
+                <button type="button" class="btn btn-utama" disabled><span class="pemutar" aria-hidden="true"></span>Memproses…</button>
             </div>
             <div class="flex flex-wrap items-center gap-3">
                 <button type="button" class="btn btn-utama btn-lg">Besar</button>
@@ -111,7 +112,7 @@ $js   = static fn (string $berkas): string => '<script defer src="' . base_url($
                 <button type="button" class="btn btn-bahaya btn-ikon" aria-label="Hapus"><?= ikon('trash-bin', 'h-4 w-4') ?></button>
                 <button type="button" class="btn btn-teks btn-ikon btn-sm" aria-label="Menu lain"><?= ikon('dots-vertical', 'h-4 w-4') ?></button>
             </div>
-            <p class="hint"><?= $kode('class="btn btn-utama"') ?> · varian: <?= $kode('btn-netral btn-sukses btn-bahaya btn-teks') ?> · ukuran: <?= $kode('btn-lg btn-sm btn-xs') ?> · hanya ikon: <?= $kode('btn-ikon') ?> + <?= $kode('aria-label') ?> · ikon: <?= $kode("<?= ikon('plus', 'h-4 w-4') ?>") ?></p>
+            <p class="hint"><?= $kode('class="btn btn-utama"') ?> · varian: <?= $kode('btn-netral btn-sukses btn-bahaya btn-teks') ?> · ukuran: <?= $kode('btn-lg btn-sm btn-xs') ?> · hanya ikon: <?= $kode('btn-ikon') ?> + <?= $kode('aria-label') ?> · tanda memuat: <?= $kode('<span class="pemutar" aria-hidden="true"></span>') ?> · ikon: <?= $kode("<?= ikon('plus', 'h-4 w-4') ?>") ?></p>
         </div>
     </section>
 
@@ -144,6 +145,19 @@ $js   = static fn (string $berkas): string => '<script defer src="' . base_url($
                     <label for="uk-nonaktif" class="lbl">Tidak bisa diubah</label>
                     <input type="text" id="uk-nonaktif" class="inp" value="Terkunci" disabled>
                 </div>
+                <div x-data="isianSandi">
+                    <label for="uk-sandi" class="lbl">Kata sandi</label>
+                    <div class="isian-sandi">
+                        <input type="password" :type="lihat ? 'text' : 'password'" id="uk-sandi" class="inp" value="contoh-sandi" autocomplete="off"
+                               @keydown="cekCapsLock($event)" @keyup="cekCapsLock($event)" @blur="capsLock = false">
+                        <button type="button" class="tombol-sandi" data-uji="tombol-sandi" x-cloak @mousedown.prevent @click="alih()"
+                                aria-controls="uk-sandi" aria-label="Tampilkan kata sandi" :aria-pressed="lihat" :title="lihat ? 'Sembunyikan kata sandi' : 'Tampilkan kata sandi'">
+                            <span x-show="!lihat"><?= ikon('eye', 'h-5 w-5') ?></span>
+                            <span x-show="lihat"><?= ikon('eye-slash', 'h-5 w-5') ?></span>
+                        </button>
+                    </div>
+                    <p class="hint flex items-center gap-1.5 font-medium text-yellow-700" data-uji="caps-lock" x-show="capsLock" x-cloak role="status"><?= ikon('exclamation-circle', 'h-4 w-4 shrink-0') ?>Caps Lock sedang menyala.</p>
+                </div>
                 <div>
                     <label for="uk-berkas" class="lbl">Berkas Excel</label>
                     <input type="file" id="uk-berkas" class="inp-berkas" accept=".xlsx">
@@ -165,7 +179,7 @@ $js   = static fn (string $berkas): string => '<script defer src="' . base_url($
                     <label class="saklar"><input type="checkbox" class="peer sr-only"><span class="saklar-jalur"></span><span class="saklar-label">Mode lihat saja</span></label>
                 </div>
             </div>
-            <p class="hint">Label <?= $kode('class="lbl"') ?> · isian/select/textarea <?= $kode('class="inp"') ?> (galat: + <?= $kode('inp-err') ?> dan <?= $kode('<p class="err-msg">') ?>) · bantuan <?= $kode('class="hint"') ?> · berkas <?= $kode('class="inp-berkas"') ?> · checkbox/radio <?= $kode('class="cek"') ?> + <?= $kode('class="cek-label"') ?> · saklar <?= $kode('<label class="saklar"><input type="checkbox" class="peer sr-only"><span class="saklar-jalur"></span>…') ?></p>
+            <p class="hint">Label <?= $kode('class="lbl"') ?> · isian/select/textarea <?= $kode('class="inp"') ?> (galat: + <?= $kode('inp-err') ?> dan <?= $kode('<p class="err-msg">') ?>) · bantuan <?= $kode('class="hint"') ?> · kata sandi + tombol lihat: <?= $kode('<div x-data="isianSandi"> label + <div class="isian-sandi"><input :type="lihat ? \'text\' : \'password\'" …><button class="tombol-sandi" @mousedown.prevent @click="alih()" :aria-pressed="lihat">') ?> + peringatan <?= $kode('x-show="capsLock"') ?> (contoh lengkap: admin/login.php) · berkas <?= $kode('class="inp-berkas"') ?> · checkbox/radio <?= $kode('class="cek"') ?> + <?= $kode('class="cek-label"') ?> · saklar <?= $kode('<label class="saklar"><input type="checkbox" class="peer sr-only"><span class="saklar-jalur"></span>…') ?></p>
         </div>
     </section>
 
@@ -225,7 +239,7 @@ $js   = static fn (string $berkas): string => '<script defer src="' . base_url($
     </section>
 
     <!-- ================= Tab ================= -->
-    <section id="tab" class="kartu kartu-isi scroll-mt-24 space-y-4" x-data="tab" data-awal="ringkasan">
+    <section id="tab" class="kartu kartu-isi scroll-mt-24 space-y-4" x-data="tab" data-awal="ringkasan" data-hash="1">
         <h2 class="kartu-judul">Tab (di sisi peramban)</h2>
         <div class="tab-daftar" role="tablist" aria-label="Contoh tab" @keydown.right.prevent="pindah(1)" @keydown.left.prevent="pindah(-1)">
             <button type="button" role="tab" class="tab" data-tab="ringkasan" data-uji="tab-1" :aria-selected="aktif === 'ringkasan'" :tabindex="aktif === 'ringkasan' ? '0' : '-1'" @click="pilih('ringkasan')">Ringkasan</button>

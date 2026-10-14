@@ -150,6 +150,8 @@
   .btn-lg { @apply px-5 py-3 text-base; }
   .btn-ikon { @apply p-2.5; }
   .btn-ikon.btn-sm, .btn-ikon.btn-xs { @apply p-2; }
+  /* Tanda memuat kecil (mis. di tombol "Memproses…"): <span class="pemutar" aria-hidden="true"></span> — warna ikut teks. */
+  .pemutar { @apply inline-block h-4 w-4 shrink-0 animate-spin rounded-full border-2 border-current border-r-transparent; }
 
   /* ---- Formulir (nama .inp/.lbl/.hint/.err-msg lama dipertahankan → kini gaya Flowbite) ----
      .inp untuk input/select/textarea; galat: + inp-err; .cek = checkbox/radio; .saklar = tombol geser (checkbox sr-only peer). */
@@ -159,6 +161,12 @@
   .err-msg { @apply mt-2 text-sm text-red-600; }
   .hint    { @apply mt-2 text-sm text-gray-500; }
   .inp-berkas { @apply block w-full cursor-pointer rounded-lg border border-gray-300 bg-gray-50 text-sm text-gray-900 focus:outline-hidden; }
+  /* Isian kata sandi + tombol lihat (komponen Alpine "isianSandi", F2): <div class="isian-sandi"><input class="inp">
+     <button class="tombol-sandi">. Ikon mata bawaan Microsoft Edge disembunyikan agar tidak muncul dua tombol. */
+  .isian-sandi { @apply relative; }
+  .isian-sandi > input { @apply pe-11; }
+  .isian-sandi > input::-ms-reveal, .isian-sandi > input::-ms-clear { display: none; }
+  .tombol-sandi { @apply absolute inset-y-0 end-0 flex items-center rounded-e-lg px-3 text-gray-500 transition hover:text-gray-900 focus:outline-hidden focus-visible:ring-2 focus-visible:ring-brand-300; }
   .cek     { @apply h-4 w-4 shrink-0 rounded-sm border-gray-300 bg-gray-50 text-brand-600 focus:ring-2 focus:ring-brand-500; }
   .cek[type='radio'] { @apply rounded-full; }
   .cek-label { @apply ms-2 text-sm font-medium text-gray-900; }
@@ -206,10 +214,20 @@
   .dropdown-item   { @apply flex w-full items-center gap-2 px-4 py-2 text-left text-gray-700 transition-colors hover:bg-gray-100 hover:text-gray-900 focus:bg-gray-100 focus:outline-hidden; }
   .dropdown-item-bahaya { @apply text-red-600 hover:bg-red-50 hover:text-red-700 focus:bg-red-50; }
 
-  /* ---- Dialog & laci (komponen Alpine "dialog" / "laci" — pakai helper ui_dialog_buka() / ui_laci_buka()) ---- */
-  .dialog        { @apply fixed inset-0 z-50 flex items-start justify-center overflow-y-auto p-4 sm:items-center; }
+  /* ---- Dialog & laci (komponen Alpine "dialog" / "laci" / "konfirmasi" — pakai helper ui_dialog_buka() / ui_laci_buka()) ----
+     Tampil/sembunyi lewat atribut data-buka (:data-buka="buka"); tertutup = display: none (tanpa x-cloak pun tidak berkedip).
+     Temuan F2 (diuji di Chrome): (1) BUKAN x-show — x-show beranimasi di Alpine menyembunyikan elemen tertunda satu frame, sehingga
+     dialog yang dibuka lagi tepat di celah itu ikut tersembunyi; (2) BUKAN visibility — isian/tombol berkelas "transition" (Tailwind v4)
+     ikut mentransisikan visibility turunan, sehingga sesaat setelah dibuka belum bisa difokus dan fokusnya dibuang peramban.
+     Animasi: masuk lewat @starting-style, keluar lewat transition-behavior: allow-discrete (display baru "none" setelah pudar) —
+     Chrome/Edge 117+; peramban lebih tua tetap berfungsi, hanya tanpa animasi. Saat memudar keluar, klik tidak lagi ditangkap. */
+  .dialog        { @apply fixed inset-0 z-50 hidden items-start justify-center overflow-y-auto p-4 opacity-0 sm:items-center;
+                   transition-property: opacity, display; transition-duration: 200ms; transition-behavior: allow-discrete; }
+  .dialog:not([data-buka]) { @apply pointer-events-none; }
+  .dialog[data-buka] { @apply flex opacity-100; }
   .dialog-latar  { @apply fixed inset-0 bg-gray-900/50; }
-  .dialog-panel  { @apply relative my-auto w-full max-w-lg rounded-lg bg-white shadow-lg focus:outline-hidden; }
+  .dialog-panel  { @apply relative my-auto w-full max-w-lg rounded-lg bg-white shadow-lg focus:outline-hidden; scale: .95; transition: scale 200ms; }
+  .dialog[data-buka] .dialog-panel { scale: 1; }
   .dialog-panel-sm { @apply max-w-md; }
   .dialog-panel-lg { @apply max-w-2xl; }
   .dialog-panel-xl { @apply max-w-4xl; }
@@ -218,8 +236,18 @@
   .dialog-isi    { @apply space-y-4 p-4 md:p-5; }
   .dialog-kaki   { @apply flex flex-wrap items-center justify-end gap-3 rounded-b-lg border-t border-gray-200 p-4 md:p-5; }
   .tombol-tutup  { @apply inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-gray-400 transition hover:bg-gray-200 hover:text-gray-900 focus:outline-hidden focus-visible:ring-2 focus-visible:ring-gray-300; }
-  .laci          { @apply fixed inset-0 z-50; }
-  .laci-panel    { @apply fixed inset-y-0 right-0 flex h-full w-full max-w-md flex-col bg-white shadow-lg focus:outline-hidden; }
+  .laci          { @apply fixed inset-0 z-50 hidden opacity-0; transition-property: opacity, display; transition-duration: 200ms; transition-behavior: allow-discrete; }
+  .laci:not([data-buka]) { @apply pointer-events-none; }
+  .laci[data-buka] { @apply block opacity-100; }
+  .laci-panel    { @apply fixed inset-y-0 right-0 flex h-full w-full max-w-md flex-col bg-white shadow-lg focus:outline-hidden; translate: 100% 0; transition: translate 200ms; }
+  .laci[data-buka] .laci-panel { translate: 0 0; }
+  /* Titik awal animasi masuk (begitu display berubah dari none). */
+  @starting-style {
+    .dialog[data-buka] { opacity: 0; }
+    .dialog[data-buka] .dialog-panel { scale: .95; }
+    .laci[data-buka] { opacity: 0; }
+    .laci[data-buka] .laci-panel { translate: 100% 0; }
+  }
   .laci-kepala   { @apply flex items-center justify-between gap-4 border-b border-gray-200 p-4; }
   .laci-judul    { @apply text-sm font-semibold text-gray-500 uppercase; }
   .laci-isi      { @apply flex-1 space-y-4 overflow-y-auto p-4; }
@@ -300,7 +328,7 @@
 @media (prefers-reduced-motion: reduce) {
   html { scroll-behavior: auto; }
   /* (F1) Setelan "kurangi gerakan" di Windows: semua transisi & animasi kit langsung selesai (putaran tanda memuat tetap jalan). */
-  *:not(.animate-spin), ::before, ::after { transition-duration: .01ms !important; animation-duration: .01ms !important; animation-iteration-count: 1 !important; }
+  *:not(.animate-spin, .pemutar), ::before, ::after { transition-duration: .01ms !important; animation-duration: .01ms !important; animation-iteration-count: 1 !important; }
   .rise, .bar-grow, .donut-seg { animation: none; }
   .lift { transition: none; }
   .lift:hover { transform: none; }

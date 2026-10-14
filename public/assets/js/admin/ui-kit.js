@@ -32,7 +32,8 @@
         }
         return syarat();
     };
-    var tampak = function (el) { return el !== null && el.getClientRects().length > 0; };
+    // Terlihat = punya kotak di layar DAN tidak invisible (dialog/laci tertutup memakai visibility: hidden, bukan display: none).
+    var tampak = function (el) { return el !== null && el.getClientRects().length > 0 && getComputedStyle(el).visibility !== 'hidden'; };
     var cari = function (sel) { return document.querySelector(sel); };
     var tekan = function (el, tombol) {
         el.dispatchEvent(new KeyboardEvent('keydown', { key: tombol, bubbles: true, cancelable: true }));
@@ -60,12 +61,43 @@
             if (!await sampai(function () { return !tampak(menu); })) { return 'menu tidak tertutup dengan Esc'; }
             return document.activeElement === pemicu ? '' : 'fokus tidak kembali ke tombol';
         }],
-        ['tab pindah (klik)', async function () {
+        ['isian sandi: tombol lihat & peringatan Caps Lock', async function () {
+            var isian = cari('#uk-sandi');
+            var tombol = cari('[data-uji="tombol-sandi"]');
+            var caps = cari('[data-uji="caps-lock"]');
+            if (isian.type !== 'password' || !tampak(tombol)) { return 'awal: bukan password / tombol tak tampak'; }
+            tombol.click();
+            if (!await sampai(function () { return isian.type === 'text' && tombol.getAttribute('aria-pressed') === 'true'; })) {
+                return 'klik pertama: sandi tidak terlihat (type ' + isian.type + ')';
+            }
+            tombol.click();
+            if (!await sampai(function () { return isian.type === 'password' && tombol.getAttribute('aria-pressed') === 'false'; })) {
+                return 'klik kedua: sandi tidak tersembunyi lagi';
+            }
+            isian.dispatchEvent(new KeyboardEvent('keyup', { key: 'A', modifierCapsLock: true, bubbles: true }));
+            if (!await sampai(function () { return tampak(caps); })) { return 'peringatan Caps Lock tidak muncul'; }
+            isian.dispatchEvent(new KeyboardEvent('keyup', { key: 'a', bubbles: true }));
+            return await sampai(function () { return !tampak(caps); }) ? '' : 'peringatan Caps Lock tidak hilang';
+        }],
+        ['tab pindah (klik) + ikut #alamat (data-hash)', async function () {
             cari('[data-uji="tab-2"]').click();
             var ok = await sampai(function () { return tampak(cari('[data-uji="panel-2"]')) && !tampak(cari('[data-uji="panel-1"]')); });
             var pilih = cari('[data-uji="tab-2"]').getAttribute('aria-selected') === 'true';
+            var hash = location.hash;
             cari('[data-uji="tab-1"]').click();
-            return ok && pilih ? '' : 'panel/aria-selected tidak berganti';
+            if (!ok || !pilih) { return 'panel/aria-selected tidak berganti'; }
+            return hash === '#rincian' ? '' : 'alamat tidak ikut berubah (hash "' + hash + '")';
+        }],
+        ['tab: panah kanan/kiri memindah tab & fokus', async function () {
+            var t1 = cari('[data-uji="tab-1"]'), t2 = cari('[data-uji="tab-2"]');
+            t1.focus();
+            tekan(t1, 'ArrowRight');
+            if (!await sampai(function () { return t2.getAttribute('aria-selected') === 'true' && document.activeElement === t2; })) {
+                return 'panah kanan tidak pindah ke tab 2';
+            }
+            tekan(t2, 'ArrowLeft');
+            return await sampai(function () { return t1.getAttribute('aria-selected') === 'true' && document.activeElement === t1; })
+                ? '' : 'panah kiri tidak kembali ke tab 1';
         }],
         ['dialog buka (Ui.bukaDialog) & tutup (Esc)', async function () {
             var akar = cari('[data-nama="contoh-form"]');
@@ -135,7 +167,41 @@
             }
             tekan(document.activeElement, 'Escape');
             if (!await sampai(function () { return jawaban !== null; })) { return 'Promise tidak selesai setelah Esc'; }
-            return jawaban === false ? '' : 'Esc tidak dianggap "Batal"';
+            if (jawaban !== false) { return 'Esc tidak dianggap "Batal"'; }
+            // Dibuka dari skrip (fokus awal <body>): fokus tidak boleh tertinggal di tombol dialog yang kini tersembunyi.
+            return dialogKonfirmasi().contains(document.activeElement) ? 'fokus tertinggal di dalam dialog yang sudah ditutup' : '';
+        }],
+        ['dialog & konfirmasi dibuka lagi segera setelah ditutup (jeda 0/20/40 md)', async function () {
+            var akar = cari('[data-nama="contoh-form"]');
+            var jedaDaftar = [0, 20, 40];
+            for (var i = 0; i < jedaDaftar.length; i++) {
+                var jeda = jedaDaftar[i];
+                Ui.bukaDialog('contoh-form');
+                if (!await sampai(function () { return tampak(akar); })) { return 'jeda ' + jeda + ': dialog tidak terbuka'; }
+                Ui.tutupDialog('contoh-form');
+                await tunggu(jeda);
+                Ui.bukaDialog('contoh-form');
+                await tunggu(250);
+                if (!tampak(akar)) { return 'jeda ' + jeda + ': dialog yang dibuka lagi tidak tampil'; }
+                Ui.tutupDialog('contoh-form');
+                if (!await sampai(function () { return !tampak(akar); })) { return 'jeda ' + jeda + ': dialog tidak tertutup'; }
+
+                var kedua = null;
+                Ui.konfirmasi({ pesan: 'Uji buka ulang (pertama)' });
+                if (!await sampai(function () { return tampak(dialogKonfirmasi()); })) { return 'jeda ' + jeda + ': konfirmasi pertama tidak muncul'; }
+                dialogKonfirmasi().querySelector('[x-ref="tombolBatal"]').click();
+                await tunggu(jeda);
+                Ui.konfirmasi({ pesan: 'Uji buka ulang (kedua)' }).then(function (ya) { kedua = ya; });
+                await tunggu(250);
+                if (!tampak(dialogKonfirmasi()) || !dialogKonfirmasi().contains(document.activeElement)) {
+                    return 'jeda ' + jeda + ': konfirmasi kedua tidak tampil / tidak terfokus';
+                }
+                dialogKonfirmasi().querySelector('[x-ref="tombolBatal"]').click();
+                if (!await sampai(function () { return kedua === false && !tampak(dialogKonfirmasi()); })) {
+                    return 'jeda ' + jeda + ': konfirmasi kedua tidak bisa dijawab';
+                }
+            }
+            return '';
         }],
     ];
 
