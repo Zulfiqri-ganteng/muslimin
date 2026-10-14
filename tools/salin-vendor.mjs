@@ -30,6 +30,11 @@ const versi = (p) => JSON.parse(readFileSync(join(NM, p, 'package.json'), 'utf8'
 salin('alpinejs/dist/cdn.min.js', 'public/assets/js/vendor/alpine.min.js');
 salin('@alpinejs/csp/dist/cdn.min.js', 'public/assets/js/vendor/alpine-csp.min.js');
 salin('@alpinejs/collapse/dist/cdn.min.js', 'public/assets/js/vendor/alpine-collapse.min.js');
+// ApexCharts (MIT; 5.x ke atas BUKAN MIT — jangan naik ke 5). CSS dimuat sebagai berkas <link id="apexcharts-css"> → ApexCharts
+// tidak menyisipkan <style> sendiri (siap CSP). Hanya dimuat di halaman bergrafik.
+salin('apexcharts/dist/apexcharts.min.js', 'public/assets/js/vendor/apexcharts.min.js');
+salin('apexcharts/dist/apexcharts.css', 'public/assets/css/vendor/apexcharts.css');
+salin('apexcharts/LICENSE', 'public/assets/js/vendor/apexcharts.LICENSE.txt');
 for (const n of ['latin', 'latin-ext']) salin(`@fontsource-variable/inter/files/inter-${n}-wght-normal.woff2`, `public/assets/fonts/inter/inter-${n}-wght-normal.woff2`);
 salin('@fontsource-variable/inter/LICENSE', 'public/assets/fonts/inter/LICENSE.txt');
 

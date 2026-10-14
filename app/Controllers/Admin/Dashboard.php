@@ -5,6 +5,11 @@ namespace App\Controllers\Admin;
 use App\Controllers\BaseController;
 use App\Libraries\SuratSekolah;
 use App\Libraries\UjianReport;
+use App\Models\AbsensiGuruModel;
+use App\Models\AbsensiHariModel;
+use App\Models\AbsensiKerjaModel;
+use App\Models\HariModel;
+use App\Models\JadwalModel;
 use App\Models\PklPengajuanModel;
 use App\Models\PklPengaturanModel;
 use App\Models\SettingModel;
@@ -12,9 +17,10 @@ use App\Models\SubmissionModel;
 use App\Models\UjianPeriodeModel;
 
 /**
- * Dashboard Admin — versi profesional (2026-10-12): angka utama, "Perlu tindakan", beban mengajar, ringkasan SEMUA modul
- * (PKL, Surat Sekolah, UKK, Laboratorium, Arsip Dokumen, Biodata, Kesediaan), ujian per gelombang, data siswa, kesediaan,
- * dan aktivitas staf terbaru. Hanya membaca; setiap modul dijaga tableExists() agar hosting yang belum migrasi tetap aman.
+ * Dashboard Admin — pola halaman muka template Flowbite Admin Dashboard + grafik ApexCharts (rombak tampilan F4): angka utama,
+ * tren kehadiran guru, "Perlu tindakan" & aktivitas staf, siswa per jurusan, absensi hari ini, kesediaan, beban mengajar,
+ * ringkasan SEMUA modul (PKL, Surat Sekolah, UKK, Laboratorium, Arsip Dokumen, Biodata, Kesediaan) dan ujian per gelombang.
+ * Hanya membaca; setiap modul dijaga tableExists() agar hosting yang belum migrasi tetap aman.
  */
 class Dashboard extends BaseController
 {
@@ -42,6 +48,7 @@ class Dashboard extends BaseController
             'modul'     => $modul,
             'tindakan'  => $this->tindakan($kur, $absensi, $ujian, $siswa, $modul),
             'aktivitas' => $this->aktivitas(),
+            'tren'      => $this->trenKehadiran(),
             'nama'      => (string) (session('admin')['full_name'] ?? 'Admin'),
         ]);
     }
@@ -78,6 +85,83 @@ class Dashboard extends BaseController
         cache()->save('dash_siswa', $data, 300);
 
         return $data;
+    }
+
+    /**
+     * Tren kehadiran guru 180 hari terakhir — hanya hari yang absensinya dicatat (grafik memilih 7/30/90 hari dan
+     * membandingkannya dengan rentang sebelumnya). Status harian per guru = status TERBURUK dari semua sesinya + kehadiran
+     * kerja: aturan yang sama dengan Absensi::ringkasHarian (angka "Kehadiran guru hari ini"). Daftar guru per hari diambil
+     * dari salinan sesi saat absensi dicatat (absensi_snapshot), jadi tidak berubah walau jadwal diganti kemudian.
+     *
+     * @return list<array{t:string, n:int, hadir:int, telat:int, izin:int, sakit:int, alpa:int}>
+     */
+    private function trenKehadiran(): array
+    {
+        $db = db_connect();
+        foreach (['absensi_hari', 'absensi_snapshot', 'absensi_guru', 'absensi_kerja'] as $tabel) {
+            if (! $db->tableExists($tabel)) {
+                return [];
+            }
+        }
+
+        $sampai  = date('Y-m-d');
+        $dari    = date('Y-m-d', strtotime('-179 days'));
+        $tanggal = (new AbsensiHariModel())->datesInRange($dari, $sampai);
+        if ($tanggal === []) {
+            return [];
+        }
+        // Guru per hari dari salinan sesi — cukup pasangan unik (tanggal, guru), bukan seluruh sesi (±300 baris/hari).
+        $snapshot = [];
+        foreach ($db->table('absensi_snapshot')->distinct()->select('tanggal, guru_id')
+            ->where('tanggal >=', $dari)->where('tanggal <=', $sampai)->get()->getResultArray() as $r) {
+            $snapshot[(string) $r['tanggal']][(int) $r['guru_id']] = true;
+        }
+
+        // Pengecualian sesi & kehadiran kerja: [guru][tanggal] → [tanggal][guru] (status terburuk).
+        $perHari = [];
+        foreach ([(new AbsensiKerjaModel())->dayStatusPerGuru($dari, $sampai), (new AbsensiGuruModel())->dayStatusPerGuru($dari, $sampai)] as $peta) {
+            foreach ($peta as $gid => $hari) {
+                foreach ($hari as $tgl => $st) {
+                    $perHari[$tgl][$gid] = AbsensiGuruModel::worst($perHari[$tgl][$gid] ?? 'hadir', (string) $st);
+                }
+            }
+        }
+
+        // Hari tercatat tanpa salinan (dicatat sebelum fitur salinan ada): pakai jadwal yang berlaku untuk hari itu —
+        // sama dengan cadangan di AbsensiLaporan::matriks (rekap absensi).
+        $jadwalHari = [];
+        $guruJadwal = static function (string $tgl) use (&$jadwalHari): array {
+            $n = (int) date('N', strtotime($tgl));
+            if (! array_key_exists($n, $jadwalHari)) {
+                $hari            = (new HariModel())->byWeekday($n);
+                $jadwalHari[$n]  = $hari && (int) $hari['aktif'] === 1
+                    ? array_fill_keys(array_map(static fn (array $s): int => (int) $s['guru_id'], (new JadwalModel())->sessionsForHari((int) $hari['id'])), true)
+                    : [];
+            }
+
+            return $jadwalHari[$n];
+        };
+
+        $out = [];
+        foreach ($tanggal as $tgl) {
+            $guru = [];
+            foreach (array_keys($snapshot[$tgl] ?? $guruJadwal((string) $tgl)) as $gid) {
+                $guru[$gid] = 'hadir';
+            }
+            foreach ($perHari[$tgl] ?? [] as $gid => $st) {
+                $guru[$gid] = AbsensiGuruModel::worst($guru[$gid] ?? 'hadir', $st);
+            }
+            if ($guru === []) {
+                continue;
+            }
+            $n = ['hadir' => 0, 'telat' => 0, 'izin' => 0, 'sakit' => 0, 'alpa' => 0];
+            foreach ($guru as $st) {
+                $n[$st] = ($n[$st] ?? 0) + 1;
+            }
+            $out[] = ['t' => (string) $tgl, 'n' => count($guru)] + $n;
+        }
+
+        return $out;
     }
 
     /** Total JP dari seluruh penugasan guru pengajar — pembanding "JP terjadwal". */

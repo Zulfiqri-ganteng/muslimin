@@ -131,6 +131,22 @@
     --sb-segera-bg: rgb(250 204 21 / .15);     --sb-segera-teks: var(--color-yellow-300); --sb-nonaktif: var(--color-gray-500);
   }
 
+  /* (F4) Palet grafik ApexCharts — SATU sumber untuk grafik (dibaca admin/dashboard.js lewat getComputedStyle) dan titik legenda
+     (.warna-grafik-*). Nilai = palet template Flowbite (src/charts.js: #1A56DB, #16BDCA, #FDBA8C, garis #F3F4F6/#374151, teks
+     #6B7280/#9CA3AF); warna 1 = warna merek tema, jadi ikut Biru/Lilac. Status absensi berwarna tetap (selalu disertai teks). */
+  :root {
+    --grafik-1: rgb(var(--brand-600)); --grafik-2: #16bdca; --grafik-3: #fdba8c; --grafik-4: #e74694;
+    --grafik-5: #31c48d;               --grafik-6: #e3a008; --grafik-7: #8da2fb; --grafik-8: #9ca3af;
+    --grafik-hadir: #0e9f6e; --grafik-telat: #e3a008; --grafik-izin: #3f83f8; --grafik-sakit: #ff8a4c; --grafik-alpa: #f05252;
+    --grafik-teks: #6b7280;  --grafik-kuat: #111827;  --grafik-garis: #f3f4f6; --grafik-jalur: #e5e7eb; --grafik-tepi: #ffffff;
+    --grafik-batas: #374151;
+  }
+  [data-mode="gelap"] {
+    --grafik-1: rgb(var(--brand-500));
+    --grafik-teks: #9ca3af;  --grafik-kuat: #ffffff;  --grafik-garis: #374151; --grafik-jalur: #374151; --grafik-tepi: #1f2937;
+    --grafik-batas: #e5e7eb;
+  }
+
   /* ---- Kompatibel Tailwind v3: aturan bawaan v3 yang berubah di v4, dipertahankan agar halaman yang belum dirombak tidak bergeser.
      Ditinjau lagi di F12 (dibuang bila tak dibutuhkan lagi). */
   *, ::after, ::before, ::backdrop, ::file-selector-button { border-color: var(--color-gray-200, currentcolor); }
@@ -429,8 +445,50 @@
   .lift:hover  { transform: translateY(-3px); box-shadow: 0 16px 32px -14px rgb(var(--brand-900) / .28); }
   .lift:active { transform: translateY(-1px) scale(.99); }
   .bar-grow  { animation: grow .9s cubic-bezier(.16,.84,.44,1) .25s backwards; }
-  .donut-seg { animation: donutIn 1.1s cubic-bezier(.16,.84,.44,1) backwards; transition: stroke-width .2s ease; }
-  .donut-seg:hover, .donut-seg:focus-visible { stroke-width: 20; }
+
+  /* ---- (F4) Dashboard: kartu angka & kartu grafik — pola halaman muka template Flowbite Admin Dashboard (content/_index.html).
+     Kartu = .kartu .kartu-isi; angka besar .stat-angka di atas/bawah .stat-label; kaki kartu grafik .kaki-grafik (garis atas). ---- */
+  .stat-label   { @apply text-base font-normal text-gray-500 dark:text-gray-400; }
+  .stat-angka   { @apply text-2xl leading-none font-bold text-gray-900 sm:text-3xl dark:text-white; }
+  .stat-ket     { @apply mt-1 flex flex-wrap items-center gap-x-1.5 text-sm text-gray-500 dark:text-gray-400; }
+  .tren-naik    { @apply inline-flex items-center gap-0.5 font-medium text-green-600 dark:text-green-400; }
+  .tren-turun   { @apply inline-flex items-center gap-0.5 font-medium text-red-600 dark:text-red-500; }
+  .tren-datar   { @apply inline-flex items-center gap-0.5 font-medium text-gray-500 dark:text-gray-400; }
+  .tautan-kartu { @apply inline-flex shrink-0 items-center gap-1 rounded-lg p-2 text-xs font-medium text-brand-700 uppercase transition-colors hover:bg-gray-100 focus:outline-hidden focus-visible:ring-2 focus-visible:ring-brand-300 sm:text-sm dark:text-brand-400 dark:hover:bg-gray-700; }
+  .kaki-grafik  { @apply mt-4 flex items-center justify-between gap-2 border-t border-gray-200 pt-3 sm:pt-5 dark:border-gray-700; }
+  .tombol-rentang { @apply inline-flex items-center gap-2 rounded-lg p-2 text-sm font-medium text-gray-500 transition-colors hover:text-gray-900 focus:outline-hidden focus-visible:ring-2 focus-visible:ring-brand-300 dark:text-gray-400 dark:hover:text-white; }
+  .daftar-kartu { @apply divide-y divide-gray-200 dark:divide-gray-700; }
+  .daftar-kartu > li { @apply py-3 sm:py-4; }
+  .ubin-ikon    { @apply flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-300; }
+  .grafik       { @apply w-full; }
+  .grafik-kecil { @apply w-full max-w-36 shrink-0 sm:max-w-44; }
+  /* Kartu angka yang seluruhnya tautan (Siswa → Data Siswa, dst.). */
+  .kartu-tautan { @apply transition-colors hover:border-gray-300 hover:bg-gray-50 focus:outline-hidden focus-visible:ring-4 focus-visible:ring-brand-300 dark:hover:border-gray-600 dark:hover:bg-gray-700/60 dark:focus-visible:ring-brand-800; }
+  /* Tab lebar penuh (widget "Statistics this month" template: tombol abu bersekat, aktif = warna merek). Komponen Alpine "tab" kit. */
+  .tab-penuh-daftar { @apply flex divide-x divide-gray-200 overflow-hidden rounded-lg text-center text-sm font-medium text-gray-500 dark:divide-gray-600 dark:text-gray-400; }
+  .tab-penuh { @apply inline-flex w-full items-center justify-center gap-2 bg-gray-50 p-4 transition-colors hover:bg-gray-100 focus:outline-hidden focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-brand-300 dark:bg-gray-700 dark:hover:bg-gray-600; }
+  .tab-penuh[aria-selected='true'] { @apply bg-gray-100 text-brand-700 dark:bg-gray-600 dark:text-white; }
+  /* Daftar panjang di kartu sejajar (tab Perlu tindakan/Aktivitas): tinggi dibatasi ±6 butir, sisanya digulir di dalam kartu. */
+  .panel-gulir { @apply max-h-[27rem] overflow-y-auto overscroll-contain; }
+
+  /* Titik legenda & penanda tooltip: warna dari palet grafik di atas (tanpa atribut style → siap CSP). */
+  .titik-legenda { @apply inline-block h-2.5 w-2.5 shrink-0 rounded-full; }
+  .warna-grafik-1 { background-color: var(--grafik-1); } .warna-grafik-2 { background-color: var(--grafik-2); }
+  .warna-grafik-3 { background-color: var(--grafik-3); } .warna-grafik-4 { background-color: var(--grafik-4); }
+  .warna-grafik-5 { background-color: var(--grafik-5); } .warna-grafik-6 { background-color: var(--grafik-6); }
+  .warna-grafik-7 { background-color: var(--grafik-7); } .warna-grafik-8 { background-color: var(--grafik-8); }
+  .warna-grafik-hadir { background-color: var(--grafik-hadir); } .warna-grafik-telat { background-color: var(--grafik-telat); }
+  .warna-grafik-izin  { background-color: var(--grafik-izin); }  .warna-grafik-sakit { background-color: var(--grafik-sakit); }
+  .warna-grafik-alpa  { background-color: var(--grafik-alpa); }  .warna-grafik-batas { background-color: var(--grafik-batas); }
+
+  /* Tooltip grafik (isi dibuat dashboard.js, kelas saja). Wadah .apexcharts-tooltip = gaya plugin Flowbite (putih + bayangan);
+     versi gelap ditulis di sini karena plugin memakai kelas .dark, sedangkan mode gelap kita = <html data-mode="gelap">. */
+  .grafik-tip        { @apply min-w-36 text-sm; }
+  .grafik-tip-judul  { @apply border-b border-gray-200 bg-gray-100 px-3 py-2 font-normal text-gray-500 dark:border-gray-500 dark:bg-gray-600 dark:text-gray-300; }
+  .grafik-tip-isi    { @apply space-y-1 px-3 py-2; }
+  .grafik-tip-baris  { @apply flex items-center gap-2 text-gray-500 dark:text-gray-400; }
+  .grafik-tip-nilai  { @apply ml-auto pl-3 font-semibold text-gray-900 tabular-nums dark:text-white; }
+  [data-mode="gelap"] .apexcharts-canvas .apexcharts-tooltip { background-color: var(--color-gray-700) !important; color: var(--color-gray-400) !important; }
 
   /* ---- Pratinjau dokumen (HTML polos hasil SheetJS & mammoth, tanpa kelas) ---- */
   .dok-pratinjau table { @apply w-full text-xs border-collapse; }
@@ -449,12 +507,11 @@
 
 @keyframes rise { from { opacity: 0; transform: translateY(16px); } to { opacity: 1; transform: translateY(0); } }
 @keyframes grow { from { width: 0; } }
-@keyframes donutIn { from { stroke-dasharray: 0 400; } }
 @media (prefers-reduced-motion: reduce) {
   html { scroll-behavior: auto; }
   /* (F1) Setelan "kurangi gerakan" di Windows: semua transisi & animasi kit langsung selesai (putaran tanda memuat tetap jalan). */
   *:not(.animate-spin, .pemutar), ::before, ::after { transition-duration: .01ms !important; animation-duration: .01ms !important; animation-iteration-count: 1 !important; }
-  .rise, .bar-grow, .donut-seg { animation: none; }
+  .rise, .bar-grow { animation: none; }
   .lift { transition: none; }
   .lift:hover { transform: none; }
 }

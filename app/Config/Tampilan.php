@@ -38,7 +38,7 @@ class Tampilan extends BaseConfig
         ],
         'dashboard' => [
             'fase' => 'F4', 'label' => 'Dashboard',
-            'view' => ['admin/dashboard.php', 'admin/kurikulum/dashboard.php'],
+            'view' => ['admin/dashboard.php'], // admin/kurikulum/dashboard.php (view mati + Chart.js CDN) dihapus di F4; alamatnya hanya mengalihkan
             'url'  => ['admin/dashboard', 'admin/kurikulum/dashboard'],
         ],
         'master' => [
@@ -85,5 +85,5 @@ class Tampilan extends BaseConfig
      *
      * @var list<string>
      */
-    public array $alpineCsp = ['kit', 'login', 'kerangka'];
+    public array $alpineCsp = ['kit', 'login', 'kerangka', 'dashboard'];
 }

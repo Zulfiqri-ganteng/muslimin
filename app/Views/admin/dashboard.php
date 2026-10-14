@@ -1,432 +1,508 @@
 <?php
 /**
- * Dashboard Admin — versi profesional (2026-10-12). Gaya tenang seperti aplikasi kerja: kartu putih bergaris 1px, lilac
- * hemat, tanpa gradasi/cahaya/emoji/angka berhitung (memori feedback-tampilan-bukan-ai). Grafik: batang satu warna +
- * garis batas, donat 4 warna kategori yang lolos uji buta-warna; nilai selalu tertulis, tooltip di admin/dashboard.js.
- * Susunan: kolom kiri (tindakan, beban, modul, ujian) & kanan (hari ini, siswa, kesediaan, aktivitas) mengalir sendiri-
- * sendiri; di HP diurutkan lewat `order` (pembungkus `contents`).
+ * Dashboard Admin — rombak tampilan F4: pola halaman muka template Flowbite Admin Dashboard (resources/flowbite/content/_index.html)
+ * + grafik ApexCharts. Susunan: kepala (sapaan, tanggal, tombol cepat) · 4 kartu angka bergrafik kecil (tiap kartu = tautan ke
+ * halamannya) · tren kehadiran guru (area; 7/30/90 hari, dibanding rentang sebelumnya) + tab "Perlu tindakan / Aktivitas terbaru" ·
+ * siswa per jurusan, absensi hari ini, kesediaan guru (donat) · beban mengajar (batang mendatar + garis batas) + ringkasan modul ·
+ * tabel ujian per gelombang. Grafik = <div class="grafik" data-grafik="…" data-isi="JSON"> yang digambar admin/dashboard.js (tanpa
+ * skrip/gaya sebaris; komponen Alpine kit saja → siap Alpine versi CSP). Semua angka juga tertulis sebagai teks.
  *
  * @var array $kur @var array $stats @var array $setting @var array $absensi @var array $ujian @var array $siswa
  * @var int $jpTugas @var array $modul @var list<array> $tindakan @var list<array> $aktivitas @var string $nama
+ * @var list<array{t:string,n:int,hadir:int,telat:int,izin:int,sakit:int,alpa:int}> $tren
  */
 use App\Libraries\IsianBantu;
 
 $angka   = static fn ($n): string => number_format((int) $n, 0, ',', '.');
+$json    = static fn ($v): string => esc((string) json_encode($v, JSON_UNESCAPED_UNICODE), 'attr');
 $jam     = (int) date('G');
 $salam   = $jam < 4 ? 'Selamat malam' : ($jam < 11 ? 'Selamat pagi' : ($jam < 15 ? 'Selamat siang' : ($jam < 18 ? 'Selamat sore' : 'Selamat malam')));
 $hariIni = ucfirst(mb_strtolower((string) $absensi['hari_nama'])); // data hari tersimpan HURUF BESAR
+$tglIni  = IsianBantu::tanggalIndo($absensi['tanggal']);
 $bulanPendek = ['Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun', 'Jul', 'Agu', 'Sep', 'Okt', 'Nov', 'Des'];
 $waktuPendek = static function (?string $dt) use ($bulanPendek): string {
     $t = $dt ? strtotime($dt) : false;
 
-    return $t ? (int) date('j', $t) . ' ' . $bulanPendek[(int) date('n', $t) - 1] . ', ' . date('H.i', $t) : '';
+    return $t ? (int) date('j', $t) . ' ' . $bulanPendek[(int) date('n', $t) - 1] . ' ' . date('Y', $t) . ', ' . date('H.i', $t) : '';
 };
-$svg = static fn (string $d, string $kelas = 'h-5 w-5'): string => '<svg class="' . $kelas . '" fill="none" stroke="currentColor" stroke-width="1.7" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="' . $d . '"/></svg>';
+$urlAbsensi = site_url('admin/absensi') . '?tanggal=' . rawurlencode((string) $absensi['tanggal']);
 
-// Absensi hari ini
+// Kehadiran guru hari ini (status harian per guru).
 $abs         = $absensi['ringkas'];
 $absTotal    = array_sum($abs);
 $persenHadir = $absTotal > 0 ? (int) round(($abs['hadir'] + $abs['telat']) / $absTotal * 100) : 0;
+$statusAbsen = ['hadir' => 'Hadir', 'telat' => 'Telat', 'izin' => 'Izin', 'sakit' => 'Sakit', 'alpa' => 'Alpa'];
 
-// Beban per guru: skala bersama = nilai terbesar di antara JP dan batasnya.
-$beban = $kur['chart'] ?? [];
-$skala = 1;
-foreach ($beban as $b) {
-    $skala = max($skala, (int) $b['total_jp'], (int) $b['max_beban']);
-}
-
-// Penjadwalan
+// Penjadwalan KBM.
 $jpJadwal = (int) $kur['jpTerjadwal'];
 $persenJp = $jpTugas > 0 ? min(100, (int) round($jpJadwal / $jpTugas * 100)) : 0;
 
-// Siswa
-$maxJurusan = max(1, ...array_map(static fn ($r) => (int) $r['n'], $siswa['jurusan'] ?: [['n' => 1]]));
-$maxTingkat = max(1, ...array_map(static fn ($r) => (int) $r['n'], $siswa['tingkat'] ?: [['n' => 1]]));
+// Guru vs batas jam mengajar (statistik penjadwalan).
+$guruSesuai = max(0, (int) $kur['guru'] - (int) $kur['kurang'] - (int) $kur['lebih']);
 
-// Kesediaan: donat status kepegawaian (warna tetap per status, bukan peringkat; lolos uji buta-warna).
-$warnaPegawai = ['PNS' => '#2a78d6', 'PPPK' => '#eb6834', 'GTY' => '#1baf7a', 'GTT' => '#eda100'];
-$totalPegawai = array_sum($stats['byStatus'] ?: []);
-$keliling     = 2 * M_PI * 52; // r = 52
+// Tren kehadiran: nilai awal 30 hari (dashboard.js menghitung ulang saat rentang diganti — rumusnya sama: jumlah guru hadir +
+// telat ÷ jumlah guru, semua hari tercatat dalam rentang; pembanding = rentang yang sama tepat sebelumnya).
+$potongTren = static function (array $tren, int $hari, int $geser): array {
+    $akhir = strtotime('today -' . $geser . ' days');
+    $awal  = strtotime('-' . ($hari - 1) . ' days', $akhir);
 
-// Ujian: status periode → lencana
+    return array_values(array_filter($tren, static fn (array $d): bool => ($t = strtotime($d['t'])) >= $awal && $t <= $akhir));
+};
+$persenTren = static function (array $daftar): ?float {
+    $h = 0;
+    $n = 0;
+    foreach ($daftar as $d) {
+        $h += $d['hadir'] + $d['telat'];
+        $n += $d['n'];
+    }
+
+    return $n > 0 ? $h / $n * 100 : null;
+};
+$pTren  = $persenTren($potongTren($tren, 30, 0));
+$pLalu  = $persenTren($potongTren($tren, 30, 30));
+$beda   = ($pTren !== null && $pLalu !== null) ? round($pTren - $pLalu, 1) : null;
+$jmlHariTren = count($potongTren($tren, 30, 0));
+
+// Beban mengajar: 12 terbanyak (nama dipendekkan untuk sumbu; nama lengkap di tooltip).
+$beban = array_map(static fn (array $b): array => [
+    'kode'  => (string) $b['kode_guru'],
+    'nama'  => (string) $b['nama'],
+    'label' => $b['kode_guru'] . ' · ' . mb_strimwidth(trim(explode(',', (string) $b['nama'])[0]), 0, 16, '…'),
+    'jp'    => (int) $b['total_jp'],
+    'max'   => (int) $b['max_beban'],
+    'tugas' => (int) ($b['jml_tugas'] ?? 0),
+], $kur['chart'] ?? []);
+
+// Siswa per jurusan & kesediaan (donat; warna = urutan palet grafik).
+$jurusan      = array_map(static fn (array $j): array => ['label' => (string) $j['label'], 'nama' => (string) $j['nama'], 'n' => (int) $j['n']], $siswa['jurusan']);
+$tingkat      = array_map(static fn (array $t): array => ['label' => (string) $t['label'], 'n' => (int) $t['n']], $siswa['tingkat']);
+$totalJurusan = array_sum(array_column($jurusan, 'n'));
+$pegawai      = [];
+foreach ($stats['byStatus'] as $st => $n) {
+    $pegawai[] = ['label' => (string) $st, 'nama' => (string) $st, 'n' => (int) $n];
+}
+$totalPegawai = array_sum(array_column($pegawai, 'n'));
+$warnaKe      = static fn (int $i): string => 'warna-grafik-' . (($i % 8) + 1);
+$persen       = static fn (int $n, int $total): int => $total > 0 ? (int) round($n / $total * 100) : 0;
+
+// Ujian: status periode → lencana kit.
 $ujStatus = [
-    'draft'    => ['Draft', 'bg-gray-100 text-gray-600'],
-    'berjalan' => ['Berjalan', 'bg-emerald-50 text-emerald-700'],
-    'selesai'  => ['Selesai', 'bg-brand-50 text-brand-700'],
+    'draft'    => ['Draft', 'lencana-abu'],
+    'berjalan' => ['Berjalan', 'lencana-hijau'],
+    'selesai'  => ['Selesai', 'lencana-merek'],
 ];
 
-// Perlu tindakan: ikon + warna per tingkat (selalu disertai teks)
-$ikonTindakan = [
-    'kritis' => ['text-red-600', 'M12 9v3.75m0 3.75h.008M10.34 3.94 1.82 18a1.875 1.875 0 0 0 1.6 2.82h17.16a1.875 1.875 0 0 0 1.6-2.82L13.66 3.94a1.875 1.875 0 0 0-3.32 0Z'],
-    'awas'   => ['text-amber-600', 'M12 6v6l4 2m6-2a10 10 0 1 1-20 0 10 10 0 0 1 20 0Z'],
-    'info'   => ['text-brand-600', 'M11.25 11.25l.04-.02a.75.75 0 0 1 1.06.85l-.7 2.84a.75.75 0 0 0 1.06.85l.04-.02M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Zm-9-3.75h.008v.008H12V8.25Z'],
+// Perlu tindakan: [ikon, warna ikon, keterangan tingkat] — warna selalu disertai teks.
+$tingkatTindakan = [
+    'kritis' => ['exclamation-circle', 'text-red-600 dark:text-red-500', 'Mendesak'],
+    'awas'   => ['clock', 'text-yellow-600 dark:text-yellow-400', 'Perlu ditindaklanjuti'],
+    'info'   => ['info-circle', 'text-brand-700 dark:text-brand-400', 'Informasi'],
 ];
 
-// Ringkasan modul: [judul, keterangan (baris 1), keterangan (baris 2) | null, alamat]
+// Ringkasan modul: [judul, ikon, keterangan, keterangan baris 2 | null, alamat]
 $baris = [];
 if ($m = $modul['pkl']) {
     $s = $m['status'];
-    $baris[] = ['PKL / Prakerin', $angka($s['menunggu'] ?? 0) . ' menunggu ACC · ' . $angka($s['perbaikan'] ?? 0) . ' perbaikan · ' . $angka($s['disetujui'] ?? 0) . ' disetujui · ' . $angka($s['ditolak'] ?? 0) . ' ditolak',
+    $baris[] = ['PKL / Prakerin', 'briefcase', $angka($s['menunggu'] ?? 0) . ' menunggu ACC · ' . $angka($s['perbaikan'] ?? 0) . ' perbaikan · ' . $angka($s['disetujui'] ?? 0) . ' disetujui · ' . $angka($s['ditolak'] ?? 0) . ' ditolak',
         'Siswa sudah PKL ' . $angka($m['siswa']['sudah_pkl'] ?? 0) . ' dari ' . $angka($m['siswa']['total'] ?? 0) . ' (' . (int) ($m['siswa']['persen_pkl'] ?? 0) . '%)', 'admin/pkl'];
 }
 if ($m = $modul['surat']) {
-    $baris[] = ['Surat sekolah', $angka($m['menunggu'] ?? 0) . ' menunggu ACC · ' . $angka($m['belum_unduh'] ?? 0) . ' belum diunduh · ' . $angka($m['dikembalikan'] ?? 0) . ' dikembalikan',
+    $baris[] = ['Surat sekolah', 'envelope', $angka($m['menunggu'] ?? 0) . ' menunggu ACC · ' . $angka($m['belum_unduh'] ?? 0) . ' belum diunduh · ' . $angka($m['dikembalikan'] ?? 0) . ' dikembalikan',
         $angka($m['semua'] ?? 0) . ' surat tercatat', 'admin/surat'];
 }
 if ($m = $modul['ukk']) {
     $p = $m['peserta'];
-    $baris[] = ['Uji kompetensi (UKK)', $angka(array_sum($p)) . ' peserta · ' . $angka($p['lulus'] ?? 0) . ' lulus · ' . $angka($p['tidak_lulus'] ?? 0) . ' tidak lulus',
+    $baris[] = ['Uji kompetensi (UKK)', 'award', $angka(array_sum($p)) . ' peserta · ' . $angka($p['lulus'] ?? 0) . ' lulus · ' . $angka($p['tidak_lulus'] ?? 0) . ' tidak lulus',
         $angka($m['jadwal']) . ' jadwal uji', 'admin/peserta-ukk'];
 }
 if ($m = $modul['lab']) {
-    $baris[] = ['Laboratorium', $angka(array_sum($m['pinjam'])) . ' sedang dipinjam' . (($m['pinjam']['terlambat'] ?? 0) > 0 ? ' (' . $angka($m['pinjam']['terlambat']) . ' terlambat)' : '') . ' · ' . $angka(array_sum($m['kerusakan'])) . ' kerusakan terbuka',
+    $baris[] = ['Laboratorium', 'desktop-pc', $angka(array_sum($m['pinjam'])) . ' sedang dipinjam' . (($m['pinjam']['terlambat'] ?? 0) > 0 ? ' (' . $angka($m['pinjam']['terlambat']) . ' terlambat)' : '') . ' · ' . $angka(array_sum($m['kerusakan'])) . ' kerusakan terbuka',
         null, 'admin/peminjaman'];
 }
 if ($m = $modul['dokumen']) {
     $mb = static fn (int $b): string => number_format($b / 1048576, $b < 10 * 1048576 ? 1 : 0, ',', '.') . ' MB';
-    $baris[] = ['Arsip dokumen', $angka($m['jumlah']) . ' dokumen · ' . $mb($m['byte']) . ' dari ' . $mb($m['kuota']) . ' terpakai', null, 'admin/dokumen'];
+    $baris[] = ['Arsip dokumen', 'folder-open', $angka($m['jumlah']) . ' dokumen · ' . $mb($m['byte']) . ' dari ' . $mb($m['kuota']) . ' terpakai', null, 'admin/dokumen'];
 }
 if (($m = $modul['biodata']) !== null) {
-    $baris[] = ['Isian biodata siswa', $angka($m['menunggu'] ?? 0) . ' menunggu · ' . $angka($m['perbaikan'] ?? 0) . ' perbaikan · ' . $angka($m['disetujui'] ?? 0) . ' disetujui', null, 'admin/biodata'];
+    $baris[] = ['Isian biodata siswa', 'profile-card', $angka($m['menunggu'] ?? 0) . ' menunggu · ' . $angka($m['perbaikan'] ?? 0) . ' perbaikan · ' . $angka($m['disetujui'] ?? 0) . ' disetujui', null, 'admin/biodata'];
 }
 $k = $modul['kesediaan'];
-$baris[] = ['Kesediaan guru mengajar', $angka($k['total']) . ' isian · ' . $angka($k['hari_ini']) . ' masuk hari ini · formulir ' . ($k['dibuka'] ? 'dibuka' : 'ditutup'), null, 'admin/submissions'];
+$baris[] = ['Kesediaan guru mengajar', 'clipboard-list', $angka($k['total']) . ' isian · ' . $angka($k['hari_ini']) . ' masuk hari ini · formulir ' . ($k['dibuka'] ? 'dibuka' : 'ditutup'), null, 'admin/submissions'];
+
+// Teks aria untuk grafik (pembaca layar membaca angkanya, bukan gambarnya).
+$ariaDaftar = static fn (string $judul, array $daftar, string $satuan): string => $judul . ': ' . implode(', ', array_map(
+    static fn (array $d): string => $d['label'] . ' ' . number_format($d['n'], 0, ',', '.') . ' ' . $satuan,
+    $daftar
+));
 ?>
 <?= $this->extend('layouts/admin') ?>
+
+<?= $this->section('kepala') ?>
+<?php ob_start(); ?>
+    <?php if ($absensi['hari_aktif']): ?>
+        <a href="<?= esc($urlAbsensi, 'attr') ?>" class="btn btn-utama"><?= ikon('clipboard-check', 'h-4 w-4') ?><?= $absensi['recorded'] ? 'Lihat absensi hari ini' : 'Catat absensi hari ini' ?></a>
+    <?php endif; ?>
+    <a href="<?= site_url('admin/pengumuman') ?>" class="btn btn-netral"><?= ikon('bullhorn', 'h-4 w-4') ?>Pengumuman</a>
+<?php $aksiKepala = (string) ob_get_clean(); ?>
+<?= ui_kepala([
+    'judul' => $salam . ', ' . trim(explode(',', $nama)[0]),
+    'ket'   => $hariIni . ', ' . $tglIni . ' · Tahun Pelajaran ' . ($setting['academic_year'] ?? '-'),
+    'aksi'  => $aksiKepala,
+]) ?>
+<?= $this->endSection() ?>
+
 <?= $this->section('content') ?>
 
 <?= view('admin/partials/help', [
-    'helpKey'   => 'dashboard_v4',
+    'helpKey'   => 'dashboard_v5',
     'helpTitle' => 'Dashboard',
-    'helpBody'  => '<p>Ringkasan seluruh sekolah dalam satu halaman.</p>
+    'helpBody'  => '<p>Ringkasan seluruh sekolah dalam satu halaman. Arahkan kursor ke grafik untuk melihat rinciannya.</p>
         <ul class="mt-2 list-disc pl-5 space-y-1">
-        <li><b>Perlu tindakan</b>: pekerjaan yang menunggu (bentrok jadwal, absensi belum dicatat, ajuan PKL &amp; surat menunggu ACC, biodata menunggu, susulan ujian, lab, siswa tanpa kelas). Klik untuk membukanya.</li>
-        <li><b>Ringkasan modul</b>: keadaan PKL, Surat Sekolah, UKK, Laboratorium, Arsip Dokumen, Biodata, dan Kesediaan.</li>
-        <li><b>Beban mengajar</b>: batang = JP guru, garis tegak = batas maksimalnya. Arahkan kursor ke batang untuk rinciannya.</li>
+        <li><b>Kartu angka</b> di atas bisa diklik untuk membuka halamannya (Data Siswa, Data Guru, Absensi, Jadwal).</li>
+        <li><b>Kehadiran guru</b>: persentase guru hadir (termasuk telat) pada hari-hari yang absensinya sudah dicatat. Pilih 7, 30, atau 90 hari di bawah grafik; panah hijau/merah = naik/turun dibanding rentang sebelumnya.</li>
+        <li><b>Perlu tindakan</b>: pekerjaan yang menunggu (bentrok jadwal, absensi belum dicatat, ajuan PKL &amp; surat menunggu ACC, biodata, susulan ujian, lab, siswa tanpa kelas). Klik untuk membukanya. Tab <b>Aktivitas terbaru</b> = 8 kegiatan staf terakhir.</li>
+        <li><b>Beban mengajar</b>: batang = JP penugasan guru, garis tegak = batas maksimalnya; batang merah = lebih dari batas.</li>
         <li>Angka penjadwalan diperbarui paling lama tiap 30 menit; angka siswa tiap 5 menit; selebihnya langsung.</li>
         </ul>',
 ]) ?>
 
-<!-- ===== Kepala: tanggal, sapaan, tombol cepat ===== -->
-<div class="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
-    <div>
-        <p class="text-sm text-gray-500"><?= esc($hariIni) ?>, <?= esc(IsianBantu::tanggalIndo($absensi['tanggal'])) ?> &middot; Tahun Pelajaran <?= esc($setting['academic_year'] ?? '-') ?></p>
-        <p class="mt-0.5 text-lg font-semibold text-gray-900"><?= esc($salam) ?>, <?= esc(trim(explode(',', $nama)[0])) ?></p>
-    </div>
-    <div class="flex flex-wrap gap-2">
-        <?php if ($absensi['hari_aktif']): ?>
-            <a href="<?= site_url('admin/absensi') ?>?tanggal=<?= esc($absensi['tanggal'], 'url') ?>" class="rounded-md bg-brand-700 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-brand-800"><?= $absensi['recorded'] ? 'Lihat absensi hari ini' : 'Catat absensi hari ini' ?></a>
-        <?php endif; ?>
-        <a href="<?= site_url('admin/pengumuman') ?>" class="rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-50">Pengumuman</a>
-    </div>
-</div>
-
-<!-- ===== Angka utama ===== -->
-<div class="mt-5 grid grid-cols-2 gap-px overflow-hidden rounded-lg border border-gray-200 bg-gray-200 lg:grid-cols-4">
-    <a href="<?= site_url('admin/master/siswa') ?>" class="bg-white px-5 py-4 transition-colors hover:bg-gray-50">
-        <p class="text-sm text-gray-500">Siswa aktif</p>
-        <p class="mt-1 text-2xl font-semibold text-gray-900"><?= $angka($siswa['aktif']) ?></p>
-        <p class="mt-0.5 text-xs text-gray-500">di <?= $angka($kur['kelas']) ?> kelas<?= $siswa['tanpa_kelas'] > 0 ? ' · ' . $angka($siswa['tanpa_kelas']) . ' tanpa kelas' : '' ?></p>
-    </a>
-    <a href="<?= site_url('admin/master/guru') ?>" class="bg-white px-5 py-4 transition-colors hover:bg-gray-50">
-        <p class="text-sm text-gray-500">Guru pengajar</p>
-        <p class="mt-1 text-2xl font-semibold text-gray-900"><?= $angka($kur['guru']) ?></p>
-        <p class="mt-0.5 text-xs text-gray-500"><?= $angka($kur['mapel']) ?> mata pelajaran</p>
-    </a>
-    <a href="<?= site_url('admin/absensi') ?>" class="bg-white px-5 py-4 transition-colors hover:bg-gray-50">
-        <p class="text-sm text-gray-500">Kehadiran guru hari ini</p>
-        <?php if (! $absensi['hari_aktif']): ?>
-            <p class="mt-1 text-2xl font-semibold text-gray-400">&ndash;</p>
-            <p class="mt-0.5 text-xs text-gray-500">Bukan hari KBM</p>
-        <?php elseif (! $absensi['recorded']): ?>
-            <p class="mt-1 text-lg font-semibold text-amber-700">Belum dicatat</p>
-            <p class="mt-0.5 text-xs text-gray-500"><?= $angka($absensi['total_guru']) ?> guru mengajar hari ini</p>
-        <?php else: ?>
-            <p class="mt-1 text-2xl font-semibold text-gray-900"><?= $persenHadir ?>%</p>
-            <p class="mt-0.5 text-xs text-gray-500"><?= $angka($abs['hadir'] + $abs['telat']) ?> dari <?= $angka($absTotal) ?> guru hadir</p>
-        <?php endif; ?>
-    </a>
-    <a href="<?= site_url('admin/jadwal') ?>" class="bg-white px-5 py-4 transition-colors hover:bg-gray-50">
-        <p class="text-sm text-gray-500">Jadwal KBM tersusun</p>
-        <p class="mt-1 text-2xl font-semibold text-gray-900"><?= $persenJp ?>%</p>
-        <p class="mt-0.5 text-xs text-gray-500"><?= $angka($jpJadwal) ?> dari <?= $angka($jpTugas) ?> JP penugasan</p>
-    </a>
-</div>
-
-<!-- ===== Isi: dua kolom mengalir sendiri-sendiri; HP diurutkan lewat order ===== -->
-<div class="mt-6 flex flex-col gap-6 lg:grid lg:grid-cols-3 lg:items-start">
-<div class="contents lg:col-span-2 lg:flex lg:flex-col lg:gap-6">
-
-    <!-- Perlu tindakan -->
-    <section class="order-1 rounded-lg border border-gray-200 bg-white" aria-labelledby="judulTindakan">
-        <div class="flex items-center justify-between border-b border-gray-200 px-5 py-3.5">
-            <h2 id="judulTindakan" class="font-semibold text-gray-900">Perlu tindakan</h2>
-            <span class="text-sm text-gray-500"><?= count($tindakan) ?> hal</span>
+<!-- ===== 1. Kartu angka utama (pola kartu statistik template) ===== -->
+<div class="grid gap-4 sm:grid-cols-2 2xl:grid-cols-4">
+    <a href="<?= site_url('admin/master/siswa') ?>" class="kartu kartu-isi kartu-tautan flex items-center justify-between gap-4">
+        <div class="min-w-0">
+            <h2 class="stat-label">Siswa aktif</h2>
+            <p class="stat-angka mt-1"><?= $angka($siswa['aktif']) ?></p>
+            <p class="stat-ket">di <?= $angka($kur['kelas']) ?> kelas<?php if ($siswa['tanpa_kelas'] > 0): ?> · <span class="font-medium text-yellow-600 dark:text-yellow-400"><?= $angka($siswa['tanpa_kelas']) ?> tanpa kelas</span><?php endif; ?></p>
         </div>
-        <?php if ($tindakan === []): ?>
-            <p class="px-5 py-5 text-sm text-gray-600">Tidak ada pekerjaan yang menunggu.</p>
+        <?php if ($tingkat !== []): ?>
+            <div class="grafik grafik-kecil" data-grafik="tingkat" data-isi="<?= $json($tingkat) ?>" role="img" aria-label="<?= esc($ariaDaftar('Siswa aktif per tingkat', $tingkat, 'siswa'), 'attr') ?>"></div>
+        <?php endif; ?>
+    </a>
+
+    <a href="<?= site_url('admin/master/guru') ?>" class="kartu kartu-isi kartu-tautan flex items-center justify-between gap-4">
+        <div class="min-w-0">
+            <h2 class="stat-label">Guru pengajar</h2>
+            <p class="stat-angka mt-1"><?= $angka($kur['guru']) ?></p>
+            <p class="stat-ket"><?= $angka($kur['mapel']) ?> mata pelajaran</p>
+        </div>
+        <?php if ((int) $kur['guru'] > 0): ?>
+            <div class="grafik grafik-kecil" data-grafik="batas" data-isi="<?= $json(['kurang' => (int) $kur['kurang'], 'sesuai' => $guruSesuai, 'lebih' => (int) $kur['lebih']]) ?>"
+                 role="img" aria-label="<?= esc('Guru menurut batas jam: ' . $kur['kurang'] . ' kurang, ' . $guruSesuai . ' sesuai, ' . $kur['lebih'] . ' lebih', 'attr') ?>"></div>
+        <?php endif; ?>
+    </a>
+
+    <a href="<?= esc($urlAbsensi, 'attr') ?>" class="kartu kartu-isi kartu-tautan flex items-center justify-between gap-4">
+        <div class="min-w-0">
+            <h2 class="stat-label">Kehadiran guru hari ini</h2>
+            <?php if (! $absensi['hari_aktif']): ?>
+                <p class="stat-angka mt-1 text-gray-400 dark:text-gray-500">&ndash;</p>
+                <p class="stat-ket">Bukan hari KBM</p>
+            <?php elseif (! $absensi['recorded']): ?>
+                <p class="mt-1 text-xl leading-none font-bold text-yellow-600 sm:text-2xl dark:text-yellow-400">Belum dicatat</p>
+                <p class="stat-ket"><?= $angka($absensi['total_guru']) ?> guru mengajar hari ini</p>
+            <?php else: ?>
+                <p class="stat-angka mt-1"><?= $persenHadir ?>%</p>
+                <p class="stat-ket"><?= $angka($abs['hadir'] + $abs['telat']) ?> dari <?= $angka($absTotal) ?> guru hadir</p>
+            <?php endif; ?>
+        </div>
+        <?php if ($absensi['hari_aktif'] && $absensi['recorded']): ?>
+            <div class="grafik w-28 shrink-0" data-grafik="radial" data-nilai="<?= $persenHadir ?>" role="img" aria-label="Kehadiran guru hari ini <?= $persenHadir ?> persen"></div>
+        <?php endif; ?>
+    </a>
+
+    <a href="<?= site_url('admin/jadwal') ?>" class="kartu kartu-isi kartu-tautan flex items-center justify-between gap-4">
+        <div class="min-w-0">
+            <h2 class="stat-label">Jadwal KBM tersusun</h2>
+            <p class="stat-angka mt-1"><?= $persenJp ?>%</p>
+            <p class="stat-ket"><?= $angka($jpJadwal) ?> dari <?= $angka($jpTugas) ?> JP penugasan</p>
+        </div>
+        <div class="grafik w-28 shrink-0" data-grafik="radial" data-nilai="<?= $persenJp ?>" role="img" aria-label="Jadwal KBM tersusun <?= $persenJp ?> persen"></div>
+    </a>
+</div>
+
+<!-- ===== 2. Tren kehadiran (widget utama template) + tab Perlu tindakan / Aktivitas ===== -->
+<div class="mt-4 grid gap-4 xl:grid-cols-2 2xl:grid-cols-3">
+    <section class="kartu kartu-isi flex flex-col 2xl:col-span-2" data-tren aria-labelledby="judulTren">
+        <div class="mb-4 flex items-start justify-between gap-4">
+            <div class="min-w-0">
+                <p class="stat-angka" data-tren-angka aria-live="polite"><?= $pTren === null ? '–' : (int) round($pTren) . '%' ?></p>
+                <h2 id="judulTren" class="stat-label mt-1">Kehadiran guru · <span data-tren-judul>30 hari terakhir</span></h2>
+            </div>
+            <p class="flex flex-col items-end text-right text-sm" data-tren-banding<?= $beda === null ? ' hidden' : '' ?>>
+                <span class="<?= $beda === null || $beda == 0 ? 'tren-datar' : ($beda > 0 ? 'tren-naik' : 'tren-turun') ?> text-base" data-tren-beda>
+                    <span data-tren-poin><?= $beda !== null ? number_format(abs($beda), 1, ',', '.') . ' poin' : '' ?></span>
+                    <span data-tren-naik<?= $beda !== null && $beda > 0 ? '' : ' hidden' ?>><?= ikon('caret-up', 'h-5 w-5', 'solid') ?><span class="sr-only">naik</span></span>
+                    <span data-tren-turun<?= $beda !== null && $beda < 0 ? '' : ' hidden' ?>><?= ikon('caret-down', 'h-5 w-5', 'solid') ?><span class="sr-only">turun</span></span>
+                </span>
+                <span class="text-gray-500 dark:text-gray-400">dibanding <span data-tren-pembanding>30 hari sebelumnya</span></span>
+            </p>
+        </div>
+        <div class="grafik mb-4 min-h-60 sm:min-h-[380px]" data-grafik="tren" data-isi="<?= $json($tren) ?>" role="img"
+             aria-label="Grafik kehadiran guru per hari tercatat. Rata-rata 30 hari terakhir <?= $pTren === null ? 'belum ada data' : (int) round($pTren) . ' persen' ?>."<?= $jmlHariTren === 0 ? ' hidden' : '' ?>></div>
+        <div data-tren-kosong<?= $jmlHariTren === 0 ? '' : ' hidden' ?>>
+            <?= ui_kosong(['ikon' => 'chart-line-up', 'judul' => 'Belum ada absensi tercatat', 'teks' => 'Grafik muncul setelah absensi guru dicatat di menu Absensi Guru.']) ?>
+        </div>
+        <div class="kaki-grafik mt-auto">
+            <div class="relative" x-data="dropdown" @click.outside="tutup()" @keydown.escape="tutup(true)" @keydown.down.prevent="gerak(1)" @keydown.up.prevent="gerak(-1)">
+                <button type="button" class="tombol-rentang" x-ref="pemicu" @click="alih()" :aria-expanded="buka" aria-haspopup="true">
+                    <span data-tren-label>30 hari terakhir</span><?= ikon('chevron-down', 'h-4 w-4') ?>
+                </button>
+                <div class="dropdown-menu bottom-full mb-2" x-show="buka" x-cloak x-transition.origin.bottom.left.duration.150ms>
+                    <ul class="py-1">
+                        <li><button type="button" class="dropdown-item" data-rentang="7" @click="tutup()">7 hari terakhir</button></li>
+                        <li><button type="button" class="dropdown-item" data-rentang="30" @click="tutup()">30 hari terakhir</button></li>
+                        <li><button type="button" class="dropdown-item" data-rentang="90" @click="tutup()">90 hari terakhir</button></li>
+                    </ul>
+                </div>
+            </div>
+            <a href="<?= site_url('admin/absensi/rekap') ?>" class="tautan-kartu">Rekap absensi<?= ikon('chevron-right', 'h-4 w-4') ?></a>
+        </div>
+    </section>
+
+    <section class="kartu kartu-isi flex flex-col" x-data="tab" data-awal="tindakan" aria-labelledby="judulKerja">
+        <h2 id="judulKerja" class="kartu-judul mb-4">Pekerjaan &amp; aktivitas</h2>
+        <div class="tab-penuh-daftar" role="tablist" aria-label="Pekerjaan dan aktivitas" @keydown.right.prevent="pindah(1)" @keydown.left.prevent="pindah(-1)">
+            <button type="button" role="tab" class="tab-penuh" data-tab="tindakan" :aria-selected="aktif === 'tindakan'" :tabindex="aktif === 'tindakan' ? '0' : '-1'" @click="pilih('tindakan')">
+                Perlu tindakan<?php if ($tindakan !== []): ?> <span class="tab-jumlah"><?= count($tindakan) ?></span><?php endif; ?>
+            </button>
+            <button type="button" role="tab" class="tab-penuh" data-tab="aktivitas" :aria-selected="aktif === 'aktivitas'" :tabindex="aktif === 'aktivitas' ? '0' : '-1'" @click="pilih('aktivitas')">Aktivitas terbaru</button>
+        </div>
+
+        <div role="tabpanel" aria-label="Perlu tindakan" class="mt-2 flex-1" x-show="aktif === 'tindakan'">
+            <?php if ($tindakan === []): ?>
+                <?= ui_kosong(['ikon' => 'check-circle', 'judul' => 'Semua beres', 'teks' => 'Tidak ada pekerjaan yang menunggu.']) ?>
+            <?php else: ?>
+                <ul class="daftar-kartu panel-gulir -mx-2 px-2">
+                    <?php foreach ($tindakan as $t): [$ikonT, $warnaT, $ketT] = $tingkatTindakan[$t['tingkat']] ?? $tingkatTindakan['info']; ?>
+                        <li>
+                            <a href="<?= esc($t['url'], 'attr') ?>" class="group -mx-2 flex items-center gap-3 rounded-lg px-2 py-1 transition-colors hover:bg-gray-50 focus:outline-hidden focus-visible:ring-2 focus-visible:ring-brand-300 dark:hover:bg-gray-700">
+                                <span class="ubin-ikon <?= $warnaT ?>"><?= ikon($ikonT, 'h-5 w-5') ?></span>
+                                <span class="min-w-0 flex-1">
+                                    <span class="block text-sm font-medium text-gray-900 dark:text-white"><?= esc(ucfirst($t['teks'])) ?></span>
+                                    <span class="block text-sm text-gray-500 dark:text-gray-400"><?= $ketT ?></span>
+                                </span>
+                                <span class="text-base font-semibold text-gray-900 tabular-nums dark:text-white"><?= $angka($t['n']) ?></span>
+                                <span class="text-gray-400 group-hover:text-brand-700 dark:group-hover:text-brand-400"><?= ikon('chevron-right', 'h-4 w-4') ?></span>
+                            </a>
+                        </li>
+                    <?php endforeach; ?>
+                </ul>
+            <?php endif; ?>
+        </div>
+
+        <div role="tabpanel" aria-label="Aktivitas terbaru" class="mt-4 flex flex-1 flex-col" x-show="aktif === 'aktivitas'" x-cloak>
+            <?php if ($aktivitas === []): ?>
+                <?= ui_kosong(['ikon' => 'clock', 'judul' => 'Belum ada aktivitas', 'teks' => 'Kegiatan staf akan tercatat di sini.']) ?>
+            <?php else: ?>
+                <div class="panel-gulir ps-1.5"><ol class="relative border-s border-gray-200 dark:border-gray-700">
+                    <?php foreach ($aktivitas as $a): ?>
+                        <li class="ms-4 pb-4 last:pb-0">
+                            <span class="absolute -start-1.5 mt-1.5 h-3 w-3 rounded-full border border-white bg-gray-200 dark:border-gray-800 dark:bg-gray-700" aria-hidden="true"></span>
+                            <time class="text-xs leading-none text-gray-400 dark:text-gray-500" datetime="<?= esc((string) $a['waktu'], 'attr') ?>"><?= esc($waktuPendek($a['waktu'])) ?></time>
+                            <p class="text-sm font-semibold text-gray-900 dark:text-white"><?= esc($a['nama'] ?: (! empty($a['admin_id']) ? 'Akun terhapus' : 'Sistem')) ?></p>
+                            <p class="text-sm text-gray-500 dark:text-gray-400"><?= esc(mb_strimwidth((string) $a['deskripsi'], 0, 110, '…')) ?></p>
+                        </li>
+                    <?php endforeach; ?>
+                </ol></div>
+            <?php endif; ?>
+            <div class="kaki-grafik mt-auto">
+                <span class="text-sm text-gray-500 dark:text-gray-400"><?= count($aktivitas) ?> kegiatan terakhir</span>
+                <a href="<?= site_url('admin/audit') ?>" class="tautan-kartu">Audit log<?= ikon('chevron-right', 'h-4 w-4') ?></a>
+            </div>
+        </div>
+    </section>
+</div>
+
+<!-- ===== 3. Kartu donat (pola "Traffic by device" template) ===== -->
+<div class="mt-4 grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+    <section class="kartu kartu-isi" aria-labelledby="judulJurusan">
+        <div class="mb-4 flex items-center justify-between gap-3 border-b border-gray-200 pb-4 dark:border-gray-700">
+            <div>
+                <h2 id="judulJurusan" class="stat-label">Siswa aktif per jurusan</h2>
+                <p class="stat-angka mt-1"><?= $angka($siswa['aktif']) ?></p>
+            </div>
+            <a href="<?= site_url('admin/master/siswa') ?>" class="tautan-kartu">Data siswa<?= ikon('chevron-right', 'h-4 w-4') ?></a>
+        </div>
+        <?php if ($jurusan === []): ?>
+            <?= ui_kosong(['ikon' => 'users', 'judul' => 'Belum ada siswa berkelas', 'teks' => 'Atur kelas siswa di menu Data Siswa.']) ?>
         <?php else: ?>
-            <ul class="divide-y divide-gray-100">
-                <?php foreach ($tindakan as $t): [$warna, $ikon] = $ikonTindakan[$t['tingkat']]; ?>
-                    <li>
-                        <a href="<?= esc($t['url'], 'attr') ?>" class="group flex items-center gap-3 px-5 py-2.5 transition-colors hover:bg-gray-50">
-                            <span class="<?= $warna ?>"><?= $svg($ikon) ?></span>
-                            <span class="min-w-0 flex-1 text-sm text-gray-700"><b class="font-semibold text-gray-900"><?= $angka($t['n']) ?></b> <?= esc($t['teks']) ?></span>
-                            <span class="shrink-0 text-sm font-medium text-brand-700 group-hover:underline">Buka</span>
-                        </a>
+            <div class="grafik" data-grafik="donat" data-isi="<?= $json($jurusan) ?>" data-satuan="siswa" data-total="Siswa"
+                 role="img" aria-label="<?= esc($ariaDaftar('Siswa aktif per jurusan', $jurusan, 'siswa'), 'attr') ?>"></div>
+            <ul class="mt-4 grid gap-x-6 gap-y-2 text-sm sm:grid-cols-2">
+                <?php foreach ($jurusan as $i => $j): ?>
+                    <li class="flex items-center gap-2" title="<?= esc($j['nama'], 'attr') ?>">
+                        <span class="titik-legenda <?= $warnaKe($i) ?>"></span>
+                        <span class="min-w-0 flex-1 truncate text-gray-600 dark:text-gray-300"><?= esc($j['label']) ?></span>
+                        <span class="font-semibold text-gray-900 tabular-nums dark:text-white"><?= $angka($j['n']) ?></span>
+                        <span class="w-9 text-right text-xs text-gray-400 tabular-nums"><?= $persen($j['n'], $totalJurusan) ?>%</span>
+                    </li>
+                <?php endforeach; ?>
+            </ul>
+        <?php endif; ?>
+        <?php if ($siswa['tanpa_kelas'] > 0): ?>
+            <p class="mt-4 text-sm text-yellow-700 dark:text-yellow-400"><?= $angka($siswa['tanpa_kelas']) ?> siswa aktif belum punya kelas (tidak terhitung di grafik).</p>
+        <?php endif; ?>
+    </section>
+
+    <section class="kartu kartu-isi" aria-labelledby="judulAbsen">
+        <div class="mb-4 flex items-center justify-between gap-3 border-b border-gray-200 pb-4 dark:border-gray-700">
+            <div class="min-w-0">
+                <h2 id="judulAbsen" class="stat-label">Absensi guru hari ini</h2>
+                <?php if (! $absensi['hari_aktif']): ?>
+                    <p class="mt-1 text-xl leading-none font-bold text-gray-400 dark:text-gray-500">Bukan hari KBM</p>
+                <?php elseif (! $absensi['recorded']): ?>
+                    <p class="mt-1 text-xl leading-none font-bold text-yellow-600 sm:text-2xl dark:text-yellow-400">Belum dicatat</p>
+                <?php else: ?>
+                    <p class="stat-angka mt-1"><?= $persenHadir ?>% <span class="text-base font-normal text-gray-500 dark:text-gray-400">hadir</span></p>
+                <?php endif; ?>
+                <p class="mt-1 text-xs text-gray-500 dark:text-gray-400"><?= esc($hariIni) ?>, <?= esc($tglIni) ?></p>
+            </div>
+            <?php if ($absensi['hari_aktif']): ?>
+                <a href="<?= esc($urlAbsensi, 'attr') ?>" class="tautan-kartu"><?= $absensi['recorded'] ? 'Lihat' : 'Catat' ?><?= ikon('chevron-right', 'h-4 w-4') ?></a>
+            <?php endif; ?>
+        </div>
+        <?php if (! $absensi['hari_aktif']): ?>
+            <?= ui_kosong(['ikon' => 'calendar-month', 'judul' => 'Hari ini bukan hari KBM aktif', 'teks' => 'Tidak ada jadwal mengajar yang perlu dicatat.']) ?>
+        <?php elseif (! $absensi['recorded']): ?>
+            <?= ui_kosong(['ikon' => 'clipboard-check', 'judul' => $angka($absensi['total_guru']) . ' guru mengajar hari ini', 'teks' => 'Kehadiran hari ini belum dicatat.',
+                'aksi' => '<a href="' . esc($urlAbsensi, 'attr') . '" class="btn btn-utama">' . ikon('clipboard-check', 'h-4 w-4') . 'Catat sekarang</a>']) ?>
+        <?php else: ?>
+            <?php $absData = []; foreach ($statusAbsen as $kk => $lbl) { $absData[] = ['kunci' => $kk, 'label' => $lbl, 'nama' => $lbl, 'n' => (int) $abs[$kk]]; } ?>
+            <div class="grafik" data-grafik="donat" data-warna="status" data-isi="<?= $json($absData) ?>" data-satuan="guru" data-total="Guru"
+                 role="img" aria-label="<?= esc($ariaDaftar('Absensi guru hari ini', $absData, 'guru'), 'attr') ?>"></div>
+            <ul class="mt-4 grid grid-cols-5 gap-2 text-center">
+                <?php foreach ($absData as $d): ?>
+                    <li class="rounded-lg bg-gray-50 px-1 py-2 dark:bg-gray-700">
+                        <p class="text-lg font-bold text-gray-900 tabular-nums dark:text-white"><?= $angka($d['n']) ?></p>
+                        <p class="flex items-center justify-center gap-1 text-xs text-gray-500 dark:text-gray-400"><span class="titik-legenda warna-grafik-<?= $d['kunci'] ?>"></span><?= $d['label'] ?></p>
                     </li>
                 <?php endforeach; ?>
             </ul>
         <?php endif; ?>
     </section>
 
-    <!-- Beban mengajar -->
-    <section class="order-3 rounded-lg border border-gray-200 bg-white" aria-labelledby="judulBeban">
-        <div class="flex flex-wrap items-start justify-between gap-2 border-b border-gray-200 px-5 py-3.5">
+    <section class="kartu kartu-isi md:col-span-2 xl:col-span-1" aria-labelledby="judulKesediaan">
+        <div class="mb-4 flex items-center justify-between gap-3 border-b border-gray-200 pb-4 dark:border-gray-700">
             <div>
-                <h2 id="judulBeban" class="font-semibold text-gray-900">Beban mengajar guru</h2>
-                <p class="text-xs text-gray-500">12 terbanyak &middot; batang = JP penugasan, garis tegak = batas maksimal</p>
+                <h2 id="judulKesediaan" class="stat-label">Kesediaan guru mengajar</h2>
+                <p class="stat-angka mt-1"><?= $angka($stats['total']) ?> <span class="text-base font-normal text-gray-500 dark:text-gray-400">isian</span></p>
+                <p class="mt-2 flex flex-wrap items-center gap-2 text-xs text-gray-500 dark:text-gray-400">
+                    <span class="lencana <?= ! empty($setting['form_open']) ? 'lencana-hijau' : 'lencana-abu' ?>">Formulir <?= ! empty($setting['form_open']) ? 'dibuka' : 'ditutup' ?></span>
+                    <?= $angka($stats['today']) ?> masuk hari ini
+                </p>
             </div>
-            <a href="<?= site_url('admin/kurikulum/rekap') ?>" class="text-sm font-medium text-brand-700 hover:underline">Rekap lengkap</a>
+            <a href="<?= site_url('admin/submissions') ?>" class="tautan-kartu">Data<?= ikon('chevron-right', 'h-4 w-4') ?></a>
+        </div>
+        <?php if ($totalPegawai === 0): ?>
+            <?= ui_kosong(['ikon' => 'clipboard-list', 'judul' => 'Belum ada isian kesediaan', 'teks' => 'Isian guru dari formulir kesediaan akan muncul di sini.']) ?>
+        <?php else: ?>
+            <div class="grafik" data-grafik="donat" data-isi="<?= $json($pegawai) ?>" data-satuan="guru" data-total="Guru"
+                 role="img" aria-label="<?= esc($ariaDaftar('Kesediaan menurut status kepegawaian', $pegawai, 'guru'), 'attr') ?>"></div>
+            <ul class="mt-4 grid grid-cols-2 gap-x-6 gap-y-2 text-sm">
+                <?php foreach ($pegawai as $i => $p): ?>
+                    <li class="flex items-center gap-2">
+                        <span class="titik-legenda <?= $warnaKe($i) ?>"></span>
+                        <span class="min-w-0 flex-1 text-gray-600 dark:text-gray-300"><?= esc($p['label']) ?></span>
+                        <span class="font-semibold text-gray-900 tabular-nums dark:text-white"><?= $angka($p['n']) ?></span>
+                        <span class="w-9 text-right text-xs text-gray-400 tabular-nums"><?= $persen($p['n'], $totalPegawai) ?>%</span>
+                    </li>
+                <?php endforeach; ?>
+            </ul>
+        <?php endif; ?>
+    </section>
+</div>
+
+<!-- ===== 4. Beban mengajar + ringkasan modul ===== -->
+<div class="mt-4 grid gap-4 xl:grid-cols-2 2xl:grid-cols-3">
+    <section class="kartu kartu-isi 2xl:col-span-2" aria-labelledby="judulBeban">
+        <div class="mb-2 flex flex-wrap items-start justify-between gap-2">
+            <div>
+                <h2 id="judulBeban" class="kartu-judul">Beban mengajar guru</h2>
+                <p class="kartu-ket">12 terbanyak · batang = JP penugasan, garis tegak = batas maksimal, merah = lebih dari batas</p>
+            </div>
+            <a href="<?= site_url('admin/kurikulum/rekap') ?>" class="tautan-kartu">Rekap lengkap<?= ikon('chevron-right', 'h-4 w-4') ?></a>
         </div>
         <?php if ($beban === []): ?>
-            <p class="px-5 py-8 text-center text-sm text-gray-500">Belum ada data beban. Atur Penugasan terlebih dahulu.</p>
+            <?= ui_kosong(['ikon' => 'chalkboard-user', 'judul' => 'Belum ada data beban', 'teks' => 'Atur Penugasan guru terlebih dahulu.']) ?>
         <?php else: ?>
-            <ul class="space-y-1 px-4 py-3">
-                <?php foreach ($beban as $i => $b):
-                    $jp  = (int) $b['total_jp'];
-                    $max = (int) $b['max_beban'];
-                    $selisih = $jp - $max;
-                    $tip = $b['kode_guru'] . ' · ' . $b['nama'] . ' — ' . $jp . ' JP dari batas ' . $max . ' JP'
-                        . ($selisih > 0 ? ' (lebih ' . $selisih . ')' : ($selisih < 0 ? ' (kurang ' . -$selisih . ')' : ' (pas)'))
-                        . ' · ' . (int) ($b['jml_tugas'] ?? 0) . ' penugasan'; ?>
-                    <li tabindex="0" data-tip="<?= esc($tip, 'attr') ?>"
-                        class="group grid grid-cols-[minmax(0,9rem)_1fr_5.5rem] items-center gap-3 rounded-md px-1.5 py-1 outline-hidden hover:bg-gray-50 focus-visible:ring-2 focus-visible:ring-brand-300 sm:grid-cols-[minmax(0,13rem)_1fr_6rem]">
-                        <span class="truncate text-sm text-gray-600"><span class="font-medium text-gray-900"><?= esc($b['kode_guru']) ?></span> &middot; <?= esc($b['nama']) ?></span>
-                        <span class="relative h-3 rounded-full bg-gray-100">
-                            <span class="bar-grow absolute inset-y-0 left-0 rounded-r-[4px] rounded-l-full bg-brand-500" style="width: <?= round($jp / $skala * 100, 2) ?>%; animation-delay: <?= 0.1 + $i * 0.03 ?>s"></span>
-                            <?php if ($max > 0): ?>
-                                <span class="absolute -inset-y-1 w-0.5 rounded-sm bg-gray-700" style="left: calc(<?= round($max / $skala * 100, 2) ?>% - 1px)"></span>
-                            <?php endif; ?>
-                        </span>
-                        <span class="flex items-center justify-end gap-1 text-right text-sm tabular-nums">
-                            <?php if ($selisih > 0): ?>
-                                <svg class="h-3.5 w-3.5 text-red-600" viewBox="0 0 20 20" fill="currentColor" aria-label="lebih dari batas"><path d="M10 3l7 12H3z"/></svg>
-                            <?php elseif ($selisih < 0): ?>
-                                <svg class="h-3.5 w-3.5 text-amber-500" viewBox="0 0 20 20" fill="currentColor" aria-label="kurang dari batas"><path d="M10 17L3 5h14z"/></svg>
-                            <?php endif; ?>
-                            <span class="font-semibold text-gray-900"><?= $jp ?></span><span class="text-gray-400">/<?= $max ?></span>
-                        </span>
-                    </li>
-                <?php endforeach; ?>
-            </ul>
-            <div class="flex flex-wrap gap-x-5 gap-y-1 border-t border-gray-100 px-5 py-2.5 text-xs text-gray-500">
-                <span class="inline-flex items-center gap-1"><svg class="h-3 w-3 text-red-600" viewBox="0 0 20 20" fill="currentColor"><path d="M10 3l7 12H3z"/></svg> lebih dari batas (<?= $angka($kur['lebih']) ?> guru)</span>
-                <span class="inline-flex items-center gap-1"><svg class="h-3 w-3 text-amber-500" viewBox="0 0 20 20" fill="currentColor"><path d="M10 17L3 5h14z"/></svg> kurang dari batas (<?= $angka($kur['kurang']) ?> guru)</span>
-                <span>bentrok jadwal: <?= $angka($kur['bentrok']) ?></span>
+            <div class="grafik" data-grafik="beban" data-isi="<?= $json($beban) ?>" role="img"
+                 aria-label="<?= esc('Beban mengajar 12 guru terbanyak: ' . implode(', ', array_map(static fn (array $b): string => $b['kode'] . ' ' . $b['jp'] . ' dari ' . $b['max'] . ' JP', $beban)), 'attr') ?>"></div>
+            <div class="kaki-grafik flex-wrap justify-start gap-x-5 gap-y-1 text-xs text-gray-500 dark:text-gray-400">
+                <span class="inline-flex items-center gap-1.5"><span class="titik-legenda warna-grafik-1"></span>JP penugasan</span>
+                <span class="inline-flex items-center gap-1.5"><span class="titik-legenda warna-grafik-alpa"></span>Lebih dari batas (<?= $angka($kur['lebih']) ?> guru)</span>
+                <span>Kurang dari batas: <b class="font-semibold text-gray-900 dark:text-white"><?= $angka($kur['kurang']) ?></b> guru</span>
+                <span class="inline-flex items-center gap-1.5"><span class="h-3 w-0.5 rounded-sm warna-grafik-batas"></span>Batas maksimal</span>
+                <span>Bentrok jadwal: <b class="font-semibold <?= (int) $kur['bentrok'] > 0 ? 'text-red-600 dark:text-red-500' : 'text-gray-900 dark:text-white' ?>"><?= $angka($kur['bentrok']) ?></b></span>
             </div>
         <?php endif; ?>
     </section>
 
-    <!-- Ringkasan modul -->
-    <section class="order-4 rounded-lg border border-gray-200 bg-white" aria-labelledby="judulModul">
-        <div class="border-b border-gray-200 px-5 py-3.5">
-            <h2 id="judulModul" class="font-semibold text-gray-900">Ringkasan modul</h2>
-        </div>
-        <ul class="divide-y divide-gray-100">
-            <?php foreach ($baris as [$judul, $ket, $ket2, $url]): ?>
-                <li class="flex items-start gap-4 px-5 py-3">
-                    <div class="min-w-0 flex-1 sm:flex sm:gap-4">
-                        <p class="shrink-0 text-sm font-medium text-gray-900 sm:w-44"><?= esc($judul) ?></p>
-                        <div class="min-w-0 text-sm text-gray-600">
-                            <p><?= esc($ket) ?></p>
-                            <?php if ($ket2 !== null): ?><p class="text-xs text-gray-500"><?= esc($ket2) ?></p><?php endif; ?>
-                        </div>
-                    </div>
-                    <a href="<?= site_url($url) ?>" class="shrink-0 text-sm font-medium text-brand-700 hover:underline">Buka</a>
+    <section class="kartu kartu-isi" aria-labelledby="judulModul">
+        <h2 id="judulModul" class="kartu-judul mb-2">Ringkasan modul</h2>
+        <ul class="daftar-kartu">
+            <?php foreach ($baris as [$judul, $ikonM, $ket, $ket2, $url]): ?>
+                <li>
+                    <a href="<?= site_url($url) ?>" class="group -mx-2 flex items-start gap-3 rounded-lg px-2 py-1 transition-colors hover:bg-gray-50 focus:outline-hidden focus-visible:ring-2 focus-visible:ring-brand-300 dark:hover:bg-gray-700">
+                        <span class="ubin-ikon"><?= ikon($ikonM, 'h-5 w-5') ?></span>
+                        <span class="min-w-0 flex-1">
+                            <span class="block text-sm font-semibold text-gray-900 group-hover:text-brand-700 dark:text-white dark:group-hover:text-brand-400"><?= esc($judul) ?></span>
+                            <span class="block text-sm text-gray-500 dark:text-gray-400"><?= esc($ket) ?></span>
+                            <?php if ($ket2 !== null): ?><span class="block text-xs text-gray-400 dark:text-gray-500"><?= esc($ket2) ?></span><?php endif; ?>
+                        </span>
+                        <span class="mt-2.5 text-gray-400 group-hover:text-brand-700 dark:group-hover:text-brand-400"><?= ikon('chevron-right', 'h-4 w-4') ?></span>
+                    </a>
                 </li>
             <?php endforeach; ?>
         </ul>
     </section>
+</div>
 
-    <!-- Ujian -->
-    <section class="order-6 rounded-lg border border-gray-200 bg-white" aria-labelledby="judulUjian">
-        <div class="border-b border-gray-200 px-5 py-3.5">
-            <h2 id="judulUjian" class="font-semibold text-gray-900">Ujian &middot; TP <?= esc($ujian['tahun']) ?></h2>
+<!-- ===== 5. Ujian per gelombang (pola tabel "Transactions" template) ===== -->
+<section class="kartu kartu-isi mt-4" aria-labelledby="judulUjian">
+    <div class="mb-4 flex flex-wrap items-center justify-between gap-2">
+        <div>
+            <h2 id="judulUjian" class="kartu-judul">Ujian</h2>
+            <p class="kartu-ket">Tahun pelajaran <?= esc($ujian['tahun']) ?> · keadaan tiap gelombang</p>
         </div>
-        <div class="overflow-x-auto">
-            <table class="w-full text-sm">
-                <thead>
-                    <tr class="border-b border-gray-100 text-left text-xs text-gray-500">
-                        <th class="px-5 py-2 font-medium">Gelombang</th>
-                        <th class="px-3 py-2 font-medium">Status</th>
-                        <th class="px-3 py-2 text-right font-medium">Sesi</th>
-                        <th class="px-3 py-2 text-right font-medium">Tidak hadir</th>
-                        <th class="px-5 py-2 text-right font-medium">Susulan belum</th>
+        <a href="<?= site_url('admin/ujian') ?>" class="tautan-kartu">Semua ujian<?= ikon('chevron-right', 'h-4 w-4') ?></a>
+    </div>
+    <div class="tabel-bungkus overflow-hidden rounded-lg border border-gray-200 dark:border-gray-700">
+        <table class="tabel">
+            <thead>
+                <tr>
+                    <th scope="col">Gelombang</th>
+                    <th scope="col">Status</th>
+                    <th scope="col" class="text-right">Sesi</th>
+                    <th scope="col" class="text-right">Tidak hadir</th>
+                    <th scope="col" class="text-right">Susulan belum dijadwalkan</th>
+                </tr>
+            </thead>
+            <tbody>
+                <?php foreach ($ujian['kartu'] as $u): [$lblStatus, $lencana] = $ujStatus[$u['status']] ?? $ujStatus['draft']; ?>
+                    <tr>
+                        <th scope="row"><a href="<?= site_url('admin/ujian/' . $u['slug']) ?>" class="hover:text-brand-700 hover:underline dark:hover:text-brand-400"><?= esc($u['label']) ?></a></th>
+                        <td><span class="lencana <?= $lencana ?>"><?= $lblStatus ?></span></td>
+                        <td class="text-right tabular-nums"><?= $angka($u['jadwal']) ?></td>
+                        <td class="text-right tabular-nums"><?= $angka($u['takHadir']) ?></td>
+                        <td class="text-right tabular-nums">
+                            <?php if ((int) $u['belum'] > 0): ?>
+                                <span class="lencana lencana-kuning"><?= $angka($u['belum']) ?> belum</span>
+                            <?php else: ?>
+                                <span class="text-gray-400 dark:text-gray-500">0</span>
+                            <?php endif; ?>
+                        </td>
                     </tr>
-                </thead>
-                <tbody class="divide-y divide-gray-100">
-                    <?php foreach ($ujian['kartu'] as $u): [$lblStatus, $lencana] = $ujStatus[$u['status']] ?? $ujStatus['draft']; ?>
-                        <tr>
-                            <td class="px-5 py-2.5"><a href="<?= site_url('admin/ujian/' . $u['slug']) ?>" class="font-medium text-gray-900 hover:text-brand-700 hover:underline"><?= esc($u['label']) ?></a></td>
-                            <td class="px-3 py-2.5"><span class="rounded-sm px-2 py-0.5 text-xs font-medium <?= $lencana ?>"><?= $lblStatus ?></span></td>
-                            <td class="px-3 py-2.5 text-right tabular-nums"><?= (int) $u['jadwal'] ?></td>
-                            <td class="px-3 py-2.5 text-right tabular-nums"><?= (int) $u['takHadir'] ?></td>
-                            <td class="px-5 py-2.5 text-right tabular-nums <?= $u['belum'] > 0 ? 'font-semibold text-amber-700' : '' ?>"><?= (int) $u['belum'] ?></td>
-                        </tr>
-                    <?php endforeach; ?>
-                </tbody>
-            </table>
-        </div>
-    </section>
-</div>
-
-<div class="contents lg:flex lg:flex-col lg:gap-6">
-
-    <!-- Hari ini -->
-    <section class="order-2 rounded-lg border border-gray-200 bg-white" aria-labelledby="judulHariIni">
-        <div class="border-b border-gray-200 px-5 py-3.5">
-            <h2 id="judulHariIni" class="font-semibold text-gray-900">Absensi guru hari ini</h2>
-            <p class="text-xs text-gray-500"><?= esc($hariIni) ?>, <?= esc(IsianBantu::tanggalIndo($absensi['tanggal'])) ?></p>
-        </div>
-        <div class="px-5 py-4 text-sm">
-            <?php if (! $absensi['hari_aktif']): ?>
-                <p class="text-gray-600">Hari ini bukan hari KBM aktif.</p>
-            <?php elseif (! $absensi['recorded']): ?>
-                <p class="text-gray-600"><?= $angka($absensi['total_guru']) ?> guru mengajar hari ini. Kehadiran <b class="font-semibold text-amber-700">belum dicatat</b>.</p>
-            <?php else: ?>
-                <div class="grid grid-cols-5 gap-2 text-center">
-                    <?php foreach (['hadir' => 'Hadir', 'telat' => 'Telat', 'izin' => 'Izin', 'sakit' => 'Sakit', 'alpa' => 'Alpa'] as $kk => $lbl): ?>
-                        <div class="rounded-md bg-gray-50 py-2">
-                            <p class="text-base font-semibold tabular-nums text-gray-900"><?= (int) $abs[$kk] ?></p>
-                            <p class="text-[11px] text-gray-500"><?= $lbl ?></p>
-                        </div>
-                    <?php endforeach; ?>
-                </div>
-            <?php endif; ?>
-            <?php if ($absensi['hari_aktif']): ?>
-                <a href="<?= site_url('admin/absensi') ?>?tanggal=<?= esc($absensi['tanggal'], 'url') ?>" class="mt-3 inline-block text-sm font-medium text-brand-700 hover:underline"><?= $absensi['recorded'] ? 'Lihat atau ubah absensi' : 'Catat sekarang' ?></a>
-            <?php endif; ?>
-        </div>
-    </section>
-
-    <!-- Siswa -->
-    <section class="order-5 rounded-lg border border-gray-200 bg-white" aria-labelledby="judulSiswa">
-        <div class="flex items-start justify-between gap-2 border-b border-gray-200 px-5 py-3.5">
-            <div>
-                <h2 id="judulSiswa" class="font-semibold text-gray-900">Siswa aktif</h2>
-                <p class="text-xs text-gray-500"><?= $angka($siswa['aktif']) ?> siswa</p>
-            </div>
-            <a href="<?= site_url('admin/master/siswa') ?>" class="text-sm font-medium text-brand-700 hover:underline">Data siswa</a>
-        </div>
-        <div class="space-y-5 px-5 py-4">
-            <?php if ($siswa['jurusan'] !== []): ?>
-                <div>
-                    <p class="mb-2 text-xs font-medium text-gray-500">Per jurusan</p>
-                    <ul class="space-y-2">
-                        <?php foreach ($siswa['jurusan'] as $i => $j): $pct = $siswa['aktif'] > 0 ? round($j['n'] / $siswa['aktif'] * 100) : 0; ?>
-                            <li tabindex="0" data-tip="<?= esc($j['nama'] . ' — ' . $angka($j['n']) . ' siswa (' . $pct . '%)', 'attr') ?>" class="grid grid-cols-[4.5rem_1fr_3.5rem] items-center gap-3 rounded-sm text-sm outline-hidden focus-visible:ring-2 focus-visible:ring-brand-300">
-                                <span class="truncate text-gray-600" title="<?= esc($j['nama'], 'attr') ?>"><?= esc($j['label']) ?></span>
-                                <span class="h-1.5 rounded-full bg-gray-100"><span class="bar-grow block h-full rounded-full bg-brand-500" style="width: <?= round($j['n'] / $maxJurusan * 100, 2) ?>%; animation-delay: <?= 0.15 + $i * 0.05 ?>s"></span></span>
-                                <span class="text-right font-medium tabular-nums text-gray-900"><?= $angka($j['n']) ?></span>
-                            </li>
-                        <?php endforeach; ?>
-                    </ul>
-                </div>
-            <?php endif; ?>
-            <?php if ($siswa['tingkat'] !== []): ?>
-                <div>
-                    <p class="mb-2 text-xs font-medium text-gray-500">Per tingkat</p>
-                    <ul class="space-y-2">
-                        <?php foreach ($siswa['tingkat'] as $i => $t): ?>
-                            <li tabindex="0" data-tip="<?= esc('Kelas ' . $t['label'] . ' — ' . $angka($t['n']) . ' siswa', 'attr') ?>" class="grid grid-cols-[4.5rem_1fr_3.5rem] items-center gap-3 rounded-sm text-sm outline-hidden focus-visible:ring-2 focus-visible:ring-brand-300">
-                                <span class="text-gray-600">Kelas <?= esc($t['label']) ?></span>
-                                <span class="h-1.5 rounded-full bg-gray-100"><span class="bar-grow block h-full rounded-full bg-brand-500" style="width: <?= round($t['n'] / $maxTingkat * 100, 2) ?>%; animation-delay: <?= 0.2 + $i * 0.05 ?>s"></span></span>
-                                <span class="text-right font-medium tabular-nums text-gray-900"><?= $angka($t['n']) ?></span>
-                            </li>
-                        <?php endforeach; ?>
-                    </ul>
-                </div>
-            <?php endif; ?>
-            <?php if ($siswa['tanpa_kelas'] > 0): ?>
-                <p class="text-xs text-amber-700"><?= $angka($siswa['tanpa_kelas']) ?> siswa aktif belum punya kelas (tidak terhitung di atas).</p>
-            <?php endif; ?>
-        </div>
-    </section>
-
-    <!-- Kesediaan guru -->
-    <section class="order-7 rounded-lg border border-gray-200 bg-white" aria-labelledby="judulKesediaan">
-        <div class="flex items-start justify-between gap-2 border-b border-gray-200 px-5 py-3.5">
-            <div>
-                <h2 id="judulKesediaan" class="font-semibold text-gray-900">Kesediaan guru mengajar</h2>
-                <p class="text-xs text-gray-500">Formulir <?= ! empty($setting['form_open']) ? 'dibuka' : 'ditutup' ?> &middot; <?= (int) $stats['today'] ?> masuk hari ini</p>
-            </div>
-            <a href="<?= site_url('admin/submissions') ?>" class="text-sm font-medium text-brand-700 hover:underline">Data</a>
-        </div>
-        <?php if ($totalPegawai === 0): ?>
-            <p class="px-5 py-6 text-sm text-gray-500">Belum ada data kesediaan masuk.</p>
-        <?php else: ?>
-            <div class="flex items-center gap-5 px-5 py-4">
-                <div class="relative h-28 w-28 shrink-0">
-                    <svg viewBox="0 0 120 120" class="h-full w-full -rotate-90" role="img" aria-label="Komposisi status kepegawaian">
-                        <circle cx="60" cy="60" r="52" fill="none" stroke="#f1f5f9" stroke-width="16"/>
-                        <?php $mulai = 0; $kIdx = 0;
-                        foreach ($stats['byStatus'] as $st => $n): if ((int) $n <= 0) { continue; }
-                            $panjang = $n / $totalPegawai * $keliling;
-                            $celah   = $totalPegawai > $n ? 2 : 0; // celah 2px warna permukaan antar-irisan ?>
-                            <circle cx="60" cy="60" r="52" fill="none" stroke="<?= $warnaPegawai[$st] ?? '#94a3b8' ?>" stroke-width="16"
-                                    class="donut-seg outline-hidden" tabindex="0"
-                                    data-tip="<?= esc($st . ' — ' . $n . ' guru (' . round($n / $totalPegawai * 100) . '%)', 'attr') ?>"
-                                    stroke-dasharray="<?= round(max(0.5, $panjang - $celah), 2) ?> <?= round($keliling, 2) ?>"
-                                    stroke-dashoffset="<?= round(-$mulai, 2) ?>" style="animation-delay: <?= 0.2 + $kIdx * 0.1 ?>s"/>
-                        <?php $mulai += $panjang; $kIdx++; endforeach; ?>
-                    </svg>
-                    <div class="pointer-events-none absolute inset-0 flex flex-col items-center justify-center">
-                        <span class="text-xl font-semibold text-gray-900"><?= $angka($stats['total']) ?></span>
-                        <span class="text-[11px] text-gray-500">guru</span>
-                    </div>
-                </div>
-                <ul class="min-w-0 flex-1 space-y-1.5 text-sm">
-                    <?php foreach ($stats['byStatus'] as $st => $n): ?>
-                        <li class="flex items-center gap-2">
-                            <span class="h-2.5 w-2.5 shrink-0 rounded-xs" style="background: <?= $warnaPegawai[$st] ?? '#94a3b8' ?>"></span>
-                            <span class="flex-1 text-gray-600"><?= esc($st) ?></span>
-                            <span class="font-medium tabular-nums text-gray-900"><?= (int) $n ?></span>
-                            <span class="w-9 text-right text-xs tabular-nums text-gray-400"><?= $totalPegawai > 0 ? round($n / $totalPegawai * 100) : 0 ?>%</span>
-                        </li>
-                    <?php endforeach; ?>
-                </ul>
-            </div>
-        <?php endif; ?>
-    </section>
-
-    <!-- Aktivitas terbaru -->
-    <section class="order-8 rounded-lg border border-gray-200 bg-white" aria-labelledby="judulAktivitas">
-        <div class="flex items-center justify-between border-b border-gray-200 px-5 py-3.5">
-            <h2 id="judulAktivitas" class="font-semibold text-gray-900">Aktivitas terbaru</h2>
-            <a href="<?= site_url('admin/audit') ?>" class="text-sm font-medium text-brand-700 hover:underline">Audit log</a>
-        </div>
-        <?php if ($aktivitas === []): ?>
-            <p class="px-5 py-5 text-sm text-gray-500">Belum ada aktivitas tercatat.</p>
-        <?php else: ?>
-            <ul class="divide-y divide-gray-100">
-                <?php foreach ($aktivitas as $a): ?>
-                    <li class="px-5 py-2.5 text-sm">
-                        <p class="text-gray-700"><span class="font-medium text-gray-900"><?= esc($a['nama'] ?: (! empty($a['admin_id']) ? 'Akun terhapus' : 'Sistem')) ?></span> &middot; <?= esc(mb_strimwidth((string) $a['deskripsi'], 0, 90, '…')) ?></p>
-                        <p class="text-xs text-gray-500"><?= esc($waktuPendek($a['waktu'])) ?></p>
-                    </li>
                 <?php endforeach; ?>
-            </ul>
-        <?php endif; ?>
-    </section>
-</div>
-</div>
-
-<?php // Satu tooltip bersama untuk semua [data-tip] (isi diisi lewat textContent di dashboard.js). ?>
-<div id="vizTip" role="tooltip" class="pointer-events-none fixed z-50 hidden max-w-xs rounded-md bg-gray-900 px-3 py-2 text-xs font-medium text-white shadow-lg"></div>
+            </tbody>
+        </table>
+    </div>
+</section>
 
 <?= $this->endSection() ?>
 
 <?= $this->section('scripts') ?>
-<script defer src="<?= base_url('assets/js/admin/dashboard.js') ?>?v=<?= @filemtime(FCPATH . 'assets/js/admin/dashboard.js') ?>"></script>
+<?php // ApexCharts (MIT) lokal; CSS-nya dimuat sebagai berkas (link id="apexcharts-css") → ApexCharts tidak menyisipkan tag gaya sendiri (siap CSP). ?>
+<link id="apexcharts-css" rel="stylesheet" href="<?= base_url('assets/css/vendor/apexcharts.css') ?>?v=<?= @filemtime(FCPATH . 'assets/css/vendor/apexcharts.css') ?>" <?= csp_style_nonce() ?>>
+<script defer src="<?= base_url('assets/js/vendor/apexcharts.min.js') ?>?v=<?= @filemtime(FCPATH . 'assets/js/vendor/apexcharts.min.js') ?>" <?= csp_script_nonce() ?>></script>
+<script defer src="<?= base_url('assets/js/admin/dashboard.js') ?>?v=<?= @filemtime(FCPATH . 'assets/js/admin/dashboard.js') ?>" <?= csp_script_nonce() ?>></script>
 <?= $this->endSection() ?>
