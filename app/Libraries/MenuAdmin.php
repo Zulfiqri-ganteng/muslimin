@@ -124,6 +124,7 @@ final class MenuAdmin
                     ['admin/pkl/daftar', 'Kotak Masuk', 'M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4'],
                     ['admin/pkl/baru', 'Isi atas Nama', 'M12 9v3m0 0v3m0-3h3m-3 0H9m12 0a9 9 0 11-18 0 9 9 0 0118 0z'],
                     ['admin/pkl/siswa', 'Status Siswa', self::I_CENTANG],
+                    ['admin/pkl/prakerin', 'Data Prakerin', self::I_DOK],
                     ['admin/pkl/laporan', 'Laporan Pembayaran', self::I_REKAP],
                     ['admin/pkl/ttd', 'Tanda Tangan', 'M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z'],
                     ['admin/pkl/pengaturan', 'Pengaturan PKL', self::I_GERIGI],

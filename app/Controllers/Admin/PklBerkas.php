@@ -9,6 +9,7 @@ use App\Libraries\PklBiaya;
 use App\Libraries\PklDocx;
 use App\Libraries\PklHak;
 use App\Libraries\PklImpor;
+use App\Libraries\PklPrakerin;
 use App\Libraries\PklSurat;
 use App\Libraries\PklUnduh;
 use App\Models\AuditModel;
@@ -445,13 +446,71 @@ class PklBerkas extends BaseController
         }
         @unlink($path); // sekali pakai: tekan Simpan dua kali tidak menggandakan data
 
-        $hasil = (new PklImpor())->simpan($isi['data'], $this->konteks());
-        $this->audit->record('create', 'pkl_pengajuan', null, 'Impor riwayat PKL: ' . $hasil['dibuat'] . ' ajuan, ' . $hasil['siswa'] . ' siswa' . ($hasil['gagal'] ? ', ' . count($hasil['gagal']) . ' gagal' : ''));
+        // Format sekolah: nama mirip hanya disimpan bila dicentang di pratinjau.
+        $sekolah = ($isi['data']['format'] ?? '') === 'sekolah';
+        $pakai   = $sekolah ? array_values(array_filter((array) $this->request->getPost('pakai'), 'is_string')) : null;
+        $hasil   = (new PklImpor())->simpan($isi['data'], $this->konteks(), $pakai);
+        $this->audit->record('create', 'pkl_pengajuan', null, 'Impor riwayat PKL' . ($sekolah ? ' (format Data Siswa Prakerin)' : '') . ': ' . $hasil['dibuat'] . ' ajuan, ' . $hasil['siswa'] . ' siswa' . ($hasil['gagal'] ? ', ' . count($hasil['gagal']) . ' gagal' : ''));
 
         $pesan = 'Impor selesai: ' . $hasil['dibuat'] . ' ajuan (' . $hasil['siswa'] . ' siswa) dibuat sebagai Disetujui.';
-        $redir = $this->ke('admin/pkl/daftar/disetujui', 'success', $pesan);
+        $redir = $this->ke($sekolah ? 'admin/pkl/prakerin' : 'admin/pkl/daftar/disetujui', 'success', $pesan);
 
         return $hasil['gagal'] !== [] ? $redir->with('errors', $hasil['gagal']) : $redir;
+    }
+
+    // =================================================================
+    // Data Siswa Prakerin (rekap per kelas + Excel format sekolah)
+    // =================================================================
+
+    /** GET admin/pkl/prakerin — pratinjau rekap per kelas, isinya sama dengan unduhan Excel. */
+    public function prakerin()
+    {
+        [$semua, $pilih, $tingkat, $kelasId] = $this->pilihPrakerin();
+        $setting = (new SettingModel())->get();
+
+        return view('admin/pkl/prakerin', $this->dasar('Data Siswa Prakerin', 'prakerin') + [
+            'semuaKelas' => $semua, 'rekap' => (new PklPrakerin())->data($pilih), 'tingkatPilih' => $tingkat, 'kelasId' => $kelasId,
+            'sekolah' => (string) ($setting['school_name'] ?? ''), 'tahun' => (string) ($setting['academic_year'] ?? ''),
+        ]);
+    }
+
+    /** GET admin/pkl/prakerin/excel — satu lembar per kelas, persis format "DATA SISWA PRAKERIN" sekolah. */
+    public function prakerinExcel()
+    {
+        [, $pilih, $tingkat, $kelasId] = $this->pilihPrakerin();
+        if ($pilih === []) {
+            return $this->ke('admin/pkl/prakerin', 'error', 'Tidak ada kelas untuk diunduh.');
+        }
+        $setting = (new SettingModel())->get();
+        $tahun   = (string) ($setting['academic_year'] ?? '');
+        $biner   = PklPrakerin::excel((new PklPrakerin())->data($pilih), (string) ($setting['school_name'] ?? ''), $tahun);
+        $nama    = 'Data Siswa Prakerin ' . ($kelasId > 0 ? $pilih[0]['nama_kelas'] : 'Kelas ' . $tingkat) . ($tahun !== '' ? ' ' . str_replace('/', '-', $tahun) : '') . '.xlsx';
+        $nama    = preg_replace('/[^A-Za-z0-9 ._-]+/', '-', $nama) ?? 'Data Siswa Prakerin.xlsx';
+
+        return $this->response->download($nama, $biner)->setFileName($nama);
+    }
+
+    /**
+     * Kelas yang dipilih: satu kelas (?kelas_id=) atau semua kelas satu tingkat (?tingkat=, bawaan = tingkat tertinggi
+     * yang boleh PKL di Pengaturan, atau XII).
+     *
+     * @return array{0: list<array>, 1: list<array>, 2: string, 3: int} [semua kelas, kelas terpilih, tingkat, kelas_id]
+     */
+    private function pilihPrakerin(): array
+    {
+        $semua   = (new PklPrakerin())->kelas();
+        $kelasId = (int) $this->request->getGet('kelas_id');
+        $tingkat = strtoupper(trim((string) $this->request->getGet('tingkat')));
+        if (! in_array($tingkat, PklPengaturanModel::TINGKAT, true)) {
+            $boleh   = PklPengaturanModel::tingkatBoleh((new PklPengaturanModel())->ambil());
+            $tingkat = $boleh !== [] ? (string) end($boleh) : 'XII';
+        }
+        $satu = $kelasId > 0 ? array_values(array_filter($semua, static fn (array $k): bool => $k['id'] === $kelasId)) : [];
+        if ($satu !== []) {
+            return [$semua, $satu, $satu[0]['tingkat'], $kelasId];
+        }
+
+        return [$semua, array_values(array_filter($semua, static fn (array $k): bool => $k['tingkat'] === $tingkat)), $tingkat, 0];
     }
 
     // =================================================================

@@ -104,6 +104,8 @@ $routes->group('admin', static function ($routes) {
         $routes->get('pkl/siswa', 'Admin\Pkl::siswa');
         $routes->get('pkl/siswa/excel', 'Admin\PklBerkas::siswaExcel');
         $routes->get('pkl/siswa-kelas', 'Admin\Pkl::siswaKelas');
+        $routes->get('pkl/prakerin', 'Admin\PklBerkas::prakerin');
+        $routes->get('pkl/prakerin/excel', 'Admin\PklBerkas::prakerinExcel');
         $routes->get('pkl/baru', 'Admin\Pkl::baru', ['filter' => 'csrf']);
         $routes->post('pkl/baru', 'Admin\Pkl::simpanBaru', ['filter' => 'csrf']);
         $routes->get('pkl/pengaturan', 'Admin\Pkl::pengaturan', ['filter' => 'csrf']);
