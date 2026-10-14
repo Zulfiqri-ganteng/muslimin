@@ -85,5 +85,5 @@ class Tampilan extends BaseConfig
      *
      * @var list<string>
      */
-    public array $alpineCsp = ['kit', 'login', 'kerangka', 'dashboard', 'master'];
+    public array $alpineCsp = ['kit', 'login', 'kerangka', 'dashboard', 'master', 'kesiswaan'];
 }
