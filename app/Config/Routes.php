@@ -698,6 +698,7 @@ $routes->group('admin', static function ($routes) {
         // Pengaturan sekolah
         $routes->get('settings', 'Admin\Settings::index');
         $routes->post('settings', 'Admin\Settings::save');
+        $routes->post('settings/tampilan', 'Admin\Settings::simpanTampilan'); // tema panel admin (khusus Admin, rombak F3)
 
         // Profil admin
         $routes->get('profile', 'Admin\Profile::index');

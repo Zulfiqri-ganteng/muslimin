@@ -4,7 +4,7 @@
  * di tengah, isian akun & kata sandi (tombol lihat sandi + peringatan Caps Lock), tombol penuh warna utama, tanpa gradasi.
  * Logika masuk TIDAK diubah (Admin\Auth::attemptLogin: isian "login" & "password" + token CSRF; pesan lewat flash error/success).
  * SIAP CSP: Alpine versi CSP + ui.js (komponen isianSandi) + login.js (formMasuk); tanpa skrip/gaya sebaris.
- * Tema: kelas tema-lilac seperti layout admin — pemilih tema dari pengaturan sekolah menyusul di F3.
+ * Tema: <html data-warna data-sidebar> dari Pengaturan Sekolah → Tampilan (sama dengan layout admin, Libraries\Tampilan).
  *
  * @var array<string, mixed> $setting baris pengaturan sekolah (school_name, logo)
  */
@@ -15,9 +15,10 @@ $logo        = (string) ($setting['logo'] ?? '');
 $adaLogo     = $logo !== '' && is_file(FCPATH . 'uploads/' . $logo);
 // Gagal masuk (isian akun dikembalikan) → kursor langsung di kotak kata sandi.
 $fokusSandi  = (string) old('login') !== '';
+$tema        = \App\Libraries\Tampilan::tema($setting ?? null);
 ?>
 <!DOCTYPE html>
-<html lang="id" class="tema-lilac">
+<html lang="id" data-warna="<?= $tema['warna'] ?>" data-sidebar="<?= $tema['sidebar'] ?>">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">

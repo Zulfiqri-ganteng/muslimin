@@ -3,6 +3,9 @@
 namespace App\Controllers\Admin;
 
 use App\Controllers\BaseController;
+use App\Libraries\HakPeran;
+use App\Libraries\Tampilan;
+use App\Models\AuditModel;
 use App\Models\SettingModel;
 
 class Settings extends BaseController
@@ -16,10 +19,47 @@ class Settings extends BaseController
 
     public function index()
     {
+        $setting = $this->model->get();
+
         return view('admin/settings', [
-            'title'   => 'Pengaturan Sekolah',
-            'setting' => $this->model->get(),
+            'title'     => 'Pengaturan Sekolah',
+            'setting'   => $setting,
+            'tema'      => Tampilan::tema($setting),
+            'temaSiap'  => Tampilan::temaSiap(),
+            'bolehTema' => (string) (session('admin')['role'] ?? '') === HakPeran::ADMIN,
         ]);
+    }
+
+    /**
+     * POST admin/settings/tampilan — tema panel admin (warna utama × gaya menu samping) untuk SEMUA akun. Khusus peran Admin.
+     * Isian: pilihan = salah satu kunci tema siap pakai ("lilac-warna", …) atau "sendiri" (+ tema_warna & tema_sidebar).
+     */
+    public function simpanTampilan()
+    {
+        if ((string) (session('admin')['role'] ?? '') !== HakPeran::ADMIN) {
+            return redirect()->to(site_url('admin/settings'))->with('error', 'Tema tampilan hanya bisa diganti akun Admin.');
+        }
+        if (! Tampilan::temaSiap()) {
+            return redirect()->to(site_url('admin/settings') . '#tampilan')->with('error', 'Kolom tema belum ada di database. Jalankan migrasi dulu (php spark migrate).');
+        }
+
+        $pilihan = (string) $this->request->getPost('pilihan');
+        $warna   = (string) $this->request->getPost('tema_warna');
+        $sidebar = (string) $this->request->getPost('tema_sidebar');
+        foreach (Tampilan::PRESET as $p) {
+            if ($pilihan === $p['warna'] . '-' . $p['sidebar']) {
+                [$warna, $sidebar] = [$p['warna'], $p['sidebar']];
+            }
+        }
+        if (! isset(Tampilan::WARNA[$warna], Tampilan::SIDEBAR[$sidebar])) {
+            return redirect()->to(site_url('admin/settings') . '#tampilan')->with('error', 'Pilihan tema tidak dikenali.');
+        }
+
+        $this->model->store(['tema_warna' => $warna, 'tema_sidebar' => $sidebar]);
+        $nama = Tampilan::namaTema($warna, $sidebar);
+        (new AuditModel())->record('update', 'settings', 1, 'Tema tampilan panel admin diganti: ' . $nama);
+
+        return redirect()->to(site_url('admin/settings') . '#tampilan')->with('success', 'Tema tampilan disimpan: ' . $nama . '. Berlaku untuk semua akun.');
     }
 
     public function save()

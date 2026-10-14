@@ -187,9 +187,78 @@
     </div>
 </form>
 
+<?php if ($bolehTema): // ===== Tampilan panel admin (rombak F3) — khusus Admin; formulir sendiri ===== ?>
+    <section id="tampilan" class="kartu mt-6 max-w-3xl scroll-mt-24" x-data="pilihTema" data-warna="<?= esc($tema['warna'], 'attr') ?>" data-sidebar="<?= esc($tema['sidebar'], 'attr') ?>">
+        <div class="kartu-kepala">
+            <div>
+                <h2 class="kartu-judul">Tampilan panel admin</h2>
+                <p class="kartu-ket">Warna utama dan gaya menu samping untuk <b>semua akun</b> panel admin (termasuk halaman masuk). Pilihan langsung terlihat di halaman ini sebagai pratinjau; klik <b>Simpan tema</b> untuk menerapkannya.</p>
+            </div>
+        </div>
+        <form method="post" action="<?= site_url('admin/settings/tampilan') ?>" class="kartu-isi space-y-5">
+            <?= csrf_field() ?>
+            <?php if (! $temaSiap): ?>
+                <?= ui_peringatan('awas', 'Kolom tema belum ada di database, jadi pilihan belum bisa disimpan. Jalankan migrasi: php spark migrate.') ?>
+            <?php endif; ?>
+            <fieldset>
+                <legend class="lbl">Tema siap pakai</legend>
+                <div class="grid gap-3 sm:grid-cols-3">
+                    <?php foreach (\App\Libraries\Tampilan::PRESET as $p): $kunci = $p['warna'] . '-' . $p['sidebar']; ?>
+                        <label class="flex cursor-pointer flex-col gap-2 rounded-lg border border-gray-200 p-3 transition hover:bg-gray-50 has-[:checked]:border-brand-600 has-[:checked]:ring-1 has-[:checked]:ring-brand-600">
+                            <span class="pratinjau-tema" data-warna="<?= $p['warna'] ?>" data-sidebar="<?= $p['sidebar'] ?>" aria-hidden="true">
+                                <span class="pratinjau-tema-bilah"></span>
+                                <span class="pratinjau-tema-badan">
+                                    <span class="pratinjau-tema-sb"><span></span><span class="aktif"></span><span></span><span></span></span>
+                                    <span class="pratinjau-tema-isi"><span></span><span class="w-2/3"></span><span class="tombol"></span></span>
+                                </span>
+                            </span>
+                            <span class="flex items-center">
+                                <input type="radio" name="pilihan" value="<?= $kunci ?>" class="cek" x-model="pilihan"<?= $kunci === $tema['warna'] . '-' . $tema['sidebar'] ? ' checked' : '' ?>>
+                                <span class="cek-label"><?= esc($p['nama']) ?></span>
+                            </span>
+                            <span class="text-xs text-gray-500"><?= esc($p['ket']) ?></span>
+                        </label>
+                    <?php endforeach; ?>
+                </div>
+                <?php $sendiri = ! in_array($tema['warna'] . '-' . $tema['sidebar'], array_map(static fn (array $p): string => $p['warna'] . '-' . $p['sidebar'], \App\Libraries\Tampilan::PRESET), true); ?>
+                <label class="mt-3 inline-flex cursor-pointer items-center">
+                    <input type="radio" name="pilihan" value="sendiri" class="cek" x-model="pilihan"<?= $sendiri ? ' checked' : '' ?>>
+                    <span class="cek-label">Atur sendiri</span>
+                </label>
+            </fieldset>
+            <div class="grid gap-4 sm:grid-cols-2" x-show="pilihan === 'sendiri'"<?= $sendiri ? '' : ' x-cloak' ?>>
+                <div>
+                    <label class="lbl" for="tema_warna">Warna utama</label>
+                    <select id="tema_warna" name="tema_warna" class="inp" x-model="warna">
+                        <?php foreach (\App\Libraries\Tampilan::WARNA as $k => $nama): ?>
+                            <option value="<?= $k ?>"<?= $k === $tema['warna'] ? ' selected' : '' ?>><?= esc($nama) ?></option>
+                        <?php endforeach; ?>
+                    </select>
+                </div>
+                <div>
+                    <label class="lbl" for="tema_sidebar">Menu samping</label>
+                    <select id="tema_sidebar" name="tema_sidebar" class="inp" x-model="sidebar">
+                        <?php foreach (\App\Libraries\Tampilan::SIDEBAR as $k => $nama): ?>
+                            <option value="<?= $k ?>"<?= $k === $tema['sidebar'] ? ' selected' : '' ?>><?= esc($nama) ?></option>
+                        <?php endforeach; ?>
+                    </select>
+                </div>
+            </div>
+            <div class="flex flex-wrap items-center gap-3">
+                <button type="submit" class="btn btn-utama"<?= $temaSiap ? '' : ' disabled' ?>>Simpan tema</button>
+                <button type="button" class="btn btn-netral" x-show="berubah()" x-cloak @click="batal()">Batalkan pratinjau</button>
+                <span class="text-sm text-gray-500" x-show="berubah()" x-cloak>Pratinjau — belum disimpan.</span>
+            </div>
+        </form>
+    </section>
+<?php endif; ?>
+
 <style type="text/tailwindcss">
     .lbl { @apply block text-sm font-medium text-gray-600 mb-1.5; }
     .inp { @apply w-full rounded-lg border border-gray-300 px-3.5 py-2.5 text-sm focus:border-brand-500 focus:ring-2 focus:ring-brand-500/20 outline-hidden transition; }
 </style>
 
+<?= $this->endSection() ?>
+<?= $this->section('scripts') ?>
+<script defer src="<?= base_url('assets/js/admin/tampilan.js') ?>?v=<?= @filemtime(FCPATH . 'assets/js/admin/tampilan.js') ?>" <?= csp_script_nonce() ?>></script>
 <?= $this->endSection() ?>
