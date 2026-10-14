@@ -1,8 +1,8 @@
 <?php
 /**
- * Satu baris sesi absensi — dipakai tampilan PER GURU & PER KELAS.
- * Atribut data-* & data-role dibaca isiJson()/stats() di index.php: jangan
- * diubah tanpa menyesuaikan skrip di sana.
+ * Satu baris sesi absensi — dipakai tampilan PER GURU & PER KELAS (rombak tampilan F6: komponen Alpine "sesiAbsen" di
+ * assets/js/admin/absensi/harian.js; nilai awal lewat data-st / data-jm / data-ket / data-mulai → siap CSP).
+ * Atribut data-* & data-role dibaca siapkanKirim()/stats() di harian.js: jangan diubah tanpa menyesuaikan skrip di sana.
  *
  * @var array  $s          sesi (AbsensiHarian::muat)
  * @var int    $gid        id ORANG guru pemilik sesi
@@ -13,56 +13,44 @@
 $sh    = $s['jam_shift'] ?? $s['shift'] ?? 'pagi';
 $mulai = substr((string) $s['waktu_mulai'], 0, 5);
 $kelas = ($mode ?? 'guru') === 'kelas';
+$st    = (string) ($s['status'] ?? 'hadir');
 ?>
-<div x-data="{ gid: <?= (int) $gid ?>, sh: '<?= esc($sh, 'js') ?>', mulai: '<?= esc($mulai, 'js') ?>', st: '<?= esc($s['status'], 'js') ?>', jm: '<?= esc($s['jam_masuk'], 'js') ?>', ket: '<?= esc($s['keterangan'], 'js') ?>' }"
-     x-show="sh === shift"
-     x-on:absen-setall.window="if ($event.detail.gid === gid && $event.detail.shift === sh) { st = $event.detail.val; if (st === 'hadir') { jm = ''; ket = ''; } }"
-     x-on:absen-datang.window="if ($event.detail.gid === gid && $event.detail.shift === sh && st === 'hadir' && mulai <= $event.detail.jam) { st = 'telat'; jm = $event.detail.jam; }"
+<div x-data="sesiAbsen" x-show="sh === shift" @absen-setall.window="setDariSemua($event)" @absen-datang.window="tandaiDatang($event)"
      data-guru-id="<?= (int) $gid ?>" data-guru-asli="<?= (int) $s['guru_id'] ?>" data-shift="<?= esc($sh, 'attr') ?>"
      data-kelas="<?= (int) $s['kelas_id'] ?>" data-jam="<?= (int) $s['jam_id'] ?>"
      data-hari="<?= (int) $s['hari_id'] ?>" data-mapel="<?= (int) ($s['mapel_id'] ?? 0) ?>"
-     data-jadwal="<?= (int) $s['jadwal_id'] ?>"
-     class="absen-row p-4 border-l-4 transition"
-     :class="{
-        'border-l-emerald-400': st==='hadir', 'border-l-amber-400': st==='telat',
-        'border-l-brand-400': st==='izin', 'border-l-pink-400': st==='sakit', 'border-l-red-400': st==='alpa'<?php if ($kelas): ?>,
-        'bg-red-50': isBelum(gid)<?php endif; ?>
-     }">
+     data-jadwal="<?= (int) $s['jadwal_id'] ?>" data-mulai="<?= esc($mulai, 'attr') ?>"
+     data-st="<?= esc($st, 'attr') ?>" data-jm="<?= esc((string) ($s['jam_masuk'] ?? ''), 'attr') ?>" data-ket="<?= esc((string) ($s['keterangan'] ?? ''), 'attr') ?>"<?= $kelas ? ' data-mode="kelas"' : '' ?>
+     class="absen-row border-l-4 p-4 transition-colors" :class="kelasBaris()">
 
-    <div class="flex flex-col md:flex-row md:items-center gap-3">
-        <div class="md:w-64 shrink-0">
-            <p class="text-sm font-bold text-gray-700">Jam <?= esc($s['jam_ke']) ?>
-                <span class="text-gray-400 font-normal text-xs">(<?= esc($mulai) ?>–<?= esc(substr((string) $s['waktu_selesai'], 0, 5)) ?>)</span>
+    <div class="flex flex-col gap-3 md:flex-row md:items-center">
+        <div class="shrink-0 md:w-64">
+            <p class="text-sm font-semibold text-gray-900 dark:text-white">Jam <?= esc($s['jam_ke']) ?>
+                <span class="text-xs font-normal text-gray-500 dark:text-gray-400">(<?= esc($mulai) ?>–<?= esc(substr((string) $s['waktu_selesai'], 0, 5)) ?>)</span>
             </p>
             <?php if ($kelas): ?>
-                <p class="text-sm font-semibold text-gray-700 truncate"><?= esc($namaGuru ?? '') ?>
-                    <span x-show="piket[shift].indexOf(gid) !== -1" x-cloak class="ml-1 align-middle rounded-full bg-brand-50 text-brand-700 border border-brand-200 px-1.5 py-0.5 text-[10px] font-semibold">Piket</span>
+                <p class="truncate text-sm font-medium text-gray-900 dark:text-white"><?= esc($namaGuru ?? '') ?>
+                    <span x-show="piketShift(gid)" x-cloak class="lencana lencana-merek ms-1 align-middle">Piket</span>
                 </p>
-                <button type="button" x-show="!isBelum(gid)" @click="tandaiBelum(gid)"
-                        class="mt-1 text-xs font-semibold text-red-600 hover:text-red-700">Tandai belum hadir</button>
-                <p x-show="isBelum(gid)" x-cloak class="mt-1 text-xs font-semibold">
-                    <span class="text-red-700">Belum hadir</span> &middot;
-                    <button type="button" @click="sudahDatang(gid)" class="text-emerald-700 hover:text-emerald-800">Sudah datang</button>
+                <button type="button" x-show="!isBelum(gid)" @click="tandaiBelum(gid)" class="mt-1 text-xs font-medium text-red-700 hover:underline dark:text-red-500">Tandai belum hadir</button>
+                <p x-show="isBelum(gid)" x-cloak class="mt-1 text-xs font-medium">
+                    <span class="text-red-700 dark:text-red-500">Belum hadir</span> &middot;
+                    <button type="button" @click="sudahDatang(gid)" class="text-green-700 hover:underline dark:text-green-400">Sudah datang</button>
                 </p>
             <?php else: ?>
-                <p class="text-sm text-gray-600"><?= esc($s['nama_kelas']) ?> &middot; <span class="font-semibold"><?= esc($s['nama_mapel']) ?></span></p>
+                <p class="text-sm text-gray-600 dark:text-gray-300"><?= esc($s['nama_kelas']) ?> &middot; <span class="font-semibold text-gray-900 dark:text-white"><?= esc($s['nama_mapel']) ?></span></p>
             <?php endif; ?>
         </div>
         <div class="shrink-0">
-            <select x-model="st" data-role="status"
-                    class="rounded-lg border border-gray-300 px-3 py-2 text-sm font-semibold focus:border-brand-500 focus:ring-2 focus:ring-brand-500/20 outline-hidden">
+            <select x-model="st" data-role="status" class="inp w-auto font-medium" aria-label="Status Jam <?= esc((string) $s['jam_ke'], 'attr') ?>">
                 <?php foreach ($statusOpts as $k => $lbl): ?>
-                    <option value="<?= $k ?>"><?= esc($lbl) ?></option>
+                    <option value="<?= $k ?>"<?= $st === $k ? ' selected' : '' ?>><?= esc($lbl) ?></option>
                 <?php endforeach; ?>
             </select>
         </div>
-        <div class="flex flex-col sm:flex-row gap-2 flex-1" x-show="st !== 'hadir'" x-cloak>
-            <input type="time" x-model="jm" data-role="jm"
-                   class="w-full sm:w-32 rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-brand-500 outline-hidden"
-                   title="Jam masuk (opsional)">
-            <input type="text" x-model="ket" data-role="ket" maxlength="255"
-                   placeholder="Keterangan (opsional)…"
-                   class="flex-1 rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-brand-500 outline-hidden">
+        <div class="flex flex-1 flex-col gap-2 sm:flex-row" x-show="st !== 'hadir'" x-cloak>
+            <input type="time" x-model="jm" data-role="jm" class="inp sm:w-32" title="Jam masuk (opsional)" aria-label="Jam masuk">
+            <input type="text" x-model="ket" data-role="ket" maxlength="255" placeholder="Keterangan (opsional)…" class="inp flex-1" aria-label="Keterangan">
         </div>
     </div>
 </div>

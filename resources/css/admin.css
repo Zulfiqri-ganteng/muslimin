@@ -299,6 +299,10 @@
      <button class="saklar-tombol bg-…" role="switch"><span class="saklar-kenop translate-x-…"></span></button> ---- */
   .saklar-tombol { @apply relative inline-flex h-6 w-11 shrink-0 items-center rounded-full p-0.5 transition-colors focus:outline-hidden focus-visible:ring-4 focus-visible:ring-brand-300 dark:focus-visible:ring-brand-800; }
   .saklar-kenop  { @apply inline-block h-5 w-5 rounded-full border border-gray-300 bg-white transition-transform; }
+
+  /* ---- (F6) Tombol saring berbentuk pil (mis. jurusan): <button class="tombol-saring" :aria-pressed="…">TKJ</button> ---- */
+  .tombol-saring { @apply rounded-full border border-gray-300 bg-white px-3 py-1 text-xs font-medium text-gray-700 transition-colors hover:bg-gray-100 focus:outline-hidden focus-visible:ring-2 focus-visible:ring-brand-300 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700; }
+  .tombol-saring[aria-pressed='true'] { @apply border-brand-700 bg-brand-700 text-white hover:bg-brand-800 dark:border-brand-600 dark:bg-brand-600; }
   .kaki-crud { @apply sticky right-0 bottom-0 z-10 w-full border-t border-gray-200 bg-white p-4 dark:border-gray-700 dark:bg-gray-800; }
 
   /* ---- Lencana (badge): class="lencana lencana-hijau". Warna status tetap: hijau = hadir/disetujui, kuning = menunggu,
