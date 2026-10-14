@@ -1,3 +1,18 @@
+<?php
+/**
+ * Jadwal guru piket per hari, terpisah KBM pagi & siang (rombak tampilan F6: kartu + tabel kit, lencana guru dengan tombol hapus).
+ * Komponen Alpine "jadwalPiket" di assets/js/admin/absensi/piket.js (tanpa skrip sebaris; konfigurasi lewat data-cfg) → siap CSP.
+ *
+ * @var array $hari Hari aktif (id, nama)
+ * @var array $grid [hari_id][pagi|siang] => [guru_id…]
+ * @var array $guru Opsi guru [{id, nama}]
+ */
+$cfg = [
+    'hari' => array_map(static fn ($h) => ['id' => (int) $h['id'], 'nama' => $h['nama']], $hari),
+    'grid' => (object) $grid,
+    'guru' => $guru,
+];
+?>
 <?= $this->extend('layouts/admin') ?>
 <?= $this->section('content') ?>
 
@@ -7,98 +22,58 @@
     'helpBody'  => '<p>Atur siapa yang <b>piket</b> tiap hari, terpisah untuk <b>KBM pagi</b> dan <b>KBM siang</b> (guru yang piket pagi saja cukup diisi di kolom Pagi). Pada halaman <b>Absensi Guru</b>, guru piket hari itu otomatis diisikan ke panel <b>Kehadiran Kerja</b> dan muncul di bagian <b>"Guru piket yang hadir"</b> pada pesan WhatsApp.</p>',
 ]) ?>
 
-<?php
-    $cfg = [
-        'hari' => array_map(static fn ($h) => ['id' => (int) $h['id'], 'nama' => $h['nama']], $hari),
-        'grid' => (object) $grid,
-        'guru' => $guru,
-    ];
-?>
+<?php if (empty($hari)): ?>
+    <div class="kartu"><?= ui_kosong(['ikon' => 'calendar-week', 'judul' => 'Belum ada hari aktif', 'teks' => 'Atur dulu di Master Data ▸ Hari.']) ?></div>
+<?php else: ?>
+    <form method="post" action="<?= site_url('admin/absensi/piket') ?>" class="kartu" x-data="jadwalPiket" data-cfg="<?= esc((string) json_encode($cfg), 'attr') ?>" @submit="siapkanKirim()">
+        <?= csrf_field() ?>
+        <input type="hidden" name="grid_json" x-ref="json">
 
-<form method="post" action="<?= site_url('admin/absensi/piket') ?>" x-data='jadwalPiket(<?= htmlspecialchars(json_encode($cfg), ENT_QUOTES) ?>)' @submit="isi()">
-    <?= csrf_field() ?>
-    <input type="hidden" name="grid_json" x-ref="json">
-
-    <?php if (empty($hari)): ?>
-        <div class="bg-white rounded-2xl border border-gray-200 shadow-xs p-10 text-center text-gray-400">
-            Belum ada hari aktif. Atur dulu di <b>Master Data ▸ Hari</b>.
-        </div>
-    <?php else: ?>
-        <div class="bg-white rounded-2xl border border-gray-200 shadow-xs overflow-hidden">
-            <div class="overflow-x-auto">
-                <table class="w-full text-sm">
-                    <thead class="bg-gray-50 text-gray-500 text-left">
-                        <tr>
-                            <th class="px-4 py-3 font-semibold w-32">Hari</th>
-                            <th class="px-4 py-3 font-semibold">Piket KBM Pagi</th>
-                            <th class="px-4 py-3 font-semibold">Piket KBM Siang</th>
+        <div class="tabel-bungkus">
+            <table class="tabel">
+                <thead>
+                    <tr>
+                        <th scope="col" class="w-32">Hari</th>
+                        <th scope="col">Piket KBM pagi</th>
+                        <th scope="col">Piket KBM siang</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <template x-for="h in hari" :key="h.id">
+                        <tr class="align-top">
+                            <th scope="row" x-text="h.nama"></th>
+                            <template x-for="sh in shift" :key="sh">
+                                <td>
+                                    <div class="mb-2 flex flex-wrap gap-1.5">
+                                        <template x-for="gid in daftar(h.id, sh)" :key="gid">
+                                            <span class="lencana lencana-merek gap-1 pe-1">
+                                                <span x-text="nama(gid)"></span>
+                                                <button type="button" class="rounded-full p-0.5 hover:bg-brand-200 dark:hover:bg-brand-800" @click="hapus(h.id, sh, gid)" aria-label="Hapus dari daftar piket"><?= ikon('close', 'h-3.5 w-3.5') ?></button>
+                                            </span>
+                                        </template>
+                                        <span x-show="kosong(h.id, sh)" class="text-xs text-gray-400 dark:text-gray-500">— belum ada —</span>
+                                    </div>
+                                    <select data-tambah-piket :data-hari="h.id" :data-shift="sh" class="inp max-w-xs py-1.5 text-xs" aria-label="Tambah guru piket">
+                                        <option value="">+ tambah guru piket…</option>
+                                        <template x-for="g in guru" :key="g.id">
+                                            <option :value="g.id" x-text="g.nama" :disabled="sudahAda(h.id, sh, g.id)"></option>
+                                        </template>
+                                    </select>
+                                </td>
+                            </template>
                         </tr>
-                    </thead>
-                    <tbody class="divide-y divide-gray-100">
-                        <template x-for="h in hari" :key="h.id">
-                            <tr class="align-top">
-                                <td class="px-4 py-3 font-bold text-gray-700" x-text="h.nama"></td>
-                                <template x-for="sh in ['pagi', 'siang']" :key="sh">
-                                    <td class="px-4 py-3">
-                                        <div class="flex flex-wrap gap-1.5 mb-2">
-                                            <template x-for="gid in daftar(h.id, sh)" :key="gid">
-                                                <span class="inline-flex items-center gap-1 rounded-full bg-brand-50 border border-brand-200 text-brand-700 pl-2.5 pr-1 py-0.5 text-xs font-semibold">
-                                                    <span x-text="nama(gid)"></span>
-                                                    <button type="button" @click="hapus(h.id, sh, gid)" class="rounded-full hover:bg-brand-100 p-0.5" title="Hapus">
-                                                        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2.4" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg>
-                                                    </button>
-                                                </span>
-                                            </template>
-                                            <span x-show="daftar(h.id, sh).length === 0" class="text-xs text-gray-300">— belum ada —</span>
-                                        </div>
-                                        <select @change="tambah(h.id, sh, $event.target.value); $event.target.selectedIndex = 0"
-                                                class="w-full max-w-xs rounded-lg border border-gray-300 px-2.5 py-1.5 text-xs focus:border-brand-500 outline-hidden">
-                                            <option value="">+ tambah guru piket…</option>
-                                            <template x-for="g in guru" :key="g.id">
-                                                <option :value="g.id" x-text="g.nama" :disabled="daftar(h.id, sh).indexOf(g.id) !== -1"></option>
-                                            </template>
-                                        </select>
-                                    </td>
-                                </template>
-                            </tr>
-                        </template>
-                    </tbody>
-                </table>
-            </div>
-            <div class="px-5 py-4 border-t border-gray-100 flex justify-end">
-                <button type="submit" class="inline-flex items-center gap-2 rounded-xl bg-brand-700 hover:bg-brand-800 text-white font-bold px-6 py-2.5 text-sm transition">
-                    <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/></svg>
-                    Simpan Jadwal Piket
-                </button>
-            </div>
+                    </template>
+                </tbody>
+            </table>
         </div>
-    <?php endif; ?>
-</form>
+        <div class="kartu-kaki flex justify-end">
+            <button type="submit" class="btn btn-utama"><?= ikon('check', 'h-4 w-4') ?>Simpan jadwal piket</button>
+        </div>
+    </form>
+<?php endif; ?>
 
 <?= $this->endSection() ?>
 
 <?= $this->section('scripts') ?>
-<script>
-    // Grid jadwal piket: [hari_id][pagi|siang] => [guru_id…], dikirim sebagai JSON.
-    function jadwalPiket(cfg) {
-        const grid = {};
-        cfg.hari.forEach(function (h) {
-            const g = cfg.grid[h.id] || {};
-            grid[h.id] = { pagi: (g.pagi || []).map(Number), siang: (g.siang || []).map(Number) };
-        });
-        return {
-            hari: cfg.hari,
-            guru: cfg.guru,
-            grid: grid,
-            daftar(hid, sh) { return this.grid[hid][sh]; },
-            nama(id) { const g = this.guru.find(function (x) { return x.id === id; }); return g ? g.nama : ('Guru #' + id); },
-            tambah(hid, sh, val) {
-                const id = Number(val);
-                if (id && this.grid[hid][sh].indexOf(id) === -1) this.grid[hid][sh].push(id);
-            },
-            hapus(hid, sh, id) { this.grid[hid][sh] = this.grid[hid][sh].filter(function (x) { return x !== id; }); },
-            isi() { this.$refs.json.value = JSON.stringify(this.grid); },
-        };
-    }
-</script>
+<script defer src="<?= base_url('assets/js/admin/absensi/piket.js') ?>?v=<?= @filemtime(FCPATH . 'assets/js/admin/absensi/piket.js') ?>" <?= csp_script_nonce() ?>></script>
 <?= $this->endSection() ?>

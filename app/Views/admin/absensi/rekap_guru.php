@@ -1,92 +1,93 @@
-<?= $this->extend('layouts/admin') ?>
-<?= $this->section('content') ?>
-
 <?php
-    $statusOpts = ['hadir' => 'Hadir', 'telat' => 'Telat', 'izin' => 'Izin', 'sakit' => 'Sakit', 'alpa' => 'Alpa'];
-    $badge = [
-        'hadir' => 'bg-emerald-50 text-emerald-700 border-emerald-200',
-        'telat' => 'bg-amber-50 text-amber-700 border-amber-200',
-        'izin'  => 'bg-brand-50 text-brand-700 border-brand-200',
-        'sakit' => 'bg-pink-50 text-pink-700 border-pink-200',
-        'alpa'  => 'bg-red-50 text-red-700 border-red-200',
-    ];
-    $chip = [
-        'hadir' => 'bg-emerald-50 text-emerald-700 border-emerald-200',
-        'telat' => 'bg-amber-50 text-amber-700 border-amber-200',
-        'izin'  => 'bg-brand-50 text-brand-700 border-brand-200',
-        'sakit' => 'bg-pink-50 text-pink-700 border-pink-200',
-        'alpa'  => 'bg-red-50 text-red-700 border-red-200',
-    ];
-    $bulan = [1 => 'Jan', 2 => 'Feb', 3 => 'Mar', 4 => 'Apr', 5 => 'Mei', 6 => 'Jun', 7 => 'Jul', 8 => 'Agu', 9 => 'Sep', 10 => 'Okt', 11 => 'Nov', 12 => 'Des'];
-    $namaHari = ['Min', 'Sen', 'Sel', 'Rab', 'Kam', 'Jum', 'Sab'];
-    $qs = '?dari=' . urlencode($dari) . '&sampai=' . urlencode($sampai);
+/**
+ * Rincian rekap absensi satu guru pada satu periode (rombak tampilan F6: kartu + tabel kit; lencana status absensi warna tetap:
+ * hadir hijau, telat kuning, izin biru, sakit pink, alpa merah). Tombol Kembali ke Rekap membawa periode.
+ *
+ * @var array  $guru    Baris guru
+ * @var array  $jabatan Jabatan guru (nama, is_struktural)
+ * @var array  $ringkas total, hadir, telat, izin, sakit, alpa
+ * @var array  $detail  Catatan ketidakhadiran
+ * @var string $dari    Awal periode (Y-m-d)
+ * @var string $sampai  Akhir periode (Y-m-d)
+ */
+$statusOpts = ['hadir' => 'Hadir', 'telat' => 'Telat', 'izin' => 'Izin', 'sakit' => 'Sakit', 'alpa' => 'Alpa'];
+$lencana    = ['hadir' => 'lencana-hijau', 'telat' => 'lencana-kuning', 'izin' => 'lencana-biru', 'sakit' => 'lencana-pink', 'alpa' => 'lencana-merah'];
+$bulan      = [1 => 'Jan', 2 => 'Feb', 3 => 'Mar', 4 => 'Apr', 5 => 'Mei', 6 => 'Jun', 7 => 'Jul', 8 => 'Agu', 9 => 'Sep', 10 => 'Okt', 11 => 'Nov', 12 => 'Des'];
+$namaHari   = ['Min', 'Sen', 'Sel', 'Rab', 'Kam', 'Jum', 'Sab'];
+$qs         = '?dari=' . urlencode($dari) . '&sampai=' . urlencode($sampai);
 ?>
+<?= $this->extend('layouts/admin') ?>
 
-<a href="<?= site_url('admin/absensi/rekap') . $qs ?>" class="inline-flex items-center gap-1.5 text-sm font-semibold text-gray-500 hover:text-brand-700 mb-4">
-    <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7"/></svg>
-    Kembali ke Rekap
-</a>
+<?= $this->section('aksi') ?>
+<a href="<?= site_url('admin/absensi/rekap') . $qs ?>" class="btn btn-netral"><?= ikon('chevron-left', 'h-4 w-4') ?>Kembali ke rekap</a>
+<?= $this->endSection() ?>
 
-<!-- Header guru + ringkasan -->
-<div class="bg-white rounded-2xl border border-gray-200 shadow-xs p-5 mb-5">
-    <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-        <div>
-            <h2 class="font-bold text-lg text-gray-800"><?= esc($guru['nama']) ?></h2>
-            <p class="text-sm text-gray-400"><?= esc($guru['kode_guru']) ?> &middot; Periode <?= esc($dari) ?> s/d <?= esc($sampai) ?></p>
+<?= $this->section('content') ?>
+<div class="space-y-4">
+    <!-- Kepala guru + ringkasan -->
+    <div class="kartu kartu-isi flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <div class="min-w-0">
+            <h2 class="text-lg font-semibold text-gray-900 dark:text-white"><?= esc($guru['nama']) ?></h2>
+            <p class="text-sm text-gray-500 dark:text-gray-400"><?= esc($guru['kode_guru']) ?> &middot; Periode <?= esc($dari) ?> s/d <?= esc($sampai) ?></p>
             <?php if (! empty($jabatan)): ?>
-                <div class="flex flex-wrap gap-1 mt-1.5">
+                <div class="mt-1.5 flex flex-wrap gap-1">
                     <?php foreach ($jabatan as $j): ?>
-                        <span class="inline-flex rounded-full border px-2 py-0.5 text-[11px] font-semibold <?= $j['is_struktural'] ? 'bg-amber-50 text-amber-700 border-amber-200' : 'bg-gray-100 text-gray-600 border-gray-200' ?>"><?= esc($j['nama']) ?></span>
+                        <span class="lencana <?= $j['is_struktural'] ? 'lencana-kuning' : 'lencana-abu' ?>"><?= esc($j['nama']) ?></span>
                     <?php endforeach; ?>
                 </div>
             <?php endif; ?>
         </div>
         <div class="flex flex-wrap gap-2">
-            <span class="inline-flex items-center rounded-lg border border-gray-200 bg-gray-50 px-2.5 py-1.5 text-xs font-bold text-gray-600">Total sesi: <?= (int) $ringkas['total'] ?></span>
-            <span class="inline-flex items-center rounded-lg border px-2.5 py-1.5 text-xs font-bold <?= $chip['hadir'] ?>">Hadir: <?= (int) $ringkas['hadir'] ?></span>
+            <span class="lencana lencana-abu">Total sesi: <?= (int) $ringkas['total'] ?></span>
             <?php foreach ($statusOpts as $k => $lbl): ?>
-                <span class="inline-flex items-center rounded-lg border px-2.5 py-1.5 text-xs font-bold <?= $chip[$k] ?>"><?= $lbl ?>: <?= (int) $ringkas[$k] ?></span>
+                <span class="lencana <?= $lencana[$k] ?>"><?= $lbl ?>: <?= (int) $ringkas[$k] ?></span>
             <?php endforeach; ?>
         </div>
     </div>
-</div>
 
-<?php if (empty($detail)): ?>
-    <div class="bg-white rounded-2xl border border-gray-200 shadow-xs p-10 text-center text-gray-400">
-        Tidak ada catatan ketidakhadiran pada periode ini — guru <b>hadir penuh</b>. 🎉
-    </div>
-<?php else: ?>
-    <div class="bg-white rounded-2xl border border-gray-200 shadow-xs overflow-hidden">
-        <div class="px-5 py-3.5 border-b border-gray-100">
-            <p class="font-bold text-gray-800">Rincian Ketidakhadiran <span class="text-gray-400 font-normal">(<?= count($detail) ?> catatan)</span></p>
-        </div>
-        <div class="overflow-x-auto">
-            <table class="w-full text-sm">
-                <thead class="bg-gray-50 text-gray-500 text-left">
-                    <tr>
-                        <th class="px-4 py-2.5 font-semibold w-36">Tanggal</th>
-                        <th class="px-4 py-2.5 font-semibold w-40">Jam</th>
-                        <th class="px-4 py-2.5 font-semibold">Kelas &amp; Mapel</th>
-                        <th class="px-4 py-2.5 font-semibold w-24">Status</th>
-                        <th class="px-4 py-2.5 font-semibold w-24">Jam Masuk</th>
-                        <th class="px-4 py-2.5 font-semibold">Keterangan</th>
-                    </tr>
-                </thead>
-                <tbody class="divide-y divide-gray-100">
-                    <?php foreach ($detail as $d): $ts = strtotime($d['tanggal']); ?>
-                        <tr class="hover:bg-gray-50/60">
-                            <td class="px-4 py-2.5 whitespace-nowrap"><span class="font-semibold text-gray-700"><?= (int) date('j', $ts) ?> <?= $bulan[(int) date('n', $ts)] ?> <?= date('Y', $ts) ?></span><br><span class="text-xs text-gray-400"><?= $namaHari[(int) date('w', $ts)] ?></span></td>
-                            <td class="px-4 py-2.5 whitespace-nowrap"><?php if ($d['jam_ke'] !== null): ?>Jam <?= esc($d['jam_ke']) ?> <span class="text-xs text-gray-400">(<?= esc(substr((string) $d['waktu_mulai'], 0, 5)) ?>–<?= esc(substr((string) $d['waktu_selesai'], 0, 5)) ?>)</span><?php else: ?><span class="text-gray-300">—</span><?php endif; ?></td>
-                            <td class="px-4 py-2.5"><?php if (! empty($d['label'])): ?><span class="inline-flex items-center rounded-lg border border-red-200 bg-red-50 px-2 py-0.5 text-xs font-semibold text-red-700"><?= esc($d['label']) ?></span><?php elseif (! empty($d['kehadiran_kerja'])): ?><span class="inline-flex items-center rounded-lg border border-gray-200 bg-gray-50 px-2 py-0.5 text-xs font-semibold text-gray-500">Kehadiran kerja</span><?php else: ?><?= esc($d['nama_kelas'] ?? '—') ?> <span class="text-gray-400">·</span> <span class="font-medium"><?= esc($d['nama_mapel'] ?? '—') ?></span><?php endif; ?></td>
-                            <td class="px-4 py-2.5"><span class="inline-flex items-center rounded-lg border px-2.5 py-1 text-xs font-bold <?= $badge[$d['status']] ?? $badge['izin'] ?>"><?= esc($statusOpts[$d['status']] ?? $d['status']) ?></span></td>
-                            <td class="px-4 py-2.5"><?= $d['jam_masuk'] ? esc(substr($d['jam_masuk'], 0, 5)) : '<span class="text-gray-300">—</span>' ?></td>
-                            <td class="px-4 py-2.5 text-gray-500"><?= $d['keterangan'] ? esc($d['keterangan']) : '<span class="text-gray-300">—</span>' ?></td>
+    <?php if (empty($detail)): ?>
+        <div class="kartu"><?= ui_kosong(['ikon' => 'check-circle', 'judul' => 'Hadir penuh', 'teks' => 'Tidak ada catatan ketidakhadiran pada periode ini.']) ?></div>
+    <?php else: ?>
+        <section class="kartu" aria-labelledby="judul-rincian">
+            <div class="kartu-kepala">
+                <h2 id="judul-rincian" class="text-base font-semibold text-gray-900 dark:text-white">Rincian ketidakhadiran</h2>
+                <span class="lencana lencana-abu"><?= count($detail) ?> catatan</span>
+            </div>
+            <div class="tabel-bungkus">
+                <table class="tabel">
+                    <thead>
+                        <tr>
+                            <th scope="col">Tanggal</th>
+                            <th scope="col">Jam</th>
+                            <th scope="col">Kelas &amp; mapel</th>
+                            <th scope="col">Status</th>
+                            <th scope="col">Jam masuk</th>
+                            <th scope="col">Keterangan</th>
                         </tr>
-                    <?php endforeach; ?>
-                </tbody>
-            </table>
-        </div>
-    </div>
-<?php endif; ?>
-
+                    </thead>
+                    <tbody>
+                        <?php foreach ($detail as $d): $ts = strtotime($d['tanggal']); ?>
+                            <tr>
+                                <td class="whitespace-nowrap"><span class="font-semibold text-gray-900 dark:text-white"><?= (int) date('j', $ts) ?> <?= $bulan[(int) date('n', $ts)] ?> <?= date('Y', $ts) ?></span><br><span class="text-xs text-gray-500 dark:text-gray-400"><?= $namaHari[(int) date('w', $ts)] ?></span></td>
+                                <td class="whitespace-nowrap"><?php if ($d['jam_ke'] !== null): ?>Jam <?= esc($d['jam_ke']) ?> <span class="text-xs text-gray-500 dark:text-gray-400">(<?= esc(substr((string) $d['waktu_mulai'], 0, 5)) ?>–<?= esc(substr((string) $d['waktu_selesai'], 0, 5)) ?>)</span><?php else: ?>—<?php endif; ?></td>
+                                <td>
+                                    <?php if (! empty($d['label'])): ?>
+                                        <span class="lencana lencana-merah"><?= esc($d['label']) ?></span>
+                                    <?php elseif (! empty($d['kehadiran_kerja'])): ?>
+                                        <span class="lencana lencana-abu">Kehadiran kerja</span>
+                                    <?php else: ?>
+                                        <?= esc($d['nama_kelas'] ?? '—') ?> · <span class="font-medium text-gray-900 dark:text-white"><?= esc($d['nama_mapel'] ?? '—') ?></span>
+                                    <?php endif; ?>
+                                </td>
+                                <td><span class="lencana <?= $lencana[$d['status']] ?? 'lencana-biru' ?>"><?= esc($statusOpts[$d['status']] ?? $d['status']) ?></span></td>
+                                <td><?= $d['jam_masuk'] ? esc(substr($d['jam_masuk'], 0, 5)) : '—' ?></td>
+                                <td><?= $d['keterangan'] ? esc($d['keterangan']) : '—' ?></td>
+                            </tr>
+                        <?php endforeach; ?>
+                    </tbody>
+                </table>
+            </div>
+        </section>
+    <?php endif; ?>
+</div>
 <?= $this->endSection() ?>

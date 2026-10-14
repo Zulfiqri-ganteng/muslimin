@@ -67,6 +67,7 @@
     "open-sidebar",
     "pen-nib",
     "plus",
+    "printer",
     "profile-card",
     "receipt",
     "school",
@@ -127,6 +128,7 @@
     "map-pin",
     "newspaper",
     "pen-nib",
+    "printer",
     "profile-card",
     "receipt",
     "school",
@@ -139,6 +141,7 @@
     "user-headset",
     "user-settings",
     "users",
-    "users-group"
+    "users-group",
+    "whatsapp"
   ]
 }
