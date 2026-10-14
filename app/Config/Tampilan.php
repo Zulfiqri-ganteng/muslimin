@@ -79,10 +79,11 @@ class Tampilan extends BaseConfig
 
     /**
      * Grup yang halamannya sudah memakai Alpine versi CSP (@alpinejs/csp). Diisi saat fase grup itu selesai; di F12 semua grup
-     * masuk, lalu Alpine biasa dan pemilih ini dibuang. ('kit' = halaman ui-kit dan 'login' = halaman masuk: keduanya berdiri sendiri
-     * tanpa layout dan selalu memuat versi CSP — dicantumkan agar dev:cek-ui & uji peramban melaporkannya sebagai grup versi CSP.)
+     * masuk, lalu Alpine biasa dan pemilih ini dibuang. ('login' = halaman masuk: berdiri sendiri, selalu versi CSP. 'kit' = halaman
+     * ui-kit, sejak F3 di dalam layouts/admin → kerangka ikut diuji di versi CSP. 'kerangka' = layout & partial bersama (F3): tidak
+     * punya alamat sendiri, versinya mengikuti grup halaman — dicantumkan karena sudah siap kedua versi, agar dev:cek-ui melaporkannya.)
      *
      * @var list<string>
      */
-    public array $alpineCsp = ['kit', 'login'];
+    public array $alpineCsp = ['kit', 'login', 'kerangka'];
 }

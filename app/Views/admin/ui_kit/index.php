@@ -1,51 +1,31 @@
 <?php
 /**
- * Halaman ui-kit (rombak tampilan F1) — contoh hidup SEMUA kit komponen + cara pakainya, sekaligus halaman uji CSP.
- * KHUSUS LAPTOP (Admin\UiKit). Berdiri sendiri tanpa layouts/admin: layout lama belum jalan di Alpine versi CSP (dirombak di F3).
- * Selalu memuat Alpine versi CSP. ?uji=1 → uji-diri komponen (public/assets/js/admin/ui-kit.js; dibaca tools/uji-peramban.mjs).
+ * Halaman ui-kit (rombak tampilan F1; sejak F3 memakai layouts/admin) — contoh hidup SEMUA kit komponen + cara pakainya, sekaligus
+ * halaman uji CSP: grup 'kit' ada di Config\Tampilan::$alpineCsp, jadi layout memuat Alpine versi CSP di sini (kerangka ikut teruji).
+ * KHUSUS LAPTOP (Admin\UiKit). ?uji=1 → uji-diri komponen + kerangka (public/assets/js/admin/ui-kit.js; dibaca tools/uji-peramban.mjs).
  *
  * @var string       $contohPager HTML paginasi contoh (templat pager "admin")
  * @var list<string> $ikonDaftar  nama ikon outline yang tersedia (resources/ikon.json → npm run vendor)
  * @var bool         $modeUji
  */
 $kode = static fn (string $teks): string => '<code class="rounded-md bg-gray-100 px-1.5 py-0.5 font-mono text-xs text-gray-800">' . esc($teks) . '</code>';
-$js   = static fn (string $berkas): string => '<script defer src="' . base_url($berkas) . '?v=' . @filemtime(FCPATH . $berkas) . '" ' . csp_script_nonce() . '></script>';
 ?>
-<!DOCTYPE html>
-<html lang="id" class="tema-lilac">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>UI Kit &mdash; Panel Admin</title>
-    <meta name="robots" content="noindex">
-    <?= view('partials/favicon') ?>
-    <link rel="preload" href="<?= base_url('assets/fonts/inter/inter-latin-wght-normal.woff2') ?>" as="font" type="font/woff2" crossorigin>
-    <link rel="stylesheet" href="<?= base_url('assets/css/admin.css') ?>?v=<?= @filemtime(FCPATH . 'assets/css/admin.css') ?>" <?= csp_style_nonce() ?>>
-</head>
-<body class="bg-gray-50 text-gray-800 antialiased" x-data="uiKit"<?= $modeUji ? ' data-uji="1"' : '' ?>>
+<?= $this->extend('layouts/admin') ?>
 
-<header class="sticky top-0 z-20 border-b border-gray-200 bg-white">
-    <div class="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-3 px-4 py-3">
-        <div>
-            <p class="text-base font-semibold text-gray-900">UI Kit panel admin</p>
-            <p class="text-xs text-gray-500">Rombak tampilan F1 · khusus laptop · Alpine versi CSP</p>
-        </div>
-        <div class="flex flex-wrap items-center gap-3">
-            <span id="label-tema" class="text-sm text-gray-500">Tema</span>
-            <div class="inline-flex rounded-lg border border-gray-200 bg-gray-50 p-1" role="radiogroup" aria-labelledby="label-tema">
-                <button type="button" role="radio" :aria-checked="tema === 'terang'" @click="pilihTema('terang')"
-                        class="rounded-md px-3 py-1.5 text-sm font-medium text-gray-500 transition hover:text-gray-900 aria-checked:bg-white aria-checked:text-gray-900 aria-checked:shadow-xs">Flowbite Terang</button>
-                <button type="button" role="radio" :aria-checked="tema === 'gelap'" @click="pilihTema('gelap')"
-                        class="rounded-md px-3 py-1.5 text-sm font-medium text-gray-500 transition hover:text-gray-900 aria-checked:bg-white aria-checked:text-gray-900 aria-checked:shadow-xs">Flowbite Gelap</button>
-                <button type="button" role="radio" :aria-checked="tema === 'lilac'" @click="pilihTema('lilac')"
-                        class="rounded-md px-3 py-1.5 text-sm font-medium text-gray-500 transition hover:text-gray-900 aria-checked:bg-white aria-checked:text-gray-900 aria-checked:shadow-xs">Lilac Sekolah</button>
-            </div>
-            <a href="<?= site_url('admin/dashboard') ?>" class="btn btn-netral btn-sm"><?= ikon('chevron-left', 'h-4 w-4') ?>Kembali</a>
-        </div>
-    </div>
-</header>
+<?php // Pemilih tema CONTOH (hanya halaman ini, disimpan di peramban); tema semua akun = Pengaturan Sekolah → Tampilan. ?>
+<?= $this->section('aksi') ?>
+<div class="inline-flex rounded-lg border border-gray-200 bg-gray-50 p-1" role="radiogroup" aria-label="Tema contoh" x-data="uiKitTema">
+    <button type="button" role="radio" :aria-checked="tema === 'terang'" @click="pilih('terang')"
+            class="rounded-md px-3 py-1.5 text-sm font-medium text-gray-500 transition hover:text-gray-900 aria-checked:bg-white aria-checked:text-gray-900 aria-checked:shadow-xs">Flowbite Terang</button>
+    <button type="button" role="radio" :aria-checked="tema === 'gelap'" @click="pilih('gelap')"
+            class="rounded-md px-3 py-1.5 text-sm font-medium text-gray-500 transition hover:text-gray-900 aria-checked:bg-white aria-checked:text-gray-900 aria-checked:shadow-xs">Flowbite Gelap</button>
+    <button type="button" role="radio" :aria-checked="tema === 'lilac'" @click="pilih('lilac')"
+            class="rounded-md px-3 py-1.5 text-sm font-medium text-gray-500 transition hover:text-gray-900 aria-checked:bg-white aria-checked:text-gray-900 aria-checked:shadow-xs">Lilac Sekolah</button>
+</div>
+<?= $this->endSection() ?>
 
-<main class="mx-auto max-w-6xl space-y-6 px-4 py-6">
+<?= $this->section('content') ?>
+<div class="mx-auto max-w-6xl space-y-6" x-data="uiKit"<?= $modeUji ? ' data-mode-uji="1"' : '' ?>>
     <?php if ($modeUji): ?>
         <div class="peringatan peringatan-info" role="status">
             <?= ikon('info-circle', 'mt-0.5 h-5 w-5 shrink-0') ?>
@@ -56,8 +36,8 @@ $js   = static fn (string $berkas): string => '<script defer src="' . base_url($
     <?= ui_peringatan('netral', '', ['judul' => 'Cara memakai halaman ini', 'html' =>
         '<p>Setiap kotak = satu komponen + cara pakainya. Kelas CSS di <b>resources/css/admin.css</b> (bagian KIT KOMPONEN), komponen Alpine di '
         . '<b>public/assets/js/admin/ui.js</b>, partial PHP lewat helper <b>ui_*()</b> (app/Helpers/ui_helper.php). Atribut Alpine hanya isian '
-        . 'sederhana yang didukung versi CSP (rancangan §5a). Flowbite Terang dan Flowbite Gelap baru berbeda di gaya menu samping (dibangun di F3); '
-        . 'di halaman ini keduanya memakai warna utama biru, Lilac Sekolah memakai ungu lilac.</p>']) ?>
+        . 'sederhana yang didukung versi CSP (rancangan §5a). Pemilih tema di kanan atas hanya <b>pratinjau di halaman ini</b> (menu samping & '
+        . 'warna utama ikut berubah); tema untuk semua akun diatur Admin di <b>Pengaturan Sekolah → Tampilan</b>.</p>']) ?>
 
     <nav aria-label="Daftar isi" class="flex flex-wrap gap-2 text-sm">
         <?php foreach (['kepala' => 'Kepala halaman', 'tombol' => 'Tombol', 'formulir' => 'Formulir', 'kartu' => 'Kartu & tabel', 'lencana' => 'Lencana',
@@ -70,6 +50,7 @@ $js   = static fn (string $berkas): string => '<script defer src="' . base_url($
     <!-- ================= Kepala halaman ================= -->
     <section id="kepala" class="kartu kartu-isi scroll-mt-24">
         <?= ui_kepala([
+            'tingkat' => 2, // contoh di dalam halaman: <h2> (judul <h1> halaman ini milik kepala layout)
             'judul' => 'Data Guru',
             'ket'   => 'Contoh kepala halaman: remah roti, judul, keterangan, tombol aksi, lalu tab.',
             'remah' => [['Data Master'], ['Guru']],
@@ -82,7 +63,7 @@ $js   = static fn (string $berkas): string => '<script defer src="' . base_url($
             ],
         ]) ?>
         <p class="hint">Pakai: <?= $kode("<?= ui_kepala(['judul' => 'Data Guru', 'ket' => '…', 'remah' => [['Data Master'], ['Guru']], 'aksi' => '<a class=\"btn btn-utama\" …>', 'tab' => [...]]) ?>") ?>
-            — remah saja: <?= $kode('ui_remah([...])') ?>, tab tautan saja: <?= $kode("ui_tab([['label' => …, 'url' => …, 'aktif' => true, 'jumlah' => 3]])") ?>.</p>
+            — <?= $kode("'tingkat' => 2") ?> = judul &lt;h2&gt; (kepala di dalam halaman yang sudah ber-&lt;h1&gt;); remah saja: <?= $kode('ui_remah([...])') ?>, tab tautan saja: <?= $kode("ui_tab([['label' => …, 'url' => …, 'aktif' => true, 'jumlah' => 3]])") ?>.</p>
     </section>
 
     <!-- ================= Tombol ================= -->
@@ -417,14 +398,10 @@ $js   = static fn (string $berkas): string => '<script defer src="' . base_url($
         </div>
         <p class="hint"><?= $kode("<?= ikon('users', 'h-5 w-5') ?>") ?> — ikon baru: tambah namanya di <?= $kode('resources/ikon.json') ?> lalu <?= $kode('npm run vendor') ?> (nama: flowbite.com/icons).</p>
     </section>
-</main>
+</div>
+<?= $this->endSection() ?>
 
-<?= ui_toast() ?>
-<?= ui_konfirmasi() ?>
-
-<?php // Urutan defer: kit (ui.js) & skrip halaman mendaftarkan komponen sebelum Alpine versi CSP berjalan. ?>
-<?= $js('assets/js/admin/ui.js') ?>
-<?= $js('assets/js/admin/ui-kit.js') ?>
-<?= $js('assets/js/vendor/alpine-csp.min.js') ?>
-</body>
-</html>
+<?php // Wadah toast & dialog konfirmasi disediakan layout; ui.js, app.js, dan Alpine (versi CSP untuk grup 'kit') dimuat layout. ?>
+<?= $this->section('scripts') ?>
+<script defer src="<?= base_url('assets/js/admin/ui-kit.js') ?>?v=<?= @filemtime(FCPATH . 'assets/js/admin/ui-kit.js') ?>" <?= csp_script_nonce() ?>></script>
+<?= $this->endSection() ?>

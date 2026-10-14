@@ -24,6 +24,7 @@ class UiKit extends BaseController
         $ikon    = array_map(static fn (string $f): string => basename($f, '.svg'), glob(APPPATH . 'ThirdParty/flowbite-icons/outline/*.svg') ?: []);
 
         return view('admin/ui_kit/index', [
+            'title'       => 'UI Kit panel admin',
             'contohPager' => service('pager')->makeLinks($halaman, 10, 137, 'admin', 0, 'kit'),
             'ikonDaftar'  => $ikon,
             'modeUji'     => $this->request->getGet('uji') === '1',

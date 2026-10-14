@@ -1,6 +1,6 @@
 <?php
 /**
- * Kartu panduan ringkas untuk tiap halaman.
+ * Kartu panduan ringkas untuk tiap halaman (gaya kit F3: sudut rounded-lg, ikon Flowbite, tombol tutup kit).
  * Default TERTUTUP — user menekan "Baca panduan halaman" untuk membuka,
  * pilihan tersimpan di localStorage (komponen `helpCard` di assets/js/admin/app.js).
  *
@@ -13,22 +13,21 @@
 ?>
 <div x-data="helpCard" data-help-key="<?= esc($helpKey, 'attr') ?>" x-cloak class="mb-5">
     <button type="button" x-show="!show" @click="openHelp()"
-            class="inline-flex items-center gap-1.5 text-xs font-semibold text-brand-600 hover:text-brand-800">
-        <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+            class="inline-flex items-center gap-1.5 rounded-lg text-xs font-semibold text-brand-600 hover:text-brand-800 focus:outline-hidden focus-visible:ring-2 focus-visible:ring-brand-300">
+        <?= ikon('info-circle', 'h-4 w-4') ?>
         Baca panduan halaman
     </button>
-    <div x-show="show" x-transition class="rounded-2xl border border-brand-200 bg-brand-50 p-4 sm:p-5">
+    <div x-show="show" x-transition class="rounded-lg border border-brand-200 bg-brand-50 p-4 sm:p-5">
         <div class="flex items-start gap-3">
-            <span class="shrink-0 flex h-8 w-8 items-center justify-center rounded-lg bg-brand-600 text-white">
-                <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+            <span class="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-brand-600 text-white">
+                <?= ikon('info-circle', 'h-5 w-5') ?>
             </span>
-            <div class="flex-1 min-w-0 text-sm leading-relaxed text-gray-600">
-                <p class="font-bold text-brand-800 mb-1"><?= esc($helpTitle) ?></p>
+            <div class="min-w-0 flex-1 text-sm leading-relaxed text-gray-600">
+                <p class="mb-1 font-bold text-brand-800"><?= esc($helpTitle) ?></p>
                 <?= $helpBody ?>
             </div>
-            <button type="button" @click="closeHelp()"
-                    class="shrink-0 text-gray-400 hover:text-gray-600" title="Sembunyikan panduan">
-                <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg>
+            <button type="button" @click="closeHelp()" class="tombol-tutup -my-1 -me-1" title="Sembunyikan panduan" aria-label="Sembunyikan panduan">
+                <?= ikon('close', 'h-4 w-4') ?>
             </button>
         </div>
     </div>
