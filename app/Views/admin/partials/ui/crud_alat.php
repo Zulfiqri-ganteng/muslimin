@@ -10,8 +10,9 @@
  *   baseUrl: string, cari?: string|null, q?: string, filter?: list<array{name: string, value?: string, all: string, options: array<string, string>}>,
  *   per?: int, kiriHtml?: string|null, tambah?: bool, labelTambah?: string, impor?: bool, eksporUrl?: string|null, eksporTitle?: string,
  *   tambahanHtml?: string, massalUrl?: string|null, massalHidden?: array<string, string>, massalLabel?: string, massalPeringatan?: string,
- *   filterLangsung?: bool
+ *   filterLangsung?: bool, hidden?: array<string, string>
  * } $ui
+ * 'hidden' (F7) = isian tersembunyi di formulir cari/filter yang ikut terkirim, mis. ['tp' => '2026/2027'] (tahun pelajaran Ujian).
  */
 $baseUrl     = (string) ($ui['baseUrl'] ?? '');
 $cari        = $ui['cari'] ?? null;
@@ -39,6 +40,9 @@ foreach ($filter as $f) {
         <div class="alat-crud-cari">
             <?php if ($cari !== null): ?>
                 <form method="get" id="toolbarFilter" class="flex min-w-0 flex-1 flex-wrap items-center gap-2" role="search">
+                    <?php foreach ($ui['hidden'] ?? [] as $name => $val): ?>
+                        <input type="hidden" name="<?= esc((string) $name, 'attr') ?>" value="<?= esc((string) $val, 'attr') ?>">
+                    <?php endforeach; ?>
                     <label class="alat-crud-kotak">
                         <span class="sr-only">Cari</span>
                         <?= ikon('search', '') ?>
