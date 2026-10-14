@@ -16,6 +16,9 @@
  * Dipakai halaman: $title (judul); section 'content'; opsional section 'aksi' (tombol di kanan judul), 'kepala' (mengganti kepala
  * halaman bawaan, mis. ui_kepala() dengan tab), 'scripts' (berkas JS halaman). Halaman yang isinya sudah punya <h1> sendiri
  * (belum dirombak) hanya mendapat remah roti, supaya judul tidak ganda.
+ * MODE CRUD (F5, pola template content/crud/users.html): section 'tata' berisi "crud" → isi tanpa bantalan, kepala = bilah putih
+ * selebar layar (remah, judul, panduan dari section 'bantuan', pesan) yang menyambung dengan bilah alat halaman (ui_crud_alat),
+ * lalu tabel selebar layar (.tabel-crud) dan bilah halaman yang menempel di bawah (ui_crud_kaki).
  */
 $cur   = uri_string();
 $admin = session('admin') ?? [];
@@ -100,6 +103,8 @@ if ($cur === $beranda) {
 $isiHalaman   = $this->renderSection('content');
 $kepalaKhusus = trim($this->renderSection('kepala'));
 $aksiHalaman  = trim($this->renderSection('aksi'));
+$modeCrud     = trim($this->renderSection('tata')) === 'crud';
+$bantuan      = trim($this->renderSection('bantuan'));
 $punyaJudul   = str_contains($isiHalaman, '<h1');
 
 // Ikon menu samping: versi SOLID seperti template (cadangan versi garis bila ikon itu tak punya versi solid).
@@ -292,8 +297,27 @@ $js       = static fn (string $berkas): string => '<script defer src="' . base_u
 
 <!-- ===================== ISI (template: main-content) ===================== -->
 <div class="kerangka-isi">
-    <main id="isi" tabindex="-1" class="flex-1 px-4 pt-6 focus:outline-hidden"<?= $lihatSaja ? ' data-lihat-saja="1"' : '' ?>>
+    <main id="isi" tabindex="-1" class="flex-1 <?= $modeCrud ? '' : 'px-4 pt-6 ' ?>focus:outline-hidden"<?= $lihatSaja ? ' data-lihat-saja="1"' : '' ?>>
         <?php $adaPesan = $lihatSaja || session('success') || session('error') || session('errors'); ?>
+        <?php if ($modeCrud): ?>
+            <?php // Kepala CRUD: bilah putih selebar layar, menyambung dengan bilah alat (ui_crud_alat) di awal isi halaman. ?>
+            <div class="kepala-crud">
+                <?php if ($remah !== []): ?><div class="mb-5"><?= ui_remah($remah) ?></div><?php endif; ?>
+                <h1 class="judul-halaman"><?= esc($judulHalaman) ?></h1>
+                <?php if ($bantuan !== ''): ?><div class="mt-3"><?= $bantuan ?></div><?php endif; ?>
+                <?php $adaPesan = false; ?>
+                <?php if ($lihatSaja || session('success') || session('error') || session('errors')): ?>
+                    <div class="mt-4 space-y-3">
+                        <?php if ($lihatSaja): ?>
+                            <?= ui_peringatan('info', 'Akun ' . $labelPeranKini . ' bisa membuka dan mengunduh dari halaman ini, tetapi tidak bisa mengubah datanya. Admin bisa mengubahnya di Sistem → Hak Akses.', ['judul' => 'Mode lihat saja']) ?>
+                        <?php endif; ?>
+                        <?php if (session('success')): ?><?= ui_peringatan('sukses', (string) session('success'), ['tutup' => true]) ?><?php endif; ?>
+                        <?php if (session('error')): ?><?= ui_peringatan('galat', (string) session('error'), ['tutup' => true]) ?><?php endif; ?>
+                        <?php if (session('errors')): ?><?= ui_peringatan('galat', array_map('strval', array_values((array) session('errors'))), ['tutup' => true]) ?><?php endif; ?>
+                    </div>
+                <?php endif; ?>
+            </div>
+        <?php endif; ?>
         <?php if ($adaPesan): ?>
             <div class="mb-5 space-y-3">
                 <?php if ($lihatSaja): ?>
@@ -305,7 +329,9 @@ $js       = static fn (string $berkas): string => '<script defer src="' . base_u
             </div>
         <?php endif; ?>
 
-        <?php if ($kepalaKhusus !== ''): ?>
+        <?php if ($modeCrud): ?>
+            <?php // kepala sudah dirender di atas ?>
+        <?php elseif ($kepalaKhusus !== ''): ?>
             <?= $kepalaKhusus ?>
         <?php elseif ($punyaJudul): ?>
             <?php if ($remah !== []): ?><div class="mb-4"><?= ui_remah($remah) ?></div><?php endif; ?>

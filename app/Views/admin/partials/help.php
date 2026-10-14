@@ -9,9 +9,10 @@
  * @var string $helpKey   kunci unik halaman (untuk localStorage)
  * @var string $helpTitle judul panduan
  * @var string $helpBody  isi HTML panduan
+ * @var string $helpKelas (opsional) kelas jarak pembungkus; bawaan mb-5 (mode CRUD: "" karena sudah di kepala halaman)
  */
 ?>
-<div x-data="helpCard" data-help-key="<?= esc($helpKey, 'attr') ?>" x-cloak class="mb-5">
+<div x-data="helpCard" data-help-key="<?= esc($helpKey, 'attr') ?>" x-cloak class="<?= esc($helpKelas ?? 'mb-5', 'attr') ?>">
     <button type="button" x-show="!show" @click="openHelp()"
             class="inline-flex items-center gap-1.5 rounded-lg text-xs font-semibold text-brand-600 hover:text-brand-800 dark:text-brand-400 dark:hover:text-brand-300 focus:outline-hidden focus-visible:ring-2 focus-visible:ring-brand-300">
         <?= ikon('info-circle', 'h-4 w-4') ?>

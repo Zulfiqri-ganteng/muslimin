@@ -192,10 +192,10 @@
         <div class="kartu-kepala">
             <div>
                 <h2 class="kartu-judul">Tampilan panel admin</h2>
-                <p class="kartu-ket">Pilih mode tampilan untuk <b>semua akun</b> panel admin (termasuk halaman masuk). Pilihan langsung terlihat di halaman ini sebagai pratinjau; klik <b>Simpan tema</b> untuk menerapkannya.</p>
+                <p class="kartu-ket">Klik salah satu mode — tampilan <b>langsung berubah dan tersimpan</b> untuk <b>semua akun</b> panel admin (termasuk halaman masuk).</p>
             </div>
         </div>
-        <form method="post" action="<?= site_url('admin/settings/tampilan') ?>" class="kartu-isi space-y-5">
+        <form method="post" action="<?= site_url('admin/settings/tampilan') ?>" class="kartu-isi space-y-5" x-ref="formTema">
             <?= csrf_field() ?>
             <?php if (! $temaSiap): ?>
                 <?= ui_peringatan('awas', 'Kolom tema belum ada di database, jadi pilihan belum bisa disimpan. Jalankan migrasi: php spark migrate.') ?>
@@ -213,7 +213,7 @@
                                 </span>
                             </span>
                             <span class="flex items-center">
-                                <input type="radio" name="pilihan" value="<?= $kunci ?>" class="cek" x-model="pilihan"<?= $kunci === $tema['mode'] ? ' checked' : '' ?>>
+                                <input type="radio" name="pilihan" value="<?= $kunci ?>" class="cek" x-model="pilihan"<?= $kunci === $tema['mode'] ? ' checked' : '' ?><?= $temaSiap ? '' : ' disabled' ?>>
                                 <span class="cek-label"><?= esc($m['nama']) ?></span>
                             </span>
                             <span class="text-xs text-gray-500 dark:text-gray-400"><?= esc($m['ket']) ?></span>
@@ -221,11 +221,8 @@
                     <?php endforeach; ?>
                 </div>
             </fieldset>
-            <div class="flex flex-wrap items-center gap-3">
-                <button type="submit" class="btn btn-utama"<?= $temaSiap ? '' : ' disabled' ?>><?= ikon('check', 'h-4 w-4') ?>Simpan tema</button>
-                <button type="button" class="btn btn-netral" x-show="berubah()" x-cloak @click="batal()"><?= ikon('close', 'h-4 w-4') ?>Batalkan pratinjau</button>
-                <span class="text-sm text-gray-500 dark:text-gray-400" x-show="berubah()" x-cloak>Pratinjau — belum disimpan.</span>
-            </div>
+            <?php // Dengan JavaScript: klik mode = langsung tersimpan (tampilan.js). Tanpa JavaScript: tombol Simpan cadangan. ?>
+            <noscript><button type="submit" class="btn btn-utama"<?= $temaSiap ? '' : ' disabled' ?>><?= ikon('check', 'h-4 w-4') ?>Simpan tema</button></noscript>
         </form>
     </section>
 <?php endif; ?>

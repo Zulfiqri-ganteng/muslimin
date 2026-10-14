@@ -107,4 +107,48 @@ if (! function_exists('ui_partial')) {
     {
         return ui_partial('konfirmasi');
     }
+
+    /*
+     * (F5) Halaman data / CRUD — pola template content/crud/users.html. Layout: section 'tata' = crud (kepala putih selebar
+     * layar), section 'bantuan' = panduan halaman. Isi: <div x-data="masterList" data-base="…" data-defaults="…">
+     *   ui_crud_alat([...])  → tabel .tabel-crud (aksi baris: ui_crud_aksi) → ui_crud_kaki([...])
+     *   ui_crud_form_buka(['benda' => 'Jurusan']) … kolom isian … ui_crud_form_tutup()   ui_crud_impor([...])
+     * </div>
+     */
+
+    /** Bilah alat: cari, filter, "Tampilkan N", Cari/Reset, hapus massal | Tambah, Import, Export. Lihat partial ui/crud_alat. */
+    function ui_crud_alat(array $opsi): string
+    {
+        return ui_partial('crud_alat', $opsi);
+    }
+
+    /** Tombol per baris: Detail (opsional), Ubah (biru), Hapus (merah + konfirmasi). Lihat partial ui/crud_aksi. */
+    function ui_crud_aksi(array $opsi): string
+    {
+        return ui_partial('crud_aksi', $opsi);
+    }
+
+    /** Bilah bawah yang menempel: info jumlah + paginasi. Lihat partial ui/crud_kaki. */
+    function ui_crud_kaki(array $opsi): string
+    {
+        return ui_partial('crud_kaki', $opsi);
+    }
+
+    /** Dialog Import Excel (keadaan importOpen milik masterList). Lihat partial ui/crud_impor. */
+    function ui_crud_impor(array $opsi): string
+    {
+        return ui_partial('crud_impor', $opsi);
+    }
+
+    /** Pembuka dialog formulir Tambah/Ubah (keadaan open/mode milik masterList). Lihat partial ui/crud_form_buka. */
+    function ui_crud_form_buka(array $opsi): string
+    {
+        return ui_partial('crud_form_buka', $opsi);
+    }
+
+    /** Penutup dialog formulir: Batal + Simpan. */
+    function ui_crud_form_tutup(array $opsi = []): string
+    {
+        return ui_partial('crud_form_tutup', $opsi);
+    }
 }

@@ -205,22 +205,38 @@
 
         form.querySelectorAll('input[name="ids[]"]').forEach(function (n) { n.remove(); });
 
+        // (F5) Pertanyaan lewat dialog konfirmasi kit (merah) bila tersedia; bila tidak, confirm() bawaan peramban.
+        var tanya = function (judul, pesan, ya) {
+            if (window.Ui && window.Ui.adaKonfirmasi()) {
+                return window.Ui.konfirmasi({ judul: judul, pesan: pesan, ya: ya, batal: 'Batal', jenis: 'bahaya' });
+            }
+            return Promise.resolve(window.confirm(pesan));
+        };
+        var checked = Array.prototype.slice.call(document.querySelectorAll('.row-check:checked'));
+        var janji;
         if (mode === 'all') {
-            if (!window.confirm('HAPUS SEMUA ' + label + '? Tindakan ini menghapus seluruh daftar dan tidak dapat dibatalkan.' + warn)) { return; }
+            janji = tanya('Hapus semua ' + label + '?', 'Tindakan ini menghapus SELURUH daftar dan tidak dapat dibatalkan.' + warn, 'Ya, hapus semua');
         } else {
-            var checked = Array.prototype.slice.call(document.querySelectorAll('.row-check:checked'));
-            if (checked.length === 0) { window.alert('Centang dulu data yang ingin dihapus.'); return; }
-            if (!window.confirm('Hapus ' + checked.length + ' ' + label + ' terpilih?' + warn)) { return; }
-            checked.forEach(function (c) {
-                var i = document.createElement('input');
-                i.type = 'hidden';
-                i.name = 'ids[]';
-                i.value = c.value;
-                form.appendChild(i);
-            });
+            if (checked.length === 0) {
+                if (window.Ui && window.Ui.toast) { window.Ui.toast('Centang dulu data yang ingin dihapus.', 'awas'); } else { window.alert('Centang dulu data yang ingin dihapus.'); }
+                return;
+            }
+            janji = tanya('Hapus ' + checked.length + ' ' + label + '?', 'Hapus ' + checked.length + ' ' + label + ' terpilih? Tindakan ini tidak dapat dibatalkan.' + warn, 'Ya, hapus');
         }
-        form.querySelector('[name=mode]').value = mode;
-        form.submit();
+        janji.then(function (setuju) {
+            if (!setuju) { return; }
+            if (mode !== 'all') {
+                checked.forEach(function (c) {
+                    var i = document.createElement('input');
+                    i.type = 'hidden';
+                    i.name = 'ids[]';
+                    i.value = c.value;
+                    form.appendChild(i);
+                });
+            }
+            form.querySelector('[name=mode]').value = mode;
+            form.submit();
+        });
     });
 
     /* ---------------------------------------------------------------
@@ -232,6 +248,14 @@
      *    Perilaku khusus per halaman dioper lewat `overrides`.
      * ------------------------------------------------------------- */
     window.masterList = function (overrides) {
+        var akar = null; // elemen root komponen (disimpan di init; di metode Alpine versi CSP this.$el = elemen pemicu)
+        // (F5) Fokus ke kolom isian pertama dialog yang baru terbuka.
+        var fokusIsian = function () {
+            setTimeout(function () {
+                var el = akar ? akar.querySelector('.dialog[data-buka] .dialog-isi :is(input, select, textarea):not([type="hidden"]):not([disabled])') : null;
+                if (el) { el.focus(); }
+            }, 60);
+        };
         var base = {
             open: false,
             importOpen: false,
@@ -245,10 +269,17 @@
             allChecked: false, // semua baris tercentang → tombol "Hapus Semua" muncul
 
             init: function () {
+                var self = this;
+                akar          = this.$el;
                 this.base     = this.$el.getAttribute('data-base') || '';
                 this.entity   = this.$el.getAttribute('data-entity') || 'data';
                 this.defaults = readJson(this.$el, 'defaults', {});
                 this.form     = Object.assign({}, this.defaults);
+                // (F5) Tombol Ubah kit (ui_crud_aksi): <button data-ubah data-row="JSON"> — delegasi, tanpa isian Alpine (siap CSP).
+                akar.addEventListener('click', function (e) {
+                    var b = e.target.closest ? e.target.closest('[data-ubah]') : null;
+                    if (b && akar.contains(b)) { self.openEditEl(b); }
+                });
                 if (this.onInit) { this.onInit(); }
             },
 
@@ -258,7 +289,11 @@
                 this.form      = Object.assign({}, this.defaults);
                 this.actionUrl = this.base;
                 this.open      = true;
+                fokusIsian();
             },
+            tutupForm: function () { this.open = false; },
+            bukaImpor: function () { this.importOpen = true; fokusIsian(); },
+            tutupImpor: function () { this.importOpen = false; },
             // Dipanggil dari tombol edit: data baris ada di atribut data-row (JSON).
             openEditEl: function (el) {
                 this.openEdit(JSON.parse(el.getAttribute('data-row') || '{}'));
@@ -268,6 +303,7 @@
                 this.form      = this.mapEdit(r);
                 this.actionUrl = this.base + '/' + r.id;
                 this.open      = true;
+                fokusIsian();
             },
             /** Petakan baris DB → form. Override bila perlu konversi khusus. */
             mapEdit: function (r) {
