@@ -109,7 +109,7 @@ class ContentSecurityPolicy extends BaseConfig
      *
      * @var list<string>|string
      */
-    public $imageSrc = ['self', 'data:', 'blob:'];
+    public $imageSrc = ['self', 'data:', 'blob:', 'https://img.youtube.com']; // sampul video YouTube di Arsip Dokumen (dokumen_thumb_url_eksternal)
 
     /**
      * Restricts the URLs that can appear in a page's `<base>` element.
@@ -165,7 +165,7 @@ class ContentSecurityPolicy extends BaseConfig
      *
      * @var list<string>|string|null
      */
-    public $frameSrc = ['self', 'https://www.youtube-nocookie.com']; // video YouTube di Arsip Dokumen (partials/dokumen_penampil.php)
+    public $frameSrc = ['self', 'https://www.youtube-nocookie.com']; // video YouTube di Arsip Dokumen (admin/dokumen/_penampil.php & partials/dokumen_penampil.php)
 
     /**
      * Restricts the origins allowed to deliver video and audio.

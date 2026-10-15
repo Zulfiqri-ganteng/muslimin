@@ -310,6 +310,27 @@
   /* (F9) Tautan saringan (<a class="tombol-saring" aria-current="true">) memakai gaya aktif yang sama. */
   .tombol-saring[aria-pressed='true'], .tombol-saring[aria-current='true'] { @apply border-brand-700 bg-brand-700 text-white hover:bg-brand-800 dark:border-brand-600 dark:bg-brand-600; }
 
+  /* ---- (F10) Penjelajah Manajemen Dokumen. Status dari Alpine lewat atribut data (siap CSP, tanpa :class): [data-terpilih]
+     dicentang · [data-diseret] sedang diseret · [data-sasaran] folder tujuan saat menyeret · [data-seret] berkas diseret ke
+     kotak unggah. Warna dasar ditaruh di sini (bukan utilitas di elemen) supaya status bisa menimpanya. Kotak centang & tombol
+     aksi kecil: di layar sentuh selalu tampak; di perangkat berkursor baru muncul saat disorot/difokus/dicentang. ---- */
+  .dok-butir  { @apply relative rounded-lg transition hover:bg-gray-100 dark:hover:bg-gray-700; }
+  .dok-kartu  { @apply relative flex flex-col overflow-hidden rounded-lg border border-gray-200 bg-white transition hover:border-brand-300 dark:border-gray-700 dark:bg-gray-800 dark:hover:border-brand-500; }
+  .dok-folder { @apply relative flex items-center gap-3 rounded-lg border border-gray-200 bg-white p-3 transition hover:border-brand-300 dark:border-gray-700 dark:bg-gray-800 dark:hover:border-brand-500; }
+  .dok-baris  { @apply transition; }
+  .dok-butir[data-terpilih], .dok-baris[data-terpilih] { @apply bg-brand-50 dark:bg-gray-700; }
+  .dok-butir[data-terpilih], .dok-kartu[data-terpilih] { @apply ring-2 ring-brand-500; }
+  .dok-kartu[data-terpilih] { @apply border-brand-500; }
+  .dok-butir[data-diseret], .dok-kartu[data-diseret], .dok-baris[data-diseret] { @apply opacity-40; }
+  .dok-sasaran[data-sasaran] { @apply border-brand-500 bg-brand-50 ring-2 ring-brand-500 dark:bg-gray-700; }
+  .dok-zona { @apply block cursor-pointer rounded-lg border-2 border-dashed border-gray-300 bg-gray-50 p-6 text-center transition hover:border-brand-400 hover:bg-gray-100 dark:border-gray-600 dark:bg-gray-700 dark:hover:border-brand-500 dark:hover:bg-gray-600; }
+  .dok-zona[data-seret] { @apply border-brand-500 bg-brand-50 dark:bg-gray-600; }
+  .dok-sorot { @apply transition-opacity; }
+  @media (hover: hover) {
+    .dok-sorot { opacity: 0; }
+    .group:hover .dok-sorot, .group:focus-within .dok-sorot, [data-terpilih] .dok-sorot { opacity: 1; }
+  }
+
   /* ---- (F8) Isian "Kendala" (Jurnal Lab) tampil hanya saat opsi "Ada kendala" dipilih — CSS :has(), tanpa JS (siap CSP).
      Jangan beri kelas utilitas hidden/block pada elemennya: lapisan utilities selalu menang atas aturan di sini. ---- */
   .muncul-saat-kendala { display: none; }
