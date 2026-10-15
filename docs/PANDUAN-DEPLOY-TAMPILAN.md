@@ -1,7 +1,7 @@
 # Panduan: memasang rombak tampilan admin (cabang `upgrade-tampilan`) di server
 
 Isi paket: seluruh panel admin + halaman masuk bergaya **Flowbite Admin Dashboard** (F0–F12), tiga mode tampilan
-(**Terang** / **Gelap** / **Warna Sekolah**) di *Pengaturan Sekolah → Tampilan*, ikon & tombol berwarna, dasbor bergrafik,
+(**Terang** / **Gelap** / **Warna Sekolah** — serba ungu lilac: tombol, tabel, lencana) di *Pengaturan Sekolah → Tampilan*, ikon & tombol berwarna, dasbor bergrafik,
 halaman galat 404 baru, semua skrip & gaya di berkas terpisah (siap CSP). **Halaman publik belum dirombak** (fase terakhir).
 Rancangan & riwayat: `docs/RENCANA-UPGRADE-TAMPILAN.md`.
 
@@ -42,7 +42,8 @@ phpm spark migrate
 ## 4. Cek cepat (±15 menit)
 1. **Halaman masuk** → masuk Admin: menu samping, bilah atas, kaki halaman tampil rapi; tombol ciutkan menu & cari menu jalan.
 2. **Dasbor**: kartu angka & grafik kehadiran tampil; ganti 7/30/90 hari.
-3. **Pengaturan → Tampilan**: klik Gelap → seluruh halaman gelap; klik Warna Sekolah → ungu; kembalikan ke pilihan sekolah.
+3. **Pengaturan → Tampilan**: klik Gelap → seluruh halaman gelap; klik Warna Sekolah → serba ungu lilac (tombol Hapus merah
+   keunguan, tabel lavender); kembalikan ke pilihan sekolah.
 4. **Master Siswa**: cari, saring kelas, Tambah → Simpan → Ubah → Hapus (muncul dialog konfirmasi merah) satu data uji.
 5. **Absensi Guru** dan **Jadwal KBM**: simpan sekali (tanpa pindah halaman) → berhasil.
 6. **Ujian → Honor / SKBM**: buka grid, ubah satu sel, tersimpan.
