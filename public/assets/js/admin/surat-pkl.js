@@ -151,10 +151,13 @@ document.addEventListener('alpine:init', function () {
                 this.dipilih = this.ajuan.filter(function (a) { return !a.balasan && self.tampil(a); }).map(function (a) { return String(a.id); });
             },
             siswaAjuan: function () { var a = this.cariAjuan(this.ajuanTunggal); return a ? a.siswa : []; },
+            // (F9) nama siswa satu ajuan, dipisah koma (dulu fungsi sebaris di x-text — tak didukung Alpine versi CSP).
+            daftarNamaSiswa: function (a) { return (a && a.siswa ? a.siswa : []).map(function (s) { return s.nama; }).join(", "); },
             namaTempat: function () { var a = this.cariAjuan(this.ajuanTunggal); return this.tempat || (a ? a.perusahaan : ''); },
 
-            periodeTeks: periodeTeks,
-            tglIndo: tglIndo,
+            // (F9) nama metode beda dari fungsi di atas — dev:cek-ui menolak isian yang mirip panggilan fungsi global.
+            teksPeriode: periodeTeks,
+            teksTglIndo: tglIndo,
             lamaTeks: function () { var n = lamaBulan(this.mulai, this.selesai); return n > 0 ? n + ' (' + terbilang(n) + ') bulan' : ''; },
 
             /* Peringatan terhadap Pengaturan PKL (server memeriksa ulang; tidak memblokir). */
