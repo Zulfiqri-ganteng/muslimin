@@ -31,7 +31,7 @@ class PklSuratSekolah extends Migration
             'kontak_surat_hp'      => ['type' => 'VARCHAR', 'constraint' => 30, 'null' => true],
             // Nama berkas gambar tanda tangan Waka Hubin di writable/pkl/ (kosong = ruang dikosongkan untuk tanda tangan basah).
             'ttd_hubin'            => ['type' => 'VARCHAR', 'constraint' => 150, 'null' => true],
-            'format_nama_berkas'   => ['type' => 'VARCHAR', 'constraint' => 150, 'default' => '{urut} Surat Izin PKL BINUS - {nama_depan} {all} {kelas}'],
+            'format_nama_berkas'   => ['type' => 'VARCHAR', 'constraint' => 150, 'default' => '{urut} Surat Izin PKL - {nama_depan} {all} {kelas}'],
             // Waka Hubin memutuskan paling lambat sekian hari sejak siswa mengirim.
             'batas_keputusan_hari' => ['type' => 'TINYINT', 'constraint' => 3, 'unsigned' => true, 'default' => 5],
         ];

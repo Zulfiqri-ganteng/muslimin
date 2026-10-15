@@ -906,7 +906,7 @@ class UjiSurat extends BaseCommand
             && str_contains($kaki, 'Kode verifikasi: SRT-00012-ABC123') && str_contains($kaki, 'Dicetak oleh Siti Operator (Operator Sekolah) pada') && str_contains($kaki, 'pukul 10.05 WIB'), $kaki);
         $this->cek('kaki surat ACC oleh Admin: "(Admin Sistem)" apa adanya, tanpa "mewakili"', str_contains($B::kakiSurat(['acc_peran' => 'admin'] + $dasar, $p, $ekstra), '(Admin Sistem)') && ! str_contains($B::kakiSurat(['acc_peran' => 'admin'] + $dasar, $p, $ekstra), 'mewakili'));
         $tanpa = $B::kakiSurat(['perlu_acc' => 0] + $dasar, $p, $ekstra);
-        $this->cek('kaki surat tanpa ACC: hanya keterangan cetak (tidak mengaku "disetujui")', str_contains($tanpa, 'Dicetak melalui Sistem Informasi Akademik Sekolah (BINUS) oleh Siti Operator') && ! str_contains($tanpa, 'disetujui') && $B::kakiSurat(['perlu_acc' => 0] + $dasar, $p, []) === '');
+        $this->cek('kaki surat tanpa ACC: hanya keterangan cetak (tidak mengaku "disetujui")', str_contains($tanpa, 'Dicetak melalui Sistem Informasi Akademik Sekolah oleh Siti Operator') && ! str_contains($tanpa, 'disetujui') && $B::kakiSurat(['perlu_acc' => 0] + $dasar, $p, []) === '');
 
         // --- Penanda umum
         $ttd = ['path' => '/x.png', 'ext' => 'png', 'cx' => 1512000, 'cy' => 648000];

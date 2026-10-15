@@ -332,7 +332,7 @@ final class SuratBerkas
             return '';
         }
 
-        return 'Dicetak melalui Sistem Informasi Akademik Sekolah (BINUS) oleh ' . $ekstra['oleh']
+        return 'Dicetak melalui Sistem Informasi Akademik Sekolah oleh ' . $ekstra['oleh']
             . (! empty($ekstra['peran']) ? ' (' . HakAkses::label((string) $ekstra['peran']) . ')' : '')
             . ' pada ' . PklSurat::waktuIndo((string) ($ekstra['sekarang'] ?? date('Y-m-d H:i:s'))) . '.';
     }

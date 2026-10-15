@@ -666,7 +666,7 @@ final class PklSurat
         $jabatanHubin = trim((string) ($p['waka_hubin_jabatan'] ?? '')) !== '' ? trim((string) $p['waka_hubin_jabatan']) : 'Wakil Kepala Sekolah Bidang Hubungan Industri';
 
         if ($peran === 'impor') {
-            $baris1 = 'Data PKL ini adalah riwayat yang diimpor ke Sistem Informasi Akademik Sekolah (BINUS) oleh ' . ($nama !== '' ? $nama : 'staf') . ($waktu !== '' ? ' pada ' . $waktu : '') . ' — bukan persetujuan elektronik Waka Hubin.';
+            $baris1 = 'Data PKL ini adalah riwayat yang diimpor ke Sistem Informasi Akademik Sekolah oleh ' . ($nama !== '' ? $nama : 'staf') . ($waktu !== '' ? ' pada ' . $waktu : '') . ' — bukan persetujuan elektronik Waka Hubin.';
             $baris2 = $kode !== '' ? 'Kode verifikasi: ' . $kode : '';
         } else {
             $siapa = match (true) {
@@ -676,7 +676,7 @@ final class PklSurat
                 default            => $nama !== '' ? $nama : 'tidak tercatat',
             };
             // Tiap keterangan satu baris pendek (tidak terpotong di tengah kode verifikasi).
-            $baris1 = 'Surat ini disetujui secara elektronik melalui Sistem Informasi Akademik Sekolah (BINUS).';
+            $baris1 = 'Surat ini disetujui secara elektronik melalui Sistem Informasi Akademik Sekolah.';
             $baris2 = 'Disetujui oleh: ' . $siapa;
             $rinci  = array_filter([
                 $waktu !== '' ? 'Waktu persetujuan: ' . $waktu : '',

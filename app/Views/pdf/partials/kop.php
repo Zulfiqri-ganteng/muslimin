@@ -10,7 +10,7 @@
 $logo   = kop_logo_base64($setting);
 $lokasi = kop_lokasi($setting);
 $kontak = kop_kontak($setting);
-// Jenjang + nama digabung jadi SATU baris besar: "SMK BINA NUSA (BINUS)".
+// Jenjang + nama digabung jadi SATU baris besar: "SMK NAMA SEKOLAH (SINGKATAN)".
 $level  = trim((string) ($setting['school_level'] ?? ''));
 $nama   = trim((string) ($setting['school_name'] ?? ''));
 $namaLengkap = trim($level . ' ' . $nama);

@@ -5,7 +5,7 @@ namespace App\Libraries;
 /**
  * Pola nama berkas surat PKL (satu surat). Bawaan mengikuti kebiasaan sekolah:
  *
- *   "295 Surat Izin PKL BINUS - Ilyasha ALL XII TKJ 5.docx"
+ *   "295 Surat Izin PKL - Ilyasha ALL XII TKJ 5.docx"
  *
  *   {urut}         nomor urut surat apa adanya (295)     {urut3} 295   {urut4} 0295
  *   {nama_depan}   nama depan pengaju (Ilyasha). Bila nama depan ≤ 2 huruf (mis. "M Fahri"), dua kata pertama.
@@ -17,7 +17,7 @@ namespace App\Libraries;
  */
 final class PklNamaBerkas
 {
-    public const BAWAAN = '{urut} Surat Izin PKL BINUS - {nama_depan} {all} {kelas}';
+    public const BAWAAN = '{urut} Surat Izin PKL - {nama_depan} {all} {kelas}';
 
     private const TOKEN = ['{urut}', '{urut3}', '{urut4}', '{nama_depan}', '{nama_pengaju}', '{all}', '{kelas}', '{perusahaan}', '{thn}'];
 

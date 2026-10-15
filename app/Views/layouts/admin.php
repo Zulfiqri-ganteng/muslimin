@@ -359,7 +359,7 @@ $js = static fn (string $berkas): string => '<script defer src="' . base_url($be
             </ul>
             <?= view('partials/kredit', ['kreditKelas' => 'text-sm text-gray-500 dark:text-gray-400']) ?>
         </div>
-        <p class="kaki-hak">&copy; <?= date('Y') ?> &middot; Sistem Informasi Akademik Sekolah (BINUS)</p>
+        <p class="kaki-hak">&copy; <?= date('Y') ?> &middot; Sistem Informasi Akademik Sekolah</p>
     </footer>
 </div>
 

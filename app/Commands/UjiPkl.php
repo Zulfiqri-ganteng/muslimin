@@ -937,7 +937,7 @@ class UjiPkl extends BaseCommand
         $st = $svc->statusBanyak([$a1, $a2]);
         $this->cek('setelah diunduh: tak lagi perlu cetak ulang, cetak_ke naik, riwayat tercatat', $st[$a1]['perlu_ulang'] === false && (int) $svc->surat($a1)['cetak_ke'] === 1 && $this->db->table('pkl_riwayat')->where('pengajuan_id', $a1)->where('aksi', 'cetak')->countAllResults() === 1);
         $b2 = $svc->bangun([$a1], $admin);
-        $this->cek('unduh lagi: nomor tetap, cetak_ke 2, nama berkas "{urut} Surat Izin PKL BINUS - …"', $b2['ok'] && (int) $svc->surat($a1)['cetak_ke'] === 2 && $svc->surat($a1)['nomor'] === $r1['surat']['nomor'] && str_starts_with((string) $b2['nama'], (int) $r1['surat']['urut'] . ' Surat Izin PKL BINUS - '), (string) ($b2['nama'] ?? ''));
+        $this->cek('unduh lagi: nomor tetap, cetak_ke 2, nama berkas "{urut} Surat Izin PKL - …"', $b2['ok'] && (int) $svc->surat($a1)['cetak_ke'] === 2 && $svc->surat($a1)['nomor'] === $r1['surat']['nomor'] && str_starts_with((string) $b2['nama'], (int) $r1['surat']['urut'] . ' Surat Izin PKL - '), (string) ($b2['nama'] ?? ''));
         $tak = $svc->bangun([$a3], $admin);
         $this->cek('bangun untuk ajuan belum disetujui ditolak', $tak['ok'] === false);
 
@@ -1075,12 +1075,12 @@ class UjiPkl extends BaseCommand
         $this->cek('nomor bawaan = format surat sekolah: 295/SMK-BN/PKL/IX/2026', \App\Libraries\PklNomorSurat::format(\App\Libraries\PklNomorSurat::BAWAAN, 295, new \DateTimeImmutable('2026-09-03')) === '295/SMK-BN/PKL/IX/2026' && \App\Libraries\PklNomorSurat::periksa(\App\Libraries\PklNomorSurat::BAWAAN) === null);
         $NB = \App\Libraries\PklNamaBerkas::class;
         $pola = $NB::BAWAAN;
-        $this->cek('nama berkas: "295 Surat Izin PKL BINUS - Ilyasha ALL XII TKJ 5" (lebih dari 1 siswa)', $NB::format($pola, ['urut' => 295, 'nama_pengaju' => 'Ilyasha Hawari', 'kelas' => 'XII TKJ 5', 'jumlah' => 5]) === '295 Surat Izin PKL BINUS - Ilyasha ALL XII TKJ 5');
-        $this->cek('nama berkas: siswa sendirian → tanpa "ALL", spasi rapi', $NB::format($pola, ['urut' => 296, 'nama_pengaju' => 'Dewi Lestari', 'kelas' => 'XI TKJ 1', 'jumlah' => 1]) === '296 Surat Izin PKL BINUS - Dewi XI TKJ 1');
+        $this->cek('nama berkas: "295 Surat Izin PKL - Ilyasha ALL XII TKJ 5" (lebih dari 1 siswa)', $NB::format($pola, ['urut' => 295, 'nama_pengaju' => 'Ilyasha Hawari', 'kelas' => 'XII TKJ 5', 'jumlah' => 5]) === '295 Surat Izin PKL - Ilyasha ALL XII TKJ 5');
+        $this->cek('nama berkas: siswa sendirian → tanpa "ALL", spasi rapi', $NB::format($pola, ['urut' => 296, 'nama_pengaju' => 'Dewi Lestari', 'kelas' => 'XI TKJ 1', 'jumlah' => 1]) === '296 Surat Izin PKL - Dewi XI TKJ 1');
         $this->cek('nama berkas: nama depan singkatan ("M Fahri Alfarizi") memakai dua kata', $NB::namaDepan('M Fahri Alfarizi') === 'M Fahri' && $NB::namaDepan('Ilyasha Hawari') === 'Ilyasha' && $NB::namaDepan('') === '');
-        $this->cek('nama berkas: karakter terlarang dibuang, pola ngawur → pola bawaan', ! preg_match('#[\\\\/:*?"<>|]#', $NB::format('{urut} PKL {perusahaan}', ['urut' => 1, 'perusahaan' => 'PT A/B: "C"'])) && $NB::format('{ngawur}', ['urut' => 7, 'nama_pengaju' => 'Ani Budi', 'kelas' => 'X', 'jumlah' => 2]) === '7 Surat Izin PKL BINUS - Ani ALL X');
+        $this->cek('nama berkas: karakter terlarang dibuang, pola ngawur → pola bawaan', ! preg_match('#[\\\\/:*?"<>|]#', $NB::format('{urut} PKL {perusahaan}', ['urut' => 1, 'perusahaan' => 'PT A/B: "C"'])) && $NB::format('{ngawur}', ['urut' => 7, 'nama_pengaju' => 'Ani Budi', 'kelas' => 'X', 'jumlah' => 2]) === '7 Surat Izin PKL - Ani ALL X');
         $this->cek('nama berkas: periksa pola (token tak dikenal, karakter, kosong, panjang)', $NB::periksa($pola) === null && $NB::periksa('{urut} {ngawur}') !== null && $NB::periksa('{urut}<x>') !== null && $NB::periksa('') !== null && $NB::periksa(str_repeat('a', 151)) !== null);
-        $this->cek('nama berkas: contoh()', str_ends_with($NB::contoh($pola), '.docx') && str_starts_with($NB::contoh($pola), '295 Surat Izin PKL BINUS - Ilyasha ALL'));
+        $this->cek('nama berkas: contoh()', str_ends_with($NB::contoh($pola), '.docx') && str_starts_with($NB::contoh($pola), '295 Surat Izin PKL - Ilyasha ALL'));
 
         $PS = \App\Libraries\PklSurat::class;
         $this->cek('tanggalSurat: "03 September 2026" (hari 2 angka); waktuIndo: "Rabu, 07 Oktober 2026 pukul 09.41 WIB"', $PS::tanggalSurat('2026-09-03') === '03 September 2026' && $PS::waktuIndo('2026-10-07 09:41:00') === 'Rabu, 07 Oktober 2026 pukul 09.41 WIB');
@@ -1210,8 +1210,8 @@ class UjiPkl extends BaseCommand
         $b2 = $svc->bangun([$aa2], $oper);
         $urut1 = (int) $svc->surat($ah2)['urut'];
         $urut2 = (int) $svc->surat($aa2)['urut'];
-        $this->cek('nama berkas satu surat: "{urut} Surat Izin PKL BINUS - ZZUJI ALL {kelas}" (3 siswa → ALL)', $b1['ok'] && $b1['nama'] === $urut1 . ' Surat Izin PKL BINUS - ZZUJI ALL ' . $k['nama_kelas'] . '.docx', (string) ($b1['nama'] ?? ''));
-        $this->cek('nama berkas satu siswa: tanpa "ALL"', $b2['ok'] && $b2['nama'] === $urut2 . ' Surat Izin PKL BINUS - ZZUJI ' . $k['nama_kelas'] . '.docx', (string) ($b2['nama'] ?? ''));
+        $this->cek('nama berkas satu surat: "{urut} Surat Izin PKL - ZZUJI ALL {kelas}" (3 siswa → ALL)', $b1['ok'] && $b1['nama'] === $urut1 . ' Surat Izin PKL - ZZUJI ALL ' . $k['nama_kelas'] . '.docx', (string) ($b1['nama'] ?? ''));
+        $this->cek('nama berkas satu siswa: tanpa "ALL"', $b2['ok'] && $b2['nama'] === $urut2 . ' Surat Izin PKL - ZZUJI ' . $k['nama_kelas'] . '.docx', (string) ($b2['nama'] ?? ''));
         $this->cek('nomor surat memakai format sekolah (…/SMK-BN/PKL/{bln romawi}/{tahun})', (bool) preg_match('#^\d+/SMK-BN/PKL/(I|II|III|IV|V|VI|VII|VIII|IX|X|XI|XII)/\d{4}$#', (string) $svc->surat($ah2)['nomor']), (string) $svc->surat($ah2)['nomor']);
 
         // tanpa gambar TTD → ruang kosong (gambar berkurang 1)

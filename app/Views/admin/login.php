@@ -87,7 +87,7 @@ $tema        = \App\Libraries\Tampilan::tema($setting ?? null);
     </div>
 
     <footer class="mt-8 text-center text-xs text-gray-500 dark:text-gray-400">
-        <p>&copy; <?= date('Y') ?> &middot; Sistem Informasi Akademik Sekolah (BINUS)</p>
+        <p>&copy; <?= date('Y') ?> &middot; Sistem Informasi Akademik Sekolah</p>
         <?= view('partials/kredit', ['kreditKelas' => 'mt-1']) ?>
     </footer>
 </main>
