@@ -19,6 +19,8 @@
  *   toastWadah  wadah notifikasi kecil — sekali per halaman (ui_toast()).
  *   konfirmasi  dialog konfirmasi — sekali per halaman (ui_konfirmasi()).
  *   salinTeks   tombol salin — data-teks="…" atau data-sasaran="#id"; @click="salin()"; x-show="tersalin".
+ *   daftarCentang daftar centang + Pilih semua + penghitung (F8) — butir input[data-centang]; @change="hitungCentang()",
+ *               pilihSemuaCentang($event), x-text="teksCentang()", :disabled="belumDicentang()"; data-satuan="siswa dipilih".
  *   pilihBerkas nama berkas yang dipilih (F8) — x-data="pilihBerkas" data-kosong="…"; input file @change="catatBerkas($event)";
  *               x-text="namaBerkasTerpilih()". Tautan Kembali tanpa JS halaman: <a href="URL cadangan" data-kembali>.
  *   isianSandi  kata sandi + tombol lihat (F2) — pada pembungkus label+isian: input :type="lihat ? 'text' : 'password'"
@@ -584,6 +586,28 @@
                         toast('Gagal menyalin. Pilih teksnya lalu tekan Ctrl+C.', 'galat');
                     });
                 },
+            };
+        });
+
+        /* (F8) Daftar centang + "Pilih semua" + penghitung. Pada pembungkus: x-data="daftarCentang" data-satuan="siswa dipilih"
+         * @change="hitungCentang()"; butir = input[type=checkbox][data-centang]; kotak "Pilih semua" (tanpa data-centang)
+         * @change="pilihSemuaCentang($event)"; penghitung x-text="teksCentang()"; tombol kirim :disabled="belumDicentang()". */
+        Alpine.data('daftarCentang', function () {
+            var akar = null;
+            var butir = function () { return akar ? akar.querySelectorAll('input[type="checkbox"][data-centang]') : []; };
+            return {
+                jumlah: 0,
+                init: function () { akar = this.$el; this.hitungCentang(); },
+                pilihSemuaCentang: function (e) {
+                    var on = !!(e && e.target && e.target.checked);
+                    Array.prototype.forEach.call(butir(), function (c) { if (!c.disabled) { c.checked = on; } });
+                    this.hitungCentang();
+                },
+                hitungCentang: function () {
+                    this.jumlah = Array.prototype.filter.call(butir(), function (c) { return c.checked; }).length;
+                },
+                belumDicentang: function () { return this.jumlah === 0; },
+                teksCentang: function () { return this.jumlah + ' ' + ((akar && akar.getAttribute('data-satuan')) || 'dipilih'); },
             };
         });
 
