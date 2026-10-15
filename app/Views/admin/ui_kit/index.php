@@ -1,7 +1,7 @@
 <?php
 /**
  * Halaman ui-kit (rombak tampilan F1; sejak F3 memakai layouts/admin) — contoh hidup SEMUA kit komponen + cara pakainya, sekaligus
- * halaman uji CSP: grup 'kit' ada di Config\Tampilan::$alpineCsp, jadi layout memuat Alpine versi CSP di sini (kerangka ikut teruji).
+ * halaman uji CSP: layout memuat Alpine versi CSP (seperti seluruh panel admin), jadi kerangka ikut teruji di sini.
  * KHUSUS LAPTOP (Admin\UiKit). ?uji=1 → uji-diri komponen + kerangka (public/assets/js/admin/ui-kit.js; dibaca tools/uji-peramban.mjs).
  *
  * @var string       $contohPager HTML paginasi contoh (templat pager "admin")

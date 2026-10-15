@@ -6,7 +6,6 @@ use CodeIgniter\Config\BaseConfig;
 
 /**
  * Peta rombak tampilan admin (docs/RENCANA-UPGRADE-TAMPILAN.md): satu grup = satu fase. Satu sumber untuk
- * - layouts/admin.php → memuat Alpine versi CSP pada alamat yang grupnya sudah ada di $alpineCsp (App\Libraries\Tampilan);
  * - php spark dev:cek-ui → memeriksa view per grup (aturan tampilan + aturan siap-CSP);
  * - tools/uji-peramban.mjs --grup=… → membuka halaman grup itu saja.
  *
@@ -76,14 +75,4 @@ class Tampilan extends BaseConfig
             'bersama' => ['errors/html/_galat.php', 'errors/html/error_404.php', 'errors/html/error_400.php', 'errors/html/production.php'],
         ],
     ];
-
-    /**
-     * Grup yang halamannya sudah memakai Alpine versi CSP (@alpinejs/csp). Diisi saat fase grup itu selesai; di F12 semua grup
-     * masuk, lalu Alpine biasa dan pemilih ini dibuang. ('login' = halaman masuk: berdiri sendiri, selalu versi CSP. 'kit' = halaman
-     * ui-kit, sejak F3 di dalam layouts/admin → kerangka ikut diuji di versi CSP. 'kerangka' = layout & partial bersama (F3): tidak
-     * punya alamat sendiri, versinya mengikuti grup halaman — dicantumkan karena sudah siap kedua versi, agar dev:cek-ui melaporkannya.)
-     *
-     * @var list<string>
-     */
-    public array $alpineCsp = ['kit', 'login', 'kerangka', 'dashboard', 'master', 'kesiswaan', 'ujian', 'ukk-lab', 'pkl-surat', 'sistem'];
 }

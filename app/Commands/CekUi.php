@@ -67,7 +67,7 @@ class CekUi extends BaseCommand
     {
         $cfg = config(TampilanConfig::class);
         if (CLI::getOption('json') !== null) {
-            CLI::write(json_encode(['grup' => $cfg->grup, 'alpineCsp' => $cfg->alpineCsp], JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE));
+            CLI::write(json_encode(['grup' => $cfg->grup], JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE));
 
             return EXIT_SUCCESS;
         }
@@ -104,7 +104,7 @@ class CekUi extends BaseCommand
             foreach ($jumlah as $k => $n) {
                 $total[$k] += $n;
             }
-            $baris[] = [$kunci, $g['fase'], count($berkas), $jumlah, in_array($kunci, $cfg->alpineCsp, true)];
+            $baris[] = [$kunci, $g['fase'], count($berkas), $jumlah];
         }
 
         // Rata kanan berdasar jumlah karakter (bukan bita — "✗" = 3 bita).
@@ -114,13 +114,13 @@ class CekUi extends BaseCommand
         foreach (self::KOLOM as [$j]) {
             $judul .= $kanan($j, mb_strlen($j) + 2);
         }
-        CLI::write($judul . '  Alpine');
-        foreach ($baris as [$kunci, $fase, $nView, $jumlah, $csp]) {
+        CLI::write($judul);
+        foreach ($baris as [$kunci, $fase, $nView, $jumlah]) {
             $teks = str_pad($kunci, 11) . str_pad($fase, 5) . str_pad((string) $nView, 5);
             foreach (self::KOLOM as $k => [$j]) {
                 $teks .= $kanan((string) $jumlah[$k], mb_strlen($j) + 2);
             }
-            CLI::write($teks . '  ' . ($csp ? 'versi CSP' : 'biasa'));
+            CLI::write($teks);
         }
         $teks = str_pad('TOTAL', 21);
         foreach (self::KOLOM as $k => [$j]) {

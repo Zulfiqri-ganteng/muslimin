@@ -11,7 +11,7 @@
  * grup lipat (cookie sb_grup), ciutkan menu jadi deret ikon (desktop, cookie sb_ciut), laci di HP, kepala halaman + remah otomatis.
  * Warna lewat token tema (<html data-warna data-sidebar>, ditulis server — tanpa kedipan).
  * SIAP CSP: tanpa skrip/gaya sebaris; atribut Alpine hanya isian sederhana (adminLayout / sbMenu / sbGrup di app.js, kit di ui.js),
- * jadi jalan di Alpine biasa maupun versi CSP (dipilih per grup: Config\Tampilan::$alpineCsp).
+ * dan seluruh panel admin memakai Alpine versi CSP (@alpinejs/csp, tanpa eval) sejak F12.
  *
  * Dipakai halaman: $title (judul); section 'content'; opsional section 'aksi' (tombol di kanan judul), 'kepala' (mengganti kepala
  * halaman bawaan, mis. ui_kepala() dengan tab), 'scripts' (berkas JS halaman). Halaman yang isinya sudah punya <h1> sendiri
@@ -146,8 +146,7 @@ foreach ($groups as $g) {
 foreach ($tautanLuar as $t) {
     $semuaLabel[] = mb_strtolower($t[1]);
 }
-$alpineJs = \App\Libraries\Tampilan::alpineCsp($cur) ? 'assets/js/vendor/alpine-csp.min.js' : 'assets/js/vendor/alpine.min.js';
-$js       = static fn (string $berkas): string => '<script defer src="' . base_url($berkas) . '?v=' . @filemtime(FCPATH . $berkas) . '" ' . csp_script_nonce() . '></script>';
+$js = static fn (string $berkas): string => '<script defer src="' . base_url($berkas) . '?v=' . @filemtime(FCPATH . $berkas) . '" ' . csp_script_nonce() . '></script>';
 ?>
 <!DOCTYPE html>
 <html lang="id" data-mode="<?= $tema['mode'] ?>" data-warna="<?= $tema['warna'] ?>" data-sidebar="<?= $tema['sidebar'] ?>"<?= $ciut ? ' data-ciut' : '' ?>>
@@ -381,11 +380,11 @@ if ($galatFlash !== '') {
 <?= ui_konfirmasi() ?>
 
 <?php // Urutan defer: kit (ui.js) → skrip halaman → app.js → plugin collapse → Alpine (komponen terdaftar sebelum Alpine berjalan).
-      // Masa transisi rombak tampilan: grup yang sudah selesai (Config\Tampilan::$alpineCsp) memakai Alpine versi CSP (tanpa eval). ?>
+      // Alpine versi CSP (tanpa eval) di seluruh panel admin; Alpine biasa (alpine.min.js) kini hanya dipakai halaman publik. ?>
 <?= $js('assets/js/admin/ui.js') ?>
 <?= $this->renderSection('scripts') ?>
 <?= $js('assets/js/admin/app.js') ?>
 <?= $js('assets/js/vendor/alpine-collapse.min.js') ?>
-<?= $js($alpineJs) ?>
+<?= $js('assets/js/vendor/alpine-csp.min.js') ?>
 </body>
 </html>

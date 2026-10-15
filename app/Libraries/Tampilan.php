@@ -6,7 +6,7 @@ use Config\Tampilan as TampilanConfig;
 
 /**
  * Pembantu rombak tampilan admin (rancangan: docs/RENCANA-UPGRADE-TAMPILAN.md):
- *   - peta grup (Config\Tampilan): grup sebuah alamat / berkas view, dan versi Alpine yang dimuat (§5a masa transisi Alpine);
+ *   - peta grup (Config\Tampilan): grup sebuah berkas view (dipakai dev:cek-ui);
  *   - TEMA (§3, F3 + revisi R2 atas permintaan user): TIGA MODE — Terang (persis template Flowbite, bawaan), Gelap (mode gelap
  *     Flowbite di bingkai, kit & halaman), Warna Sekolah (lilac asli sekolah). Disimpan sebagai pasangan kolom settings.tema_warna ×
  *     settings.tema_sidebar (tanpa migrasi baru), diatur Admin di Pengaturan Sekolah → Tampilan. Layout & halaman masuk menulis
@@ -104,25 +104,6 @@ final class Tampilan
 
         return method_exists($req, 'getCookie') ? (string) ($req->getCookie($nama) ?? '') : '';
     }
-    /**
-     * Grup untuk sebuah alamat (jalur relatif, mis. "admin/master/siswa"): awalan TERPANJANG yang cocok per segmen.
-     */
-    public static function grupAlamat(string $alamat): ?string
-    {
-        $alamat  = trim(strtolower($alamat), '/');
-        $pilih   = null;
-        $panjang = -1;
-        foreach (config(TampilanConfig::class)->grup as $kunci => $g) {
-            foreach ($g['url'] as $awalan) {
-                if (($alamat === $awalan || str_starts_with($alamat, $awalan . '/')) && strlen($awalan) > $panjang) {
-                    $pilih   = $kunci;
-                    $panjang = strlen($awalan);
-                }
-            }
-        }
-
-        return $pilih;
-    }
 
     /**
      * Grup untuk sebuah berkas view (jalur relatif dari app/Views, garis miring "/"), berdasarkan berkas/folder terpanjang yang cocok.
@@ -156,13 +137,5 @@ final class Tampilan
         $host = (string) parse_url((string) config('App')->baseURL, PHP_URL_HOST);
 
         return in_array($host, ['localhost', '127.0.0.1'], true);
-    }
-
-    /** Pakai Alpine versi CSP (tanpa eval) di alamat ini? */
-    public static function alpineCsp(string $alamat): bool
-    {
-        $grup = self::grupAlamat($alamat);
-
-        return $grup !== null && in_array($grup, config(TampilanConfig::class)->alpineCsp, true);
     }
 }
