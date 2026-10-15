@@ -19,9 +19,12 @@ document.addEventListener('alpine:init', function () {
         var e = document.getElementById(id);
         if (e) { e.textContent = teks; }
     }
+    // Warna sel & kotak peserta (sama dengan kelas awal di views/admin/ujian/koreksi.php — rombak tampilan F7: amber → yellow,
+    // + mode gelap; kotak peserta = .inp, tanda "diketik" = KELAS_PESERTA_MANUAL).
     var KELAS_AKTIF = ['bg-brand-500', 'text-white', 'font-semibold'];
-    var KELAS_MATI = ['bg-gray-200'];
-    var KELAS_KHUSUS = ['ring-2', 'ring-inset', 'ring-amber-400'];
+    var KELAS_MATI = ['bg-gray-200', 'dark:bg-gray-700'];
+    var KELAS_KHUSUS = ['ring-2', 'ring-inset', 'ring-yellow-400'];
+    var KELAS_PESERTA_MANUAL = ['border-yellow-400', 'bg-yellow-50', 'dark:bg-yellow-900/30'];
 
     Alpine.data('koreksiGrid', function () {
         var dasar = {
@@ -47,6 +50,10 @@ document.addEventListener('alpine:init', function () {
                 if (['isi-skbm', 'isi', 'impor', 'salin', 'tambah', 'terapkan', 'kosong'].indexOf(h) >= 0) { this.panel = h; }
                 this.mulaiTampilan();
             },
+
+            // (F7) Panel alur kerja: buka-tutup (dulu penugasan + ternary di @click); mode klik sel.
+            alihPanel: function (nama) { this.panel = this.panel === nama ? '' : nama; },
+            pilihMode: function (m) { this.mode = m; },
 
             tampil: function (teks, galat) {
                 var self = this;
@@ -177,8 +184,7 @@ document.addEventListener('alpine:init', function () {
                     if (info) {
                         el.value = String(info.peserta);
                         el.dataset.awal = String(info.peserta);
-                        el.classList.toggle('border-amber-400', !!info.manual);
-                        el.classList.toggle('bg-amber-50', !!info.manual);
+                        KELAS_PESERTA_MANUAL.forEach(function (c) { el.classList.toggle(c, !!info.manual); });
                         // semua sel kelas ini yang memakai angka peserta ikut berubah
                         self.$root.querySelectorAll('td[data-k="' + el.dataset.kelas + '"][data-aktif="1"]').forEach(function (td) {
                             if (td.dataset.khusus !== '1') { td.textContent = String(info.peserta); }
