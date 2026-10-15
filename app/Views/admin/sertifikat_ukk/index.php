@@ -89,7 +89,7 @@ $total = $pager ? $pager->getTotal() : count($rows);
 
     <?= ui_crud_form_buka(['benda' => 'Sertifikat', 'judulTambah' => 'Terbitkan Sertifikat']) ?>
         <div x-show="mode === 'add'">
-            <label class="lbl" for="su-peserta">Peserta (lulus, belum bersertifikat) <span class="text-red-600">*</span></label>
+            <label class="lbl" for="su-peserta">Peserta (lulus, belum bersertifikat) <span class="text-red-600 dark:text-red-400">*</span></label>
             <select id="su-peserta" name="peserta_ukk_id" x-model="form.peserta_ukk_id" :required="mode === 'add'" class="inp">
                 <option value="">— Pilih peserta —</option>
                 <?php foreach ($pesertaOpts as $id => $lbl): ?>
@@ -101,7 +101,7 @@ $total = $pager ? $pager->getTotal() : count($rows);
             <?php endif; ?>
         </div>
         <div>
-            <label class="lbl" for="su-tanggal">Tanggal terbit <span class="text-red-600">*</span></label>
+            <label class="lbl" for="su-tanggal">Tanggal terbit <span class="text-red-600 dark:text-red-400">*</span></label>
             <input type="date" id="su-tanggal" name="tanggal_terbit" x-model="form.tanggal_terbit" required class="inp">
         </div>
         <div>

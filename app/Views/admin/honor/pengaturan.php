@@ -53,7 +53,7 @@ $lblHp   = 'mb-1 block text-xs font-medium text-gray-500 md:hidden dark:text-gra
             <?= csrf_field() ?>
 
             <!-- Judul kolom (laptop) -->
-            <div class="hidden grid-cols-12 gap-3 border-b border-gray-200 bg-gray-50 px-5 py-3 text-xs font-semibold text-gray-500 uppercase md:grid dark:border-gray-700 dark:bg-gray-700 dark:text-gray-400">
+            <div class="hidden grid-cols-12 gap-3 border-b border-gray-200 bg-gray-50 px-5 py-3 text-xs font-semibold text-gray-500 uppercase md:grid dark:border-gray-700 dark:bg-gray-700 dark:text-gray-300">
                 <div class="col-span-1">Aktif</div>
                 <div class="col-span-3">Komponen</div>
                 <div class="col-span-2">Tarif / nominal</div>
@@ -75,7 +75,7 @@ $lblHp   = 'mb-1 block text-xs font-medium text-gray-500 md:hidden dark:text-gra
                     $jenisK = $adaOldK ? (array) (old("$p.jenis", null, false) ?? []) : Aturan::jenisBerlaku($k['berlaku_di']);
                     $tetap  = $k['tipe'] === 'tetap';
                     ?>
-                    <div class="grid gap-3 px-4 py-4 transition-colors has-[input.js-aktif:not(:checked)]:bg-gray-50 has-[input.js-aktif:not(:checked)]:opacity-70 md:grid-cols-12 md:items-start md:px-5 dark:has-[input.js-aktif:not(:checked)]:bg-gray-800/60">
+                    <div class="grid gap-3 px-4 py-4 transition-colors has-[input.js-aktif:not(:checked)]:bg-gray-50 md:grid-cols-12 md:items-start md:px-5 dark:has-[input.js-aktif:not(:checked)]:bg-gray-800/60">
                         <div class="md:col-span-1 md:pt-2">
                             <label class="inline-flex cursor-pointer items-center gap-2 text-sm font-medium text-gray-900 dark:text-white">
                                 <input type="checkbox" name="k[<?= $id ?>][aktif]" value="1"<?= $aktif ? ' checked' : '' ?> class="cek js-aktif h-5 w-5" aria-label="Aktifkan <?= esc($k['nama'], 'attr') ?>">
@@ -210,7 +210,7 @@ $lblHp   = 'mb-1 block text-xs font-medium text-gray-500 md:hidden dark:text-gra
                 <?= ui_kosong(['ikon' => 'briefcase', 'judul' => 'Belum ada jabatan', 'teks' => 'Tambahkan di menu Guru → Jabatan.']) ?>
             <?php else: ?>
                 <div class="px-4 pb-4 md:px-6">
-                    <div class="mb-1 hidden items-center gap-3 rounded-t-lg bg-gray-50 px-3 py-2 text-xs font-semibold text-gray-500 uppercase sm:flex dark:bg-gray-700 dark:text-gray-400">
+                    <div class="mb-1 hidden items-center gap-3 rounded-t-lg bg-gray-50 px-3 py-2 text-xs font-semibold text-gray-500 uppercase sm:flex dark:bg-gray-700 dark:text-gray-300">
                         <span class="flex-1">Jabatan</span><span class="w-40 shrink-0 text-right">Tunjangan panitia</span><span class="w-24 shrink-0 text-right">Urutan</span>
                     </div>
                     <div class="divide-y divide-gray-200 dark:divide-gray-700">

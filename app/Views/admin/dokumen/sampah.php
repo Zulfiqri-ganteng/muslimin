@@ -46,7 +46,7 @@ $tautanHal = $pager !== null ? trim((string) $pager->links('dok', 'admin')) : ''
             <div class="kartu-isi grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-3">
                 <?php foreach ($folders as $f): ?>
                     <div class="flex items-center gap-2 rounded-lg border border-gray-200 p-2.5 dark:border-gray-700">
-                        <?= ikon('folder-open', 'h-7 w-7 shrink-0 text-gray-400 dark:text-gray-500', 'solid') ?>
+                        <?= ikon('folder-open', 'h-7 w-7 shrink-0 text-gray-500 dark:text-gray-400', 'solid') ?>
                         <div class="min-w-0 flex-1">
                             <p class="truncate text-sm font-medium text-gray-900 dark:text-white"><?= esc($f['nama']) ?></p>
                             <p class="text-xs text-gray-500 dark:text-gray-400">Dibuang <?= esc($tgl($f['deleted_at'])) ?></p>

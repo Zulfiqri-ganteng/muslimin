@@ -95,7 +95,7 @@ $ujStatus = [
 // Perlu tindakan: [ikon, warna ikon, keterangan tingkat] — warna selalu disertai teks.
 $tingkatTindakan = [
     'kritis' => ['exclamation-circle', 'text-red-600 dark:text-red-500', 'Mendesak'],
-    'awas'   => ['clock', 'text-yellow-600 dark:text-yellow-400', 'Perlu ditindaklanjuti'],
+    'awas'   => ['clock', 'text-yellow-700 dark:text-yellow-400', 'Perlu ditindaklanjuti'],
     'info'   => ['info-circle', 'text-brand-700 dark:text-brand-400', 'Informasi'],
 ];
 
@@ -172,7 +172,7 @@ $ariaDaftar = static fn (string $judul, array $daftar, string $satuan): string =
         <div class="min-w-0">
             <h2 class="stat-label">Siswa aktif</h2>
             <p class="stat-angka mt-1"><?= $angka($siswa['aktif']) ?></p>
-            <p class="stat-ket">di <?= $angka($kur['kelas']) ?> kelas<?php if ($siswa['tanpa_kelas'] > 0): ?> · <span class="font-medium text-yellow-600 dark:text-yellow-400"><?= $angka($siswa['tanpa_kelas']) ?> tanpa kelas</span><?php endif; ?></p>
+            <p class="stat-ket">di <?= $angka($kur['kelas']) ?> kelas<?php if ($siswa['tanpa_kelas'] > 0): ?> · <span class="font-medium text-yellow-700 dark:text-yellow-400"><?= $angka($siswa['tanpa_kelas']) ?> tanpa kelas</span><?php endif; ?></p>
         </div>
         <?php if ($tingkat !== []): ?>
             <div class="grafik grafik-kecil" data-grafik="tingkat" data-isi="<?= $json($tingkat) ?>" role="img" aria-label="<?= esc($ariaDaftar('Siswa aktif per tingkat', $tingkat, 'siswa'), 'attr') ?>"></div>
@@ -195,10 +195,10 @@ $ariaDaftar = static fn (string $judul, array $daftar, string $satuan): string =
         <div class="min-w-0">
             <h2 class="stat-label">Kehadiran guru hari ini</h2>
             <?php if (! $absensi['hari_aktif']): ?>
-                <p class="stat-angka mt-1 text-gray-400 dark:text-gray-500">&ndash;</p>
+                <p class="stat-angka mt-1 text-gray-500 dark:text-gray-400">&ndash;</p>
                 <p class="stat-ket">Bukan hari KBM</p>
             <?php elseif (! $absensi['recorded']): ?>
-                <p class="mt-1 text-xl leading-none font-bold text-yellow-600 sm:text-2xl dark:text-yellow-400">Belum dicatat</p>
+                <p class="mt-1 text-xl leading-none font-bold text-yellow-700 sm:text-2xl dark:text-yellow-400">Belum dicatat</p>
                 <p class="stat-ket"><?= $angka($absensi['total_guru']) ?> guru mengajar hari ini</p>
             <?php else: ?>
                 <p class="stat-angka mt-1"><?= $persenHadir ?>%</p>
@@ -298,7 +298,7 @@ $ariaDaftar = static fn (string $judul, array $daftar, string $satuan): string =
                     <?php foreach ($aktivitas as $a): ?>
                         <li class="ms-4 pb-4 last:pb-0">
                             <span class="absolute -start-1.5 mt-1.5 h-3 w-3 rounded-full border border-white bg-gray-200 dark:border-gray-800 dark:bg-gray-700" aria-hidden="true"></span>
-                            <time class="text-xs leading-none text-gray-400 dark:text-gray-500" datetime="<?= esc((string) $a['waktu'], 'attr') ?>"><?= esc($waktuPendek($a['waktu'])) ?></time>
+                            <time class="text-xs leading-none text-gray-500 dark:text-gray-400" datetime="<?= esc((string) $a['waktu'], 'attr') ?>"><?= esc($waktuPendek($a['waktu'])) ?></time>
                             <p class="text-sm font-semibold text-gray-900 dark:text-white"><?= esc($a['nama'] ?: (! empty($a['admin_id']) ? 'Akun terhapus' : 'Sistem')) ?></p>
                             <p class="text-sm text-gray-500 dark:text-gray-400"><?= esc(mb_strimwidth((string) $a['deskripsi'], 0, 110, '…')) ?></p>
                         </li>
@@ -334,7 +334,7 @@ $ariaDaftar = static fn (string $judul, array $daftar, string $satuan): string =
                         <span class="titik-legenda <?= $warnaKe($i) ?>"></span>
                         <span class="min-w-0 flex-1 truncate text-gray-600 dark:text-gray-300"><?= esc($j['label']) ?></span>
                         <span class="font-semibold text-gray-900 tabular-nums dark:text-white"><?= $angka($j['n']) ?></span>
-                        <span class="w-9 text-right text-xs text-gray-400 tabular-nums"><?= $persen($j['n'], $totalJurusan) ?>%</span>
+                        <span class="w-9 text-right text-xs text-gray-500 tabular-nums dark:text-gray-400"><?= $persen($j['n'], $totalJurusan) ?>%</span>
                     </li>
                 <?php endforeach; ?>
             </ul>
@@ -349,9 +349,9 @@ $ariaDaftar = static fn (string $judul, array $daftar, string $satuan): string =
             <div class="min-w-0">
                 <h2 id="judulAbsen" class="stat-label">Absensi guru hari ini</h2>
                 <?php if (! $absensi['hari_aktif']): ?>
-                    <p class="mt-1 text-xl leading-none font-bold text-gray-400 dark:text-gray-500">Bukan hari KBM</p>
+                    <p class="mt-1 text-xl leading-none font-bold text-gray-500 dark:text-gray-400">Bukan hari KBM</p>
                 <?php elseif (! $absensi['recorded']): ?>
-                    <p class="mt-1 text-xl leading-none font-bold text-yellow-600 sm:text-2xl dark:text-yellow-400">Belum dicatat</p>
+                    <p class="mt-1 text-xl leading-none font-bold text-yellow-700 sm:text-2xl dark:text-yellow-400">Belum dicatat</p>
                 <?php else: ?>
                     <p class="stat-angka mt-1"><?= $persenHadir ?>% <span class="text-base font-normal text-gray-500 dark:text-gray-400">hadir</span></p>
                 <?php endif; ?>
@@ -404,7 +404,7 @@ $ariaDaftar = static fn (string $judul, array $daftar, string $satuan): string =
                         <span class="titik-legenda <?= $warnaKe($i) ?>"></span>
                         <span class="min-w-0 flex-1 text-gray-600 dark:text-gray-300"><?= esc($p['label']) ?></span>
                         <span class="font-semibold text-gray-900 tabular-nums dark:text-white"><?= $angka($p['n']) ?></span>
-                        <span class="w-9 text-right text-xs text-gray-400 tabular-nums"><?= $persen($p['n'], $totalPegawai) ?>%</span>
+                        <span class="w-9 text-right text-xs text-gray-500 tabular-nums dark:text-gray-400"><?= $persen($p['n'], $totalPegawai) ?>%</span>
                     </li>
                 <?php endforeach; ?>
             </ul>
@@ -447,7 +447,7 @@ $ariaDaftar = static fn (string $judul, array $daftar, string $satuan): string =
                         <span class="min-w-0 flex-1">
                             <span class="block text-sm font-semibold text-gray-900 group-hover:text-brand-700 dark:text-white dark:group-hover:text-brand-400"><?= esc($judul) ?></span>
                             <span class="block text-sm text-gray-500 dark:text-gray-400"><?= esc($ket) ?></span>
-                            <?php if ($ket2 !== null): ?><span class="block text-xs text-gray-400 dark:text-gray-500"><?= esc($ket2) ?></span><?php endif; ?>
+                            <?php if ($ket2 !== null): ?><span class="block text-xs text-gray-500 dark:text-gray-400"><?= esc($ket2) ?></span><?php endif; ?>
                         </span>
                         <span class="mt-2.5 text-gray-400 group-hover:text-brand-700 dark:group-hover:text-brand-400"><?= ikon('chevron-right', 'h-4 w-4') ?></span>
                     </a>
@@ -488,7 +488,7 @@ $ariaDaftar = static fn (string $judul, array $daftar, string $satuan): string =
                             <?php if ((int) $u['belum'] > 0): ?>
                                 <span class="lencana lencana-kuning"><?= $angka($u['belum']) ?> belum</span>
                             <?php else: ?>
-                                <span class="text-gray-400 dark:text-gray-500">0</span>
+                                <span class="text-gray-500 dark:text-gray-400">0</span>
                             <?php endif; ?>
                         </td>
                     </tr>

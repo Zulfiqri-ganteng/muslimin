@@ -64,7 +64,7 @@ $dt = 'text-xs text-gray-500 dark:text-gray-400';
                     <span class="lencana <?= $laporBuka ? 'lencana-hijau' : 'lencana-merah' ?> normal-case"><?= $laporBuka ? 'sedang dibuka' : 'sedang ditutup' ?></span>
                 </p>
                 <div class="mt-1.5 flex flex-col gap-2 sm:flex-row sm:items-center">
-                    <code class="min-w-0 flex-1 truncate rounded-lg bg-gray-50 px-3 py-2 text-sm font-semibold text-brand-700 ring-1 ring-gray-200 dark:bg-gray-700 dark:text-brand-400 dark:ring-gray-600"><?= esc($tautanLapor) ?></code>
+                    <code class="min-w-0 flex-1 truncate rounded-lg bg-gray-50 px-3 py-2 text-sm font-semibold text-brand-700 ring-1 ring-gray-200 dark:bg-gray-700 dark:text-brand-300 dark:ring-gray-600"><?= esc($tautanLapor) ?></code>
                     <button type="button" class="btn btn-netral btn-sm" x-data="salinTeks" data-teks="<?= esc($tautanLapor, 'attr') ?>" data-pesan="Tautan form lapor tersalin." @click="salin()"><?= ikon('file-copy', 'h-4 w-4') ?><span x-show="!tersalin">Salin</span><span x-show="tersalin" x-cloak>Tersalin</span></button>
                 </div>
                 <p class="hint !mt-1.5">
@@ -152,7 +152,7 @@ $dt = 'text-xs text-gray-500 dark:text-gray-400';
                         <div>
                             <dt class="<?= $dt ?>">Siswa di Surat Balasan (<?= count($r['anggota']) ?>)</dt>
                             <?php if ($r['anggota'] === []): ?>
-                                <dd class="text-gray-400 dark:text-gray-500">—</dd>
+                                <dd class="text-gray-500 dark:text-gray-400">—</dd>
                             <?php else: ?>
                                 <dd><ul class="mt-0.5 space-y-0.5">
                                     <?php foreach ($r['anggota'] as $s): ?>
@@ -219,7 +219,7 @@ $dt = 'text-xs text-gray-500 dark:text-gray-400';
                                 <summary class="btn btn-netral w-full cursor-pointer list-none text-red-700 dark:text-red-400"><?= ikon('close-circle', 'h-4 w-4') ?>Kembalikan ke siswa…</summary>
                                 <form method="post" action="<?= site_url('admin/surat/balasan/laporan/' . $id . '/kembalikan') ?>" class="mt-2 space-y-2">
                                     <?= csrf_field() ?>
-                                    <label class="lbl" for="alasan-<?= $id ?>">Alasan (dibaca siswa) <span class="text-red-600">*</span></label>
+                                    <label class="lbl" for="alasan-<?= $id ?>">Alasan (dibaca siswa) <span class="text-red-600 dark:text-red-400">*</span></label>
                                     <textarea id="alasan-<?= $id ?>" name="alasan" rows="2" minlength="5" maxlength="255" required class="inp" placeholder="contoh: tanggal selesai PKL keliru, periksa lagi surat dari perusahaan"></textarea>
                                     <button type="submit" class="btn btn-bahaya w-full">Kembalikan laporan</button>
                                 </form>

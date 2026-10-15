@@ -84,7 +84,7 @@ $urlExcel  = site_url('admin/pkl/siswa/excel') . '?' . http_build_query(array_fi
     <nav class="flex flex-wrap gap-2" aria-label="Rincian status siswa">
         <?php foreach (['belum' => 'Belum mengisi', 'ditolak' => 'Ditolak', 'menunggu' => 'Menunggu ACC', 'perbaikan' => 'Perlu perbaikan', 'belum_mulai' => 'Belum mulai', 'sedang' => 'Sedang PKL', 'selesai' => 'Selesai PKL'] as $kode => $label): ?>
             <a href="<?= esc($urlSaring(['fase' => $kode]), 'attr') ?>" class="tombol-saring inline-flex items-center gap-1.5"<?= $fase === $kode ? ' aria-current="true"' : '' ?>>
-                <?= esc($label) ?><span class="tabular-nums opacity-75"><?= (int) $ringkas[$kode] ?></span>
+                <?= esc($label) ?><span class="tabular-nums opacity-90"><?= (int) $ringkas[$kode] ?></span>
             </a>
         <?php endforeach; ?>
     </nav>
@@ -136,7 +136,7 @@ $urlExcel  = site_url('admin/pkl/siswa/excel') . '?' . http_build_query(array_fi
                                     <td class="font-medium text-gray-900 dark:text-white"><?= esc($r['nama']) ?></td>
                                     <td class="whitespace-nowrap"><?= esc($r['nama_kelas']) ?></td>
                                     <td><?= view('admin/pkl/_lencana', ['kode' => $r['fase'], 'siswa' => true]) ?></td>
-                                    <td><?= esc($r['perusahaan_nama'] ?? '') ?: '<span class="text-gray-400 dark:text-gray-500">—</span>' ?></td>
+                                    <td><?= esc($r['perusahaan_nama'] ?? '') ?: '<span class="text-gray-500 dark:text-gray-400">—</span>' ?></td>
                                     <td class="text-xs whitespace-nowrap"><?= ! empty($r['tanggal_mulai']) ? esc(IsianBantu::tanggalIndo($r['tanggal_mulai'])) . ' – ' . esc(IsianBantu::tanggalIndo($r['tanggal_selesai'])) : '—' ?></td>
                                     <td class="text-right"><?php if (! empty($r['ajuan_id'])): ?><a href="<?= site_url('admin/pkl/' . $r['ajuan_id']) ?>" class="font-mono text-xs font-semibold text-brand-700 hover:underline dark:text-brand-400"><?= esc(PklPengajuanModel::kode((int) $r['ajuan_id'])) ?></a><?php endif; ?></td>
                                 </tr>

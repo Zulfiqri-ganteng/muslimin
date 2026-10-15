@@ -36,7 +36,7 @@ $base = site_url('admin/peserta-ukk/daftarkan');
         <div class="kartu-kepala"><h2 id="judul-langkah-1" class="kartu-judul">1. Pilih paket soal &amp; kelas</h2></div>
         <form method="get" action="<?= $base ?>" class="kartu-isi grid gap-4 sm:grid-cols-2">
             <div>
-                <label class="lbl" for="du-paket">Paket soal <span class="text-red-600">*</span></label>
+                <label class="lbl" for="du-paket">Paket soal <span class="text-red-600 dark:text-red-400">*</span></label>
                 <select id="du-paket" name="paket_soal_id" data-autosubmit required class="inp">
                     <option value="">— Pilih paket soal —</option>
                     <?php foreach ($paketOpts as $id => $lbl): ?>
@@ -45,7 +45,7 @@ $base = site_url('admin/peserta-ukk/daftarkan');
                 </select>
             </div>
             <div>
-                <label class="lbl" for="du-kelas">Kelas <span class="text-red-600">*</span></label>
+                <label class="lbl" for="du-kelas">Kelas <span class="text-red-600 dark:text-red-400">*</span></label>
                 <select id="du-kelas" name="kelas_id" data-autosubmit required class="inp">
                     <option value="">— Pilih kelas —</option>
                     <?php foreach ($kelasOpts as $id => $lbl): ?>

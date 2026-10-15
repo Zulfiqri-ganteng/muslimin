@@ -154,11 +154,11 @@ $tandaBeasiswa = static fn (string $teks): string => '<span class="inline-flex i
                                         <td class="text-right text-xs whitespace-nowrap">
                                             <?php if ($v['total'] > 0): ?><b class="text-gray-900 dark:text-white"><?= esc($rp($v['total'])) ?></b><?php if ($j['siklus'] === 'bulanan'): ?><br><span class="text-gray-500 dark:text-gray-400"><?= esc(implode(', ', $v['periode'])) ?></span><?php endif; ?>
                                             <?php elseif ($j['kode'] === 'spp' && $b['beasiswa']): ?><span class="text-brand-700 dark:text-brand-400">dibebaskan</span>
-                                            <?php else: ?><span class="text-gray-400 dark:text-gray-500">—</span><?php endif; ?>
+                                            <?php else: ?><span class="text-gray-500 dark:text-gray-400">—</span><?php endif; ?>
                                         </td>
                                     <?php endforeach; ?>
                                     <td class="text-right font-bold whitespace-nowrap text-gray-900 tabular-nums dark:text-white"><?= esc($rp((int) $b['total_bayar'])) ?></td>
-                                    <td class="text-right text-xs font-semibold whitespace-nowrap <?= $b['kekurangan'] > 0 ? 'text-red-700 dark:text-red-400' : 'text-gray-400 dark:text-gray-500' ?>"><?= $b['kekurangan'] > 0 ? esc($rp((int) $b['kekurangan'])) : '—' ?></td>
+                                    <td class="text-right text-xs font-semibold whitespace-nowrap <?= $b['kekurangan'] > 0 ? 'text-red-700 dark:text-red-400' : 'text-gray-500 dark:text-gray-400' ?>"><?= $b['kekurangan'] > 0 ? esc($rp((int) $b['kekurangan'])) : '—' ?></td>
                                     <td class="text-center"><span class="lencana <?= $warnaStatus[$b['status']] ?? 'lencana-abu' ?>"><?= esc($b['status_label']) ?></span></td>
                                 </tr>
                             <?php endforeach; ?>
@@ -181,7 +181,7 @@ $tandaBeasiswa = static fn (string $teks): string => '<span class="inline-flex i
                         <p class="mt-1 text-xs text-gray-500 dark:text-gray-400"><?= esc($b['perusahaan'] ?: '—') ?> · <span class="font-mono"><?= esc($b['nomor_surat'] ?: 'belum bernomor') ?></span></p>
                         <dl class="mt-2 grid grid-cols-2 gap-x-3 gap-y-1 text-xs">
                             <?php foreach ($jenis as $j): $v = $b['bayar'][$j['kode']] ?? ['total' => 0, 'periode' => []]; ?>
-                                <div class="flex justify-between gap-2"><dt class="text-gray-500 dark:text-gray-400"><?= esc($j['nama']) ?></dt><dd class="font-semibold <?= $v['total'] > 0 ? 'text-gray-900 dark:text-white' : 'text-gray-400 dark:text-gray-500' ?>"><?= $v['total'] > 0 ? esc($rp($v['total'])) : ($j['kode'] === 'spp' && $b['beasiswa'] ? 'bebas' : '—') ?></dd></div>
+                                <div class="flex justify-between gap-2"><dt class="text-gray-500 dark:text-gray-400"><?= esc($j['nama']) ?></dt><dd class="font-semibold <?= $v['total'] > 0 ? 'text-gray-900 dark:text-white' : 'text-gray-500 dark:text-gray-400' ?>"><?= $v['total'] > 0 ? esc($rp($v['total'])) : ($j['kode'] === 'spp' && $b['beasiswa'] ? 'bebas' : '—') ?></dd></div>
                             <?php endforeach; ?>
                         </dl>
                         <p class="mt-2 flex items-center justify-between border-t border-gray-200 pt-2 text-xs dark:border-gray-700"><span class="text-gray-500 dark:text-gray-400">Total <b class="text-gray-900 dark:text-white"><?= esc($rp((int) $b['total_bayar'])) ?></b></span><?php if ($b['kekurangan'] > 0): ?><span class="font-semibold text-red-700 dark:text-red-400">Kurang <?= esc($rp((int) $b['kekurangan'])) ?></span><?php endif; ?></p>

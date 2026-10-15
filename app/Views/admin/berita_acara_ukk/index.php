@@ -85,7 +85,7 @@ $total = $pager ? $pager->getTotal() : count($rows);
 
     <?= ui_crud_form_buka(['benda' => 'Berita Acara', 'judulTambah' => 'Buat Berita Acara']) ?>
         <div x-show="mode === 'add'">
-            <label class="lbl" for="ba-jadwal">Jadwal UKK <span class="text-red-600">*</span></label>
+            <label class="lbl" for="ba-jadwal">Jadwal UKK <span class="text-red-600 dark:text-red-400">*</span></label>
             <select id="ba-jadwal" name="jadwal_ukk_id" x-model="form.jadwal_ukk_id" :required="mode === 'add'" class="inp">
                 <option value="">— Pilih jadwal —</option>
                 <?php foreach ($jadwalOpts as $id => $lbl): ?>
@@ -97,7 +97,7 @@ $total = $pager ? $pager->getTotal() : count($rows);
             <?php endif; ?>
         </div>
         <div>
-            <label class="lbl" for="ba-tanggal">Tanggal <span class="text-red-600">*</span></label>
+            <label class="lbl" for="ba-tanggal">Tanggal <span class="text-red-600 dark:text-red-400">*</span></label>
             <input type="date" id="ba-tanggal" name="tanggal" x-model="form.tanggal" required class="inp">
         </div>
         <div>

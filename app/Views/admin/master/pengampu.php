@@ -125,14 +125,14 @@ ob_start(); ?>
                 <input type="hidden" name="kelas_id" value="<?= (int) $kelasId ?>">
                 <div class="dialog-isi">
                     <div>
-                        <label class="lbl" for="pa-mapel">Mata pelajaran <span class="text-red-600">*</span></label>
+                        <label class="lbl" for="pa-mapel">Mata pelajaran <span class="text-red-600 dark:text-red-400">*</span></label>
                         <select id="pa-mapel" name="mapel_id" x-model.number="form.mapel_id" @change="onMapelChange()" required class="inp">
                             <option value="">— pilih mapel —</option>
                             <?php foreach ($mapelOpts as $id => $label): ?><option value="<?= (int) $id ?>"><?= esc($label) ?></option><?php endforeach; ?>
                         </select>
                     </div>
                     <div>
-                        <label class="lbl" for="pa-guru">Guru pengampu <span class="text-red-600">*</span></label>
+                        <label class="lbl" for="pa-guru">Guru pengampu <span class="text-red-600 dark:text-red-400">*</span></label>
                         <select id="pa-guru" name="guru_id" x-model.number="form.guru_id" required class="inp">
                             <option value="">— pilih guru —</option>
                             <template x-for="g in filteredGuru" :key="g.id">
@@ -142,7 +142,7 @@ ob_start(); ?>
                         <p class="hint mt-1" x-show="form.mapel_id && filteredGuru.length < allGuru.length" x-cloak>Hanya menampilkan guru berkompetensi mapel ini.</p>
                     </div>
                     <div>
-                        <label class="lbl" for="pa-jp">Jumlah JP / minggu <span class="text-red-600">*</span></label>
+                        <label class="lbl" for="pa-jp">Jumlah JP / minggu <span class="text-red-600 dark:text-red-400">*</span></label>
                         <input type="number" id="pa-jp" name="jp" x-model.number="form.jp" min="1" max="50" required class="inp">
                     </div>
                 </div>
@@ -169,7 +169,7 @@ ob_start(); ?>
                 <?= csrf_field() ?>
                 <div class="dialog-isi">
                     <div>
-                        <label class="lbl" for="pu-guru">Guru pengampu <span class="text-red-600">*</span></label>
+                        <label class="lbl" for="pu-guru">Guru pengampu <span class="text-red-600 dark:text-red-400">*</span></label>
                         <select id="pu-guru" name="guru_id" x-model.number="eform.guru_id" required class="inp">
                             <template x-for="g in editGuru" :key="g.id">
                                 <option :value="g.id" x-text="g.label"></option>
@@ -177,7 +177,7 @@ ob_start(); ?>
                         </select>
                     </div>
                     <div>
-                        <label class="lbl" for="pu-jp">Jumlah JP / minggu <span class="text-red-600">*</span></label>
+                        <label class="lbl" for="pu-jp">Jumlah JP / minggu <span class="text-red-600 dark:text-red-400">*</span></label>
                         <input type="number" id="pu-jp" name="jp" x-model.number="eform.jp" min="1" max="50" required class="inp">
                     </div>
                 </div>

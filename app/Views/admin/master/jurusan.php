@@ -80,11 +80,11 @@
 
     <?= ui_crud_form_buka(['benda' => 'Jurusan']) ?>
         <div>
-            <label class="lbl" for="jurusan-kode">Kode <span class="text-red-600">*</span></label>
+            <label class="lbl" for="jurusan-kode">Kode <span class="text-red-600 dark:text-red-400">*</span></label>
             <input type="text" id="jurusan-kode" name="kode" x-model="form.kode" maxlength="20" required class="inp uppercase" placeholder="mis. TKJT">
         </div>
         <div>
-            <label class="lbl" for="jurusan-nama">Nama jurusan <span class="text-red-600">*</span></label>
+            <label class="lbl" for="jurusan-nama">Nama jurusan <span class="text-red-600 dark:text-red-400">*</span></label>
             <input type="text" id="jurusan-nama" name="nama" x-model="form.nama" maxlength="100" required class="inp" placeholder="mis. Teknik Komputer dan Jaringan Telekomunikasi">
         </div>
     <?= ui_crud_form_tutup() ?>

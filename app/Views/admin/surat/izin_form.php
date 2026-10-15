@@ -77,19 +77,19 @@ $pilihanBingkai = 'flex cursor-pointer items-start gap-3 rounded-lg border borde
 
             <?php if ($asts): ?>
                 <div>
-                    <label class="lbl" for="semester">Semester <span class="text-red-600">*</span></label>
+                    <label class="lbl" for="semester">Semester <span class="text-red-600 dark:text-red-400">*</span></label>
                     <select id="semester" name="semester" x-model="semester" required class="inp">
                         <option value="Ganjil">Ganjil</option>
                         <option value="Genap">Genap</option>
                     </select>
                 </div>
                 <div>
-                    <label class="lbl" for="tahun_pelajaran">Tahun pelajaran <span class="text-red-600">*</span></label>
+                    <label class="lbl" for="tahun_pelajaran">Tahun pelajaran <span class="text-red-600 dark:text-red-400">*</span></label>
                     <input id="tahun_pelajaran" name="tahun_pelajaran" type="text" x-model="tp" required maxlength="9" placeholder="2026/2027" class="inp">
                 </div>
             <?php else: ?>
                 <div class="sm:col-span-2">
-                    <label class="lbl" for="sesi">Sesi / gelombang <span class="text-red-600">*</span></label>
+                    <label class="lbl" for="sesi">Sesi / gelombang <span class="text-red-600 dark:text-red-400">*</span></label>
                     <input id="sesi" name="sesi" type="text" value="<?= esc($nilai['sesi'], 'attr') ?>" required maxlength="40" list="saranSesi" placeholder="Gelombang 1" class="inp">
                     <datalist id="saranSesi"><?php foreach ($sesiSaran as $s): ?><option value="<?= esc($s, 'attr') ?>"><?php endforeach; ?></datalist>
                     <p class="hint">Tercetak di baris "Sesi" pada surat. Pilih saran atau ketik sendiri.</p>
@@ -97,11 +97,11 @@ $pilihanBingkai = 'flex cursor-pointer items-start gap-3 rounded-lg border borde
             <?php endif; ?>
 
             <div>
-                <label class="lbl" for="tgl_mulai">Tanggal mulai <span class="text-red-600">*</span></label>
+                <label class="lbl" for="tgl_mulai">Tanggal mulai <span class="text-red-600 dark:text-red-400">*</span></label>
                 <input id="tgl_mulai" name="tgl_mulai" type="date" x-model="mulai" required class="inp">
             </div>
             <div>
-                <label class="lbl" for="tgl_selesai">Tanggal selesai <span class="text-red-600">*</span></label>
+                <label class="lbl" for="tgl_selesai">Tanggal selesai <span class="text-red-600 dark:text-red-400">*</span></label>
                 <input id="tgl_selesai" name="tgl_selesai" type="date" x-model="selesai" required class="inp">
             </div>
             <div>
@@ -109,7 +109,7 @@ $pilihanBingkai = 'flex cursor-pointer items-start gap-3 rounded-lg border borde
                 <input id="tempat" name="tempat" type="text" value="<?= esc($nilai['tempat'], 'attr') ?>" maxlength="100" class="inp">
             </div>
             <div>
-                <label class="lbl" for="tanggal_surat">Tanggal surat <span class="text-red-600">*</span></label>
+                <label class="lbl" for="tanggal_surat">Tanggal surat <span class="text-red-600 dark:text-red-400">*</span></label>
                 <input id="tanggal_surat" name="tanggal_surat" type="date" x-model="tanggalSurat" required class="inp">
                 <p class="hint">Menentukan bulan dan tahun pada nomor surat. Tidak boleh setelah kegiatan selesai.</p>
             </div>
@@ -148,11 +148,11 @@ $pilihanBingkai = 'flex cursor-pointer items-start gap-3 rounded-lg border borde
                 <div class="grid gap-3 sm:grid-cols-2">
                     <label class="<?= $pilihanBingkai ?>">
                         <input type="radio" name="mode" value="umum" x-model="mode" class="cek mt-0.5">
-                        <span><span class="block text-sm font-semibold text-gray-900 dark:text-white">Surat umum</span><span class="block text-xs text-gray-500 dark:text-gray-400">Satu surat, satu nomor, ditujukan ke "Pimpinan / Pembimbing PKL". Persis contoh sekolah.</span></span>
+                        <span><span class="block text-sm font-semibold text-gray-900 dark:text-white">Surat umum</span><span class="block text-xs text-gray-600 dark:text-gray-300">Satu surat, satu nomor, ditujukan ke "Pimpinan / Pembimbing PKL". Persis contoh sekolah.</span></span>
                     </label>
                     <label class="<?= $pilihanBingkai ?>">
                         <input type="radio" name="mode" value="perusahaan" x-model="mode" class="cek mt-0.5">
-                        <span><span class="block text-sm font-semibold text-gray-900 dark:text-white">Per perusahaan</span><span class="block text-xs text-gray-500 dark:text-gray-400">Satu surat untuk tiap perusahaan yang dipilih, memuat nama perusahaan dan daftar siswanya. Nomor berbeda-beda.</span></span>
+                        <span><span class="block text-sm font-semibold text-gray-900 dark:text-white">Per perusahaan</span><span class="block text-xs text-gray-600 dark:text-gray-300">Satu surat untuk tiap perusahaan yang dipilih, memuat nama perusahaan dan daftar siswanya. Nomor berbeda-beda.</span></span>
                     </label>
                 </div>
 

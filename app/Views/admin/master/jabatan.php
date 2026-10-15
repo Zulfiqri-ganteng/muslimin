@@ -127,7 +127,7 @@ $adaSaring = $q !== '' || $kategori !== '';
     <?= ui_crud_form_buka(['benda' => 'Jabatan', 'ukuran' => 'lg']) ?>
         <div class="grid gap-4 sm:grid-cols-2">
             <div>
-                <label class="lbl" for="jbt-kode">Kode <span class="text-red-600">*</span></label>
+                <label class="lbl" for="jbt-kode">Kode <span class="text-red-600 dark:text-red-400">*</span></label>
                 <input type="text" id="jbt-kode" name="kode" x-model="form.kode" maxlength="30" required class="inp uppercase">
             </div>
             <div>
@@ -139,7 +139,7 @@ $adaSaring = $q !== '' || $kategori !== '';
                 </select>
             </div>
             <div class="sm:col-span-2">
-                <label class="lbl" for="jbt-nama">Nama jabatan <span class="text-red-600">*</span></label>
+                <label class="lbl" for="jbt-nama">Nama jabatan <span class="text-red-600 dark:text-red-400">*</span></label>
                 <input type="text" id="jbt-nama" name="nama" x-model="form.nama" maxlength="150" required class="inp">
             </div>
             <div>

@@ -11,6 +11,10 @@
 //   node tools/uji-peramban.mjs --progres                       cetak posisi uji per halaman ke stderr (untuk uji yang lama)
 //   node tools/uji-peramban.mjs --potret=sebelum.json.gz        simpan potret gaya (peran pertama saja)
 //   node tools/uji-peramban.mjs --banding=sebelum.json.gz [--rinci=beda.json]   potret ulang lalu bandingkan
+//   node tools/uji-peramban.mjs --lebar=360                     lebar layar (HP); halaman yang melebar ke samping selalu dilaporkan
+//   node tools/uji-peramban.mjs --mode=gelap                    paksa mode tema terang|gelap|sekolah (atribut <html>, DB tidak diubah)
+//   node tools/uji-peramban.mjs --kontras                       kontras tulisan WCAG AA (4,5:1; huruf besar 3:1)
+//   node tools/uji-peramban.mjs --fokus                         elemen yang bisa difokus papan ketik tapi tanpa tanda fokus tampak
 //
 // Butuh Node 24 (fetch & WebSocket bawaan), Google Chrome, Apache lokal. Alamat situs dibaca dari app.baseURL di .env.
 // Profil Chrome sementara dibuat di folder UJI_PROFIL_DIR (bawaan: folder temp sistem) lalu dihapus.
@@ -54,6 +58,13 @@ function grupAlamat(alamat) {
 // admin/ui-kit?uji=1 = halaman kit komponen (F1) yang menguji dirinya sendiri (hanya Admin; peran lain dialihkan).
 const TAMBAHAN = ['admin/master/tahun-ajaran', 'admin/master/fase', 'admin/ujian/asts1/honor', 'admin/dokumen/sampah', 'admin/dokumen/penyimpanan',
     'admin/ui-kit?uji=1'];
+// Ukuran layar: bawaan laptop 1366×900; --lebar=360 → HP (viewport mobile).
+const LEBAR = Number(ARG.lebar) > 0 ? Number(ARG.lebar) : 1366;
+const TINGGI = LEBAR < 768 ? 800 : 900;
+// --mode=…: atribut <html> per mode (sama dengan App\Libraries\Tampilan::MODE).
+const MODE_TEMA = { terang: ['terang', 'biru', 'terang'], gelap: ['gelap', 'biru', 'gelap'], sekolah: ['sekolah', 'lilac', 'warna'] };
+const MODE = typeof ARG.mode === 'string' ? ARG.mode : null;
+if (MODE && !MODE_TEMA[MODE]) throw new Error(`Mode tidak dikenal: ${MODE} (ada: ${Object.keys(MODE_TEMA).join(', ')})`);
 // Gaya yang dipotret per elemen (urutan = urutan nilai di berkas potret).
 const PROP = ['display', 'position', 'float', 'width', 'height', 'margin-top', 'margin-right', 'margin-bottom', 'margin-left',
     'padding-top', 'padding-right', 'padding-bottom', 'padding-left', 'border-top-width', 'border-right-width', 'border-bottom-width',
@@ -319,6 +330,145 @@ function potretHalaman(PROP) {
     return hasil;
 }
 
+// Label pendek elemen untuk laporan: tag#id.kelas (6 kelas pertama).
+function labelElemen(el) {
+    const kelas = (el.getAttribute('class') || '').trim().split(/\s+/).filter(Boolean).slice(0, 6).join('.');
+    return el.tagName.toLowerCase() + (el.id ? '#' + el.id : '') + (kelas ? '.' + kelas : '');
+}
+
+// Halaman melebar ke samping (ada gulir mendatar)? Laporkan elemen terluar yang menjorok melewati tepi kanan layar
+// (elemen di dalam wadah ber-overflow selain visible — mis. tabel-bungkus yang memang digulir — tidak dihitung).
+function cekLebar(labelElemen) {
+    const W = document.documentElement.clientWidth;
+    const lebar = document.documentElement.scrollWidth;
+    if (lebar <= W + 1) return null;
+    const terkurung = (el) => {
+        for (let p = el.parentElement; p && p !== document.body && p !== document.documentElement; p = p.parentElement) {
+            if (getComputedStyle(p).overflowX !== 'visible') return true;
+        }
+        return false;
+    };
+    const menjorok = (el) => {
+        const r = el.getBoundingClientRect();
+        return r.width > 0 && r.right > W + 1 && getComputedStyle(el).position !== 'fixed' && !terkurung(el);
+    };
+    const elemen = [];
+    for (const el of document.body.querySelectorAll('*')) {
+        if (!menjorok(el)) continue;
+        if (el.parentElement && el.parentElement !== document.body && menjorok(el.parentElement)) continue;
+        elemen.push(labelElemen(el) + ` (sampai ${Math.round(el.getBoundingClientRect().right)}px)`);
+        if (elemen.length >= 4) break;
+    }
+    return { lebar, layar: W, elemen };
+}
+
+// Kontras tulisan WCAG 2.x AA: 4,5:1, huruf besar (≥ 24px, atau ≥ 18,66px tebal) 3:1. Latar = tumpukan warna latar leluhur
+// (berhenti di latar pertama yang pekat; latar bergambar/gradien dilewati karena tak bisa dihitung). Opasitas leluhur ikut dihitung.
+// Elemen nonaktif (disabled / aria-disabled) dikecualikan WCAG.
+function cekKontras(labelElemen) {
+    const kanvas = document.createElement('canvas');
+    kanvas.width = kanvas.height = 1;
+    const g = kanvas.getContext('2d', { willReadFrequently: true });
+    const simpan = new Map();
+    const urai = (v) => {
+        if (!simpan.has(v)) {
+            g.clearRect(0, 0, 1, 1);
+            g.fillStyle = '#000';
+            g.fillStyle = v;
+            g.fillRect(0, 0, 1, 1);
+            const d = g.getImageData(0, 0, 1, 1).data;
+            simpan.set(v, [d[0], d[1], d[2], d[3] / 255]);
+        }
+        return simpan.get(v);
+    };
+    const campur = (atas, bawah, a = atas[3]) => [0, 1, 2].map((i) => atas[i] * a + bawah[i] * (1 - a));
+    const lum = (w) => {
+        const [r, gg, b] = w.map((v) => { v /= 255; return v <= 0.03928 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4; });
+        return 0.2126 * r + 0.7152 * gg + 0.0722 * b;
+    };
+    const latarDari = (el) => {
+        const lapis = [];
+        for (let p = el; p; p = p.parentElement) {
+            const cs = getComputedStyle(p);
+            if (cs.backgroundImage !== 'none' && !cs.backgroundImage.startsWith('url(')) return null;
+            const w = urai(cs.backgroundColor);
+            if (w[3] > 0) { lapis.push(w); if (w[3] >= 1) break; }
+        }
+        let hasil = [255, 255, 255];
+        for (let i = lapis.length - 1; i >= 0; i--) hasil = campur(lapis[i], hasil);
+        return hasil;
+    };
+    const hex = (w) => '#' + w.map((v) => Math.round(v).toString(16).padStart(2, '0')).join('');
+    const ISIAN = 'input:not([type=hidden],[type=checkbox],[type=radio],[type=file],[type=range],[type=color],[type=submit],[type=button]),select,textarea';
+    const hasil = [];
+    let diperiksa = 0;
+    for (const el of document.body.querySelectorAll('*')) {
+        if (el.closest('svg,script,style,template,noscript')) continue;
+        const isian = el.matches(ISIAN);
+        const teks = isian ? String(el.value ?? '').trim()
+            : [...el.childNodes].filter((n) => n.nodeType === 3).map((n) => n.textContent).join('').trim();
+        if (!teks) continue;
+        const r = el.getBoundingClientRect();
+        if (r.width <= 1 || r.height <= 1 || r.right <= 0 || r.left >= innerWidth) continue; // laci tertutup di luar layar
+        const cs = getComputedStyle(el);
+        if (cs.visibility !== 'visible') continue;
+        if (el.closest(':disabled,[aria-disabled="true"],[inert]')) continue;
+        let opasitas = 1;
+        for (let p = el; p; p = p.parentElement) opasitas *= Number(getComputedStyle(p).opacity);
+        if (opasitas <= 0.05) continue;
+        const latar = latarDari(el);
+        if (!latar) continue;
+        const w = urai(cs.color);
+        const depan = campur(w, latar, w[3] * opasitas);
+        const [a, b] = [lum(depan), lum(latar)];
+        const rasio = (Math.max(a, b) + 0.05) / (Math.min(a, b) + 0.05);
+        const ukuran = parseFloat(cs.fontSize);
+        const besar = ukuran >= 24 || (ukuran >= 18.66 && Number(cs.fontWeight) >= 700);
+        diperiksa++;
+        if (rasio + 0.005 < (besar ? 3 : 4.5)) {
+            hasil.push({ el: labelElemen(el), teks: teks.slice(0, 30), depan: hex(depan), latar: hex(latar), rasio: Math.round(rasio * 100) / 100 });
+            if (hasil.length >= 300) break;
+        }
+    }
+    return { diperiksa, gagal: hasil };
+}
+
+// Elemen yang bisa dicapai Tab tapi tidak menampilkan tanda fokus apa pun (garis luar, cincin/bayangan, warna garis, latar,
+// tulisan, garis bawah) pada dirinya atau dua leluhurnya (pola :focus-within / :has). Hanya dihitung bila :focus-visible berlaku.
+function cekFokus(labelElemen) {
+    const PILIH = 'a[href],button:not([disabled]),input:not([type=hidden]):not([disabled]),select:not([disabled]),textarea:not([disabled]),'
+        + 'summary,[tabindex]:not([tabindex="-1"])';
+    const foto = (el) => {
+        if (!el || el === document.body) return '';
+        const cs = getComputedStyle(el);
+        return [cs.outlineStyle, cs.outlineWidth, cs.outlineColor, cs.boxShadow, cs.borderTopColor, cs.borderBottomColor, cs.backgroundColor,
+            cs.color, cs.textDecorationLine].join('|');
+    };
+    const daftar = [...document.querySelectorAll(PILIH)].filter((el) => {
+        const r = el.getBoundingClientRect();
+        return r.width > 1 && r.height > 1 && r.right > 0 && r.left < innerWidth && getComputedStyle(el).visibility === 'visible' && !el.closest('[inert]');
+    }).slice(0, 300);
+    const gagal = [];
+    let diperiksa = 0;
+    for (const el of daftar) {
+        const rantai = [el, el.parentElement, el.parentElement?.parentElement].filter((x) => x && x !== document.body);
+        // Transisi dimatikan sementara (CSSOM, bukan atribut style= → tidak melanggar CSP): gaya fokus langsung terbaca nilai akhirnya.
+        const transisi = rantai.map((x) => x.style.transition);
+        for (const x of rantai) x.style.transition = 'none';
+        const sebelum = rantai.map(foto);
+        el.focus({ preventScroll: true });
+        const sah = document.activeElement === el && el.matches(':focus-visible');
+        if (sah) {
+            diperiksa++;
+            const sesudah = rantai.map(foto);
+            if (sebelum.every((v, i) => v === sesudah[i])) gagal.push(labelElemen(el));
+        }
+        el.blur();
+        rantai.forEach((x, i) => { x.style.transition = transisi[i]; });
+    }
+    return { diperiksa, gagal };
+}
+
 // ---------------------------------------------------------------- pembanding potret
 const GRUP_PROP = {
     ukuran: ['width', 'height', 'margin-top', 'margin-right', 'margin-bottom', 'margin-left', 'padding-top', 'padding-right', 'padding-bottom',
@@ -456,6 +606,32 @@ function cetakBanding({ jenis, kecil, perHalaman }) {
     }
 }
 
+// --mode: tulis atribut tema di <html> halaman yang baru dibuka (ApexCharts tetap warna awal).
+async function pasangMode(c) {
+    if (!MODE) return;
+    const [mode, warna, sidebar] = MODE_TEMA[MODE];
+    await c.nilai(`(() => { const h = document.documentElement; h.dataset.mode = ${JSON.stringify(mode)}; h.dataset.warna = ${JSON.stringify(warna)};
+        h.dataset.sidebar = ${JSON.stringify(sidebar)}; return true; })()`);
+    // Tunggu semua transisi warna (transition-colors) selesai — di halaman besar bisa lebih lama dari durasinya (maks 5 detik).
+    await c.nilai(`(async () => {
+        for (let i = 0; i < 100; i++) {
+            await new Promise((r) => setTimeout(r, 50));
+            if (!document.getAnimations().some((a) => a instanceof CSSTransition && a.playState !== 'finished')) return true;
+        }
+        return false;
+    })()`);
+}
+
+// Pemeriksaan per halaman sesudah potret: melebar (selalu), kontras & fokus (bila diminta; fokus terakhir karena mengubah keadaan).
+async function cekTambahan(c) {
+    const lab = String(labelElemen);
+    return {
+        lebar: await c.nilai(`(${cekLebar})(${lab})`),
+        kontras: ARG.kontras ? await c.nilai(`(${cekKontras})(${lab})`) : null,
+        fokus: ARG.fokus ? await c.nilai(`(${cekFokus})(${lab})`) : null,
+    };
+}
+
 // ---------------------------------------------------------------- utama
 const mulai = Date.now();
 const potret = {};
@@ -468,8 +644,10 @@ try {
     dengarkan(c);
     for (const d of ['Page', 'Runtime', 'Network', 'Log']) await c.kirim(d + '.enable');
     await c.kirim('Page.addScriptToEvaluateOnNewDocument', { source: `(${pendengarCsp})()` });
-    await c.kirim('Emulation.setDeviceMetricsOverride', { width: 1366, height: 900, deviceScaleFactor: 1, mobile: false });
+    await c.kirim('Emulation.setDeviceMetricsOverride', { width: LEBAR, height: TINGGI, deviceScaleFactor: 1, mobile: LEBAR < 768 });
     await c.kirim('Emulation.setEmulatedMedia', { features: [{ name: 'prefers-reduced-motion', value: 'reduce' }] });
+    // Chrome tanpa layar tidak punya fokus jendela → :focus / :focus-visible tak pernah berlaku tanpa emulasi ini (--fokus).
+    await c.kirim('Emulation.setFocusEmulationEnabled', { enabled: true });
     const butuhPotret = Boolean(ARG.potret || ARG.banding);
 
     for (const [i, peran] of PERAN.entries()) {
@@ -484,9 +662,11 @@ try {
         // Halaman login dulu (belum masuk), lalu masuk.
         for (const h of daftar) {
             await buka(c, h.url);
+            await pasangMode(c);
             const info = await c.nilai(`(${infoHalaman})()`);
-            hasil.push({ ...info, peran: '-', url: '/admin/login', akhir: pendek(info.url), galat: [...kj.galat], dialog: [...kj.dialog], dialihkan: false });
+            const baris = { ...info, peran: '-', url: '/admin/login', akhir: pendek(info.url), galat: [...kj.galat], dialog: [...kj.dialog], dialihkan: false };
             if (butuhPotret) potret['/admin/login'] = await c.nilai(`(${potretHalaman})(${JSON.stringify(PROP)})`);
+            hasil.push(Object.assign(baris, await cekTambahan(c)));
         }
         await buka(c, BASE + '/admin/login');
         aturUlang();
@@ -505,10 +685,12 @@ try {
             if (ARG.progres) process.stderr.write(`[${peran}] ${k + 1}/${semua.length} ${pendek(url)}\n`);
             try {
                 await buka(c, url);
+                await pasangMode(c);
                 const info = await c.nilai(`(${infoHalaman})()`);
                 const dialihkan = jalur(info.url) !== jalur(url);
-                hasil.push({ ...info, peran, url: pendek(url), akhir: pendek(info.url), galat: [...kj.galat], dialog: [...kj.dialog], dialihkan });
+                const baris = { ...info, peran, url: pendek(url), akhir: pendek(info.url), galat: [...kj.galat], dialog: [...kj.dialog], dialihkan };
                 if (butuhPotret && i === 0 && !dialihkan) potret[pendek(url)] = await c.nilai(`(${potretHalaman})(${JSON.stringify(PROP)})`);
+                hasil.push(Object.assign(baris, dialihkan ? {} : await cekTambahan(c)));
             } catch (e) {
                 // Satu halaman bermasalah (mis. Chrome tak menjawab) → dicatat GAGAL, uji lanjut ke halaman berikutnya.
                 hasil.push({ url: pendek(url), akhir: pendek(url), peran, status: 0, php: false, csp: [], inter: false, alpine: null, uji: null,
@@ -522,7 +704,8 @@ try {
 }
 
 // ---------------------------------------------------------------- laporan
-console.log(`Uji peramban — ${BASE} (Chrome tanpa layar 1366×900, gerak dikurangi) · ${((Date.now() - mulai) / 1000).toFixed(0)} dtk`);
+console.log(`Uji peramban — ${BASE} (Chrome tanpa layar ${LEBAR}×${TINGGI}${LEBAR < 768 ? ' HP' : ''}, gerak dikurangi`
+    + `${MODE ? ', mode ' + MODE : ''}) · ${((Date.now() - mulai) / 1000).toFixed(0)} dtk`);
 const perArahan = new Map();
 for (const peran of ['-', ...PERAN]) {
     const baris = hasil.filter((h) => h.peran === peran);
@@ -551,6 +734,42 @@ for (const peran of ['-', ...PERAN]) {
     for (const h of baris) for (const v of h.csp) perArahan.set(v.d, (perArahan.get(v.d) ?? 0) + 1);
     if (buruk.length) process.exitCode = 1;
 }
+// Melebar / kontras / fokus: dikumpulkan dari semua peran, temuan yang sama ditulis sekali beserta halaman contohnya.
+const melebar = hasil.filter((h) => h.lebar);
+if (melebar.length) {
+    console.log(`\n[LEBAR] ${melebar.length} halaman bergulir ke samping di layar ${LEBAR}px:`);
+    for (const h of melebar) console.log(`  ${h.url} (${h.peran}): lebar ${h.lebar.lebar}px · ${h.lebar.elemen.join(' · ') || '(elemen tak terdeteksi)'}`);
+    process.exitCode = 1;
+}
+const kelompok = (daftar) => {
+    const m = new Map();
+    for (const [kunci, url] of daftar) {
+        const v = m.get(kunci) ?? { n: 0, hal: new Set() };
+        v.n++; v.hal.add(url);
+        m.set(kunci, v);
+    }
+    return [...m].sort((a, b) => b[1].n - a[1].n);
+};
+if (ARG.kontras) {
+    const semua = hasil.filter((h) => h.kontras).flatMap((h) => h.kontras.gagal.map((g) => [`${g.rasio}:1 ${g.depan} di atas ${g.latar} · ${g.el} «${g.teks}»`, h.url]));
+    const nPeriksa = hasil.reduce((n, h) => n + (h.kontras?.diperiksa ?? 0), 0);
+    const grup = kelompok(semua.map(([k, u]) => [k.replace(/ «.*»$/, ''), u]));
+    console.log(`\n[KONTRAS] ${nPeriksa} tulisan diperiksa · di bawah AA ${semua.length} (${grup.length} jenis)`);
+    for (const [k, v] of grup.slice(0, Number(ARG['kontras-batas']) || 60)) {
+        const contoh = semua.find(([x]) => x.startsWith(k))?.[0].match(/«.*»$/)?.[0] ?? '';
+        console.log(`  ${String(v.n).padStart(4)}× ${k} ${contoh} — ${[...v.hal].slice(0, 3).join(', ')}${v.hal.size > 3 ? ` (+${v.hal.size - 3})` : ''}`);
+    }
+    if (semua.length) process.exitCode = 1;
+}
+if (ARG.fokus) {
+    const semua = hasil.filter((h) => h.fokus).flatMap((h) => h.fokus.gagal.map((g) => [g, h.url]));
+    const nPeriksa = hasil.reduce((n, h) => n + (h.fokus?.diperiksa ?? 0), 0);
+    const grup = kelompok(semua);
+    console.log(`\n[FOKUS] ${nPeriksa} elemen difokus · tanpa tanda fokus ${semua.length} (${grup.length} jenis)`);
+    for (const [k, v] of grup.slice(0, 60)) console.log(`  ${String(v.n).padStart(4)}× ${k} — ${[...v.hal].slice(0, 3).join(', ')}${v.hal.size > 3 ? ` (+${v.hal.size - 3})` : ''}`);
+    if (semua.length) process.exitCode = 1;
+}
+
 if (perArahan.size) {
     console.log('\nPelanggaran CSP per arahan: ' + [...perArahan.entries()].sort((a, b) => b[1] - a[1]).map(([d, n]) => `${d} ${n}`).join(' · '));
     const atas = [...hasil].filter((h) => h.csp.length).sort((a, b) => b.csp.length - a.csp.length).slice(0, 12);

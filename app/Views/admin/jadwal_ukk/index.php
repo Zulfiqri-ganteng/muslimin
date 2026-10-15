@@ -122,7 +122,7 @@ $total = $pager ? $pager->getTotal() : count($rows);
     <?= ui_crud_form_buka(['benda' => 'Jadwal UKK', 'ukuran' => 'lg']) ?>
         <div class="grid gap-4 sm:grid-cols-2">
             <div class="sm:col-span-2">
-                <label class="lbl" for="ju-paket">Paket soal <span class="text-red-600">*</span></label>
+                <label class="lbl" for="ju-paket">Paket soal <span class="text-red-600 dark:text-red-400">*</span></label>
                 <select id="ju-paket" name="paket_soal_id" x-model="form.paket_soal_id" required class="inp">
                     <option value="">— Pilih paket soal —</option>
                     <?php foreach ($paketOpts as $id => $lbl): ?>
@@ -149,7 +149,7 @@ $total = $pager ? $pager->getTotal() : count($rows);
                 </select>
             </div>
             <div>
-                <label class="lbl" for="ju-mulai">Tanggal mulai <span class="text-red-600">*</span></label>
+                <label class="lbl" for="ju-mulai">Tanggal mulai <span class="text-red-600 dark:text-red-400">*</span></label>
                 <input type="date" id="ju-mulai" name="tanggal_mulai" x-model="form.tanggal_mulai" required class="inp">
             </div>
             <div>

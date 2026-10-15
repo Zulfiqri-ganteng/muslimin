@@ -130,7 +130,7 @@ $ringkas = '<span class="lencana lencana-merek py-1">Sedang dipinjam: ' . (int) 
     <div class="dialog-isi">
         <div class="grid gap-4 sm:grid-cols-2">
             <div class="sm:col-span-2">
-                <label class="lbl" for="pj-aset">Aset (yang tersedia) <span class="text-red-600">*</span></label>
+                <label class="lbl" for="pj-aset">Aset (yang tersedia) <span class="text-red-600 dark:text-red-400">*</span></label>
                 <select id="pj-aset" name="aset_id" required class="inp">
                     <option value="">— Pilih aset —</option>
                     <?php foreach ($asetOpts as $id => $lbl): ?>
@@ -142,7 +142,7 @@ $ringkas = '<span class="lencana lencana-merek py-1">Sedang dipinjam: ' . (int) 
                 <?php endif; ?>
             </div>
             <div>
-                <label class="lbl" for="pj-nama">Nama peminjam <span class="text-red-600">*</span></label>
+                <label class="lbl" for="pj-nama">Nama peminjam <span class="text-red-600 dark:text-red-400">*</span></label>
                 <input type="text" id="pj-nama" name="peminjam_nama" required maxlength="150" class="inp">
             </div>
             <div>

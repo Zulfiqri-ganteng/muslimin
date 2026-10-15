@@ -148,7 +148,7 @@ $kartuStatus = [
                                     <p class="whitespace-nowrap text-gray-900 dark:text-white"><?= $tgl($r['tanggal_susulan']) ?> <?= esc($jam($r['jam_susulan'])) ?></p>
                                     <p class="sel-ket"><?= $r['ruang_susulan'] ? 'Ruang ' . esc($r['ruang_susulan']) : 'Ruang —' ?><?= $r['pengawas_nama'] ? ' · ' . esc($r['pengawas_nama']) : '' ?></p>
                                 <?php else: ?>
-                                    <span class="text-gray-400 dark:text-gray-500">Belum dijadwalkan</span>
+                                    <span class="text-gray-500 dark:text-gray-400">Belum dijadwalkan</span>
                                 <?php endif; ?>
                             </td>
                             <td>
@@ -191,7 +191,7 @@ $kartuStatus = [
             <p class="text-sm text-gray-500 dark:text-gray-400"><b class="text-gray-900 dark:text-white" x-text="jumlahPilih()">0</b> siswa akan dijadwalkan. Baris yang sudah <b>Selesai</b> otomatis dilewati.</p>
             <div class="grid gap-4 sm:grid-cols-2">
                 <div class="sm:col-span-2">
-                    <label class="lbl" for="sl-tanggal">Tanggal susulan <span class="text-red-600">*</span></label>
+                    <label class="lbl" for="sl-tanggal">Tanggal susulan <span class="text-red-600 dark:text-red-400">*</span></label>
                     <input type="date" id="sl-tanggal" name="tanggal_susulan" x-model="form.tanggal_susulan" required class="inp">
                 </div>
                 <div>

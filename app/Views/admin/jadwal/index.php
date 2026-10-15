@@ -127,7 +127,7 @@ $v = static fn (string $p): string => base_url($p) . '?v=' . @filemtime(FCPATH .
             <!-- ============ GRID ============ -->
             <section class="kartu overflow-x-auto" aria-label="Grid jadwal kelas">
                 <table class="w-full border-collapse text-sm">
-                    <thead class="bg-gray-50 text-xs text-gray-700 uppercase dark:bg-gray-700 dark:text-gray-400">
+                    <thead class="bg-gray-50 text-xs text-gray-700 uppercase dark:bg-gray-700 dark:text-gray-300">
                         <tr>
                             <th scope="col" class="w-36 border-b border-gray-200 px-3 py-3 text-left font-semibold dark:border-gray-600">Jam</th>
                             <?php foreach ($hari as $h): ?>

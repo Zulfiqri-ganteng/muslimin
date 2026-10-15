@@ -249,7 +249,7 @@
   .alat-crud-pemisah { @apply mx-1 hidden h-6 w-px bg-gray-200 sm:block dark:bg-gray-700; }
   .tabel-crud { @apply min-w-full divide-y divide-gray-200 text-left text-sm text-gray-900 dark:divide-gray-600 dark:text-white; }
   .tabel-crud thead { @apply bg-gray-100 dark:bg-gray-700; }
-  .tabel-crud thead th { @apply p-4 text-xs font-medium whitespace-nowrap text-gray-500 uppercase dark:text-gray-400; }
+  .tabel-crud thead th { @apply p-4 text-xs font-medium whitespace-nowrap text-gray-600 uppercase dark:text-gray-300; }
   .tabel-crud tbody { @apply divide-y divide-gray-200 bg-white dark:divide-gray-700 dark:bg-gray-800; }
   .tabel-crud tbody tr { @apply transition-colors hover:bg-gray-100 dark:hover:bg-gray-700; }
   .tabel-crud tbody td { @apply p-4 align-middle; }
@@ -425,7 +425,7 @@
   .remah          { @apply mb-5 flex; }
   .remah ol       { @apply inline-flex flex-wrap items-center gap-1 text-sm font-medium; }
   .remah a        { @apply inline-flex items-center gap-1.5 text-gray-700 transition-colors hover:text-brand-700; }
-  .remah [aria-current='page'] { @apply text-gray-400; }
+  .remah [aria-current='page'] { @apply text-gray-500; }
   .judul-halaman  { @apply text-xl font-semibold text-gray-900 sm:text-2xl; }
   .ket-halaman    { @apply mt-1 text-sm text-gray-500; }
 
@@ -546,7 +546,7 @@
   /* Kartu angka yang seluruhnya tautan (Siswa → Data Siswa, dst.). */
   .kartu-tautan { @apply transition-colors hover:border-gray-300 hover:bg-gray-50 focus:outline-hidden focus-visible:ring-4 focus-visible:ring-brand-300 dark:hover:border-gray-600 dark:hover:bg-gray-700/60 dark:focus-visible:ring-brand-800; }
   /* Tab lebar penuh (widget "Statistics this month" template: tombol abu bersekat, aktif = warna merek). Komponen Alpine "tab" kit. */
-  .tab-penuh-daftar { @apply flex divide-x divide-gray-200 overflow-hidden rounded-lg text-center text-sm font-medium text-gray-500 dark:divide-gray-600 dark:text-gray-400; }
+  .tab-penuh-daftar { @apply flex divide-x divide-gray-200 overflow-hidden rounded-lg text-center text-sm font-medium text-gray-500 dark:divide-gray-600 dark:text-gray-300; }
   .tab-penuh { @apply inline-flex w-full items-center justify-center gap-2 bg-gray-50 p-4 transition-colors hover:bg-gray-100 focus:outline-hidden focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-brand-300 dark:bg-gray-700 dark:hover:bg-gray-600; }
   .tab-penuh[aria-selected='true'] { @apply bg-gray-100 text-brand-700 dark:bg-gray-600 dark:text-white; }
   /* Daftar panjang di kartu sejajar (tab Perlu tindakan/Aktivitas): tinggi dibatasi ±6 butir, sisanya digulir di dalam kartu. */
@@ -629,7 +629,7 @@
   .kaki-kartu    { @apply dark:bg-gray-800; }
   .kaki-tautan a, .kaki-hak { @apply dark:text-gray-400; }
   .remah a       { @apply dark:text-gray-400 dark:hover:text-white; }
-  .remah [aria-current='page'] { @apply dark:text-gray-500; }
+  .remah [aria-current='page'] { @apply dark:text-gray-400; }
   .judul-halaman { @apply dark:text-white; }
   .ket-halaman   { @apply dark:text-gray-400; }
 
@@ -639,7 +639,7 @@
   .btn-teks    { @apply dark:text-gray-400 dark:hover:bg-gray-700 dark:hover:text-white dark:focus:ring-gray-700; }
   .lbl         { @apply dark:text-white; }
   .inp, .inp-berkas { @apply dark:border-gray-600 dark:bg-gray-700 dark:text-white dark:placeholder-gray-400; }
-  .inp-err     { @apply dark:border-red-500 dark:text-red-400; }
+  .inp-err     { @apply dark:border-red-500 dark:text-red-300; }
   .hint        { @apply dark:text-gray-400; }
   .err-msg     { @apply dark:text-red-400; }
   .tombol-sandi { @apply dark:text-gray-400 dark:hover:text-white; }
@@ -651,7 +651,7 @@
   .kartu-judul { @apply dark:text-white; }
   .kartu-ket   { @apply dark:text-gray-400; }
   .tabel       { @apply dark:text-gray-400; }
-  .tabel thead { @apply dark:bg-gray-700 dark:text-gray-400; }
+  .tabel thead { @apply dark:bg-gray-700 dark:text-gray-300; }
   .tabel tbody tr { @apply dark:border-gray-700 dark:bg-gray-800 dark:hover:bg-gray-700; }
   .tabel tbody th { @apply dark:text-white; }
   .lencana-abu    { @apply dark:bg-gray-700 dark:text-gray-300; }

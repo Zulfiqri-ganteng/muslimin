@@ -118,7 +118,7 @@ $kiri = '<form method="get" class="flex min-w-0 flex-1 flex-wrap items-center ga
     <div class="dialog-isi">
         <div class="grid gap-4 sm:grid-cols-2">
             <div>
-                <label class="lbl" for="jr-lab">Lab <span class="text-red-600">*</span></label>
+                <label class="lbl" for="jr-lab">Lab <span class="text-red-600 dark:text-red-400">*</span></label>
                 <select id="jr-lab" name="lab_id" required class="inp">
                     <option value="">— Pilih lab —</option>
                     <?php foreach ($labOpts as $id => $nama): ?><option value="<?= (int) $id ?>"><?= esc($nama) ?></option><?php endforeach; ?>

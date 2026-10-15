@@ -101,17 +101,17 @@ $adaSaring = $q !== '' || $tingkat !== '' || $shift !== '';
     <?= ui_crud_form_buka(['benda' => 'Kelas', 'ukuran' => 'lg']) ?>
         <div class="grid gap-4 sm:grid-cols-2">
             <div class="sm:col-span-2">
-                <label class="lbl" for="kelas-nama">Nama kelas <span class="text-red-600">*</span></label>
+                <label class="lbl" for="kelas-nama">Nama kelas <span class="text-red-600 dark:text-red-400">*</span></label>
                 <input type="text" id="kelas-nama" name="nama_kelas" x-model="form.nama_kelas" maxlength="50" required class="inp" placeholder="contoh: X TKJT 1">
             </div>
             <div>
-                <label class="lbl" for="kelas-tingkat">Tingkat <span class="text-red-600">*</span></label>
+                <label class="lbl" for="kelas-tingkat">Tingkat <span class="text-red-600 dark:text-red-400">*</span></label>
                 <select id="kelas-tingkat" name="tingkat" x-model="form.tingkat" class="inp">
                     <option value="X">X</option><option value="XI">XI</option><option value="XII">XII</option>
                 </select>
             </div>
             <div>
-                <label class="lbl" for="kelas-shift">Shift <span class="text-red-600">*</span></label>
+                <label class="lbl" for="kelas-shift">Shift <span class="text-red-600 dark:text-red-400">*</span></label>
                 <select id="kelas-shift" name="shift" x-model="form.shift" class="inp">
                     <option value="pagi">Pagi</option><option value="siang">Siang</option>
                 </select>

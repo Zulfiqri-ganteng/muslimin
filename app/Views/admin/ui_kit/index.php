@@ -167,7 +167,7 @@ $kode = static fn (string $teks): string => '<code class="rounded-md bg-gray-100
     <!-- ================= Kartu & tabel ================= -->
     <section id="kartu" class="kartu scroll-mt-24">
         <div class="kartu-kepala">
-            <div><h2 class="kartu-judul">Daftar guru <span class="font-normal text-gray-400">(3)</span></h2><p class="kartu-ket">Kartu berkepala + tabel + kaki berisi paginasi.</p></div>
+            <div><h2 class="kartu-judul">Daftar guru <span class="font-normal text-gray-500 dark:text-gray-400">(3)</span></h2><p class="kartu-ket">Kartu berkepala + tabel + kaki berisi paginasi.</p></div>
             <button type="button" class="btn btn-utama btn-sm"><?= ikon('plus', 'h-4 w-4') ?>Tambah</button>
         </div>
         <div class="tabel-bungkus">
@@ -299,7 +299,7 @@ $kode = static fn (string $teks): string => '<code class="rounded-md bg-gray-100
 
     <!-- ================= Konfirmasi ================= -->
     <section id="konfirmasi" class="kartu kartu-isi scroll-mt-24 space-y-4">
-        <h2 class="kartu-judul">Dialog konfirmasi <span class="font-normal text-gray-400">(pengganti confirm())</span></h2>
+        <h2 class="kartu-judul">Dialog konfirmasi <span class="font-normal text-gray-500 dark:text-gray-400">(pengganti confirm())</span></h2>
         <div class="flex flex-wrap items-center gap-3">
             <button type="button" class="btn btn-bahaya" data-uji="tombol-konfirmasi" data-confirm="Hapus data contoh ini? Data yang dihapus tidak bisa dikembalikan." data-confirm-judul="Hapus data" data-confirm-ya="Ya, hapus" data-confirm-jenis="bahaya" @click="tambahHitung()"><?= ikon('trash-bin', 'h-4 w-4') ?>Hapus (tombol)</button>
             <form data-uji="form-konfirmasi" data-confirm="Kirim formulir contoh ini?" @submit.prevent="kirimContoh()">
@@ -390,7 +390,7 @@ $kode = static fn (string $teks): string => '<code class="rounded-md bg-gray-100
 
     <!-- ================= Ikon ================= -->
     <section id="ikon" class="kartu kartu-isi scroll-mt-24 space-y-4">
-        <h2 class="kartu-judul">Ikon tersedia <span class="font-normal text-gray-400">(<?= count($ikonDaftar) ?>)</span></h2>
+        <h2 class="kartu-judul">Ikon tersedia <span class="font-normal text-gray-500 dark:text-gray-400">(<?= count($ikonDaftar) ?>)</span></h2>
         <div class="grid grid-cols-2 gap-2 sm:grid-cols-4 lg:grid-cols-6">
             <?php foreach ($ikonDaftar as $nama): ?>
                 <div class="flex items-center gap-2 rounded-lg border border-gray-200 px-3 py-2 text-xs text-gray-600 dark:border-gray-700 dark:text-gray-300"><?= ikon($nama, 'h-5 w-5 shrink-0 text-gray-700 dark:text-gray-300') ?><span class="truncate"><?= esc($nama) ?></span></div>

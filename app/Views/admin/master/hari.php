@@ -91,11 +91,11 @@
     <?= ui_crud_form_buka(['benda' => 'Hari']) ?>
         <div class="grid gap-4 sm:grid-cols-2">
             <div>
-                <label class="lbl" for="hari-nama">Nama hari <span class="text-red-600">*</span></label>
+                <label class="lbl" for="hari-nama">Nama hari <span class="text-red-600 dark:text-red-400">*</span></label>
                 <input type="text" id="hari-nama" name="nama" x-model="form.nama" maxlength="15" required class="inp" placeholder="mis. Senin">
             </div>
             <div>
-                <label class="lbl" for="hari-urutan">Urutan <span class="text-red-600">*</span></label>
+                <label class="lbl" for="hari-urutan">Urutan <span class="text-red-600 dark:text-red-400">*</span></label>
                 <input type="number" id="hari-urutan" name="urutan" x-model="form.urutan" min="1" required class="inp">
             </div>
         </div>

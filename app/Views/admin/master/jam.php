@@ -93,15 +93,15 @@ ob_start(); ?>
                 </select>
             </div>
             <div>
-                <label class="lbl" for="jam-ke">Jam ke <span class="text-red-600">*</span></label>
+                <label class="lbl" for="jam-ke">Jam ke <span class="text-red-600 dark:text-red-400">*</span></label>
                 <input type="number" id="jam-ke" name="jam_ke" x-model="form.jam_ke" min="1" required class="inp">
             </div>
             <div>
-                <label class="lbl" for="jam-mulai">Mulai <span class="text-red-600">*</span></label>
+                <label class="lbl" for="jam-mulai">Mulai <span class="text-red-600 dark:text-red-400">*</span></label>
                 <input type="time" id="jam-mulai" name="waktu_mulai" x-model="form.waktu_mulai" required class="inp">
             </div>
             <div>
-                <label class="lbl" for="jam-selesai">Selesai <span class="text-red-600">*</span></label>
+                <label class="lbl" for="jam-selesai">Selesai <span class="text-red-600 dark:text-red-400">*</span></label>
                 <input type="time" id="jam-selesai" name="waktu_selesai" x-model="form.waktu_selesai" required class="inp">
             </div>
         </div>

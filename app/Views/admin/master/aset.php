@@ -140,7 +140,7 @@ $qsExport = array_filter([
                 </select>
             </div>
             <div class="sm:col-span-2">
-                <label class="lbl" for="aset-nama">Nama aset <span class="text-red-600">*</span></label>
+                <label class="lbl" for="aset-nama">Nama aset <span class="text-red-600 dark:text-red-400">*</span></label>
                 <input type="text" id="aset-nama" name="nama" x-model="form.nama" maxlength="150" required class="inp">
             </div>
             <div>

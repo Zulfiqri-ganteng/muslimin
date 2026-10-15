@@ -61,7 +61,7 @@ $pilihanBingkai = 'flex cursor-pointer items-start gap-3 rounded-lg border borde
                 <?php foreach (['kelas' => ['Per kelas', 'Semua siswa aktif di kelas yang dicentang. Satu surat per kelas.'], 'ajuan' => ['Per ajuan PKL', 'Semua anggota ajuan PKL yang dicentang. Satu surat per ajuan.'], 'siswa' => ['Siswa pilihan', 'Pilih siswa satu per satu (boleh beda kelas). Satu surat.']] as $k => [$judul, $ket]): ?>
                     <label class="<?= $pilihanBingkai ?>">
                         <input type="radio" name="cakupan" value="<?= $k ?>" x-model="cakupan" class="cek mt-0.5">
-                        <span><span class="block text-sm font-semibold text-gray-900 dark:text-white"><?= $judul ?></span><span class="block text-xs text-gray-500 dark:text-gray-400"><?= $ket ?></span></span>
+                        <span><span class="block text-sm font-semibold text-gray-900 dark:text-white"><?= $judul ?></span><span class="block text-xs text-gray-600 dark:text-gray-300"><?= $ket ?></span></span>
                     </label>
                 <?php endforeach; ?>
             </div>
@@ -155,7 +155,7 @@ $pilihanBingkai = 'flex cursor-pointer items-start gap-3 rounded-lg border borde
         <?= $kepala('Isian') ?>
         <div class="kartu-isi grid grid-cols-1 gap-4 sm:grid-cols-2">
             <div>
-                <label class="lbl" for="tanggal_surat">Tanggal dibuat <span class="text-red-600">*</span></label>
+                <label class="lbl" for="tanggal_surat">Tanggal dibuat <span class="text-red-600 dark:text-red-400">*</span></label>
                 <input id="tanggal_surat" name="tanggal_surat" type="date" value="<?= esc($nilai['tanggal_surat'], 'attr') ?>" required class="inp">
                 <p class="hint">Menentukan tahun di baris "Bekasi, …… <?= esc(substr($nilai['tanggal_surat'], 0, 4)) ?>". Tanggal & bulannya tetap titik-titik, diisi orang tua.</p>
             </div>

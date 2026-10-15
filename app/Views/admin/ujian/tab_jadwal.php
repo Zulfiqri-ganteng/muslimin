@@ -172,7 +172,7 @@ foreach ($tingkatList as $t) {
                             <td><?= esc($r['ruang'] ?: '—') ?></td>
                             <td class="text-center"><a href="<?= $base ?>/pengawas/<?= (int) $r['id'] ?>" class="lencana <?= $lencanaJumlah($jml) ?> hover:underline" title="Kelola pengawas" aria-label="Kelola pengawas (<?= $jml ?> orang)"><?= ikon('users', 'h-3.5 w-3.5') ?><?= $jml ?></a></td>
                             <td class="text-center"><a href="<?= $base ?>/pembuat-soal<?= $qtp ?>" class="lencana <?= $lencanaJumlah($pbs) ?> hover:underline" title="Atur pembuat soal" aria-label="Atur pembuat soal (<?= $pbs ?> orang)"><?= ikon('pen-nib', 'h-3.5 w-3.5') ?><?= $pbs ?></a></td>
-                            <td class="text-center"><span class="<?= $tak > 0 ? 'font-semibold text-yellow-700 dark:text-yellow-400' : 'text-gray-400 dark:text-gray-500' ?>"><?= $tak ?></span></td>
+                            <td class="text-center"><span class="<?= $tak > 0 ? 'font-semibold text-yellow-700 dark:text-yellow-400' : 'text-gray-500 dark:text-gray-400' ?>"><?= $tak ?></span></td>
                             <td class="kolom-aksi">
                                 <div class="inline-flex items-center justify-end gap-2">
                                     <a href="<?= $base ?>/daftar-hadir/<?= (int) $r['id'] ?><?= $qtp ?>" target="_blank" rel="noopener" class="btn btn-netral btn-sm" title="Cetak daftar hadir" aria-label="Cetak daftar hadir"><?= ikon('printer', 'h-4 w-4') ?></a>
@@ -194,7 +194,7 @@ foreach ($tingkatList as $t) {
         <input type="hidden" name="periode_id" value="<?= (int) $periode['id'] ?>">
         <input type="hidden" name="id" :value="form.id">
         <div>
-            <label class="lbl" for="uj-mapel">Mata pelajaran <span class="text-red-600">*</span></label>
+            <label class="lbl" for="uj-mapel">Mata pelajaran <span class="text-red-600 dark:text-red-400">*</span></label>
             <select id="uj-mapel" name="mapel_id" x-model="form.mapel_id" required class="inp">
                 <option value="">— Pilih mata pelajaran —</option>
                 <?php foreach ($mapelOpts as $id => $lbl): ?>
@@ -204,7 +204,7 @@ foreach ($tingkatList as $t) {
         </div>
         <div class="grid gap-4 sm:grid-cols-2">
             <div>
-                <label class="lbl" for="uj-tingkat">Tingkat <span class="text-red-600">*</span></label>
+                <label class="lbl" for="uj-tingkat">Tingkat <span class="text-red-600 dark:text-red-400">*</span></label>
                 <select id="uj-tingkat" name="tingkat" x-model="form.tingkat" required class="inp">
                     <option value="">— Pilih tingkat —</option>
                     <?php foreach ($tingkatList as $t): ?>
@@ -232,7 +232,7 @@ foreach ($tingkatList as $t) {
         </div>
         <div class="grid gap-4 sm:grid-cols-3">
             <div>
-                <label class="lbl" for="uj-tanggal">Tanggal <span class="text-red-600">*</span></label>
+                <label class="lbl" for="uj-tanggal">Tanggal <span class="text-red-600 dark:text-red-400">*</span></label>
                 <input type="date" id="uj-tanggal" name="tanggal" x-model="form.tanggal" required class="inp">
             </div>
             <div>

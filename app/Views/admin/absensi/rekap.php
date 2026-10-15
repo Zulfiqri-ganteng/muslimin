@@ -22,9 +22,9 @@ $qs = '?dari=' . urlencode($dari) . '&sampai=' . urlencode($sampai) . ($jabatanI
 $cols = [
     'hadir' => ['Hadir', 'text-green-700 dark:text-green-400'],
     'telat' => ['Telat', 'text-yellow-700 dark:text-yellow-400'],
-    'izin'  => ['Izin', 'text-blue-700 dark:text-blue-400'],
-    'sakit' => ['Sakit', 'text-pink-700 dark:text-pink-400'],
-    'alpa'  => ['Alpa', 'text-red-700 dark:text-red-400'],
+    'izin'  => ['Izin', 'text-blue-700 dark:text-blue-300'],
+    'sakit' => ['Sakit', 'text-pink-700 dark:text-pink-300'],
+    'alpa'  => ['Alpa', 'text-red-700 dark:text-red-300'],
 ];
 ?>
 <?= $this->extend('layouts/admin') ?>
@@ -147,7 +147,7 @@ $cols = [
                                 </td>
                                 <td class="text-center font-semibold text-gray-900 dark:text-white"><?= (int) $r['total'] ?></td>
                                 <?php foreach (array_keys($cols) as $k): $v = (int) $r[$k]; ?>
-                                    <td class="text-center <?= $v > 0 ? $cols[$k][1] . ' font-semibold' : 'text-gray-400 dark:text-gray-500' ?>"><?= $v ?></td>
+                                    <td class="text-center <?= $v > 0 ? $cols[$k][1] . ' font-semibold' : 'text-gray-500 dark:text-gray-400' ?>"><?= $v ?></td>
                                 <?php endforeach; ?>
                             </tr>
                         <?php endforeach; ?>

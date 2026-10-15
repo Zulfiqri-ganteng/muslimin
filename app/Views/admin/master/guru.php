@@ -129,7 +129,7 @@ $adaSaring = $q !== '' || $status !== '';
     <?= ui_crud_form_buka(['benda' => 'Guru', 'ukuran' => 'lg']) ?>
         <div class="grid gap-4 sm:grid-cols-2">
             <div>
-                <label class="lbl" for="guru-kode">Kode guru <span class="text-red-600">*</span></label>
+                <label class="lbl" for="guru-kode">Kode guru <span class="text-red-600 dark:text-red-400">*</span></label>
                 <input type="text" id="guru-kode" name="kode_guru" x-model="form.kode_guru" maxlength="20" required class="inp">
             </div>
             <div>
@@ -137,7 +137,7 @@ $adaSaring = $q !== '' || $status !== '';
                 <input type="text" id="guru-nip" name="nip" x-model="form.nip" maxlength="60" class="inp">
             </div>
             <div class="sm:col-span-2">
-                <label class="lbl" for="guru-nama">Nama guru <span class="text-red-600">*</span></label>
+                <label class="lbl" for="guru-nama">Nama guru <span class="text-red-600 dark:text-red-400">*</span></label>
                 <input type="text" id="guru-nama" name="nama" x-model="form.nama" maxlength="150" required class="inp">
             </div>
             <div>

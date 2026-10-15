@@ -91,7 +91,7 @@
     <?= ui_crud_form_buka(['benda' => 'Penguji Eksternal', 'ukuran' => 'lg']) ?>
         <div class="grid gap-4 sm:grid-cols-2">
             <div>
-                <label class="lbl" for="pe-kode">Kode <span class="text-red-600">*</span></label>
+                <label class="lbl" for="pe-kode">Kode <span class="text-red-600 dark:text-red-400">*</span></label>
                 <input type="text" id="pe-kode" name="kode" x-model="form.kode" maxlength="30" required class="inp uppercase">
             </div>
             <div>
@@ -99,7 +99,7 @@
                 <input type="text" id="pe-hp" name="no_hp" x-model="form.no_hp" maxlength="25" class="inp" inputmode="tel">
             </div>
             <div class="sm:col-span-2">
-                <label class="lbl" for="pe-nama">Nama <span class="text-red-600">*</span></label>
+                <label class="lbl" for="pe-nama">Nama <span class="text-red-600 dark:text-red-400">*</span></label>
                 <input type="text" id="pe-nama" name="nama" x-model="form.nama" maxlength="150" required class="inp">
             </div>
             <div>

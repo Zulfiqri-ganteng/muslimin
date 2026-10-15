@@ -190,7 +190,7 @@ $bilah = 'flex flex-col gap-3 border-b border-gray-200 bg-gray-50 px-4 py-3 sm:f
                         ?>
                             <tr>
                                 <?php if ($bisaPilih): ?><td><?php if ($bolehDipilih($r)): ?><input type="checkbox" class="cek" name="ids[]" value="<?= (int) $r['id'] ?>" form="<?= $formPilih ?>" data-centang aria-label="Pilih <?= esc($r['judul'], 'attr') ?>"><?php endif; ?></td><?php endif; ?>
-                                <td class="font-mono text-xs font-semibold whitespace-nowrap text-gray-700 dark:text-gray-300"><?= (string) $r['nomor'] !== '' ? esc($r['nomor']) : '<span class="font-sans font-normal text-gray-400 dark:text-gray-500">belum bernomor</span>' ?></td>
+                                <td class="font-mono text-xs font-semibold whitespace-nowrap text-gray-700 dark:text-gray-300"><?= (string) $r['nomor'] !== '' ? esc($r['nomor']) : '<span class="font-sans font-normal text-gray-500 dark:text-gray-400">belum bernomor</span>' ?></td>
                                 <td><span class="lencana <?= esc(SuratJenis::badge((string) $r['jenis']), 'attr') ?>"><?= esc(SuratJenis::singkat((string) $r['jenis'])) ?></span></td>
                                 <td>
                                     <a href="<?= $lihat ?>" class="font-semibold text-gray-900 hover:text-brand-700 dark:text-white dark:hover:text-brand-400"><?= esc($r['judul']) ?></a>
@@ -204,7 +204,7 @@ $bilah = 'flex flex-col gap-3 border-b border-gray-200 bg-gray-50 px-4 py-3 sm:f
                                     <?php if (in_array($r['status'], ['dikembalikan', 'dibatalkan'], true) && (string) $r['catatan_staf'] !== ''): ?><p class="mt-1 max-w-[14rem] text-xs text-gray-500 dark:text-gray-400"><?= esc($r['catatan_staf']) ?></p><?php endif; ?>
                                 </td>
                                 <td class="text-xs"><?= esc((string) $r['dibuat_nama'] !== '' ? $r['dibuat_nama'] : '—') ?><span class="block text-gray-500 dark:text-gray-400"><?= esc(date('d-m-Y H:i', strtotime((string) $r['created_at']))) ?></span></td>
-                                <td class="text-center text-xs"><?= (int) $r['cetak_ke'] > 0 ? (int) $r['cetak_ke'] . '×' : '<span class="text-gray-400 dark:text-gray-500">—</span>' ?></td>
+                                <td class="text-center text-xs"><?= (int) $r['cetak_ke'] > 0 ? (int) $r['cetak_ke'] . '×' : '<span class="text-gray-500 dark:text-gray-400">—</span>' ?></td>
                                 <td class="text-right whitespace-nowrap"><a href="<?= $lihat ?>" class="btn btn-utama btn-sm">Buka</a></td>
                             </tr>
                         <?php endforeach; ?>

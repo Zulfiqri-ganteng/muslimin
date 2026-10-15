@@ -63,7 +63,7 @@ $jamIds = array_map(static fn ($j) => (int) $j['id'], $jam);
 
             <div class="tabel-bungkus">
                 <table class="w-full border-collapse text-sm">
-                    <thead class="bg-gray-100 text-xs font-medium text-gray-500 uppercase dark:bg-gray-700 dark:text-gray-400">
+                    <thead class="bg-gray-100 text-xs font-medium text-gray-600 uppercase dark:bg-gray-700 dark:text-gray-300">
                         <tr>
                             <th scope="col" class="w-40 p-3 text-left">Jam</th>
                             <?php foreach ($hari as $h): ?>

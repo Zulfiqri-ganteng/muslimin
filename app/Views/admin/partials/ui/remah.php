@@ -17,7 +17,7 @@ $akhir   = count($remah) - 1;
                 <?php if ($i === $akhir): ?>
                     <span aria-current="page"><?= esc((string) ($r[0] ?? '')) ?></span>
                 <?php elseif ($url === null || $url === ''): ?>
-                    <span class="text-gray-500"><?= esc((string) ($r[0] ?? '')) ?></span>
+                    <span class="text-gray-500 dark:text-gray-400"><?= esc((string) ($r[0] ?? '')) ?></span>
                 <?php else: ?>
                     <a href="<?= esc((string) $url, 'attr') ?>"><?= esc((string) ($r[0] ?? '')) ?></a>
                 <?php endif; ?>

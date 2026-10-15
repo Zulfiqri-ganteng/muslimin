@@ -104,7 +104,7 @@ foreach ($allGuru as $id => $label) {
     <?= ui_crud_form_buka(['benda' => 'Mata Pelajaran', 'ukuran' => 'lg']) ?>
         <div class="grid gap-4 sm:grid-cols-2">
             <div>
-                <label class="lbl" for="mapel-kode">Kode mapel <span class="text-red-600">*</span></label>
+                <label class="lbl" for="mapel-kode">Kode mapel <span class="text-red-600 dark:text-red-400">*</span></label>
                 <input type="text" id="mapel-kode" name="kode_mapel" x-model="form.kode_mapel" maxlength="20" required class="inp uppercase">
             </div>
             <div>
@@ -112,7 +112,7 @@ foreach ($allGuru as $id => $label) {
                 <input type="number" id="mapel-jp" name="jp_default" x-model="form.jp_default" min="0" max="50" class="inp">
             </div>
             <div class="sm:col-span-2">
-                <label class="lbl" for="mapel-nama">Nama mapel <span class="text-red-600">*</span></label>
+                <label class="lbl" for="mapel-nama">Nama mapel <span class="text-red-600 dark:text-red-400">*</span></label>
                 <input type="text" id="mapel-nama" name="nama_mapel" x-model="form.nama_mapel" maxlength="150" required class="inp">
             </div>
             <div class="sm:col-span-2">

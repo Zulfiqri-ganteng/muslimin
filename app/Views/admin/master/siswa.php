@@ -183,7 +183,7 @@ $bagian = static fn (string $judul, string $ket = ''): string => '<p class="bord
         <?= $bagian('Identitas') ?>
         <div class="grid gap-4 sm:grid-cols-2">
             <div>
-                <label class="lbl" for="siswa-nis">NIS <span class="text-red-600">*</span></label>
+                <label class="lbl" for="siswa-nis">NIS <span class="text-red-600 dark:text-red-400">*</span></label>
                 <input type="text" id="siswa-nis" name="nis" x-model="form.nis" maxlength="30" required class="inp">
             </div>
             <div>
@@ -191,7 +191,7 @@ $bagian = static fn (string $judul, string $ket = ''): string => '<p class="bord
                 <input type="text" id="siswa-nisn" name="nisn" x-model="form.nisn" maxlength="30" class="inp">
             </div>
             <div class="sm:col-span-2">
-                <label class="lbl" for="siswa-nama">Nama lengkap <span class="text-red-600">*</span></label>
+                <label class="lbl" for="siswa-nama">Nama lengkap <span class="text-red-600 dark:text-red-400">*</span></label>
                 <input type="text" id="siswa-nama" name="nama" x-model="form.nama" maxlength="150" required class="inp">
             </div>
             <div>

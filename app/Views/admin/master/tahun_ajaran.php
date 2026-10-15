@@ -97,11 +97,11 @@
 
     <?= ui_crud_form_buka(['benda' => 'Tahun Ajaran']) ?>
         <div>
-            <label class="lbl" for="ta-tahun">Tahun ajaran <span class="text-red-600">*</span></label>
+            <label class="lbl" for="ta-tahun">Tahun ajaran <span class="text-red-600 dark:text-red-400">*</span></label>
             <input type="text" id="ta-tahun" name="tahun" x-model="form.tahun" maxlength="20" required class="inp" placeholder="2026/2027">
         </div>
         <div>
-            <label class="lbl" for="ta-semester">Semester <span class="text-red-600">*</span></label>
+            <label class="lbl" for="ta-semester">Semester <span class="text-red-600 dark:text-red-400">*</span></label>
             <select id="ta-semester" name="semester" x-model="form.semester" required class="inp">
                 <option value="Ganjil">Ganjil</option>
                 <option value="Genap">Genap</option>

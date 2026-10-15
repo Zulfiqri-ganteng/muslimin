@@ -19,7 +19,7 @@ $periode    = static fn (array $k): string => $k['mulai'] !== null || $k['selesa
     ? IsianBantu::tanggalIndo($k['mulai']) . ' – ' . IsianBantu::tanggalIndo($k['selesai'])
     : 'tanpa tanggal';
 $netral = 'text-gray-900 dark:text-white';
-$redup  = 'text-gray-400 dark:text-gray-500';
+$redup  = 'text-gray-500 dark:text-gray-400';
 // Kartu angka pratinjau.
 $tile = static fn (string $label, int $angka, string $warna, string $ket = ''): string => '<div class="rounded-lg border border-gray-200 px-4 py-3 dark:border-gray-700">'
     . '<p class="text-xs font-medium text-gray-500 dark:text-gray-400">' . esc($label) . '</p>'
@@ -209,7 +209,7 @@ $ringkasDetail = 'cursor-pointer px-4 py-3 text-sm font-semibold text-gray-900 d
                             <summary class="<?= $ringkasDetail ?>">Lihat ajuan yang akan dibuat (<?= count($pratinjau['kelompok']) ?>)</summary>
                             <div class="max-h-96 divide-y divide-gray-200 overflow-y-auto border-t border-gray-200 dark:divide-gray-700 dark:border-gray-700">
                                 <?php foreach ($perKls as $kls => $daftar): ?>
-                                    <p class="bg-gray-50 px-4 py-1.5 text-xs font-bold text-gray-500 dark:bg-gray-700 dark:text-gray-400"><?= esc((string) $kls) ?></p>
+                                    <p class="bg-gray-50 px-4 py-1.5 text-xs font-bold text-gray-500 dark:bg-gray-700 dark:text-gray-300"><?= esc((string) $kls) ?></p>
                                     <?php foreach ($daftar as $k): ?>
                                         <div class="px-4 py-2.5">
                                             <p class="font-semibold text-gray-900 dark:text-white"><?= esc($k['perusahaan']) ?> <span class="text-xs font-normal text-gray-500 dark:text-gray-400"><?= esc($periode($k)) ?></span></p>

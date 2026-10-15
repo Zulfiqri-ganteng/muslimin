@@ -79,7 +79,7 @@ $warnaKet = static fn (string $tahap): string => match ($tahap) {
             <nav class="flex flex-wrap items-center gap-2" aria-label="Tingkat">
                 <span class="w-14 text-xs font-semibold text-gray-500 dark:text-gray-400">Tingkat</span>
                 <?php foreach (['X', 'XI', 'XII'] as $t): ?>
-                    <a href="<?= esc($urlHal(['tingkat' => $t]), 'attr') ?>" class="tombol-saring"<?= $aktif($t === $tingkatPilih) ?>>Kelas <?= $t ?> <span class="tabular-nums opacity-75">(<?= count($perTingkat[$t] ?? []) ?>)</span></a>
+                    <a href="<?= esc($urlHal(['tingkat' => $t]), 'attr') ?>" class="tombol-saring"<?= $aktif($t === $tingkatPilih) ?>>Kelas <?= $t ?> <span class="tabular-nums opacity-90">(<?= count($perTingkat[$t] ?? []) ?>)</span></a>
                 <?php endforeach; ?>
             </nav>
             <?php if (($perTingkat[$tingkatPilih] ?? []) !== []): ?>
@@ -135,7 +135,7 @@ $warnaKet = static fn (string $tahap): string => match ($tahap) {
                                 <tr>
                                     <td class="text-center tabular-nums text-gray-500 dark:text-gray-400"><?= (int) $s['no'] ?></td>
                                     <td class="font-medium text-gray-900 dark:text-white"><?= esc($s['nama']) ?></td>
-                                    <td><?= $s['mitra'] !== '' ? esc($s['mitra']) : '<span class="text-gray-400 dark:text-gray-500">—</span>' ?></td>
+                                    <td><?= $s['mitra'] !== '' ? esc($s['mitra']) : '<span class="text-gray-500 dark:text-gray-400">—</span>' ?></td>
                                     <td class="whitespace-nowrap"><?= $s['mulai'] !== null ? esc(IsianBantu::tanggalIndo($s['mulai'])) : '' ?></td>
                                     <td class="whitespace-nowrap"><?= $s['selesai'] !== null ? esc(IsianBantu::tanggalIndo($s['selesai'])) : '' ?></td>
                                     <td class="whitespace-nowrap"><?= $s['lama'] !== null ? (int) $s['lama'] . ' bulan' : '' ?></td>

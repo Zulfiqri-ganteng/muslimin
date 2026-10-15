@@ -207,7 +207,7 @@ $kotakCentang = 'inline-flex h-10 w-10 cursor-pointer items-center justify-cente
                                         <?php if ($bernomor): ?>
                                             <label class="<?= $kotakCentang ?>"><input type="checkbox" name="acc[]" value="<?= esc($j, 'attr') ?>"<?= ! empty($accSurat[$j]) ? ' checked' : '' ?> class="cek" aria-label="<?= esc(SuratJenis::label($j) . ' wajib ACC', 'attr') ?>"></label>
                                         <?php else: ?>
-                                            <span class="text-xs text-gray-400 dark:text-gray-500" title="Tanpa nomor, tidak memakai ACC">—</span>
+                                            <span class="text-xs text-gray-500 dark:text-gray-400" title="Tanpa nomor, tidak memakai ACC">—</span>
                                         <?php endif; ?>
                                     </td>
                                     <?php foreach ($atur as $kode): ?>
@@ -289,7 +289,7 @@ $kotakCentang = 'inline-flex h-10 w-10 cursor-pointer items-center justify-cente
                 <?= $kepalaKartu('Tambah peran baru') ?>
                 <form method="post" action="<?= site_url('admin/hak-akses/peran') ?>" class="kartu-isi space-y-3">
                     <?= csrf_field() ?>
-                    <div><label class="lbl" for="peran_baru">Nama peran <span class="text-red-600">*</span></label><input id="peran_baru" name="label" required minlength="3" maxlength="60" placeholder="mis. Waka Kesiswaan" class="inp"></div>
+                    <div><label class="lbl" for="peran_baru">Nama peran <span class="text-red-600 dark:text-red-400">*</span></label><input id="peran_baru" name="label" required minlength="3" maxlength="60" placeholder="mis. Waka Kesiswaan" class="inp"></div>
                     <div><label class="lbl" for="peran_ket">Keterangan</label><textarea id="peran_ket" name="ringkas" rows="2" maxlength="300" placeholder="Tugas singkat peran ini" class="inp"></textarea></div>
                     <div>
                         <label class="lbl" for="peran_salin">Salin menu &amp; hak dari</label>

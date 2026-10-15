@@ -195,7 +195,7 @@ $peranAcc = static fn (array $r): string => match ((string) ($r['acc_peran'] ?? 
                                             <span class="font-semibold text-gray-900 dark:text-white"><?= esc($r['acc_nama']) ?></span>
                                             <span class="block text-gray-500 dark:text-gray-400"><?= esc($peranAcc($r)) ?><?= ! empty($r['acc_at']) ? ' · ' . esc(date('d-m-Y H:i', strtotime((string) $r['acc_at']))) : '' ?></span>
                                         <?php else: ?>
-                                            <span class="text-gray-400 dark:text-gray-500">—</span>
+                                            <span class="text-gray-500 dark:text-gray-400">—</span>
                                         <?php endif; ?>
                                     </td>
                                     <td class="text-xs">
@@ -203,7 +203,7 @@ $peranAcc = static fn (array $r): string => match ((string) ($r['acc_peran'] ?? 
                                             <span class="font-mono font-semibold text-gray-700 dark:text-gray-300"><?= esc($ss['nomor']) ?></span>
                                             <?php if ($ss['perlu_ulang']): ?><div><?= $lencanaUlang ?></div><?php endif; ?>
                                         <?php else: ?>
-                                            <span class="text-gray-400 dark:text-gray-500">belum ada</span>
+                                            <span class="text-gray-500 dark:text-gray-400">belum ada</span>
                                         <?php endif; ?>
                                     </td>
                                 <?php endif; ?>
@@ -249,7 +249,7 @@ $peranAcc = static fn (array $r): string => match ((string) ($r['acc_peran'] ?? 
                             <?php if ($status === 'disetujui' && ! empty($r['acc_nama'])): ?><p class="mt-1 text-xs text-gray-500 dark:text-gray-400">Disetujui: <b class="text-gray-700 dark:text-gray-300"><?= esc($r['acc_nama']) ?></b><?= (string) ($r['acc_peran'] ?? '') !== '' && ($r['acc_peran'] ?? '') !== 'impor' ? ' (' . esc(\App\Libraries\HakAkses::label((string) ($r['acc_peran'] ?? ''))) . ')' : '' ?></p><?php endif; ?>
                             <?php if ($status === 'menunggu' && isset($cek[$id])): ?><div class="mt-1.5"><?= $lencanaCek($cek[$id]) ?></div><?php endif; ?>
                             <?php if ($status === 'disetujui'): ?>
-                                <div class="mt-1 text-xs"><?= $ssHp ? '<span class="font-mono font-semibold text-gray-700 dark:text-gray-300">' . esc($ssHp['nomor']) . '</span>' . ($ssHp['perlu_ulang'] ? ' ' . $lencanaUlang : '') : '<span class="text-gray-400 dark:text-gray-500">surat belum ada</span>' ?></div>
+                                <div class="mt-1 text-xs"><?= $ssHp ? '<span class="font-mono font-semibold text-gray-700 dark:text-gray-300">' . esc($ssHp['nomor']) . '</span>' . ($ssHp['perlu_ulang'] ? ' ' . $lencanaUlang : '') : '<span class="text-gray-500 dark:text-gray-400">surat belum ada</span>' ?></div>
                             <?php endif; ?>
                             <?php if (! empty($r['catatan_staf']) && in_array($status, ['perbaikan', 'ditolak'], true)): ?>
                                 <p class="mt-1 text-xs text-gray-500 dark:text-gray-400"><span class="font-semibold">Catatan:</span> <?= esc($r['catatan_staf']) ?></p>

@@ -49,10 +49,10 @@ $kepala  = static fn (string $judul, string $ket = ''): string => '<div class="k
     <nav class="flex min-w-0 flex-wrap items-center gap-1 text-sm" aria-label="Letak dokumen">
         <a href="<?= site_url('admin/dokumen') ?>" class="inline-flex items-center gap-1.5 rounded-lg px-2 py-1 text-gray-600 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-700"><?= ikon('folder-open', 'h-4 w-4') ?>Dokumen</a>
         <?php foreach ($jejak as $j): ?>
-            <?= ikon('chevron-right', 'h-4 w-4 shrink-0 text-gray-400 dark:text-gray-500') ?>
+            <?= ikon('chevron-right', 'h-4 w-4 shrink-0 text-gray-500 dark:text-gray-400') ?>
             <a href="<?= site_url('admin/dokumen?folder=' . $j['id']) ?>" class="max-w-[160px] truncate rounded-lg px-2 py-1 text-gray-600 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-700"><?= esc($j['nama']) ?></a>
         <?php endforeach; ?>
-        <?= ikon('chevron-right', 'h-4 w-4 shrink-0 text-gray-400 dark:text-gray-500') ?>
+        <?= ikon('chevron-right', 'h-4 w-4 shrink-0 text-gray-500 dark:text-gray-400') ?>
         <span class="max-w-[220px] truncate px-2 py-1 font-semibold text-brand-700 dark:text-brand-400"><?= esc($d['judul']) ?></span>
     </nav>
 

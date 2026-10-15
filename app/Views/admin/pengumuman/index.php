@@ -78,11 +78,11 @@ $base = site_url('admin/pengumuman');
 
     <?= ui_crud_form_buka(['benda' => 'Pengumuman', 'ukuran' => 'lg']) ?>
         <div>
-            <label class="lbl" for="pg-judul">Judul <span class="text-red-600">*</span></label>
+            <label class="lbl" for="pg-judul">Judul <span class="text-red-600 dark:text-red-400">*</span></label>
             <input type="text" id="pg-judul" name="judul" x-model="form.judul" maxlength="200" required class="inp">
         </div>
         <div>
-            <label class="lbl" for="pg-isi">Isi <span class="text-red-600">*</span></label>
+            <label class="lbl" for="pg-isi">Isi <span class="text-red-600 dark:text-red-400">*</span></label>
             <textarea id="pg-isi" name="isi" x-model="form.isi" rows="5" required class="inp"></textarea>
         </div>
         <label class="saklar">

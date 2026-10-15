@@ -126,7 +126,7 @@ $v = static fn (string $p): string => base_url($p) . '?v=' . @filemtime(FCPATH .
         <?php endif; ?>
 
         <!-- Judul kolom (layar lebar) -->
-        <div class="hidden grid-cols-[13rem_minmax(0,1fr)_minmax(0,1fr)] gap-4 border-b border-gray-200 bg-gray-50 px-4 py-2.5 text-xs font-semibold tracking-wide text-gray-500 uppercase md:grid md:px-6 dark:border-gray-700 dark:bg-gray-700 dark:text-gray-400">
+        <div class="hidden grid-cols-[13rem_minmax(0,1fr)_minmax(0,1fr)] gap-4 border-b border-gray-200 bg-gray-50 px-4 py-2.5 text-xs font-semibold tracking-wide text-gray-500 uppercase md:grid md:px-6 dark:border-gray-700 dark:bg-gray-700 dark:text-gray-300">
             <span>Kolom</span><span><?= esc($judulLama) ?></span><span>Isian siswa</span>
         </div>
 
@@ -192,7 +192,7 @@ $v = static fn (string $p): string => base_url($p) . '?v=' . @filemtime(FCPATH .
             <form id="form-kembalikan" x-cloak x-show="formKembali" x-transition method="post" action="<?= $aksi ?>/kembalikan" class="mt-4 rounded-lg border border-yellow-200 bg-yellow-50 p-4 dark:border-yellow-800 dark:bg-yellow-900/20">
                 <?= csrf_field() ?>
                 <input type="hidden" name="kelas_id" value="<?= $kelasId ?: '' ?>">
-                <label class="lbl" for="catatan">Apa yang harus diperbaiki siswa? <span class="text-red-600">*</span></label>
+                <label class="lbl" for="catatan">Apa yang harus diperbaiki siswa? <span class="text-red-600 dark:text-red-400">*</span></label>
                 <textarea id="catatan" name="catatan" rows="2" maxlength="255" required x-ref="catatan" class="inp"
                           placeholder="Contoh: NISN salah, cek lagi di kartu pelajar. Tanggal lahir tidak sesuai KK."></textarea>
                 <p class="hint">Catatan ini tampil ke siswa saat membuka isiannya lagi (dengan NISN / tanggal lahir). Kabari siswa lewat wali kelas.</p>

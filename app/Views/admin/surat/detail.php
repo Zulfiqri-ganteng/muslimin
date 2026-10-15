@@ -137,7 +137,7 @@ $dd = 'font-semibold text-gray-900 dark:text-white';
                                         <td class="font-mono text-xs"><?= esc((string) $a['nis'] !== '' ? $a['nis'] : '—') ?></td>
                                         <td class="whitespace-nowrap"><?= esc((string) ($a['nama_kelas'] ?? '') !== '' ? $a['nama_kelas'] : '—') ?></td>
                                         <td><?= esc((string) ($a['jurusan_nama'] ?? '') !== '' ? $a['jurusan_nama'] : '—') ?></td>
-                                        <td class="font-mono text-xs whitespace-nowrap"><?= $hp !== '' ? esc($hp) : '<span class="text-gray-400 dark:text-gray-500">—</span>' ?></td>
+                                        <td class="font-mono text-xs whitespace-nowrap"><?= $hp !== '' ? esc($hp) : '<span class="text-gray-500 dark:text-gray-400">—</span>' ?></td>
                                     </tr>
                                 <?php endforeach; ?>
                             </tbody>
@@ -265,7 +265,7 @@ $dialog = static function (string $nama, string $judul, string $aksiUrl, string 
         . '<button type="submit" class="btn ' . $kelasTombol . '">' . $tombol . '</button></div></form>'
         . ui_dialog_tutup();
 };
-$kotakAlasan = static fn (string $ph, string $untuk): string => '<div><label class="lbl" for="alasan_' . $untuk . '">Alasan <span class="text-red-600">*</span></label>'
+$kotakAlasan = static fn (string $ph, string $untuk): string => '<div><label class="lbl" for="alasan_' . $untuk . '">Alasan <span class="text-red-600 dark:text-red-400">*</span></label>'
     . '<textarea id="alasan_' . $untuk . '" name="catatan" rows="3" required minlength="5" maxlength="255" class="inp" placeholder="' . esc($ph, 'attr') . '"></textarea>'
     . '<p class="hint">Minimal 5 huruf. Tercatat di riwayat surat.</p></div>';
 

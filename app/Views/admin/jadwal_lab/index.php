@@ -125,14 +125,14 @@ $kiri = '<form method="get" class="flex flex-wrap items-center gap-2">'
         <div class="dialog-isi">
             <div class="grid gap-4 sm:grid-cols-2">
                 <div>
-                    <label class="lbl" for="jl-hari">Hari <span class="text-red-600">*</span></label>
+                    <label class="lbl" for="jl-hari">Hari <span class="text-red-600 dark:text-red-400">*</span></label>
                     <select id="jl-hari" name="hari_id" required class="inp">
                         <option value="">— Pilih —</option>
                         <?php foreach ($hariOpts as $id => $nama): ?><option value="<?= (int) $id ?>"><?= esc(ucfirst(strtolower($nama))) ?></option><?php endforeach; ?>
                     </select>
                 </div>
                 <div>
-                    <label class="lbl" for="jl-jam">Jam <span class="text-red-600">*</span></label>
+                    <label class="lbl" for="jl-jam">Jam <span class="text-red-600 dark:text-red-400">*</span></label>
                     <select id="jl-jam" name="jam_id" required class="inp">
                         <option value="">— Pilih —</option>
                         <?php foreach ($jamOpts as $id => $lbl): ?><option value="<?= (int) $id ?>"><?= esc($lbl) ?></option><?php endforeach; ?>

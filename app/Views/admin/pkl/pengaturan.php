@@ -40,17 +40,17 @@ $kepala = static fn (string $judul): string => '<div class="kartu-kepala"><h3 cl
 // Pilihan radio berbingkai (menyala saat dipilih).
 $pilihan = static fn (string $nama, string $nilaiPil, bool $dipilih, string $judul, string $ket, string $nyala): string => '<label class="flex cursor-pointer items-start gap-3 rounded-lg border border-gray-200 p-4 transition-colors dark:border-gray-600 dark:has-[:checked]:bg-gray-700 ' . $nyala . '">'
     . '<input type="radio" name="' . $nama . '" value="' . $nilaiPil . '"' . ($dipilih ? ' checked' : '') . ' class="cek mt-0.5">'
-    . '<span><b class="block text-sm text-gray-900 dark:text-white">' . esc($judul) . '</b><span class="text-xs text-gray-500 dark:text-gray-400">' . esc($ket) . '</span></span></label>';
+    . '<span><b class="block text-sm text-gray-900 dark:text-white">' . esc($judul) . '</b><span class="text-xs text-gray-500 dark:text-gray-300">' . esc($ket) . '</span></span></label>';
 $nyalaHijau = 'has-[:checked]:border-green-500 has-[:checked]:bg-green-50';
 $nyalaAbu   = 'has-[:checked]:border-gray-500 has-[:checked]:bg-gray-50';
 // Kotak tautan + tombol Salin (kit salinTeks).
 $kotakTautan = static fn (string $judul, string $url, string $pesan, string $ket = ''): string => '<div class="rounded-lg border border-gray-200 bg-gray-50 px-4 py-3 dark:border-gray-600 dark:bg-gray-700">'
-    . '<p class="text-xs font-semibold text-gray-500 uppercase dark:text-gray-400">' . esc($judul) . '</p>'
+    . '<p class="text-xs font-semibold text-gray-500 uppercase dark:text-gray-300">' . esc($judul) . '</p>'
     . '<div class="mt-1.5 flex flex-wrap items-center gap-2">'
     . '<code class="min-w-0 flex-1 truncate rounded-lg bg-white px-3 py-2 text-sm font-semibold text-brand-700 ring-1 ring-gray-200 dark:bg-gray-800 dark:text-brand-400 dark:ring-gray-600">' . esc($url) . '</code>'
     . '<button type="button" class="btn btn-netral btn-sm" x-data="salinTeks" data-teks="' . esc($url, 'attr') . '" data-pesan="' . esc($pesan, 'attr') . '" @click="salin()">'
     . ikon('file-copy', 'h-4 w-4') . '<span x-show="!tersalin">Salin</span><span x-show="tersalin" x-cloak>Tersalin</span></button></div>'
-    . ($ket !== '' ? '<p class="hint !mt-1.5">' . esc($ket) . '</p>' : '') . '</div>';
+    . ($ket !== '' ? '<p class="hint !mt-1.5 dark:text-gray-300">' . esc($ket) . '</p>' : '') . '</div>';
 ?>
 <?= $this->extend('layouts/admin') ?>
 <?= $this->section('content') ?>

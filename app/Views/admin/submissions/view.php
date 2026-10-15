@@ -162,7 +162,7 @@ $sb = $statusBadge[$row['status']] ?? $statusBadge['baru'];
                 <?php foreach ($hariList as $h): $sesi = $row['ketersediaan_hari'][$h] ?? []; ?>
                     <li class="flex items-center justify-between rounded-lg bg-gray-50 px-3 py-1.5 dark:bg-gray-700">
                         <span class="text-gray-600 dark:text-gray-300"><?= $h ?></span>
-                        <span class="font-semibold <?= $sesi ? 'text-green-700 dark:text-green-400' : 'text-gray-400 dark:text-gray-500' ?>"><?= $sesi ? esc(implode(' & ', (array) $sesi)) : '—' ?></span>
+                        <span class="font-semibold <?= $sesi ? 'text-green-700 dark:text-green-400' : 'text-gray-500 dark:text-gray-400' ?>"><?= $sesi ? esc(implode(' & ', (array) $sesi)) : '—' ?></span>
                     </li>
                 <?php endforeach; ?>
             </ul>

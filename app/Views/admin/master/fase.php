@@ -80,7 +80,7 @@
     <?= ui_crud_form_buka(['benda' => 'Fase']) ?>
         <div class="grid gap-4 sm:grid-cols-2">
             <div>
-                <label class="lbl" for="fase-kode">Kode <span class="text-red-600">*</span></label>
+                <label class="lbl" for="fase-kode">Kode <span class="text-red-600 dark:text-red-400">*</span></label>
                 <input type="text" id="fase-kode" name="kode" x-model="form.kode" maxlength="2" required class="inp uppercase" placeholder="mis. E">
             </div>
             <div>
@@ -89,7 +89,7 @@
             </div>
         </div>
         <div>
-            <label class="lbl" for="fase-nama">Nama fase <span class="text-red-600">*</span></label>
+            <label class="lbl" for="fase-nama">Nama fase <span class="text-red-600 dark:text-red-400">*</span></label>
             <input type="text" id="fase-nama" name="nama" x-model="form.nama" maxlength="30" required class="inp" placeholder="Fase E">
         </div>
         <div>

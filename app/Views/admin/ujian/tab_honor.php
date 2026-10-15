@@ -504,7 +504,7 @@ $panelKelas  = 'border-t border-gray-200 bg-gray-50 p-4 md:px-6 dark:border-gray
                 <div class="overflow-x-auto">
                     <div class="px-3 py-3 md:min-w-[var(--minw)] md:px-0 md:py-0">
                         <!-- Judul kolom (laptop) -->
-                        <div class="hidden border-b border-gray-200 bg-gray-50 px-3 py-2 text-[11px] font-semibold tracking-wide text-gray-500 uppercase md:grid md:gap-2 md:[grid-template-columns:var(--kolom)] dark:border-gray-700 dark:bg-gray-700 dark:text-gray-400">
+                        <div class="hidden border-b border-gray-200 bg-gray-50 px-3 py-2 text-[11px] font-semibold tracking-wide text-gray-500 uppercase md:grid md:gap-2 md:[grid-template-columns:var(--kolom)] dark:border-gray-700 dark:bg-gray-700 dark:text-gray-300">
                             <div class="md:sticky md:left-0 md:z-10 md:bg-gray-50 dark:md:bg-gray-700">Nama &amp; jabatan</div>
                             <?php foreach ($komp as $k): ?>
                                 <div class="text-right">

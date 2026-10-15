@@ -120,7 +120,7 @@ $tombolAksi = static function (bool $milikSaya, bool $aktif): string {
                                     <div class="flex items-center gap-3">
                                         <?= $avatar($r, 'h-9 w-9') ?>
                                         <div class="min-w-0">
-                                            <p class="flex flex-wrap items-center gap-1.5 font-semibold <?= $aktif ? 'text-gray-900 dark:text-white' : 'text-gray-400 dark:text-gray-500' ?>">
+                                            <p class="flex flex-wrap items-center gap-1.5 font-semibold <?= $aktif ? 'text-gray-900 dark:text-white' : 'text-gray-500 dark:text-gray-400' ?>">
                                                 <span class="truncate"><?= esc($r['full_name']) ?></span>
                                                 <?php if ($milikSaya): ?><span class="lencana lencana-abu">Anda</span><?php endif; ?>
                                             </p>
@@ -130,7 +130,7 @@ $tombolAksi = static function (bool $milikSaya, bool $aktif): string {
                                 </td>
                                 <td><span class="lencana <?= $warnaPeran[$r['role']] ?? $warnaNetral ?>"><?= esc($labelPeran[$r['role']] ?? $r['role']) ?></span></td>
                                 <td><div class="flex flex-wrap items-center gap-1.5"><?= $lencanaStatus($r) ?></div></td>
-                                <td class="text-xs whitespace-nowrap"><?= $tglLogin($r['last_login_at']) ?? '<span class="text-gray-400 dark:text-gray-500">Belum pernah</span>' ?></td>
+                                <td class="text-xs whitespace-nowrap"><?= $tglLogin($r['last_login_at']) ?? '<span class="text-gray-500 dark:text-gray-400">Belum pernah</span>' ?></td>
                                 <td class="text-right whitespace-nowrap"><div class="inline-flex items-center justify-end gap-2"><?= $tombolAksi($milikSaya, $aktif) ?></div></td>
                             </tr>
                         <?php endforeach; ?>
@@ -146,7 +146,7 @@ $tombolAksi = static function (bool $milikSaya, bool $aktif): string {
                     <div class="flex items-start gap-3">
                         <?= $avatar($r, 'h-10 w-10') ?>
                         <div class="min-w-0 flex-1">
-                            <p class="flex flex-wrap items-center gap-1.5 font-semibold <?= $aktif ? 'text-gray-900 dark:text-white' : 'text-gray-400 dark:text-gray-500' ?>">
+                            <p class="flex flex-wrap items-center gap-1.5 font-semibold <?= $aktif ? 'text-gray-900 dark:text-white' : 'text-gray-500 dark:text-gray-400' ?>">
                                 <?= esc($r['full_name']) ?>
                                 <?php if ($milikSaya): ?><span class="lencana lencana-abu">Anda</span><?php endif; ?>
                             </p>
@@ -196,11 +196,11 @@ $tombolAksi = static function (bool $milikSaya, bool $aktif): string {
                 <?= csrf_field() ?>
                 <div class="dialog-isi">
                     <div>
-                        <label class="lbl" for="akun-nama">Nama lengkap <span class="text-red-600">*</span></label>
+                        <label class="lbl" for="akun-nama">Nama lengkap <span class="text-red-600 dark:text-red-400">*</span></label>
                         <input id="akun-nama" type="text" name="full_name" x-model="form.full_name" x-ref="nama" maxlength="150" required autocomplete="off" class="inp" placeholder="Contoh: Siti Aminah, S.Pd.">
                     </div>
                     <div>
-                        <label class="lbl" for="akun-email">Email <span class="text-red-600">*</span></label>
+                        <label class="lbl" for="akun-email">Email <span class="text-red-600 dark:text-red-400">*</span></label>
                         <input id="akun-email" type="email" name="email" x-model="form.email" maxlength="150" required autocomplete="off" inputmode="email" class="inp" placeholder="nama@sekolah.sch.id">
                         <p class="hint">Dipakai untuk login — pastikan penulisannya benar.</p>
                     </div>
@@ -210,7 +210,7 @@ $tombolAksi = static function (bool $milikSaya, bool $aktif): string {
                     </div>
 
                     <fieldset>
-                        <legend class="lbl">Peran <span class="text-red-600">*</span></legend>
+                        <legend class="lbl">Peran <span class="text-red-600 dark:text-red-400">*</span></legend>
                         <div class="space-y-2">
                             <?php foreach ($peran as $kode => $p): ?>
                                 <label class="flex cursor-pointer items-start gap-3 rounded-lg border p-3 transition-colors"

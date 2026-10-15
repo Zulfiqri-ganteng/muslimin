@@ -111,14 +111,14 @@ $total = $pager ? $pager->getTotal() : count($rows);
     <div class="dialog-isi">
         <div class="grid gap-4 sm:grid-cols-2">
             <div class="sm:col-span-2">
-                <label class="lbl" for="kr-aset">Aset <span class="text-red-600">*</span></label>
+                <label class="lbl" for="kr-aset">Aset <span class="text-red-600 dark:text-red-400">*</span></label>
                 <select id="kr-aset" name="aset_id" required class="inp">
                     <option value="">— Pilih aset —</option>
                     <?php foreach ($asetOpts as $id => $lbl): ?><option value="<?= (int) $id ?>"><?= esc($lbl) ?></option><?php endforeach; ?>
                 </select>
             </div>
             <div class="sm:col-span-2">
-                <label class="lbl" for="kr-deskripsi">Deskripsi kerusakan <span class="text-red-600">*</span></label>
+                <label class="lbl" for="kr-deskripsi">Deskripsi kerusakan <span class="text-red-600 dark:text-red-400">*</span></label>
                 <input type="text" id="kr-deskripsi" name="deskripsi" required maxlength="255" class="inp">
             </div>
             <div>

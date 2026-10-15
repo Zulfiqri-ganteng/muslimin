@@ -135,7 +135,7 @@ $bukaPratinjau = '<div class="peringatan peringatan-info sm:col-span-2">' . ikon
 
                 <?php if (! $balasan && $ajuan !== []): ?>
                     <div x-show="siswaAjuan().length" class="rounded-lg border border-gray-200 px-4 py-3 dark:border-gray-700">
-                        <p class="text-xs font-semibold text-gray-500 uppercase dark:text-gray-400">Siswa yang ditarik <span class="text-red-600">*</span></p>
+                        <p class="text-xs font-semibold text-gray-500 uppercase dark:text-gray-400">Siswa yang ditarik <span class="text-red-600 dark:text-red-400">*</span></p>
                         <div class="mt-2 space-y-1.5">
                             <template x-for="s in siswaAjuan()" :key="s.id">
                                 <label class="flex cursor-pointer items-center gap-2 text-sm text-gray-900 dark:text-white">
@@ -160,18 +160,18 @@ $bukaPratinjau = '<div class="peringatan peringatan-info sm:col-span-2">' . ikon
                     <p class="hint">Tercetak "Bapak/Ibu <?= esc($nilai['sapaan']) ?>". Kosong = Pimpinan.</p>
                 </div>
                 <div>
-                    <label class="lbl" for="tanggal_surat">Tanggal surat <span class="text-red-600">*</span></label>
+                    <label class="lbl" for="tanggal_surat">Tanggal surat <span class="text-red-600 dark:text-red-400">*</span></label>
                     <input id="tanggal_surat" name="tanggal_surat" type="date" value="<?= esc($nilai['tanggal_surat'], 'attr') ?>" required class="inp">
                     <p class="hint">Menentukan bulan dan tahun pada nomor surat.</p>
                 </div>
 
                 <?php if ($balasan): ?>
                     <div>
-                        <label class="lbl" for="periode_mulai">PKL mulai <span class="text-red-600">*</span></label>
+                        <label class="lbl" for="periode_mulai">PKL mulai <span class="text-red-600 dark:text-red-400">*</span></label>
                         <input id="periode_mulai" name="periode_mulai" type="date" x-model="mulai" required class="inp">
                     </div>
                     <div>
-                        <label class="lbl" for="periode_selesai">PKL selesai <span class="text-red-600">*</span></label>
+                        <label class="lbl" for="periode_selesai">PKL selesai <span class="text-red-600 dark:text-red-400">*</span></label>
                         <input id="periode_selesai" name="periode_selesai" type="date" x-model="selesai" required class="inp">
                     </div>
                     <?php if ($ubah || $lapor !== null): ?>
@@ -188,11 +188,11 @@ $bukaPratinjau = '<div class="peringatan peringatan-info sm:col-span-2">' . ikon
                     </div></div>
                 <?php else: ?>
                     <div>
-                        <label class="lbl" for="tgl_efektif">Ditarik terhitung sejak tanggal <span class="text-red-600">*</span></label>
+                        <label class="lbl" for="tgl_efektif">Ditarik terhitung sejak tanggal <span class="text-red-600 dark:text-red-400">*</span></label>
                         <input id="tgl_efektif" name="tgl_efektif" type="date" x-model="tglEfektif" required class="inp">
                     </div>
                     <div>
-                        <label class="lbl" for="alasan_pilih">Alasan <span class="text-red-600">*</span></label>
+                        <label class="lbl" for="alasan_pilih">Alasan <span class="text-red-600 dark:text-red-400">*</span></label>
                         <select id="alasan_pilih" name="alasan_pilih" x-model="alasanPilih" class="inp">
                             <?php foreach ($alasanSaran as $i => $a): ?><option value="<?= (int) $i ?>"><?= esc(ucfirst($a)) ?></option><?php endforeach; ?>
                             <option value="lain">Lainnya — tulis sendiri</option>

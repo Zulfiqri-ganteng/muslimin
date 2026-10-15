@@ -85,7 +85,7 @@
                 <div class="kartu-kepala"><h3 class="text-base font-semibold text-gray-900 dark:text-white">Shift <?= esc($shiftLabel[$shift] ?? ucfirst($shift)) ?></h3></div>
                 <div class="tabel-bungkus">
                     <table class="w-full border-collapse text-sm">
-                        <thead class="bg-gray-100 text-xs font-medium text-gray-500 uppercase dark:bg-gray-700 dark:text-gray-400">
+                        <thead class="bg-gray-100 text-xs font-medium text-gray-500 uppercase dark:bg-gray-700 dark:text-gray-300">
                             <tr>
                                 <th scope="col" class="w-36 p-3 text-left">Jam</th>
                                 <?php foreach ($hari as $h): ?>

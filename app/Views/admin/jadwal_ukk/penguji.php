@@ -105,7 +105,7 @@ $rentang = $tgl($jadwal['tanggal_mulai'])
                         </div>
                     </fieldset>
                     <div x-show="tipe === 'internal'">
-                        <label class="lbl" for="pj-guru">Guru <span class="text-red-600">*</span></label>
+                        <label class="lbl" for="pj-guru">Guru <span class="text-red-600 dark:text-red-400">*</span></label>
                         <select id="pj-guru" name="guru_id" class="inp">
                             <option value="">— Pilih guru —</option>
                             <?php foreach ($guruOpts as $id => $lbl): ?>
@@ -117,7 +117,7 @@ $rentang = $tgl($jadwal['tanggal_mulai'])
                         <?php endif; ?>
                     </div>
                     <div x-show="tipe === 'eksternal'" x-cloak>
-                        <label class="lbl" for="pj-eksternal">Penguji eksternal <span class="text-red-600">*</span></label>
+                        <label class="lbl" for="pj-eksternal">Penguji eksternal <span class="text-red-600 dark:text-red-400">*</span></label>
                         <select id="pj-eksternal" name="penguji_eksternal_id" class="inp">
                             <option value="">— Pilih penguji —</option>
                             <?php foreach ($eksternalOpts as $id => $lbl): ?>

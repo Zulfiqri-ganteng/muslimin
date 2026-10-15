@@ -16,7 +16,7 @@ $statusPkl     = [
     'disetujui' => ['Disetujui', 'lencana-hijau'],
 ];
 $urlEdit = site_url('admin/master/siswa') . '?' . http_build_query(['q' => (string) $s['nis'], 'edit' => (int) $s['id']]);
-$kosong  = '<span class="text-gray-400 dark:text-gray-500">—</span>';
+$kosong  = '<span class="text-gray-500 dark:text-gray-400">—</span>';
 $bio     = $d['biodata'];
 $inisial = mb_strtoupper(mb_substr(trim((string) $s['nama']), 0, 1)) ?: '?';
 // Satu baris data: label kiri, isi kanan.

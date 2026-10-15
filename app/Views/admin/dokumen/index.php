@@ -67,7 +67,7 @@ $ikonKategori = [
     'audio'       => ['file-music', 'text-pink-600 dark:text-pink-400'],
     'video'       => ['file-video', 'text-rose-600 dark:text-rose-400'],
     'arsip'       => ['file-zip', 'text-yellow-500 dark:text-yellow-400'],
-    'lainnya'     => ['file', 'text-gray-400 dark:text-gray-500'],
+    'lainnya'     => ['file', 'text-gray-500 dark:text-gray-400'],
 ];
 $labelVisib   = ['privat' => 'Privat', 'link' => 'Lewat tautan', 'publik' => 'Publik'];
 $lencanaVisib = ['privat' => 'lencana-abu', 'link' => 'lencana-merek', 'publik' => 'lencana-hijau'];
@@ -218,7 +218,7 @@ $judulKosong = $cariGlobal ? 'Tidak ada dokumen yang cocok' : ($subfolder !== []
                     <?= ikon('home', 'h-4 w-4') ?>Dokumen
                 </a>
                 <?php foreach ($jejak as $j): ?>
-                    <?= ikon('chevron-right', 'h-4 w-4 shrink-0 text-gray-400 dark:text-gray-500') ?>
+                    <?= ikon('chevron-right', 'h-4 w-4 shrink-0 text-gray-500 dark:text-gray-400') ?>
                     <a href="<?= esc($url(['folder' => $j['id'], 'q' => null]), 'attr') ?>" <?= $sasaran((int) $j['id'], (string) (int) $j['id']) ?>
                        class="dok-sasaran max-w-[180px] truncate rounded-lg px-2 py-1 hover:bg-gray-100 dark:hover:bg-gray-700 <?= (int) $j['id'] === $folderId ? 'font-semibold text-brand-700 dark:text-brand-400' : 'text-gray-600 dark:text-gray-300' ?>"><?= esc($j['nama']) ?></a>
                 <?php endforeach; ?>
@@ -480,7 +480,7 @@ $judulKosong = $cariGlobal ? 'Tidak ada dokumen yang cocok' : ($subfolder !== []
     <div class="dialog-isi">
         <p class="text-sm text-gray-500 dark:text-gray-400">Dibuat di: <b class="text-gray-900 dark:text-white"><?= esc($folderKini['nama'] ?? 'Dokumen (utama)') ?></b></p>
         <div>
-            <label class="lbl" for="dok-fb-nama">Nama folder <span class="text-red-600">*</span></label>
+            <label class="lbl" for="dok-fb-nama">Nama folder <span class="text-red-600 dark:text-red-400">*</span></label>
             <input id="dok-fb-nama" name="nama" required maxlength="150" class="inp" placeholder="mis. Proposal Kegiatan 2026">
         </div>
         <div>
@@ -509,7 +509,7 @@ $judulKosong = $cariGlobal ? 'Tidak ada dokumen yang cocok' : ($subfolder !== []
         </p>
         <div x-data="unggahDokumen">
             <label class="dok-zona" :data-seret="seret" @dragover.prevent="seretMasuk()" @dragleave.prevent="seretKeluar()" @drop.prevent="jatuhkanBerkas($event)">
-                <?= ikon('upload', 'mx-auto h-10 w-10 text-gray-400 dark:text-gray-500') ?>
+                <?= ikon('upload', 'mx-auto h-10 w-10 text-gray-500 dark:text-gray-400') ?>
                 <span class="mt-2 block text-sm text-gray-600 dark:text-gray-300">Seret berkas ke sini, atau <span class="font-semibold text-brand-700 dark:text-brand-400">pilih dari perangkat</span></span>
                 <span class="mt-1 block text-xs text-gray-500 dark:text-gray-400">Word, Excel, PowerPoint, PDF, gambar, zip — boleh banyak sekaligus</span>
                 <input type="file" name="berkas[]" multiple class="sr-only" @change="catatBerkasUnggah()">
@@ -535,7 +535,7 @@ $judulKosong = $cariGlobal ? 'Tidak ada dokumen yang cocok' : ($subfolder !== []
     <div class="dialog-isi">
         <p class="text-sm text-gray-500 dark:text-gray-400">Untuk video YouTube, berkas Google Drive, atau alamat web lain. Video sengaja tidak disimpan di server agar ruang penyimpanan tidak cepat penuh.</p>
         <div>
-            <label class="lbl" for="dok-tt-url">Alamat tautan <span class="text-red-600">*</span></label>
+            <label class="lbl" for="dok-tt-url">Alamat tautan <span class="text-red-600 dark:text-red-400">*</span></label>
             <input id="dok-tt-url" name="url_eksternal" required type="url" placeholder="https://youtu.be/…" class="inp">
         </div>
         <div>
@@ -564,7 +564,7 @@ $judulKosong = $cariGlobal ? 'Tidak ada dokumen yang cocok' : ($subfolder !== []
         <?= csrf_field() ?>
         <div class="dialog-isi">
             <div>
-                <label class="lbl" for="<?= $namaDialog ?>-judul">Judul <span class="text-red-600">*</span></label>
+                <label class="lbl" for="<?= $namaDialog ?>-judul">Judul <span class="text-red-600 dark:text-red-400">*</span></label>
                 <input id="<?= $namaDialog ?>-judul" name="judul" data-isi-pemicu="judul" required maxlength="200" class="inp">
             </div>
             <?php if ($untukTautan): ?>
@@ -596,7 +596,7 @@ $judulKosong = $cariGlobal ? 'Tidak ada dokumen yang cocok' : ($subfolder !== []
     <input type="hidden" name="pindah" value="1">
     <div class="dialog-isi">
         <div>
-            <label class="lbl" for="dok-fu-nama">Nama folder <span class="text-red-600">*</span></label>
+            <label class="lbl" for="dok-fu-nama">Nama folder <span class="text-red-600 dark:text-red-400">*</span></label>
             <input id="dok-fu-nama" name="nama" data-isi-pemicu="nama" required maxlength="150" class="inp">
         </div>
         <div>

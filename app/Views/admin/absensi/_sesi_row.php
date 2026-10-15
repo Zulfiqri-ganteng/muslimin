@@ -32,7 +32,7 @@ $st    = (string) ($s['status'] ?? 'hadir');
                 <p class="truncate text-sm font-medium text-gray-900 dark:text-white"><?= esc($namaGuru ?? '') ?>
                     <span x-show="piketShift(gid)" x-cloak class="lencana lencana-merek ms-1 align-middle">Piket</span>
                 </p>
-                <button type="button" x-show="!isBelum(gid)" @click="tandaiBelum(gid)" class="mt-1 text-xs font-medium text-red-700 hover:underline dark:text-red-500">Tandai belum hadir</button>
+                <button type="button" x-show="!isBelum(gid)" @click="tandaiBelum(gid)" class="mt-1 text-xs font-medium text-red-700 hover:underline dark:text-red-400">Tandai belum hadir</button>
                 <p x-show="isBelum(gid)" x-cloak class="mt-1 text-xs font-medium">
                     <span class="text-red-700 dark:text-red-500">Belum hadir</span> &middot;
                     <button type="button" @click="sudahDatang(gid)" class="text-green-700 hover:underline dark:text-green-400">Sudah datang</button>

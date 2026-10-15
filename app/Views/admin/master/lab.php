@@ -100,7 +100,7 @@ $adaSaring    = $q !== '' || $jenis !== '';
     <?= ui_crud_form_buka(['benda' => 'Laboratorium', 'ukuran' => 'lg']) ?>
         <div class="grid gap-4 sm:grid-cols-2">
             <div>
-                <label class="lbl" for="lab-kode">Kode <span class="text-red-600">*</span></label>
+                <label class="lbl" for="lab-kode">Kode <span class="text-red-600 dark:text-red-400">*</span></label>
                 <input type="text" id="lab-kode" name="kode" x-model="form.kode" maxlength="30" required class="inp uppercase">
             </div>
             <div>
@@ -112,7 +112,7 @@ $adaSaring    = $q !== '' || $jenis !== '';
                 </select>
             </div>
             <div class="sm:col-span-2">
-                <label class="lbl" for="lab-nama">Nama lab <span class="text-red-600">*</span></label>
+                <label class="lbl" for="lab-nama">Nama lab <span class="text-red-600 dark:text-red-400">*</span></label>
                 <input type="text" id="lab-nama" name="nama" x-model="form.nama" maxlength="150" required class="inp">
             </div>
             <div>

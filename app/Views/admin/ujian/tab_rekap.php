@@ -116,7 +116,7 @@ $kosongTakHadir = ui_kosong(['ikon' => 'check-circle', 'judul' => 'Belum ada cat
                                 <td class="text-center"><?= (int) $r['belum'] ?></td>
                                 <td class="text-center"><?= (int) $r['dijadwalkan'] ?></td>
                                 <td class="text-center text-green-700 dark:text-green-400"><?= (int) $r['selesai'] ?></td>
-                                <td class="text-center text-gray-400 dark:text-gray-500"><?= (int) $r['batal'] ?></td>
+                                <td class="text-center text-gray-500 dark:text-gray-400"><?= (int) $r['batal'] ?></td>
                             </tr>
                         <?php endforeach; ?>
                     </tbody>

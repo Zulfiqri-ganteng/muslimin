@@ -38,7 +38,7 @@
             <section class="kartu" aria-label="<?= esc($g['kode_guru'] . ' ' . $g['guru_nama'], 'attr') ?>">
                 <div class="kartu-kepala">
                     <p class="min-w-0 truncate text-base font-semibold text-gray-900 dark:text-white"><span class="font-normal text-gray-500 dark:text-gray-400"><?= esc($g['kode_guru']) ?></span> · <?= esc($g['guru_nama']) ?></p>
-                    <div class="flex shrink-0 flex-wrap items-center gap-2">
+                    <div class="flex flex-wrap items-center gap-2">
                         <span class="text-sm text-gray-500 dark:text-gray-400">Total <b class="text-gray-900 dark:text-white"><?= $total ?></b> / <?= $max ?> JP</span>
                         <span class="lencana <?= $lencana ?>"><?= $stat ?></span>
                         <a href="<?= site_url('admin/cetak/jadwal-guru/' . $g['guru_id'] . '/pdf') ?>" target="_blank" rel="noopener" class="btn btn-netral btn-xs" title="Jadwal guru (PDF)"><?= ikon('printer', 'h-3.5 w-3.5') ?>PDF</a>

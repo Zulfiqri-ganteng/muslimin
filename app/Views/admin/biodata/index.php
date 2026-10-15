@@ -205,7 +205,7 @@ $v = static fn (string $p): string => base_url($p) . '?v=' . @filemtime(FCPATH .
                 <div>
                     <label class="lbl" for="tautanForm">Tautan untuk dibagikan</label>
                     <div class="flex flex-col gap-2 sm:flex-row">
-                        <input id="tautanForm" x-ref="tautanForm" type="text" readonly value="<?= esc($tautan, 'attr') ?>" class="inp min-w-0 flex-1 font-medium text-brand-700 dark:text-brand-400" @focus="pilihTeks($event)">
+                        <input id="tautanForm" x-ref="tautanForm" type="text" readonly value="<?= esc($tautan, 'attr') ?>" class="inp min-w-0 flex-1 font-medium text-brand-700 dark:text-brand-300" @focus="pilihTeks($event)">
                         <div class="grid grid-cols-2 gap-2 sm:flex">
                             <button type="button" class="btn btn-netral" @click="salin($refs.tautanForm.value, 'tautan')">
                                 <?= ikon('file-copy', 'h-4 w-4') ?><span x-text="tersalin === 'tautan' ? 'Tersalin' : 'Salin'">Salin</span>
@@ -482,7 +482,7 @@ $v = static fn (string $p): string => base_url($p) . '?v=' . @filemtime(FCPATH .
                     <span class="inline-flex items-center gap-1"><span class="h-2 w-4 rounded-full bg-yellow-400"></span>34–66%</span>
                     <span class="inline-flex items-center gap-1"><span class="h-2 w-4 rounded-full bg-green-500"></span>67% ke atas</span>
                 </div>
-                <div class="hidden grid-cols-[7rem_minmax(0,1fr)_3.5rem_4.5rem_4.5rem_4.75rem_3.5rem_8.5rem_10.75rem] gap-x-3 border-b border-gray-200 bg-gray-50 px-4 py-3 text-[11px] font-semibold text-gray-500 uppercase xl:grid dark:border-gray-700 dark:bg-gray-700 dark:text-gray-400">
+                <div class="hidden grid-cols-[7rem_minmax(0,1fr)_3.5rem_4.5rem_4.5rem_4.75rem_3.5rem_8.5rem_10.75rem] gap-x-3 border-b border-gray-200 bg-gray-50 px-4 py-3 text-[11px] font-semibold text-gray-500 uppercase xl:grid dark:border-gray-700 dark:bg-gray-700 dark:text-gray-300">
                     <span>Kelas</span><span>Wali kelas</span><span class="text-right">Siswa</span><span class="text-right">Menunggu</span><span class="text-right">Disetujui</span><span class="text-right">Perbaikan</span><span class="text-right">Belum</span><span>Sudah mengisi</span><span class="text-right">Aksi</span>
                 </div>
                 <ul class="divide-y divide-gray-200 dark:divide-gray-700">
@@ -494,10 +494,10 @@ $v = static fn (string $p): string => base_url($p) . '?v=' . @filemtime(FCPATH .
                             </div>
                             <span class="hidden truncate text-gray-600 xl:block dark:text-gray-300" title="<?= esc($k['wali'] ?? '', 'attr') ?>"><?= esc($k['wali'] ?? '—') ?></span>
                             <span class="hidden text-right text-gray-900 tabular-nums xl:block dark:text-white"><?= $k['total'] ?></span>
-                            <span class="hidden text-right tabular-nums xl:block <?= $k['menunggu'] > 0 ? 'font-semibold text-brand-700 dark:text-brand-400' : 'text-gray-400 dark:text-gray-500' ?>"><?= $k['menunggu'] ?></span>
-                            <span class="hidden text-right tabular-nums xl:block <?= $k['disetujui'] > 0 ? 'text-green-700 dark:text-green-400' : 'text-gray-400 dark:text-gray-500' ?>"><?= $k['disetujui'] ?></span>
-                            <span class="hidden text-right tabular-nums xl:block <?= $k['perbaikan'] > 0 ? 'text-yellow-700 dark:text-yellow-400' : 'text-gray-400 dark:text-gray-500' ?>"><?= $k['perbaikan'] ?></span>
-                            <span class="hidden text-right font-semibold tabular-nums xl:block <?= $k['belum'] > 0 ? 'text-gray-900 dark:text-white' : 'text-gray-400 dark:text-gray-500' ?>"><?= $k['belum'] ?></span>
+                            <span class="hidden text-right tabular-nums xl:block <?= $k['menunggu'] > 0 ? 'font-semibold text-brand-700 dark:text-brand-400' : 'text-gray-500 dark:text-gray-400' ?>"><?= $k['menunggu'] ?></span>
+                            <span class="hidden text-right tabular-nums xl:block <?= $k['disetujui'] > 0 ? 'text-green-700 dark:text-green-400' : 'text-gray-500 dark:text-gray-400' ?>"><?= $k['disetujui'] ?></span>
+                            <span class="hidden text-right tabular-nums xl:block <?= $k['perbaikan'] > 0 ? 'text-yellow-700 dark:text-yellow-400' : 'text-gray-500 dark:text-gray-400' ?>"><?= $k['perbaikan'] ?></span>
+                            <span class="hidden text-right font-semibold tabular-nums xl:block <?= $k['belum'] > 0 ? 'text-gray-900 dark:text-white' : 'text-gray-500 dark:text-gray-400' ?>"><?= $k['belum'] ?></span>
                             <!-- HP: ringkasan angka dalam satu baris -->
                             <p class="col-span-2 text-xs text-gray-500 xl:hidden dark:text-gray-400">
                                 <?= $k['total'] ?> siswa · <span class="<?= $k['menunggu'] > 0 ? 'font-semibold text-brand-700 dark:text-brand-400' : '' ?>"><?= $k['menunggu'] ?> menunggu</span> · <?= $k['disetujui'] ?> disetujui · <?= $k['perbaikan'] ?> perbaikan · <b class="text-gray-900 dark:text-white"><?= $k['belum'] ?> belum</b>

@@ -56,7 +56,7 @@ $baris = static function (string $label, ?string $isi): string {
     $isi = trim((string) $isi);
 
     return '<div class="grid grid-cols-[7.5rem_1fr] gap-3 px-4 py-2.5 text-sm sm:px-6"><dt class="text-gray-500 dark:text-gray-400">' . esc($label) . '</dt><dd class="font-medium break-words text-gray-900 dark:text-white">'
-        . ($isi !== '' ? esc($isi) : '<span class="font-normal text-gray-400 dark:text-gray-500">—</span>') . '</dd></div>';
+        . ($isi !== '' ? esc($isi) : '<span class="font-normal text-gray-500 dark:text-gray-400">—</span>') . '</dd></div>';
 };
 $kepalaKartu = static fn (string $judul, string $id): string => '<div class="kartu-kepala"><h3 id="' . $id . '" class="kartu-judul text-base">' . $judul . '</h3></div>';
 $catatanKunci = static fn (string $html): string => '<div class="peringatan peringatan-netral">' . ikon('lock', 'mt-0.5 h-4 w-4 shrink-0') . '<p>' . $html . '</p></div>';
@@ -383,7 +383,7 @@ $dialog = static function (string $nama, string $judul, string $aksiUrl, string 
         . '<button type="submit" class="btn ' . $kelasTombol . '">' . $tombol . '</button></div></form>'
         . ui_dialog_tutup();
 };
-$kotakAlasan = static fn (string $idIsian, string $ph): string => '<div><label class="lbl" for="' . $idIsian . '">Alasan <span class="text-red-600">*</span></label>'
+$kotakAlasan = static fn (string $idIsian, string $ph): string => '<div><label class="lbl" for="' . $idIsian . '">Alasan <span class="text-red-600 dark:text-red-400">*</span></label>'
     . '<textarea id="' . $idIsian . '" name="catatan" rows="3" required minlength="5" maxlength="255" class="inp" placeholder="' . esc($ph, 'attr') . '"></textarea>'
     . '<p class="hint">Minimal 5 huruf. Siswa akan membaca catatan ini.</p></div>';
 $kotakPaham = static fn (string $teks): string => '<label class="flex cursor-pointer items-start gap-2 rounded-lg border border-red-300 bg-red-50 p-3 text-red-800 dark:border-red-800 dark:bg-gray-700 dark:text-red-400">'
@@ -423,12 +423,12 @@ if (! empty($bolehSurat)) {
     echo $dialog('hapusbayar', 'Hapus catatan biaya?', $id . '/pembayaran/hapus',
         '<input type="hidden" name="pembayaran_id" data-isi-pemicu="pembayaran_id">'
         . '<p>Catatan <b data-isi-pemicu="teks"></b> akan <b>dihapus</b> (misalnya karena salah centang). Tercatat di riwayat ajuan dan Audit Log.</p>'
-        . '<div><label class="lbl" for="alasanBayar">Alasan koreksi <span class="text-red-600">*</span></label><textarea id="alasanBayar" name="alasan" rows="2" required minlength="5" maxlength="200" class="inp" placeholder="Contoh: Salah centang, uang SPP belum diterima."></textarea></div>',
+        . '<div><label class="lbl" for="alasanBayar">Alasan koreksi <span class="text-red-600 dark:text-red-400">*</span></label><textarea id="alasanBayar" name="alasan" rows="2" required minlength="5" maxlength="200" class="inp" placeholder="Contoh: Salah centang, uang SPP belum diterima."></textarea></div>',
         ikon('trash-bin', 'h-4 w-4') . 'Hapus catatan', 'btn-bahaya');
     echo $dialog('cabutbeasiswa', 'Cabut beasiswa?', $id . '/pembayaran/beasiswa-cabut',
         '<input type="hidden" name="siswa_id" data-isi-pemicu="siswa_id">'
         . '<p>Beasiswa <b data-isi-pemicu="teks"></b> akan <b>dicabut</b>; SPP-nya kembali wajib dibayar.</p>'
-        . '<div><label class="lbl" for="alasanBeasiswa">Alasan <span class="text-red-600">*</span></label><textarea id="alasanBeasiswa" name="alasan" rows="2" required minlength="5" maxlength="200" class="inp" placeholder="Contoh: Salah memilih beasiswa pada siswa ini."></textarea></div>',
+        . '<div><label class="lbl" for="alasanBeasiswa">Alasan <span class="text-red-600 dark:text-red-400">*</span></label><textarea id="alasanBeasiswa" name="alasan" rows="2" required minlength="5" maxlength="200" class="inp" placeholder="Contoh: Salah memilih beasiswa pada siswa ini."></textarea></div>',
         'Cabut beasiswa', 'btn-bahaya');
 }
 if ($bolehHapus) {

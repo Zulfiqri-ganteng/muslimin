@@ -38,7 +38,7 @@ $err = static fn (string $k) => isset($galat[$k]) ? '<p class="err-msg">' . esc(
 $kelasInp = static fn (string $k) => isset($galat[$k]) ? 'inp-err' : '';
 $input = static function (string $k, string $label, string $nilai, array $o = []) use ($err, $kelasInp): void {
     echo '<div class="' . ($o['cls'] ?? '') . '"><label class="lbl" for="f_' . $k . '">' . esc($label)
-        . (($o['wajib'] ?? false) ? ' <span class="text-red-600">*</span>' : ' <span class="font-normal text-gray-500 dark:text-gray-400">(opsional)</span>') . '</label>'
+        . (($o['wajib'] ?? false) ? ' <span class="text-red-600 dark:text-red-400">*</span>' : ' <span class="font-normal text-gray-500 dark:text-gray-400">(opsional)</span>') . '</label>'
         . '<input id="f_' . $k . '" name="' . $k . '" type="' . ($o['type'] ?? 'text') . '" value="' . esc($nilai, 'attr') . '" class="inp ' . $kelasInp($k) . '"'
         . (isset($o['maks']) ? ' maxlength="' . (int) $o['maks'] . '"' : '') . (isset($o['ph']) ? ' placeholder="' . esc($o['ph'], 'attr') . '"' : '')
         . (isset($o['model']) ? ' x-model="' . $o['model'] . '"' : '') . ' autocomplete="off">'
@@ -73,12 +73,12 @@ $kepala = static fn (string $judul): string => '<div class="kartu-kepala"><h3 cl
         <?= $kepala('Siswa') ?>
         <div class="kartu-isi space-y-4">
             <div>
-                <p class="lbl">Pengaju <span class="text-red-600">*</span></p>
+                <p class="lbl">Pengaju <span class="text-red-600 dark:text-red-400">*</span></p>
                 <div class="flex flex-wrap items-center gap-3 rounded-lg border border-gray-200 bg-gray-50 px-4 py-3 dark:border-gray-600 dark:bg-gray-700">
                     <template x-if="pengaju">
-                        <span class="min-w-0 flex-1"><b class="text-gray-900 dark:text-white" x-text="pengaju.nama"></b> <span class="text-xs text-gray-500 dark:text-gray-400" x-text="pengaju.kelas ? '(' + pengaju.kelas + ')' : ''"></span></span>
+                        <span class="min-w-0 flex-1"><b class="text-gray-900 dark:text-white" x-text="pengaju.nama"></b> <span class="text-xs text-gray-500 dark:text-gray-300" x-text="pengaju.kelas ? '(' + pengaju.kelas + ')' : ''"></span></span>
                     </template>
-                    <span x-show="!pengaju" class="flex-1 text-sm text-gray-500 dark:text-gray-400">Belum dipilih</span>
+                    <span x-show="!pengaju" class="flex-1 text-sm text-gray-500 dark:text-gray-300">Belum dipilih</span>
                     <?php if (! $ubah): ?>
                         <button type="button" class="btn btn-netral btn-sm" @click="bukaPemilih('pengaju')"><?= ikon('user', 'h-4 w-4') ?><span x-text="pengaju ? 'Ganti' : 'Pilih siswa'">Pilih siswa</span></button>
                     <?php else: ?>
@@ -136,7 +136,7 @@ $kepala = static fn (string $judul): string => '<div class="kartu-kepala"><h3 cl
         <div class="kartu-isi space-y-4">
             <?php $input('perusahaan_nama', 'Nama perusahaan', $val('perusahaan_nama'), ['wajib' => true, 'maks' => 150, 'ph' => 'Contoh: PT Telkom Indonesia', 'hint' => 'Periksa ejaannya — nama ini jadi saran untuk siswa lain setelah di-ACC.']) ?>
             <div>
-                <label class="lbl" for="f_perusahaan_alamat">Alamat <span class="text-red-600">*</span></label>
+                <label class="lbl" for="f_perusahaan_alamat">Alamat <span class="text-red-600 dark:text-red-400">*</span></label>
                 <textarea id="f_perusahaan_alamat" name="perusahaan_alamat" rows="2" maxlength="255" class="inp <?= $kelasInp('perusahaan_alamat') ?>" placeholder="Jalan, nomor, daerah"><?= esc($val('perusahaan_alamat')) ?></textarea>
                 <?= $err('perusahaan_alamat') ?>
             </div>
@@ -164,7 +164,7 @@ $kepala = static fn (string $judul): string => '<div class="kartu-kepala"><h3 cl
                 <?php $awal = ($old['status_awal'] ?? 'menunggu') === 'disetujui' ? 'disetujui' : 'menunggu'; ?>
                 <label class="flex cursor-pointer items-start gap-3 rounded-lg border border-gray-200 p-3.5 transition-colors has-[:checked]:border-brand-500 has-[:checked]:bg-brand-50 dark:border-gray-600 dark:has-[:checked]:bg-gray-700">
                     <input type="radio" name="status_awal" value="menunggu" <?= $awal === 'menunggu' ? 'checked' : '' ?> class="cek mt-0.5">
-                    <span><b class="block text-sm text-gray-900 dark:text-white">Menunggu pemeriksaan</b><span class="text-xs text-gray-500 dark:text-gray-400">Masuk antrean seperti ajuan siswa; diputuskan nanti.</span></span>
+                    <span><b class="block text-sm text-gray-900 dark:text-white">Menunggu pemeriksaan</b><span class="text-xs text-gray-600 dark:text-gray-300">Masuk antrean seperti ajuan siswa; diputuskan nanti.</span></span>
                 </label>
                 <?php if (! empty($bolehAcc)): ?>
                     <label class="flex cursor-pointer items-start gap-3 rounded-lg border border-gray-200 p-3.5 transition-colors has-[:checked]:border-green-500 has-[:checked]:bg-green-50 dark:border-gray-600 dark:has-[:checked]:bg-gray-700">

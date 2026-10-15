@@ -51,7 +51,7 @@ $cfg = [
                                                 <button type="button" class="rounded-full p-0.5 hover:bg-brand-200 dark:hover:bg-brand-800" @click="hapus(h.id, sh, gid)" aria-label="Hapus dari daftar piket"><?= ikon('close', 'h-3.5 w-3.5') ?></button>
                                             </span>
                                         </template>
-                                        <span x-show="kosong(h.id, sh)" class="text-xs text-gray-400 dark:text-gray-500">— belum ada —</span>
+                                        <span x-show="kosong(h.id, sh)" class="text-xs text-gray-500 dark:text-gray-400">— belum ada —</span>
                                     </div>
                                     <select data-tambah-piket :data-hari="h.id" :data-shift="sh" class="inp max-w-xs py-1.5 text-xs" aria-label="Tambah guru piket">
                                         <option value="">+ tambah guru piket…</option>

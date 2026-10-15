@@ -357,7 +357,7 @@ $js = static fn (string $berkas): string => '<script defer src="' . base_url($be
                 <li><a href="<?= site_url('admin/profile') ?>">Profil saya</a></li>
                 <?php if ($bolehPengaturan): ?><li><a href="<?= site_url('admin/settings') ?>">Pengaturan sekolah</a></li><?php endif; ?>
             </ul>
-            <?= view('partials/kredit', ['kreditKelas' => 'text-sm text-gray-500']) ?>
+            <?= view('partials/kredit', ['kreditKelas' => 'text-sm text-gray-500 dark:text-gray-400']) ?>
         </div>
         <p class="kaki-hak">&copy; <?= date('Y') ?> &middot; Sistem Informasi Akademik Sekolah (BINUS)</p>
     </footer>

@@ -76,7 +76,7 @@ $ikat = static fn (string $key): string => preg_match('/^[A-Za-z_$][A-Za-z0-9_$]
                             <th scope="col">Status</th>
                             <?php foreach ($cols as $c): ?>
                                 <th scope="col" class="<?= $lebar(isset($c['width']) ? (int) $c['width'] : null) ?>">
-                                    <?= esc($c['label']) ?><?= ! empty($c['required']) ? ' <span class="text-red-600">*</span>' : '' ?>
+                                    <?= esc($c['label']) ?><?= ! empty($c['required']) ? ' <span class="text-red-600 dark:text-red-400">*</span>' : '' ?>
                                 </th>
                             <?php endforeach; ?>
                             <th scope="col" class="kolom-aksi">Aksi</th>

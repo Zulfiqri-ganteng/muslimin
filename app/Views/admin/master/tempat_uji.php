@@ -88,7 +88,7 @@
     <?= ui_crud_form_buka(['benda' => 'Tempat Uji', 'ukuran' => 'lg']) ?>
         <div class="grid gap-4 sm:grid-cols-2">
             <div>
-                <label class="lbl" for="tu-kode">Kode <span class="text-red-600">*</span></label>
+                <label class="lbl" for="tu-kode">Kode <span class="text-red-600 dark:text-red-400">*</span></label>
                 <input type="text" id="tu-kode" name="kode" x-model="form.kode" maxlength="30" required class="inp uppercase">
             </div>
             <div>
@@ -96,7 +96,7 @@
                 <input type="number" id="tu-kapasitas" name="kapasitas" x-model="form.kapasitas" min="0" max="1000" class="inp">
             </div>
             <div class="sm:col-span-2">
-                <label class="lbl" for="tu-nama">Nama <span class="text-red-600">*</span></label>
+                <label class="lbl" for="tu-nama">Nama <span class="text-red-600 dark:text-red-400">*</span></label>
                 <input type="text" id="tu-nama" name="nama" x-model="form.nama" maxlength="150" required class="inp">
             </div>
             <div class="sm:col-span-2">

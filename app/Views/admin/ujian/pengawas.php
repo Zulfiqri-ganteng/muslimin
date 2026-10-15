@@ -66,7 +66,7 @@ $warnaPeran = ['pengawas' => 'lencana-hijau', 'cadangan' => 'lencana-abu'];
             <form method="post" action="<?= $aksi ?>" class="kartu-isi space-y-4">
                 <?= csrf_field() ?>
                 <div>
-                    <label class="lbl" for="pw-guru">Guru <span class="text-red-600">*</span></label>
+                    <label class="lbl" for="pw-guru">Guru <span class="text-red-600 dark:text-red-400">*</span></label>
                     <select id="pw-guru" name="guru_id" required class="inp">
                         <option value="">— Pilih guru —</option>
                         <?php foreach ($guruOpts as $id => $lbl): ?>

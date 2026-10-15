@@ -37,7 +37,7 @@ $saklar = static fn (string $nama, bool $nyala, string $judul, string $ket): str
                     <?php if ($adaLogo): ?>
                         <img src="<?= base_url('uploads/' . esc($setting['logo'])) ?>" class="h-full w-full object-contain" alt="Logo sekolah">
                     <?php else: ?>
-                        <?= ikon('image', 'h-8 w-8 text-gray-400 dark:text-gray-500') ?>
+                        <?= ikon('image', 'h-8 w-8 text-gray-500 dark:text-gray-400') ?>
                     <?php endif; ?>
                 </div>
                 <div class="min-w-0 flex-1">
@@ -63,7 +63,7 @@ $saklar = static fn (string $nama, bool $nyala, string $judul, string $ket): str
                     <input type="text" id="st-jenjang" name="school_level" value="<?= esc($setting['school_level'], 'attr') ?>" class="inp" placeholder="SMK / SMA / SMP">
                 </div>
                 <div class="sm:col-span-2">
-                    <label class="lbl" for="st-nama">Nama sekolah <span class="text-red-600">*</span></label>
+                    <label class="lbl" for="st-nama">Nama sekolah <span class="text-red-600 dark:text-red-400">*</span></label>
                     <input type="text" id="st-nama" name="school_name" value="<?= esc($setting['school_name'], 'attr') ?>" required class="inp" placeholder="Nama sekolah">
                 </div>
             </div>
