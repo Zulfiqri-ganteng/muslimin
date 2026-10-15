@@ -6,12 +6,12 @@
 @source "../../app/Views/admin";
 @source "../../app/Views/layouts/admin.php";
 @source "../../app/Views/pager/admin.php";
-@source "../../app/Views/partials/dokumen_penampil.php";
 @source "../../app/Views/partials/kredit.php";
 @source "../../app/Libraries/SuratJenis.php";
 @source "../../app/Libraries/PklLapor.php";
 @source "../../app/Models/SuratSekolahModel.php";
 @source "../../public/assets/js/admin";
+@source "../../public/assets/js/dokumen-penampil.js";
 
 /* Plugin Flowbite 3 (MIT): gaya dasar formulir (input, select, checkbox, radio, berkas) + gaya tooltip ApexCharts (F4).
    flowbite.js TIDAK dipakai (tugasnya dikerjakan Alpine), jadi bagian lain plugin dimatikan. Warna birunya ditimpa di @layer base. */
