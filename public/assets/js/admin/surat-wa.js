@@ -7,7 +7,16 @@
  *   - event 'surat-wa' {detail: {id}} (satu surat) atau {detail: {jenis}} (kabar massal: yang belum dikabari);
  *   - otomatis setelah unduhan selesai (app.js mengirim 'surat:unduh-selesai' untuk form ber-data-surat-wa / data-surat-wa-jenis):
  *     kotak hanya muncul bila masih ada siswa bernomor HP yang belum dikabari; selain itu halaman dimuat ulang (nomor & status segar).
+ * (F9) Tombol pemicu tanpa JS sebaris (siap CSP): data-kabari-surat="ID" atau data-kabari-surat-jenis="jenis" → event 'surat-wa'
+ *     (dulu @click="window.dispatchEvent(…)"; nama atribut sengaja beda dari penanda form data-surat-wa milik app.js).
  */
+document.addEventListener('click', function (e) {
+    var b = e.target && e.target.closest ? e.target.closest('[data-kabari-surat], [data-kabari-surat-jenis]') : null;
+    if (!b) { return; }
+    var d = b.hasAttribute('data-kabari-surat') ? { id: b.getAttribute('data-kabari-surat') } : { jenis: b.getAttribute('data-kabari-surat-jenis') };
+    window.dispatchEvent(new CustomEvent('surat-wa', { detail: d }));
+});
+
 document.addEventListener('alpine:init', function () {
     'use strict';
 

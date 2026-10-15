@@ -29,27 +29,27 @@ final class SuratJenis
     public const DATA = [
         self::ASTS => [
             'label' => 'Surat Izin ASTS', 'singkat' => 'Izin ASTS', 'alamat' => 'admin/surat/asts', 'bernomor' => true, 'acc' => true,
-            'template' => 'izin_asts.docx', 'varian' => ['perusahaan' => 'izin_asts_perusahaan.docx'], 'badge' => 'bg-sky-100 text-sky-800',
+            'template' => 'izin_asts.docx', 'varian' => ['perusahaan' => 'izin_asts_perusahaan.docx'], 'badge' => 'lencana-biru',
             'ringkas' => 'Pemberitahuan pelaksanaan ASTS dan permohonan dispensasi bagi siswa yang sedang PKL.',
         ],
         self::TKA => [
             'label' => 'Surat Izin TKA', 'singkat' => 'Izin TKA', 'alamat' => 'admin/surat/tka', 'bernomor' => true, 'acc' => true,
-            'template' => 'izin_tka.docx', 'varian' => ['perusahaan' => 'izin_tka_perusahaan.docx'], 'badge' => 'bg-indigo-100 text-indigo-800',
+            'template' => 'izin_tka.docx', 'varian' => ['perusahaan' => 'izin_tka_perusahaan.docx'], 'badge' => 'lencana-ungu',
             'ringkas' => 'Pemberitahuan pelaksanaan TKA (per gelombang) dan permohonan dispensasi bagi siswa yang sedang PKL.',
         ],
         self::PERNYATAAN => [
             'label' => 'Pernyataan Orang Tua PKL', 'singkat' => 'Pernyataan Ortu', 'alamat' => 'admin/surat/pernyataan-ortu', 'bernomor' => false, 'acc' => false,
-            'template' => 'pernyataan_ortu.docx', 'badge' => 'bg-teal-100 text-teal-800',
+            'template' => 'pernyataan_ortu.docx', 'badge' => 'lencana-merek',
             'ringkas' => 'Formulir pernyataan dan persetujuan orang tua/wali untuk PKL (diisi tangan, bermaterai). Tanpa nomor.',
         ],
         self::BALASAN => [
             'label' => 'Surat Balasan PKL', 'singkat' => 'Balasan PKL', 'alamat' => 'admin/surat/balasan', 'bernomor' => true, 'acc' => true,
-            'template' => 'balasan_pkl.docx', 'badge' => 'bg-emerald-100 text-emerald-800',
+            'template' => 'balasan_pkl.docx', 'badge' => 'lencana-hijau',
             'ringkas' => 'Penegasan bahwa perusahaan menerima siswa PKL, lengkap dengan periode dan lokasi penempatan.',
         ],
         self::PENARIKAN => [
             'label' => 'Penarikan Izin PKL', 'singkat' => 'Penarikan PKL', 'alamat' => 'admin/surat/penarikan', 'bernomor' => true, 'acc' => true,
-            'template' => 'penarikan_pkl.docx', 'badge' => 'bg-rose-100 text-rose-800',
+            'template' => 'penarikan_pkl.docx', 'badge' => 'lencana-merah',
             'ringkas' => 'Pemberhentian dan penarikan siswa dari tempat PKL, lengkap dengan tanggal dan alasan.',
         ],
     ];
@@ -107,7 +107,7 @@ final class SuratJenis
 
     public static function badge(string $kode): string
     {
-        return self::DATA[$kode]['badge'] ?? 'bg-gray-100 text-gray-700';
+        return self::DATA[$kode]['badge'] ?? 'lencana-abu';
     }
 
     /** Halaman jenis ini sudah dibangun (menu aktif)? */

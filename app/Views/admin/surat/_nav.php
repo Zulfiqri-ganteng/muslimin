@@ -1,6 +1,8 @@
 <?php
 /**
  * Tab status Surat Sekolah (Daftar Surat). Tab membawa serta saringan lain (jenis, tahun, pencarian) yang sedang dipakai.
+ * Rombak tampilan F9: bilah tab kit .tab-daftar/.tab + .tab-jumlah (kuning bila ada yang menunggu ACC), bergulir menyamping
+ * di layar sempit.
  *
  * @var array<string, int>   $hitung jumlah surat: semua + per status
  * @var array<string, mixed> $f      saringan aktif: status, jenis, tahun, q
@@ -18,15 +20,16 @@ foreach (SuratSekolahModel::STATUS as $s) {
     $tabs[] = [$s, SuratSekolahModel::TAMPIL_STATUS[$s][0], (int) ($hitung[$s] ?? 0)];
 }
 ?>
-<nav class="rise -mx-1 mb-5 flex gap-1.5 overflow-x-auto px-1 pb-1 lg:flex-wrap lg:overflow-visible" aria-label="Status surat">
-    <?php foreach ($tabs as [$kode, $label, $jumlah]):
-        $aktif = $statusAktif === $kode;
-        $url   = site_url('admin/surat') . ($kode !== '' || $bawa !== [] ? '?' . http_build_query($bawa + ($kode !== '' ? ['status' => $kode] : [])) : '');
-    ?>
-        <a href="<?= esc($url, 'attr') ?>"
-           class="inline-flex shrink-0 items-center gap-2 rounded-xl px-3.5 py-2 text-sm font-semibold transition active:scale-95 <?= $aktif ? 'bg-brand-700 text-white shadow-md shadow-brand-700/20' : 'border border-gray-200 bg-white text-gray-600 hover:border-brand-200 hover:bg-brand-50 hover:text-brand-700' ?>"<?= $aktif ? ' aria-current="page"' : '' ?>>
-            <?= esc($label) ?>
-            <span class="inline-flex min-w-[1.4rem] justify-center rounded-full px-1.5 py-0.5 text-[11px] font-bold <?= $aktif ? 'bg-white/20 text-white' : ($kode === 'menunggu' && $jumlah > 0 ? 'bg-amber-100 text-amber-800' : 'bg-gray-100 text-gray-500') ?>"><?= $jumlah ?></span>
-        </a>
-    <?php endforeach; ?>
-</nav>
+<div class="mb-5 overflow-x-auto">
+    <nav class="tab-daftar min-w-max flex-nowrap" aria-label="Status surat">
+        <?php foreach ($tabs as [$kode, $label, $jumlah]):
+            $aktif = $statusAktif === $kode;
+            $url   = site_url('admin/surat') . ($kode !== '' || $bawa !== [] ? '?' . http_build_query($bawa + ($kode !== '' ? ['status' => $kode] : [])) : '');
+        ?>
+            <a href="<?= esc($url, 'attr') ?>" class="tab whitespace-nowrap"<?= $aktif ? ' aria-current="page"' : '' ?>>
+                <?= esc($label) ?>
+                <span class="tab-jumlah<?= $kode === 'menunggu' && $jumlah > 0 ? ' bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-300' : '' ?>"><?= $jumlah ?></span>
+            </a>
+        <?php endforeach; ?>
+    </nav>
+</div>

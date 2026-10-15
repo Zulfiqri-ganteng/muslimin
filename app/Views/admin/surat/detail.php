@@ -1,6 +1,10 @@
 <?php
 /**
  * Detail satu surat sekolah: data, siswa, status & ACC, tindakan (ACC / kembalikan / ajukan ulang / unduh / batalkan), riwayat.
+ * Rombak tampilan F9: kepala halaman layout + tombol Kembali, kartu kit (kepala surat, Data surat, Siswa, Tindakan, Persetujuan,
+ * Riwayat), ui_peringatan, lencana kit, tombol kit ber-ikon (pengganti emoji). Siap CSP: dialog keputusan = dialog kit
+ * (ui_dialog_buka, dibuka data-buka-dialog) — dulu x-data akar { dlg } + x-show per dialog; Kabari WA = data-kabari-surat
+ * (dulu @click window.dispatchEvent).
  *
  * @var array<string, mixed>           $surat       baris surat_sekolah + 'isi_arr'
  * @var list<array>                    $siswa
@@ -18,6 +22,9 @@
  * @var array{total:int,dikabari:int}  $hitungWa    siswa pada surat & yang sudah dikabari
  * @var string                         $pemegangAcc / $pemegangUnduh  nama peran yang memegang hak itu (teks)
  * @var string                         $namaSaya
+ * @var string                         $alamatUbah  alamat formulir ubah ('' = jenis ini tak bisa diubah)
+ * @var string                         $peran
+ * @var bool                           $bolehPengaturan
  */
 
 use App\Libraries\HakAkses;
@@ -28,15 +35,24 @@ use App\Libraries\SuratPeriksa;
 use App\Libraries\SuratSekolah;
 use App\Models\SuratSekolahModel;
 
-[$stLabel, $stKelas] = SuratSekolahModel::TAMPIL_STATUS[$surat['status']] ?? [$surat['status'], 'bg-gray-100 text-gray-600'];
+[$stLabel, $stKelas] = SuratSekolahModel::TAMPIL_STATUS[$surat['status']] ?? [$surat['status'], 'lencana-abu'];
 $id       = (int) $surat['id'];
 $jenis    = (string) $surat['jenis'];
 $status   = (string) $surat['status'];
 $wajibAcc = (int) $surat['perlu_acc'] === 1;
 $bernomor = (string) $surat['nomor'] !== '';
 $adaBahaya = SuratPeriksa::adaBahaya($periksa);
+$kepalaKartu = static fn (string $judul, string $idJudul, string $tambahan = ''): string => '<div class="kartu-kepala"><h3 id="' . $idJudul . '" class="kartu-judul text-base">' . $judul . '</h3>' . $tambahan . '</div>';
+$catatanKunci = static fn (string $html): string => '<div class="peringatan peringatan-netral">' . ikon('lock', 'mt-0.5 h-4 w-4 shrink-0') . '<p>' . $html . '</p></div>';
+$dt = 'text-xs text-gray-500 dark:text-gray-400';
+$dd = 'font-semibold text-gray-900 dark:text-white';
 ?>
 <?= $this->extend('layouts/admin') ?>
+
+<?= $this->section('aksi') ?>
+<a href="<?= site_url('admin/surat') ?>" class="btn btn-netral"><?= ikon('chevron-left', 'h-4 w-4') ?>Daftar Surat</a>
+<?= $this->endSection() ?>
+
 <?= $this->section('content') ?>
 
 <?= view('admin/partials/help', [
@@ -51,241 +67,231 @@ $adaBahaya = SuratPeriksa::adaBahaya($periksa);
         . '</ul>',
 ]) ?>
 
-<div x-data="{ dlg: '' }">
-
-<a href="<?= site_url('admin/surat') ?>" class="rise mb-4 inline-flex items-center gap-1 text-sm font-semibold text-brand-700 hover:underline">← Daftar Surat</a>
-
-<div class="rise mb-5 flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-    <div class="min-w-0">
+<div class="space-y-4">
+    <!-- Kepala surat -->
+    <section class="kartu kartu-isi" aria-labelledby="judul-surat">
         <div class="flex flex-wrap items-center gap-2">
-            <span class="inline-flex rounded-full px-2.5 py-0.5 text-[11px] font-bold <?= esc(SuratJenis::badge($jenis), 'attr') ?>"><?= esc(SuratJenis::label($jenis)) ?></span>
-            <span class="inline-flex rounded-full px-2.5 py-0.5 text-[11px] font-bold <?= esc($stKelas, 'attr') ?>"><?= esc($stLabel) ?></span>
-            <span class="font-mono text-xs font-semibold text-gray-400"><?= esc($kode) ?></span>
+            <span class="lencana <?= esc(SuratJenis::badge($jenis), 'attr') ?>"><?= esc(SuratJenis::label($jenis)) ?></span>
+            <span class="lencana <?= esc($stKelas, 'attr') ?>"><?= esc($stLabel) ?></span>
+            <span class="font-mono text-xs font-semibold text-gray-500 dark:text-gray-400"><?= esc($kode) ?></span>
         </div>
-        <h1 class="mt-2 text-xl font-bold leading-snug text-gray-800"><?= esc($surat['judul']) ?></h1>
-    </div>
-</div>
+        <h2 id="judul-surat" class="mt-2 text-xl font-bold text-gray-900 dark:text-white"><?= esc($surat['judul']) ?></h2>
+    </section>
 
-<?php if ($perluUlang): ?>
-    <p class="rise mb-4 rounded-xl border border-amber-300 bg-amber-50 px-4 py-3 text-sm font-semibold leading-relaxed text-amber-900">⚠ PERLU CETAK ULANG &mdash; data surat atau penanda tangan berubah sejak surat terakhir diunduh. Nomor tetap sama.</p>
-<?php endif; ?>
-<?php if ($status === 'dikembalikan' && (string) $surat['catatan_staf'] !== ''): ?>
-    <p class="rise mb-4 rounded-xl border border-orange-300 bg-orange-50 px-4 py-3 text-sm leading-relaxed text-orange-900"><b>Dikembalikan dengan catatan:</b> <?= esc($surat['catatan_staf']) ?></p>
-<?php endif; ?>
-<?php if ($status === 'dibatalkan'): ?>
-    <p class="rise mb-4 rounded-xl border border-gray-300 bg-gray-100 px-4 py-3 text-sm leading-relaxed text-gray-700"><b>Surat dibatalkan.</b> <?= (string) $surat['catatan_staf'] !== '' ? esc($surat['catatan_staf']) : '' ?><?= $bernomor ? ' Nomor ' . esc($surat['nomor']) . ' tetap tercatat dan tidak dipakai lagi.' : '' ?></p>
-<?php endif; ?>
-<?php foreach ($periksa as $w): $bahaya = $w['tingkat'] === 'bahaya'; ?>
-    <p class="rise mb-3 rounded-xl border px-4 py-3 text-sm font-semibold leading-relaxed <?= $bahaya ? 'border-red-300 bg-red-50 text-red-800' : 'border-amber-300 bg-amber-50 text-amber-900' ?>">⚠ <?= $bahaya ? 'BAHAYA: ' : '' ?><?= esc($w['teks']) ?>
-        <?php if (str_contains($w['teks'], 'Pengaturan PKL') && $bolehPengaturan): ?><a href="<?= site_url('admin/pkl/pengaturan#surat') ?>" class="underline">Isi di Pengaturan PKL</a>, lalu unduh surat lagi (nomor tetap sama).<?php endif; ?></p>
-<?php endforeach; ?>
+    <?php if ($perluUlang): ?>
+        <?= ui_peringatan('awas', '', ['html' => '<b>Perlu cetak ulang</b> &mdash; data surat atau penanda tangan berubah sejak surat terakhir diunduh. Nomor tetap sama.']) ?>
+    <?php endif; ?>
+    <?php if ($status === 'dikembalikan' && (string) $surat['catatan_staf'] !== ''): ?>
+        <?= ui_peringatan('galat', '', ['html' => '<b>Dikembalikan dengan catatan:</b> ' . esc($surat['catatan_staf'])]) ?>
+    <?php endif; ?>
+    <?php if ($status === 'dibatalkan'): ?>
+        <?= ui_peringatan('netral', '', ['html' => '<b>Surat dibatalkan.</b> ' . ((string) $surat['catatan_staf'] !== '' ? esc($surat['catatan_staf']) : '') . ($bernomor ? ' Nomor ' . esc($surat['nomor']) . ' tetap tercatat dan tidak dipakai lagi.' : '')]) ?>
+    <?php endif; ?>
+    <?php foreach ($periksa as $w): $bahaya = $w['tingkat'] === 'bahaya'; ?>
+        <?= ui_peringatan($bahaya ? 'galat' : 'awas', '', ['html' => ($bahaya ? '<b>Bahaya:</b> ' : '') . esc($w['teks'])
+            . (str_contains($w['teks'], 'Pengaturan PKL') && $bolehPengaturan ? ' <a href="' . site_url('admin/pkl/pengaturan#surat') . '" class="font-semibold underline">Isi di Pengaturan PKL</a>, lalu unduh surat lagi (nomor tetap sama).' : '')]) ?>
+    <?php endforeach; ?>
 
-<div class="grid gap-5 lg:grid-cols-[1fr_20rem]">
-    <div class="space-y-5">
-        <!-- Data surat -->
-        <section class="rise rise-1 overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-xs">
-            <h3 class="border-b border-gray-100 bg-gray-50 px-5 py-3 text-xs font-bold uppercase tracking-wide text-gray-500">Data surat</h3>
-            <dl class="grid gap-x-6 gap-y-4 px-5 py-5 text-sm sm:grid-cols-2">
-                <div><dt class="text-xs text-gray-500">Nomor surat</dt><dd class="font-mono font-bold text-gray-800"><?= $bernomor ? esc($surat['nomor']) : '<span class="font-sans font-normal text-gray-400">' . (SuratJenis::bernomor($jenis) ? 'belum diterbitkan' : 'jenis ini tidak bernomor') . '</span>' ?></dd></div>
-                <div><dt class="text-xs text-gray-500">Tanggal surat</dt><dd class="font-semibold text-gray-800"><?= esc(IsianBantu::tanggalIndo((string) $surat['tanggal_surat'])) ?></dd></div>
-                <?php if ((string) $surat['perusahaan_nama'] !== ''): ?>
-                    <div class="sm:col-span-2"><dt class="text-xs text-gray-500">Perusahaan / tujuan</dt><dd class="font-semibold text-gray-800"><?= esc($surat['perusahaan_nama']) ?>
-                        <?php if (! empty($surat['pengajuan_id'])): ?><a href="<?= site_url('admin/pkl/' . (int) $surat['pengajuan_id']) ?>" class="ml-1 text-xs font-semibold text-brand-700 hover:underline">lihat ajuan PKL →</a><?php endif; ?></dd></div>
-                <?php endif; ?>
-                <?php foreach ($ringkasIsi as [$label, $nilai]): ?>
-                    <div><dt class="text-xs text-gray-500"><?= esc($label) ?></dt><dd class="font-semibold text-gray-800"><?= esc($nilai) ?></dd></div>
-                <?php endforeach; ?>
-                <div><dt class="text-xs text-gray-500">Dibuat oleh</dt><dd class="font-semibold text-gray-800"><?= esc((string) $surat['dibuat_nama'] !== '' ? $surat['dibuat_nama'] : '—') ?></dd><dd class="text-xs text-gray-400"><?= esc(date('d-m-Y H:i', strtotime((string) $surat['created_at']))) ?></dd></div>
-            </dl>
-        </section>
-
-        <!-- Siswa -->
-        <?php if ($siswa !== []): ?>
-            <section class="rise rise-2 overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-xs">
-                <h3 class="border-b border-gray-100 bg-gray-50 px-5 py-3 text-xs font-bold uppercase tracking-wide text-gray-500">Siswa pada surat <span class="ml-1 rounded-full bg-gray-200 px-2 py-0.5 text-[11px] text-gray-600"><?= count($siswa) ?></span></h3>
-                <div class="overflow-x-auto">
-                    <table class="w-full min-w-[34rem] text-sm">
-                        <thead class="text-left text-gray-500">
-                            <tr class="border-b border-gray-100">
-                                <th class="w-12 px-5 py-2.5 font-semibold">No</th>
-                                <th class="px-3 py-2.5 font-semibold">Nama</th>
-                                <th class="px-3 py-2.5 font-semibold">NIS</th>
-                                <th class="px-3 py-2.5 font-semibold">Kelas</th>
-                                <th class="px-3 py-2.5 font-semibold">Konsentrasi keahlian</th>
-                                <th class="px-5 py-2.5 font-semibold">HP</th>
-                            </tr>
-                        </thead>
-                        <tbody class="divide-y divide-gray-100">
-                            <?php foreach ($siswa as $i => $a):
-                                $hp = trim((string) ($a['hp'] ?? '')) !== '' ? (string) $a['hp'] : (string) ($a['hp_master'] ?? '');
-                            ?>
-                                <tr>
-                                    <td class="px-5 py-2.5 text-gray-400"><?= $i + 1 ?></td>
-                                    <td class="px-3 py-2.5 font-semibold text-gray-800"><?= esc($a['nama']) ?></td>
-                                    <td class="px-3 py-2.5 font-mono text-xs text-gray-600"><?= esc((string) $a['nis'] !== '' ? $a['nis'] : '—') ?></td>
-                                    <td class="whitespace-nowrap px-3 py-2.5 text-gray-600"><?= esc((string) ($a['nama_kelas'] ?? '') !== '' ? $a['nama_kelas'] : '—') ?></td>
-                                    <td class="px-3 py-2.5 text-gray-600"><?= esc((string) ($a['jurusan_nama'] ?? '') !== '' ? $a['jurusan_nama'] : '—') ?></td>
-                                    <td class="whitespace-nowrap px-5 py-2.5 font-mono text-xs text-gray-600"><?= $hp !== '' ? esc($hp) : '<span class="text-gray-300">—</span>' ?></td>
-                                </tr>
-                            <?php endforeach; ?>
-                        </tbody>
-                    </table>
-                </div>
+    <div class="grid gap-4 lg:grid-cols-[1fr_20rem]">
+        <div class="space-y-4">
+            <!-- Data surat -->
+            <section class="kartu overflow-hidden" aria-labelledby="judul-data-surat">
+                <?= $kepalaKartu('Data surat', 'judul-data-surat') ?>
+                <dl class="kartu-isi grid gap-x-6 gap-y-4 text-sm sm:grid-cols-2">
+                    <div><dt class="<?= $dt ?>">Nomor surat</dt><dd class="font-mono font-bold text-gray-900 dark:text-white"><?= $bernomor ? esc($surat['nomor']) : '<span class="font-sans font-normal text-gray-500 dark:text-gray-400">' . (SuratJenis::bernomor($jenis) ? 'belum diterbitkan' : 'jenis ini tidak bernomor') . '</span>' ?></dd></div>
+                    <div><dt class="<?= $dt ?>">Tanggal surat</dt><dd class="<?= $dd ?>"><?= esc(IsianBantu::tanggalIndo((string) $surat['tanggal_surat'])) ?></dd></div>
+                    <?php if ((string) $surat['perusahaan_nama'] !== ''): ?>
+                        <div class="sm:col-span-2"><dt class="<?= $dt ?>">Perusahaan / tujuan</dt><dd class="<?= $dd ?>"><?= esc($surat['perusahaan_nama']) ?>
+                            <?php if (! empty($surat['pengajuan_id'])): ?><a href="<?= site_url('admin/pkl/' . (int) $surat['pengajuan_id']) ?>" class="ms-1 inline-flex items-center gap-0.5 text-xs font-medium text-brand-700 hover:underline dark:text-brand-400">lihat ajuan PKL<?= ikon('chevron-right', 'h-3 w-3') ?></a><?php endif; ?></dd></div>
+                    <?php endif; ?>
+                    <?php foreach ($ringkasIsi as [$label, $nilai]): ?>
+                        <div><dt class="<?= $dt ?>"><?= esc($label) ?></dt><dd class="<?= $dd ?>"><?= esc($nilai) ?></dd></div>
+                    <?php endforeach; ?>
+                    <div><dt class="<?= $dt ?>">Dibuat oleh</dt><dd class="<?= $dd ?>"><?= esc((string) $surat['dibuat_nama'] !== '' ? $surat['dibuat_nama'] : '—') ?></dd><dd class="<?= $dt ?>"><?= esc(date('d-m-Y H:i', strtotime((string) $surat['created_at']))) ?></dd></div>
+                </dl>
             </section>
-        <?php endif; ?>
-    </div>
 
-    <div class="space-y-5">
-        <!-- Tindakan -->
-        <?php if ($status !== 'dibatalkan'): ?>
-            <section class="rise rise-1 overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-xs">
-                <h3 class="border-b border-gray-100 bg-gray-50 px-5 py-3 text-xs font-bold uppercase tracking-wide text-gray-500">Tindakan</h3>
-                <div class="space-y-3 px-5 py-5 text-sm">
-                    <?php if ($status === 'menunggu'): ?>
-                        <?php if ($bolehAcc): ?>
-                            <button type="button" @click="dlg = 'acc'" class="w-full rounded-xl bg-green-600 px-4 py-2.5 text-sm font-bold text-white transition hover:bg-green-700 active:scale-95">✓ ACC surat ini</button>
-                            <button type="button" @click="dlg = 'kembalikan'" class="w-full rounded-xl border border-amber-300 bg-amber-50 px-4 py-2.5 text-sm font-bold text-amber-800 transition hover:bg-amber-100 active:scale-95">↩ Kembalikan untuk diperbaiki</button>
-                        <?php else: ?>
-                            <p class="rounded-xl border border-gray-200 bg-gray-50 px-3.5 py-3 text-xs leading-relaxed text-gray-600">🔒 Surat ini menunggu <b>ACC</b> dari <?= esc($pemegangAcc ?? 'peran yang berhak') ?>. Akun <?= esc(HakAkses::label($peran)) ?> tidak punya hak ACC jenis surat ini.</p>
-                        <?php endif; ?>
-                    <?php elseif ($status === 'dikembalikan'): ?>
-                        <?php if ($bolehBuat): ?>
-                            <form method="post" action="<?= site_url('admin/surat/' . $id . '/ajukan-ulang') ?>">
-                                <?= csrf_field() ?>
-                                <button type="submit" class="w-full rounded-xl bg-brand-700 px-4 py-2.5 text-sm font-bold text-white transition hover:bg-brand-800 active:scale-95">Ajukan ulang untuk ACC</button>
-                            </form>
-                            <p class="text-xs leading-relaxed text-gray-500">Perbaiki dulu sesuai catatan di atas bila perlu, lalu ajukan ulang. Riwayatnya tercatat.</p>
-                        <?php else: ?>
-                            <p class="rounded-xl border border-gray-200 bg-gray-50 px-3.5 py-3 text-xs leading-relaxed text-gray-600">Menunggu pembuat surat memperbaiki dan mengajukan ulang.</p>
-                        <?php endif; ?>
-                    <?php elseif ($status === 'disetujui'): ?>
-                        <?php if ($bolehUnduh): ?>
-                            <?php if ($templateAda): ?>
-                                <form method="post" action="<?= site_url('admin/surat/' . $id . '/unduh') ?>" data-unduh<?= ! empty($kabarWa) ? ' data-surat-wa="' . $id . '"' : '' ?>>
+            <!-- Siswa -->
+            <?php if ($siswa !== []): ?>
+                <section class="kartu overflow-hidden" aria-labelledby="judul-siswa-surat">
+                    <?= $kepalaKartu('Siswa pada surat', 'judul-siswa-surat', '<span class="lencana lencana-abu">' . count($siswa) . ' siswa</span>') ?>
+                    <div class="tabel-bungkus">
+                        <table class="tabel min-w-[34rem]">
+                            <thead>
+                                <tr>
+                                    <th scope="col" class="w-12">No</th>
+                                    <th scope="col">Nama</th>
+                                    <th scope="col">NIS</th>
+                                    <th scope="col">Kelas</th>
+                                    <th scope="col">Konsentrasi keahlian</th>
+                                    <th scope="col">HP</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <?php foreach ($siswa as $i => $a):
+                                    $hp = trim((string) ($a['hp'] ?? '')) !== '' ? (string) $a['hp'] : (string) ($a['hp_master'] ?? '');
+                                ?>
+                                    <tr>
+                                        <td class="tabular-nums text-gray-500 dark:text-gray-400"><?= $i + 1 ?></td>
+                                        <td class="font-semibold text-gray-900 dark:text-white"><?= esc($a['nama']) ?></td>
+                                        <td class="font-mono text-xs"><?= esc((string) $a['nis'] !== '' ? $a['nis'] : '—') ?></td>
+                                        <td class="whitespace-nowrap"><?= esc((string) ($a['nama_kelas'] ?? '') !== '' ? $a['nama_kelas'] : '—') ?></td>
+                                        <td><?= esc((string) ($a['jurusan_nama'] ?? '') !== '' ? $a['jurusan_nama'] : '—') ?></td>
+                                        <td class="font-mono text-xs whitespace-nowrap"><?= $hp !== '' ? esc($hp) : '<span class="text-gray-400 dark:text-gray-500">—</span>' ?></td>
+                                    </tr>
+                                <?php endforeach; ?>
+                            </tbody>
+                        </table>
+                    </div>
+                </section>
+            <?php endif; ?>
+        </div>
+
+        <div class="space-y-4">
+            <!-- Tindakan -->
+            <?php if ($status !== 'dibatalkan'): ?>
+                <section class="kartu overflow-hidden" aria-labelledby="judul-tindakan">
+                    <?= $kepalaKartu('Tindakan', 'judul-tindakan') ?>
+                    <div class="kartu-isi space-y-3 !p-4 text-sm">
+                        <?php if ($status === 'menunggu'): ?>
+                            <?php if ($bolehAcc): ?>
+                                <button type="button" class="btn btn-sukses w-full" data-buka-dialog="surat-acc"><?= ikon('check', 'h-4 w-4') ?>ACC surat ini</button>
+                                <button type="button" class="btn btn-utama w-full" data-buka-dialog="surat-kembalikan"><?= ikon('file-pen', 'h-4 w-4') ?>Kembalikan untuk diperbaiki</button>
+                            <?php else: ?>
+                                <?= $catatanKunci('Surat ini menunggu <b>ACC</b> dari ' . esc($pemegangAcc ?? 'peran yang berhak') . '. Akun ' . esc(HakAkses::label($peran)) . ' tidak punya hak ACC jenis surat ini.') ?>
+                            <?php endif; ?>
+                        <?php elseif ($status === 'dikembalikan'): ?>
+                            <?php if ($bolehBuat): ?>
+                                <form method="post" action="<?= site_url('admin/surat/' . $id . '/ajukan-ulang') ?>">
                                     <?= csrf_field() ?>
-                                    <button type="submit" class="w-full rounded-xl bg-brand-700 px-4 py-2.5 text-sm font-bold text-white transition hover:bg-brand-800 active:scale-95">⬇ <?= (int) $surat['cetak_ke'] > 0 ? 'Unduh ulang surat (Word)' : 'Unduh surat (Word)' ?></button>
+                                    <button type="submit" class="btn btn-utama w-full"><?= ikon('arrow-right-to-bracket', 'h-4 w-4') ?>Ajukan ulang untuk ACC</button>
                                 </form>
-                                <p class="text-xs leading-relaxed text-gray-500"><?= $bernomor || ! SuratJenis::bernomor($jenis) ? 'Unduh ulang memakai nomor yang sama.' : 'Nomor surat diterbitkan sekali, saat surat pertama diunduh.' ?></p>
-                                <?php if (! empty($kabarWa)): $hw = $hitungWa ?? ['total' => 0, 'dikabari' => 0]; ?>
-                                    <?php if ((int) $surat['cetak_ke'] > 0): ?>
-                                        <button type="button" @click="window.dispatchEvent(new CustomEvent('surat-wa', { detail: { id: <?= $id ?> } }))"
-                                                class="w-full rounded-xl border border-green-300 bg-white px-4 py-2.5 text-sm font-bold text-green-700 transition hover:bg-green-50 active:scale-95">Kabari siswa via WhatsApp</button>
-                                        <p class="text-xs leading-relaxed <?= $hw['dikabari'] >= $hw['total'] && $hw['total'] > 0 ? 'font-semibold text-green-700' : 'text-gray-500' ?>">
-                                            <?= $hw['dikabari'] >= $hw['total'] && $hw['total'] > 0 ? '✓ Semua siswa (' . $hw['total'] . ') sudah dikabari surat ini siap diambil.' : 'Sudah dikabari: ' . $hw['dikabari'] . ' dari ' . $hw['total'] . ' siswa. Pesan: surat siap diambil di Tata Usaha.' ?>
-                                        </p>
-                                    <?php else: ?>
-                                        <p class="text-xs leading-relaxed text-gray-500">Setelah surat diunduh, siswa bisa dikabari lewat WhatsApp bahwa suratnya siap diambil.</p>
+                                <p class="text-xs text-gray-500 dark:text-gray-400">Perbaiki dulu sesuai catatan di atas bila perlu, lalu ajukan ulang. Riwayatnya tercatat.</p>
+                            <?php else: ?>
+                                <?= ui_peringatan('netral', 'Menunggu pembuat surat memperbaiki dan mengajukan ulang.') ?>
+                            <?php endif; ?>
+                        <?php elseif ($status === 'disetujui'): ?>
+                            <?php if ($bolehUnduh): ?>
+                                <?php if ($templateAda): ?>
+                                    <form method="post" action="<?= site_url('admin/surat/' . $id . '/unduh') ?>" data-unduh<?= ! empty($kabarWa) ? ' data-surat-wa="' . $id . '"' : '' ?>>
+                                        <?= csrf_field() ?>
+                                        <button type="submit" class="btn btn-utama w-full"><?= ikon('download', 'h-4 w-4') ?><?= (int) $surat['cetak_ke'] > 0 ? 'Unduh ulang surat (Word)' : 'Unduh surat (Word)' ?></button>
+                                    </form>
+                                    <p class="text-xs text-gray-500 dark:text-gray-400"><?= $bernomor || ! SuratJenis::bernomor($jenis) ? 'Unduh ulang memakai nomor yang sama.' : 'Nomor surat diterbitkan sekali, saat surat pertama diunduh.' ?></p>
+                                    <?php if (! empty($kabarWa)): $hw = $hitungWa ?? ['total' => 0, 'dikabari' => 0]; $semuaKabar = $hw['dikabari'] >= $hw['total'] && $hw['total'] > 0; ?>
+                                        <?php if ((int) $surat['cetak_ke'] > 0): ?>
+                                            <button type="button" class="btn btn-sukses w-full" data-kabari-surat="<?= $id ?>"><?= ikon('whatsapp', 'h-4 w-4', 'solid') ?>Kabari siswa via WhatsApp</button>
+                                            <p class="flex items-start gap-1 text-xs <?= $semuaKabar ? 'font-semibold text-green-700 dark:text-green-400' : 'text-gray-500 dark:text-gray-400' ?>">
+                                                <?= $semuaKabar ? ikon('check', 'mt-0.5 h-3.5 w-3.5 shrink-0') . 'Semua siswa (' . $hw['total'] . ') sudah dikabari surat ini siap diambil.' : 'Sudah dikabari: ' . $hw['dikabari'] . ' dari ' . $hw['total'] . ' siswa. Pesan: surat siap diambil di Tata Usaha.' ?>
+                                            </p>
+                                        <?php else: ?>
+                                            <p class="text-xs text-gray-500 dark:text-gray-400">Setelah surat diunduh, siswa bisa dikabari lewat WhatsApp bahwa suratnya siap diambil.</p>
+                                        <?php endif; ?>
                                     <?php endif; ?>
+                                <?php else: ?>
+                                    <?= ui_peringatan('netral', 'Template Word untuk ' . SuratJenis::label($jenis) . ' belum tersedia, jadi surat ini belum bisa diunduh.') ?>
                                 <?php endif; ?>
                             <?php else: ?>
-                                <p class="rounded-xl border border-gray-200 bg-gray-50 px-3.5 py-3 text-xs leading-relaxed text-gray-600">Template Word untuk <?= esc(SuratJenis::label($jenis)) ?> belum tersedia, jadi surat ini belum bisa diunduh.</p>
+                                <?= $catatanKunci('Surat ini diunduh oleh ' . esc($pemegangUnduh ?? 'peran yang berhak') . ' (diatur Admin di Sistem → Hak Akses).') ?>
                             <?php endif; ?>
-                        <?php else: ?>
-                            <p class="rounded-xl border border-gray-200 bg-gray-50 px-3.5 py-3 text-xs leading-relaxed text-gray-600">🔒 Surat ini diunduh oleh <?= esc($pemegangUnduh ?? 'peran yang berhak') ?> (diatur Admin di Sistem → Hak Akses).</p>
+                            <?php if ($bisaBatalAcc && $bolehAcc): ?>
+                                <button type="button" class="btn btn-netral btn-sm w-full text-red-700 dark:text-red-400" data-buka-dialog="surat-batalacc"><?= ikon('close-circle', 'h-4 w-4') ?>Batalkan persetujuan</button>
+                            <?php endif; ?>
                         <?php endif; ?>
-                        <?php if ($bisaBatalAcc && $bolehAcc): ?>
-                            <button type="button" @click="dlg = 'batalacc'" class="w-full rounded-xl border border-amber-300 bg-white px-4 py-2 text-xs font-bold text-amber-800 transition hover:bg-amber-50">Batalkan persetujuan</button>
+                        <?php if ($bolehBuat && $alamatUbah !== ''): ?>
+                            <a href="<?= esc($alamatUbah, 'attr') ?>" class="btn btn-netral btn-sm w-full"><?= ikon('edit', 'h-4 w-4') ?>Ubah data surat</a>
                         <?php endif; ?>
+                        <?php if ($bolehBuat): ?>
+                            <button type="button" class="btn btn-teks btn-sm w-full text-red-600 hover:bg-red-50 dark:text-red-400 dark:hover:bg-gray-700" data-buka-dialog="surat-batal"><?= ikon('trash-bin', 'h-4 w-4') ?>Batalkan surat</button>
+                        <?php endif; ?>
+                    </div>
+                </section>
+            <?php endif; ?>
+
+            <!-- Status & ACC -->
+            <section class="kartu overflow-hidden" aria-labelledby="judul-persetujuan">
+                <?= $kepalaKartu('Persetujuan &amp; unduhan', 'judul-persetujuan') ?>
+                <div class="kartu-isi space-y-4 !p-4 text-sm">
+                    <div>
+                        <p class="<?= $dt ?>">Aturan jenis ini</p>
+                        <p class="<?= $dd ?>"><?= $wajibAcc ? 'Wajib ACC sebelum diunduh' : 'Tanpa ACC (langsung siap unduh)' ?></p>
+                    </div>
+                    <?php if (! empty($surat['acc_at'])): ?>
+                        <div>
+                            <p class="<?= $dt ?>">Disetujui oleh</p>
+                            <p class="<?= $dd ?>"><?= esc((string) $surat['acc_nama']) ?></p>
+                            <p class="<?= $dt ?>"><?= esc(HakAkses::label((string) $surat['acc_peran'])) ?> · <?= esc(PklSurat::waktuIndo((string) $surat['acc_at'])) ?></p>
+                            <?php if ((string) $surat['acc_kode'] !== ''): ?><p class="mt-1 font-mono text-xs font-semibold text-gray-700 dark:text-gray-300"><?= esc($surat['acc_kode']) ?></p><?php endif; ?>
+                        </div>
+                    <?php elseif ($status === 'menunggu'): ?>
+                        <?= ui_peringatan('awas', 'Menunggu persetujuan' . ((string) $surat['diajukan_at'] !== '' ? ' sejak ' . date('d-m-Y H:i', strtotime((string) $surat['diajukan_at'])) : '') . '.') ?>
                     <?php endif; ?>
-                    <?php if ($bolehBuat && $alamatUbah !== ''): ?>
-                        <a href="<?= esc($alamatUbah, 'attr') ?>" class="block w-full rounded-xl border border-gray-300 bg-white px-4 py-2 text-center text-xs font-bold text-gray-700 transition hover:bg-gray-50">✎ Ubah data surat</a>
-                    <?php endif; ?>
-                    <?php if ($bolehBuat): ?>
-                        <button type="button" @click="dlg = 'batal'" class="w-full rounded-xl border border-gray-200 bg-white px-4 py-2 text-xs font-semibold text-gray-500 transition hover:border-red-300 hover:bg-red-50 hover:text-red-700">Batalkan surat</button>
-                    <?php endif; ?>
+                    <div>
+                        <p class="<?= $dt ?>">Diunduh</p>
+                        <p class="<?= $dd ?>"><?= (int) $surat['cetak_ke'] > 0 ? (int) $surat['cetak_ke'] . ' kali' : 'belum pernah' ?></p>
+                        <?php if (! empty($surat['terakhir_cetak_at'])): ?><p class="<?= $dt ?>">terakhir <?= esc(date('d-m-Y H:i', strtotime((string) $surat['terakhir_cetak_at']))) ?></p><?php endif; ?>
+                    </div>
                 </div>
             </section>
-        <?php endif; ?>
 
-        <!-- Status & ACC -->
-        <section class="rise rise-1 overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-xs">
-            <h3 class="border-b border-gray-100 bg-gray-50 px-5 py-3 text-xs font-bold uppercase tracking-wide text-gray-500">Persetujuan &amp; unduhan</h3>
-            <div class="space-y-4 px-5 py-5 text-sm">
-                <div>
-                    <p class="text-xs text-gray-500">Aturan jenis ini</p>
-                    <p class="font-semibold text-gray-800"><?= $wajibAcc ? 'Wajib ACC sebelum diunduh' : 'Tanpa ACC (langsung siap unduh)' ?></p>
-                </div>
-                <?php if (! empty($surat['acc_at'])): ?>
-                    <div>
-                        <p class="text-xs text-gray-500">Disetujui oleh</p>
-                        <p class="font-semibold text-gray-800"><?= esc((string) $surat['acc_nama']) ?></p>
-                        <p class="text-xs text-gray-500"><?= esc(HakAkses::label((string) $surat['acc_peran'])) ?></p>
-                        <p class="text-xs text-gray-400"><?= esc(PklSurat::waktuIndo((string) $surat['acc_at'])) ?></p>
-                        <?php if ((string) $surat['acc_kode'] !== ''): ?><p class="mt-1 font-mono text-xs font-semibold text-gray-600"><?= esc($surat['acc_kode']) ?></p><?php endif; ?>
-                    </div>
-                <?php elseif ($status === 'menunggu'): ?>
-                    <p class="rounded-lg bg-amber-50 px-3 py-2 text-xs font-semibold leading-relaxed text-amber-800">Menunggu persetujuan<?= (string) $surat['diajukan_at'] !== '' ? ' sejak ' . esc(date('d-m-Y H:i', strtotime((string) $surat['diajukan_at']))) : '' ?>.</p>
+            <!-- Riwayat -->
+            <section class="kartu overflow-hidden" aria-labelledby="judul-riwayat-surat">
+                <?= $kepalaKartu('Riwayat', 'judul-riwayat-surat') ?>
+                <?php if ($riwayat === []): ?>
+                    <p class="px-4 py-5 text-center text-sm text-gray-500 dark:text-gray-400">Belum ada riwayat.</p>
+                <?php else: ?>
+                    <ol class="divide-y divide-gray-200 dark:divide-gray-700">
+                        <?php foreach ($riwayat as $h): ?>
+                            <li class="px-4 py-3 text-sm">
+                                <p class="font-semibold text-gray-900 dark:text-white"><?= esc(SuratSekolah::AKSI[$h['aksi']] ?? $h['aksi']) ?></p>
+                                <?php if ((string) $h['catatan'] !== ''): ?><p class="text-xs text-gray-600 dark:text-gray-300"><?= esc($h['catatan']) ?></p><?php endif; ?>
+                                <p class="mt-0.5 text-xs text-gray-500 dark:text-gray-400"><?= esc($h['oleh']) ?><?= (string) $h['peran'] !== '' ? ' (' . esc(HakAkses::label((string) $h['peran'])) . ')' : '' ?> · <?= esc(date('d-m-Y H:i', strtotime((string) $h['created_at']))) ?></p>
+                            </li>
+                        <?php endforeach; ?>
+                    </ol>
                 <?php endif; ?>
-                <div>
-                    <p class="text-xs text-gray-500">Diunduh</p>
-                    <p class="font-semibold text-gray-800"><?= (int) $surat['cetak_ke'] > 0 ? (int) $surat['cetak_ke'] . ' kali' : 'belum pernah' ?></p>
-                    <?php if (! empty($surat['terakhir_cetak_at'])): ?><p class="text-xs text-gray-400">terakhir <?= esc(date('d-m-Y H:i', strtotime((string) $surat['terakhir_cetak_at']))) ?></p><?php endif; ?>
-                </div>
-            </div>
-        </section>
-
-        <!-- Riwayat -->
-        <section class="rise rise-2 overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-xs">
-            <h3 class="border-b border-gray-100 bg-gray-50 px-5 py-3 text-xs font-bold uppercase tracking-wide text-gray-500">Riwayat</h3>
-            <?php if ($riwayat === []): ?>
-                <p class="px-5 py-5 text-center text-sm text-gray-400">Belum ada riwayat.</p>
-            <?php else: ?>
-                <ol class="divide-y divide-gray-100">
-                    <?php foreach ($riwayat as $h): ?>
-                        <li class="px-5 py-3 text-sm">
-                            <p class="font-semibold text-gray-800"><?= esc(SuratSekolah::AKSI[$h['aksi']] ?? $h['aksi']) ?></p>
-                            <?php if ((string) $h['catatan'] !== ''): ?><p class="text-xs leading-relaxed text-gray-500"><?= esc($h['catatan']) ?></p><?php endif; ?>
-                            <p class="mt-0.5 text-xs text-gray-400"><?= esc($h['oleh']) ?><?= (string) $h['peran'] !== '' ? ' (' . esc(HakAkses::label((string) $h['peran'])) . ')' : '' ?> · <?= esc(date('d-m-Y H:i', strtotime((string) $h['created_at']))) ?></p>
-                        </li>
-                    <?php endforeach; ?>
-                </ol>
-            <?php endif; ?>
-        </section>
+            </section>
+        </div>
     </div>
 </div>
 
-<!-- ============ Dialog-dialog keputusan ============ -->
+<!-- ============ Dialog-dialog keputusan (dialog kit, dibuka tombol data-buka-dialog) ============ -->
 <?php
-$dialog = static function (string $kunci, string $judul, string $aksiUrl, string $isi, string $tombol, string $warnaTombol) use ($id): void {
-    echo '<div x-show="dlg === \'' . $kunci . '\'" x-cloak x-transition.opacity.duration.150ms class="fixed inset-0 z-50 flex items-end justify-center sm:items-center sm:p-4" role="dialog" aria-modal="true">'
-        . '<div class="absolute inset-0 bg-gray-900/50" @click="dlg = \'\'"></div>'
-        . '<form method="post" action="' . esc(site_url('admin/surat/' . $id . '/' . $aksiUrl), 'attr') . '" class="relative max-h-[92vh] w-full overflow-y-auto rounded-t-2xl bg-white shadow-2xl sm:max-w-lg sm:rounded-2xl">'
-        . csrf_field()
-        . '<div class="border-b border-gray-100 px-5 py-4"><h3 class="text-lg font-bold text-gray-800">' . $judul . '</h3></div>'
-        . '<div class="space-y-4 p-5 text-sm text-gray-600">' . $isi . '</div>'
-        . '<div class="flex flex-col-reverse gap-2 border-t border-gray-100 px-5 py-4 sm:flex-row sm:justify-end">'
-        . '<button type="button" @click="dlg = \'\'" class="rounded-xl border border-gray-300 px-5 py-2.5 text-sm font-semibold text-gray-600 transition hover:bg-gray-50">Batal</button>'
-        . '<button type="submit" class="rounded-xl px-5 py-2.5 text-sm font-bold text-white transition active:scale-95 ' . $warnaTombol . '">' . $tombol . '</button>'
-        . '</div></form></div>';
+$dialog = static function (string $nama, string $judul, string $aksiUrl, string $isi, string $tombol, string $kelasTombol) use ($id): string {
+    return ui_dialog_buka(['nama' => 'surat-' . $nama, 'judul' => $judul])
+        . '<form method="post" action="' . esc(site_url('admin/surat/' . $id . '/' . $aksiUrl), 'attr') . '">' . csrf_field()
+        . '<div class="dialog-isi text-sm text-gray-600 dark:text-gray-300">' . $isi . '</div>'
+        . '<div class="dialog-kaki"><button type="button" class="btn btn-netral" @click="tutup()">Batal</button>'
+        . '<button type="submit" class="btn ' . $kelasTombol . '">' . $tombol . '</button></div></form>'
+        . ui_dialog_tutup();
 };
-$kotakAlasan = static fn (string $ph, string $untuk): string => '<div><label class="lbl" for="alasan_' . $untuk . '">Alasan <span class="text-red-500">*</span></label>'
+$kotakAlasan = static fn (string $ph, string $untuk): string => '<div><label class="lbl" for="alasan_' . $untuk . '">Alasan <span class="text-red-600">*</span></label>'
     . '<textarea id="alasan_' . $untuk . '" name="catatan" rows="3" required minlength="5" maxlength="255" class="inp" placeholder="' . esc($ph, 'attr') . '"></textarea>'
-    . '<p class="mt-1 text-xs text-gray-400">Minimal 5 huruf. Tercatat di riwayat surat.</p></div>';
+    . '<p class="hint">Minimal 5 huruf. Tercatat di riwayat surat.</p></div>';
 
 if ($status === 'menunggu' && $bolehAcc) {
     $isiAcc = '<p>Surat <b>' . esc($kode) . '</b> — ' . esc($surat['judul']) . ' akan disetujui dan siap diunduh oleh yang berhak (nomor surat terbit saat pertama diunduh).</p>';
     if ($adaBahaya) {
-        $isiAcc .= '<label class="flex cursor-pointer items-start gap-2 rounded-xl border border-red-300 bg-red-50 p-3 text-red-800"><input type="checkbox" name="paham" value="1" required class="mt-0.5"><span class="text-sm font-semibold">Ada peringatan BAHAYA di halaman ini. Saya sudah memeriksanya dan tetap ingin meng-ACC.</span></label>';
+        $isiAcc .= '<label class="flex cursor-pointer items-start gap-2 rounded-lg border border-red-300 bg-red-50 p-3 text-red-800 dark:border-red-800 dark:bg-gray-700 dark:text-red-400"><input type="checkbox" name="paham" value="1" required class="cek mt-0.5"><span class="text-sm font-semibold">Ada peringatan BAHAYA di halaman ini. Saya sudah memeriksanya dan tetap ingin meng-ACC.</span></label>';
     }
-    $isiAcc .= '<p class="rounded-xl border border-gray-200 bg-gray-50 px-4 py-2.5 text-xs leading-relaxed text-gray-600">Persetujuan ini akan <b>tercatat atas nama ' . esc($namaSaya) . '</b> (' . esc(HakAkses::label($peran)) . ') lengkap dengan tanggal &amp; jam, dan tercetak di kaki surat.</p>';
-    $dialog('acc', 'ACC surat ' . esc($kode) . '?', 'acc', $isiAcc, '✓ Ya, ACC', 'bg-green-600 hover:bg-green-700');
-    $dialog('kembalikan', 'Kembalikan untuk diperbaiki', 'kembalikan',
+    $isiAcc .= ui_peringatan('netral', '', ['html' => 'Persetujuan ini akan <b>tercatat atas nama ' . esc($namaSaya) . '</b> (' . esc(HakAkses::label($peran)) . ') lengkap dengan tanggal &amp; jam, dan tercetak di kaki surat.']);
+    echo $dialog('acc', 'ACC surat ' . $kode . '?', 'acc', $isiAcc, ikon('check', 'h-4 w-4') . 'Ya, ACC', 'btn-sukses');
+    echo $dialog('kembalikan', 'Kembalikan untuk diperbaiki', 'kembalikan',
         '<p>Surat kembali ke pembuatnya untuk diperbaiki, lalu diajukan ulang kepada Anda.</p>' . $kotakAlasan('Contoh: Tanggal pelaksanaan belum sesuai kalender ujian.', 'kembalikan'),
-        '↩ Kembalikan', 'bg-amber-500 hover:bg-amber-600');
+        ikon('file-pen', 'h-4 w-4') . 'Kembalikan', 'btn-utama');
 }
 if ($status === 'disetujui' && $bisaBatalAcc && $bolehAcc) {
-    $dialog('batalacc', 'Batalkan persetujuan ' . esc($kode), 'batal-acc',
-        '<p class="rounded-xl border border-amber-200 bg-amber-50 px-4 py-2.5 text-amber-900">Surat kembali ke status <b>Dikembalikan</b> supaya diperbaiki, lalu perlu di-ACC lagi. Hanya bisa selama surat belum bernomor dan belum diunduh.</p>' . $kotakAlasan('Contoh: Ada siswa yang salah masuk daftar.', 'batalacc'),
-        'Ya, batalkan persetujuan', 'bg-amber-500 hover:bg-amber-600');
+    echo $dialog('batalacc', 'Batalkan persetujuan ' . $kode, 'batal-acc',
+        ui_peringatan('awas', '', ['html' => 'Surat kembali ke status <b>Dikembalikan</b> supaya diperbaiki, lalu perlu di-ACC lagi. Hanya bisa selama surat belum bernomor dan belum diunduh.'])
+            . $kotakAlasan('Contoh: Ada siswa yang salah masuk daftar.', 'batalacc'),
+        'Ya, batalkan persetujuan', 'btn-bahaya');
 }
 if ($bolehBuat && in_array($status, ['menunggu', 'dikembalikan', 'disetujui'], true)) {
-    $dialog('batal', 'Batalkan surat ' . esc($kode) . '?', 'batal',
+    echo $dialog('batal', 'Batalkan surat ' . $kode . '?', 'batal',
         '<p>Surat ini <b>tidak jadi dipakai</b> dan tidak bisa diunduh lagi.' . ($bernomor ? ' Nomor <b>' . esc($surat['nomor']) . '</b> tetap tercatat dan tidak dipakai lagi.' : '') . ' Jejaknya tetap ada di riwayat dan Daftar Surat.</p>' . $kotakAlasan('Contoh: Dibuat dua kali, dipakai surat yang satunya.', 'batal'),
-        'Ya, batalkan surat', 'bg-red-600 hover:bg-red-700');
+        ikon('trash-bin', 'h-4 w-4') . 'Ya, batalkan surat', 'btn-bahaya');
 }
 ?>
-
-</div>
 
 <?php if (! empty($kabarWa)): ?><?= view('admin/surat/_wa') ?><?php endif; ?>
 
