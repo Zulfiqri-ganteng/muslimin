@@ -1,23 +1,23 @@
 <?php
 /**
- * Lencana status PKL. Kelas ditulis utuh agar terbaca Tailwind.
+ * Lencana status PKL — kelas lencana kit (rombak tampilan F9; dulu warna amber/teal/emerald/fuchsia buatan sendiri).
  *
  * @var string $kode     menunggu | perbaikan | disetujui | ditolak | belum | belum_mulai | sedang | selesai
  * @var bool   $siswa    (opsional) label gaya "Status Siswa" (mis. ditolak = perlu ajukan ulang)
  */
 $peta = [
-    'menunggu'    => ['Menunggu ACC', 'bg-brand-100 text-brand-700'],
-    'perbaikan'   => ['Perlu perbaikan', 'bg-amber-100 text-amber-800'],
-    'disetujui'   => ['Disetujui', 'bg-green-100 text-green-700'],
-    'ditolak'     => ['Ditolak', 'bg-red-100 text-red-700'],
-    'belum'       => ['Belum mengisi', 'bg-gray-200 text-gray-600'],
-    'belum_mulai' => ['Disetujui · belum mulai', 'bg-teal-100 text-teal-700'],
-    'sedang'      => ['Sedang PKL', 'bg-emerald-100 text-emerald-700'],
-    'selesai'     => ['Selesai PKL', 'bg-fuchsia-100 text-fuchsia-700'],
+    'menunggu'    => ['Menunggu ACC', 'lencana-merek'],
+    'perbaikan'   => ['Perlu perbaikan', 'lencana-kuning'],
+    'disetujui'   => ['Disetujui', 'lencana-hijau'],
+    'ditolak'     => ['Ditolak', 'lencana-merah'],
+    'belum'       => ['Belum mengisi', 'lencana-abu'],
+    'belum_mulai' => ['Disetujui · belum mulai', 'lencana-biru'],
+    'sedang'      => ['Sedang PKL', 'lencana-hijau'],
+    'selesai'     => ['Selesai PKL', 'lencana-ungu'],
 ];
-[$label, $warna] = $peta[$kode] ?? [ucfirst((string) $kode), 'bg-gray-100 text-gray-600'];
+[$label, $warna] = $peta[$kode] ?? [ucfirst((string) $kode), 'lencana-abu'];
 if (($siswa ?? false) && $kode === 'ditolak') {
     $label = 'Ditolak · perlu ajukan ulang';
 }
 ?>
-<span class="inline-flex items-center whitespace-nowrap rounded-full px-2.5 py-0.5 text-xs font-semibold <?= $warna ?>"><?= esc($label) ?></span>
+<span class="lencana <?= $warna ?> whitespace-nowrap"><?= esc($label) ?></span>

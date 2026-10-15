@@ -302,7 +302,8 @@
 
   /* ---- (F6) Tombol saring berbentuk pil (mis. jurusan): <button class="tombol-saring" :aria-pressed="…">TKJ</button> ---- */
   .tombol-saring { @apply rounded-full border border-gray-300 bg-white px-3 py-1 text-xs font-medium text-gray-700 transition-colors hover:bg-gray-100 focus:outline-hidden focus-visible:ring-2 focus-visible:ring-brand-300 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700; }
-  .tombol-saring[aria-pressed='true'] { @apply border-brand-700 bg-brand-700 text-white hover:bg-brand-800 dark:border-brand-600 dark:bg-brand-600; }
+  /* (F9) Tautan saringan (<a class="tombol-saring" aria-current="true">) memakai gaya aktif yang sama. */
+  .tombol-saring[aria-pressed='true'], .tombol-saring[aria-current='true'] { @apply border-brand-700 bg-brand-700 text-white hover:bg-brand-800 dark:border-brand-600 dark:bg-brand-600; }
 
   /* ---- (F8) Isian "Kendala" (Jurnal Lab) tampil hanya saat opsi "Ada kendala" dipilih — CSS :has(), tanpa JS (siap CSP).
      Jangan beri kelas utilitas hidden/block pada elemennya: lapisan utilities selalu menang atas aturan di sini. ---- */

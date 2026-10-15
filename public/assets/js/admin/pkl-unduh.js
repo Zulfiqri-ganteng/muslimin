@@ -14,6 +14,12 @@
  *              unduhan selesai (event 'pkl:unduh-selesai' dari app.js) HANYA bila masih ada siswa ber-nomor HP yang
  *              belum dikabari; selain itu halaman langsung dimuat ulang. Bisa juga lewat event 'pkl-wa' {detail: {ids: [..]}}.
  *
+ * (F9) Tombol pemicu di halaman tanpa JS sebaris (siap CSP) — atribut data, ditangkap delegasi klik di bawah:
+ *   data-pkl-unduh="terpilih|belum|semua"            → kotak catat biaya untuk unduh massal
+ *   data-pkl-unduh-ajuan="12" (+ data-pkl-unduh-paksa) → satu ajuan ("Catat biaya lain" = paksa)
+ *   data-pkl-wa-ajuan="12"                            → kotak WhatsApp untuk satu ajuan
+ *   data-pkl-wa-terpilih                               → kotak WhatsApp untuk ajuan yang dicentang (input[name="ids[]"])
+ *
  * Konfigurasi dari atribut data-config pada elemen akar (lihat views/admin/pkl/_unduh.php).
  */
 (function () {
@@ -53,6 +59,30 @@
                     .then(function (j) { j._status = r.status; return j; });
             });
     }
+
+    // (F9) Delegasi tombol pemicu (pengganti onclick="window.dispatchEvent(…)").
+    document.addEventListener('click', function (e) {
+        var b = e.target && e.target.closest ? e.target.closest('[data-pkl-unduh], [data-pkl-unduh-ajuan], [data-pkl-wa-ajuan], [data-pkl-wa-terpilih]') : null;
+        if (!b) { return; }
+        if (b.hasAttribute('data-pkl-unduh-ajuan')) {
+            var d = { ajuan: parseInt(b.getAttribute('data-pkl-unduh-ajuan'), 10) };
+            if (b.hasAttribute('data-pkl-unduh-paksa')) { d.paksa = true; }
+            window.dispatchEvent(new CustomEvent('pkl-unduh', { detail: d }));
+        } else if (b.hasAttribute('data-pkl-unduh')) {
+            window.dispatchEvent(new CustomEvent('pkl-unduh', { detail: { mode: b.getAttribute('data-pkl-unduh') } }));
+        } else if (b.hasAttribute('data-pkl-wa-ajuan')) {
+            window.dispatchEvent(new CustomEvent('pkl-wa', { detail: { ids: [b.getAttribute('data-pkl-wa-ajuan')] } }));
+        } else {
+            // Kotak centang tabel (layar lebar) & kartu (HP) bernama sama → ambil yang dicentang, tanpa ganda.
+            var ids = Array.prototype.map.call(document.querySelectorAll('input[name="ids[]"]:checked'), function (c) { return c.value; })
+                .filter(function (v, i, a) { return a.indexOf(v) === i; });
+            if (!ids.length) {
+                if (window.Ui) { window.Ui.toast('Centang dulu ajuan yang siswanya mau dikabari.', 'awas'); }
+                return;
+            }
+            window.dispatchEvent(new CustomEvent('pkl-wa', { detail: { ids: ids } }));
+        }
+    });
 
     document.addEventListener('alpine:init', function () {
 
@@ -166,7 +196,8 @@
                 },
 
                 // ---------- bantu tampilan ----------
-                rupiah: rupiah,
+                // (F9) nama metode beda dari fungsi rupiah() di atas — dev:cek-ui menolak isian yang mirip panggilan fungsi global.
+                teksRupiah: rupiah,
                 labelBulan: labelBulan,
 
                 // 12 bulan ke belakang s/d 2 bulan ke depan — diperpanjang (maks. 12) agar saran tiap siswa selalu ada.

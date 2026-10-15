@@ -1,6 +1,8 @@
 <?php
 /**
- * Status Siswa — siapa sudah/belum mengisi, siapa sudah/belum PKL.
+ * Status Siswa — siapa sudah/belum mengisi, siapa sudah/belum PKL. Rombak tampilan F9: tab kit (_nav), kartu angka kit
+ * (kartu-tautan), rincian status = tautan .tombol-saring (aktif: aria-current), kartu kit dengan bilah cari & saringan langsung,
+ * Unduh Excel ber-ikon, tabel kit (layar lebar) + kartu (HP), lencana status kit (_lencana), ui_peringatan / ui_kosong.
  *
  * @var array<string,int|float> $ringkas
  * @var list<array>             $rows
@@ -12,6 +14,7 @@
  * @var list<string>            $tingkat
  * @var int                     $page
  * @var int                     $jmlHal
+ * Bersama dari PklDasar::dasar(): $tab, $hitungTab, $bolehPengaturan, …
  */
 
 use App\Libraries\IsianBantu;
@@ -36,6 +39,8 @@ $opsiFase = [
     'sedang'        => '— Sedang PKL',
     'selesai'       => '— Selesai PKL',
 ];
+$adaSaring = $q !== '' || $kelasId > 0 || $fase !== '';
+$urlExcel  = site_url('admin/pkl/siswa/excel') . '?' . http_build_query(array_filter(['q' => $q, 'kelas_id' => $kelasId ?: null, 'fase' => $fase]));
 ?>
 <?= $this->extend('layouts/admin') ?>
 <?= $this->section('content') ?>
@@ -53,108 +58,115 @@ $opsiFase = [
 
 <?= view('admin/pkl/_nav', ['tab' => $tab, 'hitungTab' => $hitungTab]) ?>
 
-<?php if ($tingkat === []): ?>
-    <div class="mb-5 rounded-2xl border border-amber-200 bg-amber-50 px-5 py-4 text-sm text-amber-900">
-        <b>Tingkat yang boleh mengajukan belum diatur</b>, jadi belum ada siswa yang dihitung.
-        <?php if ($bolehPengaturan): ?><a href="<?= site_url('admin/pkl/pengaturan') ?>" class="font-bold underline">Atur di Pengaturan PKL</a>.<?php endif; ?>
-    </div>
-<?php endif; ?>
-
-<!-- Empat angka utama -->
-<div class="mb-4 grid grid-cols-2 gap-3 lg:grid-cols-4">
-    <?php foreach ([
-        ['Sudah mengisi', $ringkas['sudah_isi'], 'text-brand-700', 'sudah_mengisi', $ringkas['persen_isi'] . '% dari ' . $ringkas['total']],
-        ['Belum mengisi', $ringkas['belum_isi'], 'text-gray-700', 'belum_mengisi', 'belum + ditolak'],
-        ['Sudah PKL', $ringkas['sudah_pkl'], 'text-green-600', 'sudah_pkl', $ringkas['persen_pkl'] . '% (sudah disetujui)'],
-        ['Belum PKL', $ringkas['belum_pkl'], 'text-amber-600', '', 'belum dapat tempat'],
-    ] as [$label, $nilai, $warna, $saring, $ket]): ?>
-        <a href="<?= $saring !== '' ? esc($urlSaring(['fase' => $saring]), 'attr') : esc($urlSaring([]), 'attr') ?>" class="rounded-2xl border border-gray-200 bg-white px-4 py-3.5 shadow-xs transition hover:border-brand-300 hover:shadow-sm">
-            <p class="text-xs font-semibold text-gray-400"><?= esc($label) ?></p>
-            <p class="mt-1 text-3xl font-extrabold <?= $warna ?>"><?= (int) $nilai ?></p>
-            <p class="mt-0.5 text-[11px] text-gray-400"><?= esc($ket) ?></p>
-        </a>
-    <?php endforeach; ?>
-</div>
-
-<!-- Rincian status -->
-<div class="mb-5 flex flex-wrap gap-2">
-    <?php foreach (['belum' => 'Belum mengisi', 'ditolak' => 'Ditolak', 'menunggu' => 'Menunggu ACC', 'perbaikan' => 'Perlu perbaikan', 'belum_mulai' => 'Belum mulai', 'sedang' => 'Sedang PKL', 'selesai' => 'Selesai PKL'] as $kode => $label): ?>
-        <a href="<?= esc($urlSaring(['fase' => $kode]), 'attr') ?>" class="inline-flex items-center gap-2 rounded-full border px-3 py-1.5 text-xs font-semibold transition <?= $fase === $kode ? 'border-brand-600 bg-brand-50 text-brand-700' : 'border-gray-200 bg-white text-gray-600 hover:bg-gray-50' ?>">
-            <?= esc($label) ?> <span class="rounded-full bg-gray-100 px-1.5 text-[11px] text-gray-500"><?= (int) $ringkas[$kode] ?></span>
-        </a>
-    <?php endforeach; ?>
-</div>
-
-<div class="rise rise-1 overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-xs">
-    <form method="get" class="grid grid-cols-1 gap-2 border-b border-gray-100 p-4 sm:grid-cols-[1fr_12rem_15rem_auto]">
-        <input type="search" name="q" value="<?= esc($q, 'attr') ?>" placeholder="Cari nama siswa…" class="inp" aria-label="Cari nama">
-        <select name="kelas_id" class="inp" aria-label="Kelas">
-            <option value="">Semua kelas</option>
-            <?php foreach ($kelas as $k): ?><option value="<?= (int) $k['id'] ?>" <?= (int) $k['id'] === $kelasId ? 'selected' : '' ?>><?= esc($k['nama_kelas']) ?></option><?php endforeach; ?>
-        </select>
-        <select name="fase" class="inp" aria-label="Status">
-            <?php foreach ($opsiFase as $v => $l): ?><option value="<?= esc($v, 'attr') ?>" <?= $v === $fase ? 'selected' : '' ?>><?= esc($l) ?></option><?php endforeach; ?>
-        </select>
-        <div class="flex gap-2">
-            <button type="submit" class="rounded-lg bg-brand-700 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-brand-800">Terapkan</button>
-            <?php if ($q !== '' || $kelasId > 0 || $fase !== ''): ?><a href="<?= site_url('admin/pkl/siswa') ?>" class="rounded-lg border border-gray-300 px-4 py-2.5 text-sm font-semibold text-gray-600 transition hover:bg-gray-50">Reset</a><?php endif; ?>
-        </div>
-    </form>
-
-    <div class="flex items-center justify-between border-b border-gray-100 px-5 py-2.5"><p class="text-xs text-gray-400"><?= (int) $total ?> siswa ditampilkan</p><a href="<?= esc(site_url('admin/pkl/siswa/excel') . '?' . http_build_query(array_filter(['q' => $q, 'kelas_id' => $kelasId ?: null, 'fase' => $fase])), 'attr') ?>" class="text-xs font-bold text-brand-700 hover:underline">⬇ Unduh Excel (sesuai saringan)</a></div>
-
-    <?php if ($rows === []): ?>
-        <p class="px-5 py-12 text-center font-semibold text-gray-600">Tidak ada siswa yang cocok.</p>
-    <?php else: ?>
-        <div class="hidden md:block">
-            <table class="w-full text-sm">
-                <thead class="bg-gray-50 text-left text-gray-500">
-                    <tr>
-                        <th class="px-5 py-3 font-semibold">Nama</th>
-                        <th class="px-3 py-3 font-semibold">Kelas</th>
-                        <th class="px-3 py-3 font-semibold">Status</th>
-                        <th class="px-3 py-3 font-semibold">Perusahaan</th>
-                        <th class="px-3 py-3 font-semibold">Periode</th>
-                        <th class="px-5 py-3 text-right font-semibold">Ajuan</th>
-                    </tr>
-                </thead>
-                <tbody class="divide-y divide-gray-100">
-                    <?php foreach ($rows as $r): ?>
-                        <tr class="hover:bg-gray-50">
-                            <td class="px-5 py-2.5 font-medium text-gray-800"><?= esc($r['nama']) ?></td>
-                            <td class="px-3 py-2.5 text-gray-500"><?= esc($r['nama_kelas']) ?></td>
-                            <td class="px-3 py-2.5"><?= view('admin/pkl/_lencana', ['kode' => $r['fase'], 'siswa' => true]) ?></td>
-                            <td class="px-3 py-2.5 text-gray-700"><?= esc($r['perusahaan_nama'] ?? '') ?: '<span class="text-gray-300">—</span>' ?></td>
-                            <td class="whitespace-nowrap px-3 py-2.5 text-xs text-gray-500"><?= ! empty($r['tanggal_mulai']) ? esc(IsianBantu::tanggalIndo($r['tanggal_mulai'])) . ' – ' . esc(IsianBantu::tanggalIndo($r['tanggal_selesai'])) : '—' ?></td>
-                            <td class="px-5 py-2.5 text-right"><?php if (! empty($r['ajuan_id'])): ?><a href="<?= site_url('admin/pkl/' . $r['ajuan_id']) ?>" class="font-mono text-xs font-semibold text-brand-700 hover:underline"><?= esc(PklPengajuanModel::kode((int) $r['ajuan_id'])) ?></a><?php endif; ?></td>
-                        </tr>
-                    <?php endforeach; ?>
-                </tbody>
-            </table>
-        </div>
-        <ul class="divide-y divide-gray-100 md:hidden">
-            <?php foreach ($rows as $r): ?>
-                <li class="px-4 py-3">
-                    <div class="flex items-start justify-between gap-2">
-                        <p class="font-semibold text-gray-800"><?= esc($r['nama']) ?> <span class="text-xs font-normal text-gray-400">· <?= esc($r['nama_kelas']) ?></span></p>
-                    </div>
-                    <div class="mt-1.5 flex flex-wrap items-center gap-2">
-                        <?= view('admin/pkl/_lencana', ['kode' => $r['fase'], 'siswa' => true]) ?>
-                        <?php if (! empty($r['ajuan_id'])): ?><a href="<?= site_url('admin/pkl/' . $r['ajuan_id']) ?>" class="font-mono text-[11px] font-semibold text-brand-700"><?= esc(PklPengajuanModel::kode((int) $r['ajuan_id'])) ?></a><?php endif; ?>
-                    </div>
-                    <?php if (! empty($r['perusahaan_nama'])): ?><p class="mt-1 text-xs text-gray-500"><?= esc($r['perusahaan_nama']) ?></p><?php endif; ?>
-                </li>
-            <?php endforeach; ?>
-        </ul>
-
-        <?php if ($jmlHal > 1): ?>
-            <div class="flex items-center justify-between border-t border-gray-100 px-5 py-3 text-sm">
-                <?php if ($page > 1): ?><a href="<?= esc($urlHal($page - 1), 'attr') ?>" class="font-semibold text-brand-700 hover:underline">← Sebelumnya</a><?php else: ?><span></span><?php endif; ?>
-                <span class="text-xs text-gray-400">Halaman <?= $page ?> dari <?= $jmlHal ?></span>
-                <?php if ($page < $jmlHal): ?><a href="<?= esc($urlHal($page + 1), 'attr') ?>" class="font-semibold text-brand-700 hover:underline">Berikutnya →</a><?php else: ?><span></span><?php endif; ?>
-            </div>
-        <?php endif; ?>
+<div class="space-y-4">
+    <?php if ($tingkat === []): ?>
+        <?= ui_peringatan('awas', '', ['html' => '<b>Tingkat yang boleh mengajukan belum diatur</b>, jadi belum ada siswa yang dihitung.'
+            . ($bolehPengaturan ? ' <a href="' . site_url('admin/pkl/pengaturan') . '" class="font-semibold underline">Atur di Pengaturan PKL</a>.' : '')]) ?>
     <?php endif; ?>
+
+    <!-- Empat angka utama -->
+    <section class="grid grid-cols-2 gap-4 lg:grid-cols-4" aria-label="Ringkasan siswa">
+        <?php foreach ([
+            ['Sudah mengisi', $ringkas['sudah_isi'], 'text-brand-700 dark:text-brand-400', 'sudah_mengisi', $ringkas['persen_isi'] . '% dari ' . $ringkas['total']],
+            ['Belum mengisi', $ringkas['belum_isi'], 'text-gray-900 dark:text-white', 'belum_mengisi', 'belum + ditolak'],
+            ['Sudah PKL', $ringkas['sudah_pkl'], 'text-green-700 dark:text-green-400', 'sudah_pkl', $ringkas['persen_pkl'] . '% (sudah disetujui)'],
+            ['Belum PKL', $ringkas['belum_pkl'], 'text-yellow-700 dark:text-yellow-400', '', 'belum dapat tempat'],
+        ] as [$label, $nilai, $warna, $saring, $ket]): ?>
+            <a href="<?= esc($urlSaring($saring !== '' ? ['fase' => $saring] : []), 'attr') ?>" class="kartu kartu-isi kartu-tautan">
+                <p class="stat-label text-sm"><?= esc($label) ?></p>
+                <p class="stat-angka mt-2 tabular-nums <?= $warna ?>"><?= (int) $nilai ?></p>
+                <p class="mt-1 text-xs text-gray-500 dark:text-gray-400"><?= esc($ket) ?></p>
+            </a>
+        <?php endforeach; ?>
+    </section>
+
+    <!-- Rincian status -->
+    <nav class="flex flex-wrap gap-2" aria-label="Rincian status siswa">
+        <?php foreach (['belum' => 'Belum mengisi', 'ditolak' => 'Ditolak', 'menunggu' => 'Menunggu ACC', 'perbaikan' => 'Perlu perbaikan', 'belum_mulai' => 'Belum mulai', 'sedang' => 'Sedang PKL', 'selesai' => 'Selesai PKL'] as $kode => $label): ?>
+            <a href="<?= esc($urlSaring(['fase' => $kode]), 'attr') ?>" class="tombol-saring inline-flex items-center gap-1.5"<?= $fase === $kode ? ' aria-current="true"' : '' ?>>
+                <?= esc($label) ?><span class="tabular-nums opacity-75"><?= (int) $ringkas[$kode] ?></span>
+            </a>
+        <?php endforeach; ?>
+    </nav>
+
+    <section class="kartu overflow-hidden" aria-label="Daftar siswa">
+        <div class="alat-crud">
+            <form method="get" class="alat-crud-cari" role="search">
+                <label class="alat-crud-kotak">
+                    <span class="sr-only">Cari nama</span>
+                    <?= ikon('search', '') ?>
+                    <input type="search" name="q" value="<?= esc($q, 'attr') ?>" placeholder="Cari nama siswa…" class="inp">
+                </label>
+                <select name="kelas_id" data-autosubmit class="inp alat-crud-pilih" aria-label="Kelas">
+                    <option value="">Semua kelas</option>
+                    <?php foreach ($kelas as $k): ?><option value="<?= (int) $k['id'] ?>"<?= (int) $k['id'] === $kelasId ? ' selected' : '' ?>><?= esc($k['nama_kelas']) ?></option><?php endforeach; ?>
+                </select>
+                <select name="fase" data-autosubmit class="inp alat-crud-pilih" aria-label="Status">
+                    <?php foreach ($opsiFase as $v => $l): ?><option value="<?= esc($v, 'attr') ?>"<?= $v === $fase ? ' selected' : '' ?>><?= esc($l) ?></option><?php endforeach; ?>
+                </select>
+                <button type="submit" class="btn btn-netral"><?= ikon('search', 'h-4 w-4') ?>Terapkan</button>
+                <?php if ($adaSaring): ?><a href="<?= site_url('admin/pkl/siswa') ?>" class="btn btn-teks"><?= ikon('close', 'h-4 w-4') ?>Reset</a><?php endif; ?>
+            </form>
+        </div>
+
+        <div class="flex flex-wrap items-center justify-between gap-2 border-b border-gray-200 px-4 py-2.5 sm:px-6 dark:border-gray-700">
+            <p class="text-sm text-gray-500 dark:text-gray-400"><b class="text-gray-900 tabular-nums dark:text-white"><?= (int) $total ?></b> siswa ditampilkan</p>
+            <a href="<?= esc($urlExcel, 'attr') ?>" class="btn btn-netral btn-sm"><?= ikon('download', 'h-4 w-4') ?>Unduh Excel (sesuai saringan)</a>
+        </div>
+
+        <?php if ($rows === []): ?>
+            <?= ui_kosong(['ikon' => 'users', 'judul' => 'Tidak ada siswa yang cocok', 'teks' => $adaSaring ? 'Ubah pencarian/saringan, atau tekan Reset.' : '']) ?>
+        <?php else: ?>
+            <div class="hidden md:block">
+                <div class="tabel-bungkus">
+                    <table class="tabel">
+                        <thead>
+                            <tr>
+                                <th scope="col">Nama</th>
+                                <th scope="col">Kelas</th>
+                                <th scope="col">Status</th>
+                                <th scope="col">Perusahaan</th>
+                                <th scope="col">Periode</th>
+                                <th scope="col" class="text-right">Ajuan</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <?php foreach ($rows as $r): ?>
+                                <tr>
+                                    <td class="font-medium text-gray-900 dark:text-white"><?= esc($r['nama']) ?></td>
+                                    <td class="whitespace-nowrap"><?= esc($r['nama_kelas']) ?></td>
+                                    <td><?= view('admin/pkl/_lencana', ['kode' => $r['fase'], 'siswa' => true]) ?></td>
+                                    <td><?= esc($r['perusahaan_nama'] ?? '') ?: '<span class="text-gray-400 dark:text-gray-500">—</span>' ?></td>
+                                    <td class="text-xs whitespace-nowrap"><?= ! empty($r['tanggal_mulai']) ? esc(IsianBantu::tanggalIndo($r['tanggal_mulai'])) . ' – ' . esc(IsianBantu::tanggalIndo($r['tanggal_selesai'])) : '—' ?></td>
+                                    <td class="text-right"><?php if (! empty($r['ajuan_id'])): ?><a href="<?= site_url('admin/pkl/' . $r['ajuan_id']) ?>" class="font-mono text-xs font-semibold text-brand-700 hover:underline dark:text-brand-400"><?= esc(PklPengajuanModel::kode((int) $r['ajuan_id'])) ?></a><?php endif; ?></td>
+                                </tr>
+                            <?php endforeach; ?>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            <ul class="divide-y divide-gray-200 md:hidden dark:divide-gray-700">
+                <?php foreach ($rows as $r): ?>
+                    <li class="px-4 py-3">
+                        <p class="font-semibold text-gray-900 dark:text-white"><?= esc($r['nama']) ?> <span class="text-xs font-normal text-gray-500 dark:text-gray-400">· <?= esc($r['nama_kelas']) ?></span></p>
+                        <div class="mt-1.5 flex flex-wrap items-center gap-2">
+                            <?= view('admin/pkl/_lencana', ['kode' => $r['fase'], 'siswa' => true]) ?>
+                            <?php if (! empty($r['ajuan_id'])): ?><a href="<?= site_url('admin/pkl/' . $r['ajuan_id']) ?>" class="font-mono text-xs font-semibold text-brand-700 dark:text-brand-400"><?= esc(PklPengajuanModel::kode((int) $r['ajuan_id'])) ?></a><?php endif; ?>
+                        </div>
+                        <?php if (! empty($r['perusahaan_nama'])): ?><p class="mt-1 text-sm text-gray-500 dark:text-gray-400"><?= esc($r['perusahaan_nama']) ?></p><?php endif; ?>
+                    </li>
+                <?php endforeach; ?>
+            </ul>
+
+            <?php if ($jmlHal > 1): ?>
+                <div class="kartu-kaki flex items-center justify-between gap-3 text-sm">
+                    <?php if ($page > 1): ?><a href="<?= esc($urlHal($page - 1), 'attr') ?>" class="btn btn-netral btn-sm"><?= ikon('chevron-left', 'h-4 w-4') ?>Sebelumnya</a><?php else: ?><span></span><?php endif; ?>
+                    <span class="text-gray-500 dark:text-gray-400">Halaman <b class="text-gray-900 dark:text-white"><?= $page ?></b> dari <b class="text-gray-900 dark:text-white"><?= $jmlHal ?></b></span>
+                    <?php if ($page < $jmlHal): ?><a href="<?= esc($urlHal($page + 1), 'attr') ?>" class="btn btn-netral btn-sm">Berikutnya<?= ikon('chevron-right', 'h-4 w-4') ?></a><?php else: ?><span></span><?php endif; ?>
+                </div>
+            <?php endif; ?>
+        <?php endif; ?>
+    </section>
 </div>
 
 <?= $this->endSection() ?>
