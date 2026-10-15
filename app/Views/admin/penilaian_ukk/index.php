@@ -1,6 +1,7 @@
 <?php
 /**
- * Pintu masuk Penilaian UKK: pilih jadwal, lihat progres nilai.
+ * Pintu masuk Penilaian UKK: pilih jadwal, lihat progres nilai. Rombak tampilan F8: kartu + tabel kit, bilah progres
+ * <progress class="progres"> (tanpa style=), tombol Nilai ber-ikon, ui_kosong.
  *
  * @var array             $rows             Semua jadwal_ukk::withRelations()
  * @var array<int,int>    $totalPerJadwal   jadwal_ukk_id => jumlah peserta
@@ -19,56 +20,54 @@ $tgl = static fn ($d) => $d ? date('d/m/Y', strtotime((string) $d)) : '—';
         seluruh penguji setelah minimal satu penguji mengisi nilai.</p>',
 ]) ?>
 
-<div class="bg-white rounded-2xl border border-gray-200 shadow-xs overflow-hidden">
-    <div class="px-6 py-4 border-b border-gray-100">
-        <h2 class="font-bold text-gray-800">Pilih Jadwal untuk Dinilai</h2>
-    </div>
-    <div class="overflow-x-auto">
-        <table class="w-full text-sm">
-            <thead class="bg-gray-50 text-gray-500 text-left">
-                <tr>
-                    <th class="px-6 py-3 font-semibold">Paket Soal</th>
-                    <th class="px-4 py-3 font-semibold w-32">Tanggal</th>
-                    <th class="px-4 py-3 font-semibold">Tempat Uji</th>
-                    <th class="px-4 py-3 font-semibold w-48">Progres Nilai</th>
-                    <th class="px-4 py-3 font-semibold w-24 text-right">Aksi</th>
-                </tr>
-            </thead>
-            <tbody class="divide-y divide-gray-100">
-                <?php if (empty($rows)): ?>
-                    <tr><td colspan="5" class="px-6 py-10 text-center text-gray-400">Belum ada jadwal UKK. Buat dulu di menu Jadwal UKK.</td></tr>
-                <?php else: foreach ($rows as $r):
-                    $total   = $totalPerJadwal[$r['id']] ?? 0;
-                    $dinilai = $dinilaiPerJadwal[$r['id']] ?? 0;
-                    $pct     = $total > 0 ? (int) round($dinilai / $total * 100) : 0; ?>
-                    <tr class="hover:bg-gray-50">
-                        <td class="px-6 py-3">
-                            <div class="font-medium text-gray-800"><?= esc($r['paket_kode'] ?? '—') ?></div>
-                            <div class="text-xs text-gray-400"><?= esc($r['paket_nama'] ?? '—') ?></div>
-                        </td>
-                        <td class="px-4 py-3 text-gray-600"><?= $tgl($r['tanggal_mulai']) ?></td>
-                        <td class="px-4 py-3 text-gray-600"><?= esc($r['tempat_nama'] ?? '—') ?></td>
-                        <td class="px-4 py-3">
-                            <?php if ($total === 0): ?>
-                                <span class="text-xs text-gray-400">Belum ada peserta</span>
-                            <?php else: ?>
-                                <div class="flex items-center gap-2">
-                                    <div class="flex-1 h-2 rounded-full bg-gray-100 overflow-hidden">
-                                        <div class="h-full bg-emerald-500" style="width: <?= $pct ?>%"></div>
-                                    </div>
-                                    <span class="text-xs text-gray-500 w-16 text-right"><?= $dinilai ?>/<?= $total ?></span>
-                                </div>
-                            <?php endif; ?>
-                        </td>
-                        <td class="px-4 py-3 text-right">
-                            <a href="<?= site_url('admin/penilaian-ukk/jadwal/' . (int) $r['id']) ?>"
-                               class="inline-flex items-center gap-1 rounded-lg bg-brand-700 hover:bg-brand-800 text-white text-xs font-semibold px-3 py-1.5">Nilai</a>
-                        </td>
+<section class="kartu overflow-hidden" aria-labelledby="judul-pilih-jadwal">
+    <div class="kartu-kepala"><h2 id="judul-pilih-jadwal" class="kartu-judul">Pilih jadwal untuk dinilai</h2></div>
+    <?php if (empty($rows)): ?>
+        <?= ui_kosong(['ikon' => 'calendar-week', 'judul' => 'Belum ada jadwal UKK', 'teks' => 'Buat dulu di menu Jadwal UKK.',
+            'aksi' => '<a href="' . site_url('admin/jadwal-ukk') . '" class="btn btn-netral">' . ikon('calendar-plus', 'h-4 w-4') . 'Buka Jadwal UKK</a>']) ?>
+    <?php else: ?>
+        <div class="tabel-bungkus">
+            <table class="tabel">
+                <thead>
+                    <tr>
+                        <th scope="col">Paket soal</th>
+                        <th scope="col">Tanggal</th>
+                        <th scope="col">Tempat uji</th>
+                        <th scope="col" class="w-56">Progres nilai</th>
+                        <th scope="col" class="text-right">Aksi</th>
                     </tr>
-                <?php endforeach; endif; ?>
-            </tbody>
-        </table>
-    </div>
-</div>
+                </thead>
+                <tbody>
+                    <?php foreach ($rows as $r):
+                        $total   = $totalPerJadwal[$r['id']] ?? 0;
+                        $dinilai = $dinilaiPerJadwal[$r['id']] ?? 0;
+                        $pct     = $total > 0 ? (int) round($dinilai / $total * 100) : 0; ?>
+                        <tr>
+                            <td>
+                                <p class="font-semibold text-gray-900 dark:text-white"><?= esc($r['paket_kode'] ?? '—') ?></p>
+                                <p class="text-xs text-gray-500 dark:text-gray-400"><?= esc($r['paket_nama'] ?? '—') ?></p>
+                            </td>
+                            <td class="whitespace-nowrap"><?= $tgl($r['tanggal_mulai']) ?></td>
+                            <td><?= esc($r['tempat_nama'] ?? '—') ?></td>
+                            <td>
+                                <?php if ($total === 0): ?>
+                                    <span class="text-xs text-gray-500 dark:text-gray-400">Belum ada peserta</span>
+                                <?php else: ?>
+                                    <div class="flex items-center gap-2">
+                                        <progress class="progres progres-hijau h-2 flex-1" value="<?= $pct ?>" max="100" aria-label="<?= $dinilai ?> dari <?= $total ?> peserta sudah dinilai"><?= $pct ?>%</progress>
+                                        <span class="w-16 text-right text-xs text-gray-500 tabular-nums dark:text-gray-400"><?= $dinilai ?>/<?= $total ?></span>
+                                    </div>
+                                <?php endif; ?>
+                            </td>
+                            <td class="text-right">
+                                <a href="<?= site_url('admin/penilaian-ukk/jadwal/' . (int) $r['id']) ?>" class="btn btn-utama btn-sm"><?= ikon('pen-nib', 'h-4 w-4') ?>Nilai</a>
+                            </td>
+                        </tr>
+                    <?php endforeach; ?>
+                </tbody>
+            </table>
+        </div>
+    <?php endif; ?>
+</section>
 
 <?= $this->endSection() ?>

@@ -1,6 +1,8 @@
 <?php
 /**
- * Matriks penilaian: peserta (baris) x penguji tertugas (kolom), 1 jadwal.
+ * Matriks penilaian: peserta (baris) x penguji tertugas (kolom), 1 jadwal. Rombak tampilan F8: Kembali di kepala halaman,
+ * kartu kit, tabel kit, status bertitik, ui_peringatan/ui_kosong; dialog kit "Isi nilai" diisi dari tombol selnya lewat
+ * data-dialog-isi (kit ui.js; sel kosong mengosongkan semua isian) — dulu x-data objek bermetode + @click berisi JSON → siap CSP.
  *
  * @var array      $jadwal      jadwal_ukk::withRelations() satu baris
  * @var array|null $paket       paket_soal_ukk (untuk bobot & KKM)
@@ -11,15 +13,22 @@
 $tgl  = static fn ($d) => $d ? date('d/m/Y', strtotime((string) $d)) : '—';
 $num  = static fn ($v) => $v !== null ? number_format((float) $v, 1) : '';
 $saveUrl = site_url('admin/penilaian-ukk/jadwal/' . (int) $jadwal['id'] . '/simpan');
-$warnaStatus = [
-    'terdaftar'   => 'bg-gray-100 text-gray-600 border-gray-200',
-    'hadir'       => 'bg-brand-50 text-brand-700 border-brand-200',
-    'tidak_hadir' => 'bg-amber-50 text-amber-700 border-amber-200',
-    'lulus'       => 'bg-emerald-50 text-emerald-700 border-emerald-200',
-    'tidak_lulus' => 'bg-red-50 text-red-700 border-red-200',
+$warnaStatus = ['terdaftar' => '', 'hadir' => 'titik-status-biru', 'tidak_hadir' => 'titik-status-kuning', 'lulus' => 'titik-status-hijau', 'tidak_lulus' => 'titik-status-merah'];
+$hariIni = date('Y-m-d');
+$komponen = [
+    'persiapan_skor' => 'Persiapan kerja',
+    'proses_skor'    => 'Proses',
+    'hasil_skor'     => 'Hasil kerja',
+    'sikap_skor'     => 'Sikap kerja',
+    'waktu_skor'     => 'Waktu',
 ];
 ?>
 <?= $this->extend('layouts/admin') ?>
+
+<?= $this->section('aksi') ?>
+<a href="<?= site_url('admin/penilaian-ukk') ?>" class="btn btn-netral"><?= ikon('chevron-left', 'h-4 w-4') ?>Kembali ke Penilaian UKK</a>
+<?= $this->endSection() ?>
+
 <?= $this->section('content') ?>
 
 <?= view('admin/partials/help', [
@@ -30,153 +39,126 @@ $warnaStatus = [
         soal. Kolom <b>Nilai Akhir</b> peserta = rata-rata seluruh penguji yang sudah mengisi.</p>',
 ]) ?>
 
-<a href="<?= site_url('admin/penilaian-ukk') ?>" class="inline-flex items-center gap-1.5 text-sm text-gray-500 hover:text-gray-700 mb-4">
-    <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7"/></svg>
-    Kembali ke Penilaian UKK
-</a>
+<div class="space-y-4">
+    <!-- Info jadwal -->
+    <section class="kartu kartu-isi" aria-labelledby="judul-jadwal-nilai">
+        <h2 id="judul-jadwal-nilai" class="text-lg font-semibold text-gray-900 dark:text-white"><?= esc($jadwal['paket_kode'] ?? '—') ?> — <?= esc($jadwal['paket_nama'] ?? '—') ?></h2>
+        <p class="mt-1 flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-gray-500 dark:text-gray-400">
+            <span class="inline-flex items-center gap-1.5"><?= ikon('calendar-month', 'h-4 w-4 shrink-0') ?><?= $tgl($jadwal['tanggal_mulai']) ?></span>
+            <?php if (! empty($jadwal['tempat_nama'])): ?><span class="inline-flex items-center gap-1.5"><?= ikon('map-pin', 'h-4 w-4 shrink-0') ?><?= esc($jadwal['tempat_nama']) ?></span><?php endif; ?>
+            <?php if ($paket): ?><span class="lencana lencana-merek">KKM <?= esc((string) $paket['kkm']) ?></span><?php endif; ?>
+        </p>
+    </section>
 
-<!-- Info jadwal -->
-<div class="bg-white rounded-2xl border border-gray-200 shadow-xs p-5 mb-5">
-    <h2 class="font-bold text-gray-800 text-lg"><?= esc($jadwal['paket_kode'] ?? '—') ?> — <?= esc($jadwal['paket_nama'] ?? '—') ?></h2>
-    <p class="text-sm text-gray-500 mt-0.5">
-        <?= $tgl($jadwal['tanggal_mulai']) ?><?= ! empty($jadwal['tempat_nama']) ? ' · ' . esc($jadwal['tempat_nama']) : '' ?>
-        <?= $paket ? ' · KKM ' . esc((string) $paket['kkm']) : '' ?>
-    </p>
-</div>
-
-<?php if (empty($pengujiList)): ?>
-    <div class="bg-amber-50 border border-amber-200 text-amber-800 rounded-2xl p-5 mb-5 text-sm">
-        Belum ada penguji ditugaskan pada jadwal ini.
-        <a href="<?= site_url('admin/jadwal-ukk/penguji/' . (int) $jadwal['id']) ?>" class="font-semibold underline">Tugaskan penguji dulu</a>.
-    </div>
-<?php elseif (empty($peserta)): ?>
-    <div class="bg-white rounded-2xl border border-gray-200 shadow-xs p-8 text-center text-gray-400">
-        Belum ada peserta terdaftar pada jadwal ini.
-        <a href="<?= site_url('admin/peserta-ukk/daftarkan') ?>" class="text-brand-600 font-semibold hover:underline">Daftarkan peserta</a>.
-    </div>
-<?php else: ?>
-    <div x-data="{ open:false, form:{}, label:'',
-          openNilai(peserta_ukk_id, tipe, guru_id, penguji_eksternal_id, label, existing) {
-              this.form = Object.assign({
-                  peserta_ukk_id: peserta_ukk_id, tipe_penguji: tipe, guru_id: guru_id, penguji_eksternal_id: penguji_eksternal_id,
-                  persiapan_skor: '', proses_skor: '', hasil_skor: '', sikap_skor: '', waktu_skor: '',
-                  tanggal_nilai: '<?= date('Y-m-d') ?>', keterangan: ''
-              }, existing || {});
-              this.label = label;
-              this.open = true;
-          } }">
-
-        <div class="bg-white rounded-2xl border border-gray-200 shadow-xs overflow-hidden">
-            <div class="px-6 py-4 border-b border-gray-100">
-                <h2 class="font-bold text-gray-800">Matriks Nilai (<?= count($peserta) ?> peserta)</h2>
+    <?php if (empty($pengujiList)): ?>
+        <?= ui_peringatan('awas', '', ['html' => 'Belum ada penguji ditugaskan pada jadwal ini. <a href="' . site_url('admin/jadwal-ukk/penguji/' . (int) $jadwal['id']) . '" class="font-semibold underline">Tugaskan penguji dulu</a>.']) ?>
+    <?php elseif (empty($peserta)): ?>
+        <div class="kartu"><?= ui_kosong(['ikon' => 'user-graduate', 'judul' => 'Belum ada peserta terdaftar pada jadwal ini',
+            'aksi' => '<a href="' . site_url('admin/peserta-ukk/daftarkan') . '" class="btn btn-utama">' . ikon('plus', 'h-4 w-4') . 'Daftarkan peserta</a>']) ?></div>
+    <?php else: ?>
+        <section class="kartu overflow-hidden" aria-labelledby="judul-matriks-nilai">
+            <div class="kartu-kepala">
+                <h2 id="judul-matriks-nilai" class="kartu-judul">Matriks nilai</h2>
+                <span class="lencana lencana-abu"><?= count($peserta) ?> peserta</span>
             </div>
-            <div class="overflow-x-auto">
-                <table class="w-full text-sm">
-                    <thead class="bg-gray-50 text-gray-500 text-left">
+            <div class="tabel-bungkus">
+                <table class="tabel">
+                    <thead>
                         <tr>
-                            <th class="px-6 py-3 font-semibold">Peserta</th>
+                            <th scope="col">Peserta</th>
                             <?php foreach ($pengujiList as $pg):
                                 $pgLabel = $pg['tipe'] === 'internal' ? ($pg['guru_nama'] ?? '—') : ($pg['eksternal_nama'] ?? '—'); ?>
-                                <th class="px-3 py-3 font-semibold text-center w-28">
+                                <th scope="col" class="w-28 text-center">
                                     <?= esc($pgLabel) ?>
-                                    <div class="text-[10px] font-normal text-gray-400"><?= $pg['tipe'] === 'internal' ? 'Internal' : 'Eksternal' ?></div>
+                                    <span class="block text-[10px] font-normal text-gray-500 normal-case dark:text-gray-400"><?= $pg['tipe'] === 'internal' ? 'Internal' : 'Eksternal' ?></span>
                                 </th>
                             <?php endforeach; ?>
-                            <th class="px-4 py-3 font-semibold w-24 text-right">Nilai Akhir</th>
-                            <th class="px-4 py-3 font-semibold w-28">Status</th>
+                            <th scope="col" class="text-right">Nilai akhir</th>
+                            <th scope="col">Status</th>
                         </tr>
                     </thead>
-                    <tbody class="divide-y divide-gray-100">
+                    <tbody>
                         <?php foreach ($peserta as $p): ?>
-                            <tr class="hover:bg-gray-50">
-                                <td class="px-6 py-3">
-                                    <div class="font-medium text-gray-800"><?= esc($p['siswa_nama'] ?? '—') ?></div>
-                                    <div class="text-xs text-gray-400 font-mono"><?= esc($p['no_peserta'] ?? '—') ?></div>
+                            <tr>
+                                <td>
+                                    <p class="font-semibold text-gray-900 dark:text-white"><?= esc($p['siswa_nama'] ?? '—') ?></p>
+                                    <p class="font-mono text-xs text-gray-500 dark:text-gray-400"><?= esc($p['no_peserta'] ?? '—') ?></p>
                                 </td>
                                 <?php foreach ($pengujiList as $pg):
                                     $pengujiId = (int) ($pg['tipe'] === 'internal' ? $pg['guru_id'] : $pg['penguji_eksternal_id']);
                                     $pgLabel   = $pg['tipe'] === 'internal' ? ($pg['guru_nama'] ?? '—') : ($pg['eksternal_nama'] ?? '—');
                                     $n         = $nilaiMap[$p['id'] . '-' . $pg['tipe'] . '-' . $pengujiId] ?? null;
-                                    $cellLabel = ($p['siswa_nama'] ?? '') . ' — ' . $pgLabel;
-                                    $existingJs = $n ? json_encode([
-                                        'persiapan_skor' => $n['persiapan_skor'], 'proses_skor' => $n['proses_skor'],
-                                        'hasil_skor' => $n['hasil_skor'], 'sikap_skor' => $n['sikap_skor'], 'waktu_skor' => $n['waktu_skor'],
-                                        'tanggal_nilai' => $n['tanggal_nilai'], 'keterangan' => $n['keterangan'],
-                                    ]) : '{}'; ?>
-                                    <td class="px-3 py-3 text-center">
-                                        <button type="button"
-                                                @click="openNilai(<?= (int) $p['id'] ?>, '<?= $pg['tipe'] ?>', <?= $pg['tipe'] === 'internal' ? $pengujiId : 'null' ?>, <?= $pg['tipe'] === 'eksternal' ? $pengujiId : 'null' ?>, '<?= esc($cellLabel, 'js') ?>', <?= htmlspecialchars($existingJs, ENT_QUOTES) ?>)"
-                                                class="<?= $n ? 'text-brand-700 font-semibold hover:underline' : 'text-gray-300 hover:text-brand-600 text-xs' ?>">
-                                            <?= $n ? $num($n['nilai_akhir']) : 'Isi' ?>
+                                    // Data dialog: semua kunci selalu dikirim supaya sel kosong mengosongkan isian sel sebelumnya.
+                                    $isi = [
+                                        'label'                => ($p['siswa_nama'] ?? '') . ' — ' . $pgLabel,
+                                        'peserta_ukk_id'       => (int) $p['id'],
+                                        'tipe_penguji'         => $pg['tipe'],
+                                        'guru_id'              => $pg['tipe'] === 'internal' ? $pengujiId : '',
+                                        'penguji_eksternal_id' => $pg['tipe'] === 'eksternal' ? $pengujiId : '',
+                                        'persiapan_skor'       => $n['persiapan_skor'] ?? '',
+                                        'proses_skor'          => $n['proses_skor'] ?? '',
+                                        'hasil_skor'           => $n['hasil_skor'] ?? '',
+                                        'sikap_skor'           => $n['sikap_skor'] ?? '',
+                                        'waktu_skor'           => $n['waktu_skor'] ?? '',
+                                        'tanggal_nilai'        => $n['tanggal_nilai'] ?? $hariIni,
+                                        'keterangan'           => $n['keterangan'] ?? '',
+                                    ]; ?>
+                                    <td class="text-center">
+                                        <button type="button" data-buka-dialog="isi-nilai" data-dialog-isi="<?= esc((string) json_encode($isi), 'attr') ?>"
+                                                class="<?= $n ? 'btn btn-netral btn-xs font-semibold text-brand-700 tabular-nums dark:text-brand-400' : 'btn btn-teks btn-xs' ?>"
+                                                aria-label="<?= $n ? 'Ubah' : 'Isi' ?> nilai <?= esc($isi['label'], 'attr') ?>">
+                                            <?= $n ? $num($n['nilai_akhir']) : ikon('plus', 'h-3.5 w-3.5') . 'Isi' ?>
                                         </button>
                                     </td>
                                 <?php endforeach; ?>
-                                <td class="px-4 py-3 text-right font-semibold text-gray-700"><?= $p['nilai_akhir'] !== null ? $num($p['nilai_akhir']) : '—' ?></td>
-                                <td class="px-4 py-3">
-                                    <span class="rounded-full border px-2.5 py-1 text-xs font-semibold <?= $warnaStatus[$p['status']] ?? 'bg-gray-100 text-gray-500 border-gray-200' ?>"><?= esc(ucfirst(str_replace('_', ' ', $p['status']))) ?></span>
-                                </td>
+                                <td class="text-right font-semibold text-gray-900 tabular-nums dark:text-white"><?= $p['nilai_akhir'] !== null ? $num($p['nilai_akhir']) : '—' ?></td>
+                                <td><span class="titik-status <?= $warnaStatus[$p['status']] ?? '' ?> font-medium"><?= esc(ucfirst(str_replace('_', ' ', $p['status']))) ?></span></td>
                             </tr>
                         <?php endforeach; ?>
                     </tbody>
                 </table>
             </div>
-        </div>
+        </section>
 
-        <!-- Modal isi nilai -->
-        <div x-show="open" x-cloak x-transition.opacity.duration.200ms class="fixed inset-0 z-50 flex items-center justify-center p-4">
-            <div class="absolute inset-0 bg-black/40" @click="open=false"></div>
-            <div class="relative bg-white rounded-2xl shadow-xl w-full max-w-lg p-6 max-h-[90vh] overflow-y-auto">
-                <h3 class="font-bold text-lg text-gray-800 mb-1">Isi Nilai</h3>
-                <p class="text-sm text-gray-500 mb-4" x-text="label"></p>
-                <form method="post" action="<?= $saveUrl ?>">
-                    <?= csrf_field() ?>
-                    <input type="hidden" name="peserta_ukk_id" x-model="form.peserta_ukk_id">
-                    <input type="hidden" name="tipe_penguji" x-model="form.tipe_penguji">
-                    <input type="hidden" name="guru_id" x-model="form.guru_id">
-                    <input type="hidden" name="penguji_eksternal_id" x-model="form.penguji_eksternal_id">
-                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <!-- Dialog isi nilai (diisi dari tombol sel) -->
+        <?= ui_dialog_buka(['nama' => 'isi-nilai', 'judul' => 'Isi nilai', 'ukuran' => 'lg']) ?>
+        <form method="post" action="<?= $saveUrl ?>">
+            <?= csrf_field() ?>
+            <input type="hidden" name="peserta_ukk_id" data-isi-pemicu="peserta_ukk_id">
+            <input type="hidden" name="tipe_penguji" data-isi-pemicu="tipe_penguji">
+            <input type="hidden" name="guru_id" data-isi-pemicu="guru_id">
+            <input type="hidden" name="penguji_eksternal_id" data-isi-pemicu="penguji_eksternal_id">
+            <div class="dialog-isi">
+                <p class="text-sm font-medium text-gray-900 dark:text-white" data-isi-pemicu="label"></p>
+                <div class="grid gap-4 sm:grid-cols-2">
+                    <?php foreach ($komponen as $nama => $lbl): ?>
                         <div>
-                            <label class="block text-sm font-medium text-gray-600 mb-1">Persiapan Kerja</label>
-                            <input type="number" name="persiapan_skor" x-model="form.persiapan_skor" min="0" max="100" step="0.01" class="w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm focus:border-brand-500 outline-hidden">
+                            <label class="lbl" for="nl-<?= $nama ?>"><?= esc($lbl) ?></label>
+                            <input type="number" id="nl-<?= $nama ?>" name="<?= $nama ?>" data-isi-pemicu="<?= $nama ?>" min="0" max="100" step="0.01" class="inp tabular-nums">
                         </div>
-                        <div>
-                            <label class="block text-sm font-medium text-gray-600 mb-1">Proses</label>
-                            <input type="number" name="proses_skor" x-model="form.proses_skor" min="0" max="100" step="0.01" class="w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm focus:border-brand-500 outline-hidden">
-                        </div>
-                        <div>
-                            <label class="block text-sm font-medium text-gray-600 mb-1">Hasil Kerja</label>
-                            <input type="number" name="hasil_skor" x-model="form.hasil_skor" min="0" max="100" step="0.01" class="w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm focus:border-brand-500 outline-hidden">
-                        </div>
-                        <div>
-                            <label class="block text-sm font-medium text-gray-600 mb-1">Sikap Kerja</label>
-                            <input type="number" name="sikap_skor" x-model="form.sikap_skor" min="0" max="100" step="0.01" class="w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm focus:border-brand-500 outline-hidden">
-                        </div>
-                        <div>
-                            <label class="block text-sm font-medium text-gray-600 mb-1">Waktu</label>
-                            <input type="number" name="waktu_skor" x-model="form.waktu_skor" min="0" max="100" step="0.01" class="w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm focus:border-brand-500 outline-hidden">
-                        </div>
-                        <div>
-                            <label class="block text-sm font-medium text-gray-600 mb-1">Tanggal Nilai</label>
-                            <input type="date" name="tanggal_nilai" x-model="form.tanggal_nilai" class="w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm focus:border-brand-500 outline-hidden">
-                        </div>
-                        <div class="sm:col-span-2">
-                            <label class="block text-sm font-medium text-gray-600 mb-1">Keterangan</label>
-                            <input type="text" name="keterangan" x-model="form.keterangan" maxlength="255" class="w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm focus:border-brand-500 outline-hidden">
-                        </div>
+                    <?php endforeach; ?>
+                    <div>
+                        <label class="lbl" for="nl-tanggal">Tanggal nilai</label>
+                        <input type="date" id="nl-tanggal" name="tanggal_nilai" data-isi-pemicu="tanggal_nilai" value="<?= $hariIni ?>" class="inp">
                     </div>
-                    <?php if ($paket): ?>
-                        <p class="text-xs text-gray-400 mt-3">Bobot: Persiapan <?= esc((string) $paket['bobot_persiapan']) ?>% ·
-                            Proses <?= esc((string) $paket['bobot_proses']) ?>% · Hasil <?= esc((string) $paket['bobot_hasil']) ?>% ·
-                            Sikap <?= esc((string) $paket['bobot_sikap']) ?>% · Waktu <?= esc((string) $paket['bobot_waktu']) ?>%</p>
-                    <?php endif; ?>
-                    <div class="flex justify-end gap-2 mt-6">
-                        <button type="button" @click="open=false" class="rounded-lg border border-gray-300 text-gray-600 text-sm font-semibold px-4 py-2.5 hover:bg-gray-50">Batal</button>
-                        <button class="rounded-lg bg-brand-700 hover:bg-brand-800 text-white text-sm font-semibold px-5 py-2.5">Simpan Nilai</button>
+                    <div class="sm:col-span-2">
+                        <label class="lbl" for="nl-ket">Keterangan</label>
+                        <input type="text" id="nl-ket" name="keterangan" data-isi-pemicu="keterangan" maxlength="255" class="inp">
                     </div>
-                </form>
+                </div>
+                <?php if ($paket): ?>
+                    <p class="hint">Bobot: Persiapan <?= esc((string) $paket['bobot_persiapan']) ?>% ·
+                        Proses <?= esc((string) $paket['bobot_proses']) ?>% · Hasil <?= esc((string) $paket['bobot_hasil']) ?>% ·
+                        Sikap <?= esc((string) $paket['bobot_sikap']) ?>% · Waktu <?= esc((string) $paket['bobot_waktu']) ?>%</p>
+                <?php endif; ?>
             </div>
-        </div>
-    </div>
-<?php endif; ?>
+            <div class="dialog-kaki">
+                <button type="button" class="btn btn-netral" @click="tutup()">Batal</button>
+                <button type="submit" class="btn btn-utama"><?= ikon('check', 'h-4 w-4') ?>Simpan nilai</button>
+            </div>
+        </form>
+        <?= ui_dialog_tutup() ?>
+    <?php endif; ?>
+</div>
 
 <?= $this->endSection() ?>

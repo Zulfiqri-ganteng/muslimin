@@ -4,11 +4,13 @@
  * isi kolom isian, kaki tombol Simpan). Keadaan = open / mode / actionUrl / form milik komponen "masterList". Judul dua versi
  * (Tambah …/Ubah …) ditulis server dan dipilih lewat x-show, jadi tanpa teks di dalam isian Alpine (siap CSP).
  * Isi di antara ui_crud_form_buka() dan ui_crud_form_tutup(): kolom isian (.lbl + .inp; dua kolom: <div class="grid gap-4 sm:grid-cols-2">).
- * Panggil: ui_crud_form_buka(['benda' => 'Jurusan', 'ukuran' => 'lg']).
+ * Panggil: ui_crud_form_buka(['benda' => 'Jurusan', 'ukuran' => 'lg']). (F8) 'judulTambah' = judul mode tambah bila bukan
+ * "Tambah {benda}" (mis. 'Terbitkan Sertifikat'); mode ubah tetap "Ubah {benda}".
  *
- * @var array{benda: string, ukuran?: 'sm'|'lg'|'xl', enctype?: string} $ui
+ * @var array{benda: string, ukuran?: 'sm'|'lg'|'xl', enctype?: string, judulTambah?: string} $ui
  */
 $benda  = (string) ($ui['benda'] ?? 'Data');
+$judulTambah = (string) ($ui['judulTambah'] ?? 'Tambah ' . $benda);
 $ukuran = ['sm' => ' dialog-panel-sm', 'lg' => ' dialog-panel-lg', 'xl' => ' dialog-panel-xl'][$ui['ukuran'] ?? ''] ?? '';
 ?>
 <div class="dialog" :data-buka="open" @keydown.escape.stop="tutupForm()" role="dialog" aria-modal="true" aria-labelledby="dialog-form-judul">
@@ -16,7 +18,7 @@ $ukuran = ['sm' => ' dialog-panel-sm', 'lg' => ' dialog-panel-lg', 'xl' => ' dia
     <div class="dialog-panel<?= $ukuran ?>" tabindex="-1">
         <div class="dialog-kepala">
             <h3 id="dialog-form-judul" class="dialog-judul">
-                <span x-show="mode === 'add'">Tambah <?= esc($benda) ?></span><span x-show="mode !== 'add'" x-cloak>Ubah <?= esc($benda) ?></span>
+                <span x-show="mode === 'add'"><?= esc($judulTambah) ?></span><span x-show="mode !== 'add'" x-cloak>Ubah <?= esc($benda) ?></span>
             </h3>
             <button type="button" class="tombol-tutup" @click="tutupForm()" aria-label="Tutup"><?= ikon('close', 'h-5 w-5') ?></button>
         </div>
