@@ -20,12 +20,13 @@
     'use strict';
 
     // Kelas Tailwind chip — berkas ini dipindai Tailwind (lihat tailwind.config.js), jadi kelas di sini ikut terbentuk.
+    // (F7) Warna diselaraskan dengan kit tampilan admin: amber → yellow, sudut rounded-lg, + mode gelap.
     var KELAS = {
         dasar: 'inline-flex min-w-[3.4rem] flex-col items-center justify-center rounded-lg border px-2 py-1.5 leading-tight transition active:scale-95',
-        mati: 'border-gray-200 bg-gray-50 text-gray-400',
+        mati: 'border-gray-200 bg-gray-50 text-gray-400 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-500',
         aktif: 'border-brand-500 bg-brand-500 text-white',
-        tanpaJp: 'border-amber-400 bg-amber-300 text-amber-900',
-        khusus: 'ring-2 ring-amber-400 ring-offset-1'
+        tanpaJp: 'border-yellow-400 bg-yellow-300 text-yellow-900',
+        khusus: 'ring-2 ring-yellow-400 ring-offset-1 dark:ring-offset-gray-800'
     };
 
     function el(tag, kelas, teks) {
@@ -100,16 +101,16 @@
             },
 
             kartuGuru: function (g) {
-                var d = el('details', 'rounded-xl border border-gray-200 bg-white');
+                var d = el('details', 'rounded-lg border border-gray-200 bg-white dark:border-gray-700 dark:bg-gray-800');
                 d.dataset.g = g.id;
                 d.dataset.kartuNama = g.judul.toLowerCase();
                 var s = el('summary', 'flex cursor-pointer list-none items-center justify-between gap-3 px-4 py-3');
                 var kiri = el('span', 'flex min-w-0 items-baseline gap-2');
-                kiri.appendChild(el('span', 'text-xs tabular-nums text-gray-400', g.no));
-                kiri.appendChild(el('span', 'truncate font-semibold text-gray-800', g.judul));
-                kiri.appendChild(el('span', 'shrink-0 text-xs text-gray-400', g.baris.length + ' mapel'));
+                kiri.appendChild(el('span', 'text-xs tabular-nums text-gray-500 dark:text-gray-400', g.no));
+                kiri.appendChild(el('span', 'truncate font-semibold text-gray-900 dark:text-white', g.judul));
+                kiri.appendChild(el('span', 'shrink-0 text-xs text-gray-500 dark:text-gray-400', g.baris.length + ' mapel'));
                 var kanan = el('span', 'flex shrink-0 items-center gap-2');
-                var tot = el('span', 'text-sm font-extrabold tabular-nums text-gray-800', this.teksDari('gt-' + g.id));
+                var tot = el('span', 'text-sm font-bold tabular-nums text-gray-900 dark:text-white', this.teksDari('gt-' + g.id));
                 tot.id = 'ct-' + g.id;
                 kanan.appendChild(tot);
                 kanan.appendChild(el('span', 'text-gray-400', '▾'));
@@ -123,15 +124,15 @@
             /** Isi kartu: tiap baris mapel + chip kelas per kelompok. */
             isiKartu: function (d, g) {
                 var self = this;
-                var isi = el('div', 'space-y-4 border-t border-gray-100 px-4 py-3');
+                var isi = el('div', 'space-y-4 border-t border-gray-200 px-4 py-3 dark:border-gray-700');
                 g.baris.forEach(function (tr) {
                     var blok = el('div', 'space-y-2');
                     var kepala = el('div', 'flex items-center justify-between gap-2');
                     var kiri = el('div', 'flex min-w-0 items-baseline gap-2');
-                    kiri.appendChild(el('span', 'shrink-0 text-xs font-semibold text-gray-400', tr.dataset.kode || ''));
+                    kiri.appendChild(el('span', 'shrink-0 text-xs font-semibold text-gray-500 dark:text-gray-400', tr.dataset.kode || ''));
                     var m = tr.querySelector('button[data-id][data-nama]');
                     if (m) {
-                        var tombol = el('button', 'min-w-0 truncate text-left text-sm font-semibold text-gray-700 hover:text-brand-700 hover:underline', m.dataset.nama);
+                        var tombol = el('button', 'min-w-0 truncate text-left text-sm font-semibold text-gray-900 hover:text-brand-700 hover:underline dark:text-white dark:hover:text-brand-400', m.dataset.nama);
                         tombol.type = 'button';
                         tombol.dataset.id = m.dataset.id;
                         tombol.dataset.nama = m.dataset.nama;
@@ -141,7 +142,7 @@
                         kiri.appendChild(tombol);
                     }
                     var kanan = el('div', 'flex shrink-0 items-center gap-2');
-                    var tm = el('span', 'text-xs font-semibold tabular-nums text-gray-500', self.teksDari('mt-' + tr.dataset.mapel));
+                    var tm = el('span', 'text-xs font-semibold tabular-nums text-gray-500 dark:text-gray-400', self.teksDari('mt-' + tr.dataset.mapel));
                     tm.id = 'cm-' + tr.dataset.mapel;
                     kanan.appendChild(tm);
                     var hapus = tr.querySelector('[data-aksi-mapel]');
@@ -151,7 +152,7 @@
                     blok.appendChild(kepala);
 
                     (self.cfg.grup || []).forEach(function (gr) {
-                        blok.appendChild(el('p', 'text-[11px] font-bold uppercase tracking-wide text-gray-400', gr.judul));
+                        blok.appendChild(el('p', 'text-[11px] font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400', gr.judul));
                         var baris = el('div', 'flex flex-wrap gap-1.5');
                         for (var i = gr.dari; i <= gr.sampai; i++) {
                             var k = self.cfg.kelas[i];
@@ -174,7 +175,7 @@
                 });
                 var aksi = g.baris[0].querySelector('[data-aksi-guru]');
                 if (aksi) {
-                    var pie = el('div', 'border-t border-gray-100 pt-3');
+                    var pie = el('div', 'border-t border-gray-200 pt-3 dark:border-gray-700');
                     pie.appendChild(aksi.cloneNode(true));
                     isi.appendChild(pie);
                 }

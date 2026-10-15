@@ -18,9 +18,10 @@ document.addEventListener('alpine:init', function () {
         var e = document.getElementById(id);
         if (e) { e.textContent = teks; }
     }
+    // Warna sel (sama dengan kelas awal di views/admin/skbm/index.php — rombak tampilan F7: amber → yellow, + mode gelap).
     var KELAS_JP = ['bg-brand-500', 'text-white', 'font-semibold'];
-    var KELAS_TANPA_JP = ['bg-amber-300', 'text-amber-900', 'font-semibold'];
-    var KELAS_MATI = ['bg-gray-200'];
+    var KELAS_TANPA_JP = ['bg-yellow-300', 'text-yellow-900', 'font-semibold'];
+    var KELAS_MATI = ['bg-gray-200', 'dark:bg-gray-700'];
 
     Alpine.data('skbmGrid', function () {
         var dasar = {
@@ -45,6 +46,18 @@ document.addEventListener('alpine:init', function () {
                 if (['impor', 'salin', 'tambah', 'kosong'].indexOf(h) >= 0) { this.panel = h; }
                 this.mulaiTampilan();
             },
+
+            // (F7) Panel Impor/Salin/Tambah/Kosongkan: buka-tutup & buka + gulir ke panelnya (dulu penugasan + fungsi panah
+            // + document.getElementById di isian @click — tidak didukung Alpine versi CSP).
+            alihPanel: function (nama) { this.panel = this.panel === nama ? '' : nama; },
+            bukaPanel: function (nama) {
+                this.panel = nama;
+                this.$nextTick(function () {
+                    var p = document.getElementById(nama);
+                    if (p) { p.scrollIntoView({ behavior: 'smooth', block: 'center' }); }
+                });
+            },
+            pilihMode: function (m) { this.mode = m; },
 
             tampil: function (teks, galat) {
                 var self = this;
