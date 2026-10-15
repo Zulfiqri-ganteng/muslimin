@@ -19,6 +19,8 @@
  *   toastWadah  wadah notifikasi kecil — sekali per halaman (ui_toast()).
  *   konfirmasi  dialog konfirmasi — sekali per halaman (ui_konfirmasi()).
  *   salinTeks   tombol salin — data-teks="…" atau data-sasaran="#id"; @click="salin()"; x-show="tersalin".
+ *   pilihBerkas nama berkas yang dipilih (F8) — x-data="pilihBerkas" data-kosong="…"; input file @change="catatBerkas($event)";
+ *               x-text="namaBerkasTerpilih()". Tautan Kembali tanpa JS halaman: <a href="URL cadangan" data-kembali>.
  *   isianSandi  kata sandi + tombol lihat (F2) — pada pembungkus label+isian: input :type="lihat ? 'text' : 'password'"
  *               @keydown/@keyup="cekCapsLock($event)" @blur="capsLock = false"; tombol .tombol-sandi @mousedown.prevent
  *               @click="alih()" :aria-pressed="lihat"; peringatan x-show="capsLock". Saat formulir dikirim kembali tersembunyi.
@@ -584,5 +586,33 @@
                 },
             };
         });
+
+        /* (F8) Pilih berkas: tampilkan nama berkas yang dipilih. Pada pembungkus label+isian file: x-data="pilihBerkas"
+         * data-kosong="Belum ada berkas dipilih"; isian file @change="catatBerkas($event)"; teks x-text="namaBerkasTerpilih()". */
+        Alpine.data('pilihBerkas', function () {
+            var kosong = 'Belum ada berkas dipilih';
+            return {
+                nama: '',
+                init: function () { kosong = this.$el.getAttribute('data-kosong') || kosong; },
+                catatBerkas: function (e) {
+                    var berkas = (e && e.target && e.target.files) ? e.target.files : [];
+                    this.nama = Array.prototype.map.call(berkas, function (f) { return f.name; }).join(', ');
+                },
+                namaBerkasTerpilih: function () { return this.nama !== '' ? this.nama : kosong; },
+            };
+        });
+    });
+
+    /* (F8) Tautan Kembali: <a href="URL cadangan" data-kembali> — kembali ke halaman sebelumnya bila datang dari situs ini,
+     * selain itu ikuti href (pengganti onclick="history.back()" yang ditolak CSP). */
+    document.addEventListener('click', function (e) {
+        var a = e.target && e.target.closest ? e.target.closest('a[data-kembali]') : null;
+        if (!a || e.defaultPrevented || e.button !== 0 || e.metaKey || e.ctrlKey || e.shiftKey) { return; }
+        var dariSini = false;
+        try { dariSini = document.referrer !== '' && new URL(document.referrer).origin === window.location.origin; } catch (err) { dariSini = false; }
+        if (dariSini && window.history.length > 1) {
+            e.preventDefault();
+            window.history.back();
+        }
     });
 })();

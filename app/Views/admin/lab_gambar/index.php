@@ -1,65 +1,74 @@
 <?php
 /**
- * Galeri foto satu record SIMLAB (generik).
+ * Galeri foto satu record SIMLAB (generik). Rombak tampilan F8: Kembali di kepala halaman (a[data-kembali], dulu onclick
+ * history.back), kartu kit, area unggah dengan komponen kit "pilihBerkas" (dulu objek sebaris + fungsi panah), galeri dengan
+ * tombol Hapus merah (dialog konfirmasi kit), ui_kosong → siap CSP.
  *
  * @var string $entitas
  * @var int    $id
  * @var string $label
  * @var array  $rows  Baris lab_gambar
  */
+// Tujuan cadangan tombol Kembali (bila halaman dibuka langsung, bukan dari daftarnya).
+$asal = [
+    'aset'       => 'admin/master/aset',
+    'kerusakan'  => 'admin/kerusakan',
+    'perbaikan'  => 'admin/perbaikan',
+    'lab'        => 'admin/master/lab',
+    'sparepart'  => 'admin/master/sparepart',
+    'peminjaman' => 'admin/peminjaman',
+][$entitas] ?? 'admin';
 ?>
 <?= $this->extend('layouts/admin') ?>
+
+<?= $this->section('aksi') ?>
+<a href="<?= site_url($asal) ?>" data-kembali class="btn btn-netral"><?= ikon('chevron-left', 'h-4 w-4') ?>Kembali</a>
+<?= $this->endSection() ?>
+
 <?= $this->section('content') ?>
 
-<div class="mb-4">
-    <a href="#" onclick="history.back();return false;" class="inline-flex items-center gap-1.5 text-sm font-semibold text-gray-500 hover:text-brand-700">
-        <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7"/></svg>
-        Kembali
-    </a>
-</div>
-
-<div class="bg-white rounded-2xl border border-gray-200 shadow-xs overflow-hidden max-w-4xl">
-    <div class="px-6 py-4 border-b border-gray-100 bg-gray-50">
-        <h2 class="font-bold text-gray-800">Foto <?= esc($label) ?></h2>
-        <p class="text-sm text-gray-500 mt-0.5">Semua gambar otomatis dikonversi ke <b>WEBP</b> (maks. 5 MB/foto). Bisa unggah beberapa sekaligus.</p>
+<section class="kartu max-w-4xl overflow-hidden" aria-labelledby="judul-foto">
+    <div class="kartu-kepala">
+        <div>
+            <h2 id="judul-foto" class="kartu-judul">Foto <?= esc($label) ?></h2>
+            <p class="kartu-ket">Semua gambar otomatis dikonversi ke <b>WEBP</b> (maks. 5 MB/foto). Bisa unggah beberapa sekaligus.</p>
+        </div>
     </div>
 
     <!-- Unggah -->
-    <form method="post" action="<?= site_url("admin/lab-gambar/{$entitas}/{$id}") ?>" enctype="multipart/form-data" class="p-6 border-b border-gray-100"
-          x-data="{ names: [] }">
+    <form method="post" action="<?= site_url("admin/lab-gambar/{$entitas}/{$id}") ?>" enctype="multipart/form-data" class="kartu-isi border-b border-gray-200 dark:border-gray-700">
         <?= csrf_field() ?>
-        <label class="flex flex-col items-center justify-center gap-2 rounded-xl border-2 border-dashed border-gray-300 hover:border-brand-400 cursor-pointer p-6 text-center transition">
-            <svg class="w-8 h-8 text-gray-400" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"/></svg>
-            <span class="text-sm font-semibold text-gray-600">Pilih gambar (JPG, PNG, WEBP, GIF, HEIC…)</span>
-            <span class="text-xs text-gray-400" x-text="names.length ? names.join(', ') : 'Belum ada berkas dipilih'"></span>
-            <input type="file" name="gambar[]" accept="image/*" multiple class="hidden"
-                   @change="names = Array.from($event.target.files).map(f => f.name)">
+        <label x-data="pilihBerkas" data-kosong="Belum ada berkas dipilih"
+               class="flex cursor-pointer flex-col items-center justify-center gap-2 rounded-lg border-2 border-dashed border-gray-300 bg-gray-50 p-6 text-center transition-colors focus-within:ring-4 focus-within:ring-brand-300 hover:border-brand-400 hover:bg-gray-100 dark:border-gray-600 dark:bg-gray-700/50 dark:hover:border-brand-500 dark:hover:bg-gray-700">
+            <?= ikon('upload', 'h-8 w-8 text-gray-500 dark:text-gray-400') ?>
+            <span class="text-sm font-semibold text-gray-900 dark:text-white">Pilih gambar (JPG, PNG, WEBP, GIF, HEIC…)</span>
+            <span class="text-xs text-gray-500 dark:text-gray-400" x-text="namaBerkasTerpilih()">Belum ada berkas dipilih</span>
+            <input type="file" name="gambar[]" accept="image/*" multiple class="sr-only" @change="catatBerkas($event)">
         </label>
-        <div class="flex justify-end mt-4">
-            <button class="rounded-lg bg-brand-700 hover:bg-brand-800 text-white text-sm font-semibold px-5 py-2.5">Unggah</button>
+        <div class="mt-4 flex justify-end">
+            <button type="submit" class="btn btn-utama"><?= ikon('upload', 'h-4 w-4') ?>Unggah</button>
         </div>
     </form>
 
     <!-- Galeri -->
-    <div class="p-6">
+    <div class="kartu-isi">
         <?php if (empty($rows)): ?>
-            <p class="text-center text-gray-400 py-8">Belum ada foto.</p>
+            <?= ui_kosong(['ikon' => 'image', 'judul' => 'Belum ada foto', 'teks' => 'Unggah foto lewat kotak di atas.']) ?>
         <?php else: ?>
-            <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
+            <div class="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4">
                 <?php foreach ($rows as $g): ?>
-                    <div class="relative group rounded-xl overflow-hidden border border-gray-200 bg-gray-50 aspect-square">
-                        <a href="<?= esc(labimage_url($g['file'])) ?>" target="_blank">
-                            <img src="<?= esc(labimage_url($g['file'])) ?>" alt="foto" loading="lazy" class="w-full h-full object-cover">
+                    <div class="group relative aspect-square overflow-hidden rounded-lg border border-gray-200 bg-gray-50 dark:border-gray-600 dark:bg-gray-700">
+                        <a href="<?= esc(labimage_url($g['file'])) ?>" target="_blank" rel="noopener">
+                            <img src="<?= esc(labimage_url($g['file'])) ?>" alt="Foto <?= esc($label, 'attr') ?>" loading="lazy" class="h-full w-full object-cover">
                         </a>
-                        <a href="<?= site_url('admin/lab-gambar/hapus/' . $g['id']) ?>" data-method="post" data-confirm="Hapus foto ini?"
-                           class="absolute top-1.5 right-1.5 inline-flex h-8 w-8 items-center justify-center rounded-lg bg-white/90 text-red-500 hover:bg-white shadow-xs opacity-0 group-hover:opacity-100 transition" title="Hapus">
-                            <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
-                        </a>
+                        <a href="<?= site_url('admin/lab-gambar/hapus/' . $g['id']) ?>" data-method="post" title="Hapus foto" aria-label="Hapus foto"
+                           data-confirm="Hapus foto ini?" data-confirm-judul="Hapus foto?" data-confirm-ya="Ya, hapus" data-confirm-jenis="bahaya"
+                           class="btn btn-bahaya btn-sm absolute end-1.5 top-1.5 px-2 opacity-100 transition-opacity sm:opacity-0 sm:group-hover:opacity-100 sm:focus-visible:opacity-100"><?= ikon('trash-bin', 'h-4 w-4') ?></a>
                     </div>
                 <?php endforeach; ?>
             </div>
         <?php endif; ?>
     </div>
-</div>
+</section>
 
 <?= $this->endSection() ?>
