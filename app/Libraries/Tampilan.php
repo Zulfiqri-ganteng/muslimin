@@ -33,7 +33,7 @@ final class Tampilan
         'gelap'   => ['nama' => 'Gelap', 'warna' => 'biru', 'sidebar' => 'gelap',
             'ket' => 'Mode gelap Flowbite: latar abu tua, tulisan terang — nyaman dipakai malam hari.'],
         'sekolah' => ['nama' => 'Warna Sekolah', 'warna' => 'lilac', 'sidebar' => 'warna',
-            'ket' => 'Warna asli sekolah: menu samping ungu, aksen lilac & mint.'],
+            'ket' => 'Serba ungu lilac khas sekolah: menu samping, tombol, tabel & lencana; aksen mint.'],
     ];
 
     public const BAWAAN_MODE = 'terang';

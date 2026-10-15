@@ -24,12 +24,30 @@
 /* Mode Gelap (R2): <html data-mode="gelap"> ditulis server dari Pengaturan → Tampilan (Libraries\Tampilan). Kelas dark: = varian ini.
    Pakai atribut bernama PERSIS data-mode hanya di <html> (atribut lain di halaman: data-mode-awal, data-pratinjau). */
 @custom-variant dark (&:where([data-mode="gelap"], [data-mode="gelap"] *));
+/* Warna Sekolah serba lilac (2026-10-15): <html data-mode="sekolah">. Kelas sekolah: = varian ini (kit di blok "WARNA SEKOLAH"). */
+@custom-variant sekolah (&:where([data-mode="sekolah"], [data-mode="sekolah"] *));
 
 @theme {
   --font-sans: 'Inter', 'Segoe UI', system-ui, sans-serif;
   --color-gold-400: #fcc419;
   --color-gold-500: #f5a623;
 
+  /* Warna pendamping lilac untuk mode Warna Sekolah. "anggur" = ungu tua (tombol tambah/simpan/sukses);
+     "plum" = merah keunguan (hapus/bahaya/galat). Tulisan putih di 700 ≥ 7:1, tulisan 800 di atas 100 ≥ 7:1 (AA). */
+  --color-anggur-50: #f5f1fb;
+  --color-anggur-100: #ebe3f7;
+  --color-anggur-200: #d6c6ee;
+  --color-anggur-600: #5b3a91;
+  --color-anggur-700: #4a2d7a;
+  --color-anggur-800: #3b2364;
+  --color-anggur-900: #2c1a4b;
+  --color-plum-50: #fdf2f7;
+  --color-plum-100: #fbe4ef;
+  --color-plum-200: #f5c2da;
+  --color-plum-600: #b52a72;
+  --color-plum-700: #a3206a;
+  --color-plum-800: #861a57;
+  --color-plum-900: #6b1446;
 }
 
 /* Warna merek = variabel CSS bertriplet "R G B" (nilai di @layer base) → tema bisa diganti tanpa build ulang.
@@ -704,6 +722,99 @@
   .pratinjau-tema[data-pratinjau="gelap"] { @apply border-gray-700 bg-gray-900; }
   .pratinjau-tema[data-pratinjau="gelap"] .pratinjau-tema-bilah { @apply border-gray-700 bg-gray-800; }
   .pratinjau-tema[data-pratinjau="gelap"] .pratinjau-tema-isi > span:not(.tombol) { @apply bg-gray-700; }
+  /* Warna Sekolah: latar lavender + garis lilac (seperti mode serba lilac). */
+  .pratinjau-tema[data-pratinjau="sekolah"] { @apply border-brand-200 bg-brand-50; }
+  .pratinjau-tema[data-pratinjau="sekolah"] .pratinjau-tema-bilah { @apply border-brand-100; }
+  .pratinjau-tema[data-pratinjau="sekolah"] .pratinjau-tema-isi > span:not(.tombol) { @apply bg-brand-200; }
+}
+
+/* =====================================================================================================================
+   WARNA SEKOLAH SERBA LILAC — <html data-mode="sekolah"> (permintaan sekolah 2026-10-15). Mode Terang & Gelap tidak tersentuh.
+   Semua kit ikut palet lilac (warna merek = ramp lilac dari [data-warna="lilac"]) + warna pendamping yang serasi:
+     - "ungu tua" (--color-anggur-*) untuk tombol sukses/tambah/simpan;
+     - "merah keunguan" (--color-plum-*) untuk hapus/bahaya/galat — tetap terasa bahaya (ikon tempat sampah + dialog konfirmasi);
+     - mint (emerald, aksen sekolah sejak tema Lilac + Mint) untuk status berhasil/hadir; kuning tetap untuk "menunggu/perlu cek".
+   Kontras AA dijaga (tulisan putih di tombol ≥ 7:1, tulisan lencana ≥ 4,5:1). Varian sekolah: dipakai juga di view (body, kerangka).
+   ===================================================================================================================== */
+@layer components {
+  /* Tombol */
+  .btn-sukses { @apply sekolah:bg-anggur-700 sekolah:hover:bg-anggur-800 sekolah:focus:ring-brand-300; }
+  .btn-bahaya { @apply sekolah:bg-plum-700 sekolah:hover:bg-plum-800 sekolah:focus:ring-plum-200; }
+  .btn-netral { @apply sekolah:border-brand-200 sekolah:text-brand-800 sekolah:hover:bg-brand-50 sekolah:hover:text-brand-900 sekolah:focus:ring-brand-100; }
+  .btn-teks   { @apply sekolah:text-brand-800 sekolah:hover:bg-brand-50 sekolah:hover:text-brand-900 sekolah:focus:ring-brand-100; }
+
+  /* Formulir */
+  .inp, .inp-berkas { @apply sekolah:border-brand-200 sekolah:bg-brand-50; }
+  .cek          { @apply sekolah:border-brand-300 sekolah:bg-brand-50; }
+  .saklar-jalur { @apply sekolah:bg-brand-100; }
+  .err-msg      { @apply sekolah:text-plum-700; }
+  .inp-err      { @apply sekolah:border-plum-600 sekolah:bg-plum-50 sekolah:text-plum-900 sekolah:focus:border-plum-600 sekolah:focus:ring-plum-600; }
+
+  /* Kartu, bilah alat, kaki */
+  .kartu, .kartu-kepala, .kartu-kaki, .alat-crud, .kaki-crud { @apply sekolah:border-brand-100; }
+  .alat-crud-pemisah { @apply sekolah:bg-brand-100; }
+  .navbar { @apply sekolah:border-brand-100; }
+  .kartu-tautan { @apply sekolah:hover:border-brand-200 sekolah:hover:bg-brand-50; }
+
+  /* Tabel & daftar data */
+  .tabel thead    { @apply sekolah:bg-brand-50 sekolah:text-brand-900; }
+  .tabel tbody tr { @apply sekolah:border-brand-100 sekolah:hover:bg-brand-50; }
+  .tabel-crud, .tabel-crud tbody { @apply sekolah:divide-brand-100; }
+  .tabel-crud thead    { @apply sekolah:bg-brand-100; }
+  .tabel-crud thead th { @apply sekolah:text-brand-800; }
+  .tabel-crud tbody tr { @apply sekolah:hover:bg-brand-50; }
+
+  /* Lencana: arti warna tetap terbaca, tapi dalam keluarga lilac */
+  .lencana-abu    { @apply sekolah:bg-brand-50 sekolah:text-brand-800; }
+  .lencana-biru   { @apply sekolah:bg-brand-200 sekolah:text-brand-900; }
+  .lencana-ungu   { @apply sekolah:bg-anggur-100 sekolah:text-anggur-800; }
+  .lencana-hijau  { @apply sekolah:bg-emerald-100 sekolah:text-emerald-800; }
+  .lencana-merah  { @apply sekolah:bg-plum-100 sekolah:text-plum-800; }
+  .titik-status-biru::before  { @apply sekolah:bg-brand-500; }
+  .titik-status-merah::before { @apply sekolah:bg-plum-600; }
+  .titik-status-hijau::before { @apply sekolah:bg-emerald-400; }
+
+  /* Saringan, tab, paginasi, menu tarik */
+  .tombol-saring { @apply sekolah:border-brand-200 sekolah:text-brand-800 sekolah:hover:bg-brand-50; }
+  .tab-daftar    { @apply sekolah:border-brand-100; }
+  .tab           { @apply sekolah:hover:border-brand-200 sekolah:hover:text-brand-800; }
+  .tab-jumlah    { @apply sekolah:bg-brand-100 sekolah:text-brand-800; }
+  .tab-penuh-daftar { @apply sekolah:divide-brand-100 sekolah:text-brand-700; }
+  .tab-penuh     { @apply sekolah:bg-brand-50 sekolah:hover:bg-brand-100; }
+  .tab-penuh[aria-selected='true'] { @apply sekolah:bg-brand-100 sekolah:text-brand-800; }
+  .paginasi-item { @apply sekolah:border-brand-200 sekolah:text-brand-700 sekolah:hover:bg-brand-50 sekolah:hover:text-brand-900; }
+  .dropdown-menu { @apply sekolah:divide-brand-50 sekolah:border-brand-100; }
+  .dropdown-item { @apply sekolah:hover:bg-brand-50 sekolah:hover:text-brand-900 sekolah:focus:bg-brand-50; }
+  .dropdown-item-bahaya { @apply sekolah:text-plum-700 sekolah:hover:bg-plum-50 sekolah:hover:text-plum-800 sekolah:focus:bg-plum-50; }
+
+  /* Pesan & keadaan kosong */
+  .peringatan-info   { @apply sekolah:border-brand-200 sekolah:bg-brand-50 sekolah:text-brand-900; }
+  .peringatan-netral { @apply sekolah:border-brand-200 sekolah:bg-brand-50; }
+  .peringatan-sukses { @apply sekolah:border-emerald-300 sekolah:bg-emerald-50 sekolah:text-emerald-800; }
+  .peringatan-galat  { @apply sekolah:border-plum-200 sekolah:bg-plum-50 sekolah:text-plum-800; }
+  .toast         { @apply sekolah:border-brand-100; }
+  .toast-sukses .toast-ikon { @apply sekolah:bg-emerald-100 sekolah:text-emerald-700; }
+  .toast-galat  .toast-ikon { @apply sekolah:bg-plum-100 sekolah:text-plum-700; }
+  .kosong-ikon   { @apply sekolah:bg-brand-100 sekolah:text-brand-700; }
+  .ubin-ikon     { @apply sekolah:bg-brand-100 sekolah:text-brand-700; }
+}
+
+/* Warna Sekolah — pemetaan warna utilitas yang ditulis LANGSUNG di view (tombol hapus berikon, tautan "Hapus", status merah, kotak
+   info biru) ke palet lilac: merah → plum (merah keunguan), biru → lilac. Tanpa @layer → menang atas kelas utilitas; hanya berlaku di
+   <html data-mode="sekolah">, mode Terang & Gelap tidak tersentuh. Kontras: plum-600 di putih 5,9:1, plum-700 7:1, brand-700 7,4:1. */
+[data-mode="sekolah"] {
+  .text-red-500, .text-red-600 { color: var(--color-plum-600); }
+  .text-red-700, .text-red-800 { color: var(--color-plum-700); }
+  .text-red-900 { color: var(--color-plum-900); }
+  .bg-red-50 { background-color: var(--color-plum-50); }
+  .bg-red-100 { background-color: var(--color-plum-100); }
+  .border-red-200, .border-red-300 { border-color: var(--color-plum-200); }
+  .hover\:text-red-600:hover, .hover\:text-red-700:hover { color: var(--color-plum-800); }
+  .hover\:bg-red-50:hover { background-color: var(--color-plum-50); }
+  .text-blue-600, .text-blue-700, .text-blue-800 { color: rgb(var(--brand-700)); }
+  .bg-blue-50 { background-color: rgb(var(--brand-50)); }
+  .bg-blue-100 { background-color: rgb(var(--brand-100)); }
+  .border-blue-200, .border-blue-300 { border-color: rgb(var(--brand-200)); }
 }
 
 /* (R2) Mode gelap: bilah gulir & kontrol bawaan peramban ikut gelap; pengaman kotak centang/radio tanpa .cek di isi halaman. */

@@ -28,7 +28,7 @@ $tema        = \App\Libraries\Tampilan::tema($setting ?? null);
     <link rel="preload" href="<?= base_url('assets/fonts/inter/inter-latin-wght-normal.woff2') ?>" as="font" type="font/woff2" crossorigin>
     <link rel="stylesheet" href="<?= base_url('assets/css/admin.css') ?>?v=<?= @filemtime(FCPATH . 'assets/css/admin.css') ?>" <?= csp_style_nonce() ?>>
 </head>
-<body class="bg-gray-50 text-gray-800 antialiased dark:bg-gray-900 dark:text-gray-200">
+<body class="bg-gray-50 text-gray-800 antialiased dark:bg-gray-900 dark:text-gray-200 sekolah:bg-brand-50/60">
 <main class="flex min-h-screen flex-col items-center justify-center px-4 py-10">
     <a href="<?= site_url('/') ?>" class="mb-6 flex max-w-md items-center gap-3 rounded-lg focus:outline-hidden focus-visible:ring-2 focus-visible:ring-brand-300" title="Ke beranda situs sekolah">
         <?php if ($adaLogo): ?>

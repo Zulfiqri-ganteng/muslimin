@@ -164,7 +164,7 @@ $js = static fn (string $berkas): string => '<script defer src="' . base_url($be
     <link rel="preload" href="<?= base_url('assets/fonts/inter/inter-latin-wght-normal.woff2') ?>" as="font" type="font/woff2" crossorigin>
     <link rel="stylesheet" href="<?= base_url('assets/css/admin.css') ?>?v=<?= @filemtime(FCPATH . 'assets/css/admin.css') ?>" <?= csp_style_nonce() ?>>
 </head>
-<body class="bg-gray-50 text-gray-800 antialiased dark:bg-gray-900 dark:text-gray-200" x-data="adminLayout" @keydown.escape.window="tutupLaci()">
+<body class="bg-gray-50 text-gray-800 antialiased dark:bg-gray-900 dark:text-gray-200 sekolah:bg-brand-50/60" x-data="adminLayout" @keydown.escape.window="tutupLaci()">
 <a href="#isi" class="sr-only focus:not-sr-only focus:fixed focus:top-3 focus:left-3 focus:z-[80] focus:rounded-lg focus:bg-white focus:px-4 focus:py-2 focus:text-sm focus:font-medium focus:text-brand-700 focus:shadow-sm">Lewati ke isi halaman</a>
 
 <!-- Layar "Memproses…" saat formulir dikirim (semua formulir, kecuali data-noload). -->
