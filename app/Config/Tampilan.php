@@ -71,9 +71,9 @@ class Tampilan extends BaseConfig
         'sistem' => [
             'fase' => 'F10', 'label' => 'Arsip, Info, Sistem & halaman galat',
             'view'    => ['admin/dokumen', 'admin/pengumuman', 'admin/akun', 'admin/hak_akses', 'admin/audit', 'admin/profile.php', 'admin/settings.php',
-                'partials/dokumen_penampil.php', 'errors/html/error_404.php', 'errors/html/error_400.php', 'errors/html/production.php'],
+                'errors/html/error_404.php', 'errors/html/error_400.php', 'errors/html/production.php'],
             'url'     => ['admin/dokumen', 'admin/pengumuman', 'admin/akun', 'admin/hak-akses', 'admin/audit', 'admin/profile', 'admin/settings'],
-            'bersama' => ['partials/dokumen_penampil.php', 'errors/html/error_404.php', 'errors/html/error_400.php', 'errors/html/production.php'],
+            'bersama' => ['errors/html/error_404.php', 'errors/html/error_400.php', 'errors/html/production.php'],
         ],
     ];
 

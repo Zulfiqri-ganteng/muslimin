@@ -1,7 +1,10 @@
 <?php
 
 /**
- * Pratinjau satu dokumen + pengelolaan tautan berbagi.
+ * Pratinjau satu dokumen + pengelolaan tautan berbagi. Rombak tampilan F10: Bagikan / Unduh / Kembali di kepala halaman, jejak
+ * folder ber-ikon, kartu kit (penampil, keterangan, tautan berbagi, riwayat), lencana kit, penampil versi admin
+ * (admin/dokumen/_penampil.php). Siap CSP: Salin tautan = kit salinTeks (dulu objek x-data bermetode async + fungsi panah),
+ * dialog Bagikan = dialog kit (dulu x-show), Cabut = data-confirm kit (dulu onsubmit confirm), onclick select dibuang.
  *
  * @var array $d       Baris dokumen (+ pengunggah, folder_nama)
  * @var array $jejak   Breadcrumb folder
@@ -23,266 +26,195 @@ $bolehViewerLuar = ! $tautan && in_array($d['visibilitas'], ['link', 'publik'], 
     && in_array($ext, ['doc', 'docx', 'xls', 'xlsx', 'ppt', 'pptx'], true);
 
 $labelVisib = ['privat' => 'Privat', 'link' => 'Lewat tautan', 'publik' => 'Publik'];
-$warnaVisib = [
-    'privat' => 'bg-gray-100 text-gray-600',
-    'link'   => 'bg-brand-50 text-brand-700',
-    'publik' => 'bg-emerald-50 text-emerald-700',
-];
+$warnaVisib = ['privat' => 'lencana-abu', 'link' => 'lencana-merek', 'publik' => 'lencana-hijau'];
 $tgl     = static fn ($x) => $x ? date('d/m/Y H:i', strtotime((string) $x)) : '—';
 $sekolah = (new \App\Models\SettingModel())->get()['school_name'] ?? 'Sekolah';
+$baris   = static fn (string $dt, string $dd): string => '<div class="flex justify-between gap-3"><dt class="shrink-0 text-gray-500 dark:text-gray-400">' . esc($dt) . '</dt><dd class="text-right break-words text-gray-900 dark:text-white">' . $dd . '</dd></div>';
+$kepala  = static fn (string $judul, string $ket = ''): string => '<div class="kartu-kepala"><div><h3 class="kartu-judul text-base">' . esc($judul) . '</h3>' . ($ket !== '' ? '<p class="kartu-ket">' . esc($ket) . '</p>' : '') . '</div></div>';
 ?>
 <?= $this->extend('layouts/admin') ?>
+
+<?= $this->section('aksi') ?>
+<button type="button" class="btn btn-sukses" data-buka-dialog="dok-bagikan"><?= ikon('users', 'h-4 w-4') ?>Bagikan</button>
+<?php if (! $tautan): ?>
+    <a href="<?= $urlUnduh ?>" class="btn btn-utama"><?= ikon('download', 'h-4 w-4') ?>Unduh</a>
+<?php endif; ?>
+<a href="<?= site_url('admin/dokumen' . ($d['folder_id'] !== null ? '?folder=' . (int) $d['folder_id'] : '')) ?>" class="btn btn-netral"><?= ikon('chevron-left', 'h-4 w-4') ?>Kembali</a>
+<?= $this->endSection() ?>
+
 <?= $this->section('content') ?>
 
-<div x-data="{
-        bagikanOpen: false,
-        async salin(teks, el) {
-            try { await navigator.clipboard.writeText(teks); }
-            catch (e) {
-                const t = document.createElement('textarea');
-                t.value = teks; document.body.appendChild(t); t.select();
-                document.execCommand('copy'); t.remove();
-            }
-            const asli = el.textContent; el.textContent = 'Tersalin!';
-            setTimeout(() => { el.textContent = asli; }, 1600);
-        }
-     }">
+<div class="space-y-4">
+    <!-- Jejak folder -->
+    <nav class="flex min-w-0 flex-wrap items-center gap-1 text-sm" aria-label="Letak dokumen">
+        <a href="<?= site_url('admin/dokumen') ?>" class="inline-flex items-center gap-1.5 rounded-lg px-2 py-1 text-gray-600 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-700"><?= ikon('folder-open', 'h-4 w-4') ?>Dokumen</a>
+        <?php foreach ($jejak as $j): ?>
+            <?= ikon('chevron-right', 'h-4 w-4 shrink-0 text-gray-400 dark:text-gray-500') ?>
+            <a href="<?= site_url('admin/dokumen?folder=' . $j['id']) ?>" class="max-w-[160px] truncate rounded-lg px-2 py-1 text-gray-600 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-700"><?= esc($j['nama']) ?></a>
+        <?php endforeach; ?>
+        <?= ikon('chevron-right', 'h-4 w-4 shrink-0 text-gray-400 dark:text-gray-500') ?>
+        <span class="max-w-[220px] truncate px-2 py-1 font-semibold text-brand-700 dark:text-brand-400"><?= esc($d['judul']) ?></span>
+    </nav>
 
-    <!-- Remah jejak + aksi -->
-    <div class="flex flex-col sm:flex-row sm:items-center gap-3 mb-4">
-        <nav class="flex items-center gap-1 text-sm flex-1 min-w-0 flex-wrap">
-            <a href="<?= site_url('admin/dokumen') ?>" class="px-2 py-1 rounded-lg hover:bg-gray-100 text-gray-600">Dokumen</a>
-            <?php foreach ($jejak as $j) { ?>
-                <svg class="w-4 h-4 text-gray-300 shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7"/></svg>
-                <a href="<?= site_url('admin/dokumen?folder=' . $j['id']) ?>" class="px-2 py-1 rounded-lg hover:bg-gray-100 text-gray-600 truncate max-w-[160px]"><?= esc($j['nama']) ?></a>
-            <?php } ?>
-            <svg class="w-4 h-4 text-gray-300 shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7"/></svg>
-            <span class="px-2 py-1 font-semibold text-brand-700 truncate max-w-[220px]"><?= esc($d['judul']) ?></span>
-        </nav>
+    <!-- Penampil dibuat SELEBAR halaman: berkas yang dibaca (PDF/Excel/Word) butuh ruang horizontal, sementara keterangan cukup
+         dibaca sekilas — jadi keterangan turun ke bawah, bukan mengapit di samping. -->
+    <section class="kartu overflow-hidden" aria-label="Isi dokumen">
+        <?= view('admin/dokumen/_penampil', [
+            'urlIsi'          => $urlIsi,
+            'urlUnduh'        => $urlUnduh,
+            'kategori'        => $kategori,
+            'ext'             => $ext,
+            'judul'           => $d['judul'],
+            'mime'            => (string) $d['mime'],
+            'tautan'          => $tautan,
+            'ytId'            => $tautan ? dokumen_youtube_id((string) $d['url_eksternal']) : null,
+            'urlEksternal'    => $d['url_eksternal'],
+            'penyedia'        => (string) $d['penyedia'],
+            'bolehViewerLuar' => $bolehViewerLuar,
+            'urlViewerLuar'   => $bolehViewerLuar
+                ? 'https://view.officeapps.live.com/op/embed.aspx?src=' . rawurlencode($urlIsi)
+                : null,
+        ]) ?>
+    </section>
 
-        <div class="flex items-center gap-2 flex-wrap">
-            <button type="button" @click="bagikanOpen=true"
-                    class="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl bg-emerald-600 text-white text-sm font-semibold hover:bg-emerald-700">
-                <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M8.684 13.342a3 3 0 100-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684zm0-12.632a3 3 0 105.368-2.684 3 3 0 00-5.368 2.684z"/></svg>
-                Bagikan
-            </button>
-            <?php if (! $tautan) { ?>
-                <a href="<?= $urlUnduh ?>" class="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl bg-brand-700 text-white text-sm font-semibold hover:bg-brand-800">
-                    <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg>
-                    Unduh
-                </a>
-            <?php } ?>
-            <a href="<?= site_url('admin/dokumen' . ($d['folder_id'] !== null ? '?folder=' . (int) $d['folder_id'] : '')) ?>"
-               class="px-3 py-2 rounded-xl border border-gray-300 text-sm font-medium text-gray-700 hover:bg-gray-50">Kembali</a>
-        </div>
-    </div>
+    <!-- Panel bawah: keterangan · tautan berbagi · riwayat -->
+    <div class="grid grid-cols-1 items-start gap-4 lg:grid-cols-3">
 
-    <!-- Penampil dibuat SELEBAR halaman: berkas yang dibaca (PDF/Excel/Word)
-         butuh ruang horizontal, sementara keterangan cukup dibaca sekilas —
-         jadi keterangan turun ke bawah, bukan mengapit di samping. -->
-    <div class="space-y-4">
-
-        <!-- Penampil -->
-        <div class="bg-white rounded-2xl border border-gray-200 shadow-xs overflow-hidden">
-            <?= view('partials/dokumen_penampil', [
-                'urlIsi'          => $urlIsi,
-                'urlUnduh'        => $urlUnduh,
-                'kategori'        => $kategori,
-                'ext'             => $ext,
-                'judul'           => $d['judul'],
-                'mime'            => (string) $d['mime'],
-                'tautan'          => $tautan,
-                'ytId'            => $tautan ? dokumen_youtube_id((string) $d['url_eksternal']) : null,
-                'urlEksternal'    => $d['url_eksternal'],
-                'penyedia'        => (string) $d['penyedia'],
-                'bolehViewerLuar' => $bolehViewerLuar,
-                'urlViewerLuar'   => $bolehViewerLuar
-                    ? 'https://view.officeapps.live.com/op/embed.aspx?src=' . rawurlencode($urlIsi)
-                    : null,
-            ]) ?>
-        </div>
-
-        <!-- Panel bawah: keterangan · tautan berbagi · riwayat -->
-        <div class="grid grid-cols-1 lg:grid-cols-3 gap-4 items-start">
-
-            <!-- Keterangan -->
-            <div class="bg-white rounded-2xl border border-gray-200 shadow-xs p-4">
-                <h3 class="font-semibold text-gray-800 text-sm mb-3">Keterangan Berkas</h3>
+        <!-- Keterangan -->
+        <section class="kartu overflow-hidden">
+            <?= $kepala('Keterangan berkas') ?>
+            <div class="kartu-isi !p-4">
                 <dl class="space-y-2 text-sm">
-                    <div class="flex justify-between gap-3">
-                        <dt class="text-gray-500 shrink-0">Judul</dt>
-                        <dd class="text-gray-800 font-medium text-right break-words"><?= esc($d['judul']) ?></dd>
-                    </div>
-                    <?php if (! $tautan) { ?>
-                        <div class="flex justify-between gap-3">
-                            <dt class="text-gray-500 shrink-0">Nama berkas</dt>
-                            <dd class="text-gray-700 text-right break-all text-xs"><?= esc((string) $d['nama_asli']) ?></dd>
-                        </div>
-                        <div class="flex justify-between gap-3">
-                            <dt class="text-gray-500">Ukuran</dt>
-                            <dd class="text-gray-700"><?= esc(dokumen_ukuran_manusia((int) $d['ukuran'])) ?></dd>
-                        </div>
-                        <div class="flex justify-between gap-3">
-                            <dt class="text-gray-500">Jenis</dt>
-                            <dd class="text-gray-700"><?= esc(strtoupper($ext ?: $kategori)) ?></dd>
-                        </div>
-                    <?php } else { ?>
-                        <div class="flex justify-between gap-3">
-                            <dt class="text-gray-500 shrink-0">Tautan</dt>
-                            <dd class="text-right break-all text-xs"><a href="<?= esc($d['url_eksternal']) ?>" target="_blank" rel="noopener" class="text-brand-700 underline"><?= esc($d['url_eksternal']) ?></a></dd>
-                        </div>
-                    <?php } ?>
-                    <div class="flex justify-between gap-3">
-                        <dt class="text-gray-500">Akses</dt>
-                        <dd><span class="px-2 py-0.5 rounded-sm text-[11px] font-medium <?= $warnaVisib[$d['visibilitas']] ?>"><?= esc($labelVisib[$d['visibilitas']]) ?></span></dd>
-                    </div>
-                    <div class="flex justify-between gap-3">
-                        <dt class="text-gray-500">Folder</dt>
-                        <dd class="text-gray-700 text-right"><?= esc((string) ($d['folder_nama'] ?? 'Dokumen (utama)')) ?></dd>
-                    </div>
-                    <div class="flex justify-between gap-3">
-                        <dt class="text-gray-500">Diunggah</dt>
-                        <dd class="text-gray-700 text-right text-xs">
-                            <?= esc($tgl($d['created_at'])) ?><br>
-                            <span class="text-gray-400"><?= esc((string) ($d['pengunggah'] ?? '—')) ?></span>
-                        </dd>
-                    </div>
-                    <div class="flex justify-between gap-3">
-                        <dt class="text-gray-500">Dibuka / diunduh</dt>
-                        <dd class="text-gray-700"><?= (int) $d['jml_lihat'] ?> / <?= (int) $d['jml_unduh'] ?></dd>
-                    </div>
+                    <?= $baris('Judul', '<span class="font-medium">' . esc($d['judul']) . '</span>') ?>
+                    <?php if (! $tautan): ?>
+                        <?= $baris('Nama berkas', '<span class="text-xs break-all">' . esc((string) $d['nama_asli']) . '</span>') ?>
+                        <?= $baris('Ukuran', esc(dokumen_ukuran_manusia((int) $d['ukuran']))) ?>
+                        <?= $baris('Jenis', esc(strtoupper($ext ?: $kategori))) ?>
+                    <?php else: ?>
+                        <?= $baris('Tautan', '<a href="' . esc((string) $d['url_eksternal'], 'attr') . '" target="_blank" rel="noopener" class="text-xs break-all text-brand-700 underline dark:text-brand-400">' . esc((string) $d['url_eksternal']) . '</a>') ?>
+                    <?php endif; ?>
+                    <?= $baris('Akses', '<span class="lencana ' . ($warnaVisib[$d['visibilitas']] ?? 'lencana-abu') . '">' . esc($labelVisib[$d['visibilitas']] ?? $d['visibilitas']) . '</span>') ?>
+                    <?= $baris('Folder', esc((string) ($d['folder_nama'] ?? 'Dokumen (utama)'))) ?>
+                    <?= $baris('Diunggah', '<span class="text-xs">' . esc($tgl($d['created_at'])) . '<br><span class="text-gray-500 dark:text-gray-400">' . esc((string) ($d['pengunggah'] ?? '—')) . '</span></span>') ?>
+                    <?= $baris('Dibuka / diunduh', (int) $d['jml_lihat'] . ' / ' . (int) $d['jml_unduh']) ?>
                 </dl>
 
-                <?php if (trim((string) $d['deskripsi']) !== '') { ?>
-                    <div class="mt-3 pt-3 border-t border-gray-100">
-                        <p class="text-xs text-gray-500 mb-1">Keterangan</p>
-                        <p class="text-sm text-gray-700 whitespace-pre-line"><?= esc($d['deskripsi']) ?></p>
+                <?php if (trim((string) $d['deskripsi']) !== ''): ?>
+                    <div class="mt-3 border-t border-gray-200 pt-3 dark:border-gray-700">
+                        <p class="mb-1 text-xs text-gray-500 dark:text-gray-400">Keterangan</p>
+                        <p class="text-sm whitespace-pre-line text-gray-700 dark:text-gray-300"><?= esc($d['deskripsi']) ?></p>
                     </div>
-                <?php } ?>
+                <?php endif; ?>
             </div>
+        </section>
 
-            <!-- Tautan berbagi -->
-            <div class="bg-white rounded-2xl border border-gray-200 shadow-xs p-4">
-                <h3 class="font-semibold text-gray-800 text-sm mb-1">Tautan Berbagi</h3>
-                <p class="text-xs text-gray-500 mb-3">Guru tidak perlu akun — cukup buka tautannya.</p>
-
-                <?php if ($shares === []) { ?>
-                    <p class="text-sm text-gray-400 py-3 text-center">Belum ada tautan. Klik <b>Bagikan</b> di atas.</p>
-                <?php } else { ?>
+        <!-- Tautan berbagi -->
+        <section class="kartu overflow-hidden">
+            <?= $kepala('Tautan berbagi', 'Guru tidak perlu akun — cukup buka tautannya.') ?>
+            <div class="kartu-isi !p-4">
+                <?php if ($shares === []): ?>
+                    <p class="py-3 text-center text-sm text-gray-500 dark:text-gray-400">Belum ada tautan. Klik <b>Bagikan</b> di atas.</p>
+                <?php else: ?>
                     <div class="space-y-3">
-                        <?php foreach ($shares as $s) {
+                        <?php foreach ($shares as $s):
                             $url    = site_url('d/' . $s['token']);
                             $mati   = (int) $s['aktif'] !== 1;
                             $lewat  = ! empty($s['expired_at']) && strtotime((string) $s['expired_at']) < time();
                             $habis  = $s['maks_unduh'] !== null && (int) $s['jml_unduh'] >= (int) $s['maks_unduh'];
                             $sehat  = ! $mati && ! $lewat && ! $habis;
-                            $pesanWa = rawurlencode("Assalamualaikum. Berikut dokumen \"" . $d['judul'] . "\" dari " . $sekolah . ":\n" . $url);
+                            $pesanWa = rawurlencode('Assalamualaikum. Berikut dokumen "' . $d['judul'] . '" dari ' . $sekolah . ":\n" . $url);
                             ?>
-                            <div class="border rounded-xl p-3 <?= $sehat ? 'border-emerald-200 bg-emerald-50/40' : 'border-gray-200 bg-gray-50' ?>">
-                                <div class="flex items-center gap-2 mb-2">
-                                    <span class="px-2 py-0.5 rounded-sm text-[10px] font-bold <?= $sehat ? 'bg-emerald-100 text-emerald-700' : 'bg-gray-200 text-gray-500' ?>">
-                                        <?= $mati ? 'DICABUT' : ($lewat ? 'KEDALUWARSA' : ($habis ? 'JATAH HABIS' : 'AKTIF')) ?>
-                                    </span>
-                                    <?php if ($s['password_hash']) { ?>
-                                        <span class="px-2 py-0.5 rounded-sm text-[10px] bg-amber-100 text-amber-700">Bersandi</span>
-                                    <?php } ?>
-                                    <?php if ((int) $s['boleh_unduh'] !== 1) { ?>
-                                        <span class="px-2 py-0.5 rounded-sm text-[10px] bg-gray-200 text-gray-600">Lihat saja</span>
-                                    <?php } ?>
+                            <div class="rounded-lg border p-3 <?= $sehat ? 'border-green-200 bg-green-50/40 dark:border-green-900 dark:bg-gray-700/40' : 'border-gray-200 bg-gray-50 dark:border-gray-700 dark:bg-gray-700/40' ?>">
+                                <div class="mb-2 flex flex-wrap items-center gap-1.5">
+                                    <span class="lencana <?= $sehat ? 'lencana-hijau' : 'lencana-abu' ?>"><?= $mati ? 'Dicabut' : ($lewat ? 'Kedaluwarsa' : ($habis ? 'Jatah habis' : 'Aktif')) ?></span>
+                                    <?php if ($s['password_hash']): ?><span class="lencana lencana-kuning">Bersandi</span><?php endif; ?>
+                                    <?php if ((int) $s['boleh_unduh'] !== 1): ?><span class="lencana lencana-abu">Lihat saja</span><?php endif; ?>
                                 </div>
 
-                                <input readonly value="<?= esc($url, 'attr') ?>" onclick="this.select()"
-                                       class="w-full px-2 py-1.5 rounded-lg border border-gray-300 text-[11px] font-mono bg-white mb-2">
+                                <input readonly value="<?= esc($url, 'attr') ?>" class="inp mb-2 !py-1.5 font-mono text-xs" aria-label="Tautan berbagi">
 
-                                <div class="flex items-center gap-1.5 flex-wrap">
-                                    <button type="button" @click="salin('<?= esc($url, 'js') ?>', $el)"
-                                            class="px-2.5 py-1 rounded-lg border border-gray-300 text-xs font-medium text-gray-700 hover:bg-white">Salin</button>
-                                    <a href="https://wa.me/?text=<?= $pesanWa ?>" target="_blank" rel="noopener"
-                                       class="px-2.5 py-1 rounded-lg bg-green-600 text-white text-xs font-medium hover:bg-green-700">WhatsApp</a>
-                                    <a href="<?= esc($url) ?>" target="_blank" rel="noopener"
-                                       class="px-2.5 py-1 rounded-lg border border-gray-300 text-xs text-gray-600 hover:bg-white">Coba buka</a>
-                                    <?php if (! $mati) { ?>
-                                        <form method="post" action="<?= site_url('admin/dokumen/share/' . $s['id'] . '/cabut') ?>" class="ml-auto"
-                                              onsubmit="return confirm('Cabut tautan ini? Guru yang sudah memegangnya tidak bisa lagi membuka dokumen.')">
+                                <div class="flex flex-wrap items-center gap-1.5">
+                                    <button type="button" class="btn btn-netral btn-xs" x-data="salinTeks" data-teks="<?= esc($url, 'attr') ?>" data-pesan="Tautan tersalin." @click="salin()"><?= ikon('file-copy', 'h-3.5 w-3.5') ?><span x-show="!tersalin">Salin</span><span x-show="tersalin" x-cloak>Tersalin</span></button>
+                                    <a href="https://wa.me/?text=<?= $pesanWa ?>" target="_blank" rel="noopener" class="btn btn-sukses btn-xs"><?= ikon('whatsapp', 'h-3.5 w-3.5', 'solid') ?>WhatsApp</a>
+                                    <a href="<?= esc($url, 'attr') ?>" target="_blank" rel="noopener" class="btn btn-netral btn-xs"><?= ikon('arrow-up-right-from-square', 'h-3.5 w-3.5') ?>Coba buka</a>
+                                    <?php if (! $mati): ?>
+                                        <form method="post" action="<?= site_url('admin/dokumen/share/' . $s['id'] . '/cabut') ?>" class="ms-auto"
+                                              data-confirm="Cabut tautan ini? Guru yang sudah memegangnya tidak bisa lagi membuka dokumen." data-confirm-judul="Cabut tautan?" data-confirm-ya="Ya, cabut" data-confirm-jenis="bahaya">
                                             <?= csrf_field() ?>
-                                            <button class="px-2.5 py-1 rounded-lg border border-red-300 text-xs font-medium text-red-700 hover:bg-red-50">Cabut</button>
+                                            <button type="submit" class="btn btn-bahaya btn-xs"><?= ikon('close-circle', 'h-3.5 w-3.5') ?>Cabut</button>
                                         </form>
-                                    <?php } ?>
+                                    <?php endif; ?>
                                 </div>
 
-                                <p class="text-[11px] text-gray-500 mt-2">
+                                <p class="mt-2 text-xs text-gray-500 dark:text-gray-400">
                                     Dibuka <?= (int) $s['jml_akses'] ?>× · diunduh <?= (int) $s['jml_unduh'] ?><?= $s['maks_unduh'] !== null ? '/' . (int) $s['maks_unduh'] : '' ?>×
-                                    <?php if (! empty($s['expired_at'])) { ?> · berlaku s/d <?= esc(date('d/m/Y', strtotime((string) $s['expired_at']))) ?><?php } ?>
+                                    <?php if (! empty($s['expired_at'])): ?> · berlaku s/d <?= esc(date('d/m/Y', strtotime((string) $s['expired_at']))) ?><?php endif; ?>
                                 </p>
-                                <?php if (! empty($s['catatan'])) { ?>
-                                    <p class="text-[11px] text-gray-500 italic mt-0.5"><?= esc($s['catatan']) ?></p>
-                                <?php } ?>
+                                <?php if (! empty($s['catatan'])): ?>
+                                    <p class="mt-0.5 text-xs text-gray-500 italic dark:text-gray-400"><?= esc($s['catatan']) ?></p>
+                                <?php endif; ?>
                             </div>
-                        <?php } ?>
+                        <?php endforeach; ?>
                     </div>
-                <?php } ?>
+                <?php endif; ?>
             </div>
+        </section>
 
-            <!-- Riwayat akses -->
-            <?php if ($riwayat !== []) { ?>
-                <div class="bg-white rounded-2xl border border-gray-200 shadow-xs p-4">
-                    <h3 class="font-semibold text-gray-800 text-sm mb-3">Riwayat Akses Terakhir</h3>
-                    <ul class="space-y-1.5 text-xs">
-                        <?php foreach ($riwayat as $r) { ?>
-                            <li class="flex items-center gap-2">
-                                <span class="px-1.5 py-0.5 rounded-sm text-[10px] font-medium <?= $r['aksi'] === 'unduh' ? 'bg-brand-50 text-brand-700' : 'bg-gray-100 text-gray-500' ?>"><?= esc(ucfirst($r['aksi'])) ?></span>
-                                <span class="text-gray-600 truncate"><?= esc((string) ($r['admin_nama'] ?? 'Tamu lewat tautan')) ?></span>
-                                <span class="text-gray-400 ml-auto shrink-0"><?= esc($tgl($r['created_at'])) ?></span>
-                            </li>
-                        <?php } ?>
-                    </ul>
-                </div>
-            <?php } ?>
-        </div>
-    </div>
-
-    <!-- Modal: buat tautan berbagi -->
-    <div x-show="bagikanOpen" x-cloak x-transition.opacity.duration.200ms class="fixed inset-0 z-[70] flex items-center justify-center p-4">
-        <div class="absolute inset-0 bg-gray-900/50" @click="bagikanOpen=false"></div>
-        <form method="post" action="<?= site_url('admin/dokumen/' . $id . '/bagikan') ?>" class="relative bg-white rounded-2xl shadow-xl w-full max-w-md p-5">
-            <?= csrf_field() ?>
-            <h3 class="font-semibold text-gray-800 mb-1">Bagikan Dokumen</h3>
-            <p class="text-xs text-gray-500 mb-4">Tautan bisa dibuka siapa pun yang memegangnya, tanpa perlu akun. Semua pembatasan di bawah bersifat opsional.</p>
-
-            <label class="block text-sm text-gray-600 mb-1">Berlaku sampai tanggal</label>
-            <input type="date" name="expired_at" class="w-full px-3 py-2 rounded-xl border border-gray-300 text-sm mb-1">
-            <p class="text-[11px] text-gray-400 mb-3">Kosongkan bila tautan tidak perlu kedaluwarsa.</p>
-
-            <label class="block text-sm text-gray-600 mb-1">Kata sandi</label>
-            <input type="text" name="sandi" autocomplete="off" placeholder="Kosongkan bila tidak perlu"
-                   class="w-full px-3 py-2 rounded-xl border border-gray-300 text-sm mb-3">
-
-            <label class="block text-sm text-gray-600 mb-1">Batas jumlah unduhan</label>
-            <input type="number" name="maks_unduh" min="1" placeholder="Kosongkan = tanpa batas"
-                   class="w-full px-3 py-2 rounded-xl border border-gray-300 text-sm mb-3">
-
-            <label class="flex items-center gap-2 mb-3 cursor-pointer">
-                <input type="checkbox" name="boleh_unduh" value="1" checked class="w-4 h-4 rounded-sm border-gray-300 text-brand-600 focus:ring-brand-500">
-                <span class="text-sm text-gray-700">Boleh diunduh (jika dimatikan, hanya bisa dilihat)</span>
-            </label>
-
-            <label class="block text-sm text-gray-600 mb-1">Catatan internal</label>
-            <input name="catatan" maxlength="255" placeholder="mis. untuk wali kelas XII"
-                   class="w-full px-3 py-2 rounded-xl border border-gray-300 text-sm mb-4">
-
-            <?php if ($d['visibilitas'] === 'privat') { ?>
-                <p class="text-[11px] text-brand-800 bg-brand-50 border border-brand-200 rounded-lg px-3 py-2 mb-4">
-                    Dokumen ini masih <b>Privat</b>. Setelah tautan dibuat, aksesnya otomatis
-                    diubah menjadi <b>Lewat tautan</b> agar penerima benar-benar bisa membukanya.
-                </p>
-            <?php } ?>
-
-            <div class="flex justify-end gap-2">
-                <button type="button" @click="bagikanOpen=false" class="px-4 py-2 rounded-xl border border-gray-300 text-sm">Batal</button>
-                <button class="px-4 py-2 rounded-xl bg-emerald-600 text-white text-sm font-semibold hover:bg-emerald-700">Buat Tautan</button>
-            </div>
-        </form>
+        <!-- Riwayat akses -->
+        <?php if ($riwayat !== []): ?>
+            <section class="kartu overflow-hidden">
+                <?= $kepala('Riwayat akses terakhir') ?>
+                <ul class="kartu-isi space-y-1.5 !p-4 text-xs">
+                    <?php foreach ($riwayat as $r): ?>
+                        <li class="flex items-center gap-2">
+                            <span class="lencana <?= $r['aksi'] === 'unduh' ? 'lencana-merek' : 'lencana-abu' ?>"><?= esc(ucfirst($r['aksi'])) ?></span>
+                            <span class="truncate text-gray-700 dark:text-gray-300"><?= esc((string) ($r['admin_nama'] ?? 'Tamu lewat tautan')) ?></span>
+                            <span class="ms-auto shrink-0 text-gray-500 dark:text-gray-400"><?= esc($tgl($r['created_at'])) ?></span>
+                        </li>
+                    <?php endforeach; ?>
+                </ul>
+            </section>
+        <?php endif; ?>
     </div>
 </div>
+
+<!-- Dialog: buat tautan berbagi -->
+<?= ui_dialog_buka(['nama' => 'dok-bagikan', 'judul' => 'Bagikan dokumen']) ?>
+<form method="post" action="<?= site_url('admin/dokumen/' . $id . '/bagikan') ?>">
+    <?= csrf_field() ?>
+    <div class="dialog-isi">
+        <p class="text-sm text-gray-500 dark:text-gray-400">Tautan bisa dibuka siapa pun yang memegangnya, tanpa perlu akun. Semua pembatasan di bawah bersifat opsional.</p>
+        <div>
+            <label class="lbl" for="bg-sampai">Berlaku sampai tanggal</label>
+            <input type="date" id="bg-sampai" name="expired_at" class="inp">
+            <p class="hint">Kosongkan bila tautan tidak perlu kedaluwarsa.</p>
+        </div>
+        <div>
+            <label class="lbl" for="bg-sandi">Kata sandi</label>
+            <input type="text" id="bg-sandi" name="sandi" autocomplete="off" placeholder="Kosongkan bila tidak perlu" class="inp">
+        </div>
+        <div>
+            <label class="lbl" for="bg-maks">Batas jumlah unduhan</label>
+            <input type="number" id="bg-maks" name="maks_unduh" min="1" placeholder="Kosongkan = tanpa batas" class="inp">
+        </div>
+        <label class="saklar">
+            <input type="checkbox" name="boleh_unduh" value="1" checked class="peer sr-only">
+            <span class="saklar-jalur"></span>
+            <span class="saklar-label">Boleh diunduh (jika dimatikan, hanya bisa dilihat)</span>
+        </label>
+        <div>
+            <label class="lbl" for="bg-catatan">Catatan internal</label>
+            <input id="bg-catatan" name="catatan" maxlength="255" placeholder="mis. untuk wali kelas XII" class="inp">
+        </div>
+        <?php if ($d['visibilitas'] === 'privat'): ?>
+            <?= ui_peringatan('info', '', ['html' => 'Dokumen ini masih <b>Privat</b>. Setelah tautan dibuat, aksesnya otomatis diubah menjadi <b>Lewat tautan</b> agar penerima benar-benar bisa membukanya.']) ?>
+        <?php endif; ?>
+    </div>
+    <div class="dialog-kaki">
+        <button type="button" class="btn btn-netral" @click="tutup()">Batal</button>
+        <button type="submit" class="btn btn-sukses"><?= ikon('check', 'h-4 w-4') ?>Buat tautan</button>
+    </div>
+</form>
+<?= ui_dialog_tutup() ?>
 
 <?= $this->endSection() ?>

@@ -205,6 +205,10 @@ class CekUi extends BaseCommand
                 $teks[] = (string) file_get_contents($f->getPathname());
             }
         }
+        // JS bersama (di luar assets/js/admin) yang juga dimuat halaman admin.
+        foreach (['dokumen-penampil.js'] as $bersama) {
+            $teks[] = (string) @file_get_contents(FCPATH . 'assets/js/' . $bersama);
+        }
         foreach (array_merge($this->berkasGrup(['admin']), ['layouts/admin.php']) as $rel) {
             preg_match_all('#<script\b(?![^>]*\bsrc=)[^>]*>(.*?)</script>#si', (string) file_get_contents(APPPATH . 'Views/' . $rel), $m);
             $teks = array_merge($teks, $m[1]);

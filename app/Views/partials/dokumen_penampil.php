@@ -5,6 +5,9 @@
  * halaman penerima tautan berbagi, supaya guru yang membuka tautan melihat
  * persis apa yang dilihat admin (dan tak ada dua salinan kode yang bisa
  * berbeda perilaku).
+ * (F10) Kini hanya dipakai halaman publik berbagi (Tailwind v3, gaya lama dipertahankan sampai halaman publik dirombak); panel
+ * admin memakai admin/dokumen/_penampil.php. Perilaku keduanya SATU: komponen Alpine `penampilDokumen` di
+ * assets/js/dokumen-penampil.js (dulu fungsi global di skrip sebaris; isi dipasang lewat JS, bukan x-html). Skrip ber-nonce.
  *
  * @var string      $urlIsi          URL penyaji berkas (inline)
  * @var string      $urlUnduh        URL unduhan
@@ -29,16 +32,20 @@ $pakaiPustaka    = ! $tautan && in_array($kategori, ['spreadsheet', 'dokumen'], 
 
 <?php if ($pakaiPustaka) { ?>
     <?php if ($kategori === 'spreadsheet' && $ext !== 'csv') { ?>
-        <script defer src="<?= base_url('assets/js/vendor/xlsx.full.min.js') ?>"></script>
+        <script defer src="<?= base_url('assets/js/vendor/xlsx.full.min.js') ?>" <?= csp_script_nonce() ?>></script>
     <?php } elseif ($ext === 'csv') { ?>
-        <script defer src="<?= base_url('assets/js/vendor/xlsx.full.min.js') ?>"></script>
+        <script defer src="<?= base_url('assets/js/vendor/xlsx.full.min.js') ?>" <?= csp_script_nonce() ?>></script>
     <?php } ?>
     <?php if ($ext === 'docx') { ?>
-        <script defer src="<?= base_url('assets/js/vendor/mammoth.browser.min.js') ?>"></script>
+        <script defer src="<?= base_url('assets/js/vendor/mammoth.browser.min.js') ?>" <?= csp_script_nonce() ?>></script>
     <?php } ?>
 <?php } ?>
 
-<div x-data="penampilDokumen({ kategori: '<?= esc($kategori, 'js') ?>', ext: '<?= esc($ext, 'js') ?>', url: '<?= esc($urlIsi, 'js') ?>' })" x-init="muat()">
+<?php if (! defined('DOK_PENAMPIL_JS')) { define('DOK_PENAMPIL_JS', true); ?>
+    <script src="<?= base_url('assets/js/dokumen-penampil.js') ?>?v=<?= @filemtime(FCPATH . 'assets/js/dokumen-penampil.js') ?>" <?= csp_script_nonce() ?>></script>
+<?php } ?>
+
+<div x-data="penampilDokumen" data-kategori="<?= esc($kategori, 'attr') ?>" data-ext="<?= esc($ext, 'attr') ?>" data-url="<?= esc($urlIsi, 'attr') ?>">
 
     <?php if ($tautan && $ytId !== null) { ?>
         <div class="aspect-video bg-slate-900">
@@ -115,7 +122,7 @@ $pakaiPustaka    = ! $tautan && in_array($kategori, ['spreadsheet', 'dokumen'], 
                 </template>
             </div>
 
-            <div x-show="status === 'siap'" x-cloak class="dok-pratinjau overflow-auto max-h-[72vh]" x-html="isi"></div>
+            <div x-show="status === 'siap'" x-cloak class="dok-pratinjau overflow-auto max-h-[72vh] text-slate-700" data-isi-dokumen></div>
         </div>
 
     <?php } else { ?>
@@ -148,75 +155,3 @@ $pakaiPustaka    = ! $tautan && in_array($kategori, ['spreadsheet', 'dokumen'], 
     <?php } ?>
 </div>
 
-<?php if (! defined('DOK_PENAMPIL_JS')) { define('DOK_PENAMPIL_JS', true); ?>
-<script>
-/**
- * Pembaca isi Excel & Word. Seluruh pengolahan terjadi DI PERAMBAN memakai
- * pustaka yang dilayani server ini sendiri, jadi berkas tak pernah dikirim
- * ke layanan pihak ketiga.
- */
-function penampilDokumen(opt) {
-    return {
-        status: 'muat', pesan: '', isi: '', lembar: [], lembarAktif: 0, _wb: null,
-
-        async muat() {
-            if (!['spreadsheet', 'dokumen'].includes(opt.kategori)) { this.status = 'siap'; return; }
-
-            try {
-                const res = await fetch(opt.url, { credentials: 'same-origin' });
-                if (!res.ok) throw new Error('Berkas tidak bisa diambil (HTTP ' + res.status + ')');
-
-                if (opt.ext === 'csv') {
-                    this.dariCsv(await res.text());
-                } else if (opt.ext === 'txt' || opt.ext === 'md') {
-                    this.dariTeks(await res.text());
-                } else if (opt.ext === 'docx') {
-                    await this.dariDocx(await res.arrayBuffer());
-                } else if (['xlsx', 'xls', 'ods'].includes(opt.ext)) {
-                    this.dariExcel(await res.arrayBuffer());
-                } else {
-                    throw new Error('Format ' + opt.ext.toUpperCase() + ' hanya bisa dibuka setelah diunduh.');
-                }
-                this.status = 'siap';
-            } catch (e) {
-                this.pesan = e.message || 'Terjadi kesalahan saat membaca berkas.';
-                this.status = 'gagal';
-            }
-        },
-
-        dariTeks(teks) {
-            const aman = teks.replace(/[<>&]/g, c => ({ '<': '&lt;', '>': '&gt;', '&': '&amp;' }[c]));
-            this.isi = '<pre class="text-xs whitespace-pre-wrap font-mono text-slate-700">' + aman + '</pre>';
-        },
-
-        dariCsv(teks) {
-            if (typeof XLSX === 'undefined') { this.dariTeks(teks); return; }
-            this._wb = XLSX.read(teks, { type: 'string' });
-            this.lembar = this._wb.SheetNames;
-            this.pilihLembar(0);
-        },
-
-        dariExcel(buf) {
-            if (typeof XLSX === 'undefined') throw new Error('Pustaka penampil Excel belum termuat.');
-            this._wb = XLSX.read(new Uint8Array(buf), { type: 'array' });
-            this.lembar = this._wb.SheetNames;
-            if (!this.lembar.length) throw new Error('Berkas Excel ini tidak berisi lembar apa pun.');
-            this.pilihLembar(0);
-        },
-
-        pilihLembar(i) {
-            this.lembarAktif = i;
-            this.isi = XLSX.utils.sheet_to_html(this._wb.Sheets[this.lembar[i]], { editable: false });
-        },
-
-        async dariDocx(buf) {
-            if (typeof mammoth === 'undefined') throw new Error('Pustaka penampil Word belum termuat.');
-            const hasil = await mammoth.convertToHtml({ arrayBuffer: buf });
-            this.isi = hasil.value && hasil.value.trim() !== ''
-                ? hasil.value
-                : '<p class="text-sm text-slate-500">Dokumen ini tidak memuat teks yang bisa ditampilkan (kemungkinan isinya berupa gambar).</p>';
-        },
-    };
-}
-</script>
-<?php } ?>

@@ -294,6 +294,11 @@
   .progres-hijau  { @apply [--progres-isi:var(--color-green-500)]; }
   .progres-kuning { @apply [--progres-isi:var(--color-yellow-400)]; }
   .progres-merah  { @apply [--progres-isi:var(--color-red-500)]; }
+  /* (F10) Warna tambahan untuk bilah per jenis (mis. pemakaian penyimpanan per jenis berkas). */
+  .progres-biru   { @apply [--progres-isi:var(--color-blue-500)]; }
+  .progres-ungu   { @apply [--progres-isi:var(--color-purple-500)]; }
+  .progres-pink   { @apply [--progres-isi:var(--color-pink-500)]; }
+  .progres-abu    { @apply [--progres-isi:var(--color-gray-400)]; }
 
   /* ---- (F6) Saklar berupa tombol kirim (satu klik langsung tersimpan), tampilan sama dengan .saklar-jalur:
      <button class="saklar-tombol bg-…" role="switch"><span class="saklar-kenop translate-x-…"></span></button> ---- */
