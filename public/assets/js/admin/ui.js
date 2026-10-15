@@ -11,6 +11,8 @@
  *               @keydown.down.prevent="gerak(1)" / up = gerak(-1); tombol pemicu x-ref="pemicu".
  *   dialog      kotak dialog (modal) — pakai ui_dialog_buka()/ui_dialog_tutup(). Dibuka lewat tombol data-buka-dialog="nama",
  *               $dispatch('buka-dialog', { nama: 'nama' }) atau Ui.bukaDialog('nama'); data-awal-buka="1" = langsung terbuka.
+ *               (F8) Tombol pemicu boleh membawa data: data-dialog-aksi="URL" → action form[data-aksi-pemicu] di dialog;
+ *               data-dialog-isi='{"k":"…"}' → isi elemen [data-isi-pemicu="k"] (isian = value, lainnya = teks). Tanpa JS halaman.
  *   laci        laci samping (drawer) — sama dengan dialog (ui_laci_buka()/ui_laci_tutup()).
  *   tab         tab di sisi peramban — data-awal="nama", tombol role="tab" data-tab="nama" @click="pilih('nama')"
  *               :aria-selected="aktif === 'nama'"; panah kiri/kanan = pindah(-1)/pindah(1); data-hash="1" = ikut #alamat.
@@ -243,11 +245,47 @@
     var kirimAcara = function (nama, jenis) {
         window.dispatchEvent(new CustomEvent(jenis, { detail: { nama: String(nama) } }));
     };
+    // (F8) Data dari tombol pemicu ke dialog — tanpa JS halaman (siap CSP):
+    //   data-dialog-aksi="URL"          → action semua form[data-aksi-pemicu] di dalam dialog;
+    //   data-dialog-isi='{"k":"nilai"}' → elemen [data-isi-pemicu="k"]: input/select/textarea dapat value (kotak centang:
+    //                                     dicentang bila nilai "1"/"true"/sama dengan value-nya), elemen lain dapat teks.
+    var isiDialogDariPemicu = function (nama, el) {
+        var aksi = el.getAttribute('data-dialog-aksi');
+        var raw = el.getAttribute('data-dialog-isi');
+        if (aksi === null && raw === null) { return; }
+        var sel = '[x-data="dialog"][data-nama="' + nama + '"], [x-data="laci"][data-nama="' + nama + '"]';
+        var dlg = null;
+        try { dlg = document.querySelector(sel); } catch (err) { dlg = null; }
+        if (!dlg) { return; }
+        if (aksi !== null) {
+            Array.prototype.forEach.call(dlg.querySelectorAll('form[data-aksi-pemicu]'), function (f) { f.setAttribute('action', aksi); });
+        }
+        if (raw === null) { return; }
+        var isi = {};
+        try { isi = JSON.parse(raw) || {}; } catch (err) { isi = {}; }
+        Array.prototype.forEach.call(dlg.querySelectorAll('[data-isi-pemicu]'), function (t) {
+            var k = t.getAttribute('data-isi-pemicu');
+            if (!Object.prototype.hasOwnProperty.call(isi, k)) { return; }
+            var v = isi[k] === null || isi[k] === undefined ? '' : String(isi[k]);
+            if (t.type === 'checkbox' || t.type === 'radio') {
+                t.checked = t.type === 'radio' ? t.value === v : (v === '1' || v === 'true' || v === t.value);
+            } else if (/^(INPUT|SELECT|TEXTAREA)$/.test(t.tagName)) {
+                t.value = v;
+            } else {
+                t.textContent = v;
+                return;
+            }
+            t.dispatchEvent(new Event('input', { bubbles: true }));   // isian ber-x-model ikut diperbarui
+            t.dispatchEvent(new Event('change', { bubbles: true }));
+        });
+    };
     document.addEventListener('click', function (e) {
         var el = e.target && e.target.closest ? e.target.closest('[data-buka-dialog]') : null;
         if (!el || e.defaultPrevented) { return; }
         e.preventDefault();
-        kirimAcara(el.getAttribute('data-buka-dialog'), 'buka-dialog');
+        var nama = el.getAttribute('data-buka-dialog');
+        isiDialogDariPemicu(nama, el);
+        kirimAcara(nama, 'buka-dialog');
     });
 
     // (F5) Kotak peringatan ber-data-hilang="ms" (ui_peringatan … ['hilang' => ms]) memudar lalu hilang sendiri — aturan user:

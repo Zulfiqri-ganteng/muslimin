@@ -1,6 +1,8 @@
 <?php
 /**
- * Perbaikan / Maintenance / Penggantian komponen.
+ * Perbaikan / Maintenance / Penggantian komponen — pola halaman data template Flowbite (rombak tampilan F8: mode CRUD,
+ * ui_crud_alat, tabel-crud, lencana, tombol aksi ber-ikon, ui_crud_kaki, dialog kit dibuka lewat data-buka-dialog).
+ * Tanpa Alpine di halaman → siap CSP.
  *
  * @var array                         $rows          Baris perbaikan
  * @var \CodeIgniter\Pager\Pager|null $pager         Paginasi
@@ -14,196 +16,186 @@
  * @var array                         $jenisList     Daftar jenis
  * @var array                         $hasilList     Daftar hasil
  */
-$tgl = static fn ($d) => $d ? date('d/m/Y', strtotime((string) $d)) : '—';
+$tgl  = static fn ($d) => $d ? date('d/m/Y', strtotime((string) $d)) : '—';
 $base = site_url('admin/perbaikan');
-$warnaJenis = ['perbaikan' => 'bg-brand-50 text-brand-700', 'maintenance' => 'bg-pink-50 text-pink-700', 'penggantian' => 'bg-amber-50 text-amber-700'];
-$warnaHasil = ['berhasil' => 'text-emerald-600', 'sebagian' => 'text-amber-600', 'gagal' => 'text-red-600', 'ganti_unit' => 'text-gray-500'];
+$warnaJenis = ['perbaikan' => 'lencana-merek', 'maintenance' => 'lencana-pink', 'penggantian' => 'lencana-kuning'];
+$warnaHasil = ['berhasil' => 'text-green-700 dark:text-green-400', 'sebagian' => 'text-yellow-700 dark:text-yellow-400', 'gagal' => 'text-red-700 dark:text-red-400', 'ganti_unit' => 'text-gray-500 dark:text-gray-400'];
+$opsiJenis = [];
+foreach ($jenisList as $j) {
+    $opsiJenis[$j] = ucfirst($j);
+}
+$total = $pager ? $pager->getTotal() : count($rows);
 ?>
 <?= $this->extend('layouts/admin') ?>
-<?= $this->section('content') ?>
+<?= $this->section('tata') ?>crud<?= $this->endSection() ?>
 
+<?= $this->section('bantuan') ?>
 <?= view('admin/partials/help', [
     'helpKey'   => 'perbaikan',
     'helpTitle' => 'Perbaikan & Maintenance',
+    'helpKelas' => '',
     'helpBody'  => '<p>Catat tindakan atas aset: <b>perbaikan</b>, <b>maintenance</b> rutin, atau <b>penggantian komponen</b>. Bila mengisi bagian "Penggantian Komponen", stok sparepart otomatis <b>berkurang</b> (dan dipulihkan bila catatan ini dihapus).</p>
         <p class="mt-1">Kaitkan ke sebuah <b>kerusakan</b> lalu set status <b>Selesai</b> → kerusakan itu otomatis ditandai selesai & asetnya kembali <b>tersedia</b>.</p>',
 ]) ?>
+<?= $this->endSection() ?>
 
-<div x-data="{ open:false }">
+<?= $this->section('content') ?>
+<?= ui_crud_alat([
+    'baseUrl'      => $base,
+    'cari'         => 'Cari aset atau tindakan…',
+    'q'            => $q,
+    'filter'       => [['name' => 'jenis', 'value' => $jenis, 'all' => 'Semua jenis', 'options' => $opsiJenis]],
+    'per'          => $per,
+    'tambah'       => false,
+    'impor'        => false,
+    'tambahanHtml' => '<button type="button" class="btn btn-utama" data-buka-dialog="catat-perbaikan">' . ikon('plus', 'h-4 w-4') . 'Catat perbaikan</button>',
+]) ?>
 
-    <div class="bg-white rounded-2xl border border-gray-200 shadow-xs p-4 mb-5">
-        <form method="get" class="flex flex-col sm:flex-row sm:flex-wrap sm:items-center gap-2">
-            <div class="relative flex-1 min-w-[200px]">
-                <svg class="w-5 h-5 text-gray-400 absolute left-3 top-1/2 -translate-y-1/2" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
-                <input type="text" name="q" value="<?= esc($q) ?>" placeholder="Cari aset atau tindakan..."
-                       class="w-full rounded-lg border border-gray-300 pl-10 pr-3 py-2.5 text-sm focus:border-brand-500 focus:ring-2 focus:ring-brand-500/20 outline-hidden">
-            </div>
-            <select name="jenis" class="rounded-lg border border-gray-300 px-3 py-2.5 text-sm focus:border-brand-500 outline-hidden shrink-0">
-                <option value="">Semua jenis</option>
-                <?php foreach ($jenisList as $j): ?><option value="<?= esc($j, 'attr') ?>" <?= $jenis === $j ? 'selected' : '' ?>><?= esc(ucfirst($j)) ?></option><?php endforeach; ?>
-            </select>
-            <select name="per" data-autosubmit class="rounded-lg border border-gray-300 px-3 py-2.5 text-sm focus:border-brand-500 outline-hidden shrink-0">
-                <?php foreach ([10, 20, 30, 40, 50] as $n): ?><option value="<?= $n ?>" <?= $per === $n ? 'selected' : '' ?>>Tampilkan <?= $n ?></option><?php endforeach; ?>
-            </select>
-            <button class="rounded-lg bg-brand-700 hover:bg-brand-800 text-white text-sm font-semibold px-5 py-2.5 shrink-0">Cari</button>
-            <?php if ($q !== '' || $jenis !== ''): ?><a href="<?= $base ?>" class="rounded-lg border border-gray-300 text-gray-600 text-sm font-semibold px-4 py-2.5 hover:bg-gray-50 text-center shrink-0">Reset</a><?php endif; ?>
-        </form>
-        <div class="flex items-center justify-end border-t border-gray-100 mt-3 pt-3">
-            <button @click="open=true" class="inline-flex items-center gap-1.5 rounded-lg bg-brand-700 hover:bg-brand-800 text-white text-sm font-semibold px-3.5 py-2.5 transition">
-                <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4"/></svg>
-                Catat Perbaikan
-            </button>
-        </div>
-    </div>
-
-    <div class="bg-white rounded-2xl border border-gray-200 shadow-xs overflow-hidden">
-        <div class="px-6 py-4 border-b border-gray-100"><h2 class="font-bold text-gray-800">Daftar Perbaikan</h2></div>
-        <div class="overflow-x-auto">
-            <table class="w-full text-sm">
-                <thead class="bg-gray-50 text-gray-500 text-left">
-                    <tr>
-                        <th class="px-6 py-3 font-semibold">Aset</th>
-                        <th class="px-4 py-3 font-semibold w-28">Jenis</th>
-                        <th class="px-4 py-3 font-semibold">Tindakan</th>
-                        <th class="px-4 py-3 font-semibold w-40">Komponen</th>
-                        <th class="px-4 py-3 font-semibold w-28">Tanggal</th>
-                        <th class="px-4 py-3 font-semibold w-16 text-right">Aksi</th>
-                    </tr>
-                </thead>
-                <tbody class="divide-y divide-gray-100">
-                    <?php if (empty($rows)): ?>
-                        <tr><td colspan="6" class="px-6 py-10 text-center text-gray-400"><?= $q !== '' || $jenis !== '' ? 'Tidak ada perbaikan yang cocok.' : 'Belum ada catatan perbaikan.' ?></td></tr>
-                    <?php else: foreach ($rows as $r): ?>
-                        <tr class="hover:bg-gray-50">
-                            <td class="px-6 py-3">
-                                <div class="font-mono font-semibold text-brand-700"><?= esc($r['nomor_aset'] ?? '—') ?></div>
-                                <div class="text-gray-700"><?= esc($r['aset_nama'] ?? '—') ?></div>
-                            </td>
-                            <td class="px-4 py-3"><span class="rounded-full px-2.5 py-1 text-xs font-semibold <?= $warnaJenis[$r['jenis']] ?? 'bg-gray-100 text-gray-600' ?>"><?= esc(ucfirst($r['jenis'])) ?></span></td>
-                            <td class="px-4 py-3 text-gray-700">
-                                <?= esc($r['tindakan']) ?>
-                                <div class="text-xs mt-0.5">
-                                    <span class="font-semibold <?= $warnaHasil[$r['hasil']] ?? 'text-gray-500' ?>"><?= esc(ucfirst(str_replace('_', ' ', $r['hasil']))) ?></span>
-                                    <?php if ($r['biaya'] !== null): ?><span class="text-gray-400"> · Rp<?= number_format((float) $r['biaya'], 0, ',', '.') ?></span><?php endif; ?>
-                                    <?php if ($r['status'] === 'proses'): ?><span class="text-amber-600"> · proses</span><?php endif; ?>
-                                </div>
-                            </td>
-                            <td class="px-4 py-3 text-gray-600">
-                                <?php if (! empty($r['komponen_nama'])): ?>
-                                    <?= esc($r['komponen_nama']) ?> <span class="text-gray-400">×<?= (int) $r['komponen_jumlah'] ?> <?= esc($r['komponen_satuan'] ?? '') ?></span>
-                                <?php else: ?><span class="text-gray-300">—</span><?php endif; ?>
-                            </td>
-                            <td class="px-4 py-3 text-gray-600"><?= $tgl($r['tanggal']) ?></td>
-                            <td class="px-4 py-3 text-right whitespace-nowrap">
-                                <a href="<?= site_url('admin/lab-gambar/perbaikan/' . (int) $r['id']) ?>" title="Foto" class="inline-flex h-8 w-8 items-center justify-center rounded-lg text-gray-500 hover:bg-gray-100 transition align-middle">
-                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
-                                </a>
-                                <a href="<?= $base ?>/delete/<?= (int) $r['id'] ?>" data-method="post" data-confirm="Hapus catatan perbaikan ini? Stok komponen (bila ada) akan dipulihkan." title="Hapus"
-                                   class="inline-flex h-8 w-8 items-center justify-center rounded-lg text-red-500 hover:bg-red-50 transition">
-                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
-                                </a>
-                            </td>
-                        </tr>
-                    <?php endforeach; endif; ?>
-                </tbody>
-            </table>
-        </div>
-        <?php if ($pager): ?><div class="px-6 py-4 border-t border-gray-100"><?= $pager->only(['q', 'jenis', 'per'])->links('default', 'admin') ?></div><?php endif; ?>
-    </div>
-
-    <!-- Modal Catat Perbaikan -->
-    <div x-show="open" x-cloak x-transition.opacity.duration.200ms class="fixed inset-0 z-50 flex items-center justify-center p-4">
-        <div class="absolute inset-0 bg-black/40" @click="open=false"></div>
-        <div class="relative bg-white rounded-2xl shadow-xl w-full max-w-2xl p-6 max-h-[90vh] overflow-y-auto">
-            <h3 class="font-bold text-lg text-gray-800 mb-4">Catat Perbaikan</h3>
-            <form method="post" action="<?= $base ?>">
-                <?= csrf_field() ?>
-                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                    <div>
-                        <label class="block text-sm font-medium text-gray-600 mb-1">Aset *</label>
-                        <select name="aset_id" required class="w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm focus:border-brand-500 outline-hidden">
-                            <option value="">— Pilih aset —</option>
-                            <?php foreach ($asetOpts as $id => $lbl): ?><option value="<?= (int) $id ?>"><?= esc($lbl) ?></option><?php endforeach; ?>
-                        </select>
-                    </div>
-                    <div>
-                        <label class="block text-sm font-medium text-gray-600 mb-1">Kaitkan Kerusakan</label>
-                        <select name="kerusakan_id" class="w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm focus:border-brand-500 outline-hidden">
-                            <option value="">— Tidak dikaitkan —</option>
-                            <?php foreach ($kerusakanOpts as $id => $lbl): ?><option value="<?= (int) $id ?>"><?= esc($lbl) ?></option><?php endforeach; ?>
-                        </select>
-                    </div>
-                    <div>
-                        <label class="block text-sm font-medium text-gray-600 mb-1">Jenis</label>
-                        <select name="jenis" class="w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm focus:border-brand-500 outline-hidden">
-                            <?php foreach ($jenisList as $j): ?><option value="<?= esc($j, 'attr') ?>"><?= esc(ucfirst($j)) ?></option><?php endforeach; ?>
-                        </select>
-                    </div>
-                    <div>
-                        <label class="block text-sm font-medium text-gray-600 mb-1">Tanggal</label>
-                        <input type="date" name="tanggal" value="<?= date('Y-m-d') ?>" class="w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm focus:border-brand-500 outline-hidden">
-                    </div>
-                    <div class="sm:col-span-2">
-                        <label class="block text-sm font-medium text-gray-600 mb-1">Tindakan *</label>
-                        <input type="text" name="tindakan" required maxlength="255" class="w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm focus:border-brand-500 outline-hidden">
-                    </div>
-                    <div>
-                        <label class="block text-sm font-medium text-gray-600 mb-1">Hasil</label>
-                        <select name="hasil" class="w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm focus:border-brand-500 outline-hidden">
-                            <?php foreach ($hasilList as $h): ?><option value="<?= esc($h, 'attr') ?>"><?= esc(ucfirst(str_replace('_', ' ', $h))) ?></option><?php endforeach; ?>
-                        </select>
-                    </div>
-                    <div>
-                        <label class="block text-sm font-medium text-gray-600 mb-1">Status</label>
-                        <select name="status" class="w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm focus:border-brand-500 outline-hidden">
-                            <option value="selesai">Selesai</option>
-                            <option value="proses">Proses</option>
-                        </select>
-                    </div>
-                    <div>
-                        <label class="block text-sm font-medium text-gray-600 mb-1">Biaya (Rp)</label>
-                        <input type="number" name="biaya" min="0" step="1" class="w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm focus:border-brand-500 outline-hidden">
-                    </div>
-                    <div>
-                        <label class="block text-sm font-medium text-gray-600 mb-1">Teknisi</label>
-                        <select name="teknisi_id" class="w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm focus:border-brand-500 outline-hidden">
-                            <option value="">— Tidak dipilih —</option>
-                            <?php foreach ($teknisiOpts as $id => $nama): ?><option value="<?= (int) $id ?>"><?= esc($nama) ?></option><?php endforeach; ?>
-                        </select>
-                    </div>
-                </div>
-
-                <!-- Penggantian komponen (opsional) -->
-                <div class="mt-4 rounded-xl border border-amber-200 bg-amber-50/50 p-4">
-                    <p class="text-sm font-semibold text-amber-800 mb-2">Penggantian Komponen (opsional)</p>
-                    <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                        <div class="sm:col-span-2">
-                            <label class="block text-xs font-medium text-gray-600 mb-1">Sparepart</label>
-                            <select name="sparepart_id" class="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-brand-500 outline-hidden">
-                                <option value="">— Tidak ada penggantian —</option>
-                                <?php foreach ($sparepartOpts as $id => $lbl): ?><option value="<?= (int) $id ?>"><?= esc($lbl) ?></option><?php endforeach; ?>
-                            </select>
-                        </div>
-                        <div>
-                            <label class="block text-xs font-medium text-gray-600 mb-1">Jumlah</label>
-                            <input type="number" name="jumlah_komponen" min="0" value="0" class="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-brand-500 outline-hidden">
-                        </div>
-                    </div>
-                    <p class="text-xs text-amber-700 mt-2">Bila diisi, stok sparepart berkurang otomatis sesuai jumlah.</p>
-                </div>
-
-                <div class="mt-4">
-                    <label class="block text-sm font-medium text-gray-600 mb-1">Keterangan</label>
-                    <input type="text" name="keterangan" maxlength="255" class="w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm focus:border-brand-500 outline-hidden">
-                </div>
-
-                <div class="flex justify-end gap-2 mt-6">
-                    <button type="button" @click="open=false" class="rounded-lg border border-gray-300 text-gray-600 text-sm font-semibold px-4 py-2.5 hover:bg-gray-50">Batal</button>
-                    <button class="rounded-lg bg-brand-700 hover:bg-brand-800 text-white text-sm font-semibold px-5 py-2.5">Simpan</button>
-                </div>
-            </form>
-        </div>
-    </div>
+<div class="tabel-bungkus">
+    <table class="tabel-crud">
+        <thead>
+            <tr>
+                <th scope="col">Aset</th>
+                <th scope="col">Jenis</th>
+                <th scope="col">Tindakan</th>
+                <th scope="col">Komponen</th>
+                <th scope="col">Tanggal</th>
+                <th scope="col" class="kolom-aksi">Aksi</th>
+            </tr>
+        </thead>
+        <tbody>
+            <?php if (empty($rows)): ?>
+                <tr>
+                    <td colspan="6">
+                        <?= ui_kosong(['ikon' => 'hammer', 'judul' => $q !== '' || $jenis !== '' ? 'Tidak ada perbaikan yang cocok' : 'Belum ada catatan perbaikan',
+                            'teks' => $q !== '' || $jenis !== '' ? 'Ubah pencarian/filter, atau tekan Reset.' : 'Catat tindakan perbaikan, maintenance, atau penggantian komponen lewat tombol Catat perbaikan.']) ?>
+                    </td>
+                </tr>
+            <?php else: foreach ($rows as $r): ?>
+                <tr>
+                    <td>
+                        <p class="font-mono font-semibold text-brand-700 dark:text-brand-400"><?= esc($r['nomor_aset'] ?? '—') ?></p>
+                        <p class="sel-ket"><?= esc($r['aset_nama'] ?? '—') ?></p>
+                    </td>
+                    <td><span class="lencana <?= $warnaJenis[$r['jenis']] ?? 'lencana-abu' ?>"><?= esc(ucfirst($r['jenis'])) ?></span></td>
+                    <td>
+                        <p class="text-gray-900 dark:text-white"><?= esc($r['tindakan']) ?></p>
+                        <p class="mt-0.5 text-xs">
+                            <span class="font-semibold <?= $warnaHasil[$r['hasil']] ?? 'text-gray-500' ?>"><?= esc(ucfirst(str_replace('_', ' ', $r['hasil']))) ?></span>
+                            <?php if ($r['biaya'] !== null): ?><span class="text-gray-500 dark:text-gray-400"> · Rp<?= number_format((float) $r['biaya'], 0, ',', '.') ?></span><?php endif; ?>
+                            <?php if ($r['status'] === 'proses'): ?> <span class="lencana lencana-kuning ms-1">proses</span><?php endif; ?>
+                        </p>
+                    </td>
+                    <td>
+                        <?php if (! empty($r['komponen_nama'])): ?>
+                            <?= esc($r['komponen_nama']) ?> <span class="sel-ket">×<?= (int) $r['komponen_jumlah'] ?> <?= esc($r['komponen_satuan'] ?? '') ?></span>
+                        <?php else: ?><span class="text-gray-300 dark:text-gray-600">—</span><?php endif; ?>
+                    </td>
+                    <td class="whitespace-nowrap"><?= $tgl($r['tanggal']) ?></td>
+                    <td class="kolom-aksi">
+                        <?= ui_crud_aksi([
+                            'ubah'         => false,
+                            'hapusUrl'     => $base . '/delete/' . (int) $r['id'],
+                            'konfirmasi'   => 'Hapus catatan perbaikan ini? Stok komponen (bila ada) akan dipulihkan.',
+                            'tambahanHtml' => '<a href="' . site_url('admin/lab-gambar/perbaikan/' . (int) $r['id']) . '" class="btn btn-netral btn-sm">' . ikon('image', 'h-4 w-4') . 'Foto</a>',
+                        ]) ?>
+                    </td>
+                </tr>
+            <?php endforeach; endif; ?>
+        </tbody>
+    </table>
 </div>
 
+<?= ui_crud_kaki(['pager' => $pager, 'total' => (int) $total, 'kunci' => ['q', 'jenis', 'per'], 'satuan' => 'catatan']) ?>
+
+<!-- Dialog Catat perbaikan -->
+<?= ui_dialog_buka(['nama' => 'catat-perbaikan', 'judul' => 'Catat perbaikan', 'ukuran' => 'xl']) ?>
+<form method="post" action="<?= $base ?>">
+    <?= csrf_field() ?>
+    <div class="dialog-isi">
+        <div class="grid gap-4 sm:grid-cols-2">
+            <div>
+                <label class="lbl" for="pb-aset">Aset <span class="text-red-600">*</span></label>
+                <select id="pb-aset" name="aset_id" required class="inp">
+                    <option value="">— Pilih aset —</option>
+                    <?php foreach ($asetOpts as $id => $lbl): ?><option value="<?= (int) $id ?>"><?= esc($lbl) ?></option><?php endforeach; ?>
+                </select>
+            </div>
+            <div>
+                <label class="lbl" for="pb-kerusakan">Kaitkan kerusakan</label>
+                <select id="pb-kerusakan" name="kerusakan_id" class="inp">
+                    <option value="">— Tidak dikaitkan —</option>
+                    <?php foreach ($kerusakanOpts as $id => $lbl): ?><option value="<?= (int) $id ?>"><?= esc($lbl) ?></option><?php endforeach; ?>
+                </select>
+            </div>
+            <div>
+                <label class="lbl" for="pb-jenis">Jenis</label>
+                <select id="pb-jenis" name="jenis" class="inp">
+                    <?php foreach ($jenisList as $j): ?><option value="<?= esc($j, 'attr') ?>"><?= esc(ucfirst($j)) ?></option><?php endforeach; ?>
+                </select>
+            </div>
+            <div>
+                <label class="lbl" for="pb-tanggal">Tanggal</label>
+                <input type="date" id="pb-tanggal" name="tanggal" value="<?= date('Y-m-d') ?>" class="inp">
+            </div>
+            <div class="sm:col-span-2">
+                <label class="lbl" for="pb-tindakan">Tindakan <span class="text-red-600">*</span></label>
+                <input type="text" id="pb-tindakan" name="tindakan" required maxlength="255" class="inp">
+            </div>
+            <div>
+                <label class="lbl" for="pb-hasil">Hasil</label>
+                <select id="pb-hasil" name="hasil" class="inp">
+                    <?php foreach ($hasilList as $h): ?><option value="<?= esc($h, 'attr') ?>"><?= esc(ucfirst(str_replace('_', ' ', $h))) ?></option><?php endforeach; ?>
+                </select>
+            </div>
+            <div>
+                <label class="lbl" for="pb-status">Status</label>
+                <select id="pb-status" name="status" class="inp">
+                    <option value="selesai">Selesai</option>
+                    <option value="proses">Proses</option>
+                </select>
+            </div>
+            <div>
+                <label class="lbl" for="pb-biaya">Biaya (Rp)</label>
+                <input type="number" id="pb-biaya" name="biaya" min="0" step="1" class="inp">
+            </div>
+            <div>
+                <label class="lbl" for="pb-teknisi">Teknisi</label>
+                <select id="pb-teknisi" name="teknisi_id" class="inp">
+                    <option value="">— Tidak dipilih —</option>
+                    <?php foreach ($teknisiOpts as $id => $nama): ?><option value="<?= (int) $id ?>"><?= esc($nama) ?></option><?php endforeach; ?>
+                </select>
+            </div>
+        </div>
+
+        <!-- Penggantian komponen (opsional) -->
+        <fieldset class="rounded-lg border border-yellow-200 bg-yellow-50 p-4 dark:border-yellow-800 dark:bg-yellow-900/20">
+            <legend class="px-1 text-sm font-semibold text-yellow-800 dark:text-yellow-300">Penggantian komponen (opsional)</legend>
+            <div class="grid gap-3 sm:grid-cols-3">
+                <div class="sm:col-span-2">
+                    <label class="lbl" for="pb-sparepart">Sparepart</label>
+                    <select id="pb-sparepart" name="sparepart_id" class="inp">
+                        <option value="">— Tidak ada penggantian —</option>
+                        <?php foreach ($sparepartOpts as $id => $lbl): ?><option value="<?= (int) $id ?>"><?= esc($lbl) ?></option><?php endforeach; ?>
+                    </select>
+                </div>
+                <div>
+                    <label class="lbl" for="pb-jumlah">Jumlah</label>
+                    <input type="number" id="pb-jumlah" name="jumlah_komponen" min="0" value="0" class="inp">
+                </div>
+            </div>
+            <p class="hint text-yellow-700 dark:text-yellow-400">Bila diisi, stok sparepart berkurang otomatis sesuai jumlah.</p>
+        </fieldset>
+
+        <div>
+            <label class="lbl" for="pb-ket">Keterangan</label>
+            <input type="text" id="pb-ket" name="keterangan" maxlength="255" class="inp">
+        </div>
+    </div>
+    <div class="dialog-kaki">
+        <button type="button" class="btn btn-netral" @click="tutup()">Batal</button>
+        <button type="submit" class="btn btn-utama"><?= ikon('check', 'h-4 w-4') ?>Simpan</button>
+    </div>
+</form>
+<?= ui_dialog_tutup() ?>
 <?= $this->endSection() ?>

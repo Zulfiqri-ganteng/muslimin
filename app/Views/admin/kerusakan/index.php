@@ -1,6 +1,8 @@
 <?php
 /**
- * Kerusakan aset lab.
+ * Kerusakan aset lab — pola halaman data template Flowbite (rombak tampilan F8: mode CRUD, ui_crud_alat, tabel-crud, lencana,
+ * tombol aksi ber-ikon, ui_crud_kaki, dialog kit). Tanpa Alpine di halaman: dialog dibuka lewat data-buka-dialog dan dialog
+ * "Ubah status" diisi dari tombolnya (data-dialog-aksi / data-dialog-isi, kit ui.js) → siap CSP.
  *
  * @var array                         $rows        Baris kerusakan
  * @var \CodeIgniter\Pager\Pager|null $pager       Paginasi
@@ -13,187 +15,166 @@
  * @var array                         $tingkatList Daftar tingkat
  * @var array                         $statusList  Daftar status
  */
-$tgl = static fn ($d) => $d ? date('d/m/Y', strtotime((string) $d)) : '—';
+$tgl  = static fn ($d) => $d ? date('d/m/Y', strtotime((string) $d)) : '—';
 $base = site_url('admin/kerusakan');
-$warnaTingkat = ['ringan' => 'bg-gray-100 text-gray-600', 'sedang' => 'bg-amber-50 text-amber-700', 'berat' => 'bg-red-50 text-red-700'];
-$warnaStatus  = [
-    'dilaporkan'   => 'bg-amber-50 text-amber-700 border-amber-200',
-    'diproses'     => 'bg-brand-50 text-brand-700 border-brand-200',
-    'selesai'      => 'bg-emerald-50 text-emerald-700 border-emerald-200',
-    'tak_teratasi' => 'bg-gray-100 text-gray-500 border-gray-200',
-];
+$warnaTingkat = ['ringan' => 'lencana-abu', 'sedang' => 'lencana-kuning', 'berat' => 'lencana-merah'];
+$warnaStatus  = ['dilaporkan' => 'titik-status-kuning', 'diproses' => 'titik-status-biru', 'selesai' => 'titik-status-hijau', 'tak_teratasi' => ''];
+$labelStatus  = static fn (string $s): string => ucfirst(str_replace('_', ' ', $s));
+$opsiStatus   = [];
+foreach ($statusList as $s) {
+    $opsiStatus[$s] = $labelStatus($s);
+}
+$total = $pager ? $pager->getTotal() : count($rows);
 ?>
 <?= $this->extend('layouts/admin') ?>
-<?= $this->section('content') ?>
+<?= $this->section('tata') ?>crud<?= $this->endSection() ?>
 
+<?= $this->section('bantuan') ?>
 <?= view('admin/partials/help', [
     'helpKey'   => 'kerusakan',
     'helpTitle' => 'Kerusakan Aset',
+    'helpKelas' => '',
     'helpBody'  => '<p>Catat laporan kerusakan aset. Saat dilaporkan, status aset otomatis menjadi <b>perbaikan</b>. Ubah status ke <b>Selesai</b> jika sudah beres — aset otomatis kembali <b>tersedia</b> (bila tak ada kerusakan lain).</p>
         <p class="mt-1">Untuk mencatat <b>tindakan perbaikan</b> (termasuk penggantian komponen yang mengurangi stok sparepart), buka menu <b>Perbaikan</b> lalu kaitkan ke kerusakan ini.</p>',
 ]) ?>
+<?= $this->endSection() ?>
 
-<div x-data="{ laporOpen:false, statusOpen:false, stAction:'', stLabel:'',
-      openStatus(id,label){ this.stAction='<?= $base ?>/status/'+id; this.stLabel=label; this.statusOpen=true; } }">
+<?= $this->section('content') ?>
+<?= ui_crud_alat([
+    'baseUrl'      => $base,
+    'cari'         => 'Cari aset atau deskripsi…',
+    'q'            => $q,
+    'filter'       => [['name' => 'status', 'value' => $status, 'all' => 'Semua status', 'options' => $opsiStatus]],
+    'per'          => $per,
+    'tambah'       => false,
+    'impor'        => false,
+    'tambahanHtml' => '<span class="lencana lencana-kuning py-1">Kerusakan terbuka: ' . (int) $terbuka . '</span>'
+        . '<button type="button" class="btn btn-utama" data-buka-dialog="lapor-kerusakan">' . ikon('exclamation-circle', 'h-4 w-4') . 'Lapor kerusakan</button>',
+]) ?>
 
-    <div class="bg-white rounded-2xl border border-gray-200 shadow-xs p-4 mb-5">
-        <form method="get" class="flex flex-col sm:flex-row sm:flex-wrap sm:items-center gap-2">
-            <div class="relative flex-1 min-w-[200px]">
-                <svg class="w-5 h-5 text-gray-400 absolute left-3 top-1/2 -translate-y-1/2" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
-                <input type="text" name="q" value="<?= esc($q) ?>" placeholder="Cari aset atau deskripsi..."
-                       class="w-full rounded-lg border border-gray-300 pl-10 pr-3 py-2.5 text-sm focus:border-brand-500 focus:ring-2 focus:ring-brand-500/20 outline-hidden">
-            </div>
-            <select name="status" class="rounded-lg border border-gray-300 px-3 py-2.5 text-sm focus:border-brand-500 outline-hidden shrink-0">
-                <option value="">Semua status</option>
-                <?php foreach ($statusList as $s): ?>
-                    <option value="<?= esc($s, 'attr') ?>" <?= $status === $s ? 'selected' : '' ?>><?= esc(ucfirst(str_replace('_', ' ', $s))) ?></option>
-                <?php endforeach; ?>
-            </select>
-            <select name="per" data-autosubmit class="rounded-lg border border-gray-300 px-3 py-2.5 text-sm focus:border-brand-500 outline-hidden shrink-0">
-                <?php foreach ([10, 20, 30, 40, 50] as $n): ?><option value="<?= $n ?>" <?= $per === $n ? 'selected' : '' ?>>Tampilkan <?= $n ?></option><?php endforeach; ?>
-            </select>
-            <button class="rounded-lg bg-brand-700 hover:bg-brand-800 text-white text-sm font-semibold px-5 py-2.5 shrink-0">Cari</button>
-            <?php if ($q !== '' || $status !== ''): ?><a href="<?= $base ?>" class="rounded-lg border border-gray-300 text-gray-600 text-sm font-semibold px-4 py-2.5 hover:bg-gray-50 text-center shrink-0">Reset</a><?php endif; ?>
-        </form>
-        <div class="flex flex-wrap items-center gap-2 border-t border-gray-100 mt-3 pt-3">
-            <span class="inline-flex items-center gap-1.5 rounded-full bg-amber-50 text-amber-700 text-xs font-semibold px-3 py-1.5">Kerusakan terbuka: <?= (int) $terbuka ?></span>
-            <div class="flex-1"></div>
-            <button @click="laporOpen=true" class="inline-flex items-center gap-1.5 rounded-lg bg-brand-700 hover:bg-brand-800 text-white text-sm font-semibold px-3.5 py-2.5 transition">
-                <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/></svg>
-                Lapor Kerusakan
-            </button>
-        </div>
-    </div>
-
-    <div class="bg-white rounded-2xl border border-gray-200 shadow-xs overflow-hidden">
-        <div class="px-6 py-4 border-b border-gray-100"><h2 class="font-bold text-gray-800">Daftar Kerusakan</h2></div>
-        <div class="overflow-x-auto">
-            <table class="w-full text-sm">
-                <thead class="bg-gray-50 text-gray-500 text-left">
-                    <tr>
-                        <th class="px-6 py-3 font-semibold">Aset</th>
-                        <th class="px-4 py-3 font-semibold">Deskripsi</th>
-                        <th class="px-4 py-3 font-semibold w-24">Tingkat</th>
-                        <th class="px-4 py-3 font-semibold w-28">Tgl Lapor</th>
-                        <th class="px-4 py-3 font-semibold w-28">Status</th>
-                        <th class="px-4 py-3 font-semibold w-32 text-right">Aksi</th>
-                    </tr>
-                </thead>
-                <tbody class="divide-y divide-gray-100">
-                    <?php if (empty($rows)): ?>
-                        <tr><td colspan="6" class="px-6 py-10 text-center text-gray-400"><?= $q !== '' || $status !== '' ? 'Tidak ada kerusakan yang cocok.' : 'Belum ada laporan kerusakan.' ?></td></tr>
-                    <?php else: foreach ($rows as $r):
-                        $open = in_array($r['status'], ['dilaporkan', 'diproses'], true);
-                        $label = ($r['nomor_aset'] ?? '-') . ' — ' . mb_substr((string) $r['deskripsi'], 0, 40); ?>
-                        <tr class="hover:bg-gray-50">
-                            <td class="px-6 py-3">
-                                <div class="font-mono font-semibold text-brand-700"><?= esc($r['nomor_aset'] ?? '—') ?></div>
-                                <div class="text-gray-700"><?= esc($r['aset_nama'] ?? '—') ?></div>
-                            </td>
-                            <td class="px-4 py-3 text-gray-700"><?= esc($r['deskripsi']) ?>
-                                <?php if (! empty($r['pelapor'])): ?><div class="text-xs text-gray-400">Pelapor: <?= esc($r['pelapor']) ?></div><?php endif; ?>
-                            </td>
-                            <td class="px-4 py-3"><span class="rounded-full px-2.5 py-1 text-xs font-semibold <?= $warnaTingkat[$r['tingkat']] ?? 'bg-gray-100 text-gray-600' ?>"><?= esc(ucfirst($r['tingkat'])) ?></span></td>
-                            <td class="px-4 py-3 text-gray-600"><?= $tgl($r['tanggal_lapor']) ?></td>
-                            <td class="px-4 py-3"><span class="rounded-full border px-2.5 py-1 text-xs font-semibold <?= $warnaStatus[$r['status']] ?? 'bg-gray-100 text-gray-500 border-gray-200' ?>"><?= esc(ucfirst(str_replace('_', ' ', $r['status']))) ?></span></td>
-                            <td class="px-4 py-3 text-right whitespace-nowrap">
-                                <div class="inline-flex items-center justify-end gap-1">
-                                    <a href="<?= site_url('admin/lab-gambar/kerusakan/' . (int) $r['id']) ?>" title="Foto" class="inline-flex h-8 w-8 items-center justify-center rounded-lg text-gray-500 hover:bg-gray-100 transition">
-                                        <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
-                                    </a>
-                                    <?php if ($open): ?>
-                                        <button type="button" @click="openStatus(<?= (int) $r['id'] ?>, '<?= esc($label, 'js') ?>')"
-                                                class="inline-flex items-center gap-1 rounded-lg border border-gray-300 text-gray-600 hover:bg-gray-50 text-xs font-semibold px-2.5 py-1.5">Ubah Status</button>
-                                    <?php endif; ?>
-                                    <a href="<?= $base ?>/delete/<?= (int) $r['id'] ?>" data-method="post" data-confirm="Hapus laporan kerusakan ini?" title="Hapus"
-                                       class="inline-flex h-8 w-8 items-center justify-center rounded-lg text-red-500 hover:bg-red-50 transition">
-                                        <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
-                                    </a>
-                                </div>
-                            </td>
-                        </tr>
-                    <?php endforeach; endif; ?>
-                </tbody>
-            </table>
-        </div>
-        <?php if ($pager): ?><div class="px-6 py-4 border-t border-gray-100"><?= $pager->only(['q', 'status', 'per'])->links('default', 'admin') ?></div><?php endif; ?>
-    </div>
-
-    <!-- Modal Lapor -->
-    <div x-show="laporOpen" x-cloak x-transition.opacity.duration.200ms class="fixed inset-0 z-50 flex items-center justify-center p-4">
-        <div class="absolute inset-0 bg-black/40" @click="laporOpen=false"></div>
-        <div class="relative bg-white rounded-2xl shadow-xl w-full max-w-lg p-6 max-h-[90vh] overflow-y-auto">
-            <h3 class="font-bold text-lg text-gray-800 mb-4">Lapor Kerusakan</h3>
-            <form method="post" action="<?= $base ?>">
-                <?= csrf_field() ?>
-                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                    <div class="sm:col-span-2">
-                        <label class="block text-sm font-medium text-gray-600 mb-1">Aset *</label>
-                        <select name="aset_id" required class="w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm focus:border-brand-500 outline-hidden">
-                            <option value="">— Pilih aset —</option>
-                            <?php foreach ($asetOpts as $id => $lbl): ?><option value="<?= (int) $id ?>"><?= esc($lbl) ?></option><?php endforeach; ?>
-                        </select>
-                    </div>
-                    <div class="sm:col-span-2">
-                        <label class="block text-sm font-medium text-gray-600 mb-1">Deskripsi Kerusakan *</label>
-                        <input type="text" name="deskripsi" required maxlength="255" class="w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm focus:border-brand-500 outline-hidden">
-                    </div>
-                    <div>
-                        <label class="block text-sm font-medium text-gray-600 mb-1">Tingkat</label>
-                        <select name="tingkat" class="w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm focus:border-brand-500 outline-hidden">
-                            <?php foreach ($tingkatList as $t): ?><option value="<?= esc($t, 'attr') ?>"><?= esc(ucfirst($t)) ?></option><?php endforeach; ?>
-                        </select>
-                    </div>
-                    <div>
-                        <label class="block text-sm font-medium text-gray-600 mb-1">Tanggal Lapor</label>
-                        <input type="date" name="tanggal_lapor" value="<?= date('Y-m-d') ?>" class="w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm focus:border-brand-500 outline-hidden">
-                    </div>
-                    <div>
-                        <label class="block text-sm font-medium text-gray-600 mb-1">Pelapor</label>
-                        <input type="text" name="pelapor" maxlength="150" class="w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm focus:border-brand-500 outline-hidden">
-                    </div>
-                    <div>
-                        <label class="block text-sm font-medium text-gray-600 mb-1">Teknisi</label>
-                        <select name="teknisi_id" class="w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm focus:border-brand-500 outline-hidden">
-                            <option value="">— Tidak dipilih —</option>
-                            <?php foreach ($teknisiOpts as $id => $nama): ?><option value="<?= (int) $id ?>"><?= esc($nama) ?></option><?php endforeach; ?>
-                        </select>
-                    </div>
-                    <div class="sm:col-span-2">
-                        <label class="block text-sm font-medium text-gray-600 mb-1">Keterangan</label>
-                        <input type="text" name="keterangan" maxlength="255" class="w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm focus:border-brand-500 outline-hidden">
-                    </div>
-                </div>
-                <div class="flex justify-end gap-2 mt-6">
-                    <button type="button" @click="laporOpen=false" class="rounded-lg border border-gray-300 text-gray-600 text-sm font-semibold px-4 py-2.5 hover:bg-gray-50">Batal</button>
-                    <button class="rounded-lg bg-brand-700 hover:bg-brand-800 text-white text-sm font-semibold px-5 py-2.5">Simpan</button>
-                </div>
-            </form>
-        </div>
-    </div>
-
-    <!-- Modal Ubah Status -->
-    <div x-show="statusOpen" x-cloak x-transition.opacity.duration.200ms class="fixed inset-0 z-50 flex items-center justify-center p-4">
-        <div class="absolute inset-0 bg-black/40" @click="statusOpen=false"></div>
-        <div class="relative bg-white rounded-2xl shadow-xl w-full max-w-md p-6">
-            <h3 class="font-bold text-lg text-gray-800 mb-1">Ubah Status Kerusakan</h3>
-            <p class="text-sm text-gray-500 mb-4" x-text="stLabel"></p>
-            <form method="post" :action="stAction">
-                <?= csrf_field() ?>
-                <label class="block text-sm font-medium text-gray-600 mb-1">Status Baru</label>
-                <select name="status" class="w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm focus:border-brand-500 outline-hidden">
-                    <option value="diproses">Diproses</option>
-                    <option value="selesai">Selesai</option>
-                    <option value="tak_teratasi">Tak Teratasi</option>
-                </select>
-                <p class="text-xs text-gray-400 mt-1">Selesai / Tak teratasi akan membebaskan aset (jika tak ada kerusakan lain).</p>
-                <div class="flex justify-end gap-2 mt-6">
-                    <button type="button" @click="statusOpen=false" class="rounded-lg border border-gray-300 text-gray-600 text-sm font-semibold px-4 py-2.5 hover:bg-gray-50">Batal</button>
-                    <button class="rounded-lg bg-brand-700 hover:bg-brand-800 text-white text-sm font-semibold px-5 py-2.5">Simpan</button>
-                </div>
-            </form>
-        </div>
-    </div>
+<div class="tabel-bungkus">
+    <table class="tabel-crud">
+        <thead>
+            <tr>
+                <th scope="col">Aset</th>
+                <th scope="col">Deskripsi</th>
+                <th scope="col">Tingkat</th>
+                <th scope="col">Tgl lapor</th>
+                <th scope="col">Status</th>
+                <th scope="col" class="kolom-aksi">Aksi</th>
+            </tr>
+        </thead>
+        <tbody>
+            <?php if (empty($rows)): ?>
+                <tr>
+                    <td colspan="6">
+                        <?= ui_kosong(['ikon' => 'tools', 'judul' => $q !== '' || $status !== '' ? 'Tidak ada kerusakan yang cocok' : 'Belum ada laporan kerusakan',
+                            'teks' => $q !== '' || $status !== '' ? 'Ubah pencarian/filter, atau tekan Reset.' : 'Laporkan kerusakan aset lewat tombol Lapor kerusakan.']) ?>
+                    </td>
+                </tr>
+            <?php else: foreach ($rows as $r):
+                $open  = in_array($r['status'], ['dilaporkan', 'diproses'], true);
+                $label = ($r['nomor_aset'] ?? '-') . ' — ' . mb_substr((string) $r['deskripsi'], 0, 40); ?>
+                <tr>
+                    <td>
+                        <p class="font-mono font-semibold text-brand-700 dark:text-brand-400"><?= esc($r['nomor_aset'] ?? '—') ?></p>
+                        <p class="sel-ket"><?= esc($r['aset_nama'] ?? '—') ?></p>
+                    </td>
+                    <td>
+                        <p class="text-gray-900 dark:text-white"><?= esc($r['deskripsi']) ?></p>
+                        <?php if (! empty($r['pelapor'])): ?><p class="sel-ket">Pelapor: <?= esc($r['pelapor']) ?></p><?php endif; ?>
+                    </td>
+                    <td><span class="lencana <?= $warnaTingkat[$r['tingkat']] ?? 'lencana-abu' ?>"><?= esc(ucfirst($r['tingkat'])) ?></span></td>
+                    <td class="whitespace-nowrap"><?= $tgl($r['tanggal_lapor']) ?></td>
+                    <td><span class="titik-status <?= $warnaStatus[$r['status']] ?? '' ?> font-medium"><?= esc($labelStatus($r['status'])) ?></span></td>
+                    <td class="kolom-aksi">
+                        <?= ui_crud_aksi([
+                            'ubah'         => false,
+                            'hapusUrl'     => $base . '/delete/' . (int) $r['id'],
+                            'konfirmasi'   => 'Hapus laporan kerusakan ini?',
+                            'tambahanHtml' => '<a href="' . site_url('admin/lab-gambar/kerusakan/' . (int) $r['id']) . '" class="btn btn-netral btn-sm">' . ikon('image', 'h-4 w-4') . 'Foto</a>'
+                                . ($open ? '<button type="button" class="btn btn-utama btn-sm" data-buka-dialog="status-kerusakan" data-dialog-aksi="' . esc($base . '/status/' . (int) $r['id'], 'attr') . '" data-dialog-isi="' . esc((string) json_encode(['label' => $label]), 'attr') . '">' . ikon('edit', 'h-4 w-4') . 'Ubah status</button>' : ''),
+                        ]) ?>
+                    </td>
+                </tr>
+            <?php endforeach; endif; ?>
+        </tbody>
+    </table>
 </div>
 
+<?= ui_crud_kaki(['pager' => $pager, 'total' => (int) $total, 'kunci' => ['q', 'status', 'per'], 'satuan' => 'laporan']) ?>
+
+<!-- Dialog Lapor kerusakan -->
+<?= ui_dialog_buka(['nama' => 'lapor-kerusakan', 'judul' => 'Lapor kerusakan', 'ukuran' => 'lg']) ?>
+<form method="post" action="<?= $base ?>">
+    <?= csrf_field() ?>
+    <div class="dialog-isi">
+        <div class="grid gap-4 sm:grid-cols-2">
+            <div class="sm:col-span-2">
+                <label class="lbl" for="kr-aset">Aset <span class="text-red-600">*</span></label>
+                <select id="kr-aset" name="aset_id" required class="inp">
+                    <option value="">— Pilih aset —</option>
+                    <?php foreach ($asetOpts as $id => $lbl): ?><option value="<?= (int) $id ?>"><?= esc($lbl) ?></option><?php endforeach; ?>
+                </select>
+            </div>
+            <div class="sm:col-span-2">
+                <label class="lbl" for="kr-deskripsi">Deskripsi kerusakan <span class="text-red-600">*</span></label>
+                <input type="text" id="kr-deskripsi" name="deskripsi" required maxlength="255" class="inp">
+            </div>
+            <div>
+                <label class="lbl" for="kr-tingkat">Tingkat</label>
+                <select id="kr-tingkat" name="tingkat" class="inp">
+                    <?php foreach ($tingkatList as $t): ?><option value="<?= esc($t, 'attr') ?>"><?= esc(ucfirst($t)) ?></option><?php endforeach; ?>
+                </select>
+            </div>
+            <div>
+                <label class="lbl" for="kr-tanggal">Tanggal lapor</label>
+                <input type="date" id="kr-tanggal" name="tanggal_lapor" value="<?= date('Y-m-d') ?>" class="inp">
+            </div>
+            <div>
+                <label class="lbl" for="kr-pelapor">Pelapor</label>
+                <input type="text" id="kr-pelapor" name="pelapor" maxlength="150" class="inp">
+            </div>
+            <div>
+                <label class="lbl" for="kr-teknisi">Teknisi</label>
+                <select id="kr-teknisi" name="teknisi_id" class="inp">
+                    <option value="">— Tidak dipilih —</option>
+                    <?php foreach ($teknisiOpts as $id => $nama): ?><option value="<?= (int) $id ?>"><?= esc($nama) ?></option><?php endforeach; ?>
+                </select>
+            </div>
+            <div class="sm:col-span-2">
+                <label class="lbl" for="kr-ket">Keterangan</label>
+                <input type="text" id="kr-ket" name="keterangan" maxlength="255" class="inp">
+            </div>
+        </div>
+    </div>
+    <div class="dialog-kaki">
+        <button type="button" class="btn btn-netral" @click="tutup()">Batal</button>
+        <button type="submit" class="btn btn-utama"><?= ikon('check', 'h-4 w-4') ?>Simpan</button>
+    </div>
+</form>
+<?= ui_dialog_tutup() ?>
+
+<!-- Dialog Ubah status (diisi dari tombol baris) -->
+<?= ui_dialog_buka(['nama' => 'status-kerusakan', 'judul' => 'Ubah status kerusakan']) ?>
+<form method="post" action="<?= $base ?>" data-aksi-pemicu>
+    <?= csrf_field() ?>
+    <div class="dialog-isi">
+        <p class="text-sm font-medium text-gray-900 dark:text-white" data-isi-pemicu="label"></p>
+        <div>
+            <label class="lbl" for="kr-status">Status baru</label>
+            <select id="kr-status" name="status" class="inp">
+                <option value="diproses">Diproses</option>
+                <option value="selesai">Selesai</option>
+                <option value="tak_teratasi">Tak teratasi</option>
+            </select>
+            <p class="hint">Selesai / Tak teratasi akan membebaskan aset (jika tak ada kerusakan lain).</p>
+        </div>
+    </div>
+    <div class="dialog-kaki">
+        <button type="button" class="btn btn-netral" @click="tutup()">Batal</button>
+        <button type="submit" class="btn btn-utama"><?= ikon('check', 'h-4 w-4') ?>Simpan</button>
+    </div>
+</form>
+<?= ui_dialog_tutup() ?>
 <?= $this->endSection() ?>
