@@ -154,6 +154,14 @@
     --grafik-teks: #9ca3af;  --grafik-kuat: #ffffff;  --grafik-garis: #374151; --grafik-jalur: #374151; --grafik-tepi: #1f2937;
     --grafik-batas: #e5e7eb;
   }
+  /* Warna Sekolah: palet grafik keluarga lilac (lavender, merah muda keunguan, plum, ungu tua) + mint aksen sekolah. Warna status
+     absensi tetap dapat dibedakan: hadir mint, telat kuning, izin lilac, sakit merah muda, alpa plum. */
+  [data-mode="sekolah"] {
+    --grafik-2: #b89be0; --grafik-3: #e7a6c9; --grafik-4: #b52a72; --grafik-5: #34d399; --grafik-6: #d4a72c; --grafik-7: #4a2d7a;
+    --grafik-8: #c4b8d6;
+    --grafik-hadir: #10b981; --grafik-izin: rgb(var(--brand-500)); --grafik-sakit: #e879b9; --grafik-alpa: #b52a72;
+    --grafik-garis: rgb(var(--brand-50)); --grafik-jalur: rgb(var(--brand-100));
+  }
 
   /* (F12) Aturan "kompatibel Tailwind v3" (warna garis bawaan, placeholder, latar isian, tinggi baris tetap) dibuang: semua view
      memakai kit / kelas warna sendiri; uji banding gaya 73 halaman = 0 garis tampak berubah, hanya lencana 10–11px sedikit lebih
@@ -302,6 +310,11 @@
   .progres-ungu   { @apply [--progres-isi:var(--color-purple-500)]; }
   .progres-pink   { @apply [--progres-isi:var(--color-pink-500)]; }
   .progres-abu    { @apply [--progres-isi:var(--color-gray-400)]; }
+  /* Warna Sekolah: jalur lavender; biru -> lilac, merah -> plum, ungu -> ungu tua. */
+  .progres { @apply sekolah:[--progres-jalur:rgb(var(--brand-100))]; }
+  .progres-biru  { @apply sekolah:[--progres-isi:rgb(var(--brand-500))]; }
+  .progres-merah { @apply sekolah:[--progres-isi:var(--color-plum-600)]; }
+  .progres-ungu  { @apply sekolah:[--progres-isi:var(--color-anggur-600)]; }
 
   /* ---- (F6) Saklar berupa tombol kirim (satu klik langsung tersimpan), tampilan sama dengan .saklar-jalur:
      <button class="saklar-tombol bg-…" role="switch"><span class="saklar-kenop translate-x-…"></span></button> ---- */
