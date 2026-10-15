@@ -8,19 +8,19 @@
  * @var list<string> $ikonDaftar  nama ikon outline yang tersedia (resources/ikon.json → npm run vendor)
  * @var bool         $modeUji
  */
-$kode = static fn (string $teks): string => '<code class="rounded-md bg-gray-100 px-1.5 py-0.5 font-mono text-xs text-gray-800">' . esc($teks) . '</code>';
+$kode = static fn (string $teks): string => '<code class="rounded-md bg-gray-100 px-1.5 py-0.5 font-mono text-xs text-gray-800 dark:bg-gray-700 dark:text-gray-200">' . esc($teks) . '</code>';
 ?>
 <?= $this->extend('layouts/admin') ?>
 
 <?php // Pemilih tema CONTOH (hanya halaman ini, disimpan di peramban); tema semua akun = Pengaturan Sekolah → Tampilan. ?>
 <?= $this->section('aksi') ?>
-<div class="inline-flex rounded-lg border border-gray-200 bg-gray-50 p-1" role="radiogroup" aria-label="Tema contoh" x-data="uiKitTema">
+<div class="inline-flex rounded-lg border border-gray-200 bg-gray-50 p-1 dark:border-gray-700 dark:bg-gray-800" role="radiogroup" aria-label="Tema contoh" x-data="uiKitTema">
     <button type="button" role="radio" :aria-checked="tema === 'terang'" @click="pilih('terang')"
-            class="rounded-md px-3 py-1.5 text-sm font-medium text-gray-500 transition hover:text-gray-900 aria-checked:bg-white aria-checked:text-gray-900 aria-checked:shadow-xs">Terang</button>
+            class="rounded-md px-3 py-1.5 text-sm font-medium text-gray-500 transition hover:text-gray-900 aria-checked:bg-white aria-checked:text-gray-900 aria-checked:shadow-xs dark:text-gray-400 dark:hover:text-white dark:aria-checked:bg-gray-700 dark:aria-checked:text-white">Terang</button>
     <button type="button" role="radio" :aria-checked="tema === 'gelap'" @click="pilih('gelap')"
-            class="rounded-md px-3 py-1.5 text-sm font-medium text-gray-500 transition hover:text-gray-900 aria-checked:bg-white aria-checked:text-gray-900 aria-checked:shadow-xs">Gelap</button>
+            class="rounded-md px-3 py-1.5 text-sm font-medium text-gray-500 transition hover:text-gray-900 aria-checked:bg-white aria-checked:text-gray-900 aria-checked:shadow-xs dark:text-gray-400 dark:hover:text-white dark:aria-checked:bg-gray-700 dark:aria-checked:text-white">Gelap</button>
     <button type="button" role="radio" :aria-checked="tema === 'lilac'" @click="pilih('lilac')"
-            class="rounded-md px-3 py-1.5 text-sm font-medium text-gray-500 transition hover:text-gray-900 aria-checked:bg-white aria-checked:text-gray-900 aria-checked:shadow-xs">Warna Sekolah</button>
+            class="rounded-md px-3 py-1.5 text-sm font-medium text-gray-500 transition hover:text-gray-900 aria-checked:bg-white aria-checked:text-gray-900 aria-checked:shadow-xs dark:text-gray-400 dark:hover:text-white dark:aria-checked:bg-gray-700 dark:aria-checked:text-white">Warna Sekolah</button>
 </div>
 <?= $this->endSection() ?>
 
@@ -43,7 +43,7 @@ $kode = static fn (string $teks): string => '<code class="rounded-md bg-gray-100
         <?php foreach (['kepala' => 'Kepala halaman', 'tombol' => 'Tombol', 'formulir' => 'Formulir', 'kartu' => 'Kartu & tabel', 'lencana' => 'Lencana',
                         'tab' => 'Tab', 'dropdown' => 'Dropdown', 'dialog' => 'Dialog & laci', 'konfirmasi' => 'Konfirmasi', 'pesan' => 'Toast & peringatan',
                         'kosong' => 'Keadaan kosong', 'paginasi' => 'Paginasi', 'format' => 'Format & salin', 'ikon' => 'Ikon'] as $id => $label): ?>
-            <a href="#<?= $id ?>" class="rounded-lg border border-gray-200 bg-white px-3 py-1.5 font-medium text-gray-700 hover:bg-gray-100 hover:text-brand-700"><?= $label ?></a>
+            <a href="#<?= $id ?>" class="rounded-lg border border-gray-200 bg-white px-3 py-1.5 font-medium text-gray-700 hover:bg-gray-100 hover:text-brand-700 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700 dark:hover:text-white"><?= $label ?></a>
         <?php endforeach; ?>
     </nav>
 
@@ -199,7 +199,7 @@ $kode = static fn (string $teks): string => '<code class="rounded-md bg-gray-100
             </table>
         </div>
         <div class="kartu-kaki"><?= $contohPager ?></div>
-        <div class="kartu-isi border-t border-gray-200">
+        <div class="kartu-isi border-t border-gray-200 dark:border-gray-700">
             <p class="hint mt-0">Kartu: <?= $kode('class="kartu"') ?> + <?= $kode('kartu-kepala / kartu-isi / kartu-kaki') ?>, judul <?= $kode('kartu-judul') ?> + <?= $kode('kartu-ket') ?>. Tabel: <?= $kode('<div class="tabel-bungkus"><table class="tabel">') ?> — kolom utama pakai <?= $kode('<th scope="row">') ?>. Dropdown di dalam tabel akan terpotong (wadahnya bergulir) → pakai tombol ikon.</p>
         </div>
     </section>
@@ -227,9 +227,9 @@ $kode = static fn (string $teks): string => '<code class="rounded-md bg-gray-100
             <button type="button" role="tab" class="tab" data-tab="rincian" data-uji="tab-2" :aria-selected="aktif === 'rincian'" :tabindex="aktif === 'rincian' ? '0' : '-1'" @click="pilih('rincian')">Rincian <span class="tab-jumlah">12</span></button>
             <button type="button" role="tab" class="tab" data-tab="riwayat" :aria-selected="aktif === 'riwayat'" :tabindex="aktif === 'riwayat' ? '0' : '-1'" @click="pilih('riwayat')">Riwayat</button>
         </div>
-        <div role="tabpanel" data-uji="panel-1" x-show="aktif === 'ringkasan'"><p class="text-sm text-gray-600">Isi tab Ringkasan. Pindah tab dengan klik atau panah kiri/kanan.</p></div>
-        <div role="tabpanel" data-uji="panel-2" x-show="aktif === 'rincian'" x-cloak><p class="text-sm text-gray-600">Isi tab Rincian (12 baris).</p></div>
-        <div role="tabpanel" x-show="aktif === 'riwayat'" x-cloak><p class="text-sm text-gray-600">Isi tab Riwayat.</p></div>
+        <div role="tabpanel" data-uji="panel-1" x-show="aktif === 'ringkasan'"><p class="text-sm text-gray-600 dark:text-gray-300">Isi tab Ringkasan. Pindah tab dengan klik atau panah kiri/kanan.</p></div>
+        <div role="tabpanel" data-uji="panel-2" x-show="aktif === 'rincian'" x-cloak><p class="text-sm text-gray-600 dark:text-gray-300">Isi tab Rincian (12 baris).</p></div>
+        <div role="tabpanel" x-show="aktif === 'riwayat'" x-cloak><p class="text-sm text-gray-600 dark:text-gray-300">Isi tab Riwayat.</p></div>
         <p class="hint"><?= $kode('<div x-data="tab" data-awal="ringkasan"> … <button type="button" role="tab" class="tab" data-tab="ringkasan" :aria-selected="aktif === \'ringkasan\'" @click="pilih(\'ringkasan\')">') ?> + panel <?= $kode('x-show="aktif === \'ringkasan\'"') ?>; <?= $kode('data-hash="1"') ?> = tab ikut alamat (#rincian). Tab berupa tautan (pindah halaman): <?= $kode('ui_tab([...])') ?>.</p>
     </section>
 
@@ -239,7 +239,7 @@ $kode = static fn (string $teks): string => '<code class="rounded-md bg-gray-100
         <div class="relative inline-block" x-data="dropdown" @click.outside="tutup()" @keydown.escape="tutup(true)" @keydown.down.prevent="gerak(1)" @keydown.up.prevent="gerak(-1)">
             <button type="button" class="btn btn-netral" x-ref="pemicu" data-uji="dropdown" @click="alih()" :aria-expanded="buka" aria-haspopup="true">Aksi lain <?= ikon('chevron-down', 'h-4 w-4') ?></button>
             <div class="dropdown-menu" data-uji="dropdown-menu" x-show="buka" x-cloak x-transition.origin.top.left.duration.150ms>
-                <div class="dropdown-kepala"><p class="text-sm font-medium">Ahmad Fauzi</p><p class="truncate text-xs text-gray-500">ahmad@sekolah.sch.id</p></div>
+                <div class="dropdown-kepala"><p class="text-sm font-medium">Ahmad Fauzi</p><p class="truncate text-xs text-gray-500 dark:text-gray-400">ahmad@sekolah.sch.id</p></div>
                 <ul class="py-1">
                     <li><a href="#dropdown" class="dropdown-item" @click="tutup()"><?= ikon('edit', 'h-4 w-4') ?>Ubah</a></li>
                     <li><a href="#dropdown" class="dropdown-item" @click="tutup()"><?= ikon('download', 'h-4 w-4') ?>Unduh</a></li>
@@ -308,7 +308,7 @@ $kode = static fn (string $teks): string => '<code class="rounded-md bg-gray-100
             <a href="#konfirmasi" class="btn btn-netral" data-confirm="Pindah ke bagian ini?">Tautan</a>
             <button type="button" class="btn btn-netral" @click="tanyaDariJs()">Dari berkas JS</button>
         </div>
-        <p class="text-sm text-gray-600">Tombol hapus disetujui: <b data-uji="hitung-konfirmasi" x-text="jumlahHapus">0</b> kali · formulir terkirim: <b data-uji="hitung-kirim" x-text="jumlahKirim">0</b> kali</p>
+        <p class="text-sm text-gray-600 dark:text-gray-300">Tombol hapus disetujui: <b data-uji="hitung-konfirmasi" x-text="jumlahHapus">0</b> kali · formulir terkirim: <b data-uji="hitung-kirim" x-text="jumlahKirim">0</b> kali</p>
         <p class="hint"><?= $kode('data-confirm="Hapus data ini?"') ?> pada <?= $kode('<a>') ?>/<?= $kode('<button>') ?> atau <?= $kode('<form>') ?> (+ <?= $kode('data-confirm-judul') ?>, <?= $kode('data-confirm-ya') ?>, <?= $kode('data-confirm-jenis="bahaya"') ?>) — aksi aslinya (tautan, kirim form, <?= $kode('@click') ?>) baru jalan setelah "Ya". Dari JS: <?= $kode("Ui.konfirmasi({ judul, pesan, ya, jenis }).then(…)") ?>. Dialognya dipasang sekali per halaman: <?= $kode('<?= ui_konfirmasi() ?>') ?>.</p>
     </section>
 
@@ -368,11 +368,11 @@ $kode = static fn (string $teks): string => '<code class="rounded-md bg-gray-100
                 </tbody>
             </table>
         </div>
-        <div class="kartu-isi grid gap-5 border-t border-gray-200 sm:grid-cols-2">
+        <div class="kartu-isi grid gap-5 border-t border-gray-200 sm:grid-cols-2 dark:border-gray-700">
             <div>
                 <label for="uk-angka" class="lbl">Coba angka</label>
                 <input type="number" id="uk-angka" class="inp" x-model="cobaNilai">
-                <p class="hint">Rupiah: <b class="text-gray-900" x-text="$rupiah(cobaNilai)"></b></p>
+                <p class="hint">Rupiah: <b class="text-gray-900 dark:text-white" x-text="$rupiah(cobaNilai)"></b></p>
             </div>
             <div>
                 <label for="uk-tautan" class="lbl">Salin teks</label>
@@ -393,7 +393,7 @@ $kode = static fn (string $teks): string => '<code class="rounded-md bg-gray-100
         <h2 class="kartu-judul">Ikon tersedia <span class="font-normal text-gray-400">(<?= count($ikonDaftar) ?>)</span></h2>
         <div class="grid grid-cols-2 gap-2 sm:grid-cols-4 lg:grid-cols-6">
             <?php foreach ($ikonDaftar as $nama): ?>
-                <div class="flex items-center gap-2 rounded-lg border border-gray-200 px-3 py-2 text-xs text-gray-600"><?= ikon($nama, 'h-5 w-5 shrink-0 text-gray-700') ?><span class="truncate"><?= esc($nama) ?></span></div>
+                <div class="flex items-center gap-2 rounded-lg border border-gray-200 px-3 py-2 text-xs text-gray-600 dark:border-gray-700 dark:text-gray-300"><?= ikon($nama, 'h-5 w-5 shrink-0 text-gray-700 dark:text-gray-300') ?><span class="truncate"><?= esc($nama) ?></span></div>
             <?php endforeach; ?>
         </div>
         <p class="hint"><?= $kode("<?= ikon('users', 'h-5 w-5') ?>") ?> — ikon baru: tambah namanya di <?= $kode('resources/ikon.json') ?> lalu <?= $kode('npm run vendor') ?> (nama: flowbite.com/icons).</p>

@@ -30,16 +30,6 @@
   --color-gold-400: #fcc419;
   --color-gold-500: #f5a623;
 
-  /* Kompatibel v3: tinggi baris berupa ukuran tetap (rem), bukan rasio. Di v4 rasio ikut turun ke anak yang hurufnya lebih kecil
-     (mis. lencana text-[11px] di dalam text-sm jadi lebih rapat). Ditinjau lagi di F12. */
-  --text-xs--line-height: 1rem;
-  --text-sm--line-height: 1.25rem;
-  --text-base--line-height: 1.5rem;
-  --text-lg--line-height: 1.75rem;
-  --text-xl--line-height: 1.75rem;
-  --text-2xl--line-height: 2rem;
-  --text-3xl--line-height: 2.25rem;
-  --text-4xl--line-height: 2.5rem;
 }
 
 /* Warna merek = variabel CSS bertriplet "R G B" (nilai di @layer base) → tema bisa diganti tanpa build ulang.
@@ -147,14 +137,9 @@
     --grafik-batas: #e5e7eb;
   }
 
-  /* ---- Kompatibel Tailwind v3: aturan bawaan v3 yang berubah di v4, dipertahankan agar halaman yang belum dirombak tidak bergeser.
-     Ditinjau lagi di F12 (dibuang bila tak dibutuhkan lagi). */
-  *, ::after, ::before, ::backdrop, ::file-selector-button { border-color: var(--color-gray-200, currentcolor); }
-  input::placeholder, textarea::placeholder { color: var(--color-gray-400); }
-  /* v3 membiarkan latar kotak isian bawaan peramban (putih); preflight v4 membuatnya transparan. */
-  input:where(:not([type="button"], [type="reset"], [type="submit"], [type="image"], [type="checkbox"], [type="radio"], [type="range"], [type="color"], [type="file"])),
-  select, textarea { background-color: Field; }
-  /* (F1) Kompat kotak tanggal/waktu F0 dibuang: sejak plugin Flowbite menyala, tingginya sama dengan kotak isian lain. */
+  /* (F12) Aturan "kompatibel Tailwind v3" (warna garis bawaan, placeholder, latar isian, tinggi baris tetap) dibuang: semua view
+     memakai kit / kelas warna sendiri; uji banding gaya 73 halaman = 0 garis tampak berubah, hanya lencana 10–11px sedikit lebih
+     rapat (perilaku asli Tailwind v4 / template Flowbite). */
 
   /* ---- Penyetelan gaya dasar formulir plugin Flowbite (dicetak SETELAH blok ini, jadi pakai awalan :root agar menang).
      Warna biru bawaannya → warna merek tema; ukuran huruf ikut induk seperti sebelum plugin (kit selalu memberi text-sm);
@@ -632,8 +617,8 @@
    MODE GELAP (R2) — <html data-mode="gelap"> (Pengaturan Sekolah → Tampilan). Nilai mengikuti versi dark template Flowbite
    (dark:bg-gray-800, dark:border-gray-700, dark:text-gray-400, …). Bagian:
      1) kerangka & kit komponen (kelas dark: lewat @apply — satu tempat, halaman yang memakai kit otomatis ikut gelap);
-     2) pratinjau mode di Pengaturan (kartu Gelap selalu gelap, kartu lain selalu terang);
-     3) LAPISAN PENYESUAI untuk halaman yang BELUM dirombak (kelas utilitas lama di isi halaman) — dibuang di F12.
+     2) pratinjau mode di Pengaturan (kartu Gelap selalu gelap, kartu lain selalu terang).
+   (Lapisan penyesuai untuk halaman yang belum dirombak dibuang di F12: semua isi halaman kini memakai kit / kelas dark: sendiri.)
    ===================================================================================================================== */
 @layer components {
   /* 1a. Kerangka */
@@ -721,59 +706,6 @@
   .pratinjau-tema[data-pratinjau="gelap"] .pratinjau-tema-isi > span:not(.tombol) { @apply bg-gray-700; }
 }
 
-/* 3. LAPISAN PENYESUAI mode gelap untuk halaman yang BELUM dirombak (F5–F10 menggantinya dengan kit). Tanpa @layer → menang atas
-      kelas utilitas lama; hanya di .kerangka-isi (isi halaman), tidak menyentuh bingkai & kit. Dibuang di F12. */
-[data-mode="gelap"] .kerangka-isi {
-  .bg-white { @apply bg-gray-800; }
-  .bg-gray-50 { @apply bg-gray-700/50; }
-  .bg-gray-100 { @apply bg-gray-700; }
-  .bg-gray-200 { @apply bg-gray-600; }
-  .text-gray-900 { @apply text-white; }
-  .text-gray-800 { @apply text-gray-100; }
-  .text-gray-700 { @apply text-gray-200; }
-  .text-gray-600 { @apply text-gray-300; }
-  .text-gray-500 { @apply text-gray-400; }
-  .text-gray-400 { @apply text-gray-500; }
-  .border-gray-100, .border-gray-200 { @apply border-gray-700; }
-  .border-gray-300 { @apply border-gray-600; }
-  .divide-gray-100 > :not(:last-child), .divide-gray-200 > :not(:last-child) { @apply border-gray-700; }
-  .hover\:bg-white:hover, .hover\:bg-gray-50:hover, .hover\:bg-gray-100:hover { @apply bg-gray-700; }
-  .hover\:text-gray-900:hover, .hover\:text-gray-800:hover { @apply text-white; }
-  .hover\:text-gray-700:hover { @apply text-gray-200; }
-  /* Kotak berwarna muda (info/peringatan lama, lencana) → warna transparan di atas latar gelap + tulisan terang. */
-  .bg-brand-50 { @apply bg-brand-500/10; }
-  .bg-brand-100 { @apply bg-brand-500/20; }
-  .text-brand-700, .text-brand-800, .text-brand-900 { @apply text-brand-300; }
-  .border-brand-100, .border-brand-200 { @apply border-brand-500/30; }
-  .bg-amber-50, .bg-yellow-50 { @apply bg-amber-500/10; }
-  .bg-amber-100, .bg-yellow-100 { @apply bg-amber-500/20; }
-  .text-amber-700, .text-amber-800, .text-amber-900, .text-yellow-700, .text-yellow-800, .text-yellow-900 { @apply text-amber-300; }
-  .border-amber-200, .border-amber-300, .border-yellow-200, .border-yellow-300 { @apply border-amber-500/40; }
-  .bg-red-50 { @apply bg-red-500/10; }
-  .bg-red-100 { @apply bg-red-500/20; }
-  .text-red-700, .text-red-800, .text-red-900 { @apply text-red-300; }
-  .border-red-200, .border-red-300 { @apply border-red-500/40; }
-  .bg-green-50, .bg-emerald-50 { @apply bg-green-500/10; }
-  .bg-green-100, .bg-emerald-100 { @apply bg-green-500/20; }
-  .text-green-700, .text-green-800, .text-green-900, .text-emerald-700, .text-emerald-800 { @apply text-green-300; }
-  .border-green-200, .border-green-300, .border-emerald-200, .border-emerald-300 { @apply border-green-500/40; }
-  .bg-blue-50, .bg-sky-50 { @apply bg-blue-500/10; }
-  .bg-blue-100, .bg-sky-100 { @apply bg-blue-500/20; }
-  .text-blue-700, .text-blue-800, .text-blue-900, .text-sky-700, .text-sky-800, .text-sky-900 { @apply text-blue-300; }
-  .border-blue-200, .border-blue-300, .border-sky-200, .border-sky-300 { @apply border-blue-500/40; }
-  .bg-orange-50 { @apply bg-orange-500/10; }
-  .bg-orange-100 { @apply bg-orange-500/20; }
-  .text-orange-700, .text-orange-800 { @apply text-orange-300; }
-  /* Isian lama tanpa kelas kit (latar putih bawaan peramban). */
-  :is(input, select, textarea):not([type="checkbox"], [type="radio"], [type="range"], [type="color"], [type="file"], [type="submit"], [type="button"], .inp) {
-    @apply border-gray-600 bg-gray-700 text-white;
-  }
-  :is(input, textarea)::placeholder { @apply text-gray-400; }
-  /* Tombol "Pilih berkas" lama (file:bg-brand-50 file:text-brand-700 → hampir putih) — gaya tombol berkas Flowbite dark. */
-  [type="file"]:not(.inp-berkas)::file-selector-button { @apply bg-gray-600 text-white; }
-  [type="file"]:not(.inp-berkas):hover::file-selector-button { @apply bg-gray-500; }
-}
-
-/* (R2) Mode gelap: bilah gulir & kontrol bawaan peramban ikut gelap; kotak centang/radio lama (tanpa .cek) di isi halaman. */
+/* (R2) Mode gelap: bilah gulir & kontrol bawaan peramban ikut gelap; pengaman kotak centang/radio tanpa .cek di isi halaman. */
 [data-mode="gelap"] { color-scheme: dark; }
 [data-mode="gelap"] .kerangka-isi :is([type="checkbox"], [type="radio"]):not(.cek):not(:checked) { @apply border-gray-600 bg-gray-700; }

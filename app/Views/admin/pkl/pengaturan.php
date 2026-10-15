@@ -124,7 +124,7 @@ $kotakTautan = static fn (string $judul, string $url, string $pesan, string $ket
                 <p class="lbl">Tingkat kelas</p>
                 <div class="flex flex-wrap gap-2">
                     <?php foreach (PklPengaturanModel::TINGKAT as $t): ?>
-                        <label class="inline-flex cursor-pointer items-center gap-2 rounded-lg border border-gray-200 px-4 py-2.5 text-sm font-medium text-gray-900 transition-colors has-[:checked]:border-brand-500 has-[:checked]:bg-brand-50 has-[:checked]:text-brand-800 dark:border-gray-600 dark:text-white dark:has-[:checked]:bg-gray-700">
+                        <label class="inline-flex cursor-pointer items-center gap-2 rounded-lg border border-gray-200 px-4 py-2.5 text-sm font-medium text-gray-900 transition-colors has-[:checked]:border-brand-500 has-[:checked]:bg-brand-50 has-[:checked]:text-brand-800 dark:border-gray-600 dark:text-white dark:has-[:checked]:bg-gray-700 dark:has-[:checked]:text-white">
                             <input type="checkbox" name="tingkat[]" value="<?= $t ?>"<?= in_array($t, $tingkat, true) ? ' checked' : '' ?> class="cek"> Kelas <?= $t ?>
                         </label>
                     <?php endforeach; ?>
