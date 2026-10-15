@@ -32,7 +32,9 @@ $saklar = static fn (string $nama, bool $nyala, string $judul, string $ket): str
             <!-- Logo -->
             <div class="flex flex-col gap-4 sm:flex-row sm:items-center">
                 <div class="flex h-20 w-20 shrink-0 items-center justify-center overflow-hidden rounded-lg border border-gray-200 bg-gray-100 dark:border-gray-600 dark:bg-gray-700">
-                    <?php if (! empty($setting['logo'])): ?>
+                    <?php // Gambar hanya bila berkasnya ADA (pola partials/favicon.php) — tanpa gambar rusak & galat 404 di konsol.
+                    $adaLogo = ! empty($setting['logo']) && is_file(FCPATH . 'uploads/' . basename((string) $setting['logo'])); ?>
+                    <?php if ($adaLogo): ?>
                         <img src="<?= base_url('uploads/' . esc($setting['logo'])) ?>" class="h-full w-full object-contain" alt="Logo sekolah">
                     <?php else: ?>
                         <?= ikon('image', 'h-8 w-8 text-gray-400 dark:text-gray-500') ?>
@@ -40,6 +42,9 @@ $saklar = static fn (string $nama, bool $nyala, string $judul, string $ket): str
                 </div>
                 <div class="min-w-0 flex-1">
                     <p class="lbl">Logo sekolah</p>
+                    <?php if (! empty($setting['logo']) && ! $adaLogo): ?>
+                        <p class="hint mb-2 text-yellow-700 dark:text-yellow-400">Berkas logo tersimpan tidak ditemukan di server — silakan unggah ulang.</p>
+                    <?php endif; ?>
                     <label x-data="pilihBerkas" data-kosong="Belum ada berkas dipilih"
                            class="flex cursor-pointer items-center gap-3 rounded-lg border-2 border-dashed border-gray-300 bg-gray-50 p-3 transition-colors focus-within:ring-4 focus-within:ring-brand-300 hover:border-brand-400 hover:bg-gray-100 dark:border-gray-600 dark:bg-gray-700/50 dark:hover:border-brand-500 dark:hover:bg-gray-700">
                         <?= ikon('upload', 'h-5 w-5 shrink-0 text-gray-500 dark:text-gray-400') ?>
