@@ -1,11 +1,16 @@
-// Warna brand dibaca dari variabel CSS (resources/css/app.css): bawaan biru, admin = ungu lilac (.tema-lilac).
+// app.css (Tailwind v3) = HALAMAN PUBLIK saja: beranda, form biodata & PKL siswa, berbagi dokumen. Panel admin & halaman masuk
+// memakai admin.css (Tailwind v4, resources/css/admin.css) sejak rombak tampilan F12 — view admin tidak dipindai di sini.
+// Warna brand dibaca dari variabel CSS (resources/css/app.css): bawaan biru, .tema-lilac = ungu lilac.
 const brand = (n) => `rgb(var(--brand-${n}) / <alpha-value>)`;
 
 /** @type {import('tailwindcss').Config} */
 module.exports = {
-  // Dua berkas non-tampilan menyimpan kelas warna lencana (jenis & status Surat Sekolah) sebagai teks;
-  // kartu-guru.js membangun "chip" kelas lewat JavaScript (tampilan Per guru di SKBM & Koreksi).
-  content: ['./app/Views/**/*.php', './app/Libraries/SuratJenis.php', './app/Models/SuratSekolahModel.php', './public/assets/js/admin/kartu-guru.js'],
+  content: [
+    './app/Views/{biodata,pkl,public,partials,pdf}/**/*.php',
+    './app/Views/layouts/{biodata,pkl,public}.php',
+    './app/Views/pager/publik.php',
+    './public/assets/js/*.js',
+  ],
   theme: {
     extend: {
       colors: {
