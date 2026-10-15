@@ -27,10 +27,10 @@ class SuratSekolahModel extends Model
 
     /** status => [label, kelas lencana]. 'disetujui' = siap diunduh (setelah ACC, atau jenis tanpa ACC). */
     public const TAMPIL_STATUS = [
-        'menunggu'     => ['Menunggu ACC', 'bg-amber-100 text-amber-800'],
-        'dikembalikan' => ['Dikembalikan', 'bg-orange-100 text-orange-800'],
-        'disetujui'    => ['Siap unduh', 'bg-green-100 text-green-800'],
-        'dibatalkan'   => ['Dibatalkan', 'bg-gray-200 text-gray-600'],
+        'menunggu'     => ['Menunggu ACC', 'lencana-kuning'],
+        'dikembalikan' => ['Dikembalikan', 'lencana-merah'],
+        'disetujui'    => ['Siap unduh', 'lencana-hijau'],
+        'dibatalkan'   => ['Dibatalkan', 'lencana-abu'],
     ];
 
     /** Kode tampilan, mis. SRT-00012 (bukan nomor surat resmi). */

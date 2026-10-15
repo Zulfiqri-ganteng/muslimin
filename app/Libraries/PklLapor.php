@@ -29,9 +29,9 @@ final class PklLapor
 
     /** status => [teks, kelas lencana] */
     public const TAMPIL = [
-        'baru'         => ['Menunggu diproses', 'bg-amber-100 text-amber-800'],
-        'diproses'     => ['Surat Balasan dibuat', 'bg-green-100 text-green-700'],
-        'dikembalikan' => ['Dikembalikan ke siswa', 'bg-red-100 text-red-700'],
+        'baru'         => ['Menunggu diproses', 'lencana-kuning'],
+        'diproses'     => ['Surat Balasan dibuat', 'lencana-hijau'],
+        'dikembalikan' => ['Dikembalikan ke siswa', 'lencana-merah'],
     ];
 
     public const MAKS_ALAMAT  = 300;
