@@ -26,7 +26,7 @@ document.addEventListener('alpine:init', function () {
         return {
             cfg: {},
             panel: '',
-            menuCetak: false,
+            qCalon: '',   // cari calon penerima (panel Tambah penerima)
             pesan: '',
             galat: false,
             cari: '',
@@ -38,6 +38,11 @@ document.addEventListener('alpine:init', function () {
             init: function () {
                 var self = this;
                 this.cfg = JSON.parse(this.$el.dataset.config || '{}');
+                // (F7) Lebar kolom grid (jumlah komponen dinamis) dipasang lewat CSSOM — dulu style="--kolom/--minw" di markup
+                // (style= sebaris ditolak CSP). Variabel diwariskan ke semua baris di dalam akar.
+                if (this.cfg.kolom) { this.$el.style.setProperty('--kolom', this.cfg.kolom); }
+                if (this.cfg.minW) { this.$el.style.setProperty('--minw', this.cfg.minW + 'rem'); }
+                if (this.$el.dataset.panelAwal) { this.panel = this.$el.dataset.panelAwal; }
                 this.tampilCount = this.$root.querySelectorAll('[data-baris-row]').length;
                 // Pencarian lewat $watch: tidak bergantung pada urutan x-model / @input.
                 this.$watch('cari', function () { self.saring(); });
@@ -46,6 +51,19 @@ document.addEventListener('alpine:init', function () {
                     if (self.tertunda > 0) { e.preventDefault(); e.returnValue = ''; }
                 });
                 if (window.location.hash === '#penerima') { this.panel = 'penerima'; }
+            },
+
+            // ------------------------------------------------------------------ (F7) panel, pemeriksaan, cari calon penerima
+            // Dulu penugasan + ternary di @click, objek sebaris di x-data & .includes()/.toLowerCase() di isian (tak cocok Alpine CSP).
+            alihPanel: function (nama) { this.panel = this.panel === nama ? '' : nama; },
+            bukaPeriksa: function () {
+                var d = this.$root.querySelector('#pemeriksaan');
+                if (d) { d.open = true; d.scrollIntoView({ behavior: 'smooth', block: 'start' }); }
+            },
+            tanpaHasil: function () { return this.cari !== '' && this.tampilCount === 0; },
+            cocokCalon: function (el) {
+                var q = String(this.qCalon || '').trim().toLowerCase();
+                return q === '' || (el.getAttribute('data-cari') || '').indexOf(q) !== -1;
             },
 
             // ------------------------------------------------------------------ pesan
@@ -136,7 +154,7 @@ document.addEventListener('alpine:init', function () {
                         } else {
                             var sama = Number(j.otomatis) === Number(j.nilai);
                             st.textContent = sama ? 'otomatis' : 'diubah';
-                            st.className = 'rounded-sm px-1 text-[10px] font-semibold ' + (sama ? 'bg-emerald-50 text-emerald-700' : 'bg-amber-50 text-amber-700');
+                            st.className = 'lencana px-1 py-0 text-[10px] ' + (sama ? 'lencana-hijau' : 'lencana-kuning');
                         }
                     }
                     self.kedip(el, true);
@@ -164,7 +182,7 @@ document.addEventListener('alpine:init', function () {
             },
 
             kedip: function (el, baik) {
-                var kelas = baik ? ['ring-2', 'ring-emerald-300'] : ['ring-2', 'ring-red-400'];
+                var kelas = baik ? ['ring-2', 'ring-green-300'] : ['ring-2', 'ring-red-400'];
                 kelas.forEach(function (c) { el.classList.add(c); });
                 setTimeout(function () { kelas.forEach(function (c) { el.classList.remove(c); }); }, baik ? 700 : 1800);
             },
@@ -180,7 +198,8 @@ document.addEventListener('alpine:init', function () {
                 if (String(n) === el.dataset.awal) { el.value = el.dataset.awal; return; }
                 this.pindahKe(el.dataset.baris, n, el);
             },
-            geser: function (btn, delta) {
+            // (F7) dulu bernama geser — dev:cek-ui mengiranya fungsi global (ada function geser di pkl-unduh.js).
+            geserBaris: function (btn, delta) {
                 var rows = this.semuaBaris();
                 var idx = rows.findIndex(function (r) { return r.dataset.barisId === btn.dataset.baris; });
                 if (idx < 0) { return; }
