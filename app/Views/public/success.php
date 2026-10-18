@@ -1,23 +1,21 @@
-<?= $this->extend('layouts/public') ?>
+<?= $this->extend('layouts/formulir') ?>
 <?= $this->section('content') ?>
-<div class="max-w-lg mx-auto px-4 py-16">
-    <div class="bg-white rounded-lg shadow-sm border border-slate-200 p-8 text-center">
-        <div class="mx-auto flex h-20 w-20 items-center justify-center rounded-full bg-green-100">
-            <svg class="w-11 h-11 text-green-600" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/></svg>
-        </div>
-        <h1 class="mt-6 text-2xl font-extrabold text-slate-800"><?= session('revisi') ? 'Perbaikan Tersimpan!' : 'Kesediaan Terkirim!' ?></h1>
-        <p class="mt-3 text-slate-500 leading-relaxed">
-            Terima kasih <b class="text-slate-700"><?= esc(session('nama') ?? 'Bapak/Ibu Guru') ?></b>.
+<?php /* Kesediaan guru terkirim (P7 rombak publik: bingkai layouts/formulir.php + kit publik.css; isi sama). */ ?>
+<div class="formulir formulir-sempit">
+    <?= view('partials/kop_formulir', ['setting' => $setting, 'judul' => 'Format Kesediaan Guru Mengajar', 'tahunLabel' => 'Tahun Ajaran'], ['saveData' => false]) ?>
+    <div class="kartu mt-6 px-6 py-8 text-center sm:px-8">
+        <span class="mx-auto grid h-14 w-14 place-items-center rounded-full bg-emerald-50 text-emerald-700"><?= ikon('check-circle', 'h-8 w-8') ?></span>
+        <h2 class="mt-5 text-heading-lg text-teks"><?= session('revisi') ? 'Perbaikan tersimpan' : 'Kesediaan terkirim' ?></h2>
+        <p class="mt-2 leading-relaxed text-teks-2">
+            Terima kasih <b class="text-teks"><?= esc(session('nama') ?? 'Bapak/Ibu Guru') ?></b>.
             <?php if (session('revisi')): ?>
                 Perbaikan data Anda telah kami simpan dan akan ditinjau ulang oleh admin sekolah.
             <?php else: ?>
                 Data Anda telah kami terima dan akan diproses oleh admin sekolah.
             <?php endif; ?>
         </p>
-        <div class="mt-6 rounded-xl bg-slate-50 border border-slate-200 px-5 py-4 text-sm text-slate-500">
-            Jika ada kesalahan data, silakan hubungi admin/operator sekolah.
-        </div>
-        <a href="<?= site_url('/') ?>" class="mt-6 inline-block text-sm font-semibold text-brand-600 hover:text-brand-800">&larr; Kembali ke halaman utama</a>
+        <p class="mt-5 rounded-lg border border-garis bg-permukaan px-5 py-4 text-sm text-teks-2">Jika ada kesalahan data, silakan hubungi admin/operator sekolah.</p>
+        <a href="<?= site_url('/') ?>" class="tombol tombol-teks mt-5"><?= ikon('angle-left', 'h-4 w-4') ?>Kembali ke halaman utama</a>
     </div>
 </div>
 <?= $this->endSection() ?>

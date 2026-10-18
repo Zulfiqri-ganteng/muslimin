@@ -1,7 +1,7 @@
 # Rencana: Rombak Tampilan Halaman Publik (konsep Rumah Pendidikan)
 
-Dibuat 2026-10-15. **Status: P0 ✅ · P1 ✅ · P3 ✅ · P4 ✅ (2026-10-15/16) · P2a ✅ · P2b ✅ · P5 ✅ · P6 Formulir siswa ✅ (P6a PKL · P6b Lapor · P6c Biodata, 2026-10-18) → P7.**
-Semua masih perubahan lokal di folder (cabang `upgrade-tampilan`, belum di-commit — atas permintaan user).
+Dibuat 2026-10-15. **Status: P0 ✅ · P1 ✅ · P3 ✅ · P4 ✅ (2026-10-15/16) · P2a ✅ · P2b ✅ · P5 ✅ · P6 Formulir siswa ✅ (P6a PKL · P6b Lapor · P6c Biodata) · P7 Penutup ✅ (2026-10-18) — SERI SELESAI.**
+Di-commit & digabung ke `main` atas permintaan user (2026-10-18). Pasang di server: `docs/PANDUAN-DEPLOY-PUBLIK.md`.
 
 > **Arahan user 2026-10-15 malam (wajib):** (1) jangan pakai kata "Ruang" — cukup **Siswa, Guru, Orang Tua, Profil Sekolah**
 > (alamat `/siswa`, `/guru`, `/orang-tua`, `/profil`); (2) tambah backend agar sekolah bisa **mengunggah foto sekolah** yang tampil
@@ -275,11 +275,19 @@ Bingkai baru bersama **`layouts/formulir.php`** (publik.css, font lokal, Alpine 
       JS/CSP. Halaman ditutup diuji (`biodata_open` dimatikan sebentar, dikembalikan). `layouts/biodata.php` & `layouts/pkl.php` kini TIDAK
       dipakai; `partials/kop_form.php` tinggal dipakai form kesediaan (P7) — ketiganya dibuang di P7 (sisa temuan grup P6 = berkas lama ini).
 
-### P7 Form Kesediaan Guru + halaman galat + penutup — (sedang)
-- [ ] `layouts/public.php` + form kesediaan (skrip sebaris → berkas), terima kasih, tutup, revisi.
-- [ ] Halaman galat disamakan dengan gaya portal (tetap mandiri, tanpa DB).
-- [ ] Buang `app.css` v3, `tailwind.config.js`, kelas hiasan lama, semua CDN; cek siap CSP = 0, kontras AA, HP 360 px.
-- [ ] `docs/PANDUAN-DEPLOY-PUBLIK.md` + catatan memori.
+### P7 Form Kesediaan Guru + halaman galat + penutup — ✅ SELESAI 2026-10-18
+- [x] Form kesediaan (`public/form.php`), terima kasih, tutup, revisi tak berlaku → `layouts/formulir.php` + kop baru. Skrip sebaris →
+      `public/assets/js/kesediaan.js` (logika sama: validasi per langkah, mode "tidak bersedia", Kirim muncul bila lengkap, POST biasa);
+      data awal tabel mapel lewat `<script type="application/json" id="data-kesediaan">`; baris tabel dibuat lewat DOM; animasi hiasan
+      lama & emoji dibuang.
+- [x] Halaman galat (`galat.css`): netral terang = token portal (#323232 / #5e5e5e / #e5e5e5 / #f5f5f5), lilac & mode gelap tetap.
+- [x] DIHAPUS: `public/assets/css/app.css`, `resources/css/app.css`, `tailwind.config.js`, `layouts/public.php`, `layouts/pkl.php`,
+      `layouts/biodata.php`, `partials/kop_form.php`, blok KOMPAT ISI LAMA di publik.css (dipindai: tak ada border tanpa warna).
+      `dev:cek-ui` diperbarui (bingkai `layouts/formulir.php`, `kesediaan.js`); `.gitattributes` mengunci `publik.css` LF.
+- [x] Uji: `dev:cek-ui` SEMUA grup admin + publik = 0 (siap-CSP & aturan tampilan; `--wajib-nol` lulus tiap grup publik); HTTP 20 halaman
+      publik 200 tanpa galat & tanpa app.css + 404 baru; peramban kesediaan 19/19 (360) & 20/20 (1280); regresi PKL 28/28, Biodata 24/24,
+      Lapor 15/15 (data sementara dihapus).
+- [x] `docs/PANDUAN-DEPLOY-PUBLIK.md` (server) + `docs/PANDUAN-GAYA-PUBLIK.md` (acuan aplikasi Android) + catatan memori.
 
 ## 9. Keputusan untuk user (saran bawaan dipakai bila tidak dijawab)
 1. **Warna kaki halaman:** arang gelap seperti acuan *(saran)* · atau ungu tua sekolah seperti sekarang.
@@ -299,6 +307,7 @@ Bingkai baru bersama **`layouts/formulir.php`** (publik.css, font lokal, Alpine 
 | Kesan meniru situs pemerintah | hanya pola susunan; identitas, logo, warna, gambar milik sekolah |
 
 ## 11. Deploy (setelah P7)
-`git switch main` → `git merge upgrade-tampilan` → `git push` → server: `git pull` (bila `public/.htaccess` berubah: stash → pull → stash pop,
-lihat PANDUAN-DEPLOY-TAMPILAN.md) → `php spark migrate` (P2 pengumuman; P3 bila keputusan 3 = ya) → Ctrl+F5. Folder unggahan
-gambar pengumuman dibuat otomatis oleh kode.
+Laptop (dikerjakan Claude 2026-10-18 atas permintaan user): commit di `upgrade-tampilan` → `git switch main` → `git merge upgrade-tampilan`
+→ `git push origin main`. Server: `git pull origin main` → `phpm spark migrate` (migrasi `2026-10-20-000001_TampilanPublik`) → Ctrl+F5.
+`public/.htaccess` tidak berubah di seri ini. Folder unggahan `public/uploads/foto-sekolah/` & `public/uploads/pengumuman/` dibuat
+otomatis oleh kode. Rincian & cek pasca-deploy: `docs/PANDUAN-DEPLOY-PUBLIK.md`.

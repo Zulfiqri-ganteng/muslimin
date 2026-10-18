@@ -10,8 +10,9 @@
 @source "../../app/Libraries/LayananPublik.php";
 @source "../../public/assets/js/publik";
 @source "../../public/assets/js/dokumen-penampil.js";
-/* Formulir siswa yang sudah pindah ke bingkai layouts/formulir.php (P6a Pengajuan PKL; berikutnya Lapor, Biodata). */
+/* Formulir publik di bingkai layouts/formulir.php: Pengajuan PKL, Lapor diterima, Biodata (P6), Kesediaan guru (P7). */
 @source "../../app/Views/layouts/formulir.php";
+@source "../../public/assets/js/kesediaan.js";
 @source "../../app/Views/pkl";
 @source "../../public/assets/js/pkl.js";
 @source "../../public/assets/js/pkl-lapor.js";
@@ -592,11 +593,3 @@
 @keyframes grafik-tumbuh-y { from { transform: scaleY(0); } }
 @keyframes grafik-tumbuh-x { from { transform: scaleX(0); } }
 @keyframes grafik-donat { from { stroke-dasharray: 0 400; } }
-
-/* ===================================================== KOMPAT ISI LAMA =====================================================
-   Aturan Tailwind v3 yang masih diandalkan isi halaman publik yang BELUM dirombak (fase P2–P7). Dibuang di P7 setelah semua halaman
-   memakai kit di atas. */
-@layer base {
-  *, ::after, ::before, ::backdrop, ::file-selector-button { border-color: var(--color-gray-200, currentColor); }
-  input::placeholder, textarea::placeholder { color: var(--color-gray-400); }
-}

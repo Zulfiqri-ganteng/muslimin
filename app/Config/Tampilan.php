@@ -106,12 +106,12 @@ class Tampilan extends BaseConfig
         ],
         'publik-formulir' => [
             'fase' => 'P6', 'label' => 'Publik: formulir siswa (PKL, Lapor diterima, Biodata)',
-            'view' => ['pkl', 'biodata', 'layouts/formulir.php', 'partials/kop_formulir.php', 'layouts/pkl.php', 'layouts/biodata.php', 'partials/kop_form.php'],
+            'view' => ['pkl', 'biodata', 'layouts/formulir.php', 'partials/kop_formulir.php'],
             'url'  => ['pkl', 'biodata'],
         ],
         'publik-guru' => [
             'fase' => 'P7', 'label' => 'Publik: formulir kesediaan guru',
-            'view' => ['public/form.php', 'public/success.php', 'public/closed.php', 'public/revisi_invalid.php', 'layouts/public.php'],
+            'view' => ['public/form.php', 'public/success.php', 'public/closed.php', 'public/revisi_invalid.php'],
             'url'  => ['isi', 'terima-kasih', 'tutup'],
         ],
     ];

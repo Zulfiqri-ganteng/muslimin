@@ -188,7 +188,7 @@ class CekUi extends BaseCommand
     {
         $yatim = [];
         // Sisi admin + sisi publik (portal, formulir siswa/guru, partial bersama).
-        $semua = array_merge($this->berkasGrup(['admin', 'public', 'pkl', 'biodata', 'partials']), ['layouts/admin.php', 'layouts/public.php', 'layouts/pkl.php', 'layouts/biodata.php']);
+        $semua = array_merge($this->berkasGrup(['admin', 'public', 'pkl', 'biodata', 'partials']), ['layouts/admin.php', 'layouts/formulir.php']);
         foreach ($semua as $rel) {
             if (Tampilan::grupView($rel) === null) {
                 $yatim[] = $rel;
@@ -215,12 +215,12 @@ class CekUi extends BaseCommand
         foreach (glob(FCPATH . 'assets/js/publik/*.js') ?: [] as $berkas) {
             $teks['publik'][] = $baca($berkas);
         }
-        foreach (['dokumen-penampil.js', 'pkl.js', 'pkl-lapor.js', 'biodata.js'] as $bersama) {
+        foreach (['dokumen-penampil.js', 'pkl.js', 'pkl-lapor.js', 'biodata.js', 'kesediaan.js'] as $bersama) {
             $teks['publik'][] = $baca(FCPATH . 'assets/js/' . $bersama);
         }
         $views = [
             'admin'  => array_merge($this->berkasGrup(['admin']), ['layouts/admin.php']),
-            'publik' => array_merge($this->berkasGrup(['public', 'pkl', 'biodata']), ['layouts/public.php', 'layouts/pkl.php', 'layouts/biodata.php']),
+            'publik' => array_merge($this->berkasGrup(['public', 'pkl', 'biodata']), ['layouts/formulir.php']),
         ];
         foreach ($views as $sisi => $daftar) {
             foreach ($daftar as $rel) {

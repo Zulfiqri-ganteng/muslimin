@@ -19,7 +19,7 @@
 (function () {
     'use strict';
 
-    // Kelas Tailwind chip — berkas ini dipindai Tailwind (lihat tailwind.config.js), jadi kelas di sini ikut terbentuk.
+    // Kelas Tailwind chip — berkas ini dipindai Tailwind (@source di resources/css/admin.css), jadi kelas di sini ikut terbentuk.
     // (F7) Warna diselaraskan dengan kit tampilan admin: amber → yellow, sudut rounded-lg, + mode gelap.
     var KELAS = {
         dasar: 'inline-flex min-w-[3.4rem] flex-col items-center justify-center rounded-lg border px-2 py-1.5 leading-tight transition active:scale-95',

@@ -14,12 +14,13 @@
     U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
 }
 
+/* Netral terang = token portal publik (publik.css: teks #323232, teks kedua #5e5e5e, garis #e5e5e5, permukaan #f5f5f5) — P7 rombak publik. */
 :root {
-  --latar: #f9fafb;
+  --latar: #f5f5f5;
   --kartu: #ffffff;
-  --garis: #e5e7eb;
-  --teks: #111827;
-  --redup: #6b7280;
+  --garis: #e5e5e5;
+  --teks: #323232;
+  --redup: #5e5e5e;
   --merek: rgb(99 69 150);
   --merek-tua: rgb(78 55 120);
   --merek-muda: rgb(239 232 249);
