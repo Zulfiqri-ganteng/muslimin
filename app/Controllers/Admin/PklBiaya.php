@@ -8,6 +8,7 @@ use App\Libraries\PklLaporanBiaya;
 use App\Libraries\PklNomorSurat;
 use App\Libraries\PklSurat;
 use App\Libraries\PklWa;
+use App\Libraries\PklWaKeputusan;
 use App\Libraries\SuratWa;
 use App\Models\AuditModel;
 use App\Models\SettingModel;
@@ -147,6 +148,20 @@ class PklBiaya extends PklDasar
                 $galatWa ??= ($g = PklWa::periksaPesan($pesanB)) !== null ? 'Pesan Surat Balasan: ' . $g : null;
             }
             $ubah['wa_pesan_balasan'] = ($pesanB === '' || $pesanB === SuratWa::PESAN_BAWAAN) ? null : $pesanB;
+        }
+        // Pesan ajuan dikembalikan / ditolak (PklWaKeputusan) — hanya bila kolomnya sudah ada (migrasi) dan isiannya dikirim.
+        if (PklWaKeputusan::kolomAda()) {
+            foreach (['wa_pesan_perbaikan' => [PklWaKeputusan::PESAN_PERBAIKAN, 'dikembalikan'], 'wa_pesan_tolak' => [PklWaKeputusan::PESAN_TOLAK, 'ditolak']] as $kolom => [$bawaan, $nama]) {
+                $kirim = $this->request->getPost($kolom);
+                if ($kirim === null) {
+                    continue;
+                }
+                $isi = trim((string) $kirim);
+                if ($isi !== '' && $isi !== $bawaan) {
+                    $galatWa ??= ($g = PklWaKeputusan::periksaPesan($isi)) !== null ? 'Pesan ajuan ' . $nama . ': ' . $g : null;
+                }
+                $ubah[$kolom] = ($isi === '' || $isi === $bawaan) ? null : $isi;
+            }
         }
         if ($hasil['ok'] && $galatWa === null) {
             db_connect()->table('pkl_pengaturan')->where('id', 1)->update($ubah);

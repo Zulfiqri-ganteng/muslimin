@@ -324,6 +324,7 @@ final class PklHak
             (bool) preg_match('~^\d+/(acc|tolak|batal-acc)$~', $sisa)           => 'acc',
             (bool) preg_match('~^\d+/(ubah|kembalikan)$~', $sisa)               => 'ubah',
             (bool) preg_match('~^\d+/(surat|pembayaran|wa)(/|$)~', $sisa)       => 'surat',
+            (bool) preg_match('~^\d+/kabar-keputusan(/|$)~', $sisa)             => PklWaKeputusan::HAK,
             default                                                             => null,
         };
     }

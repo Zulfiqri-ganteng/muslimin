@@ -15,6 +15,7 @@ use App\Libraries\PklNomorSurat;
 use App\Libraries\PklPeringatan;
 use App\Libraries\PklStaf;
 use App\Libraries\PklSurat;
+use App\Libraries\PklWaKeputusan;
 use App\Libraries\SuratJenis;
 use App\Libraries\SuratSekolah;
 use App\Models\AuditModel;
@@ -187,6 +188,9 @@ class Pkl extends BaseController
             // Laporan "sudah diterima perusahaan" dari siswa (bila ada) + boleh membuka kotak laporannya.
             'lapor'             => (new PklLapor())->untukAjuan((int) $id),
             'bolehKotakLapor'   => HakAkses::boleh($peranIni, 'admin/surat/balasan/laporan'),
+            // Kabar WhatsApp untuk ajuan yang dikembalikan/ditolak (hak acc/ubah/surat); terbuka sendiri sesudah keputusan.
+            'kabar'             => PklWaKeputusan::boleh($peranIni) ? (new PklWaKeputusan())->daftar((int) $id, $this->p, (new SettingModel())->get()) : null,
+            'kabarBuka'         => (int) session()->getFlashdata('pkl_kabar') === (int) $id,
         ]);
     }
 
@@ -220,8 +224,26 @@ class Pkl extends BaseController
         if ($hasil['kode'] === 'tidak_ada') {
             return $this->ke('admin/pkl/daftar/menunggu', 'error', $hasil['pesan']);
         }
+        $balik = $this->ke('admin/pkl/' . $id, $hasil['ok'] ? 'success' : 'error', $hasil['pesan']);
+        // Sesudah dikembalikan / ditolak / persetujuan dibatalkan: kotak "Kabari siswa via WhatsApp" langsung terbuka.
+        if ($hasil['ok'] && $aksi !== 'acc' && PklWaKeputusan::boleh($this->peranSaya())) {
+            $balik->with('pkl_kabar', $id);
+        }
 
-        return $this->ke('admin/pkl/' . $id, $hasil['ok'] ? 'success' : 'error', $hasil['pesan']);
+        return $balik;
+    }
+
+    /** POST admin/pkl/{ajuan}/kabar-keputusan/{siswa}/tandai — staf menekan tombol WhatsApp kabar dikembalikan/ditolak. */
+    public function tandaiKabar($id, $siswaId): ResponseInterface
+    {
+        if (! PklWaKeputusan::boleh($this->peranSaya())) {
+            return $this->json(['ok' => false, 'message' => 'Akun ' . HakAkses::label($this->peranSaya()) . ' tidak punya hak mengabari siswa. Admin bisa mengaturnya di Sistem → Hak Akses.'], 403, true);
+        }
+        $ok = (new PklWaKeputusan())->tandai((int) $id, (int) $siswaId, $this->konteks(['saluran' => 'web']));
+
+        return $this->json($ok
+            ? ['ok' => true, 'waktu' => date('Y-m-d H:i:s'), 'oleh' => $this->konteks()['oleh']]
+            : ['ok' => false, 'message' => 'Siswa tidak ditemukan pada ajuan yang dikembalikan/ditolak. Muat ulang halaman.'], $ok ? 200 : 404, true);
     }
     // =================================================================
     // Isi atas nama & ubah langsung
@@ -532,6 +554,8 @@ class Pkl extends BaseController
             'jenisBiaya'  => (new \App\Libraries\PklBiaya())->jenis(true),
             'waPesan'     => (string) ($this->p['wa_pesan'] ?? ''),
             'waPesanBalasan' => (string) ($this->p['wa_pesan_balasan'] ?? ''),
+            'waPesanPerbaikan' => (string) ($this->p['wa_pesan_perbaikan'] ?? ''),
+            'waPesanTolak'     => (string) ($this->p['wa_pesan_tolak'] ?? ''),
             'sekolahNama' => (string) ((new SettingModel())->get()['school_name'] ?? ''),
         ];
     }

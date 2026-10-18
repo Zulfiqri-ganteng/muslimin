@@ -154,6 +154,7 @@ final class MenuAdmin
                 'hak_akses' => ['Hak Akses', self::ADMIN, [['admin/hak-akses', 'Hak Akses', 'lock']], ['ket' => 'Khusus Admin: mengatur siapa boleh apa.']],
                 'audit'     => ['Audit Log', self::MENU, [['admin/audit', 'Audit Log', 'file-search']]],
                 'profil'    => ['Profil Saya', self::UMUM, [['admin/profile', 'Profil Saya', 'user']]],
+                'pemberitahuan' => ['Pemberitahuan (lonceng)', self::UMUM, [], ['awalan' => ['admin/pemberitahuan'], 'ket' => 'Isi ikon lonceng di bilah atas; disaring hak tiap peran.']],
             ]],
         ];
     }

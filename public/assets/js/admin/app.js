@@ -161,6 +161,121 @@
     var DESKTOP = window.matchMedia ? window.matchMedia('(min-width: 1024px)') : null;
 
     /* ---------------------------------------------------------------
+     * (2026-10-18) Menu samping MENCIUT (desktop, <html data-ciut>): sorot / fokus sebuah ikon → nama menunya melayang di samping;
+     * ikon GRUP → daftar isi grupnya bisa langsung diklik tanpa melebarkan menu (klik ikon grup tetap = lebarkan + buka grup).
+     * Satu panel #sb-melayang di <body> (keluar dari wadah bergulir yang memotong isi), diisi SALINAN tautan grup (elemen baru tanpa
+     * atribut Alpine). Posisi lewat CSSOM (el.style) — diizinkan CSP, beda dengan atribut style= di HTML.
+     * ------------------------------------------------------------- */
+    function pasangMenuMelayang() {
+        var sb = document.getElementById('menu-samping');
+        if (!sb || document.getElementById('sb-melayang')) { return; }
+        var panel = document.createElement('div');
+        panel.id = 'sb-melayang';
+        panel.className = 'sb-melayang';
+        panel.hidden = true;
+        document.body.appendChild(panel);
+        var sumber = null;
+        var timer = null;
+
+        var aktif = function () {
+            return document.documentElement.hasAttribute('data-ciut') && (DESKTOP ? DESKTOP.matches : true);
+        };
+        // Selama panel tampil, title bawaan peramban disimpan dulu supaya tak muncul tooltip ganda.
+        var pulihkanJudul = function () {
+            if (sumber && sumber.hasAttribute('data-judul-asli')) {
+                sumber.setAttribute('title', sumber.getAttribute('data-judul-asli'));
+                sumber.removeAttribute('data-judul-asli');
+            }
+        };
+        var sembunyi = function () {
+            clearTimeout(timer);
+            panel.hidden = true;
+            panel.textContent = '';
+            pulihkanJudul();
+            sumber = null;
+        };
+        var tunda = function () {
+            clearTimeout(timer);
+            timer = setTimeout(sembunyi, 180);
+        };
+        var teksDari = function (el) {
+            var l = el.querySelector('.sb-label');
+            return String((l ? l.textContent : (el.getAttribute('data-judul-asli') || el.getAttribute('title'))) || '').trim();
+        };
+        var tampil = function (el) {
+            clearTimeout(timer);
+            if (sumber === el && !panel.hidden) { return; }
+            pulihkanJudul();
+            sumber = el;
+            var judulAsli = el.getAttribute('title');
+            if (judulAsli) {
+                el.setAttribute('data-judul-asli', judulAsli);
+                el.removeAttribute('title');
+            }
+            panel.textContent = '';
+            var grup = el.classList.contains('sb-grup-tombol') ? el.closest('.sb-grup') : null;
+            panel.classList.toggle('sb-melayang-grup', !!grup);
+            var judul = document.createElement('p');
+            judul.className = 'sb-melayang-judul';
+            judul.textContent = teksDari(el);
+            panel.appendChild(judul);
+            if (grup) {
+                var ul = document.createElement('ul');
+                Array.prototype.forEach.call(grup.querySelectorAll('.sb-anak-daftar > li'), function (li) {
+                    var asal = li.querySelector('.sb-item');
+                    if (!asal) { return; }
+                    var baru = document.createElement(asal.tagName === 'A' ? 'a' : 'span');
+                    baru.className = 'sb-melayang-item' + (asal.tagName === 'A' ? '' : ' sb-melayang-segera');
+                    baru.textContent = teksDari(asal) + (asal.tagName === 'A' ? '' : ' (segera)');
+                    if (asal.tagName === 'A') {
+                        baru.href = asal.href;
+                        if (asal.getAttribute('aria-current')) { baru.setAttribute('aria-current', 'page'); }
+                    }
+                    var item = document.createElement('li');
+                    item.appendChild(baru);
+                    ul.appendChild(item);
+                });
+                panel.appendChild(ul);
+            }
+            panel.hidden = false;
+            var r = el.getBoundingClientRect();
+            var tinggi = panel.offsetHeight;
+            var atas = grup ? r.top : r.top + (r.height - tinggi) / 2;
+            panel.style.top = Math.max(72, Math.min(atas, window.innerHeight - tinggi - 8)) + 'px';
+            panel.style.left = (r.right + 10) + 'px';
+        };
+        var pemicu = function (t) {
+            var el = t && t.closest ? t.closest('.sb-item, .sb-bawah-tombol') : null;
+            return el && sb.contains(el) ? el : null;
+        };
+
+        sb.addEventListener('mouseover', function (e) {
+            var el = aktif() ? pemicu(e.target) : null;
+            if (el) { tampil(el); }
+        });
+        sb.addEventListener('mouseout', function (e) {
+            var ke = e.relatedTarget;
+            if (ke && (panel.contains(ke) || pemicu(ke))) { return; }
+            tunda();
+        });
+        sb.addEventListener('focusin', function (e) {
+            var el = aktif() ? pemicu(e.target) : null;
+            if (el) { tampil(el); } else { sembunyi(); }
+        });
+        sb.addEventListener('focusout', function (e) {
+            if (!e.relatedTarget || !panel.contains(e.relatedTarget)) { tunda(); }
+        });
+        sb.addEventListener('click', sembunyi);
+        panel.addEventListener('mouseover', function () { clearTimeout(timer); });
+        panel.addEventListener('mouseleave', tunda);
+        var gulir = sb.querySelector('.sb-gulir');
+        if (gulir) { gulir.addEventListener('scroll', sembunyi, { passive: true }); }
+        window.addEventListener('resize', sembunyi);
+        document.addEventListener('keydown', function (e) { if (e.key === 'Escape') { sembunyi(); } });
+    }
+    if (document.readyState === 'loading') { document.addEventListener('DOMContentLoaded', pasangMenuMelayang); } else { pasangMenuMelayang(); }
+
+    /* ---------------------------------------------------------------
      * Pilih baris & hapus massal (SEMUA halaman master) — plain JS
      * global tanpa ketergantungan komponen halaman:
      *   .js-check-all   : checkbox header (pilih semua baris)
@@ -515,6 +630,52 @@
                 adaHasil: function () {
                     var q = this.kata();
                     return q === '' || semua.some(function (l) { return String(l).indexOf(q) !== -1; });
+                },
+            };
+        });
+
+        /* 2c. Lonceng bilah atas (<div x-data="lonceng" data-url data-awal='{"total":3,"butir":[…]}'>, di dalam x-data="dropdown"
+         *     milik kit — buka/alih/tutup diambil dari induk). Isi = pekerjaan yang masih menunggu (Libraries\Pemberitahuan): awalnya
+         *     dari server, lalu dimuat ulang tiap 2 menit selama tab terlihat, saat tab kembali dilihat, dan saat lonceng dibuka. */
+        Alpine.data('lonceng', function () {
+            var url = '';
+            var terakhir = 0;
+            return {
+                total: 0,
+                butir: [],
+                init: function () {
+                    var self = this;
+                    var awal = readJson(this.$el, 'awal', {});
+                    url = this.$el.getAttribute('data-url') || '';
+                    this.total = Number(awal.total) || 0;
+                    this.butir = Array.isArray(awal.butir) ? awal.butir : [];
+                    terakhir = Date.now();
+                    if (!url || !window.fetch) { return; }
+                    setInterval(function () { if (!document.hidden) { self.muat(); } }, 120000);
+                    document.addEventListener('visibilitychange', function () {
+                        if (!document.hidden && Date.now() - terakhir > 30000) { self.muat(); }
+                    });
+                },
+                muat: function () {
+                    var self = this;
+                    terakhir = Date.now();
+                    fetch(url, { credentials: 'same-origin', headers: { 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest' } })
+                        .then(function (r) { return r.ok ? r.json() : null; })
+                        .then(function (j) {
+                            if (j && j.ok) {
+                                self.total = Number(j.total) || 0;
+                                self.butir = Array.isArray(j.butir) ? j.butir : [];
+                            }
+                        })
+                        .catch(function () { /* jaringan putus: biarkan angka lama */ });
+                },
+                alihLonceng: function () {
+                    this.alih();
+                    if (this.buka && Date.now() - terakhir > 10000) { this.muat(); }
+                },
+                teksTotal: function () { return this.total > 99 ? '99+' : String(this.total); },
+                labelLonceng: function () {
+                    return this.total > 0 ? 'Pemberitahuan: ' + this.total + ' pekerjaan menunggu' : 'Pemberitahuan: tidak ada yang menunggu';
                 },
             };
         });

@@ -80,6 +80,7 @@ class UjiPkl extends BaseCommand
         $this->ujiStaf();
         $this->ujiSurat();
         $this->ujiAturanBaru();
+        $this->ujiKabarKeputusan();
         $this->bersihkan();
 
         CLI::newLine();
@@ -1260,6 +1261,89 @@ class UjiPkl extends BaseCommand
     // =================================================================
     // Bersih-bersih
     // =================================================================
+
+    // =================================================================
+    // Kabar WhatsApp ajuan dikembalikan / ditolak (PklWaKeputusan, 2026-10-18)
+    // =================================================================
+
+    private function ujiKabarKeputusan(): void
+    {
+        $this->bagian('Kabar WhatsApp: ajuan dikembalikan / ditolak');
+        $K = \App\Libraries\PklWaKeputusan::class;
+        $H = \App\Libraries\HakAkses::class;
+        if (! $K::kolomAda()) {
+            $this->cek('kolom migrasi PklWaKeputusan ada (jalankan php spark migrate)', false);
+
+            return;
+        }
+
+        // ---- hak: acc | ubah | surat (bawaan: Hubin & Operator boleh; Admin selalu) ----
+        $alamat = 'admin/pkl/12/kabar-keputusan/34/tandai';
+        $this->cek('hak alamat tandai = acc|ubah|surat → Hubin, Operator, Admin boleh', $H::boleh('hubin', $alamat) && $H::boleh('operator', $alamat) && $H::boleh('admin', $alamat));
+        $this->cek('boleh(): peran tak dikenal / kosong DITOLAK', ! $K::boleh('xyz') && ! $K::boleh('') && ! $K::boleh(null) && $K::boleh('hubin') && $K::boleh('operator'));
+
+        // ---- templat ----
+        $this->cek('periksaPesan: templat bawaan sah, penanda asing {nomor_surat} ditolak, kosong ditolak',
+            $K::periksaPesan($K::PESAN_PERBAIKAN) === null && $K::periksaPesan($K::PESAN_TOLAK) === null
+            && $K::periksaPesan('Halo {nama} {nomor_surat}') !== null && $K::periksaPesan('  ') !== null && $K::periksaPesan(str_repeat('a', 601)) !== null);
+        $this->cek('templat(): kosong → bawaan, terisi → isian Pengaturan', $K::templat('perbaikan', []) === $K::PESAN_PERBAIKAN && $K::templat('ditolak', ['wa_pesan_tolak' => 'X {nama}']) === 'X {nama}' && $K::templat('ditolak', ['wa_pesan_tolak' => '']) === $K::PESAN_TOLAK);
+
+        // ---- bahan: 1 ajuan 2 siswa (pengaju ber-HP, teman tanpa HP) ----
+        $k = $this->db->table('kelas')->select('id')->where('tingkat', 'XI')->where('deleted_at', null)->orderBy('id')->get()->getRowArray();
+        if ($k === null) {
+            $this->cek('bahan uji: kelas XI tersedia', false);
+
+            return;
+        }
+        $kelasId = (int) $k['id'];
+        $s1 = $this->buatSiswa(91, $kelasId);
+        $s2 = $this->buatSiswa(92, $kelasId);
+        $this->pengaturanAsli ??= (function (): array { $p = (new PklPengaturanModel())->ambil(); unset($p['id']); return $p; })();
+        $this->db->table('pkl_pengaturan')->where('id', 1)->update(['wa_pesan_perbaikan' => null, 'wa_pesan_tolak' => null]);
+        $p = (new PklPengaturanModel())->ambil();
+        $ajuan = new PklAjuan();
+        [$data, $konteks] = $this->dataAjuan('PT Kabar Uji');
+        $r = $ajuan->kirimBaru($data, [['siswa_id' => $s1, 'kelas_id' => $kelasId, 'peran' => 'pengaju'], ['siswa_id' => $s2, 'kelas_id' => $kelasId, 'peran' => 'teman']], $konteks);
+        $a = (int) ($r['id'] ?? 0);
+        $admin = ['oleh' => 'Hubin Uji', 'admin_id' => 1, 'peran' => 'hubin', 'ip' => '10.1.1.1'];
+        $wa = new $K();
+        $set = ['school_name' => 'SMK Uji'];
+
+        $this->cek('status menunggu → daftar null & tandai ditolak', $wa->daftar($a, $p, $set) === null && $wa->tandai($a, $s1, $admin) === false);
+
+        // ---- dikembalikan ----
+        $ajuan->ubahStatus($a, 'perbaikan', $admin, 'Alamat perusahaan kurang lengkap');
+        $d = $wa->daftar($a, $p, $set);
+        $x = $d['siswa'][0] ?? [];
+        $y = $d['siswa'][1] ?? [];
+        $this->cek('perbaikan: 2 siswa, pengaju di baris pertama & ditandai', ($d['status'] ?? '') === 'perbaikan' && count($d['siswa'] ?? []) === 2 && ($x['siswa_id'] ?? 0) === $s1 && ($x['pengaju'] ?? false) === true && ($y['pengaju'] ?? true) === false);
+        $this->cek('perbaikan: pesan memuat nama, kode, alasan, tautan form, sekolah & kata DIKEMBALIKAN',
+            str_contains($x['pesan'] ?? '', 'Zzuji Pkl 91') && str_contains($x['pesan'] ?? '', PklPengajuanModel::kode($a)) && str_contains($x['pesan'] ?? '', 'Alamat perusahaan kurang lengkap')
+            && str_contains($x['pesan'] ?? '', config('Pkl')->tautan()) && str_contains($x['pesan'] ?? '', 'SMK Uji') && str_contains($x['pesan'] ?? '', 'DIKEMBALIKAN'), $x['pesan'] ?? '');
+        $this->cek('perbaikan: tautan wa.me/62… berisi pesan; teman tanpa HP → url null + alasan',
+            str_starts_with((string) ($x['url'] ?? ''), 'https://wa.me/6281234567890?text=') && $this->nul($y, 'url') && ($y['alasan_tidak'] ?? '') === 'Nomor HP kosong');
+        $this->cek('perbaikan: belum ada yang dikabari', $this->nul($x, 'dikabari_at'));
+
+        $riwayatSebelum = $this->db->table('pkl_riwayat')->where('pengajuan_id', $a)->where('aksi', 'kabari_keputusan')->countAllResults();
+        $this->cek('tandai: siswa anggota → true', $wa->tandai($a, $s1, $admin) === true);
+        $this->cek('tandai: siswa BUKAN anggota → false', $wa->tandai($a, 999999999, $admin) === false);
+        $d = $wa->daftar($a, $p, $set);
+        $this->cek('tandai: dikabari_at & oleh terisi; riwayat kabari_keputusan +1',
+            ($d['siswa'][0]['dikabari_at'] ?? null) !== null && ($d['siswa'][0]['dikabari_oleh'] ?? '') === 'Hubin Uji'
+            && $this->db->table('pkl_riwayat')->where('pengajuan_id', $a)->where('aksi', 'kabari_keputusan')->countAllResults() === $riwayatSebelum + 1);
+        // Keputusan baru sesudah dikabari → tanda "sudah dikabari" kosong lagi.
+        $this->db->table('pkl_anggota')->where('pengajuan_id', $a)->where('siswa_id', $s1)->update(['kabar_keputusan_at' => date('Y-m-d H:i:s', time() - 3600)]);
+        $d = $wa->daftar($a, $p, $set);
+        $this->cek('kabar lebih awal dari keputusan terakhir → dianggap BELUM dikabari', $this->nul($d['siswa'][0] ?? null, 'dikabari_at'));
+
+        // ---- ditolak + templat dari Pengaturan ----
+        $ajuan->ubahStatus($a, 'ditolak', $admin, 'Perusahaan tidak menerima PKL');
+        $this->db->table('pkl_pengaturan')->where('id', 1)->update(['wa_pesan_tolak' => 'Maaf {nama} ({kelas}), {kode} ditolak: {alasan}']);
+        $d = $wa->daftar($a, (new PklPengaturanModel())->ambil(), $set);
+        $this->cek('ditolak: templat Pengaturan dipakai & penanda terisi', ($d['status'] ?? '') === 'ditolak' && str_starts_with($d['siswa'][0]['pesan'] ?? '', 'Maaf Zzuji Pkl 91 (') && str_ends_with($d['siswa'][0]['pesan'] ?? '', PklPengajuanModel::kode($a) . ' ditolak: Perusahaan tidak menerima PKL'), $d['siswa'][0]['pesan'] ?? '');
+        $this->cek('ditolak: tandai tetap bisa (anggota ajuan ditolak)', $wa->tandai($a, $s2, $admin) === true);
+        $this->db->table('pkl_pengaturan')->where('id', 1)->update(['wa_pesan_tolak' => null]);
+    }
 
     private function bersihkan(): void
     {

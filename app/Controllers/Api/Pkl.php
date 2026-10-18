@@ -17,6 +17,7 @@ use App\Libraries\PklStaf;
 use App\Libraries\PklSurat;
 use App\Libraries\PklUnduh;
 use App\Libraries\PklWa;
+use App\Libraries\PklWaKeputusan;
 use App\Models\AuditModel;
 use App\Models\PklPengajuanModel;
 use App\Models\PklPengaturanModel;
@@ -49,6 +50,7 @@ use CodeIgniter\HTTP\ResponseInterface;
  *   GET    pkl/biaya                         jenis biaya aktif + sumber beasiswa + aturan  |  POST pkl/biaya (hak 'pengaturan') simpan nominal & pesan WA
  *   GET    pkl/ajuan/{id}/pembayaran         catatan biaya siswa pada ajuan  |  POST …/pembayaran/hapus {pembayaran_id, alasan}  |  POST …/pembayaran/beasiswa-cabut {siswa_id, alasan}
  *   GET    pkl/wa?ids[]=                     siswa + tautan WhatsApp (wa.me) + pesan siap kirim  |  POST pkl/ajuan/{id}/wa/{siswa_id}/tandai
+ *   GET    pkl/ajuan/{id}/kabar-keputusan    kabar WhatsApp ajuan dikembalikan/ditolak (hak acc|ubah|surat)  |  POST …/kabar-keputusan/{siswa_id}/tandai
  *   GET    pkl/laporan?…  | GET pkl/laporan/excel?…   Laporan Pembayaran (hak 'laporan')
  *   GET    pkl/hak-akses  | POST pkl/hak-akses {hak:{hubin:[…],operator:[…]}}   KHUSUS ADMIN
  *   GET    pkl/siswa?kelas_id=&fase=&q=&page=&per=   Status Siswa
@@ -73,6 +75,7 @@ class Pkl extends BaseApiController
         'tolak' => 'Ditolak', 'batal_acc' => 'Persetujuan dibatalkan', 'ubah' => 'Data diubah staf', 'isi_atas_nama' => 'Diisi atas nama siswa',
         'tunda' => 'Dikembalikan ke antrean', 'surat' => 'Surat diterbitkan', 'cetak' => 'Surat diunduh', 'impor' => 'Diimpor dari Excel',
         'bayar' => 'Biaya dicatat', 'koreksi_bayar' => 'Catatan biaya dikoreksi', 'kabari' => 'Siswa dikabari (WhatsApp)',
+        'kabari_keputusan' => 'Siswa dikabari keputusan (WhatsApp)',
         'periode' => 'Periode PKL diisi', 'surat_sekolah' => 'Surat sekolah',
         'lapor_diterima' => 'Siswa lapor diterima perusahaan', 'lapor_proses' => 'Laporan diterima diproses', 'lapor_kembali' => 'Laporan diterima dikembalikan',
     ];
@@ -512,6 +515,10 @@ class Pkl extends BaseApiController
             ],
             'wa_templat'       => trim((string) ($this->p['wa_pesan'] ?? '')) !== '' ? (string) $this->p['wa_pesan'] : PklWa::PESAN_BAWAAN,
             'wa_penanda'       => PklWa::TOKEN,
+            // Pesan ajuan dikembalikan / ditolak (PklWaKeputusan) — null bila migrasinya belum dijalankan.
+            'wa_templat_perbaikan' => PklWaKeputusan::kolomAda() ? PklWaKeputusan::templat('perbaikan', $this->p) : null,
+            'wa_templat_tolak'     => PklWaKeputusan::kolomAda() ? PklWaKeputusan::templat('ditolak', $this->p) : null,
+            'wa_penanda_keputusan' => PklWaKeputusan::TOKEN,
         ], 'Jenis biaya PKL.');
     }
 
@@ -544,6 +551,17 @@ class Pkl extends BaseApiController
                 return $this->invalid(['wa_pesan' => $galat], $galat);
             }
             db_connect()->table('pkl_pengaturan')->where('id', 1)->update(['wa_pesan' => ($pesan === '' || $pesan === PklWa::PESAN_BAWAAN) ? null : $pesan, 'updated_at' => date('Y-m-d H:i:s')]);
+        }
+        foreach (['wa_pesan_perbaikan' => PklWaKeputusan::PESAN_PERBAIKAN, 'wa_pesan_tolak' => PklWaKeputusan::PESAN_TOLAK] as $kolom => $bawaan) {
+            if (! array_key_exists($kolom, $in) || ! PklWaKeputusan::kolomAda()) {
+                continue;
+            }
+            $pesan = trim((string) $in[$kolom]);
+            $galat = ($pesan !== '' && $pesan !== $bawaan) ? PklWaKeputusan::periksaPesan($pesan) : null;
+            if ($galat !== null) {
+                return $this->invalid([$kolom => $galat], $galat);
+            }
+            db_connect()->table('pkl_pengaturan')->where('id', 1)->update([$kolom => ($pesan === '' || $pesan === $bawaan) ? null : $pesan, 'updated_at' => date('Y-m-d H:i:s')]);
         }
 
         return $this->ok($biaya->jenis(true), $hasil['pesan']);
@@ -606,6 +624,39 @@ class Pkl extends BaseApiController
         }
         if (! (new PklWa())->tandai((int) $id, (int) $siswaId, $this->konteks())) {
             return $this->missing('Siswa tidak ditemukan pada ajuan yang disetujui.');
+        }
+
+        return $this->ok(['waktu' => date('Y-m-d H:i:s')], 'Siswa ditandai sudah dikabari.');
+    }
+
+    /**
+     * GET pkl/ajuan/{id}/kabar-keputusan — siswa + tautan WhatsApp untuk ajuan yang DIKEMBALIKAN untuk diperbaiki / DITOLAK
+     * (Libraries\PklWaKeputusan; hak 'acc', 'ubah', atau 'surat'). 409 bila status ajuan bukan perbaikan/ditolak.
+     */
+    public function kabarKeputusan($id): ResponseInterface
+    {
+        if (! PklWaKeputusan::boleh($this->peran())) {
+            return $this->forbidden('Akun ' . HakAkses::label($this->peran()) . ' tidak punya hak mengabari siswa.');
+        }
+        if ($this->model->find((int) $id) === null) {
+            return $this->missing('Ajuan tidak ditemukan.');
+        }
+        $data = (new PklWaKeputusan())->daftar((int) $id, $this->p, (new SettingModel())->get());
+        if ($data === null) {
+            return $this->failure('Kabar WhatsApp keputusan hanya untuk ajuan yang dikembalikan untuk diperbaiki atau ditolak.', 409);
+        }
+
+        return $this->ok($data, 'Daftar WhatsApp keputusan.');
+    }
+
+    /** POST pkl/ajuan/{id}/kabar-keputusan/{siswa_id}/tandai — setelah tautan WhatsApp dibuka, catat "sudah dikabari keputusan". */
+    public function kabarKeputusanTandai($id, $siswaId): ResponseInterface
+    {
+        if (! PklWaKeputusan::boleh($this->peran())) {
+            return $this->forbidden('Akun ' . HakAkses::label($this->peran()) . ' tidak punya hak mengabari siswa.');
+        }
+        if (! (new PklWaKeputusan())->tandai((int) $id, (int) $siswaId, $this->konteks())) {
+            return $this->missing('Siswa tidak ditemukan pada ajuan yang dikembalikan/ditolak.');
         }
 
         return $this->ok(['waktu' => date('Y-m-d H:i:s')], 'Siswa ditandai sudah dikabari.');

@@ -3,7 +3,8 @@
  * Kerangka panel admin (rombak tampilan F3 + revisi R1 — docs/RENCANA-UPGRADE-TAMPILAN.md §3–§5a), MENGIKUTI TEMPLATE Flowbite Admin
  * Dashboard (resources/flowbite: layouts/_default/dashboard.html, partials/navbar-dashboard.html, partials/sidebar.html,
  * partials/footer-dashboard.html):
- *   - bilah atas putih bergaris bawah: tombol menu, logo + nama sekolah (teks besar), kotak cari (desktop), avatar akun;
+ *   - bilah atas putih bergaris bawah: kiri tombol menu + nama sekolah (teks besar); kanan kotak cari (desktop), lonceng
+ *     pemberitahuan (pekerjaan menunggu, Libraries\Pemberitahuan), logo sekolah = tombol menu akun (2026-10-18);
  *   - menu samping putih bergaris kanan: baris menu 16px ber-ikon solid, GRUP = satu baris ber-ikon + panah ▾ dengan isi menjorok
  *     tanpa ikon, menu aktif berlatar abu, daftar kedua (tautan luar) dipisah garis, deret ikon kecil di bawah (desktop);
  *   - isi berlatar abu muda, kaki = kartu putih bertautan + baris hak cipta.
@@ -57,7 +58,8 @@ $tema       = \App\Libraries\Tampilan::tema($setting);
 $ciut       = \App\Libraries\Tampilan::sidebarCiut();
 $grupBuka   = \App\Libraries\Tampilan::grupTerbuka();
 $namaAkun   = (string) ($admin['full_name'] ?? 'Admin');
-$awalAkun   = mb_strtoupper(mb_substr($namaAkun, 0, 1));
+// Ikon lonceng: pekerjaan yang masih menunggu, disaring hak peran ini (dirender server, lalu diperbarui berkala oleh app.js).
+$lonceng    = \App\Libraries\Pemberitahuan::untuk($peranKini);
 
 // Item menu menyala bila alamat sekarang sama persis, atau (kecuali $it[3] = persis) berada di bawahnya.
 // Dicocokkan sebagai prefiks SEGMEN agar 'admin/jadwal' tidak ikut menyala saat membuka 'admin/jadwal-guru'.
@@ -185,44 +187,70 @@ $js = static fn (string $berkas): string => '<script defer src="' . base_url($be
             </button>
             <button type="button" class="tombol-navbar hidden lg:inline-flex" @click="alihCiut()" aria-controls="menu-samping" :aria-pressed="collapsed"
                     aria-label="Ciutkan menu samping" :title="collapsed ? 'Lebarkan menu samping' : 'Ciutkan menu samping'"><?= ikon('bars', 'h-6 w-6') ?></button>
+            <?php // (2026-10-18) Kiri hanya nama sekolah; logo pindah ke kanan sebagai tombol menu akun. ?>
             <a href="<?= site_url($beranda) ?>" class="navbar-merek" title="<?= esc($schoolName, 'attr') ?>">
-                <?php if ($schoolLogo !== null): ?>
-                    <img src="<?= esc($schoolLogo, 'attr') ?>" alt="" class="mr-3 h-8 w-8 shrink-0 rounded-lg object-contain">
-                <?php else: ?>
-                    <span class="mr-3 flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-brand-700 text-sm font-semibold text-white" aria-hidden="true"><?= esc(mb_strtoupper(mb_substr($schoolName, 0, 1))) ?></span>
-                <?php endif; ?>
                 <span class="navbar-nama"><?= esc($schoolName) ?></span>
             </a>
-            <div class="hidden lg:block lg:pl-3.5" role="search">
+        </div>
+
+        <div class="flex shrink-0 items-center gap-1 sm:gap-2">
+            <div class="hidden lg:block" role="search">
                 <label for="cari-menu-atas" class="sr-only">Cari menu</label>
-                <div class="relative lg:w-96">
+                <div class="relative lg:w-72 xl:w-96">
                     <div class="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3"><?= ikon('search', 'h-5 w-5 text-gray-500', 'solid') ?></div>
                     <input type="search" id="cari-menu-atas" class="navbar-cari" placeholder="Cari menu…" autocomplete="off" x-model="cari" @keydown.enter.prevent="bukaHasilPertama()">
                 </div>
             </div>
-        </div>
+            <button type="button" class="tombol-navbar lg:hidden" @click="alihLaci()" aria-label="Cari menu" title="Cari menu"><?= ikon('search', 'h-6 w-6', 'solid') ?></button>
 
-        <div class="flex items-center">
-            <button type="button" class="tombol-navbar lg:hidden" @click="alihLaci()" aria-label="Cari menu"><?= ikon('search', 'h-6 w-6', 'solid') ?></button>
-            <!-- Menu akun (template: avatar bulat + dropdown) -->
-            <div class="relative ml-3" x-data="dropdown" @click.outside="tutup()" @keydown.escape="tutup(true)" @keydown.down.prevent="gerak(1)" @keydown.up.prevent="gerak(-1)">
+            <!-- Lonceng: pekerjaan yang masih menunggu (Libraries\Pemberitahuan), diperbarui berkala (komponen lonceng di app.js) -->
+            <div class="relative" x-data="dropdown" @click.outside="tutup()" @keydown.escape="tutup(true)" @keydown.down.prevent="gerak(1)" @keydown.up.prevent="gerak(-1)">
+                <div x-data="lonceng" data-url="<?= site_url('admin/pemberitahuan') ?>" data-awal="<?= esc((string) json_encode($lonceng), 'attr') ?>">
+                    <button type="button" x-ref="pemicu" class="tombol-navbar relative" @click="alihLonceng()" :aria-expanded="buka" aria-haspopup="true"
+                            :aria-label="labelLonceng()" aria-label="Pemberitahuan" title="Pemberitahuan">
+                        <?= ikon('bell', 'h-6 w-6') ?>
+                        <span class="lonceng-angka" x-show="total > 0" x-text="teksTotal()"<?= $lonceng['total'] > 0 ? '' : ' x-cloak' ?>><?= $lonceng['total'] > 99 ? '99+' : (int) $lonceng['total'] ?></span>
+                    </button>
+                    <div class="dropdown-menu lonceng-menu" x-show="buka" x-cloak x-transition.origin.top.right.duration.150ms>
+                        <div class="dropdown-kepala flex items-center justify-between gap-3">
+                            <p class="text-sm font-semibold">Pemberitahuan</p>
+                            <span class="text-xs text-gray-500 dark:text-gray-400" x-text="total > 0 ? total + ' menunggu' : ''"></span>
+                        </div>
+                        <ul class="lonceng-daftar" x-show="total > 0">
+                            <template x-for="b in butir" :key="b.kunci">
+                                <li><a :href="b.url" class="dropdown-item lonceng-butir"><span class="lonceng-n" x-text="b.n > 99 ? '99+' : b.n"></span><span class="min-w-0 flex-1" x-text="b.teks"></span></a></li>
+                            </template>
+                        </ul>
+                        <div class="lonceng-kosong" x-show="total === 0">
+                            <?= ikon('check-circle', 'h-8 w-8 text-gray-400') ?>
+                            <p>Tidak ada pekerjaan yang menunggu.</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Menu akun: logo sekolah (dulu huruf awal nama akun) + dropdown -->
+            <div class="relative" x-data="dropdown" @click.outside="tutup()" @keydown.escape="tutup(true)" @keydown.down.prevent="gerak(1)" @keydown.up.prevent="gerak(-1)">
                 <button type="button" x-ref="pemicu" @click="alih()" :aria-expanded="buka" aria-haspopup="true" aria-label="Menu akun <?= esc($namaAkun, 'attr') ?>"
-                        class="flex rounded-full text-sm focus:ring-4 focus:ring-gray-300 focus:outline-hidden" title="<?= esc($namaAkun . ' · ' . $labelPeranKini, 'attr') ?>">
-                    <?php if (! empty($admin['photo'])): ?>
-                        <img src="<?= base_url('uploads/' . esc($admin['photo'], 'url')) ?>" alt="" class="h-8 w-8 rounded-full object-cover">
+                        class="navbar-akun" title="<?= esc($namaAkun . ' · ' . $labelPeranKini, 'attr') ?>">
+                    <?php if ($schoolLogo !== null): ?>
+                        <img src="<?= esc($schoolLogo, 'attr') ?>" alt="" class="h-full w-full object-contain">
                     <?php else: ?>
-                        <span class="flex h-8 w-8 items-center justify-center rounded-full bg-brand-100 text-sm font-semibold text-brand-700" aria-hidden="true"><?= esc($awalAkun) ?></span>
+                        <span class="flex h-full w-full items-center justify-center bg-brand-700 text-sm font-semibold text-white" aria-hidden="true"><?= esc(mb_strtoupper(mb_substr($schoolName, 0, 1))) ?></span>
                     <?php endif; ?>
                 </button>
-                <div class="dropdown-menu right-0 w-60" x-show="buka" x-cloak x-transition.origin.top.right.duration.150ms>
+                <div class="dropdown-menu right-0 w-64" x-show="buka" x-cloak x-transition.origin.top.right.duration.150ms>
                     <div class="dropdown-kepala">
-                        <p class="truncate text-sm text-gray-900"><?= esc($namaAkun) ?></p>
-                        <p class="truncate text-sm font-medium text-gray-900"><?= esc($labelPeranKini) ?> &middot; @<?= esc((string) ($admin['username'] ?? '')) ?></p>
+                        <p class="truncate text-sm font-semibold text-gray-900"><?= esc($namaAkun) ?></p>
+                        <p class="truncate text-sm text-gray-500 dark:text-gray-400"><?= esc($labelPeranKini) ?> &middot; @<?= esc((string) ($admin['username'] ?? '')) ?></p>
                     </div>
                     <ul class="py-1">
                         <li><a href="<?= site_url('admin/profile') ?>" class="dropdown-item"><?= ikon('user', 'h-4 w-4') ?>Profil saya</a></li>
                         <?php if ($bolehPengaturan): ?>
                             <li><a href="<?= site_url('admin/settings') ?>" class="dropdown-item"><?= ikon('cog', 'h-4 w-4') ?>Pengaturan sekolah</a></li>
+                        <?php endif; ?>
+                        <?php if ($adminUtama): ?>
+                            <li><a href="<?= site_url('admin/settings') ?>#tampilan" class="dropdown-item"><?= ikon('adjustments-horizontal', 'h-4 w-4') ?>Tampilan &amp; tema</a></li>
                         <?php endif; ?>
                     </ul>
                     <ul class="py-1">
@@ -285,11 +313,12 @@ $js = static fn (string $berkas): string => '<script defer src="' . base_url($be
                 </ul>
             </div>
         </nav>
-        <!-- Deret ikon bawah (template: sidebar-bottom-menu; desktop) -->
+        <!-- Deret ikon bawah (template: sidebar-bottom-menu; desktop) — kaki tetap bergaris atas; saat menciut tersusun ke bawah,
+             sejajar dengan ikon menu, dan namanya melayang saat disorot (app.js pasangMenuMelayang). -->
         <div class="sb-bawah">
-            <a href="<?= site_url('admin/profile') ?>" class="sb-bawah-tombol" title="Profil saya" aria-label="Profil saya"><?= $ikonSb('user-circle', 'h-6 w-6') ?></a>
+            <a href="<?= site_url('admin/profile') ?>" class="sb-bawah-tombol" title="Profil saya" aria-label="Profil saya"<?= $cur === 'admin/profile' ? ' aria-current="page"' : '' ?>><?= $ikonSb('user-circle', 'h-6 w-6') ?></a>
             <?php if ($bolehPengaturan): ?>
-                <a href="<?= site_url('admin/settings') ?>" class="sb-bawah-tombol" title="Pengaturan sekolah" aria-label="Pengaturan sekolah"><?= $ikonSb('cog', 'h-6 w-6') ?></a>
+                <a href="<?= site_url('admin/settings') ?>" class="sb-bawah-tombol" title="Pengaturan sekolah" aria-label="Pengaturan sekolah"<?= $cur === 'admin/settings' ? ' aria-current="page"' : '' ?>><?= $ikonSb('cog', 'h-6 w-6') ?></a>
             <?php endif; ?>
             <?php if ($adminUtama): ?>
                 <a href="<?= site_url('admin/settings') ?>#tampilan" class="sb-bawah-tombol" title="Tampilan &amp; tema" aria-label="Tampilan dan tema"><?= $ikonSb('adjustments-horizontal', 'h-6 w-6') ?></a>

@@ -25,6 +25,8 @@
  * @var array|null  $surat             surat permohonan PKL (nomor, tanggal_surat, cetak_ke) atau null
  * @var bool        $perluUlang        data ajuan berubah sejak surat terakhir diunduh
  * @var list<array>|null $pembayaran   catatan biaya per siswa (hak surat/laporan)
+ * @var array|null  $kabar             kabar WhatsApp ajuan dikembalikan/ditolak (PklWaKeputusan::daftar) atau null (tanpa hak / status lain)
+ * @var bool        $kabarBuka         baru saja diputuskan → kotak kabar langsung terbuka
  * Bersama dari PklDasar::dasar(): $tab, $hitungTab, $p, $peran, $batasHari, $bolehUbah, $bolehSurat, $bolehLaporan, $bolehPengaturan.
  */
 
@@ -46,6 +48,7 @@ $labelAksi = [
     'tolak' => 'Ditolak', 'batal_acc' => 'Persetujuan dibatalkan', 'ubah' => 'Data diubah staf', 'isi_atas_nama' => 'Diisi atas nama siswa',
     'tunda' => 'Dikembalikan ke antrean', 'surat' => 'Surat diterbitkan', 'cetak' => 'Surat diunduh', 'impor' => 'Diimpor dari Excel',
     'bayar' => 'Biaya dicatat', 'koreksi_bayar' => 'Catatan biaya dikoreksi', 'kabari' => 'Siswa dikabari (WhatsApp)',
+    'kabari_keputusan' => 'Siswa dikabari keputusan (WhatsApp)',
     'periode' => 'Periode PKL diisi', 'surat_sekolah' => 'Surat sekolah',
     'lapor_diterima' => 'Siswa lapor diterima perusahaan', 'lapor_proses' => 'Laporan diterima diproses', 'lapor_kembali' => 'Laporan diterima dikembalikan',
 ];
@@ -189,6 +192,11 @@ $catatanKunci = static fn (string $html): string => '<div class="peringatan peri
                     <?php endif; ?>
                     <?php if ($bolehAcc && in_array($status, ['menunggu', 'perbaikan'], true)): ?>
                         <button type="button" class="btn btn-bahaya w-full" data-buka-dialog="pkl-tolak"><?= ikon('close', 'h-4 w-4') ?>Tolak</button>
+                    <?php endif; ?>
+                    <?php if (! empty($kabar)): // ajuan dikembalikan / ditolak → kabari siswa (PklWaKeputusan)
+                        $kabarBelum = count(array_filter($kabar['siswa'], static fn (array $s): bool => $s['url'] !== null && $s['dikabari_at'] === null)); ?>
+                        <button type="button" class="btn btn-sukses w-full" data-buka-dialog="pkl-kabar"><?= ikon('whatsapp', 'h-4 w-4', 'solid') ?>Kabari siswa via WhatsApp</button>
+                        <p class="-mt-1 text-center text-xs text-gray-500 dark:text-gray-400"><?= $kabarBelum > 0 ? 'Belum dikabari: ' . $kabarBelum . ' dari ' . count($kabar['siswa']) . ' siswa' : 'Semua siswa ber-nomor HP sudah dikabari' ?></p>
                     <?php endif; ?>
                     <?php if ($bolehAcc && $status === 'disetujui'): ?>
                         <button type="button" class="btn btn-netral w-full text-red-700 dark:text-red-400" data-buka-dialog="pkl-batal"><?= ikon('close-circle', 'h-4 w-4') ?>Batalkan persetujuan</button>
@@ -442,6 +450,9 @@ if ($bolehHapus) {
 
 <?php if (! empty($bolehSurat) && $status === 'disetujui'): // kotak dialog catat biaya + kabar WhatsApp ?>
     <?= view('admin/pkl/_unduh') ?>
+<?php endif; ?>
+<?php if (! empty($kabar)): // kotak kabar WhatsApp "dikembalikan / ditolak" ?>
+    <?= view('admin/pkl/_kabar_keputusan', ['kabar' => $kabar, 'kabarBuka' => ! empty($kabarBuka), 'id' => $id]) ?>
 <?php endif; ?>
 
 <?= $this->endSection() ?>

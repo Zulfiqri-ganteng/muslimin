@@ -119,7 +119,7 @@ Terbaca di: `auth/login`, `auth/biometric/login`, `auth/me` → `data.admin.hak_
 | Metode | Endpoint | Hak | Keterangan |
 |---|---|---|---|
 | GET | `pkl/biaya[?semua=1]` | PKL | jenis biaya aktif (`semua=1` + hak `pengaturan`: termasuk nonaktif), `sumber_beasiswa`, `bulan_default`, `maks_jumlah_bulan`, `aturan`, `wa_templat`, `wa_penanda` |
-| POST | `pkl/biaya` | `pengaturan` | `{biaya:{kode:{nama,nominal,aktif}}, wa_pesan?}` — sebagian boleh; 422 bila nominal tak sah / semua nonaktif / penanda asing |
+| POST | `pkl/biaya` | `pengaturan` | `{biaya:{kode:{nama,nominal,aktif}}, wa_pesan?, wa_pesan_perbaikan?, wa_pesan_tolak?}` — sebagian boleh; 422 bila nominal tak sah / semua nonaktif / penanda asing. GET juga memuat `wa_templat_perbaikan`, `wa_templat_tolak`, `wa_penanda_keputusan` |
 | GET | `pkl/surat/siap?mode=&ids[]=` | `surat` | keadaan biaya tiap siswa sebelum unduh; tiap siswa membawa `bulan_saran` (YYYY-MM: bulan pertama mulai bulan berjalan yang biaya bulanannya belum lengkap — nilai awal pemilih bulan) |
 | POST | `pkl/ajuan/{id}/surat`, `pkl/surat-massal` | `surat` | kini WAJIB memuat biaya (di bawah) |
 | GET | `pkl/ajuan/{id}/pembayaran` | `surat`/`laporan` | catatan biaya per siswa (+ `data.pembayaran` pada detail ajuan) |
@@ -127,6 +127,8 @@ Terbaca di: `auth/login`, `auth/biometric/login`, `auth/me` → `data.admin.hak_
 | POST | `pkl/ajuan/{id}/pembayaran/beasiswa-cabut` | `surat` | `{siswa_id, alasan}` |
 | GET | `pkl/wa?ids[]=` | `surat` | siswa + tautan `https://wa.me/62…?text=…` + pesan; `alasan_tidak` bila HP tak sah |
 | POST | `pkl/ajuan/{id}/wa/{siswa_id}/tandai` | `surat` | catat "sudah dikabari" |
+| GET | `pkl/ajuan/{id}/kabar-keputusan` | `acc`/`ubah`/`surat` | (2026-10-18) ajuan **dikembalikan/ditolak**: `{status, alasan, diputuskan_at, siswa[{siswa_id, nama, kelas, pengaju, hp, wa, url, alasan_tidak, pesan, dikabari_at, dikabari_oleh}]}`; 409 bila status lain. `dikabari_at` hanya terisi bila sesudah keputusan terakhir |
+| POST | `pkl/ajuan/{id}/kabar-keputusan/{siswa_id}/tandai` | `acc`/`ubah`/`surat` | catat "sudah dikabari keputusan" (riwayat `kabari_keputusan`) |
 | GET | `pkl/laporan?kelas_id=&jurusan=TKJ\|AKL\|MP&status=lunas\|sebagian\|belum&q=&dari=&sampai=&beasiswa=1&page=&per=` | `laporan` | `{ringkas, jenis, baris[]}` + `meta{page,perPage,total}` |
 | GET | `pkl/laporan/excel?…` | `laporan` | berkas `.xlsx` (lembar Rincian, Rekap Kelas, Rekap Jurusan) |
 | GET / POST | `pkl/hak-akses` | **Admin** | matriks, kamus, bawaan, peringatan; simpan `{hak:{hubin:[…],operator:[…]}}` |

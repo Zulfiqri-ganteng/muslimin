@@ -13,7 +13,7 @@
  * @var ?string $alasan  null = form sedang terbuka
  * @var array   $siswa   ringkasan siswa
  * @var list<array>|null $jenisBiaya jenis biaya (hak biaya)
- * @var string  $waPesan / $waPesanBalasan / $sekolahNama
+ * @var string  $waPesan / $waPesanBalasan / $waPesanPerbaikan / $waPesanTolak / $sekolahNama
  * Bersama dari PklDasar::dasar(): $tab, $hitungTab, $p.
  */
 
@@ -279,10 +279,15 @@ $kotakTautan = static fn (string $judul, string $url, string $pesan, string $ket
     </section>
 
     <?php if (isset($jenisBiaya)): $galatBiaya = (array) (session()->getFlashdata('galat_biaya') ?? []); $waNilai = (string) (old('wa_pesan') ?? ($waPesan ?? ''));
-        $waBalasanAda = \App\Libraries\SuratWa::kolomAda(); $waNilaiB = (string) (old('wa_pesan_balasan') ?? ($waPesanBalasan ?? '')); ?>
+        $waBalasanAda = \App\Libraries\SuratWa::kolomAda(); $waNilaiB = (string) (old('wa_pesan_balasan') ?? ($waPesanBalasan ?? ''));
+        $waKeputusanAda = \App\Libraries\PklWaKeputusan::kolomAda(); $waNilaiP = (string) (old('wa_pesan_perbaikan') ?? ($waPesanPerbaikan ?? ''));
+        $waNilaiT = (string) (old('wa_pesan_tolak') ?? ($waPesanTolak ?? '')); ?>
         <form id="biaya" method="post" action="<?= site_url('admin/pkl/pengaturan/biaya') ?>" class="scroll-mt-24 space-y-4" x-data="pklPesanWa"
               data-pesan="<?= esc($waNilai !== '' ? $waNilai : \App\Libraries\PklWa::PESAN_BAWAAN, 'attr') ?>"
               data-pesan-balasan="<?= esc($waNilaiB !== '' ? $waNilaiB : \App\Libraries\SuratWa::PESAN_BAWAAN, 'attr') ?>"
+              data-pesan-perbaikan="<?= esc($waNilaiP !== '' ? $waNilaiP : \App\Libraries\PklWaKeputusan::PESAN_PERBAIKAN, 'attr') ?>"
+              data-pesan-tolak="<?= esc($waNilaiT !== '' ? $waNilaiT : \App\Libraries\PklWaKeputusan::PESAN_TOLAK, 'attr') ?>"
+              data-tautan="<?= esc(config('Pkl')->tautan(), 'attr') ?>"
               data-sekolah="<?= esc((string) ($sekolahNama ?? 'SMK Bina Nusa'), 'attr') ?>">
             <?= csrf_field() ?>
             <section class="kartu">
@@ -322,6 +327,19 @@ $kotakTautan = static fn (string $judul, string $url, string $pesan, string $ket
                             <textarea name="wa_pesan_balasan" rows="3" maxlength="<?= \App\Libraries\PklWa::MAKS_PESAN ?>" x-model="pesanB" class="inp" aria-label="Pesan WhatsApp Surat Balasan"><?= esc($waNilaiB !== '' ? $waNilaiB : \App\Libraries\SuratWa::PESAN_BAWAAN) ?></textarea>
                             <p class="text-sm text-gray-500 dark:text-gray-400">Contoh hasil: <span class="font-medium text-gray-900 dark:text-white" x-text="contohPesanWa(pesanB)"></span></p>
                             <button type="button" class="btn btn-teks btn-sm" @click="pesanB = <?= esc(json_encode(\App\Libraries\SuratWa::PESAN_BAWAAN), 'attr') ?>"><?= ikon('clock-arrow', 'h-4 w-4') ?>Kembalikan ke pesan bawaan</button>
+                        </div>
+                    <?php endif; ?>
+                    <?php if ($waKeputusanAda): ?>
+                        <div class="space-y-3 border-t border-gray-200 pt-4 dark:border-gray-700">
+                            <p class="text-sm text-gray-500 dark:text-gray-400"><b class="text-gray-900 dark:text-white">Pesan ajuan dikembalikan / ditolak</b> — dikirim manual lewat tombol &quot;Kabari siswa via WhatsApp&quot; di halaman detail ajuan sesudah ajuan dikembalikan untuk diperbaiki atau ditolak (kotaknya terbuka sendiri). Penanda: <?php foreach (\App\Libraries\PklWaKeputusan::TOKEN as $tk): ?><code class="me-1"><?= esc($tk) ?></code><?php endforeach; ?> — <code>{alasan}</code> = catatan yang ditulis saat mengembalikan/menolak, <code>{tautan}</code> = alamat form PKL siswa.</p>
+                            <label class="lbl" for="wa_pesan_perbaikan">Dikembalikan untuk diperbaiki</label>
+                            <textarea id="wa_pesan_perbaikan" name="wa_pesan_perbaikan" rows="4" maxlength="<?= \App\Libraries\PklWa::MAKS_PESAN ?>" x-model="pesanP" class="inp"><?= esc($waNilaiP !== '' ? $waNilaiP : \App\Libraries\PklWaKeputusan::PESAN_PERBAIKAN) ?></textarea>
+                            <p class="text-sm text-gray-500 dark:text-gray-400">Contoh hasil: <span class="font-medium text-gray-900 dark:text-white" x-text="contohPesanWa(pesanP)"></span></p>
+                            <button type="button" class="btn btn-teks btn-sm" @click="pesanP = <?= esc(json_encode(\App\Libraries\PklWaKeputusan::PESAN_PERBAIKAN), 'attr') ?>"><?= ikon('clock-arrow', 'h-4 w-4') ?>Kembalikan ke pesan bawaan</button>
+                            <label class="lbl" for="wa_pesan_tolak">Ditolak</label>
+                            <textarea id="wa_pesan_tolak" name="wa_pesan_tolak" rows="4" maxlength="<?= \App\Libraries\PklWa::MAKS_PESAN ?>" x-model="pesanT" class="inp"><?= esc($waNilaiT !== '' ? $waNilaiT : \App\Libraries\PklWaKeputusan::PESAN_TOLAK) ?></textarea>
+                            <p class="text-sm text-gray-500 dark:text-gray-400">Contoh hasil: <span class="font-medium text-gray-900 dark:text-white" x-text="contohPesanWa(pesanT)"></span></p>
+                            <button type="button" class="btn btn-teks btn-sm" @click="pesanT = <?= esc(json_encode(\App\Libraries\PklWaKeputusan::PESAN_TOLAK), 'attr') ?>"><?= ikon('clock-arrow', 'h-4 w-4') ?>Kembalikan ke pesan bawaan</button>
                         </div>
                     <?php endif; ?>
                 </div>

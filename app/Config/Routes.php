@@ -149,6 +149,8 @@ $routes->group('admin', static function ($routes) {
         $routes->post('pkl/(:num)/kembalikan', 'Admin\Pkl::kembalikan/$1', ['filter' => 'csrf']);
         $routes->post('pkl/(:num)/tolak', 'Admin\Pkl::tolak/$1', ['filter' => 'csrf']);
         $routes->post('pkl/(:num)/batal-acc', 'Admin\Pkl::batalAcc/$1', ['filter' => 'csrf']);
+        // Kabar WhatsApp "dikembalikan / ditolak" (Libraries\PklWaKeputusan; hak acc|ubah|surat).
+        $routes->post('pkl/(:num)/kabar-keputusan/(:num)/tandai', 'Admin\Pkl::tandaiKabar/$1/$2', ['filter' => 'csrf']);
         // Hak yang diatur Admin (Libraries\PklHak): biaya saat unduh surat + kabar WhatsApp + koreksi ('surat'), Laporan
         // Pembayaran ('laporan'), nominal biaya ('pengaturan'). Halaman Hak Akses KHUSUS ADMIN. Dijaga HakAkses::boleh
         // (lapis kedua PKL) dan diperiksa lagi di tiap aksi controller.
@@ -719,6 +721,9 @@ $routes->group('admin', static function ($routes) {
         $routes->get('profile', 'Admin\Profile::index');
         $routes->post('profile', 'Admin\Profile::update');
         $routes->post('profile/password', 'Admin\Profile::password');
+
+        // Ikon lonceng bilah atas — pekerjaan yang masih menunggu (Libraries\Pemberitahuan), terbuka bagi semua peran (Config\Peran::$umum).
+        $routes->get('pemberitahuan', 'Admin\Pemberitahuan::index');
     });
 });
 
@@ -1122,6 +1127,8 @@ $routes->group('api/v1', ['namespace' => 'App\Controllers\Api', 'filter' => 'cor
         $routes->post('pkl/ajuan/(:num)/pembayaran/beasiswa-cabut', 'Pkl::beasiswaCabut/$1');
         $routes->get('pkl/wa', 'Pkl::wa');
         $routes->post('pkl/ajuan/(:num)/wa/(:num)/tandai', 'Pkl::waTandai/$1/$2');
+        $routes->get('pkl/ajuan/(:num)/kabar-keputusan', 'Pkl::kabarKeputusan/$1');
+        $routes->post('pkl/ajuan/(:num)/kabar-keputusan/(:num)/tandai', 'Pkl::kabarKeputusanTandai/$1/$2');
         $routes->get('pkl/laporan', 'Pkl::laporan');
         $routes->get('pkl/laporan/excel', 'Pkl::laporanExcel');
         $routes->get('pkl/hak-akses', 'Pkl::hakAkses');

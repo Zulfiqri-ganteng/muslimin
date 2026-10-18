@@ -102,16 +102,17 @@
     --brand-400: 96 165 250;  --brand-500: 59 130 246;  --brand-600: 37 99 235;   --brand-700: 29 78 216;
     --brand-800: 30 64 175;   --brand-900: 30 58 138;
   }
-  /* Gaya menu samping. Tanpa atribut = Terang (persis template Flowbite). --sb-penanda = garis kiri menu aktif (Berwarna: mint,
-     aksen Warna Sekolah). */
+  /* Gaya menu samping. Tanpa atribut = Terang (pola template Flowbite). --sb-penanda = garis kiri menu aktif (Berwarna: mint,
+     aksen Warna Sekolah; 2026-10-18: Terang & Gelap ikut warna merek), --sb-penanda-anak = garis tuntun isi grup yang aktif,
+     --sb-gulir = batang gulir tipis. */
   /* Terang = sidebar template Flowbite (partials/sidebar.html): putih, garis kanan gray-200, teks gray-900, ikon gray-500
      (gray-900 saat disorot), menu aktif & sorot berlatar gray-100. */
   :root, [data-sidebar="terang"] {
     --sb-bg: var(--color-white);               --sb-garis: var(--color-gray-200);
     --sb-teks: var(--color-gray-900);          --sb-ikon: var(--color-gray-500);          --sb-redup: var(--color-gray-500);
     --sb-judul-aktif: var(--color-gray-900);   --sb-hover-bg: var(--color-gray-100);      --sb-hover-teks: var(--color-gray-900);
-    --sb-aktif-bg: var(--color-gray-100);      --sb-aktif-teks: var(--color-gray-900);    --sb-aktif-ikon: var(--color-gray-900);
-    --sb-penanda: transparent;
+    --sb-aktif-bg: rgb(var(--brand-50));       --sb-aktif-teks: rgb(var(--brand-800));    --sb-aktif-ikon: rgb(var(--brand-700));
+    --sb-penanda: rgb(var(--brand-600));       --sb-penanda-anak: rgb(var(--brand-600));  --sb-gulir: var(--color-gray-300);
     --sb-cari-bg: var(--color-gray-50);        --sb-cari-garis: var(--color-gray-300);    --sb-cari-teks: var(--color-gray-900);
     --sb-cari-placeholder: var(--color-gray-500);
     --sb-segera-bg: var(--color-yellow-100);   --sb-segera-teks: var(--color-yellow-800); --sb-nonaktif: var(--color-gray-400);
@@ -122,7 +123,7 @@
     --sb-teks: rgb(var(--brand-100));          --sb-ikon: rgb(var(--brand-300));          --sb-redup: rgb(var(--brand-300));
     --sb-judul-aktif: var(--color-white);      --sb-hover-bg: rgb(255 255 255 / .1);      --sb-hover-teks: var(--color-white);
     --sb-aktif-bg: rgb(255 255 255 / .15);     --sb-aktif-teks: var(--color-white);       --sb-aktif-ikon: var(--color-white);
-    --sb-penanda: var(--color-emerald-300);
+    --sb-penanda: var(--color-emerald-300);    --sb-penanda-anak: var(--color-emerald-300); --sb-gulir: rgb(255 255 255 / .25);
     --sb-cari-bg: rgb(255 255 255 / .1);       --sb-cari-garis: transparent;               --sb-cari-teks: var(--color-white);
     --sb-cari-placeholder: rgb(var(--brand-300));
     --sb-segera-bg: rgb(252 196 25 / .2);      --sb-segera-teks: var(--color-gold-400);   --sb-nonaktif: rgb(var(--brand-300) / .7);
@@ -133,7 +134,7 @@
     --sb-teks: var(--color-gray-200);          --sb-ikon: var(--color-gray-400);          --sb-redup: var(--color-gray-400);
     --sb-judul-aktif: var(--color-white);      --sb-hover-bg: var(--color-gray-700);      --sb-hover-teks: var(--color-white);
     --sb-aktif-bg: var(--color-gray-700);      --sb-aktif-teks: var(--color-white);       --sb-aktif-ikon: var(--color-white);
-    --sb-penanda: transparent;
+    --sb-penanda: rgb(var(--brand-400));       --sb-penanda-anak: rgb(var(--brand-400));  --sb-gulir: var(--color-gray-600);
     --sb-cari-bg: var(--color-gray-700);       --sb-cari-garis: var(--color-gray-600);    --sb-cari-teks: var(--color-white);
     --sb-cari-placeholder: var(--color-gray-400);
     --sb-segera-bg: rgb(250 204 21 / .15);     --sb-segera-teks: var(--color-yellow-300); --sb-nonaktif: var(--color-gray-500);
@@ -469,19 +470,31 @@
   .navbar        { @apply fixed inset-x-0 top-0 z-40 border-b border-gray-200 bg-white; }
   .navbar-dalam  { @apply flex h-16 items-center justify-between px-3 lg:px-5 lg:pl-3; }
   .tombol-navbar { @apply inline-flex shrink-0 cursor-pointer items-center justify-center rounded-sm p-2 text-gray-600 transition hover:bg-gray-100 hover:text-gray-900 focus:bg-gray-100 focus:ring-2 focus:ring-gray-100 focus:outline-hidden; }
-  .navbar-merek  { @apply ml-2 flex min-w-0 items-center md:mr-24; }
-  .navbar-nama   { @apply min-w-0 self-center truncate text-xl font-semibold whitespace-nowrap text-gray-900 sm:text-2xl; }
+  .navbar-merek  { @apply ml-2 flex min-w-0 items-center; }
+  .navbar-nama   { @apply min-w-0 self-center truncate text-lg font-semibold whitespace-nowrap text-gray-900 sm:text-2xl; }
   .navbar-cari   { @apply block w-full rounded-lg border border-gray-300 bg-gray-50 p-2.5 pl-10 text-gray-900 sm:text-sm focus:border-brand-500 focus:ring-brand-500; }
+  /* (2026-10-18) Logo sekolah = tombol menu akun (pengganti huruf awal nama akun) — bulat, berlatar putih supaya logo berwarna
+     tetap terbaca di mode Gelap. */
+  .navbar-akun   { @apply ml-1 flex h-9 w-9 shrink-0 overflow-hidden rounded-full bg-white p-0.5 ring-1 ring-gray-200 transition focus:ring-4 focus:ring-brand-300 focus:outline-hidden; }
+  /* Lonceng pemberitahuan: angka merah di sudut ikon; menu = daftar "n  teks" (di HP selebar layar, di desktop 20rem rata kanan). */
+  .lonceng-angka { @apply absolute top-0.5 right-0.5 flex h-[1.125rem] min-w-[1.125rem] items-center justify-center rounded-full bg-red-600 px-1 text-[11px] leading-none font-bold text-white ring-2 ring-white; }
+  .lonceng-menu  { @apply fixed inset-x-3 top-16 mt-0 w-auto sm:absolute sm:inset-x-auto sm:top-auto sm:right-0 sm:mt-2 sm:w-80; }
+  .lonceng-daftar { @apply max-h-[min(24rem,70vh)] overflow-y-auto py-1; }
+  .lonceng-butir { @apply items-start gap-3 py-2.5; }
+  .lonceng-n     { @apply flex h-6 min-w-6 shrink-0 items-center justify-center rounded-full bg-red-100 px-1.5 text-xs font-bold text-red-700; }
+  .lonceng-kosong { @apply flex flex-col items-center gap-2 px-4 py-6 text-center text-sm text-gray-500; }
 
-  /* Menu samping = sidebar template: panel border-r, gulir pt-5 pb-4, isi px-3 dengan 2 daftar dipisah garis (space-y-2), baris
-     p-2 text-base rounded-lg + ikon 6×6 + label ml-3; GRUP = tombol baris yang sama + panah, isi menjorok pl-11 tanpa ikon;
-     deret ikon bawah (desktop). Warna lewat token --sb-* (tema). */
+  /* Menu samping = sidebar template: panel border-r, gulir pt-4, isi px-3 dengan 2 daftar dipisah garis, baris p-2 rounded-lg + ikon
+     6×6 + label ml-3; GRUP = tombol baris yang sama + panah, isi menjorok pl-11 tanpa ikon dengan GARIS TUNTUN tipis; deret ikon bawah
+     (desktop). Warna lewat token --sb-* (tema). (2026-10-18) Dirapikan: jarak antarbaris dirapatkan, batang gulir tipis sewarna tema,
+     menu aktif bergaris warna di kiri, deret bawah = kaki TETAP bergaris atas (dulu melayang di atas daftar menu sehingga batang
+     gulir terpotong & ikon tak sejajar saat menu diciutkan). */
   .sb { @apply fixed bottom-0 left-0 top-16 z-30 flex w-64 flex-col font-normal; translate: -100% 0; transition: translate 200ms, width 200ms; }
   .sb[data-terbuka] { translate: 0 0; }
   .sb-panel { @apply relative flex min-h-0 flex-1 flex-col border-r; background-color: var(--sb-bg); border-color: var(--sb-garis); }
-  .sb-gulir { @apply flex flex-1 flex-col overflow-y-auto pt-5 pb-4 lg:pb-20; }
+  .sb-gulir { @apply flex min-h-0 flex-1 flex-col overflow-y-auto overscroll-contain pt-4 pb-4; scrollbar-width: thin; scrollbar-color: var(--sb-gulir) transparent; }
   .sb-isi   { @apply flex-1 space-y-1 px-3; }
-  .sb-daftar { @apply space-y-2 pb-2; }
+  .sb-daftar { @apply space-y-1 pb-2; }
   .sb-daftar-kedua { @apply pt-2; border-top: 1px solid var(--sb-garis); }
   .sb-latar { @apply fixed inset-0 z-20 hidden bg-gray-900/50; }
   .sb-latar[data-terbuka] { @apply block lg:hidden; }
@@ -495,21 +508,39 @@
   .sb-item:hover { background-color: var(--sb-hover-bg); color: var(--sb-hover-teks); }
   .sb-ikon { @apply h-6 w-6 shrink-0 transition duration-75; color: var(--sb-ikon); }
   .sb-item:hover .sb-ikon { color: var(--sb-hover-teks); }
-  .sb-item[aria-current='page'] { background-color: var(--sb-aktif-bg); color: var(--sb-aktif-teks); box-shadow: inset 3px 0 0 var(--sb-penanda); }
+  .sb-item[aria-current='page'] { @apply font-semibold; background-color: var(--sb-aktif-bg); color: var(--sb-aktif-teks); box-shadow: inset 3px 0 0 var(--sb-penanda); }
   .sb-item[aria-current='page'] .sb-ikon { color: var(--sb-aktif-ikon); }
+  /* Judul grup yang memuat halaman sekarang: tebal & berwarna aktif (isi grupnya yang berlatar). */
+  .sb-grup-tombol[data-aktif] { @apply font-semibold; color: var(--sb-judul-aktif); }
+  .sb-grup-tombol[data-aktif] .sb-ikon { color: var(--sb-aktif-ikon); }
   .sb-label { @apply ml-3 min-w-0 flex-1 text-left leading-snug break-words; } /* boleh 2 baris: nama grup/menu panjang tidak terpotong */
-  .sb-anak { @apply pl-11; }
+  .sb-anak { @apply relative py-1.5 pl-11; }
   .sb-anak .sb-label { @apply ml-0; }
-  .sb-anak-daftar { @apply space-y-2 py-2; }
+  /* Garis tuntun isi grup tepat di bawah tengah ikon grup; menu aktif menebalkan garis itu dengan warna penanda. */
+  .sb-anak-daftar { @apply relative space-y-0.5 py-1; }
+  .sb-anak-daftar::before { content: ''; position: absolute; left: 1.25rem; top: .375rem; bottom: .375rem; width: 1px; background-color: var(--sb-garis); }
+  .sb-anak[aria-current='page'] { box-shadow: none; }
+  .sb-anak[aria-current='page']::before { content: ''; position: absolute; left: calc(1.25rem - 1px); top: .375rem; bottom: .375rem; width: 3px; border-radius: 9999px; background-color: var(--sb-penanda-anak); }
   .sb-panah { @apply ml-1 shrink-0 transition-transform duration-200; }
   .sb-item-segera { @apply cursor-not-allowed select-none; color: var(--sb-nonaktif); }
   .sb-item-segera:hover { background-color: transparent; color: var(--sb-nonaktif); }
   .sb-item-segera .sb-ikon, .sb-item-segera:hover .sb-ikon { color: var(--sb-nonaktif); }
   .sb-segera { @apply shrink-0 rounded-md px-1.5 py-0.5 text-[10px] font-semibold uppercase; background-color: var(--sb-segera-bg); color: var(--sb-segera-teks); }
   .sb-kosong { @apply px-2 py-2 text-sm; color: var(--sb-redup); }
-  .sb-bawah { @apply absolute bottom-0 left-0 hidden w-full justify-center gap-4 p-4 lg:flex; background-color: var(--sb-bg); }
-  .sb-bawah-tombol { @apply inline-flex cursor-pointer justify-center rounded-sm p-2 transition focus:outline-hidden focus-visible:ring-2 focus-visible:ring-brand-400; color: var(--sb-ikon); }
+  .sb-bawah { @apply hidden shrink-0 items-center justify-center gap-3 border-t px-3 py-3 lg:flex; background-color: var(--sb-bg); border-color: var(--sb-garis); }
+  .sb-bawah-tombol { @apply inline-flex h-10 w-10 cursor-pointer items-center justify-center rounded-lg transition focus:outline-hidden focus-visible:ring-2 focus-visible:ring-brand-400; color: var(--sb-ikon); }
   .sb-bawah-tombol:hover { background-color: var(--sb-hover-bg); color: var(--sb-hover-teks); }
+  .sb-bawah-tombol[aria-current='page'] { background-color: var(--sb-aktif-bg); color: var(--sb-aktif-ikon); }
+  /* Menu menciut (desktop): nama menu / isi grup melayang di samping ikon saat disorot (app.js pasangMenuMelayang). Satu panel di
+     <body> bertoken --sb-* — jadi warnanya selalu menyambung dengan gaya menu samping yang dipilih. Posisi top/left lewat CSSOM. */
+  .sb-melayang { @apply fixed z-50 max-w-72 min-w-max rounded-lg border px-3 py-2 text-sm font-semibold shadow-lg;
+                 background-color: var(--sb-bg); border-color: var(--sb-garis); color: var(--sb-teks); }
+  .sb-melayang-grup { @apply min-w-56 px-0 pt-2 pb-1.5; }
+  .sb-melayang-grup .sb-melayang-judul { @apply px-3 pb-1.5 text-xs font-semibold tracking-wide uppercase; color: var(--sb-redup); }
+  .sb-melayang-item { @apply mx-1.5 block rounded-md px-2.5 py-1.5 font-normal; color: var(--sb-teks); }
+  a.sb-melayang-item:hover, a.sb-melayang-item:focus-visible { @apply outline-hidden; background-color: var(--sb-hover-bg); color: var(--sb-hover-teks); }
+  .sb-melayang-item[aria-current='page'] { @apply font-semibold; background-color: var(--sb-aktif-bg); color: var(--sb-aktif-teks); }
+  .sb-melayang-segera { @apply cursor-not-allowed; color: var(--sb-nonaktif); }
 
   /* Isi = main-content template (bg-gray-50, lg:ml-64); kaki = footer-dashboard (kartu putih rounded-lg shadow, tautan kiri) + baris
      hak cipta di bawahnya. */
@@ -526,10 +557,12 @@
     [data-ciut] .sb .sb-label, [data-ciut] .sb .sb-panah, [data-ciut] .sb .sb-segera, [data-ciut] .sb .sb-kosong,
     [data-ciut] .sb .sb-daftar-kedua { display: none; }
     [data-ciut] .sb .sb-item { justify-content: center; }
-    [data-ciut] .sb .sb-grup-tombol[data-aktif] { background-color: var(--sb-aktif-bg); }
+    [data-ciut] .sb .sb-grup-tombol[data-aktif] { background-color: var(--sb-aktif-bg); box-shadow: inset 3px 0 0 var(--sb-penanda); }
     [data-ciut] .sb .sb-grup-tombol[data-aktif] .sb-ikon { color: var(--sb-aktif-ikon); }
-    [data-ciut] .sb-bawah { flex-direction: column; align-items: center; gap: .5rem; padding-inline: 0; }
-    [data-ciut] .sb-gulir { padding-bottom: 11rem; }
+    /* Tanpa batang gulir saat menciut: ikon menu & ikon kaki sama-sama di tengah lajur 4rem (dulu bergeser ±15px). */
+    [data-ciut] .sb-gulir { scrollbar-width: none; }
+    [data-ciut] .sb-gulir::-webkit-scrollbar { display: none; }
+    [data-ciut] .sb-bawah { flex-direction: column; gap: .25rem; padding: .5rem 0; }
     [data-ciut] .kerangka-isi { margin-left: 4rem; }
   }
 
@@ -657,6 +690,10 @@
   .tombol-navbar { @apply dark:text-gray-400 dark:hover:bg-gray-700 dark:hover:text-white dark:focus:bg-gray-700 dark:focus:ring-gray-700; }
   .navbar-nama   { @apply dark:text-white; }
   .navbar-cari   { @apply dark:border-gray-600 dark:bg-gray-700 dark:text-white dark:placeholder-gray-400; }
+  .navbar-akun   { @apply dark:ring-gray-600 dark:focus:ring-gray-600; }
+  .lonceng-angka { @apply dark:ring-gray-800; }
+  .lonceng-n     { @apply dark:bg-red-900/50 dark:text-red-200; }
+  .lonceng-kosong { @apply dark:text-gray-400; }
   .kaki-kartu    { @apply dark:bg-gray-800; }
   .kaki-tautan a, .kaki-hak { @apply dark:text-gray-400; }
   .remah a       { @apply dark:text-gray-400 dark:hover:text-white; }
@@ -767,6 +804,9 @@
   .kartu, .kartu-kepala, .kartu-kaki, .alat-crud, .kaki-crud { @apply sekolah:border-brand-100; }
   .alat-crud-pemisah { @apply sekolah:bg-brand-100; }
   .navbar { @apply sekolah:border-brand-100; }
+  .navbar-akun   { @apply sekolah:ring-brand-200; }
+  .lonceng-angka { @apply sekolah:bg-plum-600; }
+  .lonceng-n     { @apply sekolah:bg-plum-100 sekolah:text-plum-800; }
   .kartu-tautan { @apply sekolah:hover:border-brand-200 sekolah:hover:bg-brand-50; }
 
   /* Tabel & daftar data */

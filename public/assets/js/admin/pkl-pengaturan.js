@@ -44,19 +44,27 @@ document.addEventListener('alpine:init', function () {
 
     Alpine.data('pklPesanWa', function () {
         var sekolah = 'SMK Bina Nusa';
+        var tautan = 'https://pklbinanusa.kangmuslim.com/';
         return {
             pesan: '',
             pesanB: '',
+            pesanP: '',
+            pesanT: '',
             init: function () {
                 this.pesan = this.$el.getAttribute('data-pesan') || '';
                 this.pesanB = this.$el.getAttribute('data-pesan-balasan') || '';
+                this.pesanP = this.$el.getAttribute('data-pesan-perbaikan') || '';
+                this.pesanT = this.$el.getAttribute('data-pesan-tolak') || '';
                 var s = this.$el.getAttribute('data-sekolah');
                 if (s !== null) { sekolah = s; }
+                var t = this.$el.getAttribute('data-tautan');
+                if (t !== null) { tautan = t; }
             },
             contohPesanWa: function (t) {
                 return ganti(t, {
                     '{nama}': 'Dewi Lestari', '{kelas}': 'XI TKJ 1', '{perusahaan}': 'PT Antarestar', '{nomor_surat}': '007/SMK-BN/PKL/X/2026',
-                    '{tanggal_surat}': '8 Oktober 2026', '{sekolah}': sekolah,
+                    '{tanggal_surat}': '8 Oktober 2026', '{sekolah}': sekolah, '{kode}': 'PKL-00012',
+                    '{alasan}': 'Alamat perusahaan belum lengkap', '{tautan}': tautan,
                 });
             },
         };

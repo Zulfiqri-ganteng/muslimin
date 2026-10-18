@@ -81,5 +81,5 @@ class Peran extends BaseConfig
      *
      * @var list<string>
      */
-    public array $umum = ['admin/profile'];
+    public array $umum = ['admin/profile', 'admin/pemberitahuan'];
 }
