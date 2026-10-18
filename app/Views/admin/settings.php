@@ -20,7 +20,7 @@ $saklar = static fn (string $nama, bool $nyala, string $judul, string $ket): str
 <?= view('admin/partials/help', [
     'helpKey'   => 'settings',
     'helpTitle' => 'Pengaturan Sekolah & Tampilan Publik',
-    'helpBody'  => '<p>Identitas sekolah di sini dipakai pada kop surat, PDF, dan halaman publik. Di bagian bawah ada saklar tampilan publik: <b>Buka pengisian form</b>, <b>Tampilkan jadwal ke publik</b>, dan <b>Tampilkan absensi ke publik</b>. Matikan salah satu untuk menyembunyikan halaman terkait dari pengunjung situs.</p>',
+    'helpBody'  => '<p>Identitas sekolah di sini dipakai pada kop surat, PDF, dan halaman publik. Di bagian bawah ada saklar tampilan publik: <b>Buka pengisian form</b>, <b>Tampilkan jadwal ke publik</b>, dan <b>Tampilkan absensi ke publik</b>. Matikan salah satu untuk menyembunyikan halaman terkait dari pengunjung situs.</p><p class="mt-2">Kartu <b>Situs publik</b> berisi profil singkat sekolah, nomor WhatsApp bantuan, dan tautan unduh aplikasi Android yang tampil di situs publik.</p>',
 ]) ?>
 
 <form method="post" action="<?= site_url('admin/settings') ?>" enctype="multipart/form-data" class="max-w-3xl space-y-4">
@@ -142,6 +142,30 @@ $saklar = static fn (string $nama, bool $nyala, string $judul, string $ket): str
                 <?= $saklar('jadwal_publik', (bool) ($setting['jadwal_publik'] ?? 1), 'Tampilkan jadwal ke publik', 'Jika dimatikan, halaman Jadwal Kelas/Guru di situs publik disembunyikan.') ?>
                 <?= $saklar('absensi_publik', (bool) ($setting['absensi_publik'] ?? 1), 'Tampilkan absensi ke publik', 'Jika dimatikan, halaman Absensi Guru di situs publik disembunyikan (pengelolaan di admin tetap jalan).') ?>
                 <?= $saklar('dokumen_publik', (bool) ($setting['dokumen_publik'] ?? 0), 'Tampilkan halaman Dokumen publik', 'Menampilkan menu "Dokumen" di situs publik berisi berkas yang ditandai <b>Publik</b>. Berkas privat & yang dibagikan lewat tautan tidak ikut tampil.') ?>
+            </div>
+        </div>
+    </section>
+
+    <!-- ===== Situs publik (rombak publik P2b) ===== -->
+    <section class="kartu">
+        <?= $kepala('Situs publik', 'Isian untuk beranda, halaman Profil, dan kaki halaman situs sekolah. Yang dikosongkan tidak tampil. Foto sekolah diatur di menu <a href="' . site_url('admin/foto-sekolah') . '" class="font-medium text-brand-700 hover:underline dark:text-brand-400">Foto Sekolah</a>.') ?>
+        <div class="kartu-isi space-y-5">
+            <div>
+                <label class="lbl" for="st-profil">Profil singkat sekolah</label>
+                <textarea id="st-profil" name="profil_singkat" rows="4" maxlength="1000" class="inp" placeholder="Dua atau tiga kalimat tentang sekolah: berdiri sejak, jurusan, keunggulan."><?= esc(old('profil_singkat', (string) ($setting['profil_singkat'] ?? ''))) ?></textarea>
+                <p class="hint">Tampil di bagian "Tentang sekolah" beranda, di bawah judul halaman Profil, dan sebagai keterangan situs di mesin pencari. Kosong = kalimat otomatis dari data sekolah.</p>
+            </div>
+            <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                <div>
+                    <label class="lbl" for="st-wa">Nomor WhatsApp bantuan</label>
+                    <input type="tel" id="st-wa" name="wa_bantuan" value="<?= esc(old('wa_bantuan', (string) ($setting['wa_bantuan'] ?? '')), 'attr') ?>" maxlength="20" class="inp" placeholder="081234567890">
+                    <p class="hint">Tombol WhatsApp di kotak "Hubungi sekolah" dan kaki halaman.</p>
+                </div>
+                <div>
+                    <label class="lbl" for="st-aplikasi">Tautan unduh aplikasi Android</label>
+                    <input type="url" id="st-aplikasi" name="tautan_aplikasi" value="<?= esc(old('tautan_aplikasi', (string) ($setting['tautan_aplikasi'] ?? '')), 'attr') ?>" maxlength="255" class="inp" placeholder="https://play.google.com/store/apps/details?id=…">
+                    <p class="hint">Tampil sebagai "Unduh aplikasi" di kaki halaman situs publik.</p>
+                </div>
             </div>
         </div>
     </section>

@@ -11,6 +11,15 @@ $routes->get('jadwal-guru', 'Publik::jadwalGuru');
 $routes->get('jadwal-kelas/(:num)/pdf', 'Publik::cetakKelas/$1');
 $routes->get('jadwal-guru/(:num)/pdf', 'Publik::cetakGuru/$1');
 $routes->get('absensi', 'Publik::absensi');
+// Portal publik konsep rumah.pendidikan.go.id (docs/RENCANA-TAMPILAN-PUBLIK.md)
+$routes->get('cari', 'Publik::cari');
+$routes->get('bantuan', 'Publik::bantuan');
+$routes->get('siswa', 'Publik::kelompok/siswa');
+$routes->get('guru', 'Publik::kelompok/guru');
+$routes->get('orang-tua', 'Publik::kelompok/orang-tua');
+$routes->get('profil', 'Publik::profil');
+$routes->get('pengumuman', 'Publik::pengumuman');
+$routes->get('pengumuman/(:num)', 'Publik::pengumumanIsi/$1');
 
 // ===== Berbagi dokumen (TANPA login, dijaga token) =====
 // Rute yang lebih spesifik didahulukan agar tidak tertelan pola (:segment).
@@ -680,6 +689,12 @@ $routes->group('admin', static function ($routes) {
         $routes->post('pengumuman', 'Admin\Pengumuman::store');
         $routes->post('pengumuman/(:num)', 'Admin\Pengumuman::update/$1');
         $routes->post('pengumuman/delete/(:num)', 'Admin\Pengumuman::delete/$1');
+
+        // ===== FOTO SEKOLAH (banner beranda, pita Tentang, galeri Profil — halaman publik) =====
+        $routes->get('foto-sekolah', 'Admin\FotoSekolah::index');
+        $routes->post('foto-sekolah', 'Admin\FotoSekolah::store');
+        $routes->post('foto-sekolah/(:num)', 'Admin\FotoSekolah::update/$1');
+        $routes->post('foto-sekolah/delete/(:num)', 'Admin\FotoSekolah::delete/$1');
 
         // ===== AUDIT LOG =====
         $routes->get('audit', 'Admin\AuditLog::index');

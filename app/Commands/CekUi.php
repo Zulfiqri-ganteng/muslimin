@@ -60,8 +60,8 @@ class CekUi extends BaseCommand
     /** @var array<string, true> */
     private array $alpineData = [];
 
-    /** @var array<string, true> */
-    private array $fungsiGlobal = [];
+    /** Fungsi global per sisi (admin / publik) — nama yang sama bisa berarti metode komponen di sisi lain. @var array<string, array<string, true>> */
+    private array $fungsiGlobal = ['admin' => [], 'publik' => []];
 
     public function run(array $params)
     {
@@ -109,20 +109,20 @@ class CekUi extends BaseCommand
 
         // Rata kanan berdasar jumlah karakter (bukan bita — "✗" = 3 bita).
         $kanan = static fn (string $s, int $lebar): string => str_repeat(' ', max(0, $lebar - mb_strlen($s))) . $s;
-        CLI::write('Cek rombak tampilan admin — ' . ($pilih ?? 'semua grup') . ' (aturan: docs/RENCANA-UPGRADE-TAMPILAN.md §4 & §5a)', 'yellow');
-        $judul = str_pad('grup', 11) . str_pad('fase', 5) . str_pad('view', 5);
+        CLI::write('Cek rombak tampilan admin & publik — ' . ($pilih ?? 'semua grup') . ' (aturan: docs/RENCANA-UPGRADE-TAMPILAN.md §4 & §5a)', 'yellow');
+        $judul = str_pad('grup', 17) . str_pad('fase', 5) . str_pad('view', 5);
         foreach (self::KOLOM as [$j]) {
             $judul .= $kanan($j, mb_strlen($j) + 2);
         }
         CLI::write($judul);
         foreach ($baris as [$kunci, $fase, $nView, $jumlah]) {
-            $teks = str_pad($kunci, 11) . str_pad($fase, 5) . str_pad((string) $nView, 5);
+            $teks = str_pad($kunci, 17) . str_pad($fase, 5) . str_pad((string) $nView, 5);
             foreach (self::KOLOM as $k => [$j]) {
                 $teks .= $kanan((string) $jumlah[$k], mb_strlen($j) + 2);
             }
             CLI::write($teks);
         }
-        $teks = str_pad('TOTAL', 21);
+        $teks = str_pad('TOTAL', 27);
         foreach (self::KOLOM as $k => [$j]) {
             $teks .= $kanan((string) $total[$k], mb_strlen($j) + 2);
         }
@@ -133,8 +133,9 @@ class CekUi extends BaseCommand
 
         if ($pilih === null) {
             $yatim = $this->viewTanpaGrup();
-            CLI::write('View admin tanpa grup: ' . ($yatim === [] ? '0' : count($yatim) . ' → ' . implode(', ', $yatim)), $yatim === [] ? 'green' : 'red');
-            $this->cekBuild();
+            CLI::write('View tanpa grup: ' . ($yatim === [] ? '0' : count($yatim) . ' → ' . implode(', ', $yatim)), $yatim === [] ? 'green' : 'red');
+            $this->cekBuild('admin');
+            $this->cekBuild('publik');
         } else {
             foreach ($rinci as $rel => $daftar) {
                 CLI::newLine();
@@ -186,7 +187,9 @@ class CekUi extends BaseCommand
     private function viewTanpaGrup(): array
     {
         $yatim = [];
-        foreach (array_merge($this->berkasGrup(['admin']), ['layouts/admin.php']) as $rel) {
+        // Sisi admin + sisi publik (portal, formulir siswa/guru, partial bersama).
+        $semua = array_merge($this->berkasGrup(['admin', 'public', 'pkl', 'biodata', 'partials']), ['layouts/admin.php', 'layouts/public.php', 'layouts/pkl.php', 'layouts/biodata.php']);
+        foreach ($semua as $rel) {
             if (Tampilan::grupView($rel) === null) {
                 $yatim[] = $rel;
             }
@@ -195,32 +198,46 @@ class CekUi extends BaseCommand
         return $yatim;
     }
 
-    /** Nama komponen Alpine.data & fungsi global dari JS admin + skrip sebaris view admin. */
+    /** Nama komponen Alpine.data & fungsi global per sisi: JS admin + skrip sebaris view admin; JS publik + skrip sebaris view publik. */
     private function kumpulkanJs(): void
     {
-        $teks = [];
+        $baca = static fn (string $berkas): string => (string) @file_get_contents($berkas);
+        $teks = ['admin' => [], 'publik' => []];
         $it   = new \RecursiveIteratorIterator(new \RecursiveDirectoryIterator(FCPATH . 'assets/js/admin', \FilesystemIterator::SKIP_DOTS));
         foreach ($it as $f) {
             if ($f->getExtension() === 'js') {
-                $teks[] = (string) file_get_contents($f->getPathname());
+                $teks['admin'][] = $baca($f->getPathname());
             }
         }
         // JS bersama (di luar assets/js/admin) yang juga dimuat halaman admin.
-        foreach (['dokumen-penampil.js'] as $bersama) {
-            $teks[] = (string) @file_get_contents(FCPATH . 'assets/js/' . $bersama);
+        $teks['admin'][] = $baca(FCPATH . 'assets/js/dokumen-penampil.js');
+        // JS halaman publik: portal (assets/js/publik) + formulir siswa + penampil dokumen bersama.
+        foreach (glob(FCPATH . 'assets/js/publik/*.js') ?: [] as $berkas) {
+            $teks['publik'][] = $baca($berkas);
         }
-        foreach (array_merge($this->berkasGrup(['admin']), ['layouts/admin.php']) as $rel) {
-            preg_match_all('#<script\b(?![^>]*\bsrc=)[^>]*>(.*?)</script>#si', (string) file_get_contents(APPPATH . 'Views/' . $rel), $m);
-            $teks = array_merge($teks, $m[1]);
+        foreach (['dokumen-penampil.js', 'pkl.js', 'pkl-lapor.js', 'biodata.js'] as $bersama) {
+            $teks['publik'][] = $baca(FCPATH . 'assets/js/' . $bersama);
         }
-        foreach ($teks as $t) {
-            preg_match_all('/Alpine\.data\(\s*[\'"]([\w$]+)/', $t, $m);
-            foreach ($m[1] as $n) {
-                $this->alpineData[$n] = true;
+        $views = [
+            'admin'  => array_merge($this->berkasGrup(['admin']), ['layouts/admin.php']),
+            'publik' => array_merge($this->berkasGrup(['public', 'pkl', 'biodata']), ['layouts/public.php', 'layouts/pkl.php', 'layouts/biodata.php']),
+        ];
+        foreach ($views as $sisi => $daftar) {
+            foreach ($daftar as $rel) {
+                preg_match_all('#<script\b(?![^>]*\bsrc=)[^>]*>(.*?)</script>#si', $baca(APPPATH . 'Views/' . $rel), $m);
+                $teks[$sisi] = array_merge($teks[$sisi], $m[1]);
             }
-            preg_match_all('/(?:^|[;\n{}])\s*(?:async\s+)?function\s+([A-Za-z_$][\w$]*)\s*\(|window\.([A-Za-z_$][\w$]*)\s*=(?!=)/', $t, $m);
-            foreach (array_filter(array_merge($m[1], $m[2])) as $n) {
-                $this->fungsiGlobal[$n] = true;
+        }
+        foreach ($teks as $sisi => $daftar) {
+            foreach ($daftar as $t) {
+                preg_match_all('/Alpine\.data\(\s*[\'"]([\w$]+)/', $t, $m);
+                foreach ($m[1] as $n) {
+                    $this->alpineData[$n] = true;
+                }
+                preg_match_all('/(?:^|[;\n{}])\s*(?:async\s+)?function\s+([A-Za-z_$][\w$]*)\s*\(|window\.([A-Za-z_$][\w$]*)\s*=(?!=)/', $t, $m);
+                foreach (array_filter(array_merge($m[1], $m[2])) as $n) {
+                    $this->fungsiGlobal[$sisi][$n] = true;
+                }
             }
         }
     }
@@ -233,6 +250,7 @@ class CekUi extends BaseCommand
     private function periksa(string $rel): array
     {
         $isi    = (string) file_get_contents(APPPATH . 'Views/' . $rel);
+        $sisi   = str_starts_with((string) Tampilan::grupView($rel), 'publik-') ? 'publik' : 'admin';
         $hasil  = [];
         $catat  = static function (string $jenis, int $pos, string $teks) use (&$hasil, $isi): void {
             $hasil[] = [$jenis, substr_count($isi, "\n", 0, $pos) + 1, mb_substr(trim(preg_replace('/\s+/', ' ', $teks)), 0, 110)];
@@ -274,7 +292,7 @@ class CekUi extends BaseCommand
         }
         preg_match_all('/\s(x-[a-z][\w:.-]*|@[a-z][\w.:-]*|:[a-z][\w.-]*)\s*=\s*"([^"]*)"/', $isi, $m, PREG_OFFSET_CAPTURE | PREG_SET_ORDER);
         foreach ($m as $a) {
-            foreach ($this->alpineDitolak($a[1][0], $a[2][0]) as $alasan) {
+            foreach ($this->alpineDitolak($a[1][0], $a[2][0], $sisi) as $alasan) {
                 $catat('alpine', $a[0][1], $alasan . ': ' . $a[1][0] . '="' . $a[2][0] . '"');
             }
         }
@@ -340,7 +358,7 @@ class CekUi extends BaseCommand
      *
      * @return list<string>
      */
-    private function alpineDitolak(string $atribut, string $nilai): array
+    private function alpineDitolak(string $atribut, string $nilai, string $sisi = 'admin'): array
     {
         $alasan = [];
         // Kode PHP di dalam isian (mis. json_encode) bukan ekspresi Alpine — buang sebelum diperiksa.
@@ -373,7 +391,7 @@ class CekUi extends BaseCommand
         }
         preg_match_all('/(?<![\w$.])([A-Za-z_][\w$]*)\s*\(/', $kode, $m);
         foreach (array_unique($m[1]) as $f) {
-            if (isset($this->fungsiGlobal[$f]) && ! in_array($f, ['if', 'for', 'while', 'switch', 'function', 'return'], true)) {
+            if (isset($this->fungsiGlobal[$sisi][$f]) && ! in_array($f, ['if', 'for', 'while', 'switch', 'function', 'return'], true)) {
                 $alasan[] = 'fungsi global ' . $f . '()';
             }
         }
@@ -398,26 +416,26 @@ class CekUi extends BaseCommand
      * admin.css sudah sama dengan hasil build terbaru? Dibangun ulang ke berkas sementara lalu dibandingkan isinya (tanggal berkas
      * tidak bisa dipercaya: Tailwind tidak menulis ulang bila isinya sama). Butuh node + node_modules (hanya di laptop).
      */
-    private function cekBuild(): void
+    private function cekBuild(string $nama = 'admin'): void
     {
-        $hasil = FCPATH . 'assets/css/admin.css';
+        $hasil = FCPATH . 'assets/css/' . $nama . '.css';
         $cli   = ROOTPATH . 'node_modules/@tailwindcss/cli/dist/index.mjs';
         if (! is_file($hasil)) {
-            CLI::write('admin.css belum ada — jalankan: npm run build:admin', 'red');
+            CLI::write($nama . '.css belum ada — jalankan: npm run build:' . $nama, 'red');
 
             return;
         }
         if (! is_file($cli)) {
-            CLI::write('admin.css: tidak dicek (node_modules belum ada — npm install)', 'yellow');
+            CLI::write($nama . '.css: tidak dicek (node_modules belum ada — npm install)', 'yellow');
 
             return;
         }
-        $sementara = WRITEPATH . 'cache/cek-ui-admin.css';
-        $perintah  = 'node ' . escapeshellarg($cli) . ' -i ' . escapeshellarg(ROOTPATH . 'resources/css/admin.css')
+        $sementara = WRITEPATH . 'cache/cek-ui-' . $nama . '.css';
+        $perintah  = 'node ' . escapeshellarg($cli) . ' -i ' . escapeshellarg(ROOTPATH . 'resources/css/' . $nama . '.css')
             . ' -o ' . escapeshellarg($sementara) . ' --minify 2>&1';
         exec($perintah, $keluaran, $kode);
         if ($kode !== 0 || ! is_file($sementara)) {
-            CLI::write('admin.css: build uji gagal — ' . implode(' ', array_slice($keluaran, -2)), 'red');
+            CLI::write($nama . '.css: build uji gagal — ' . implode(' ', array_slice($keluaran, -2)), 'red');
 
             return;
         }
@@ -425,6 +443,6 @@ class CekUi extends BaseCommand
         $isi  = static fn (string $f): string => str_replace("\r\n", "\n", (string) file_get_contents($f));
         $sama = $isi($sementara) === $isi($hasil);
         @unlink($sementara);
-        CLI::write('admin.css: ' . ($sama ? 'sudah sesuai sumber terbaru' : 'BELUM DI-BUILD ULANG — jalankan npm run build:admin sebelum commit'), $sama ? 'green' : 'red');
+        CLI::write($nama . '.css: ' . ($sama ? 'sudah sesuai sumber terbaru' : 'BELUM DI-BUILD ULANG — jalankan npm run build:' . $nama . ' sebelum commit'), $sama ? 'green' : 'red');
     }
 }

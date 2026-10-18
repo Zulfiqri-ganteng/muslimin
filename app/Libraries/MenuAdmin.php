@@ -146,6 +146,7 @@ final class MenuAdmin
             ['judul' => 'ARSIP & INFO', 'ikon' => 'folder-open', 'entri' => [
                 'dokumen'    => ['Arsip Dokumen', self::MENU, [['admin/dokumen', 'Arsip Dokumen', 'folder-open']]],
                 'pengumuman' => ['Pengumuman', self::MENU, [['admin/pengumuman', 'Pengumuman', 'bullhorn']]],
+                'foto_sekolah' => ['Foto Sekolah', self::MENU, [['admin/foto-sekolah', 'Foto Sekolah', 'image']], ['ket' => 'Foto untuk banner beranda dan halaman Profil di situs publik.']],
             ]],
             ['judul' => 'SISTEM', 'ikon' => 'cog', 'entri' => [
                 'pengaturan_sekolah' => ['Pengaturan Sekolah', self::MENU, [['admin/settings', 'Pengaturan Sekolah', 'cog']]],

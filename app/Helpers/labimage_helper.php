@@ -11,13 +11,15 @@ use CodeIgniter\HTTP\Files\UploadedFile;
  * sebagai .webp di public/uploads/lab/. Maksimal 5 MB per berkas.
  *
  * Dipakai web & API: helper('labimage'); $nama = labimage_save($file, $err);
+ * Folder lain di public/uploads/ (mis. foto sekolah): labimage_save($file, $err, 1920, 82, 'foto-sekolah') + labimage_delete($nama, 'foto-sekolah').
  */
 
 if (! function_exists('labimage_dir')) {
-    /** Path absolut folder penyimpanan (dibuat bila belum ada). */
-    function labimage_dir(): string
+    /** Path absolut folder penyimpanan (dibuat bila belum ada). Bawaan public/uploads/lab/. */
+    function labimage_dir(string $folder = 'lab'): string
     {
-        $dir = FCPATH . 'uploads' . DIRECTORY_SEPARATOR . 'lab' . DIRECTORY_SEPARATOR;
+        $folder = (string) preg_replace('/[^a-z0-9_-]/', '', strtolower($folder));
+        $dir    = FCPATH . 'uploads' . DIRECTORY_SEPARATOR . ($folder !== '' ? $folder : 'lab') . DIRECTORY_SEPARATOR;
         if (! is_dir($dir)) {
             @mkdir($dir, 0755, true);
         }
@@ -38,13 +40,13 @@ if (! function_exists('labimage_url')) {
 
 if (! function_exists('labimage_delete')) {
     /** Hapus berkas fisik gambar lab (aman bila tak ada). */
-    function labimage_delete(?string $file): void
+    function labimage_delete(?string $file, string $folder = 'lab'): void
     {
         $file = basename(trim((string) $file));
         if ($file === '') {
             return;
         }
-        $path = labimage_dir() . $file;
+        $path = labimage_dir($folder) . $file;
         if (is_file($path)) {
             @unlink($path);
         }
@@ -56,9 +58,10 @@ if (! function_exists('labimage_save')) {
      * Simpan satu unggahan gambar sebagai WEBP. Mengembalikan nama berkas
      * (mis. "a1b2c3.webp") atau null bila gagal (alasan diisi di $error).
      *
-     * @param int $maxDim Sisi terpanjang maksimum (px); gambar lebih besar diperkecil.
+     * @param int    $maxDim Sisi terpanjang maksimum (px); gambar lebih besar diperkecil.
+     * @param string $folder Folder di public/uploads/ (bawaan 'lab').
      */
-    function labimage_save(UploadedFile $file, ?string &$error = null, int $maxDim = 1600, int $quality = 80): ?string
+    function labimage_save(UploadedFile $file, ?string &$error = null, int $maxDim = 1600, int $quality = 80, string $folder = 'lab'): ?string
     {
         $error = null;
         if (! $file->isValid()) {
@@ -76,7 +79,7 @@ if (! function_exists('labimage_save')) {
         $tmp  = $file->getTempName();
         $mime = strtolower((string) $file->getMimeType()); // dari isi berkas (finfo), bukan label klien
 
-        $target = labimage_dir() . uniqid('lab_', true) . '.webp';
+        $target = labimage_dir($folder) . uniqid($folder === 'lab' ? 'lab_' : 'foto_', true) . '.webp';
 
         // ── Jalur 1: Imagick (bila ada) — cakupan terluas termasuk HEIC/HEIF ──
         if (extension_loaded('imagick')) {

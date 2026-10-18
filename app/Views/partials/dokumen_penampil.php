@@ -1,13 +1,12 @@
 <?php
 
 /**
- * Penampil isi dokumen — dipakai BERSAMA oleh halaman pratinjau admin dan
- * halaman penerima tautan berbagi, supaya guru yang membuka tautan melihat
- * persis apa yang dilihat admin (dan tak ada dua salinan kode yang bisa
- * berbeda perilaku).
- * (F10) Kini hanya dipakai halaman publik berbagi (Tailwind v3, gaya lama dipertahankan sampai halaman publik dirombak); panel
- * admin memakai admin/dokumen/_penampil.php. Perilaku keduanya SATU: komponen Alpine `penampilDokumen` di
- * assets/js/dokumen-penampil.js (dulu fungsi global di skrip sebaris; isi dipasang lewat JS, bukan x-html). Skrip ber-nonce.
+ * Penampil isi dokumen untuk halaman penerima tautan berbagi (public/berbagi_dokumen.php). Panel admin memakai
+ * admin/dokumen/_penampil.php; perilaku keduanya SATU: komponen Alpine `penampilDokumen` di assets/js/dokumen-penampil.js
+ * (isi Word/Excel dipasang lewat JS, bukan x-html). Skrip ber-nonce.
+ * (P5 rombak publik) Gaya kit publik.css: ikon Flowbite lewat ikon() (bukan SVG tulisan tangan), tombol kit, latar gelap
+ * .penampil-gelap, gaya isi Word/Excel .dok-pratinjau; tab lembar Excel pakai aria-pressed. frame-src mengizinkan youtube-nocookie
+ * (Config\ContentSecurityPolicy) — alamat video disusun di $urlYoutube (pola admin/dokumen/_penampil.php).
  *
  * @var string      $urlIsi          URL penyaji berkas (inline)
  * @var string      $urlUnduh        URL unduhan
@@ -28,12 +27,12 @@ $bolehViewerLuar = $bolehViewerLuar ?? false;
 $ytId            = $ytId            ?? null;
 $penyedia        = $penyedia        ?? 'lainnya';
 $pakaiPustaka    = ! $tautan && in_array($kategori, ['spreadsheet', 'dokumen'], true);
+$urlYoutube      = $ytId !== null ? 'https://www.youtube-nocookie.com/embed/' . rawurlencode($ytId) : '';
+$tombolUnduh     = $bolehUnduh ? '<a href="' . esc($urlUnduh, 'attr') . '" class="tombol tombol-utama mt-5">' . ikon('download') . 'Unduh berkas</a>' : '';
 ?>
 
 <?php if ($pakaiPustaka) { ?>
-    <?php if ($kategori === 'spreadsheet' && $ext !== 'csv') { ?>
-        <script defer src="<?= base_url('assets/js/vendor/xlsx.full.min.js') ?>" <?= csp_script_nonce() ?>></script>
-    <?php } elseif ($ext === 'csv') { ?>
+    <?php if ($kategori === 'spreadsheet' || $ext === 'csv') { ?>
         <script defer src="<?= base_url('assets/js/vendor/xlsx.full.min.js') ?>" <?= csp_script_nonce() ?>></script>
     <?php } ?>
     <?php if ($ext === 'docx') { ?>
@@ -48,110 +47,96 @@ $pakaiPustaka    = ! $tautan && in_array($kategori, ['spreadsheet', 'dokumen'], 
 <div x-data="penampilDokumen" data-kategori="<?= esc($kategori, 'attr') ?>" data-ext="<?= esc($ext, 'attr') ?>" data-url="<?= esc($urlIsi, 'attr') ?>">
 
     <?php if ($tautan && $ytId !== null) { ?>
-        <div class="aspect-video bg-slate-900">
-            <iframe class="w-full h-full" src="https://www.youtube-nocookie.com/embed/<?= esc($ytId) ?>"
-                    title="<?= esc($judul) ?>" frameborder="0" allowfullscreen
+        <div class="aspect-video bg-kaki">
+            <iframe class="h-full w-full" src="<?= esc($urlYoutube, 'attr') ?>" title="<?= esc($judul, 'attr') ?>" allowfullscreen
                     allow="accelerometer; clipboard-write; encrypted-media; picture-in-picture"></iframe>
         </div>
 
     <?php } elseif ($tautan) { ?>
-        <div class="p-10 text-center">
-            <svg class="w-12 h-12 mx-auto text-slate-300" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M13.828 10.172a4 4 0 010 5.656l-3 3a4 4 0 01-5.656-5.656l1.5-1.5m8.656-4.828l1.5-1.5a4 4 0 115.656 5.656l-3 3a4 4 0 01-5.656 0"/></svg>
-            <p class="mt-3 text-slate-600 text-sm">Dokumen ini berupa tautan ke <b><?= esc($penyedia) ?></b>.</p>
-            <p class="text-xs text-slate-400 mt-1 break-all"><?= esc((string) ($urlEksternal ?? '')) ?></p>
-            <a href="<?= esc((string) ($urlEksternal ?? '')) ?>" target="_blank" rel="noopener"
-               class="inline-block mt-3 px-4 py-2 rounded-xl bg-brand-700 text-white text-sm font-semibold">Buka Tautan</a>
+        <div class="penampil-pesan">
+            <span class="kosong-ikon"><?= ikon('link') ?></span>
+            <p class="kosong-judul">Dokumen ini berupa tautan ke <?= esc($penyedia) ?></p>
+            <p class="kosong-teks break-all"><?= esc((string) ($urlEksternal ?? '')) ?></p>
+            <a href="<?= esc((string) ($urlEksternal ?? ''), 'attr') ?>" target="_blank" rel="noopener" class="tombol tombol-utama mt-5"><?= ikon('arrow-up-right-from-square') ?>Buka tautan</a>
         </div>
 
     <?php } elseif ($kategori === 'pdf') { ?>
         <!-- Penampil ini mengisi lebar penuh halaman, jadi tingginya ikut
              dinaikkan supaya satu halaman A4 terbaca tanpa perlu digulir. -->
-        <iframe src="<?= esc($urlIsi) ?>#view=FitH" class="w-full h-[85vh] min-h-[520px] bg-slate-100" title="<?= esc($judul) ?>"></iframe>
+        <iframe src="<?= esc($urlIsi, 'attr') ?>#view=FitH" class="penampil-pdf" title="<?= esc($judul, 'attr') ?>"></iframe>
 
     <?php } elseif ($kategori === 'gambar' && ! in_array($ext, ['heic', 'heif', 'svg'], true)) { ?>
-        <div class="bg-slate-900 flex items-center justify-center min-h-[50vh]">
-            <img src="<?= esc($urlIsi) ?>" alt="<?= esc($judul) ?>" class="max-w-full max-h-[78vh] object-contain">
+        <div class="penampil-gelap">
+            <img src="<?= esc($urlIsi, 'attr') ?>" alt="<?= esc($judul, 'attr') ?>" class="max-h-[78vh] max-w-full object-contain">
         </div>
 
     <?php } elseif ($kategori === 'gambar') { ?>
-        <div class="p-10 text-center">
-            <svg class="w-12 h-12 mx-auto text-slate-300" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
-            <p class="mt-3 text-slate-600 text-sm font-medium">Pratinjau <?= esc(strtoupper($ext)) ?> tidak tersedia di peramban</p>
-            <p class="text-xs text-slate-500 mt-1 max-w-sm mx-auto">
+        <div class="penampil-pesan">
+            <span class="kosong-ikon"><?= ikon('file-image') ?></span>
+            <p class="kosong-judul">Pratinjau <?= esc(strtoupper($ext)) ?> tidak tersedia di peramban</p>
+            <p class="kosong-teks">
                 <?= $ext === 'svg'
                     ? 'Berkas SVG sengaja tidak ditampilkan langsung karena bisa memuat skrip. Unduh untuk membukanya.'
                     : 'Foto iPhone (HEIC) belum didukung peramban. Berkasnya tetap utuh — unduh untuk membukanya.' ?>
             </p>
-            <?php if ($bolehUnduh) { ?>
-                <a href="<?= esc($urlUnduh) ?>" class="inline-block mt-3 px-4 py-2 rounded-xl bg-brand-700 text-white text-sm font-semibold">Unduh Berkas</a>
-            <?php } ?>
+            <?= $tombolUnduh ?>
         </div>
 
     <?php } elseif ($kategori === 'audio') { ?>
-        <div class="p-8 flex flex-col items-center gap-4">
-            <svg class="w-14 h-14 text-brand-300" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 19V6l12-3v13M9 19c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zm12-3c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2z"/></svg>
-            <audio controls preload="metadata" class="w-full max-w-md"><source src="<?= esc($urlIsi) ?>" type="<?= esc($mime) ?>"></audio>
+        <div class="penampil-pesan gap-5">
+            <span class="kosong-ikon"><?= ikon('file-music') ?></span>
+            <audio controls preload="metadata" class="w-full max-w-md"><source src="<?= esc($urlIsi, 'attr') ?>" type="<?= esc($mime, 'attr') ?>"></audio>
         </div>
 
     <?php } elseif ($kategori === 'video') { ?>
-        <div class="bg-slate-900">
-            <video controls preload="metadata" class="w-full max-h-[78vh]"><source src="<?= esc($urlIsi) ?>" type="<?= esc($mime) ?>"></video>
+        <div class="bg-kaki">
+            <video controls preload="metadata" class="max-h-[78vh] w-full"><source src="<?= esc($urlIsi, 'attr') ?>" type="<?= esc($mime, 'attr') ?>"></video>
         </div>
 
     <?php } elseif ($pakaiPustaka) { ?>
-        <div class="p-4">
-            <div x-show="status === 'muat'" class="py-16 text-center text-sm text-slate-500">
-                <svg class="w-6 h-6 mx-auto animate-spin text-brand-500" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/></svg>
-                <p class="mt-2">Membuka isi berkas…</p>
+        <div class="p-4 sm:p-5">
+            <div x-show="status === 'muat'" class="py-16 text-center text-sm text-teks-2" role="status">
+                <span class="mx-auto block h-6 w-6 animate-spin rounded-full border-2 border-brand-200 border-t-brand-700" aria-hidden="true"></span>
+                <p class="mt-3">Membuka isi berkas…</p>
             </div>
 
-            <div x-show="status === 'gagal'" x-cloak class="py-12 text-center">
-                <p class="text-sm text-slate-600 font-medium">Isi berkas tidak bisa ditampilkan di sini</p>
-                <p class="text-xs text-slate-500 mt-1" x-text="pesan"></p>
-                <?php if ($bolehUnduh) { ?>
-                    <a href="<?= esc($urlUnduh) ?>" class="inline-block mt-3 px-4 py-2 rounded-xl bg-brand-700 text-white text-sm font-semibold">Unduh Berkas</a>
-                <?php } ?>
+            <div x-show="status === 'gagal'" x-cloak class="penampil-pesan py-10">
+                <p class="kosong-judul mt-0">Isi berkas tidak bisa ditampilkan di sini</p>
+                <p class="kosong-teks" x-text="pesan"></p>
+                <?= $tombolUnduh ?>
             </div>
 
-            <div x-show="status === 'siap' && lembar.length > 1" x-cloak class="flex gap-1 flex-wrap mb-3 border-b border-slate-200 pb-2">
+            <div x-show="status === 'siap' && lembar.length > 1" x-cloak class="penampil-tab">
                 <template x-for="(nama, i) in lembar" :key="nama">
-                    <button type="button" @click="pilihLembar(i)"
-                            class="px-3 py-1.5 rounded-lg text-xs font-medium"
-                            :class="i === lembarAktif ? 'bg-brand-700 text-white' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'"
-                            x-text="nama"></button>
+                    <button type="button" @click="pilihLembar(i)" :aria-pressed="i === lembarAktif" x-text="nama"></button>
                 </template>
             </div>
 
-            <div x-show="status === 'siap'" x-cloak class="dok-pratinjau overflow-auto max-h-[72vh] text-slate-700" data-isi-dokumen></div>
+            <div x-show="status === 'siap'" x-cloak class="dok-pratinjau" data-isi-dokumen></div>
         </div>
 
     <?php } else { ?>
-        <div class="p-10 text-center">
-            <svg class="w-12 h-12 mx-auto text-slate-300" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z"/></svg>
-            <p class="mt-3 text-slate-600 text-sm font-medium">
+        <div class="penampil-pesan">
+            <span class="kosong-ikon"><?= ikon($kategori === 'presentasi' ? 'file-ppt' : 'file') ?></span>
+            <p class="kosong-judul">
                 <?= $kategori === 'presentasi'
                     ? 'PowerPoint tidak bisa ditampilkan langsung di peramban'
                     : 'Jenis berkas ini tidak punya pratinjau' ?>
             </p>
-            <p class="text-xs text-slate-500 mt-1 max-w-sm mx-auto">
+            <p class="kosong-teks">
                 Berkasnya tersimpan utuh. Unduh untuk membukanya dengan aplikasi di komputer<?= $kategori === 'presentasi' ? ' (PowerPoint, WPS, LibreOffice)' : '' ?>.
             </p>
-            <div class="mt-4 flex items-center justify-center gap-2 flex-wrap">
+            <div class="mt-5 flex flex-wrap items-center justify-center gap-2">
                 <?php if ($bolehUnduh) { ?>
-                    <a href="<?= esc($urlUnduh) ?>" class="px-4 py-2 rounded-xl bg-brand-700 text-white text-sm font-semibold">Unduh Berkas</a>
+                    <a href="<?= esc($urlUnduh, 'attr') ?>" class="tombol tombol-utama"><?= ikon('download') ?>Unduh berkas</a>
                 <?php } ?>
                 <?php if ($bolehViewerLuar && ! empty($urlViewerLuar)) { ?>
-                    <a href="<?= esc($urlViewerLuar) ?>" target="_blank" rel="noopener"
-                       class="px-4 py-2 rounded-xl border border-slate-300 text-sm font-medium text-slate-700 hover:bg-slate-50">Buka di Office Viewer</a>
+                    <a href="<?= esc($urlViewerLuar, 'attr') ?>" target="_blank" rel="noopener" class="tombol tombol-netral"><?= ikon('arrow-up-right-from-square') ?>Buka di Office Viewer</a>
                 <?php } ?>
             </div>
             <?php if ($bolehViewerLuar && ! empty($urlViewerLuar)) { ?>
-                <p class="text-[11px] text-amber-700 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2 mt-3 inline-block max-w-sm">
-                    Office Viewer membuka berkas lewat server Microsoft, jadi berkas ini dikirim ke sana.
-                    Tombol ini hanya muncul untuk berkas yang memang sudah boleh diakses dari luar.
-                </p>
+                <div class="peringatan peringatan-awas mt-4 max-w-md text-left"><?= ikon('info-circle') ?><p>Office Viewer membuka berkas lewat server Microsoft, jadi berkas ini dikirim ke sana. Tombol ini hanya muncul untuk berkas yang memang sudah boleh diakses dari luar.</p></div>
             <?php } ?>
         </div>
     <?php } ?>
 </div>
-

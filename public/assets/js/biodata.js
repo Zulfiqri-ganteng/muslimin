@@ -125,12 +125,18 @@ document.addEventListener('alpine:init', function () {
                 return this.siswaList.filter(function (s) { return s.nama.toLowerCase().indexOf(q) !== -1; });
             },
 
+            // Kelas = label kit publik.css (dipakai bersama kelas "label" di view).
             lencana: function (status) {
                 return {
-                    menunggu: { teks: 'Sudah mengisi', kelas: 'bg-blue-100 text-blue-700' },
-                    disetujui: { teks: 'Terverifikasi', kelas: 'bg-green-100 text-green-700' },
-                    perbaikan: { teks: 'Perlu perbaikan', kelas: 'bg-amber-100 text-amber-800' },
+                    menunggu: { teks: 'Sudah mengisi', kelas: 'label-merek' },
+                    disetujui: { teks: 'Terverifikasi', kelas: 'label-buka' },
+                    perbaikan: { teks: 'Perlu perbaikan', kelas: 'label-kuning' },
                 }[status] || { teks: '', kelas: '' };
+            },
+
+            /** Jumlah angka NISN yang sudah diketik (penghitung "x/10") — pengganti regex di atribut view (Alpine versi CSP). */
+            jumlahAngkaNisn: function () {
+                return teks(this.f.nisn).replace(/\D/g, '').length;
             },
 
             namaKelas: function () {

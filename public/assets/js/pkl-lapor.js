@@ -70,15 +70,26 @@ document.addEventListener('alpine:init', function () {
                 return q ? this.siswaList.filter(function (s) { return s.nama.toLowerCase().indexOf(q) !== -1; }) : this.siswaList;
             },
 
+            // Kelas = label kit publik.css (dipakai bersama kelas "label" di view).
             lencana: function (status) {
                 return {
-                    boleh: { teks: 'Bisa lapor', kelas: 'bg-brand-100 text-brand-800' },
-                    sudah_lapor: { teks: 'Sudah lapor', kelas: 'bg-amber-100 text-amber-800' },
-                    dikembalikan: { teks: 'Perlu diperbaiki', kelas: 'bg-red-100 text-red-700' },
-                    selesai: { teks: 'Selesai', kelas: 'bg-green-100 text-green-700' },
-                    belum_disetujui: { teks: 'Ajuan belum disetujui', kelas: 'bg-slate-100 text-slate-500' },
+                    boleh: { teks: 'Bisa lapor', kelas: 'label-merek' },
+                    sudah_lapor: { teks: 'Sudah lapor', kelas: 'label-kuning' },
+                    dikembalikan: { teks: 'Perlu diperbaiki', kelas: 'label-merah' },
+                    selesai: { teks: 'Selesai', kelas: 'label-buka' },
+                    belum_disetujui: { teks: 'Ajuan belum disetujui', kelas: 'label-tutup' },
                     belum_ajuan: { teks: '', kelas: '' },
                 }[status] || { teks: '', kelas: '' };
+            },
+
+            // Pengganti ekspresi berisi array langsung di view (aman untuk Alpine versi CSP).
+            /** Nama terpilih boleh membuka form lapor (belum lapor / sudah lapor / dikembalikan). */
+            bolehBuka: function () {
+                return !!this.pilih && ['boleh', 'sudah_lapor', 'dikembalikan'].indexOf(this.pilih.status) !== -1;
+            },
+            /** Anggota kelompok ajuan yang sedang dibuka (kosong bila belum ada data). */
+            anggotaKelompok: function () {
+                return this.data && this.data.anggota ? this.data.anggota : [];
             },
 
             namaKelas: function () {

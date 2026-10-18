@@ -1,13 +1,18 @@
-<?= $this->extend('layouts/biodata') ?>
+<?php
+/**
+ * Formulir biodata ditutup (P6c rombak publik: bingkai layouts/formulir.php + kit publik.css; isi sama).
+ *
+ * @var array $setting
+ */
+?>
+<?= $this->extend('layouts/formulir') ?>
 <?= $this->section('content') ?>
-<div class="max-w-lg mx-auto px-4 py-6 sm:py-10">
+<div class="formulir formulir-sempit">
     <?= view('biodata/_header', ['setting' => $setting]) ?>
-    <div class="mt-6 bg-white rounded-lg shadow-sm border border-slate-200 p-7 text-center">
-        <div class="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-amber-100">
-            <svg class="w-9 h-9 text-amber-500" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
-        </div>
-        <h2 class="mt-5 text-xl font-extrabold text-slate-800">Pengisian Sedang Ditutup</h2>
-        <p class="mt-2 text-slate-500 leading-relaxed">
+    <div class="kartu mt-6 px-6 py-8 text-center sm:px-8">
+        <span class="mx-auto grid h-14 w-14 place-items-center rounded-full bg-amber-50 text-amber-700"><?= ikon('clock', 'h-8 w-8') ?></span>
+        <h2 class="mt-5 text-heading-lg text-teks">Pengisian sedang ditutup</h2>
+        <p class="mt-2 leading-relaxed text-teks-2">
             Formulir biodata siswa belum dibuka atau masa pengisian sudah berakhir.
             Tunggu informasi dari wali kelas, atau hubungi operator sekolah.
         </p>

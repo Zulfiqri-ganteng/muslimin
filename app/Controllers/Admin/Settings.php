@@ -89,6 +89,23 @@ class Settings extends BaseController
             'dokumen_publik'    => $this->request->getPost('dokumen_publik') ? 1 : 0,
         ];
 
+        // --- Situs publik (rombak publik P2b): profil singkat, WhatsApp bantuan, tautan unduh aplikasi Android; kosong = tidak tampil.
+        // Dicek SEBELUM logo dipindahkan, agar isian salah tidak meninggalkan logo baru yang tak tercatat.
+        $wa       = (string) preg_replace('/[^\d+]/', '', (string) $this->request->getPost('wa_bantuan'));
+        $aplikasi = trim((string) $this->request->getPost('tautan_aplikasi'));
+        if ($aplikasi !== '' && preg_match('#^https?://#i', $aplikasi) !== 1) {
+            $aplikasi = 'https://' . $aplikasi;
+        }
+        if ($wa !== '' && preg_match('/^\+?\d{9,15}$/', $wa) !== 1) {
+            return redirect()->back()->withInput()->with('error', 'Nomor WhatsApp bantuan tidak valid. Tulis 9–15 angka, mis. 081234567890.');
+        }
+        if ($aplikasi !== '' && (mb_strlen($aplikasi) > 255 || filter_var($aplikasi, FILTER_VALIDATE_URL) === false)) {
+            return redirect()->back()->withInput()->with('error', 'Tautan aplikasi Android tidak valid. Salin alamat lengkapnya, mis. https://play.google.com/store/apps/details?id=…');
+        }
+        $data['profil_singkat']  = mb_substr(trim((string) $this->request->getPost('profil_singkat')), 0, 1000);
+        $data['wa_bantuan']      = $wa;
+        $data['tautan_aplikasi'] = $aplikasi;
+
         // Upload logo (opsional)
         $logo = $this->request->getFile('logo');
         if ($logo && $logo->isValid() && ! $logo->hasMoved()) {

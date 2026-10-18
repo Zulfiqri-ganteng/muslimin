@@ -1,10 +1,12 @@
 {
   "name": "muslimin-tampilan",
   "private": true,
-  "description": "Alat bangun tampilan admin (Tailwind CSS v4 + pola Flowbite Admin Dashboard) dan salinan lokal pustaka JS, font, ikon. Hasil build ikut di-commit, jadi server cukup git pull (tanpa npm). Rancangan: docs/RENCANA-UPGRADE-TAMPILAN.md",
+  "description": "Alat bangun tampilan admin (Tailwind CSS v4 + pola Flowbite Admin Dashboard) dan halaman publik (Tailwind CSS v4, konsep portal rumah.pendidikan.go.id), plus salinan lokal pustaka JS, font, ikon. Hasil build ikut di-commit, jadi server cukup git pull (tanpa npm). Rancangan: docs/RENCANA-UPGRADE-TAMPILAN.md, docs/RENCANA-TAMPILAN-PUBLIK.md",
   "scripts": {
     "build:admin": "tailwindcss -i resources/css/admin.css -o public/assets/css/admin.css --minify",
     "watch:admin": "tailwindcss -i resources/css/admin.css -o public/assets/css/admin.css --watch",
+    "build:publik": "tailwindcss -i resources/css/publik.css -o public/assets/css/publik.css --minify",
+    "watch:publik": "tailwindcss -i resources/css/publik.css -o public/assets/css/publik.css --watch",
     "vendor": "node tools/salin-vendor.mjs",
     "uji:peramban": "node tools/uji-peramban.mjs"
   },

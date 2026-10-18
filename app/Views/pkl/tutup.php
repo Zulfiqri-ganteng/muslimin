@@ -1,6 +1,6 @@
 <?php
 /**
- * Form PKL belum bisa diisi.
+ * Form PKL belum bisa diisi (P6a rombak publik: bingkai layouts/formulir.php + kit publik.css; isi sama).
  *
  * @var array  $setting
  * @var string $alasan  belum_dibuka | sudah_ditutup | belum_siap
@@ -12,21 +12,19 @@ $pesan = [
 ];
 [$judul, $isi] = $pesan[$alasan ?? 'belum_dibuka'] ?? $pesan['belum_dibuka'];
 ?>
-<?= $this->extend('layouts/pkl') ?>
+<?= $this->extend('layouts/formulir') ?>
 <?= $this->section('content') ?>
-<div class="max-w-lg mx-auto px-4 py-6 sm:py-10">
+<div class="formulir formulir-sempit">
     <?= view('pkl/_header', ['setting' => $setting]) ?>
-    <div class="mt-6 bg-white rounded-lg shadow-sm border border-slate-200 p-7 text-center">
-        <div class="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-amber-100">
-            <svg class="w-9 h-9 text-amber-500" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
-        </div>
-        <h2 class="mt-5 text-xl font-extrabold text-slate-800"><?= esc($judul) ?></h2>
-        <p class="mt-2 text-slate-500 leading-relaxed"><?= esc($isi) ?></p>
+    <div class="kartu mt-6 px-6 py-8 text-center sm:px-8">
+        <span class="mx-auto grid h-14 w-14 place-items-center rounded-full bg-amber-50 text-amber-700"><?= ikon('clock', 'h-8 w-8') ?></span>
+        <h2 class="mt-5 text-heading-lg text-teks"><?= esc($judul) ?></h2>
+        <p class="mt-2 leading-relaxed text-teks-2"><?= esc($isi) ?></p>
     </div>
     <?php if (! empty($laporTerbuka)): ?>
-        <a href="<?= site_url('pkl/lapor') ?>" class="mt-4 flex items-center justify-between gap-3 rounded-lg border border-green-200 bg-green-50 px-4 py-3 text-sm text-green-900 transition hover:bg-green-100 sm:px-5">
+        <a href="<?= site_url('pkl/lapor') ?>" class="peringatan peringatan-sukses mt-4 items-center justify-between transition-colors hover:bg-emerald-100">
             <span><b>Sudah diterima perusahaan?</b> Ajuan PKL-mu sudah disetujui dan perusahaan menerimamu — laporkan di sini supaya sekolah membuatkan Surat Balasan.</span>
-            <span class="shrink-0 font-bold">Lapor &rarr;</span>
+            <span class="flex shrink-0 items-center gap-1 font-semibold">Lapor<?= ikon('arrow-right', 'h-4 w-4') ?></span>
         </a>
     <?php endif; ?>
 </div>

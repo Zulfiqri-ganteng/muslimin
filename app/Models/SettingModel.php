@@ -20,6 +20,7 @@ class SettingModel extends Model
         'biodata_open', 'biodata_tutup',
         'school_postal_code', 'school_accreditation', 'supervisor_name', 'supervisor_nip',
         'tema_warna', 'tema_sidebar', // tema tampilan admin (rombak tampilan F3; Libraries\Tampilan)
+        'profil_singkat', 'wa_bantuan', 'tautan_aplikasi', // situs publik (rombak publik P2b; kosong = tidak tampil)
     ];
 
     protected $useTimestamps = true;

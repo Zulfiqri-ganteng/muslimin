@@ -132,13 +132,24 @@ document.addEventListener('alpine:init', function () {
                 return this.siswaList.filter(function (s) { return s.nama.toLowerCase().indexOf(q) !== -1; });
             },
 
+            // Kelas = label kit publik.css (dipakai bersama kelas "label" di view).
             lencana: function (status) {
                 return {
-                    menunggu: { teks: 'Menunggu ACC', kelas: 'bg-blue-100 text-blue-700' },
-                    disetujui: { teks: 'Disetujui', kelas: 'bg-green-100 text-green-700' },
-                    perbaikan: { teks: 'Perlu perbaikan', kelas: 'bg-amber-100 text-amber-800' },
-                    ditolak: { teks: 'Ditolak — boleh ajukan lagi', kelas: 'bg-red-100 text-red-700' },
+                    menunggu: { teks: 'Menunggu ACC', kelas: 'label-merek' },
+                    disetujui: { teks: 'Disetujui', kelas: 'label-buka' },
+                    perbaikan: { teks: 'Perlu perbaikan', kelas: 'label-kuning' },
+                    ditolak: { teks: 'Ditolak — boleh ajukan lagi', kelas: 'label-merah' },
                 }[status] || { teks: '', kelas: '' };
+            },
+
+            // Pengganti ekspresi ber-fungsi global di view (Alpine versi CSP menolak Boolean/String di atribut).
+            /** Saran perusahaan: "Kota · alamat" (yang kosong dilewati). */
+            lokasiSaran: function (s) {
+                return [s.kota, s.alamat].filter(function (v) { return teks(v) !== ''; }).join(' · ');
+            },
+            /** Baris ringkasan teman di langkah Periksa: "Kelas X · HP 08…" (HP kosong → "—"). */
+            infoTeman: function (t) {
+                return (t.kelas ? 'Kelas ' + t.kelas + ' · ' : '') + 'HP ' + (teks(t.hp) || '—');
             },
 
             /** "2026-10-12" → "12 Oktober 2026" (kosong bila tanggal tak sah). */

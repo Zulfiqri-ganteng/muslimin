@@ -1,70 +1,93 @@
 <?= $this->extend('public/layout') ?>
 <?= $this->section('content') ?>
+<?php
+/**
+ * Jadwal pelajaran per kelas (pola 4c rombak publik P5): pembuka · saringan dalam kartu (pilih kelas → langsung tampil lewat
+ * [data-kirim-otomatis] di portal.js; tombol Tampilkan bila JS mati) · tabel jadwal (kolom jam terkunci saat digeser di HP,
+ * kolom hari ini disorot) · Unduh PDF. Data & logika sama dengan versi lama.
+ *
+ * @var array<int, string> $kelasOpts @var int $kelasId @var array|null $kelas @var list<array> $hari @var list<array> $jam
+ * @var array<string, array> $grid "hariId-jamId" => sel @var array $now (hariId, hariNama, label)
+ */
+$hariIni = (int) ($now['hariId'] ?? 0);
+$waktu   = static fn (array $j): string => substr((string) $j['waktu_mulai'], 0, 5) . '–' . substr((string) $j['waktu_selesai'], 0, 5);
+?>
+<?= view('public/partials/pembuka', [
+    'remah' => [['Siswa', site_url('siswa')], ['Jadwal kelas', null]],
+    'ilu'   => 'jadwal-kelas',
+    'label' => 'Layanan siswa',
+    'judul' => 'Jadwal kelas',
+    'ket'   => 'Jadwal pelajaran mingguan setiap kelas. Pilih kelas untuk melihat jadwalnya, lalu unduh PDF bila perlu.',
+], ['saveData' => false]) ?>
 
-<h1 class="text-2xl font-extrabold text-slate-800 mb-1">Jadwal Pelajaran per Kelas</h1>
-<p class="text-slate-500 mb-5">Pilih kelas untuk melihat jadwal mingguannya.</p>
-
-<form method="get" class="flex flex-col sm:flex-row gap-2 max-w-xl mb-6">
-    <select name="kelas_id" onchange="this.form.submit()" class="flex-1 rounded-xl border border-slate-300 px-4 py-3 text-sm focus:border-brand-500 focus:ring-2 focus:ring-brand-500/20 outline-none">
-        <option value="">— Pilih kelas —</option>
-        <?php foreach ($kelasOpts as $id => $label): ?>
-            <option value="<?= $id ?>" <?= $kelasId === (int) $id ? 'selected' : '' ?>><?= esc($label) ?></option>
-        <?php endforeach; ?>
-    </select>
-    <noscript><button class="rounded-xl bg-brand-700 text-white font-bold px-6 py-3 text-sm">Lihat</button></noscript>
-</form>
-
-<?php if (! $kelas): ?>
-    <div class="bg-white rounded-2xl border border-slate-200 shadow-sm p-10 text-center text-slate-400">Belum ada kelas dipilih.</div>
-<?php elseif (empty($jam) || empty($hari)): ?>
-    <div class="bg-white rounded-2xl border border-slate-200 shadow-sm p-10 text-center text-slate-400">Jadwal untuk kelas ini belum tersedia.</div>
-<?php else: ?>
-    <div class="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
-        <div class="px-5 py-4 border-b border-slate-100 flex items-center justify-between gap-3">
-            <div class="flex items-center gap-2">
-                <h2 class="font-bold text-slate-800"><?= esc($kelas['nama_kelas']) ?></h2>
-                <span class="text-xs rounded-full px-2.5 py-0.5 font-semibold <?= $kelas['shift'] === 'pagi' ? 'bg-amber-100 text-amber-700' : 'bg-brand-100 text-brand-700' ?>"><?= ucfirst($kelas['shift']) ?></span>
+<section class="isi-halaman">
+    <div class="wadah space-y-6">
+        <form method="get" class="kartu kartu-isi saringan">
+            <div class="min-w-0 flex-1 sm:max-w-md">
+                <label class="lbl" for="pilih-kelas">Kelas</label>
+                <select id="pilih-kelas" name="kelas_id" class="inp" data-kirim-otomatis required>
+                    <option value="">Pilih kelas</option>
+                    <?php foreach ($kelasOpts as $id => $label): ?>
+                        <option value="<?= (int) $id ?>"<?= $kelasId === (int) $id ? ' selected' : '' ?>><?= esc($label) ?></option>
+                    <?php endforeach; ?>
+                </select>
             </div>
-            <a href="<?= site_url('jadwal-kelas/' . $kelasId . '/pdf') ?>" target="_blank" class="inline-flex items-center gap-1.5 rounded-lg bg-red-600 hover:bg-red-700 text-white text-xs font-semibold px-3 py-2 transition">
-                <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M19 7h-3V4a2 2 0 00-2-2H10a2 2 0 00-2 2v3H5a2 2 0 00-2 2v6a2 2 0 002 2h1v3a1 1 0 001 1h10a1 1 0 001-1v-3h1a2 2 0 002-2V9a2 2 0 00-2-2z"/></svg>
-                Cetak PDF
-            </a>
-        </div>
-        <div class="overflow-x-auto">
-            <table class="w-full text-sm border-collapse">
-                <thead>
-                    <tr class="bg-slate-50 text-slate-500">
-                        <th class="px-3 py-3 text-left font-semibold w-32 border-b border-slate-100">Jam</th>
-                        <?php foreach ($hari as $h): $td = (int) $h['id'] === ($now['hariId'] ?? 0); ?><th class="px-2 py-3 text-center font-semibold border-b border-l border-slate-100 min-w-[110px] <?= $td ? 'bg-brand-100 text-brand-700' : '' ?>"><?= esc($h['nama']) ?><?= $td ? ' •' : '' ?></th><?php endforeach; ?>
-                    </tr>
-                </thead>
-                <tbody>
-                    <?php foreach ($jam as $j): ?>
-                        <?php if ($j['is_istirahat']): ?>
-                            <tr><td colspan="<?= count($hari) + 1 ?>" class="bg-amber-50 text-amber-700 text-center text-xs font-semibold py-1.5 border-b border-slate-100 tracking-wider">ISTIRAHAT (<?= esc(substr($j['waktu_mulai'], 0, 5)) ?>–<?= esc(substr($j['waktu_selesai'], 0, 5)) ?>)</td></tr>
-                        <?php else: ?>
-                            <tr class="hover:bg-slate-50/50">
-                                <td class="px-3 py-2 border-b border-slate-100 whitespace-nowrap align-top">
-                                    <span class="font-bold text-brand-700">Jam ke <?= esc($j['jam_ke']) ?></span><br>
-                                    <span class="text-slate-400 text-xs"><?= esc(substr($j['waktu_mulai'], 0, 5)) ?>–<?= esc(substr($j['waktu_selesai'], 0, 5)) ?></span>
-                                </td>
-                                <?php foreach ($hari as $h): $c = $grid[$h['id'] . '-' . $j['id']] ?? null; $td = (int) $h['id'] === ($now['hariId'] ?? 0); ?>
-                                    <td class="p-1.5 border-b border-l border-slate-100 align-top <?= $td ? 'bg-brand-50/60' : '' ?>">
-                                        <?php if ($c): ?>
-                                            <div class="rounded-lg bg-brand-50 border border-brand-100 p-1.5">
-                                                <p class="font-semibold text-brand-700 text-sm leading-tight"><?= esc($c['nama_mapel']) ?></p>
-                                                <p class="text-[11px] text-slate-500"><?= esc($c['guru_nama']) ?></p>
-                                            </div>
-                                        <?php endif; ?>
-                                    </td>
+            <button type="submit" class="tombol tombol-utama h-11"><?= ikon('search') ?>Tampilkan</button>
+            <a href="<?= site_url('jadwal-guru') ?>" class="tombol tombol-teks sm:ml-auto sm:self-center">Lihat jadwal mengajar guru<?= ikon('arrow-right', 'h-4 w-4') ?></a>
+        </form>
+
+        <?php if (! $kelas): ?>
+            <div class="kartu"><div class="kosong"><span class="kosong-ikon"><?= ikon('calendar-week') ?></span><p class="kosong-judul">Belum ada kelas dipilih</p><p class="kosong-teks">Pilih kelas di atas untuk melihat jadwal pelajaran mingguannya.</p></div></div>
+        <?php elseif (empty($jam) || empty($hari)): ?>
+            <div class="kartu"><div class="kosong"><span class="kosong-ikon"><?= ikon('calendar-week') ?></span><p class="kosong-judul">Jadwal belum tersedia</p><p class="kosong-teks">Jadwal untuk kelas <?= esc($kelas['nama_kelas']) ?> belum disusun sekolah.</p></div></div>
+        <?php else: ?>
+            <div>
+                <div class="hasil-kepala">
+                    <div class="flex flex-wrap items-center gap-2.5">
+                        <h2 class="judul-sub"><?= esc($kelas['nama_kelas']) ?></h2>
+                        <span class="label <?= $kelas['shift'] === 'pagi' ? 'label-kuning' : 'label-merek' ?>">Shift <?= esc(ucfirst((string) $kelas['shift'])) ?></span>
+                    </div>
+                    <a href="<?= site_url('jadwal-kelas/' . $kelasId . '/pdf') ?>" target="_blank" rel="noopener" class="tombol tombol-garis"><?= ikon('file-pdf') ?>Unduh PDF</a>
+                </div>
+                <div class="jadwal-bungkus">
+                    <table class="jadwal">
+                        <thead>
+                            <tr>
+                                <th scope="col" class="jadwal-jam">Jam</th>
+                                <?php foreach ($hari as $h): $td = (int) $h['id'] === $hariIni; ?>
+                                    <th scope="col"<?= $td ? ' class="jadwal-hari-ini"' : '' ?>><?= esc($h['nama']) ?><?= $td ? '<span class="jadwal-tanda">Hari ini</span>' : '' ?></th>
                                 <?php endforeach; ?>
                             </tr>
-                        <?php endif; ?>
-                    <?php endforeach; ?>
-                </tbody>
-            </table>
-        </div>
+                        </thead>
+                        <tbody>
+                            <?php foreach ($jam as $j): ?>
+                                <?php if ($j['is_istirahat']): ?>
+                                    <tr class="jadwal-istirahat"><td colspan="<?= count($hari) + 1 ?>">Istirahat · <?= esc($waktu($j)) ?></td></tr>
+                                <?php else: ?>
+                                    <tr>
+                                        <th scope="row" class="jadwal-jam">
+                                            <span class="jadwal-jam-ke">Jam ke-<?= esc($j['jam_ke']) ?></span>
+                                            <span class="jadwal-waktu"><?= esc($waktu($j)) ?></span>
+                                        </th>
+                                        <?php foreach ($hari as $h): $c = $grid[$h['id'] . '-' . $j['id']] ?? null; ?>
+                                            <td class="jadwal-sel<?= (int) $h['id'] === $hariIni ? ' jadwal-hari-ini' : '' ?>">
+                                                <?php if ($c): ?>
+                                                    <div class="jadwal-isi">
+                                                        <span class="jadwal-mapel"><?= esc($c['nama_mapel']) ?></span>
+                                                        <span class="jadwal-ket"><?= esc($c['guru_nama']) ?></span>
+                                                    </div>
+                                                <?php endif; ?>
+                                            </td>
+                                        <?php endforeach; ?>
+                                    </tr>
+                                <?php endif; ?>
+                            <?php endforeach; ?>
+                        </tbody>
+                    </table>
+                </div>
+                <p class="hint">Di HP, geser tabel ke samping untuk melihat hari lainnya.</p>
+            </div>
+        <?php endif; ?>
     </div>
-<?php endif; ?>
-
+</section>
 <?= $this->endSection() ?>

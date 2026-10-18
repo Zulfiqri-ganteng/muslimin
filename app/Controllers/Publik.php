@@ -2,8 +2,10 @@
 
 namespace App\Controllers;
 
+use App\Libraries\LayananPublik;
 use App\Models\AbsensiGuruModel;
 use App\Models\AbsensiHariModel;
+use App\Models\FotoSekolahModel;
 use App\Models\GuruModel;
 use App\Models\HariModel;
 use App\Models\JadwalModel;
@@ -34,28 +36,16 @@ class Publik extends BaseController
     {
         $setting = $this->settings->get();
 
-        // "v2" = penanda bentuk cache; dinaikkan saat kunci 'siswa' ditambahkan
-        // agar setelah deploy tidak ada cache bentuk lama yang terbaca.
-        $stats = cache('publik_stats_v2');
-        if (! $stats) {
-            $stats = [
-                'guru'  => (new GuruModel())->where('bukan_pengajar', 0)->countAllResults(),
-                'kelas' => (new KelasModel())->countAllResults(),
-                'mapel' => (new MataPelajaranModel())->countAllResults(),
-                'siswa' => (new SiswaModel())->where('status', 'aktif')->countAllResults(),
-            ];
-            cache()->save('publik_stats_v2', $stats, 1800);
-        }
-
         return view('public/home', [
             'title'      => 'Beranda',
             'setting'    => $setting,
-            'stats'      => $stats,
+            'stats'      => $this->statistik(),
             // Agregat jumlah siswa untuk grafik. Hanya angka — TIDAK pernah
             // memuat identitas siswa (data pribadi anak jangan tampil publik).
             'siswaStat'  => (new SiswaModel())->statistik(),
             'kelasOpts'  => $this->jadwalPublik($setting) ? (new KelasModel())->options() : [],
             'pengumuman' => (new PengumumanModel())->aktif(5),
+            'foto'       => $this->fotoSekolah(),
             'now'        => $this->nowContext(),
             'jadwalOn'   => $this->jadwalPublik($setting),
         ]);
@@ -124,7 +114,7 @@ class Publik extends BaseController
     {
         $setting = $this->settings->get();
         if ((int) ($setting['absensi_publik'] ?? 1) !== 1) {
-            return $this->blokir($setting);
+            return $this->blokir($setting, 'Kehadiran guru');
         }
 
         $raw     = trim((string) $this->request->getGet('tanggal'));
@@ -166,6 +156,121 @@ class Publik extends BaseController
             'tanggal'   => $tanggal, 'hariNama' => $hariNama, 'hariAktif' => $hariAktif,
             'grup'      => array_values($grup), 'ringkas' => $ringkas, 'total' => count($sessions),
             'recorded'  => $recorded, 'kerja' => $kerja,
+        ]);
+    }
+
+    /**
+     * Pencarian portal: layanan & halaman, kelas (→ jadwal kelas) dan guru (→ jadwal mengajar; hanya bila jadwal dibuka untuk umum —
+     * nama yang memang sudah tampil di halaman jadwal). Tanpa data siswa.
+     */
+    public function cari()
+    {
+        $setting = $this->settings->get();
+        $q       = mb_substr(trim((string) preg_replace('/\s+/', ' ', (string) $this->request->getGet('q'))), 0, 100);
+        $hasil   = ['layanan' => [], 'kelas' => [], 'guru' => []];
+
+        if (mb_strlen($q) >= 2) {
+            $hasil['layanan'] = LayananPublik::cari($q, $setting);
+            if ($this->jadwalPublik($setting)) {
+                $kata = array_values(array_filter(explode(' ', LayananPublik::normal($q))));
+                foreach ((new KelasModel())->options() as $id => $nama) {
+                    $teks = LayananPublik::normal((string) $nama);
+                    if ($kata !== [] && count(array_filter($kata, static fn (string $k): bool => str_contains($teks, $k))) === count($kata)) {
+                        $hasil['kelas'][] = ['id' => (int) $id, 'nama' => (string) $nama];
+                    }
+                }
+                $hasil['kelas'] = array_slice($hasil['kelas'], 0, 12);
+                $hasil['guru']  = (new GuruModel())->select('id, nama')->like('nama', $q)->orderBy('nama', 'ASC')->findAll(12);
+            }
+        }
+
+        return view('public/cari', [
+            'title'   => $q !== '' ? 'Cari "' . $q . '"' : 'Pencarian',
+            'setting' => $setting,
+            'q'       => $q,
+            'hasil'   => $hasil,
+            'jumlah'  => array_sum(array_map('count', $hasil)),
+            'saran'   => LayananPublik::unggulan($setting),
+        ]);
+    }
+
+    /** Halaman layanan per pengguna: /siswa, /guru, /orang-tua. */
+    public function kelompok(string $kunci)
+    {
+        $setting  = $this->settings->get();
+        $kelompok = LayananPublik::kelompok();
+        if (! isset($kelompok[$kunci]) || $kunci === 'sekolah') {
+            throw \CodeIgniter\Exceptions\PageNotFoundException::forPageNotFound();
+        }
+
+        return view('public/kelompok', [
+            'title'     => $kelompok[$kunci]['label'],
+            'setting'   => $setting,
+            'g'         => $kelompok[$kunci],
+            'bagian'    => LayananPublik::untukKelompok($kunci, $setting),
+            'deskripsi' => $kelompok[$kunci]['ket'],
+        ]);
+    }
+
+    /** Profil sekolah: identitas (Pengaturan Sekolah) + angka agregat + kontak. */
+    public function profil()
+    {
+        $setting = $this->settings->get();
+
+        return view('public/profil', [
+            'title'     => 'Profil Sekolah',
+            'setting'   => $setting,
+            'stats'     => $this->statistik(),
+            'siswaStat' => (new SiswaModel())->statistik(),
+            'foto'      => $this->fotoSekolah(),
+        ]);
+    }
+
+    /** Daftar pengumuman aktif (9 per halaman). */
+    public function pengumuman()
+    {
+        $setting = $this->settings->get();
+        $model   = new PengumumanModel();
+
+        return view('public/pengumuman', [
+            'title'   => 'Pengumuman',
+            'setting' => $setting,
+            'rows'    => $model->where('is_aktif', 1)->orderBy('id', 'DESC')->paginate(9, 'pg'),
+            'pager'   => $model->pager,
+            'logo'    => $this->logoUrl($setting),
+        ]);
+    }
+
+    /** Isi satu pengumuman aktif + pengumuman lain. */
+    public function pengumumanIsi($id)
+    {
+        $setting = $this->settings->get();
+        $model   = new PengumumanModel();
+        $p       = $model->where('is_aktif', 1)->find((int) $id);
+        if (! $p) {
+            throw \CodeIgniter\Exceptions\PageNotFoundException::forPageNotFound();
+        }
+
+        return view('public/pengumuman_isi', [
+            'title'     => (string) $p['judul'],
+            'setting'   => $setting,
+            'p'         => $p,
+            'lain'      => (new PengumumanModel())->where('is_aktif', 1)->where('id !=', (int) $p['id'])->orderBy('id', 'DESC')->findAll(3),
+            'logo'      => $this->logoUrl($setting),
+            'deskripsi' => mb_strimwidth(trim((string) preg_replace('/\s+/', ' ', (string) $p['isi'])), 0, 160, '…'),
+        ]);
+    }
+
+    /** Bantuan: tanya-jawab + kontak sekolah. */
+    public function bantuan()
+    {
+        $setting = $this->settings->get();
+
+        return view('public/bantuan', [
+            'title'     => 'Bantuan',
+            'setting'   => $setting,
+            'tanya'     => LayananPublik::tanyaJawab($setting),
+            'deskripsi' => 'Pertanyaan yang sering ditanyakan dan kontak ' . ($setting['school_name'] ?? 'sekolah') . '.',
         ]);
     }
 
@@ -211,14 +316,62 @@ class Publik extends BaseController
     }
 
     // ===================== HELPER =====================
+    /** Angka agregat sekolah (beranda & profil), di-cache 30 menit. "v2" = penanda bentuk cache. */
+    private function statistik(): array
+    {
+        $stats = cache('publik_stats_v2');
+        if (! $stats) {
+            $stats = [
+                'guru'  => (new GuruModel())->where('bukan_pengajar', 0)->countAllResults(),
+                'kelas' => (new KelasModel())->countAllResults(),
+                'mapel' => (new MataPelajaranModel())->countAllResults(),
+                'siswa' => (new SiswaModel())->where('status', 'aktif')->countAllResults(),
+            ];
+            cache()->save('publik_stats_v2', $stats, 1800);
+        }
+
+        return $stats;
+    }
+
+    /**
+     * Foto sekolah aktif yang berkasnya ada (+ 'url') — banner beranda, Tentang sekolah, galeri Profil. Tabel belum ada (kode sudah
+     * ditarik di server tetapi `spark migrate` belum dijalankan) → kosong, beranda tetap tampil.
+     */
+    private function fotoSekolah(): array
+    {
+        try {
+            $rows = (new FotoSekolahModel())->untukPublik();
+        } catch (\CodeIgniter\Database\Exceptions\DatabaseException) {
+            return [];
+        }
+        $hasil = [];
+        foreach ($rows as $f) {
+            $url = LayananPublik::gambar(FotoSekolahModel::FOLDER, $f['berkas']);
+            if ($url !== null) {
+                $hasil[] = $f + ['url' => $url];
+            }
+        }
+
+        return $hasil;
+    }
+
+    /** URL logo sekolah bila berkasnya ada (pengganti gambar di kartu pengumuman). */
+    private function logoUrl(array $setting): ?string
+    {
+        $logo = (string) ($setting['logo'] ?? '');
+
+        return $logo !== '' && is_file(FCPATH . 'uploads/' . $logo) ? base_url('uploads/' . rawurlencode($logo)) : null;
+    }
+
     private function jadwalPublik(array $setting): bool
     {
         return (int) ($setting['jadwal_publik'] ?? 1) === 1;
     }
 
-    private function blokir(array $setting)
+    /** Halaman informasi yang saklar privasinya dimatikan di Pengaturan Sekolah (jadwal / kehadiran guru). */
+    private function blokir(array $setting, string $halaman = 'Jadwal pelajaran')
     {
-        return view('public/jadwal_off', ['title' => 'Jadwal', 'setting' => $setting]);
+        return view('public/jadwal_off', ['title' => $halaman, 'setting' => $setting, 'halaman' => $halaman]);
     }
 
     /** Konteks "sekarang": hari & jam yang sedang berlangsung. */
