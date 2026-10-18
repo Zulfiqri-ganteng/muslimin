@@ -275,7 +275,20 @@ $js = static fn (string $berkas): string => '<script defer src="' . base_url($be
                             <input type="search" id="cari-menu-samping" class="sb-cari" placeholder="Cari menu…" autocomplete="off" x-model="cari" @keydown.enter.prevent="bukaHasilPertama()">
                         </label>
                     </li>
-                    <?php foreach ($groups as $g): ?>
+                    <?php $bagianKini = null; foreach ($groups as $g): ?>
+                        <?php
+                        // Judul bagian (KURIKULUM, LAYANAN SEKOLAH) sebelum grup pertama bagiannya; bagian '' = garis pemisah saja.
+                        // Disembunyikan saat mencari; saat menu menciut tampil sebagai garis.
+                        $bagian = $g['bagian'] ?? null;
+                        if ($bagian !== null && $bagian !== $bagianKini):
+                            $bagianKini = $bagian;
+                        ?>
+                            <?php if ($bagian === ''): ?>
+                                <li class="sb-bagian sb-bagian-garis" role="separator" x-show="cari === ''"></li>
+                            <?php else: ?>
+                                <li class="sb-bagian" x-show="cari === ''"><span class="sb-bagian-teks"><?= esc($bagian) ?></span></li>
+                            <?php endif; ?>
+                        <?php endif; ?>
                         <?php if ($g['title'] === null || count($g['items']) === 1): ?>
                             <?php foreach ($g['items'] as $it) { $renderItem($it); } ?>
                         <?php else:

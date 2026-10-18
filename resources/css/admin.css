@@ -527,6 +527,10 @@
   .sb-item-segera .sb-ikon, .sb-item-segera:hover .sb-ikon { color: var(--sb-nonaktif); }
   .sb-segera { @apply shrink-0 rounded-md px-1.5 py-0.5 text-[10px] font-semibold uppercase; background-color: var(--sb-segera-bg); color: var(--sb-segera-teks); }
   .sb-kosong { @apply px-2 py-2 text-sm; color: var(--sb-redup); }
+  /* (2026-10-19) Judul bagian di atas kelompok grup (KURIKULUM, LAYANAN SEKOLAH) — huruf kecil kapital redup seperti judul daftar
+     template; tanpa teks (.sb-bagian-garis) = garis pemisah. Saat menu menciut, judul berubah menjadi garis. */
+  .sb-bagian { @apply px-2 pt-4 pb-1 text-xs font-semibold tracking-wider uppercase select-none; color: var(--sb-redup); }
+  .sb-bagian-garis { @apply mx-2 my-3 p-0; border-top: 1px solid var(--sb-garis); }
   .sb-bawah { @apply hidden shrink-0 items-center justify-center gap-3 border-t px-3 py-3 lg:flex; background-color: var(--sb-bg); border-color: var(--sb-garis); }
   .sb-bawah-tombol { @apply inline-flex h-10 w-10 cursor-pointer items-center justify-center rounded-lg transition focus:outline-hidden focus-visible:ring-2 focus-visible:ring-brand-400; color: var(--sb-ikon); }
   .sb-bawah-tombol:hover { background-color: var(--sb-hover-bg); color: var(--sb-hover-teks); }
@@ -557,6 +561,8 @@
     [data-ciut] .sb .sb-label, [data-ciut] .sb .sb-panah, [data-ciut] .sb .sb-segera, [data-ciut] .sb .sb-kosong,
     [data-ciut] .sb .sb-daftar-kedua { display: none; }
     [data-ciut] .sb .sb-item { justify-content: center; }
+    [data-ciut] .sb .sb-bagian { margin: .75rem .5rem; padding: 0; border-top: 1px solid var(--sb-garis); }
+    [data-ciut] .sb .sb-bagian-teks { display: none; }
     [data-ciut] .sb .sb-grup-tombol[data-aktif] { background-color: var(--sb-aktif-bg); box-shadow: inset 3px 0 0 var(--sb-penanda); }
     [data-ciut] .sb .sb-grup-tombol[data-aktif] .sb-ikon { color: var(--sb-aktif-ikon); }
     /* Tanpa batang gulir saat menciut: ikon menu & ikon kaki sama-sama di tengah lajur 4rem (dulu bergeser ±15px). */

@@ -133,7 +133,12 @@ class UjiHak extends BaseCommand
         $this->cek('entri "ikut" hanya merujuk entri biasa yang ada', $ikutSalah === [], implode(' | ', $ikutSalah));
 
         $grupSidebar = array_map(static fn (array $g): ?string => $g['title'], MenuAdmin::sidebar());
-        $this->cek('urutan grup menu samping tetap (aturan urutan sidebar)', $grupSidebar === [null, 'KESISWAAN', 'GURU', 'JADWAL & ABSENSI', 'UJIAN', 'UJI KOMPETENSI (UKK)', 'PKL / PRAKERIN', 'LABORATORIUM', 'SURAT SEKOLAH', 'ARSIP & INFO', 'SISTEM'], json_encode($grupSidebar));
+        $this->cek('urutan grup menu samping tetap (aturan urutan sidebar)', $grupSidebar === [null, 'GURU', 'SUPERVISI GURU', 'JADWAL & ABSENSI', 'GURU PIKET', 'UJIAN', 'UJI KOMPETENSI (UKK)', 'BANTUAN SISWA', 'KESISWAAN', 'PKL / PRAKERIN', 'LABORATORIUM', 'SURAT SEKOLAH', 'ARSIP & INFO', 'SISTEM'], json_encode($grupSidebar));
+        $bagianSidebar = array_map(static fn (array $g): ?string => $g['bagian'], MenuAdmin::sidebar());
+        $this->cek('bagian menu samping: Dashboard, 7 grup KURIKULUM, 5 grup LAYANAN SEKOLAH, garis, Sistem', $bagianSidebar === array_merge([null], array_fill(0, 7, 'KURIKULUM'), array_fill(0, 5, 'LAYANAN SEKOLAH'), ['']), json_encode($bagianSidebar));
+        $segera = array_keys(array_filter($kat, static fn (array $e): bool => $e['segera']));
+        $this->cek('menu "Segera" tersembunyi dari tabel Hak Akses & semua itemnya bertanda Segera', $segera !== [] && array_filter($segera, static fn (string $k): bool => $kat[$k]['tampil']) === []
+            && array_filter(array_merge(...array_column(MenuAdmin::sidebar(), 'items')), static fn (array $it): bool => in_array(MenuAdmin::cariAlamat(HakPeran::rapikan((string) $it[0]))['kunci'] ?? '', $segera, true) && empty($it[4])) === [], implode(', ', $segera));
 
         $tak = [];
         foreach ($this->ruteAdmin() as [$verb, $pola, $contoh]) {
@@ -330,7 +335,8 @@ class UjiHak extends BaseCommand
             'master_kelas' => 'boleh', 'surat' => 'kelola', 'akun' => 'kelola', 'ujian_akar' => 'kelola', 'ngawur' => 'kelola',
         ]]);
         $menu = HakPeran::peran($kode)['menu'];
-        $this->cek('simpanMenu membuang level yang tak sah, entri admin/ikut, dan kunci asing', $menu === ['master_siswa' => 'lihat', 'jadwal' => 'kelola', 'ujian_asas' => 'lihat', 'pkl' => 'boleh'], json_encode($menu));
+        $urutMenu = $menu; ksort($urutMenu);
+        $this->cek('simpanMenu membuang level yang tak sah, entri admin/ikut, dan kunci asing', $urutMenu === ['jadwal' => 'kelola', 'master_siswa' => 'lihat', 'pkl' => 'boleh', 'ujian_asas' => 'lihat'], json_encode($menu));
         $this->cek('Lihat: GET boleh, POST ditolak; Kelola: keduanya boleh', HakPeran::boleh($kode, 'admin/master/siswa') && HakPeran::boleh($kode, 'admin/master/siswa/12/ubah')
             && ! HakPeran::boleh($kode, 'admin/master/siswa', 'POST') && ! HakPeran::boleh($kode, 'admin/master/siswa/12', 'post')
             && HakPeran::boleh($kode, 'admin/jadwal', 'POST') && HakPeran::boleh($kode, 'admin/cetak/jadwal-kelas/3/pdf') && HakPeran::boleh($kode, 'admin/kurikulum/dashboard'));
@@ -345,12 +351,12 @@ class UjiHak extends BaseCommand
         $this->cek('hak rinci: Balasan bisa dibuat, jenis lain tidak; ACC ajuan PKL boleh; kunci asing dibuang', HakPeran::boleh($kode, 'admin/surat/balasan') && ! HakPeran::boleh($kode, 'admin/surat/asts')
             && HakPeran::boleh($kode, 'admin/pkl/12/acc', 'POST') && HakPeran::hakDaftar($kode) === ['acc', 'surat_buat:balasan_pkl'] && HakPeran::boleh($kode, 'admin/surat/balasan/laporan'));
         $this->cek('Kelola Akun & Hak Akses tetap khusus Admin', ! HakPeran::boleh($kode, 'admin/akun') && ! HakPeran::boleh($kode, 'admin/hak-akses'));
-        $this->cek('beranda otomatis = menu pertama yang boleh (Data Siswa)', HakPeran::beranda($kode) === 'admin/master/siswa', HakPeran::beranda($kode));
+        $this->cek('beranda otomatis = menu pertama yang boleh (Jadwal KBM — bagian Kurikulum di atas)', HakPeran::beranda($kode) === 'admin/jadwal', HakPeran::beranda($kode));
 
         $u = HakPeran::ubahPeran($kode, ['label' => self::LABEL_UJI . ' 2', 'beranda' => 'admin/jadwal', 'api' => true, 'ringkas' => 'uji 2'], $adm);
         $this->cek('ubah peran: nama, beranda, aplikasi → API hanya modul yang dipegang (pkl, surat)', $u['ok'] && HakPeran::label($kode) === self::LABEL_UJI . ' 2' && HakPeran::beranda($kode) === 'admin/jadwal'
             && HakPeran::aksesApi($kode) === ['pkl', 'surat'] && HakPeran::bolehApiAlamat($kode, 'pkl/ajuan') && ! HakPeran::bolehApiAlamat($kode, 'admin/master/siswa'), json_encode(HakPeran::aksesApi($kode)));
-        $this->cek('beranda yang tak boleh dibuka diganti otomatis', HakPeran::ubahPeran($kode, ['label' => self::LABEL_UJI . ' 2', 'beranda' => 'admin/akun', 'api' => true], $adm)['ok'] && HakPeran::beranda($kode) === 'admin/master/siswa');
+        $this->cek('beranda yang tak boleh dibuka diganti otomatis', HakPeran::ubahPeran($kode, ['label' => self::LABEL_UJI . ' 2', 'beranda' => 'admin/akun', 'api' => true], $adm)['ok'] && HakPeran::beranda($kode) === 'admin/jadwal');
         $this->cek('Admin & peran sistem tidak bisa diubah/dihapus', ! HakPeran::ubahPeran('admin', ['label' => 'Admin X'], $adm)['ok'] && ! HakPeran::hapusPeran('operator', $adm)['ok'] && ! HakPeran::hapusPeran('admin', $adm)['ok']);
         $this->cek('kodeDari: "Waka Kesiswaan" → waka_kesiswaan; diawali angka → peran_…; ≤ 20 huruf', HakPeran::kodeDari('Waka Kesiswaan') === 'waka_kesiswaan' && HakPeran::kodeDari('123 Abc') === 'peran_123_abc'
             && strlen(HakPeran::kodeDari('Wakil Kepala Sekolah Bidang Kurikulum Dan Lainnya')) <= 20 && preg_match(HakPeran::POLA_KODE, HakPeran::kodeDari('Tata Usaha')) === 1);

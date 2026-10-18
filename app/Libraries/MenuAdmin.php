@@ -16,8 +16,10 @@ namespace App\Libraries;
  *   - umum  : terbuka bagi semua peran yang login (Profil Saya).
  * Entri 'ikut' (tersembunyi dari tabel Hak Akses) memakai level TERTINGGI dari entri yang diikutinya, mis. akar admin/ujian.
  *
- * URUTAN GRUP & ITEM mengikuti alur kerja sekolah (aturan urutan sidebar): data induk (Kesiswaan, Guru) → kurikulum & jadwal →
- * ujian → UKK → PKL → laboratorium → tata usaha (surat, arsip) → sistem; dalam grup: data acuan → proses → laporan → pengaturan.
+ * URUTAN GRUP & ITEM mengikuti alur kerja sekolah (aturan urutan sidebar). Klien = Waka Kurikulum, jadi (2026-10-19) grup dibagi
+ * dalam BAGIAN berjudul di menu samping: KURIKULUM (Guru → Supervisi → Jadwal & Absensi → Guru Piket → Ujian → UKK → Bantuan
+ * Siswa) lalu LAYANAN SEKOLAH (Kesiswaan → PKL → laboratorium → surat → arsip), terakhir Sistem (dipisah garis). Dalam grup: data
+ * acuan → proses → laporan → pengaturan. Fitur yang disepakati tetapi belum dibangun tetap tampil (opsi 'segera').
  */
 final class MenuAdmin
 {
@@ -34,7 +36,9 @@ final class MenuAdmin
      * Grup (urutan menu samping) → entri. Entri: [kunci => [label, jenis, item menu samping, opsi]].
      * Item menu samping: [url, label, ikon, persis?, segera?]; kosong = halaman tanpa menu sendiri. Ikon = nama Flowbite Icons
      * (helper ikon(); nama baru: tambahkan di resources/ikon.json lalu npm run vendor — php spark dev:cek-ui memeriksa semua ikon menu).
-     * Opsi: awalan (default = url item), ikut, api, ket (keterangan di Hak Akses).
+     * Opsi: awalan (default = url item), ikut, api, ket (keterangan di Hak Akses), segera (fitur belum dibangun: semua itemnya tampil
+     * redup bertanda "Segera" dan entrinya disembunyikan dari tabel Hak Akses — jadi hanya Admin yang melihatnya).
+     * Grup: judul (kunci buka/tutup = md5 judul, JANGAN diganti), ikon, bagian (judul bagian di atas grup; '' = garis pemisah saja).
      *
      * @return list<array{judul: ?string, entri: array<string, array>}>
      */
@@ -54,14 +58,8 @@ final class MenuAdmin
             ['judul' => null, 'entri' => [
                 'dashboard' => ['Dashboard', self::MENU, [['admin/dashboard', 'Dashboard', 'chart-pie']]],
             ]],
-            ['judul' => 'KESISWAAN', 'ikon' => 'users-group', 'entri' => [
-                'master_siswa'   => ['Data Siswa', self::MENU, [['admin/master/siswa', 'Data Siswa', 'user-graduate']]],
-                'master_kelas'   => ['Kelas', self::MENU, [['admin/master/kelas', 'Kelas', 'chalkboard']]],
-                'master_jurusan' => ['Jurusan', self::MENU, [['admin/master/jurusan', 'Jurusan', 'school']]],
-                'biodata'        => ['Isian Biodata Siswa', self::MENU, [['admin/biodata', 'Isian Biodata Siswa', 'profile-card']]],
-                'tahun_ajaran'   => ['Tahun Ajaran', self::MENU, [], ['awalan' => ['admin/master/tahun-ajaran'], 'ket' => 'Halaman tanpa menu samping (admin/master/tahun-ajaran).']],
-            ]],
-            ['judul' => 'GURU', 'ikon' => 'chalkboard-user', 'entri' => [
+            // ===== BAGIAN KURIKULUM =====
+            ['judul' => 'GURU', 'bagian' => 'KURIKULUM', 'ikon' => 'chalkboard-user', 'entri' => [
                 'master_guru'         => ['Guru', self::MENU, [['admin/master/guru', 'Guru', 'users']]],
                 'master_jabatan'      => ['Jabatan', self::MENU, [['admin/master/jabatan', 'Jabatan', 'badge-check']]],
                 'master_ketersediaan' => ['Ketersediaan Guru', self::MENU, [['admin/master/ketersediaan', 'Ketersediaan Guru', 'calendar-edit']]],
@@ -69,20 +67,34 @@ final class MenuAdmin
                 'master_pengampu'     => ['Penugasan', self::MENU, [['admin/master/pengampu', 'Penugasan', 'clipboard-check']]],
                 'skbm'                => ['SKBM', self::MENU, [['admin/skbm', 'SKBM', 'file-lines']], ['ket' => 'Sumber ceklis Koreksi honor (data beban mengajar).']],
             ]],
-            ['judul' => 'JADWAL & ABSENSI', 'ikon' => 'calendar-month', 'entri' => [
+            // Supervisi akademik guru — menunggu format lembar supervisi dari sekolah (2026-10-19).
+            ['judul' => 'SUPERVISI GURU', 'bagian' => 'KURIKULUM', 'ikon' => 'clipboard-check', 'entri' => [
+                'supervisi' => ['Supervisi Guru', self::MENU, [
+                    ['admin/supervisi/instrumen', 'Instrumen Supervisi', 'list'],
+                    ['admin/supervisi/jadwal', 'Jadwal Supervisi', 'calendar-week'],
+                    ['admin/supervisi/penilaian', 'Penilaian Supervisi', 'file-pen'],
+                    ['admin/supervisi/rekap', 'Rekap Supervisi', 'chart-mixed'],
+                ], ['awalan' => ['admin/supervisi'], 'segera' => true]],
+            ]],
+            ['judul' => 'JADWAL & ABSENSI', 'bagian' => 'KURIKULUM', 'ikon' => 'calendar-month', 'entri' => [
                 'master_mapel'  => ['Mata Pelajaran', self::MENU, [['admin/master/mapel', 'Mata Pelajaran', 'book']]],
                 'master_hari'   => ['Hari', self::MENU, [['admin/master/hari', 'Hari', 'calendar-month']]],
                 'master_jam'    => ['Jam Pelajaran', self::MENU, [['admin/master/jam', 'Jam Pelajaran', 'clock']]],
                 'jadwal'        => ['Jadwal KBM', self::MENU, [['admin/jadwal', 'Jadwal KBM', 'grid']], ['awalan' => ['admin/jadwal', 'admin/cetak/jadwal-kelas', 'admin/kurikulum/dashboard'], 'ket' => 'Termasuk cetak jadwal kelas dan dasbor kurikulum.']],
                 'jadwal_guru'   => ['Jadwal Guru', self::MENU, [['admin/jadwal-guru', 'Jadwal Guru', 'chalkboard-user']], ['awalan' => ['admin/jadwal-guru', 'admin/cetak/jadwal-guru']]],
                 'absensi'       => ['Absensi Guru', self::MENU, [['admin/absensi', 'Absensi Guru', 'fingerprint']], ['ket' => 'Termasuk pesan WA, tarif transport, dan laporan harian.']],
-                'absensi_piket' => ['Jadwal Piket', self::MENU, [['admin/absensi/piket', 'Jadwal Piket', 'calendar-plus']]],
                 'bentrok'       => ['Deteksi Bentrok', self::MENU, [['admin/kurikulum/bentrok', 'Deteksi Bentrok', 'exclamation-circle']]],
                 'rekap_beban'   => ['Rekap Beban', self::MENU, [['admin/kurikulum/rekap', 'Rekap Beban', 'chart']], ['awalan' => ['admin/kurikulum/rekap', 'admin/cetak/rekap']]],
                 'rekap_absensi' => ['Rekap Absensi', self::MENU, [['admin/absensi/rekap', 'Rekap Absensi', 'chart-line-up']]],
                 'fase'          => ['Fase Kurikulum', self::MENU, [], ['awalan' => ['admin/master/fase'], 'ket' => 'Halaman tanpa menu samping (admin/master/fase).']],
             ]],
-            ['judul' => 'UJIAN', 'ikon' => 'file-pen', 'entri' => [
+            // Guru piket: jadwal piket (pindahan dari Jadwal & Absensi, alamat tetap) + buku keterlambatan siswa.
+            ['judul' => 'GURU PIKET', 'bagian' => 'KURIKULUM', 'ikon' => 'clock', 'entri' => [
+                'absensi_piket'       => ['Jadwal Piket', self::MENU, [['admin/absensi/piket', 'Jadwal Piket', 'calendar-plus']]],
+                'keterlambatan'       => ['Catat Keterlambatan', self::MENU, [['admin/keterlambatan', 'Catat Keterlambatan', 'user-edit']], ['segera' => true]],
+                'keterlambatan_rekap' => ['Rekap Keterlambatan', self::MENU, [['admin/keterlambatan/rekap', 'Rekap Keterlambatan', 'chart']], ['segera' => true]],
+            ]],
+            ['judul' => 'UJIAN', 'bagian' => 'KURIKULUM', 'ikon' => 'file-pen', 'entri' => [
                 'ujian_asts1' => ['ASTS 1', self::MENU, [['admin/ujian/asts1', 'ASTS 1', 'file-pen']]],
                 'ujian_asas'  => ['ASAS', self::MENU, [['admin/ujian/asas', 'ASAS', 'file-pen']]],
                 'ujian_asts2' => ['ASTS 2', self::MENU, [['admin/ujian/asts2', 'ASTS 2', 'file-pen']]],
@@ -96,7 +108,7 @@ final class MenuAdmin
                 ]],
                 'honor_pengaturan' => ['Pengaturan Honor', self::MENU, [['admin/honor/pengaturan', 'Pengaturan Honor', 'adjustments-horizontal']], ['awalan' => ['admin/honor']]],
             ]],
-            ['judul' => 'UJI KOMPETENSI (UKK)', 'ikon' => 'award', 'entri' => [
+            ['judul' => 'UJI KOMPETENSI (UKK)', 'bagian' => 'KURIKULUM', 'ikon' => 'award', 'entri' => [
                 'ukk_paket'    => ['Paket Soal', self::MENU, [['admin/master/paket-soal-ukk', 'Paket Soal', 'layers']]],
                 'ukk_tempat'   => ['Tempat Uji', self::MENU, [['admin/master/tempat-uji', 'Tempat Uji', 'map-pin']]],
                 'ukk_penguji'  => ['Penguji Eksternal', self::MENU, [['admin/master/penguji-eksternal', 'Penguji Eksternal', 'address-book']]],
@@ -107,7 +119,20 @@ final class MenuAdmin
                 'ukk_sertifikat' => ['Sertifikat', self::MENU, [['admin/sertifikat-ukk', 'Sertifikat', 'award']]],
                 'ukk_rekap'    => ['Rekap UKK', self::MENU, [['admin/laporan-ukk', 'Rekap UKK', 'chart-mixed']]],
             ]],
-            ['judul' => 'PKL / PRAKERIN', 'ikon' => 'briefcase', 'entri' => [
+            // Beasiswa — menunggu contoh format dari sekolah (2026-10-19). Beasiswa Sekolah nanti menjadi sumber bebas biaya PKL.
+            ['judul' => 'BANTUAN SISWA', 'bagian' => 'KURIKULUM', 'ikon' => 'wallet', 'entri' => [
+                'beasiswa_sekolah'    => ['Beasiswa Sekolah', self::MENU, [['admin/beasiswa/sekolah', 'Beasiswa Sekolah', 'school']], ['segera' => true]],
+                'beasiswa_pemerintah' => ['Beasiswa Pemerintah', self::MENU, [['admin/beasiswa/pemerintah', 'Beasiswa Pemerintah', 'award']], ['segera' => true]],
+            ]],
+            // ===== BAGIAN LAYANAN SEKOLAH =====
+            ['judul' => 'KESISWAAN', 'bagian' => 'LAYANAN SEKOLAH', 'ikon' => 'users-group', 'entri' => [
+                'master_siswa'   => ['Data Siswa', self::MENU, [['admin/master/siswa', 'Data Siswa', 'user-graduate']]],
+                'master_kelas'   => ['Kelas', self::MENU, [['admin/master/kelas', 'Kelas', 'chalkboard']]],
+                'master_jurusan' => ['Jurusan', self::MENU, [['admin/master/jurusan', 'Jurusan', 'school']]],
+                'biodata'        => ['Isian Biodata Siswa', self::MENU, [['admin/biodata', 'Isian Biodata Siswa', 'profile-card']]],
+                'tahun_ajaran'   => ['Tahun Ajaran', self::MENU, [], ['awalan' => ['admin/master/tahun-ajaran'], 'ket' => 'Halaman tanpa menu samping (admin/master/tahun-ajaran).']],
+            ]],
+            ['judul' => 'PKL / PRAKERIN', 'bagian' => 'LAYANAN SEKOLAH', 'ikon' => 'briefcase', 'entri' => [
                 // Modul: isi menu (Laporan, Tanda Tangan, Pengaturan, …) tampil menurut hak rinci PKL (PklHak).
                 'pkl' => ['PKL / Prakerin', self::MODUL, [
                     ['admin/pkl', 'Beranda PKL', 'briefcase', true],
@@ -120,7 +145,7 @@ final class MenuAdmin
                     ['admin/pkl/pengaturan', 'Pengaturan PKL', 'adjustments-horizontal'],
                 ], ['api' => ['pkl'], 'ket' => 'Ajuan PKL siswa, surat izin, biaya, tanda tangan. Aksi di dalamnya diatur di bagian "PKL & Surat".']],
             ]],
-            ['judul' => 'LABORATORIUM', 'ikon' => 'desktop-pc', 'entri' => [
+            ['judul' => 'LABORATORIUM', 'bagian' => 'LAYANAN SEKOLAH', 'ikon' => 'desktop-pc', 'entri' => [
                 'master_lab'       => ['Laboratorium', self::MENU, [['admin/master/lab', 'Laboratorium', 'desktop-pc']], ['awalan' => ['admin/master/lab', 'admin/lab-gambar/lab']]],
                 'master_aset'      => ['Aset / Inventaris', self::MENU, [['admin/master/aset', 'Aset / Inventaris', 'archive']], ['awalan' => ['admin/master/aset', 'admin/lab-gambar/aset']]],
                 'master_sparepart' => ['Sparepart', self::MENU, [['admin/master/sparepart', 'Sparepart', 'tools']], ['awalan' => ['admin/master/sparepart', 'admin/lab-gambar/sparepart']]],
@@ -137,18 +162,18 @@ final class MenuAdmin
             // SURAT SEKOLAH (docs/DESAIN-SURAT-SEKOLAH.md): Daftar Surat + satu menu per jenis surat (dari SuratJenis). Jenis yang
             // halamannya BELUM dibangun (tidak di SuratJenis::SIAP) tampil redup bertanda "Segera". Siapa melihat item jenis =
             // hak rinci per jenis (PklHak).
-            ['judul' => 'SURAT SEKOLAH', 'ikon' => 'envelope', 'entri' => [
+            ['judul' => 'SURAT SEKOLAH', 'bagian' => 'LAYANAN SEKOLAH', 'ikon' => 'envelope', 'entri' => [
                 'surat' => ['Surat Sekolah', self::MODUL, array_merge(
                     [['admin/surat', 'Daftar Surat', 'envelope', true]],
                     $jenisSurat
                 ), ['api' => ['surat'], 'ket' => 'Daftar Surat dan surat per jenis. Buat/ACC/Unduh tiap jenis diatur di bagian "PKL & Surat".']],
             ]],
-            ['judul' => 'ARSIP & INFO', 'ikon' => 'folder-open', 'entri' => [
+            ['judul' => 'ARSIP & INFO', 'bagian' => 'LAYANAN SEKOLAH', 'ikon' => 'folder-open', 'entri' => [
                 'dokumen'    => ['Arsip Dokumen', self::MENU, [['admin/dokumen', 'Arsip Dokumen', 'folder-open']]],
                 'pengumuman' => ['Pengumuman', self::MENU, [['admin/pengumuman', 'Pengumuman', 'bullhorn']]],
                 'foto_sekolah' => ['Foto Sekolah', self::MENU, [['admin/foto-sekolah', 'Foto Sekolah', 'image']], ['ket' => 'Foto untuk banner beranda dan halaman Profil di situs publik.']],
             ]],
-            ['judul' => 'SISTEM', 'ikon' => 'cog', 'entri' => [
+            ['judul' => 'SISTEM', 'bagian' => '', 'ikon' => 'cog', 'entri' => [
                 'pengaturan_sekolah' => ['Pengaturan Sekolah', self::MENU, [['admin/settings', 'Pengaturan Sekolah', 'cog']]],
                 'akun'      => ['Kelola Akun', self::ADMIN, [['admin/akun', 'Kelola Akun', 'user-settings']], ['ket' => 'Khusus Admin: membuat akun dan memilih perannya.']],
                 'hak_akses' => ['Hak Akses', self::ADMIN, [['admin/hak-akses', 'Hak Akses', 'lock']], ['ket' => 'Khusus Admin: mengatur siapa boleh apa.']],
@@ -163,8 +188,8 @@ final class MenuAdmin
     private static ?array $katalog = null;
 
     /**
-     * Seluruh entri: kunci => [kunci, label, grup, jenis, item, awalan, ikut, api, ket, tampil].
-     * 'tampil' = muncul di tabel Hak Akses (entri 'ikut' disembunyikan).
+     * Seluruh entri: kunci => [kunci, label, grup, jenis, item, awalan, ikut, api, ket, segera, tampil].
+     * 'tampil' = muncul di tabel Hak Akses (entri 'ikut' & 'segera' disembunyikan).
      *
      * @return array<string, array<string, mixed>>
      */
@@ -189,7 +214,8 @@ final class MenuAdmin
                     'ikut'   => $opsi['ikut'] ?? [],
                     'api'    => $opsi['api'] ?? [],
                     'ket'    => (string) ($opsi['ket'] ?? ''),
-                    'tampil' => ($opsi['ikut'] ?? []) === [],
+                    'segera' => (bool) ($opsi['segera'] ?? false),
+                    'tampil' => ($opsi['ikut'] ?? []) === [] && ! ($opsi['segera'] ?? false),
                 ];
             }
         }
@@ -225,10 +251,10 @@ final class MenuAdmin
     }
 
     /**
-     * Menu samping dalam bentuk yang dipakai layouts/admin: [['title' => ?string, 'items' => [[url, label, ikon, persis?, segera?], …]], …].
-     * Belum disaring per peran (layout menyaringnya dengan HakAkses::boleh).
+     * Menu samping dalam bentuk yang dipakai layouts/admin: [['title' => ?string, 'bagian' => ?string, 'items' => [[url, label, ikon,
+     * persis?, segera?], …]], …]. Belum disaring per peran (layout menyaringnya dengan HakAkses::boleh).
      *
-     * @return list<array{title: ?string, items: list<array>}>
+     * @return list<array{title: ?string, bagian: ?string, items: list<array>}>
      */
     public static function sidebar(): array
     {
@@ -237,12 +263,16 @@ final class MenuAdmin
             $items = [];
             foreach ($g['entri'] as $e) {
                 foreach ($e[2] as $it) {
+                    if ($e[3]['segera'] ?? false) {
+                        $it[3] ??= false;
+                        $it[4]   = true;
+                    }
                     $items[] = $it;
                 }
             }
             if ($items !== []) {
                 // 'ikon' = ikon grup di menu samping (baris grup ber-ikon + panah, pola template Flowbite Admin).
-                $out[] = ['title' => $g['judul'], 'ikon' => (string) ($g['ikon'] ?? 'grid'), 'items' => $items];
+                $out[] = ['title' => $g['judul'], 'bagian' => $g['bagian'] ?? null, 'ikon' => (string) ($g['ikon'] ?? 'grid'), 'items' => $items];
             }
         }
 

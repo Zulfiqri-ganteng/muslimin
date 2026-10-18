@@ -109,7 +109,8 @@
     "user-headset",
     "user-settings",
     "users",
-    "users-group"
+    "users-group",
+    "wallet"
   ],
   "solid": [
     "address-book",
@@ -169,6 +170,7 @@
     "user-settings",
     "users",
     "users-group",
+    "wallet",
     "whatsapp"
   ]
 }
