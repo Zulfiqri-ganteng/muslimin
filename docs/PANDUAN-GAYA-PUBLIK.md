@@ -4,7 +4,8 @@ Sumber kebenaran: `resources/css/publik.css` (Tailwind v4) hasil rombak publik P
 **rumah.pendidikan.go.id** dengan identitas sekolah sendiri. Dokumen ini menerjemahkan token & komponennya untuk aplikasi Flutter
 `flutter-muslimin`. Bila nilai di sini berbeda dengan `publik.css`, **`publik.css` yang benar**.
 
-> Jangan ubah `AppTheme` aplikasi tanpa izin pemilik proyek. Dokumen ini acuan saat layar baru dibuat / tema diselaraskan.
+> 2026-10-19: user MENGIZINKAN rombak total tampilan aplikasi (termasuk `AppTheme`) lewat `C:\flutter-muslimin\BLUEPRINT-TAMPILAN.md`
+> — dokumen ini acuan halaman sebelum login di sana. Di luar tugas itu, `AppTheme` tetap tidak diubah tanpa izin.
 
 ## 1. Prinsip
 - **Tenang & resmi**: latar putih / abu sangat muda bergantian, satu warna utama (lilac) untuk yang bisa diketuk, garis tipis 1 px,
@@ -46,7 +47,8 @@ Warna status (latar / teks) — satu label per status, tanpa titik:
 Kontras: semua pasangan di atas ≥ 4,5:1 (AA). Aplikasi publik **tanpa mode gelap** (acuan pun tanpa mode gelap).
 
 ## 3. Huruf
-Inter (variable), semua judul **semibold (600)**. Ukuran (sp) — layar HP pakai kolom kiri:
+**Plus Jakarta Sans** (sejak 2026-10-19 huruf seluruh situs publik & admin; aplikasi sudah memasangnya di `assets/fonts/`), semua judul
+**semibold (600)**. Ukuran (sp) — layar HP pakai kolom kiri:
 | Peran | HP | Tablet/lebar | Tinggi baris |
 |---|---|---|---|
 | Judul halaman (H1) | 24 | 32 | 1,25 |

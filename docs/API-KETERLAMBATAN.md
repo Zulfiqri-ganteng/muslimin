@@ -1,8 +1,9 @@
 # API Catat Keterlambatan Siswa (Android) — `/api/v1/keterlambatan…`
 
 Dibuat 2026-10-19 (Guru Piket **G5**). Cermin menu web **KURIKULUM → Guru Piket → Catat Keterlambatan** (`admin/keterlambatan`)
-dan **Rekap Keterlambatan** (`admin/keterlambatan/rekap`) untuk aplikasi Android. Layar Flutter BELUM dibangun — dokumen ini
-kontraknya (untuk AI/pengembang Android).
+dan **Rekap Keterlambatan** (`admin/keterlambatan/rekap`) untuk aplikasi Android. Layar Flutter BELUM dibangun — kontrak sisi Flutter
+(layar, tahap T0–T5, jebakan): `C:\flutter-muslimin\BLUEPRINT-KETERLAMBATAN.md` + contoh respons nyata (data fiktif)
+`C:\flutter-muslimin\test\fixtures\keterlambatan\` (ditulis 2026-10-19). Tampilan: `C:\flutter-muslimin\BLUEPRINT-TAMPILAN.md`.
 
 ## Prinsip
 - Controller tipis `App\Controllers\Api\Keterlambatan`; SEMUA aturan dari library yang sama dengan web:
