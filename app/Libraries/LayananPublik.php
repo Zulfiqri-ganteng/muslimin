@@ -331,6 +331,30 @@ final class LayananPublik
         return array_values($hasil);
     }
 
+    /**
+     * Paragraf "Tentang sekolah" (beranda web & API aplikasi): profil singkat dari Pengaturan Sekolah; bila kosong, kalimat faktual
+     * dari data sekolah (jenjang, kota, tahun pelajaran, jumlah siswa/guru/kelas, akreditasi).
+     *
+     * @param array{siswa?: int, guru?: int, kelas?: int} $stats
+     */
+    public static function tentang(array $setting, array $stats): string
+    {
+        $tentang = trim((string) ($setting['profil_singkat'] ?? ''));
+        if ($tentang !== '') {
+            return $tentang;
+        }
+        $sekolah = (string) ($setting['school_name'] ?? 'Sekolah');
+        $tahun   = trim((string) ($setting['academic_year'] ?? ''));
+        $jenjang = trim((string) ($setting['school_level'] ?? ''));
+        $kota    = trim((string) ($setting['city'] ?? ''));
+        $angka   = static fn ($n): string => number_format((int) $n, 0, ',', '.');
+
+        return $sekolah . ($jenjang !== '' || $kota !== '' ? ' adalah ' . ($jenjang !== '' ? $jenjang : 'sekolah') . ($kota !== '' ? ' di ' . $kota : '') : '') . '.'
+            . ($tahun !== '' ? ' Pada tahun pelajaran ' . $tahun . ' sekolah ini' : ' Sekolah ini')
+            . ' memiliki ' . $angka($stats['siswa'] ?? 0) . ' siswa aktif, ' . $angka($stats['guru'] ?? 0) . ' guru, dan ' . $angka($stats['kelas'] ?? 0) . ' kelas.'
+            . (! empty($setting['school_accreditation']) ? ' Terakreditasi ' . $setting['school_accreditation'] . '.' : '');
+    }
+
     /** URL ilustrasi HD berwarna (public/assets/img/ilustrasi/{nama}.svg) — ubin, kartu layanan, laci daftar layanan, banner. */
     public static function ilustrasi(string $nama): string
     {

@@ -2,7 +2,9 @@
 
 namespace App\Controllers\Api;
 
+use App\Libraries\LayananPublik;
 use App\Models\AbsensiGuruModel;
+use App\Models\FotoSekolahModel;
 use App\Models\AbsensiHariModel;
 use App\Models\GuruModel;
 use App\Models\HariModel;
@@ -206,6 +208,159 @@ class Publik extends BaseApiController
     }
 
     // ===================== HELPER =====================
+
+    /**
+     * GET publik/beranda — SEMUA bahan beranda konsep rumah.pendidikan.go.id untuk aplikasi (B1, 2026-10-19), dari sumber yang SAMA
+     * dengan situs publik web (Libraries\LayananPublik, Foto Sekolah, Pengumuman, Pengaturan Sekolah): identitas & "Tentang sekolah",
+     * foto (banner & galeri), sorotan banner, 4 kelompok pengguna, semua layanan + status buka/tutup, layanan unggulan, statistik &
+     * grafik siswa (angka saja), pengumuman berkategori + gambar, tanya-jawab, pilihan kelas cek jadwal, saklar. Tanpa token.
+     * Kontrak: docs/API-BERANDA-MENU.md.
+     */
+    public function beranda()
+    {
+        $s       = (new SettingModel())->get();
+        $stats   = $this->statistikSekolah();
+        $layanan = LayananPublik::semua($s);
+        $jadwal  = $this->jadwalOn($s);
+        $ilu     = static fn (?string $n): ?string => $n ? LayananPublik::ilustrasi($n) : null;
+        $foto    = $this->fotoPublik();
+        $tahun   = trim((string) ($s['academic_year'] ?? ''));
+        $nama    = (string) ($s['school_name'] ?? '');
+        $wa      = trim((string) ($s['wa_bantuan'] ?? ''));
+        $waNo    = $wa !== '' ? \App\Libraries\PklWa::nomorWa($wa) : null;
+
+        // Sorotan banner = urutan web: foto bertanda banner → kotak sambutan → layanan unggulan yang SEDANG DIBUKA.
+        $sorotan = [];
+        foreach ($foto as $f) {
+            if ($f['banner']) {
+                $sorotan[] = ['jenis' => 'foto', 'judul' => $f['judul'], 'teks' => $f['keterangan'], 'gambar' => $f['gambar'], 'tautan' => $f['tautan'], 'ilustrasi' => null, 'aksi' => null];
+            }
+        }
+        $sorotan[] = ['jenis' => 'sambutan', 'label' => $tahun !== '' ? 'Tahun Pelajaran ' . $tahun : 'Selamat datang', 'judul' => 'Selamat datang di ' . $nama,
+            'teks' => 'Jadwal pelajaran, pengumuman, pengajuan PKL, dan profil sekolah dalam satu tempat.', 'gambar' => null, 'tautan' => null,
+            'ilustrasi' => $ilu('sekolah'), 'aksi' => ['label' => 'Jelajahi layanan', 'layanan' => null]];
+        foreach (['pkl' => ['PKL / Prakerin', 'Pengajuan tempat PKL sedang dibuka', 'Ajukan sekarang'], 'lapor_pkl' => ['PKL / Prakerin', 'Sudah diterima perusahaan? Laporkan di sini', 'Lapor diterima'],
+            'biodata' => ['Data siswa', 'Pengisian biodata siswa sedang dibuka', 'Isi biodata'], 'kesediaan' => ['Untuk guru', 'Formulir kesediaan mengajar sedang dibuka', 'Isi formulir']] as $k => [$label, $judul, $aksi]) {
+            if (($layanan[$k]['status'] ?? null) === LayananPublik::BUKA) {
+                $sorotan[] = ['jenis' => 'layanan', 'label' => $label, 'judul' => $judul, 'teks' => $layanan[$k]['ket'], 'gambar' => null, 'tautan' => $layanan[$k]['url'],
+                    'ilustrasi' => $ilu($layanan[$k]['ilu'] ?? null), 'aksi' => ['label' => $aksi, 'layanan' => $k]];
+            }
+        }
+
+        // Kelompok pengguna (ubin "Jelajahi layanan") + isi halaman kelompok: bagian berjudul → kunci layanan (urut seperti web).
+        $kelompok = [];
+        foreach (LayananPublik::kelompok() as $k => $g) {
+            $bagian = [];
+            if ($k !== 'sekolah') {
+                foreach (LayananPublik::untukKelompok($k, $s) as $judul => $daftar) {
+                    $bagian[] = ['judul' => (string) $judul, 'layanan' => array_column($daftar, 'kunci')];
+                }
+            }
+            $kelompok[] = ['kunci' => $k, 'label' => $g['label'], 'ringkas' => $g['ringkas'], 'ket' => $g['ket'], 'ikon' => $g['ikon'],
+                'ilustrasi' => $ilu($g['ilu']), 'url_web' => $g['url'], 'bagian' => $bagian];
+        }
+
+        $pengumuman = array_map(static fn (array $p): array => [
+            'id'        => (int) $p['id'],
+            'judul'     => (string) $p['judul'],
+            'kategori'  => (string) ($p['kategori'] ?? 'Pengumuman'),
+            'ringkas'   => mb_strimwidth(trim((string) preg_replace('/\s+/', ' ', (string) $p['isi'])), 0, 150, '…'),
+            'isi'       => (string) $p['isi'],
+            'gambar'    => LayananPublik::gambar(PengumumanModel::FOLDER, $p['gambar'] ?? null),
+            'tanggal'   => LayananPublik::tanggal((string) ($p['created_at'] ?? ''), false),
+            'created_at' => $p['created_at'] ?? null,
+            'url_web'   => site_url('pengumuman/' . (int) $p['id']),
+        ], (new PengumumanModel())->aktif(5));
+
+        return $this->ok([
+            'sekolah' => [
+                'nama'            => $nama,
+                'jenjang'         => $s['school_level'] ?? null,
+                'logo'            => $this->uploadUrl($s['logo'] ?? null),
+                'tahun_pelajaran' => $tahun !== '' ? $tahun : null,
+                'tentang'         => LayananPublik::tentang($s, $stats),
+                'alamat'          => $s['address'] ?? null,
+                'kota'            => $s['city'] ?? null,
+                'kode_pos'        => $s['school_postal_code'] ?? null,
+                'telepon'         => $s['phone'] ?? null,
+                'email'           => $s['email'] ?? null,
+                'website'         => $s['website'] ?? null,
+                'akreditasi'      => $s['school_accreditation'] ?? null,
+                'kepala_sekolah'  => $s['headmaster_name'] ?? null,
+                'wa_bantuan'      => $waNo !== null ? ['nomor' => $wa, 'url' => 'https://wa.me/' . $waNo] : null,
+                'tautan_aplikasi' => trim((string) ($s['tautan_aplikasi'] ?? '')) ?: null,
+            ],
+            'sorotan'     => $sorotan,
+            'foto'        => $foto,
+            'kelompok'    => $kelompok,
+            'layanan'     => array_values(array_map(static fn (array $l): array => [
+                'kunci'     => $l['kunci'],
+                'judul'     => $l['judul'],
+                'ket'       => $l['ket'],
+                'ikon'      => $l['ikon'],
+                'ilustrasi' => $ilu($l['ilu'] ?? null),
+                'url'       => $l['url'],
+                'luar'      => (bool) $l['luar'],
+                'kelompok'  => $l['kelompok'],
+                'bagian'    => (object) $l['bagian'],
+                'status'    => $l['status'], // 'buka' | 'tutup' | null (selalu ada)
+            ], $layanan)),
+            'unggulan'    => array_column(LayananPublik::unggulan($s), 'kunci'),
+            'statistik'   => $stats,
+            'grafik_siswa' => (new SiswaModel())->statistik(),
+            'pengumuman'  => $pengumuman,
+            'tanya_jawab' => array_map(static fn (array $t): array => ['tanya' => $t[0], 'jawab' => $t[1]], LayananPublik::tanyaJawab($s)),
+            'jadwal'      => [
+                'buka'  => $jadwal,
+                'kelas' => $jadwal ? array_map(static fn ($id, $n) => ['id' => (int) $id, 'nama' => $n], array_keys((new KelasModel())->options()), (new KelasModel())->options()) : [],
+            ],
+            'saklar'      => [
+                'form_open'      => (int) ($s['form_open'] ?? 1) === 1,
+                'jadwal_publik'  => $jadwal,
+                'absensi_publik' => (int) ($s['absensi_publik'] ?? 1) === 1,
+                'dokumen_publik' => (int) ($s['dokumen_publik'] ?? 0) === 1,
+            ],
+            'sekarang'    => $this->nowContext() + ['waktu' => date('Y-m-d H:i:s')],
+            'web'         => ['beranda' => site_url('/'), 'bantuan' => site_url('bantuan'), 'profil' => site_url('profil'), 'pengumuman' => site_url('pengumuman')],
+        ], 'Bahan beranda.');
+    }
+
+    /** @return array{guru: int, kelas: int, mapel: int, siswa: int} angka agregat (sama dengan beranda web; di-cache 30 menit) */
+    private function statistikSekolah(): array
+    {
+        $stats = cache('publik_stats_v2');
+        if (! $stats) {
+            $stats = [
+                'guru'  => (new GuruModel())->where('bukan_pengajar', 0)->countAllResults(),
+                'kelas' => (new KelasModel())->countAllResults(),
+                'mapel' => (new MataPelajaranModel())->countAllResults(),
+                'siswa' => (new SiswaModel())->where('status', 'aktif')->countAllResults(),
+            ];
+            cache()->save('publik_stats_v2', $stats, 1800);
+        }
+
+        return $stats;
+    }
+
+    /** @return list<array{id: int, judul: string, keterangan: ?string, gambar: string, tautan: ?string, banner: bool}> foto aktif yang berkasnya ada */
+    private function fotoPublik(): array
+    {
+        try {
+            $rows = (new FotoSekolahModel())->untukPublik();
+        } catch (\CodeIgniter\Database\Exceptions\DatabaseException) {
+            return [];
+        }
+        $out = [];
+        foreach ($rows as $f) {
+            $url = LayananPublik::gambar(FotoSekolahModel::FOLDER, $f['berkas']);
+            if ($url !== null) {
+                $out[] = ['id' => (int) $f['id'], 'judul' => (string) $f['judul'], 'keterangan' => ($f['keterangan'] ?? '') !== '' ? (string) $f['keterangan'] : null,
+                    'gambar' => $url, 'tautan' => ($f['tautan'] ?? '') !== '' ? (string) $f['tautan'] : null, 'banner' => (int) $f['tampil_banner'] === 1];
+            }
+        }
+
+        return $out;
+    }
 
     private function jadwalOn(array $setting): bool
     {

@@ -4,7 +4,9 @@ namespace App\Controllers\Api;
 
 use App\Libraries\ApiAuth;
 use App\Libraries\HakAkses;
+use App\Libraries\HakPeran;
 use App\Libraries\LoginThrottle;
+use App\Libraries\MenuAdmin;
 use App\Models\AdminModel;
 use App\Models\ApiTokenModel;
 use App\Models\BiometricCredentialModel;
@@ -180,6 +182,51 @@ class Auth extends BaseApiController
     public function me()
     {
         return $this->ok(['admin' => $this->publicAdmin($this->admin())]);
+    }
+
+    /**
+     * GET auth/menu — menu panel admin untuk akun ini (B2, 2026-10-19): SAMA dengan menu samping web (Libraries\MenuAdmin::sidebar(),
+     * bagian KURIKULUM / LAYANAN SEKOLAH, grup, ikon Flowbite, item "Segera") dan disaring aturan hak yang sama (HakAkses::boleh).
+     * Aplikasi menyusun drawer dari sini; item yang layarnya belum ada di aplikasi ditampilkan "Segera" oleh aplikasi.
+     * Kontrak: docs/API-BERANDA-MENU.md.
+     */
+    public function menu()
+    {
+        $peran = (string) ($this->admin()['role'] ?? '');
+        $grup  = [];
+        foreach (MenuAdmin::sidebar() as $g) {
+            $item = [];
+            foreach ($g['items'] as $it) {
+                if (! HakAkses::boleh($peran, (string) $it[0])) {
+                    continue;
+                }
+                $e      = MenuAdmin::cariAlamat(HakPeran::rapikan((string) $it[0]));
+                $item[] = [
+                    'kunci'      => $e['kunci'] ?? null,
+                    'label'      => (string) $it[1],
+                    'ikon'       => (string) $it[2],
+                    'alamat_web' => (string) $it[0],
+                    'segera'     => (bool) ($it[4] ?? false),
+                    'level'      => HakAkses::levelAlamat($peran, (string) $it[0]) ?? (HakPeran::peran($peran)['penuh'] ?? false ? MenuAdmin::KELOLA : null),
+                    'api'        => $e['api'] ?? [],
+                ];
+            }
+            if ($item !== []) {
+                $grup[] = [
+                    'judul'  => $g['title'] !== null ? MenuAdmin::namaGrup((string) $g['title']) : null,
+                    'bagian' => $g['bagian'] ?? null,
+                    'ikon'   => (string) $g['ikon'],
+                    'item'   => $item,
+                ];
+            }
+        }
+
+        return $this->ok([
+            'peran'       => $peran,
+            'peran_label' => HakAkses::label($peran),
+            'akses_api'   => HakAkses::aksesApi($peran),
+            'grup'        => $grup,
+        ], 'Menu untuk akun ini.');
     }
 
     public function logout()

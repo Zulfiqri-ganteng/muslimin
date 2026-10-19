@@ -81,7 +81,7 @@ $itemAktif = static fn (array $it): bool => $urlAktif !== '' && $it[0] === $urlA
 
 // Remah roti otomatis: Beranda (di ui_remah) › Grup › Menu › judul halaman (bila beda dengan nama menunya). Halaman beranda: tanpa remah.
 $judulHalaman = (string) ($title ?? 'Panel Admin');
-$namaGrup     = static fn (string $t): string => strtr(mb_convert_case(mb_strtolower($t), MB_CASE_TITLE), ['(Ukk)' => '(UKK)', 'Pkl ' => 'PKL ']);
+$namaGrup     = static fn (string $t): string => \App\Libraries\MenuAdmin::namaGrup($t);
 $remah        = [];
 foreach ($groups as $g) {
     foreach ($g['items'] as $it) {

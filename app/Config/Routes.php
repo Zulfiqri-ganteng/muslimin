@@ -762,6 +762,8 @@ $routes->group('api/v1', ['namespace' => 'App\Controllers\Api', 'filter' => 'cor
 
     // ---------- PUBLIK (tanpa token) ----------
     $routes->get('home', 'Publik::home');
+    // Beranda lengkap konsep rumah pendidikan (B1) — sumber sama dengan situs publik; docs/API-BERANDA-MENU.md
+    $routes->get('publik/beranda', 'Publik::beranda');
     $routes->get('absensi', 'Publik::absensi');
     // Statistik siswa (agregat saja — tanpa identitas siswa)
     $routes->get('statistik/siswa', 'Publik::statistikSiswa');
@@ -779,6 +781,7 @@ $routes->group('api/v1', ['namespace' => 'App\Controllers\Api', 'filter' => 'cor
     // ---------- ADMIN (butuh token) ----------
     $routes->group('', ['filter' => 'apiauth'], static function ($routes) {
         $routes->get('auth/me', 'Auth::me');
+        $routes->get('auth/menu', 'Auth::menu'); // menu panel admin akun ini = menu samping web tersaring hak (B2)
         $routes->post('auth/logout', 'Auth::logout');
 
         // Kelola login sidik jari (butuh sesi aktif)

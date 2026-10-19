@@ -22,16 +22,8 @@ $logoB    = (string) ($setting['logo'] ?? '');
 $logo     = $logoB !== '' && is_file(FCPATH . 'uploads/' . $logoB) ? base_url('uploads/' . rawurlencode($logoB)) : null;
 $ringkas  = static fn (string $t, int $n = 150): string => mb_strimwidth(trim((string) preg_replace('/\s+/', ' ', $t)), 0, $n, '…');
 
-// Tentang sekolah: profil singkat dari Pengaturan; bila kosong, kalimat faktual dari data sekolah.
-$tentang = trim((string) ($setting['profil_singkat'] ?? ''));
-if ($tentang === '') {
-    $jenjang = trim((string) ($setting['school_level'] ?? ''));
-    $kota    = trim((string) ($setting['city'] ?? ''));
-    $tentang = $sekolah . ($jenjang !== '' || $kota !== '' ? ' adalah ' . ($jenjang !== '' ? $jenjang : 'sekolah') . ($kota !== '' ? ' di ' . $kota : '') : '') . '.'
-        . ($tahun !== '' ? ' Pada tahun pelajaran ' . $tahun . ' sekolah ini' : ' Sekolah ini')
-        . ' memiliki ' . $angka($stats['siswa'] ?? 0) . ' siswa aktif, ' . $angka($stats['guru'] ?? 0) . ' guru, dan ' . $angka($stats['kelas'] ?? 0) . ' kelas.'
-        . (! empty($setting['school_accreditation']) ? ' Terakreditasi ' . $setting['school_accreditation'] . '.' : '');
-}
+// Tentang sekolah: profil singkat dari Pengaturan; bila kosong, kalimat faktual dari data sekolah (sama dengan API aplikasi).
+$tentang = LayananPublik::tentang($setting, $stats);
 
 // Sorotan banner (acuan: banner geser berisi program & berita terbaru): foto sekolah dulu, lalu kotak sorotan.
 $slaid = [];

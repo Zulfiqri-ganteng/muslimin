@@ -225,6 +225,12 @@ final class MenuAdmin
         return self::$katalog = $out;
     }
 
+    /** Judul grup untuk ditampilkan (menu samping web & API aplikasi): "UJI KOMPETENSI (UKK)" → "Uji Kompetensi (UKK)". */
+    public static function namaGrup(string $judul): string
+    {
+        return strtr(mb_convert_case(mb_strtolower($judul), MB_CASE_TITLE), ['(Ukk)' => '(UKK)', 'Pkl ' => 'PKL ']);
+    }
+
     public static function entri(string $kunci): ?array
     {
         return self::katalog()[$kunci] ?? null;
