@@ -73,6 +73,7 @@ class UjiKeterlambatan extends BaseCommand
             $this->ujiWa();
             $this->ujiHalaman();
             $this->ujiApi();
+            $this->ujiManual();
         } catch (\Throwable $e) {
             $this->cek('tanpa galat fatal', false, get_class($e) . ': ' . $e->getMessage() . ' @ ' . $e->getFile() . ':' . $e->getLine());
         } finally {
@@ -655,6 +656,215 @@ class UjiKeterlambatan extends BaseCommand
         [$k2] = $this->api('guru_piket', 'detail', [], [], $id);
         $this->cek('DELETE {id} → 200, lalu detail → 404', $k === 200 && $k2 === 404);
         $this->cek('Audit Log mencatat "(via aplikasi)"', $this->db->table('audit_log')->where('tabel', 'keterlambatan_siswa')->where('record_id', $id)->like('deskripsi', '(via aplikasi)')->countAllResults() >= 3);
+    }
+
+    // =================================================================
+    // 6. Siswa BELUM TERDAFTAR (dicatat manual) + tautkan ke Data Siswa — pustaka, WA, halaman, API
+    // =================================================================
+
+    private function ujiManual(): void
+    {
+        $this->bagian('Siswa belum terdaftar (manual) & tautkan');
+        if (! $this->db->fieldExists('manual', 'keterlambatan_siswa')) {
+            $this->cek('kolom manual & hp_ortu ada (php spark migrate)', false);
+
+            return;
+        }
+        $buku  = new Keterlambatan();
+        $hari  = date('Y-m-d');
+        $kmrn  = date('Y-m-d', strtotime('-1 day'));
+        $lusa  = date('Y-m-d', strtotime('-2 day'));
+        $saja  = ['id' => null, 'nama' => 'ZZUJI Guru Piket'];
+        $guru  = $buku->pilihanGuru();
+        $kelas = $buku->pilihanKelas();
+        // Siswa sasaran Tautkan: siswa aktif berkelas tanpa catatan apa pun pada 3 hari uji (agar data asli tak tersentuh).
+        $s = null;
+        foreach ($this->db->table('siswa s')->select('s.id, s.nama, s.nis, s.kelas_id, s.ortu_telepon, s.no_hp_wali, k.nama_kelas')->join('kelas k', 'k.id = s.kelas_id')
+            ->where('s.deleted_at', null)->where('s.status', 'aktif')->orderBy('s.id', 'ASC')->limit(10, 20)->get()->getResultArray() as $c) {
+            if ($this->db->table('keterlambatan_siswa')->where('siswa_id', $c['id'])->whereIn('tanggal', [$hari, $kmrn, $lusa])->countAllResults() === 0) {
+                $s = $c;
+                break;
+            }
+        }
+        if ($s === null || count($guru) < 1 || count($kelas) < 2) {
+            $this->cek('data uji manual tersedia (siswa sasaran, guru, 2 kelas)', false);
+
+            return;
+        }
+        $g      = $guru[0];
+        $kA     = (int) $s['kelas_id'];
+        $kB     = (int) (array_values(array_filter($kelas, static fn (array $k): bool => $k['id'] !== $kA))[0]['id']);
+        $this->hpAsli[(int) $s['id']] ??= ['ortu_telepon' => $s['ortu_telepon'], 'no_hp_wali' => $s['no_hp_wali']];
+        $this->db->table('siswa')->where('id', $s['id'])->update(['ortu_telepon' => null, 'no_hp_wali' => null]);
+        $dasar = ['tanggal' => $hari, 'guru_id' => $g['id'], 'manual' => '1', 'kelas_id' => $kA];
+
+        // --- catat manual ---
+        $this->ingat($r1 = $buku->catat(['nama_siswa' => '  zzuji   budi santoso ', 'jam' => '07:10', 'hp_ortu' => '0812-1111-0000', 'siswa_id' => $s['id']] + $dasar, $saja));
+        $row = $r1['ok'] ? $buku->cari($r1['id']) : null;
+        $this->cek('catat manual → HURUF BESAR & spasi rapi, manual=1, siswa_id kosong (siswa_id kiriman diabaikan), kelas & shift dari daftar kelas, HP 08…', $row !== null
+            && $row['nama_siswa'] === 'ZZUJI BUDI SANTOSO' && (int) $row['manual'] === 1 && $row['siswa_id'] === null && (int) $row['kelas_id'] === $kA
+            && $row['nama_kelas'] === $s['nama_kelas'] && $row['hp_ortu'] === '081211110000' && $row['tahun_ajaran'] === Keterlambatan::tahunAjaran() && str_contains($r1['pesan'], 'belum terdaftar'), json_encode([$r1, $row]));
+        $tolak = [
+            'nama 2 huruf'       => [['nama_siswa' => 'ZZ'] + $dasar, 'nama_siswa'],
+            'nama berangka'      => [['nama_siswa' => 'ZZUJI 123'] + $dasar, 'nama_siswa'],
+            'tanpa kelas'        => [['nama_siswa' => 'ZZUJI ANI', 'kelas_id' => 0] + $dasar, 'kelas_id'],
+            'kelas tak ada'      => [['nama_siswa' => 'ZZUJI ANI', 'kelas_id' => 99999999] + $dasar, 'kelas_id'],
+            'HP berhuruf'        => [['nama_siswa' => 'ZZUJI ANI', 'hp_ortu' => '0812abc'] + $dasar, 'hp_ortu'],
+            'HP telepon rumah'   => [['nama_siswa' => 'ZZUJI ANI', 'hp_ortu' => '021 555 1234'] + $dasar, 'hp_ortu'],
+        ];
+        $salah = [];
+        foreach ($tolak as $judul => [$d, $kolom]) {
+            $r = $buku->catat($d, $saja);
+            $this->ingat($r);
+            if ($r['ok'] || ($r['kode'] ?? 0) !== 422 || ! isset($r['errors'][$kolom])) {
+                $salah[] = $judul;
+            }
+        }
+        $r = $buku->catat(['nama_siswa' => 'ZZUJI ANI', 'guru_id' => 0] + $dasar, $saja);
+        $this->ingat($r);
+        $this->cek('isian manual tidak sah → 422 + kolomnya: ' . implode(', ', array_keys($tolak)) . '; tanpa guru piket juga ditolak', $salah === [] && ! $r['ok'], 'lolos/salah: ' . implode(', ', $salah));
+        $r  = $buku->catat(['nama_siswa' => 'Zzuji Budi Santoso', 'jam' => '07:30'] + $dasar, $saja);
+        $this->ingat($r);
+        $this->ingat($r2 = $buku->catat(['nama_siswa' => 'ZZUJI BUDI SANTOSO', 'kelas_id' => $kB] + $dasar, $saja));
+        $this->cek('nama + kelas sama, hari sama (beda huruf besar/kecil) → 409 "sudah tercatat"; nama sama di kelas lain → boleh', ! $r['ok'] && $r['kode'] === 409
+            && str_contains($r['pesan'], 'sudah tercatat') && $r2['ok'], json_encode([$r, $r2]));
+        $r = $buku->catat(['nama_siswa' => mb_strtolower((string) $s['nama'])] + $dasar, $saja);
+        $this->ingat($r);
+        $this->cek('nama = siswa aktif TERDAFTAR di kelas yang sama → 422 + siswa_terdaftar (harus dipilih dari pencarian)', ! $r['ok'] && $r['kode'] === 422
+            && (int) ($r['siswa_terdaftar']['id'] ?? 0) === (int) $s['id'] && str_contains($r['pesan'], 'sudah terdaftar'), json_encode($r));
+
+        // --- cari ---
+        $h  = $buku->cariSiswa('zzuji budi', $hari, 15, true);
+        $m  = array_values(array_filter($h, static fn (array $x): bool => $x['manual'] && (int) $x['kelas_id'] === $kA))[0] ?? [];
+        $h0 = $buku->cariSiswa('zzuji budi', $hari);
+        $hs = $buku->cariSiswa((string) $s['nis'], $hari, 15, true);
+        $this->cek('cari + manual: saran siswa belum terdaftar (id null, manual, kelas, jumlah, HP terakhir, tercatat hari ini); tanpa manual → tidak ada; siswa terdaftar membawa manual=false & kelas_id', $m !== []
+            && $m['id'] === null && $m['nama'] === 'ZZUJI BUDI SANTOSO' && $m['kelas'] === $s['nama_kelas'] && $m['jumlah'] === 1 && $m['hp_ortu'] === '081211110000'
+            && $m['tercatat'] === 'jam 07:10' && $h0 === [] && ($hs[0]['manual'] ?? null) === false && ($hs[0]['kelas_id'] ?? 0) === $kA, json_encode([$h, $hs[0] ?? null]));
+
+        // --- WA & isi nomor ---
+        $W  = KeterlambatanWa::class;
+        $k1 = $W::kabar($buku->cariLengkap($r1['id']), $W::PESAN_BAWAAN, 'X');
+        $k2 = $W::kabar($buku->cariLengkap($r2['id']), $W::PESAN_BAWAAN, 'X');
+        $this->cek('WA siswa manual: nomor dari catatan (sumber "isian guru piket"); tanpa nomor → "belum ada" & bisa isi', str_contains((string) $k1['url'], 'wa.me/6281211110000')
+            && $k1['sumber'] === $W::SUMBER_ISIAN && str_contains($k1['pesan'], 'Zzuji Budi Santoso') && $k2['url'] === null && $k2['alasan_tidak'] === 'Nomor HP orang tua belum ada'
+            && $W::bisaIsiHp($buku->cari($r2['id'])), json_encode([$k1, $k2]));
+        $wa = new KeterlambatanWa();
+        $a  = $wa->isiHp($r2['id'], '0812 xx');
+        $b  = $wa->isiHp($r2['id'], '0857-2222-3333');
+        $c  = $wa->isiHp($r2['id'], '0857 4444 5555');
+        $this->cek('isi nomor siswa manual: salah → 422; sah → disimpan di CATATAN (bukan Data Siswa); isian kedua → 409 (ganti lewat Ubah)', ! $a['ok'] && $b['ok']
+            && $buku->cari($r2['id'])['hp_ortu'] === '085722223333' && str_contains($b['pesan'], 'belum terdaftar') && ! $c['ok'] && $c['kode'] === 409, json_encode([$a, $b, $c]));
+
+        // --- ubah ---
+        $u   = $buku->ubah($r2['id'], ['guru_id' => $g['id'], 'jam' => '07:45', 'nama_siswa' => 'zzuji budi santosa', 'kelas_id' => $kA, 'hp_ortu' => '']);
+        $row = $buku->cari($r2['id']);
+        $this->cek('ubah manual: nama dibetulkan (huruf besar), kelas pindah, HP dikosongkan, jam berubah', $u['ok'] && $row['nama_siswa'] === 'ZZUJI BUDI SANTOSA'
+            && (int) $row['kelas_id'] === $kA && $row['nama_kelas'] === $s['nama_kelas'] && $row['hp_ortu'] === null && $row['jam'] === '07:45:00', json_encode([$u, $row]));
+        $u1 = $buku->ubah($r2['id'], ['guru_id' => $g['id'], 'nama_siswa' => 'ZZUJI BUDI SANTOSO']);
+        $u2 = $buku->ubah($r2['id'], ['guru_id' => $g['id'], 'nama_siswa' => (string) $s['nama']]);
+        $u3 = $buku->ubah($r2['id'], ['guru_id' => $g['id'], 'sanksi' => 'Push up']);
+        $this->cek('ubah manual: jadi kembar catatan lain hari itu → 409; jadi nama siswa terdaftar → 422 "Tautkan"; tanpa kunci nama/kelas → nama & kelas tetap', ! $u1['ok'] && $u1['kode'] === 409
+            && ! $u2['ok'] && $u2['kode'] === 422 && str_contains($u2['pesan'], 'Tautkan') && $u3['ok'] && $buku->cari($r2['id'])['nama_siswa'] === 'ZZUJI BUDI SANTOSA', json_encode([$u1, $u2, $u3]));
+        $biasa = $this->siswaUji[0] ?? null;
+        $idB   = $biasa ? (int) ($this->db->table('keterlambatan_siswa')->select('id')->where(['siswa_id' => $biasa['id'], 'tanggal' => $hari])->get()->getRowArray()['id'] ?? 0) : 0;
+        if ($idB > 0) {
+            $buku->ubah($idB, ['guru_id' => $g['id'], 'nama_siswa' => 'ZZUJI PALSU', 'kelas_id' => $kB, 'hp_ortu' => '081200000001']);
+            $rb = $buku->cari($idB);
+            $this->cek('ubah catatan siswa TERDAFTAR: nama/kelas/HP kiriman diabaikan', $rb['nama_siswa'] === $biasa['nama'] && $rb['hp_ortu'] === null && (int) $rb['manual'] === 0);
+        }
+
+        // --- rekap ---
+        $rk = $buku->rekap($hari, $hari);
+        $mn = array_values(array_filter($rk['siswa'], static fn (array $x): bool => str_starts_with($x['nama'], 'ZZUJI BUDI')));
+        $this->cek('rekap: siswa manual bertanda manual=true, dipisah per nama + kelas', count($mn) === 2 && $mn[0]['manual'] && $mn[1]['manual'] && $mn[0]['nis'] === '', json_encode($mn));
+        $sx = $this->baca(KeterlambatanExcel::rekap($rk, $hari, $hari, ''));
+        $col = array_column($sx->getSheet(0)->rangeToArray('B6:C' . (5 + count($rk['siswa'])), null, false, false), 1, 0);
+        $this->cek('Excel rekap: kolom NIS siswa manual = "belum terdaftar"', ($col['ZZUJI BUDI SANTOSO'] ?? '') === 'belum terdaftar', json_encode($col));
+
+        // --- tautkan ---
+        $this->ingat($t1 = $buku->catat(['nama_siswa' => 'ZZUJI CALON SISWA', 'tanggal' => $lusa, 'hp_ortu' => '081299990001'] + $dasar, $saja));
+        $this->ingat($t2 = $buku->catat(['nama_siswa' => 'ZZUJI CALON SISWA', 'tanggal' => $kmrn] + $dasar, $saja));
+        $this->ingat($t3 = $buku->catat(['nama_siswa' => 'ZZUJI CALON SISWA', 'tanggal' => $hari] + $dasar, $saja));
+        $this->ingat($tB = $buku->catat(['nama_siswa' => 'ZZUJI CALON SISWA', 'tanggal' => $kmrn, 'kelas_id' => $kB] + $dasar, $saja));
+        $this->ingat($sr = $buku->catat(['siswa_id' => $s['id'], 'tanggal' => $hari, 'guru_id' => $g['id']], $saja)); // siswa asli sudah tercatat hari ini
+        $x1 = $buku->tautkan($t1['id'], 0);
+        $x2 = $buku->tautkan($sr['id'], (int) $s['id']);
+        $x3 = $buku->tautkan($t3['id'], (int) $s['id'], false);
+        $this->cek('tautkan: siswa kosong → 422; catatan siswa terdaftar → 422; satu-satunya tanggal bentrok → 409', ! $x1['ok'] && $x1['kode'] === 422 && ! $x2['ok'] && $x2['kode'] === 422
+            && ! $x3['ok'] && $x3['kode'] === 409, json_encode([$x1, $x2, $x3]));
+        $y   = $buku->tautkan($t1['id'], (int) $s['id']);
+        $a1  = $buku->cari($t1['id']);
+        $a3  = $buku->cari($t3['id']);
+        $aB  = $buku->cari($tB['id']);
+        $hpS = $this->db->table('siswa')->select('ortu_telepon')->where('id', $s['id'])->get()->getRowArray()['ortu_telepon'];
+        $this->cek('tautkan semua: 2 catatan (lusa, kemarin) jadi milik siswa (nama & kelas Data Siswa, manual=0); hari ini dilewati (bentrok); kelas lain tak ikut; HP catatan → Data Siswa yang kosong', $y['ok']
+            && $y['jumlah'] === 2 && $y['dilewati'] === [$hari] && (int) $a1['siswa_id'] === (int) $s['id'] && (int) $a1['manual'] === 0 && $a1['nama_siswa'] === $s['nama']
+            && (int) $buku->cari($t2['id'])['siswa_id'] === (int) $s['id'] && $a3['siswa_id'] === null && (int) $a3['manual'] === 1 && $aB['siswa_id'] === null
+            && $hpS === '081299990001' && str_contains($y['pesan'], 'disimpan ke Data Siswa'), json_encode([$y, $a1, $hpS]));
+        $this->cek('setelah ditautkan: rekap siswa itu menyatu (lusa + kemarin + hari ini = 3×), WA memakai Data Siswa', (array_values(array_filter($buku->rekap($lusa, $hari)['siswa'],
+            static fn (array $x): bool => $x['nama'] === $s['nama']))[0]['jumlah'] ?? 0) === 3 && ($W::kabar($buku->cariLengkap($t1['id']), $W::PESAN_BAWAAN, 'X')['sumber'] ?? '') === 'orang tua');
+        $this->cek('Audit Log: catat manual & tautkan tercatat', $this->db->table('audit_log')->where('tabel', 'keterlambatan_siswa')->whereIn('record_id', [$r1['id'], $t1['id']])
+            ->groupStart()->like('deskripsi', 'belum terdaftar')->orLike('deskripsi', 'Tautkan')->groupEnd()->countAllResults() >= 3);
+
+        // --- hak & halaman web ---
+        $this->cek('hak: Guru Piket boleh tautkan (Kelola); Operator tidak; alamat milik menu Catat Keterlambatan', HakPeran::boleh('guru_piket', 'admin/keterlambatan/5/tautkan', 'POST')
+            && ! HakPeran::boleh('operator', 'admin/keterlambatan/5/tautkan', 'POST') && (MenuAdmin::cariAlamat('admin/keterlambatan/5/tautkan')['kunci'] ?? '') === 'keterlambatan');
+        $html = (string) $this->panggil('admin/keterlambatan', 'GET', 'index');
+        $cekHal = [
+            'tombol tulis manual' => str_contains($html, 'Tulis manual') && str_contains($html, 'id="tl-m-nama"') && str_contains($html, 'name="manual"'),
+            'pilihan kelas'       => str_contains($html, 'id="tl-m-kelas"') && str_contains($html, '<option value="' . $kB . '">'),
+            'lencana'             => str_contains($html, 'Belum terdaftar'),
+            'tombol Tautkan'      => str_contains($html, 'data-tautkan="' . esc(site_url('admin/keterlambatan/' . $r1['id'] . '/tautkan'), 'attr') . '"'),
+            'dialog Tautkan'      => str_contains($html, 'x-data="tautkanSiswa"'),
+            'WA siswa manual'     => str_contains($html, esc('wa.me/6281211110000', 'attr')),
+            'isi no. manual'      => str_contains($html, 'data-isi-manual="1"') || $buku->cari($r2['id'])['hp_ortu'] !== null,
+        ];
+        $this->cek('halaman: tombol & isian Tulis manual, lencana Belum terdaftar, tombol + dialog Tautkan, WA dari nomor catatan', ! in_array(false, $cekHal, true), json_encode($cekHal));
+        $j  = json_decode((string) $this->panggil('admin/keterlambatan/siswa', 'GET', 'siswa', [], ['q' => 'ZZUJI BUDI', 'tanggal' => $hari])->getBody(), true);
+        $j0 = json_decode((string) $this->panggil('admin/keterlambatan/siswa', 'GET', 'siswa', [], ['q' => 'ZZUJI BUDI', 'tanggal' => $hari, 'manual' => '0'])->getBody(), true);
+        $this->cek('cari (JSON halaman): bawaan memuat saran manual; manual=0 (dialog Tautkan) tidak', in_array(true, array_column($j['hasil'] ?? [], 'manual'), true) && ($j0['hasil'] ?? null) === []);
+        $this->panggil('admin/keterlambatan', 'POST', 'store', ['manual' => '1', 'nama_siswa' => 'zzuji cici', 'kelas_id' => $kB, 'hp_ortu' => '', 'tanggal' => $hari, 'jam' => '07:05', 'guru_id' => $g['id'], 'siswa_id' => '', 'sanksi' => '', 'keterangan' => '']);
+        $idC = (int) ($this->db->table('keterlambatan_siswa')->select('id')->where(['nama_siswa' => 'ZZUJI CICI', 'tanggal' => $hari])->get()->getRowArray()['id'] ?? 0);
+        $this->idUji[] = $idC;
+        $this->cek('simpan manual lewat halaman → pesan sukses "belum terdaftar"', $idC > 0 && str_contains((string) session('success'), 'belum terdaftar'), (string) session('error'));
+        $this->panggil('admin/keterlambatan/' . $idC, 'POST', 'update', ['jam' => '07:06', 'guru_id' => $g['id'], 'sanksi' => '', 'keterangan' => '', 'nama_siswa' => 'ZZUJI CICI AMELIA', 'kelas_id' => $kB, 'hp_ortu' => '0813 5555 6666'], [], true, $idC);
+        $rc = $buku->cari($idC);
+        $this->cek('ubah manual lewat dialog halaman → nama & HP tersimpan', $rc['nama_siswa'] === 'ZZUJI CICI AMELIA' && $rc['hp_ortu'] === '081355556666', json_encode($rc));
+        $this->panggil('admin/keterlambatan/' . $idC . '/tautkan', 'POST', 'tautkan', ['siswa_id' => $s['id'], 'semua' => '1'], [], true, $idC);
+        $this->cek('tautkan lewat halaman: siswa sudah tercatat hari ini → pesan galat 409', str_contains((string) session('error'), 'sudah punya catatan'), (string) session('error') . (string) session('success'));
+
+        // --- API ---
+        [$k, $j] = $this->api('guru_piket', 'meta');
+        $this->cek('API meta: hak.tautkan & batas nama', $k === 200 && ($j['data']['hak']['tautkan'] ?? false) && ($j['data']['batas']['nama'] ?? 0) === Keterlambatan::MAKS_NAMA && ($j['data']['batas']['nama_min'] ?? 0) === Keterlambatan::MIN_NAMA);
+        [$k, $j]   = $this->api('guru_piket', 'siswa', ['q' => 'ZZUJI CICI', 'tanggal' => $hari, 'manual' => '1']);
+        [$k2, $j2] = $this->api('guru_piket', 'siswa', ['q' => 'ZZUJI CICI', 'tanggal' => $hari]);
+        $this->cek('API cari: manual=1 → saran (id null, manual true, tercatat); tanpa manual → kosong (aplikasi lama aman)', $k === 200 && array_key_exists('id', $j['data'][0] ?? []) && $j['data'][0]['id'] === null
+            && ($j['data'][0]['manual'] ?? false) === true && ($j['data'][0]['tercatat'] ?? '') === 'jam 07:06' && $k2 === 200 && $j2['data'] === [], json_encode([$j['data'] ?? $j, $j2['data'] ?? null]));
+        [$k, $j] = $this->api('guru_piket', 'catat', [], ['manual' => true, 'nama_siswa' => 'zzuji dodi', 'kelas_id' => $kB, 'hp_ortu' => '0812 7777 1111', 'guru_id' => $g['id'], 'jam' => '07:20']);
+        $idD = (int) ($j['data']['id'] ?? 0);
+        $this->idUji[] = $idD;
+        $b = $j['data'] ?? [];
+        $this->cek('API catat manual → 201: manual true, siswa_id & nis null, hp_ortu, wa.sumber "isian guru piket", bisa_isi_hp false', $k === 201 && $idD > 0 && $b['manual'] === true
+            && $b['siswa_id'] === null && $b['nis'] === null && $b['nama_siswa'] === 'ZZUJI DODI' && $b['hp_ortu'] === '081277771111' && $b['wa']['sumber'] === KeterlambatanWa::SUMBER_ISIAN
+            && $b['wa']['bisa_isi_hp'] === false, json_encode($j));
+        [$k, $j]   = $this->api('guru_piket', 'catat', [], ['manual' => '1', 'nama_siswa' => (string) $s['nama'], 'kelas_id' => $kA, 'guru_id' => $g['id'], 'tanggal' => $kmrn]);
+        [$k2, $j2] = $this->api('guru_piket', 'catat', [], ['manual' => '1', 'nama_siswa' => 'ZZUJI DODI', 'kelas_id' => $kB, 'guru_id' => $g['id']]);
+        [$k3, $j3] = $this->api('guru_piket', 'catat', [], ['manual' => '1', 'nama_siswa' => 'ZZUJI EKA', 'guru_id' => $g['id']]);
+        $this->cek('API catat manual: nama siswa terdaftar → 422 + data.siswa_terdaftar; kembar → 409; tanpa kelas → 422 errors.kelas_id', $k === 422 && (int) ($j['data']['siswa_terdaftar']['id'] ?? 0) === (int) $s['id']
+            && $k2 === 409 && $k3 === 422 && isset($j3['data']['errors']['kelas_id']), json_encode([$j, $k2, $j3]));
+        [$k, $j]   = $this->api('guru_piket', 'ubah', [], ['guru_id' => $g['id'], 'jam' => '07:21', 'nama_siswa' => 'Zzuji Dodi Pratama'], $idD);
+        [$k2, $j2] = $this->api('guru_piket', 'ubah', [], ['guru_id' => $g['id'], 'jam' => '07:22'], $idD);
+        $this->cek('API ubah manual: nama_siswa dikirim → berubah (HP tetap); tidak dikirim → tetap', $k === 200 && $j['data']['nama_siswa'] === 'ZZUJI DODI PRATAMA' && $j['data']['hp_ortu'] === '081277771111'
+            && $k2 === 200 && $j2['data']['nama_siswa'] === 'ZZUJI DODI PRATAMA' && $j2['data']['jam'] === '07:22', json_encode([$j, $j2]));
+        [$k, $j]   = $this->api('guru_piket', 'tautkan', [], ['siswa_id' => $s['id'], 'semua' => '0'], $idD);
+        [$k2, $j2] = $this->api('guru_piket', 'tautkan', [], ['siswa_id' => 0], $t3['id']);
+        $this->ingat($e1 = $buku->catat(['nama_siswa' => 'ZZUJI CALON SISWA', 'tanggal' => date('Y-m-d', strtotime('-3 day'))] + $dasar, $saja));
+        [$k3, $j3] = $this->api('guru_piket', 'tautkan', [], ['siswa_id' => $s['id']], $e1['id']);
+        [$k4]      = $this->api('operator', 'tautkan', [], ['siswa_id' => $s['id']], $e1['id']);
+        $this->cek('API tautkan: bentrok → 409; siswa kosong → 422; sah → 200 {jumlah 1, dilewati [hari ini], baris.manual false, siswa_id}; Operator → 403', $k === 409 && $k2 === 422
+            && $k3 === 200 && $j3['data']['jumlah'] === 1 && $j3['data']['dilewati'] === [$hari] && $j3['data']['baris']['manual'] === false
+            && $j3['data']['baris']['siswa_id'] === (int) $s['id'] && $j3['data']['baris']['nama_siswa'] === $s['nama'] && $k4 === 403, json_encode([$j, $j2, $j3]));
     }
 
     /**

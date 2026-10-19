@@ -697,6 +697,7 @@ $routes->group('admin', static function ($routes) {
         $routes->post('keterlambatan/(:num)', 'Admin\Keterlambatan::update/$1');
         $routes->post('keterlambatan/(:num)/kabari', 'Admin\Keterlambatan::kabari/$1');
         $routes->post('keterlambatan/(:num)/hp', 'Admin\Keterlambatan::isiHp/$1');
+        $routes->post('keterlambatan/(:num)/tautkan', 'Admin\Keterlambatan::tautkan/$1');
         $routes->post('keterlambatan/pesan', 'Admin\Keterlambatan::pesan');
         $routes->post('keterlambatan/delete/(:num)', 'Admin\Keterlambatan::delete/$1');
 
@@ -1196,6 +1197,7 @@ $routes->group('api/v1', ['namespace' => 'App\Controllers\Api', 'filter' => 'cor
         $routes->delete('keterlambatan/(:num)', 'Keterlambatan::hapus/$1');
         $routes->post('keterlambatan/(:num)/kabari', 'Keterlambatan::kabari/$1');
         $routes->post('keterlambatan/(:num)/hp', 'Keterlambatan::isiHp/$1');
+        $routes->post('keterlambatan/(:num)/tautkan', 'Keterlambatan::tautkan/$1');
 
         // ---------- PROFIL & PENGATURAN ----------
         $routes->get('admin/profile', 'Admin\Profile::show');

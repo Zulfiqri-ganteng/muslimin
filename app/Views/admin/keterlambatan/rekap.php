@@ -130,6 +130,7 @@ $periode = IsianBantu::tanggalIndo($mulai) . ' s.d. ' . IsianBantu::tanggalIndo(
                                 <td>
                                     <p class="sel-judul"><?= esc($s['nama']) ?></p>
                                     <?php if ($s['nis'] !== ''): ?><p class="sel-ket">NIS <?= esc($s['nis']) ?></p><?php endif; ?>
+                                    <?php if ($s['manual']): ?><p class="mt-0.5"><span class="lencana lencana-kuning" title="Dicatat manual; siswa belum ada di Data Siswa">Belum terdaftar</span></p><?php endif; ?>
                                 </td>
                                 <td class="whitespace-nowrap"><?= esc($s['kelas']) ?></td>
                                 <td class="text-right"><span class="lencana lencana-merek"><?= $s['jumlah'] ?>×</span></td>

@@ -160,7 +160,7 @@ final class KeterlambatanExcel
 
         $lembar = [
             ['Per siswa', ['NO', 'NAMA', 'NIS', 'KELAS', 'JUMLAH TERLAMBAT', 'TANGGAL'], [5, 32, 14, 14, 12, 60],
-                array_map(static fn (array $s): array => [(string) $s['nama'], (string) $s['nis'], (string) $s['kelas'], (int) $s['jumlah'],
+                array_map(static fn (array $s): array => [(string) $s['nama'], ! empty($s['manual']) ? 'belum terdaftar' : (string) $s['nis'], (string) $s['kelas'], (int) $s['jumlah'],
                     implode(', ', array_map(static fn (string $t): string => date('d/m', strtotime($t)), $s['tanggal']))], $rekap['siswa'])],
             ['Per kelas', ['NO', 'KELAS', 'JUMLAH TERLAMBAT', 'JUMLAH SISWA'], [5, 22, 14, 14],
                 array_map(static fn (array $k): array => [(string) $k['kelas'], (int) $k['jumlah'], (int) $k['siswa']], $rekap['kelas'])],

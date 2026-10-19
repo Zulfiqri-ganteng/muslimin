@@ -65,4 +65,19 @@ phpm spark migrate:status
 - Banyak siswa belum punya nomor HP orang tua di Data Siswa (± 4% saat fitur dibuat) — tombol **Isi no. ortu** membantu melengkapi.
 - Contoh format Excel sekolah ada di laptop (`formatdatasekolah/KETERLAMBATAN SISWA DI GURU PIKET.xlsx`, tidak ikut Git); server
   tidak membutuhkannya (format ditulis di kode, `Libraries\KeterlambatanExcel`).
-- Uji di laptop sebelum push: `php spark dev:uji-telat` (91 cek), uji hak, cek UI, uji peramban semua halaman (lihat laporan G6).
+- Uji di laptop sebelum push: `php spark dev:uji-telat` (119 cek sejak K1), uji hak, cek UI, uji peramban semua halaman (lihat laporan G6).
+
+## Pembaruan K1 (2026-10-19 malam) — siswa BELUM TERDAFTAR dicatat manual + Tautkan
+Keluhan klien: guru piket tidak bisa memilih anak yang belum ada di Data Siswa. Sekarang di halaman Catat ada tombol
+**"Siswa belum terdaftar? Tulis manual"** (nama, kelas, HP orang tua opsional), lencana **Belum terdaftar** di daftar & rekap, dan
+tombol **Tautkan** untuk menyatukan catatan itu dengan Data Siswa setelah anaknya dimasukkan. API Android ikut (docs/API-KETERLAMBATAN.md).
+
+Di server (sesudah commit & push dari laptop):
+```
+cd ~/kangmuslim
+git pull
+phpm spark migrate          # menjalankan 2026-10-23-000001_KeterlambatanManual (kolom manual & hp_ortu, catatan lama tidak berubah)
+phpm spark migrate:status   # pastikan KeterlambatanManual sudah "Migrated"
+```
+Lalu Ctrl+F5 di peramban (JS & CSS halaman Catat berubah). Tanpa migrasi, pencarian siswa & simpan manual di halaman Catat gagal
+(kolom belum ada).

@@ -20,7 +20,7 @@ use CodeIgniter\HTTP\ResponseInterface;
  * → hasil web = hasil aplikasi. Audit Log diberi "(via aplikasi)".
  * Gerbang: ApiAuthFilter (awalan 'keterlambatan' / 'keterlambatan/rekap' dari katalog menu, peran harus "boleh aplikasi") + hak per
  * aksi di sini dengan aturan web yang SAMA — HakAkses::boleh() memakai alamat web padanannya: melihat = GET admin/keterlambatan,
- * catat/ubah/hapus/kabari/isi nomor = POST (level Kelola), rekap = menu Rekap Keterlambatan, templat pesan = khusus Admin.
+ * catat (termasuk siswa belum terdaftar)/ubah/hapus/kabari/isi nomor/tautkan = POST (level Kelola), rekap = menu Rekap Keterlambatan, templat pesan = khusus Admin.
  */
 class Keterlambatan extends BaseApiController
 {
@@ -46,7 +46,8 @@ class Keterlambatan extends BaseApiController
             'guru'         => $buku->pilihanGuru(),
             'kelas'        => $buku->pilihanKelas(),
             'saran_sanksi' => $buku->saranSanksi(),
-            'batas'        => ['sanksi' => Buku::MAKS_SANKSI, 'keterangan' => Buku::MAKS_KETERANGAN, 'rentang_hari' => Buku::MAKS_HARI_RENTANG, 'cari_min' => 2, 'baris_excel' => KeterlambatanExcel::BARIS_MIN],
+            'batas'        => ['sanksi' => Buku::MAKS_SANKSI, 'keterangan' => Buku::MAKS_KETERANGAN, 'rentang_hari' => Buku::MAKS_HARI_RENTANG, 'cari_min' => 2, 'baris_excel' => KeterlambatanExcel::BARIS_MIN,
+                'nama_min' => Buku::MIN_NAMA, 'nama' => Buku::MAKS_NAMA],
             'hak'          => $this->hak(),
             'wa'           => ['templat' => KeterlambatanWa::templat(), 'bawaan' => KeterlambatanWa::PESAN_BAWAAN, 'penanda' => KeterlambatanWa::TOKEN, 'maks' => PklWa::MAKS_PESAN],
         ], 'Bahan layar keterlambatan.');
@@ -87,7 +88,11 @@ class Keterlambatan extends BaseApiController
         return $this->ok($this->baris($r, $templat, $sekolah));
     }
 
-    /** GET keterlambatan/siswa?q=&tanggal= — siswa aktif yang cocok (≥ 2 huruf); 'tercatat' = sudah dicatat pada tanggal itu. */
+    /**
+     * GET keterlambatan/siswa?q=&tanggal=&manual=1 — siswa aktif yang cocok (≥ 2 huruf); 'tercatat' = sudah dicatat pada tanggal itu.
+     * manual=1: + di akhir, siswa BELUM TERDAFTAR yang pernah dicatat manual (id null, manual true, jumlah, hp_ortu). Tanpa manual=1
+     * isinya hanya siswa terdaftar (aplikasi versi lama tetap aman).
+     */
     public function siswa(): ResponseInterface
     {
         if (($t = $this->tolak(self::WEB, 'GET', 'mencari siswa')) !== null) {
@@ -95,12 +100,16 @@ class Keterlambatan extends BaseApiController
         }
         $tanggal = Buku::tanggalSah((string) $this->request->getGet('tanggal')) ?? date('Y-m-d');
 
-        return $this->ok((new Buku('aplikasi'))->cariSiswa((string) $this->request->getGet('q'), $tanggal));
+        return $this->ok((new Buku('aplikasi'))->cariSiswa((string) $this->request->getGet('q'), $tanggal, 15, Buku::mintaManual($this->request->getGet('manual'))));
     }
 
-    // ================================================================= catat, ubah, hapus
+    // ================================================================= catat, ubah, hapus, tautkan
 
-    /** POST keterlambatan — {siswa_id, guru_id, tanggal? (bawaan hari ini), jam? "07:15", sanksi?, keterangan?} → 201 baris. */
+    /**
+     * POST keterlambatan — {siswa_id, guru_id, tanggal? (bawaan hari ini), jam? "07:15", sanksi?, keterangan?} → 201 baris.
+     * Siswa BELUM TERDAFTAR: {manual: true, nama_siswa, kelas_id, hp_ortu?, guru_id, …} (siswa_id diabaikan). Nama itu ternyata siswa
+     * aktif terdaftar di kelas yang sama → 422 + data.siswa_terdaftar (aplikasi menawarkan "Pakai siswa ini").
+     */
     public function catat(): ResponseInterface
     {
         if (($t = $this->tolak(self::WEB, 'POST', 'mencatat keterlambatan')) !== null) {
@@ -115,16 +124,24 @@ class Keterlambatan extends BaseApiController
             'guru_id'    => $in['guru_id'] ?? null,
             'sanksi'     => $in['sanksi'] ?? null,
             'keterangan' => $in['keterangan'] ?? null,
+            'manual'     => $in['manual'] ?? null,
+            'nama_siswa' => $in['nama_siswa'] ?? null,
+            'kelas_id'   => $in['kelas_id'] ?? null,
+            'hp_ortu'    => $in['hp_ortu'] ?? null,
         ], $this->pencatat());
         if (! $r['ok']) {
-            return $this->tolakHasil($r);
+            return $this->tolakManual($r);
         }
         [$templat, $sekolah] = $this->bahanWa();
 
         return $this->created($this->baris((array) $buku->cariLengkap((int) $r['id']), $templat, $sekolah), $r['pesan']);
     }
 
-    /** POST keterlambatan/{id}/ubah — {guru_id, jam?, sanksi?, keterangan?}; siswa & tanggal tidak bisa diubah. */
+    /**
+     * POST keterlambatan/{id}/ubah — {guru_id, jam?, sanksi?, keterangan?}; siswa terdaftar & tanggal tidak bisa diubah.
+     * Catatan siswa belum terdaftar (baris.manual): + nama_siswa?, kelas_id?, hp_ortu? — kunci yang tidak dikirim = tidak diubah;
+     * hp_ortu "" = dikosongkan.
+     */
     public function ubah($id): ResponseInterface
     {
         if (($t = $this->tolak(self::WEB . '/' . (int) $id, 'POST', 'mengubah catatan keterlambatan')) !== null) {
@@ -132,13 +149,55 @@ class Keterlambatan extends BaseApiController
         }
         $in   = $this->body();
         $buku = new Buku('aplikasi');
-        $r    = $buku->ubah((int) $id, ['jam' => $in['jam'] ?? null, 'guru_id' => $in['guru_id'] ?? null, 'sanksi' => $in['sanksi'] ?? null, 'keterangan' => $in['keterangan'] ?? null]);
+        $data = ['jam' => $in['jam'] ?? null, 'guru_id' => $in['guru_id'] ?? null, 'sanksi' => $in['sanksi'] ?? null, 'keterangan' => $in['keterangan'] ?? null];
+        foreach (['nama_siswa', 'kelas_id', 'hp_ortu'] as $k) {
+            if (array_key_exists($k, $in)) {
+                $data[$k] = $in[$k] ?? '';
+            }
+        }
+        $r = $buku->ubah((int) $id, $data);
+        if (! $r['ok']) {
+            return $this->tolakManual($r);
+        }
+        [$templat, $sekolah] = $this->bahanWa();
+
+        return $this->ok($this->baris((array) $buku->cariLengkap((int) $id), $templat, $sekolah), $r['pesan']);
+    }
+
+    /**
+     * POST keterlambatan/{id}/tautkan — {siswa_id, semua?: bool (bawaan true)}: catatan siswa belum terdaftar → siswa di Data Siswa
+     * (semua = juga catatan manual lain dengan nama + kelas sama). → {jumlah, ids[], dilewati[] (tanggal), baris (catatan ini)}.
+     * Bukan catatan manual / siswa_id salah → 422; semua tanggal bentrok → 409.
+     */
+    public function tautkan($id): ResponseInterface
+    {
+        if (($t = $this->tolak(self::WEB . '/' . (int) $id . '/tautkan', 'POST', 'menautkan catatan ke Data Siswa')) !== null) {
+            return $t;
+        }
+        $in   = $this->body();
+        $buku = new Buku('aplikasi');
+        $r    = $buku->tautkan((int) $id, (int) ($in['siswa_id'] ?? 0), ! array_key_exists('semua', $in) || Buku::mintaManual($in['semua']));
         if (! $r['ok']) {
             return $this->tolakHasil($r);
         }
         [$templat, $sekolah] = $this->bahanWa();
 
-        return $this->ok($this->baris((array) $buku->cariLengkap((int) $id), $templat, $sekolah), $r['pesan']);
+        return $this->ok([
+            'jumlah'   => $r['jumlah'],
+            'ids'      => $r['ids'],
+            'dilewati' => $r['dilewati'],
+            'baris'    => in_array((int) $id, $r['ids'], true) ? $this->baris((array) $buku->cariLengkap((int) $id), $templat, $sekolah) : null,
+        ], $r['pesan']);
+    }
+
+    /** Galat catat/ubah: 422 "nama sudah terdaftar" membawa data.siswa_terdaftar; selain itu seperti tolakHasil(). */
+    private function tolakManual(array $r): ResponseInterface
+    {
+        if (isset($r['siswa_terdaftar'])) {
+            return $this->failure((string) $r['pesan'], 422, ['errors' => (array) ($r['errors'] ?? []), 'siswa_terdaftar' => $r['siswa_terdaftar']]);
+        }
+
+        return $this->tolakHasil($r);
     }
 
     /** DELETE keterlambatan/{id} */
@@ -269,7 +328,8 @@ class Keterlambatan extends BaseApiController
     /** Bentuk satu baris untuk aplikasi (+ bahan tombol WA). */
     private function baris(array $r, string $templat, string $sekolah): array
     {
-        $k = KeterlambatanWa::kabar($r, $templat, $sekolah);
+        $k      = KeterlambatanWa::kabar($r, $templat, $sekolah);
+        $manual = Buku::manual($r);
 
         return [
             'id'            => (int) $r['id'],
@@ -277,6 +337,8 @@ class Keterlambatan extends BaseApiController
             'hari_tanggal'  => Buku::hariTanggal((string) $r['tanggal']),
             'jam'           => $r['jam'] !== null ? substr((string) $r['jam'], 0, 5) : null,
             'siswa_id'      => $r['siswa_id'] !== null ? (int) $r['siswa_id'] : null,
+            'manual'        => $manual,
+            'hp_ortu'       => $manual ? ($r['hp_ortu'] ?? null) : null,
             'nama_siswa'    => (string) $r['nama_siswa'],
             'nis'           => ((string) ($r['nis'] ?? '')) ?: null,
             'kelas_id'      => $r['kelas_id'] !== null ? (int) $r['kelas_id'] : null,
@@ -297,7 +359,7 @@ class Keterlambatan extends BaseApiController
                 'url'          => $k['url'],
                 'pesan'        => $k['pesan'],
                 'alasan_tidak' => $k['alasan_tidak'],
-                'bisa_isi_hp'  => $k['url'] === null && $r['siswa_id'] !== null,
+                'bisa_isi_hp'  => $k['url'] === null && KeterlambatanWa::bisaIsiHp($r),
             ],
         ];
     }
@@ -334,6 +396,7 @@ class Keterlambatan extends BaseApiController
             'hapus'      => $this->boleh(self::WEB . '/delete/0', 'POST'),
             'kabari'     => $this->boleh(self::WEB . '/0/kabari', 'POST'),
             'isi_hp'     => $this->boleh(self::WEB . '/0/hp', 'POST'),
+            'tautkan'    => $this->boleh(self::WEB . '/0/tautkan', 'POST'),
             'excel'      => $this->boleh(self::WEB . '/excel'),
             'rekap'      => $this->boleh(self::WEB . '/rekap'),
             'ubah_pesan' => $this->boleh(self::WEB . '/pesan', 'POST') && KeterlambatanWa::kolomAda(),

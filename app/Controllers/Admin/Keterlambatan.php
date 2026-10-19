@@ -13,7 +13,8 @@ use App\Models\SettingModel;
 
 /**
  * Catat Keterlambatan (menu KURIKULUM → Guru Piket): buku piket siswa terlambat per tanggal — catat cepat (cari siswa, kelas
- * otomatis), daftar hari itu, ubah/hapus. Dipakai akun Guru Piket (akun bersama di meja piket) dan Admin. Logika: Libraries\Keterlambatan.
+ * otomatis; siswa yang belum terdaftar di Data Siswa ditulis manual), daftar hari itu, ubah/hapus, tautkan catatan manual ke Data
+ * Siswa. Dipakai akun Guru Piket (akun bersama di meja piket) dan Admin. Logika: Libraries\Keterlambatan.
  * Guru piket yang terakhir dipilih diingat di sesi SELAMA HARI ITU (berganti hari → wajib dipilih lagi).
  */
 class Keterlambatan extends BaseController
@@ -35,34 +36,39 @@ class Keterlambatan extends BaseController
         unset($r);
 
         return view('admin/keterlambatan/index', [
-            'title'       => 'Catat Keterlambatan',
-            'tanggal'     => $tanggal,
-            'hariIni'     => $tanggal === date('Y-m-d'),
-            'rows'        => $rows,
-            'bolehKabari' => HakAkses::boleh($peran, 'admin/keterlambatan/0/kabari', 'POST'),
-            'bolehPesan'  => HakAkses::boleh($peran, 'admin/keterlambatan/pesan', 'POST') && KeterlambatanWa::kolomAda(),
-            'templatWa'   => $templat,
-            'piket'       => $buku->guruPiketHari($tanggal),
-            'guru'        => $buku->pilihanGuru(),
-            'saranSanksi' => $buku->saranSanksi(),
-            'guruIngat'   => is_array($ingat) && ($ingat['tanggal'] ?? '') === date('Y-m-d') ? (int) ($ingat['id'] ?? 0) : 0,
+            'title'        => 'Catat Keterlambatan',
+            'tanggal'      => $tanggal,
+            'hariIni'      => $tanggal === date('Y-m-d'),
+            'rows'         => $rows,
+            'bolehKabari'  => HakAkses::boleh($peran, 'admin/keterlambatan/0/kabari', 'POST'),
+            'bolehPesan'   => HakAkses::boleh($peran, 'admin/keterlambatan/pesan', 'POST') && KeterlambatanWa::kolomAda(),
+            'bolehTautkan' => HakAkses::boleh($peran, 'admin/keterlambatan/0/tautkan', 'POST'),
+            'templatWa'    => $templat,
+            'piket'        => $buku->guruPiketHari($tanggal),
+            'guru'         => $buku->pilihanGuru(),
+            'kelas'        => $buku->pilihanKelas(),
+            'saranSanksi'  => $buku->saranSanksi(),
+            'guruIngat'    => is_array($ingat) && ($ingat['tanggal'] ?? '') === date('Y-m-d') ? (int) ($ingat['id'] ?? 0) : 0,
         ]);
     }
 
-    /** GET ?q=&tanggal= → JSON siswa aktif yang cocok (untuk kotak cari di formulir catat). */
+    /**
+     * GET ?q=&tanggal=[&manual=0] → JSON siswa aktif yang cocok + (bawaan) saran siswa belum terdaftar yang pernah dicatat manual
+     * (kotak cari formulir catat). manual=0: hanya Data Siswa (kotak cari dialog Tautkan).
+     */
     public function siswa()
     {
         $tanggal = Buku::tanggalSah((string) $this->request->getGet('tanggal')) ?? date('Y-m-d');
 
         return $this->response->setJSON([
             'ok'    => true,
-            'hasil' => (new Buku())->cariSiswa((string) $this->request->getGet('q'), $tanggal),
+            'hasil' => (new Buku())->cariSiswa((string) $this->request->getGet('q'), $tanggal, 15, $this->request->getGet('manual') !== '0'),
         ]);
     }
 
     public function store()
     {
-        $data = $this->request->getPost(['siswa_id', 'tanggal', 'jam', 'guru_id', 'sanksi', 'keterangan']);
+        $data = $this->request->getPost(['siswa_id', 'tanggal', 'jam', 'guru_id', 'sanksi', 'keterangan', 'manual', 'nama_siswa', 'kelas_id', 'hp_ortu']);
         $r    = (new Buku())->catat($data, $this->pencatat());
         $ke   = $this->alamat((string) ($data['tanggal'] ?? ''));
         if (! $r['ok']) {
@@ -77,7 +83,18 @@ class Keterlambatan extends BaseController
     {
         $buku = new Buku();
         $row  = $buku->cari((int) $id);
-        $r    = $buku->ubah((int) $id, $this->request->getPost(['jam', 'guru_id', 'sanksi', 'keterangan']));
+        // nama_siswa/kelas_id/hp_ortu hanya dipakai untuk catatan siswa belum terdaftar (dialog Ubah menampilkannya hanya untuk itu).
+        $r    = $buku->ubah((int) $id, $this->request->getPost(['jam', 'guru_id', 'sanksi', 'keterangan', 'nama_siswa', 'kelas_id', 'hp_ortu']));
+
+        return redirect()->to($this->alamat((string) ($row['tanggal'] ?? '')))->with($r['ok'] ? 'success' : 'error', $r['pesan']);
+    }
+
+    /** POST {id}/tautkan — {siswa_id, semua}: catatan siswa belum terdaftar → siswa di Data Siswa. */
+    public function tautkan($id)
+    {
+        $buku = new Buku();
+        $row  = $buku->cari((int) $id);
+        $r    = $buku->tautkan((int) $id, (int) $this->request->getPost('siswa_id'), $this->request->getPost('semua') === '1');
 
         return redirect()->to($this->alamat((string) ($row['tanggal'] ?? '')))->with($r['ok'] ? 'success' : 'error', $r['pesan']);
     }

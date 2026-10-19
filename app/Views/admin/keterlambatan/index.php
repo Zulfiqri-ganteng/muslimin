@@ -3,22 +3,27 @@
  * Catat Keterlambatan (menu KURIKULUM → Guru Piket) — kartu formulir catat cepat + kartu daftar terlambat per tanggal + dialog Ubah
  * (layar ≥ 1536 px: formulir di kiri, daftar di kanan; lebih sempit: formulir di atas dengan isian 2 kolom, tabel selebar halaman)
  * (kit F5). Komponen Alpine "keterlambatanPage" (perluasan masterList) di assets/js/admin/keterlambatan.js: kotak cari siswa
- * (GET admin/keterlambatan/siswa, hasil dari server) + dialog ubah — tanpa skrip sebaris (siap CSP).
+ * (GET admin/keterlambatan/siswa, hasil dari server, + saran siswa belum terdaftar yang pernah dicatat manual), isian manual untuk
+ * siswa yang BELUM TERDAFTAR di Data Siswa (nama, kelas, HP orang tua), dialog ubah, dialog Tautkan ("tautkanSiswa") — tanpa skrip
+ * sebaris (siap CSP).
  *
  * @var string     $tanggal     Y-m-d yang ditampilkan/dicatat
  * @var bool       $hariIni
  * @var list<array> $rows       catatan tanggal itu (Libraries\Keterlambatan::daftar)
  * @var array{pagi: list<array{id: int, nama: string}>, siang: list<array{id: int, nama: string}>} $piket  jadwal piket hari itu
  * @var list<array{id: int, nama: string}> $guru  semua guru yang bisa dipilih
+ * @var list<array{id: int, nama: string}> $kelas kelas untuk isian siswa manual
  * @var list<string> $saranSanksi
  * @var int        $guruIngat   guru piket yang terakhir dipilih hari ini (0 = belum)
  * @var bool       $bolehKabari boleh menekan tombol WA orang tua & mengisi nomor HP orang tua (level Kelola)
  * @var bool       $bolehPesan  boleh mengubah templat pesan WA (khusus Admin)
+ * @var bool       $bolehTautkan boleh menautkan catatan siswa belum terdaftar ke Data Siswa (level Kelola)
  * @var string     $templatWa   templat pesan WA yang berlaku
  * Tiap baris $rows memuat 'kabar' (Libraries\KeterlambatanWa::kabar: url wa.me / alasan tidak bisa).
  */
 
 use App\Libraries\Keterlambatan as Buku;
+use App\Libraries\KeterlambatanWa;
 
 $base        = site_url('admin/keterlambatan');
 $hariTanggal = Buku::hariTanggal($tanggal);
@@ -28,8 +33,20 @@ $besok       = date('Y-m-d', strtotime($tanggal . ' +1 day'));
 $guruPilih   = (int) (old('guru_id') ?: $guruIngat);
 $idPiket     = array_column(array_merge($piket['pagi'], $piket['siang']), 'id');
 $guruLain    = array_values(array_filter($guru, static fn (array $g): bool => ! in_array($g['id'], $idPiket, true)));
-$siswaAwal   = old('siswa_id') ? ['id' => (int) old('siswa_id'), 'nama' => (string) old('siswa_label'), 'kelas' => '', 'nis' => ''] : null;
+$manualAwal  = Buku::mintaManual(old('manual'));
+$siswaAwal   = ! $manualAwal && old('siswa_id') ? ['id' => (int) old('siswa_id'), 'nama' => (string) old('siswa_label'), 'kelas' => '', 'nis' => ''] : null;
+$isianManual = $manualAwal ? ['nama' => (string) old('nama_siswa'), 'kelas_id' => (string) old('kelas_id'), 'hp_ortu' => (string) old('hp_ortu')] : null;
 $bolehRekap  = \App\Libraries\HakAkses::boleh((string) (session('admin')['role'] ?? ''), 'admin/keterlambatan/rekap');
+
+// Pilihan kelas (isian siswa manual & dialog ubah).
+$opsiKelas = static function () use ($kelas): string {
+    $h = '<option value="">— pilih kelas —</option>';
+    foreach ($kelas as $k) {
+        $h .= '<option value="' . $k['id'] . '">' . esc($k['nama']) . '</option>';
+    }
+
+    return $h;
+};
 
 // Pilihan guru piket: jadwal piket hari itu (pagi, siang) di atas, lalu guru lain. $model = atribut tambahan pada <select>.
 $opsiGuru = static function (int $pilih) use ($piket, $guruLain, $namaHari, $hariIni): string {
@@ -59,12 +76,14 @@ $opsiGuru = static function (int $pilih) use ($piket, $guruLain, $namaHari, $har
     'helpKey'   => 'keterlambatan_v1',
     'helpTitle' => 'Catat keterlambatan siswa',
     'helpBody'  => '<p>Catat siswa yang <b>datang terlambat</b>. Pilih dulu <b>guru piket</b> yang bertugas (disarankan dari Jadwal Piket hari itu; pilihan diingat sampai hari berganti), lalu ketik <b>nama atau NIS</b> siswa — kelasnya terisi otomatis. Sanksi dan keterangan bebas ditulis.</p>'
+        . '<p class="mt-2">Nama siswa <b>tidak ditemukan</b> karena belum terdaftar di Data Siswa? Tekan <b>Tulis manual</b>, ketik namanya dan pilih kelasnya. Catatan itu ditandai <b>Belum terdaftar</b>; setelah siswanya dimasukkan ke Data Siswa, tekan <b>Tautkan</b> agar catatannya menyatu.</p>'
         . '<p class="mt-2">Satu siswa hanya bisa dicatat <b>sekali per hari</b>. Salah pilih siswa? Hapus catatannya lalu catat ulang. Untuk melihat atau mencatat hari lain, pilih tanggal di atas daftar.</p>',
 ]) ?>
 
 <div x-data="keterlambatanPage" data-base="<?= $base ?>" data-entity="catatan" data-cari="<?= $base ?>/siswa" data-tanggal="<?= esc($tanggal, 'attr') ?>"
      data-hari-ini="<?= $hariIni ? '1' : '0' ?>" data-siswa-awal="<?= esc((string) json_encode($siswaAwal), 'attr') ?>"
-     data-defaults="<?= esc((string) json_encode(['id' => '', 'nama_siswa' => '', 'jam' => '', 'guru_id' => '', 'sanksi' => '', 'keterangan' => '']), 'attr') ?>"
+     data-manual-awal="<?= esc((string) json_encode($isianManual), 'attr') ?>" data-nama-min="<?= Buku::MIN_NAMA ?>"
+     data-defaults="<?= esc((string) json_encode(['id' => '', 'nama_siswa' => '', 'jam' => '', 'guru_id' => '', 'sanksi' => '', 'keterangan' => '', 'manual' => false, 'nama' => '', 'kelas_id' => '', 'hp_ortu' => '']), 'attr') ?>"
      class="grid items-start gap-4 2xl:grid-cols-[minmax(0,26rem)_minmax(0,1fr)]">
 
     <!-- ===== Formulir catat ===== -->
@@ -73,6 +92,7 @@ $opsiGuru = static function (int $pilih) use ($piket, $guruLain, $namaHari, $har
         <input type="hidden" name="tanggal" value="<?= esc($tanggal, 'attr') ?>">
         <input type="hidden" name="siswa_id" :value="siswaId()">
         <input type="hidden" name="siswa_label" :value="namaSiswa()">
+        <input type="hidden" name="manual" :value="nilaiManual()">
 
         <div class="kartu-kepala">
             <h2 class="kartu-judul">Catat siswa terlambat</h2>
@@ -93,13 +113,13 @@ $opsiGuru = static function (int $pilih) use ($piket, $guruLain, $namaHari, $har
 
             <div>
                 <label class="lbl" for="tl-cari">Siswa yang terlambat <span class="text-red-600 dark:text-red-400">*</span></label>
-                <div class="relative" x-show="! siswa">
+                <div class="relative" x-show="mencari()">
                     <input type="search" id="tl-cari" class="inp" placeholder="Ketik nama atau NIS (min. 2 huruf)" autocomplete="off"
                            role="combobox" aria-autocomplete="list" aria-controls="tl-hasil" :aria-expanded="terbuka"
                            x-model="q" @input.debounce.300ms="cari()" @keydown.arrow-down.prevent="pindahHasil(1)" @keydown.arrow-up.prevent="pindahHasil(-1)"
                            @keydown.enter.prevent="pilihAktif()" @keydown.escape="tutupHasil()">
                     <ul id="tl-hasil" class="dropdown-menu right-0 left-0 mt-1 max-h-72 w-auto overflow-y-auto" role="listbox" aria-label="Hasil pencarian siswa" x-show="terbuka" x-cloak>
-                        <template x-for="(s, i) in hasil" :key="s.id">
+                        <template x-for="(s, i) in hasil" :key="kunci(s)">
                             <li role="option" :aria-selected="i === aktif" :aria-disabled="sudah(s)">
                                 <button type="button" class="dropdown-item flex-col items-start gap-0.5" :class="kelasHasil(i, s)" :disabled="sudah(s)" @click="pilih(s)">
                                     <span class="font-medium" x-text="s.nama"></span>
@@ -109,6 +129,7 @@ $opsiGuru = static function (int $pilih) use ($piket, $guruLain, $namaHari, $har
                         </template>
                     </ul>
                     <p class="hint mt-1" x-show="pesanCari !== ''" x-text="pesanCari" x-cloak aria-live="polite"></p>
+                    <button type="button" class="btn btn-teks btn-sm mt-1 -ms-2" @click="mulaiManual()"><?= ikon('user-edit', 'h-4 w-4') ?>Siswa belum terdaftar? Tulis manual</button>
                 </div>
                 <div class="flex items-center justify-between gap-3 rounded-lg border border-brand-200 bg-brand-50 px-3 py-2 dark:border-brand-800 dark:bg-brand-900/30" x-show="siswa" x-cloak>
                     <div class="min-w-0">
@@ -116,6 +137,31 @@ $opsiGuru = static function (int $pilih) use ($piket, $guruLain, $namaHari, $har
                         <p class="sel-ket" x-text="ketSiswa()"></p>
                     </div>
                     <button type="button" class="btn btn-netral btn-sm shrink-0" @click="gantiSiswa()"><?= ikon('close', 'h-4 w-4') ?>Ganti</button>
+                </div>
+
+                <!-- Siswa BELUM TERDAFTAR di Data Siswa: nama & kelas diketik guru piket (isian nonaktif = tidak terkirim saat tidak dipakai) -->
+                <div class="space-y-3 rounded-lg border border-brand-200 bg-brand-50 p-3 dark:border-brand-800 dark:bg-brand-900/30" x-show="manual" x-cloak>
+                    <div class="flex flex-wrap items-center justify-between gap-2">
+                        <span class="lencana lencana-kuning">Belum terdaftar di Data Siswa</span>
+                        <button type="button" class="btn btn-netral btn-sm" @click="batalManual()"><?= ikon('search', 'h-4 w-4') ?>Cari lagi</button>
+                    </div>
+                    <div>
+                        <label class="lbl" for="tl-m-nama">Nama siswa <span class="text-red-600 dark:text-red-400">*</span></label>
+                        <input type="text" id="tl-m-nama" name="nama_siswa" class="inp" required minlength="<?= Buku::MIN_NAMA ?>" maxlength="<?= Buku::MAKS_NAMA ?>" autocomplete="off"
+                               placeholder="Nama lengkap siswa" x-model="mNama" :disabled="! manual">
+                    </div>
+                    <div class="grid gap-3 sm:grid-cols-2">
+                        <div>
+                            <label class="lbl" for="tl-m-kelas">Kelas <span class="text-red-600 dark:text-red-400">*</span></label>
+                            <select id="tl-m-kelas" name="kelas_id" class="inp" required x-model="mKelas" :disabled="! manual"><?= $opsiKelas() ?></select>
+                        </div>
+                        <div>
+                            <label class="lbl" for="tl-m-hp">No. HP orang tua</label>
+                            <input type="tel" id="tl-m-hp" name="hp_ortu" class="inp" inputmode="tel" maxlength="30" autocomplete="off"
+                                   placeholder="Opsional, 0812…" x-model="mHp" :disabled="! manual">
+                        </div>
+                    </div>
+                    <p class="hint">Catatan ditandai <b>Belum terdaftar</b>. Nomor HP orang tua dipakai tombol WhatsApp. Setelah siswa ini dimasukkan ke Data Siswa, tekan <b>Tautkan</b> di daftar.</p>
                 </div>
             </div>
 
@@ -191,13 +237,14 @@ $opsiGuru = static function (int $pilih) use ($piket, $guruLain, $namaHari, $har
                         </tr>
                     </thead>
                     <tbody>
-                        <?php foreach ($rows as $i => $r): $k = $r['kabar']; $sudah = $r['dikabari_at'] !== null; ?>
+                        <?php foreach ($rows as $i => $r): $k = $r['kabar']; $sudah = $r['dikabari_at'] !== null; $manual = Buku::manual($r); ?>
                             <tr data-kabar-baris>
                                 <td><?= $i + 1 ?></td>
                                 <td class="whitespace-nowrap"><?= $r['jam'] !== null ? esc(substr((string) $r['jam'], 0, 5)) : '—' ?></td>
                                 <td>
                                     <p class="sel-judul"><?= esc($r['nama_siswa']) ?></p>
                                     <?php if (! empty($r['nis'])): ?><p class="sel-ket">NIS <?= esc((string) $r['nis']) ?></p><?php endif; ?>
+                                    <?php if ($manual): ?><p class="mt-0.5"><span class="lencana lencana-kuning" title="Nama & kelas diketik guru piket; siswa belum ada di Data Siswa">Belum terdaftar</span></p><?php endif; ?>
                                     <p class="mt-0.5 flex items-center gap-1 text-xs font-semibold text-green-700 dark:text-green-400" data-kabar-status<?= $sudah ? '' : ' hidden' ?>>
                                         <?= ikon('check', 'h-3.5 w-3.5 shrink-0') ?><span data-kabar-status-teks><?= $sudah ? 'Sudah dikabari ' . esc(date('d-m H:i', strtotime((string) $r['dikabari_at']))) . ($r['dikabari_oleh'] ? ' oleh ' . esc((string) $r['dikabari_oleh']) : '') : '' ?></span>
                                     </p>
@@ -217,16 +264,23 @@ $opsiGuru = static function (int $pilih) use ($piket, $guruLain, $namaHari, $har
                                         $tombolWa = '<a href="' . esc($k['url'], 'attr') . '" target="_blank" rel="noopener noreferrer" class="btn btn-sukses btn-sm"'
                                             . ' data-kabar-tandai="' . esc($base . '/' . (int) $r['id'] . '/kabari', 'attr') . '" title="' . esc('Kirim ke ' . $k['hp'] . ' (HP ' . $k['sumber'] . ')', 'attr') . '">'
                                             . ikon('whatsapp', 'h-4 w-4', 'solid') . '<span data-kabar-label>' . ($sudah ? 'Kirim ulang' : 'Kabari ortu') . '</span></a>';
-                                    } elseif ($bolehKabari && $r['siswa_id'] !== null) {
+                                    } elseif ($bolehKabari && KeterlambatanWa::bisaIsiHp($r)) {
                                         $tombolWa = '<button type="button" class="btn btn-netral btn-sm" data-buka-dialog="tl-isi-hp" data-isi-hp="' . esc($base . '/' . (int) $r['id'] . '/hp', 'attr') . '"'
-                                            . ' data-isi-nama="' . esc($r['nama_siswa'] . ' (' . ($r['nama_kelas'] ?? 'tanpa kelas') . ')', 'attr') . '">' . ikon('phone', 'h-4 w-4') . 'Isi no. ortu</button>';
+                                            . ' data-isi-nama="' . esc($r['nama_siswa'] . ' (' . ($r['nama_kelas'] ?? 'tanpa kelas') . ')', 'attr') . '"' . ($manual ? ' data-isi-manual="1"' : '') . '>'
+                                            . ikon('phone', 'h-4 w-4') . 'Isi no. ortu</button>';
+                                    }
+                                    if ($bolehTautkan && $manual) {
+                                        $tombolWa .= '<button type="button" class="btn btn-netral btn-sm" data-buka-dialog="tl-tautkan" data-tautkan="' . esc($base . '/' . (int) $r['id'] . '/tautkan', 'attr') . '"'
+                                            . ' data-tautkan-nama="' . esc($r['nama_siswa'] . ' (' . ($r['nama_kelas'] ?? 'tanpa kelas') . ')', 'attr') . '" data-tautkan-q="' . esc((string) $r['nama_siswa'], 'attr') . '"'
+                                            . ' title="Siswa ini sudah dimasukkan ke Data Siswa? Satukan catatannya.">' . ikon('link', 'h-4 w-4') . 'Tautkan</button>';
                                     }
                                     ?>
                                     <?= ui_crud_aksi([
                                         'tambahanHtml' => $tombolWa,
                                         'row'        => ['id' => (int) $r['id'], 'nama_siswa' => $r['nama_siswa'] . ' (' . ($r['nama_kelas'] ?? 'tanpa kelas') . ')',
                                             'jam' => $r['jam'] !== null ? substr((string) $r['jam'], 0, 5) : '', 'guru_id' => (string) ($r['guru_id'] ?? ''),
-                                            'sanksi' => (string) ($r['sanksi'] ?? ''), 'keterangan' => (string) ($r['keterangan'] ?? '')],
+                                            'sanksi' => (string) ($r['sanksi'] ?? ''), 'keterangan' => (string) ($r['keterangan'] ?? ''),
+                                            'manual' => $manual, 'nama' => (string) $r['nama_siswa'], 'kelas_id' => (string) ($r['kelas_id'] ?? ''), 'hp_ortu' => (string) ($r['hp_ortu'] ?? '')],
                                         'hapusUrl'   => $base . '/delete/' . (int) $r['id'],
                                         'konfirmasi' => 'Hapus catatan terlambat ' . $r['nama_siswa'] . ' pada ' . $hariTanggal . '?',
                                     ]) ?>
@@ -241,10 +295,27 @@ $opsiGuru = static function (int $pilih) use ($piket, $guruLain, $namaHari, $har
 
     <!-- ===== Dialog ubah (siswa & tanggal tetap) ===== -->
     <?= ui_crud_form_buka(['benda' => 'Catatan Keterlambatan']) ?>
-        <div>
+        <div x-show="! form.manual">
             <p class="lbl">Siswa</p>
             <p class="text-sm font-medium text-gray-900 dark:text-white" x-text="form.nama_siswa"></p>
             <p class="hint mt-1">Salah siswa? Hapus catatan ini lalu catat ulang.</p>
+        </div>
+        <div class="space-y-3" x-show="form.manual" x-cloak>
+            <p><span class="lencana lencana-kuning">Belum terdaftar di Data Siswa</span></p>
+            <div>
+                <label class="lbl" for="tl-ubah-nama">Nama siswa <span class="text-red-600 dark:text-red-400">*</span></label>
+                <input type="text" id="tl-ubah-nama" name="nama_siswa" class="inp" required minlength="<?= Buku::MIN_NAMA ?>" maxlength="<?= Buku::MAKS_NAMA ?>" autocomplete="off" x-model="form.nama" :disabled="! form.manual">
+            </div>
+            <div class="grid gap-4 sm:grid-cols-2">
+                <div>
+                    <label class="lbl" for="tl-ubah-kelas">Kelas <span class="text-red-600 dark:text-red-400">*</span></label>
+                    <select id="tl-ubah-kelas" name="kelas_id" class="inp" required x-model="form.kelas_id" :disabled="! form.manual"><?= $opsiKelas() ?></select>
+                </div>
+                <div>
+                    <label class="lbl" for="tl-ubah-hp">No. HP orang tua</label>
+                    <input type="tel" id="tl-ubah-hp" name="hp_ortu" class="inp" inputmode="tel" maxlength="30" autocomplete="off" placeholder="Opsional, 0812…" x-model="form.hp_ortu" :disabled="! form.manual">
+                </div>
+            </div>
         </div>
         <div>
             <label class="lbl" for="tl-ubah-guru">Guru piket <span class="text-red-600 dark:text-red-400">*</span></label>
@@ -277,11 +348,57 @@ $opsiGuru = static function (int $pilih) use ($piket, $guruLain, $namaHari, $har
                     <label class="lbl" for="tl-hp">Nomor WhatsApp orang tua / wali</label>
                     <input type="tel" id="tl-hp" name="hp" class="inp" inputmode="tel" maxlength="30" required placeholder="0812 3456 7890" autocomplete="off">
                 </div>
-                <p class="hint">Disimpan ke <b>Data Siswa</b> (kolom Telepon orang tua) supaya lain kali tidak perlu diisi lagi. Nomor yang sudah ada di Data Siswa tidak pernah ditimpa.</p>
+                <p class="hint" id="tl-hp-ket-data">Disimpan ke <b>Data Siswa</b> (kolom Telepon orang tua) supaya lain kali tidak perlu diisi lagi. Nomor yang sudah ada di Data Siswa tidak pernah ditimpa.</p>
+                <p class="hint" id="tl-hp-ket-manual" hidden>Siswa ini <b>belum terdaftar</b> di Data Siswa — nomor disimpan di catatan ini, dan ikut masuk ke Data Siswa saat catatannya ditautkan.</p>
             </div>
             <div class="dialog-kaki">
                 <button type="button" class="btn btn-netral" @click="tutup()">Batal</button>
                 <button type="submit" class="btn btn-utama"><?= ikon('check', 'h-4 w-4') ?>Simpan nomor</button>
+            </div>
+        </form>
+        <?= ui_dialog_tutup() ?>
+    <?php endif; ?>
+
+    <?php if ($bolehTautkan): ?>
+        <!-- ===== Dialog Tautkan catatan siswa belum terdaftar ke Data Siswa (komponen "tautkanSiswa"; action diisi dari tombol) ===== -->
+        <?= ui_dialog_buka(['nama' => 'tl-tautkan', 'judul' => 'Tautkan ke Data Siswa']) ?>
+        <form method="post" action="<?= $base ?>" x-data="tautkanSiswa" data-cari="<?= $base ?>/siswa" data-tanggal="<?= esc($tanggal, 'attr') ?>" @submit="kirim">
+            <?= csrf_field() ?>
+            <input type="hidden" name="siswa_id" :value="idPilihan()">
+            <div class="dialog-isi space-y-3">
+                <p class="text-sm text-gray-600 dark:text-gray-300">Catatan: <b class="text-gray-900 dark:text-white" x-text="nama"></b> <span class="lencana lencana-kuning">Belum terdaftar</span></p>
+                <div x-show="! pilihan">
+                    <label class="lbl" for="tl-tautkan-cari">Cari siswanya di Data Siswa</label>
+                    <input type="search" id="tl-tautkan-cari" class="inp" placeholder="Ketik nama atau NIS (min. 2 huruf)" autocomplete="off"
+                           x-model="q" @input.debounce.300ms="cari()" @keydown.enter.prevent="cari()">
+                    <ul class="mt-2 max-h-64 divide-y divide-gray-200 overflow-y-auto rounded-lg border border-gray-200 dark:divide-gray-700 dark:border-gray-700" x-show="hasil.length" x-cloak aria-label="Hasil pencarian Data Siswa">
+                        <template x-for="s in hasil" :key="s.id">
+                            <li>
+                                <button type="button" class="flex w-full flex-col items-start gap-0.5 px-3 py-2 text-left hover:bg-gray-100 focus:bg-gray-100 focus:outline-none dark:hover:bg-gray-700 dark:focus:bg-gray-700" @click="pilih(s)">
+                                    <span class="text-sm font-medium text-gray-900 dark:text-white" x-text="s.nama"></span>
+                                    <span class="text-xs text-gray-500 dark:text-gray-400" x-text="ket(s)"></span>
+                                </button>
+                            </li>
+                        </template>
+                    </ul>
+                    <p class="hint mt-1" x-show="pesan !== ''" x-text="pesan" aria-live="polite"></p>
+                </div>
+                <div class="flex items-center justify-between gap-3 rounded-lg border border-brand-200 bg-brand-50 px-3 py-2 dark:border-brand-800 dark:bg-brand-900/30" x-show="pilihan" x-cloak>
+                    <div class="min-w-0">
+                        <p class="sel-judul" x-text="namaPilihan()"></p>
+                        <p class="sel-ket" x-text="ketPilihan()"></p>
+                    </div>
+                    <button type="button" class="btn btn-netral btn-sm shrink-0" @click="ganti()"><?= ikon('close', 'h-4 w-4') ?>Ganti</button>
+                </div>
+                <label class="flex items-start gap-2 text-sm text-gray-700 dark:text-gray-300">
+                    <input type="checkbox" name="semua" value="1" class="cek mt-0.5" checked>
+                    <span>Tautkan juga catatan hari lain dengan nama &amp; kelas yang sama</span>
+                </label>
+                <p class="hint">Nama (dan kelas, untuk catatan tahun ajaran ini) diganti sesuai Data Siswa, sehingga rekap menyatu dan tombol WhatsApp memakai nomor di Data Siswa. Nomor HP orang tua di catatan diisikan ke Data Siswa bila di sana masih kosong.</p>
+            </div>
+            <div class="dialog-kaki">
+                <button type="button" class="btn btn-netral" @click="tutup()">Batal</button>
+                <button type="submit" class="btn btn-utama"><?= ikon('link', 'h-4 w-4') ?>Tautkan</button>
             </div>
         </form>
         <?= ui_dialog_tutup() ?>
