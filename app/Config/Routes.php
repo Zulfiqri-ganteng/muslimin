@@ -686,6 +686,20 @@ $routes->group('admin', static function ($routes) {
         $routes->get('kurikulum/rekap', 'Admin\Kurikulum::rekap');
         $routes->get('kurikulum/bentrok', 'Admin\Kurikulum::bentrok');
 
+        // ===== GURU PIKET: CATAT KETERLAMBATAN SISWA =====
+        $routes->get('keterlambatan', 'Admin\Keterlambatan::index');
+        $routes->get('keterlambatan/siswa', 'Admin\Keterlambatan::siswa');
+        $routes->get('keterlambatan/excel', 'Admin\Keterlambatan::excel');
+        $routes->get('keterlambatan/rekap', 'Admin\Keterlambatan::rekap');
+        $routes->get('keterlambatan/rekap/excel', 'Admin\Keterlambatan::rekapExcel');
+        $routes->get('keterlambatan/rekap/buku', 'Admin\Keterlambatan::rekapBuku');
+        $routes->post('keterlambatan', 'Admin\Keterlambatan::store');
+        $routes->post('keterlambatan/(:num)', 'Admin\Keterlambatan::update/$1');
+        $routes->post('keterlambatan/(:num)/kabari', 'Admin\Keterlambatan::kabari/$1');
+        $routes->post('keterlambatan/(:num)/hp', 'Admin\Keterlambatan::isiHp/$1');
+        $routes->post('keterlambatan/pesan', 'Admin\Keterlambatan::pesan');
+        $routes->post('keterlambatan/delete/(:num)', 'Admin\Keterlambatan::delete/$1');
+
         // ===== PENGUMUMAN =====
         $routes->get('pengumuman', 'Admin\Pengumuman::index');
         $routes->post('pengumuman', 'Admin\Pengumuman::store');
@@ -1162,6 +1176,23 @@ $routes->group('api/v1', ['namespace' => 'App\Controllers\Api', 'filter' => 'cor
         $routes->post('surat/(:num)/ubah', 'Surat::ubah/$1');
         $routes->post('surat/(:segment)', 'Surat::buat/$1'); // asts | tka | pernyataan-ortu | balasan | penarikan
 
+        // ---------- KETERLAMBATAN SISWA (Guru Piket, Admin) — docs/API-KETERLAMBATAN.md ----------
+        // Gerbang peran: katalog menu 'api' (awalan "keterlambatan" / "keterlambatan/rekap"); hak per aksi dijaga controller dengan
+        // aturan web yang sama. Rute statis SEBELUM pola (:num).
+        $routes->get('keterlambatan/meta', 'Keterlambatan::meta');
+        $routes->get('keterlambatan/siswa', 'Keterlambatan::siswa');
+        $routes->get('keterlambatan/excel', 'Keterlambatan::excel');
+        $routes->get('keterlambatan/rekap', 'Keterlambatan::rekap');
+        $routes->get('keterlambatan/rekap/excel', 'Keterlambatan::rekapExcel');
+        $routes->get('keterlambatan/rekap/buku', 'Keterlambatan::rekapBuku');
+        $routes->post('keterlambatan/pesan', 'Keterlambatan::pesan');
+        $routes->get('keterlambatan', 'Keterlambatan::daftar');
+        $routes->post('keterlambatan', 'Keterlambatan::catat');
+        $routes->get('keterlambatan/(:num)', 'Keterlambatan::detail/$1');
+        $routes->post('keterlambatan/(:num)/ubah', 'Keterlambatan::ubah/$1');
+        $routes->delete('keterlambatan/(:num)', 'Keterlambatan::hapus/$1');
+        $routes->post('keterlambatan/(:num)/kabari', 'Keterlambatan::kabari/$1');
+        $routes->post('keterlambatan/(:num)/hp', 'Keterlambatan::isiHp/$1');
 
         // ---------- PROFIL & PENGATURAN ----------
         $routes->get('admin/profile', 'Admin\Profile::show');

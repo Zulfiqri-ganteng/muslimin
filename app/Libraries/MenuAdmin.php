@@ -91,8 +91,9 @@ final class MenuAdmin
             // Guru piket: jadwal piket (pindahan dari Jadwal & Absensi, alamat tetap) + buku keterlambatan siswa.
             ['judul' => 'GURU PIKET', 'bagian' => 'KURIKULUM', 'ikon' => 'clock', 'entri' => [
                 'absensi_piket'       => ['Jadwal Piket', self::MENU, [['admin/absensi/piket', 'Jadwal Piket', 'calendar-plus']]],
-                'keterlambatan'       => ['Catat Keterlambatan', self::MENU, [['admin/keterlambatan', 'Catat Keterlambatan', 'user-edit']], ['segera' => true]],
-                'keterlambatan_rekap' => ['Rekap Keterlambatan', self::MENU, [['admin/keterlambatan/rekap', 'Rekap Keterlambatan', 'chart']], ['segera' => true]],
+                'keterlambatan'       => ['Catat Keterlambatan', self::MENU, [['admin/keterlambatan', 'Catat Keterlambatan', 'user-edit']], ['api' => ['keterlambatan'], 'ket' => 'Buku piket siswa terlambat: catat, ubah, hapus, kabar WA orang tua (Lihat = hanya melihat daftar). Juga di aplikasi Android.']],
+                'keterlambatan_rekap' => ['Rekap Keterlambatan', self::MENU, [['admin/keterlambatan/rekap', 'Rekap Keterlambatan', 'chart']], ['api' => ['keterlambatan/rekap'], 'ket' => 'Rekap per siswa & per kelas + unduh Excel buku piket per rentang tanggal.']],
+                'keterlambatan_pesan' => ['Pesan WA keterlambatan', self::ADMIN, [], ['awalan' => ['admin/keterlambatan/pesan'], 'ket' => 'Khusus Admin: mengubah templat pesan WhatsApp ke orang tua.']],
             ]],
             ['judul' => 'UJIAN', 'bagian' => 'KURIKULUM', 'ikon' => 'file-pen', 'entri' => [
                 'ujian_asts1' => ['ASTS 1', self::MENU, [['admin/ujian/asts1', 'ASTS 1', 'file-pen']]],

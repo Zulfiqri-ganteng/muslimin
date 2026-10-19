@@ -163,7 +163,7 @@ $js = static fn (string $berkas): string => '<script defer src="' . base_url($be
     <meta name="csrf-token" content="<?= csrf_hash() ?>">
     <?= view('partials/favicon') ?>
     <?php // admin.css = Tailwind v4 khusus admin (npm run build:admin); font Inter disimpan sendiri; penanda nonce = persiapan CSP (§5a). ?>
-    <link rel="preload" href="<?= base_url('assets/fonts/inter/inter-latin-wght-normal.woff2') ?>" as="font" type="font/woff2" crossorigin>
+    <link rel="preload" href="<?= base_url('assets/fonts/plus-jakarta-sans/plus-jakarta-sans-latin-wght-normal.woff2') ?>" as="font" type="font/woff2" crossorigin>
     <link rel="stylesheet" href="<?= base_url('assets/css/admin.css') ?>?v=<?= @filemtime(FCPATH . 'assets/css/admin.css') ?>" <?= csp_style_nonce() ?>>
 </head>
 <body class="bg-gray-50 text-gray-800 antialiased dark:bg-gray-900 dark:text-gray-200 sekolah:bg-brand-50/60" x-data="adminLayout" @keydown.escape.window="tutupLaci()">

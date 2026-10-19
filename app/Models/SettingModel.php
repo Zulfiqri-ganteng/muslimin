@@ -21,6 +21,7 @@ class SettingModel extends Model
         'school_postal_code', 'school_accreditation', 'supervisor_name', 'supervisor_nip',
         'tema_warna', 'tema_sidebar', // tema tampilan admin (rombak tampilan F3; Libraries\Tampilan)
         'profil_singkat', 'wa_bantuan', 'tautan_aplikasi', // situs publik (rombak publik P2b; kosong = tidak tampil)
+        'wa_pesan_terlambat', // templat WA ke orang tua siswa terlambat (Libraries\KeterlambatanWa; kosong = bawaan)
     ];
 
     protected $useTimestamps = true;

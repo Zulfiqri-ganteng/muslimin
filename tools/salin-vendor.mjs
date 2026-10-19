@@ -1,6 +1,7 @@
 // Salin pustaka & aset dari node_modules ke folder yang IKUT di-commit (server tidak menjalankan npm). Jalankan: npm run vendor
 //   Alpine biasa + versi CSP + collapse      → public/assets/js/vendor/
-//   Font Inter variabel (latin, latin-ext)   → public/assets/fonts/inter/
+//   Font Inter variabel (latin, latin-ext)   → public/assets/fonts/inter/ (kini hanya pratinjau isi dokumen)
+//   Font Plus Jakarta Sans variabel           → public/assets/fonts/plus-jakarta-sans/ (huruf tampilan admin & publik)
 //   Ikon Flowbite yang terdaftar di resources/ikon.json → app/ThirdParty/flowbite-icons/{outline,solid}/<nama>.svg
 //     (ikon yang dihapus dari daftar ikut dibuang; pakai di view lewat helper ikon())
 // Versi dikunci di package.json + package-lock.json. Berkas yang isinya sudah sama tidak disentuh.
@@ -37,6 +38,9 @@ salin('apexcharts/dist/apexcharts.css', 'public/assets/css/vendor/apexcharts.css
 salin('apexcharts/LICENSE', 'public/assets/js/vendor/apexcharts.LICENSE.txt');
 for (const n of ['latin', 'latin-ext']) salin(`@fontsource-variable/inter/files/inter-${n}-wght-normal.woff2`, `public/assets/fonts/inter/inter-${n}-wght-normal.woff2`);
 salin('@fontsource-variable/inter/LICENSE', 'public/assets/fonts/inter/LICENSE.txt');
+// Plus Jakarta Sans (2026-10-19) = huruf SELURUH tampilan admin & publik; Inter tinggal dipakai pratinjau isi dokumen (.dok-pratinjau).
+for (const n of ['latin', 'latin-ext']) salin(`@fontsource-variable/plus-jakarta-sans/files/plus-jakarta-sans-${n}-wght-normal.woff2`, `public/assets/fonts/plus-jakarta-sans/plus-jakarta-sans-${n}-wght-normal.woff2`);
+salin('@fontsource-variable/plus-jakarta-sans/LICENSE', 'public/assets/fonts/plus-jakarta-sans/LICENSE.txt');
 
 // Ikon: indeks nama → berkas (nama unik lintas kategori; ganda = galat).
 const daftar = JSON.parse(readFileSync(join(AKAR, 'resources/ikon.json'), 'utf8'));
@@ -68,7 +72,7 @@ for (const varian of ['outline', 'solid']) {
 salin('flowbite-icons/LICENSE', 'app/ThirdParty/flowbite-icons/LICENSE');
 
 console.log(`Vendor: ${ubah} berubah, ${sama} sudah sama · Alpine ${versi('alpinejs')} (CSP ${versi('@alpinejs/csp')}, collapse ${versi('@alpinejs/collapse')})`
-    + ` · Inter ${versi('@fontsource-variable/inter')} · flowbite-icons ${versi('flowbite-icons')} (${(daftar.outline ?? []).length + (daftar.solid ?? []).length} ikon)`);
+    + ` · Inter ${versi('@fontsource-variable/inter')} · Plus Jakarta Sans ${versi('@fontsource-variable/plus-jakarta-sans')} · flowbite-icons ${versi('flowbite-icons')} (${(daftar.outline ?? []).length + (daftar.solid ?? []).length} ikon)`);
 if (hilang.length) {
     console.log('IKON TIDAK ADA di flowbite-icons: ' + hilang.join(', '));
     process.exitCode = 1;

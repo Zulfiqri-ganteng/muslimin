@@ -95,7 +95,7 @@
     function dasar(jenis, tinggi, p) {
         return {
             chart: {
-                type: jenis, height: tinggi, fontFamily: 'Inter, sans-serif', foreColor: p.teks, background: 'transparent',
+                type: jenis, height: tinggi, fontFamily: "'Plus Jakarta Sans', sans-serif", foreColor: p.teks, background: 'transparent',
                 toolbar: { show: false }, zoom: { enabled: false }, parentHeightOffset: 0, nonce: nonce || undefined,
                 locales: [LOKAL], defaultLocale: 'id',
                 animations: { enabled: !kurangiGerak, speed: 650, animateGradually: { enabled: true, delay: 60 }, dynamicAnimation: { enabled: !kurangiGerak, speed: 350 } },
@@ -105,7 +105,7 @@
             legend: { show: false },
             grid: { show: false },
             states: { hover: { filter: { type: 'darken', value: 0.9 } }, active: { filter: { type: 'none' } } },
-            tooltip: { theme: gelap() ? 'dark' : 'light', style: { fontSize: '14px', fontFamily: 'Inter, sans-serif' } },
+            tooltip: { theme: gelap() ? 'dark' : 'light', style: { fontSize: '14px', fontFamily: "'Plus Jakarta Sans', sans-serif" } },
         };
     }
 

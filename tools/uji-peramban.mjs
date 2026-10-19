@@ -233,7 +233,7 @@ function infoHalaman() {
         status: nav ? nav.responseStatus : 0,
         php: /Whoops!|ErrorException|Undefined (variable|array key|index|offset|property)|Fatal error|Parse error/.test(html),
         csp: (window.__ujiCsp || []).slice(0, 2000),
-        inter: [...document.fonts].some((f) => f.family.replace(/["']/g, '') === 'Inter' && f.status === 'loaded'),
+        huruf: [...document.fonts].some((f) => f.family.replace(/["']/g, '') === 'Plus Jakarta Sans' && f.status === 'loaded'),
         alpine: typeof window.Alpine === 'object' && window.Alpine ? String(window.Alpine.version || 'ada') : null,
         elemen: document.getElementsByTagName('*').length,
         uji: typeof window.__ujiHasil === 'string' ? window.__ujiHasil : null,
@@ -693,7 +693,7 @@ try {
                 hasil.push(Object.assign(baris, dialihkan ? {} : await cekTambahan(c)));
             } catch (e) {
                 // Satu halaman bermasalah (mis. Chrome tak menjawab) → dicatat GAGAL, uji lanjut ke halaman berikutnya.
-                hasil.push({ url: pendek(url), akhir: pendek(url), peran, status: 0, php: false, csp: [], inter: false, alpine: null, uji: null,
+                hasil.push({ url: pendek(url), akhir: pendek(url), peran, status: 0, php: false, csp: [], huruf: false, alpine: null, uji: null,
                     galat: [...kj.galat, 'ALAT: ' + e.message], dialog: [...kj.dialog], dialihkan: false });
             }
         }
@@ -723,7 +723,7 @@ for (const peran of ['-', ...PERAN]) {
     const nCsp = baris.reduce((n, h) => n + h.csp.length, 0);
     const label = peran === '-' ? 'login (belum masuk)' : peran;
     console.log(`\n[${label}] ${baris.length} halaman · bermasalah ${buruk.length} · dialihkan ${baris.filter((h) => h.dialihkan).length}`
-        + ` · CSP ${nCsp} pelanggaran di ${cspHal.length} halaman · Inter termuat ${baris.filter((h) => h.inter).length}/${baris.length}`
+        + ` · CSP ${nCsp} pelanggaran di ${cspHal.length} halaman · Plus Jakarta Sans termuat ${baris.filter((h) => h.huruf).length}/${baris.length}`
         + ` · Alpine ${[...new Set(baris.map((h) => h.alpine ?? 'tidak ada'))].join('/')}`);
     for (const [p, urls] of masalah) {
         const di = urls.length === baris.length ? 'semua halaman' : `${urls.length} halaman: ${urls.slice(0, 4).join(', ')}${urls.length > 4 ? ', …' : ''}`;

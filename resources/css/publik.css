@@ -20,7 +20,7 @@
 @source "../../public/assets/js/biodata.js";
 
 @theme {
-  --font-sans: 'Inter', 'Segoe UI', system-ui, sans-serif;
+  --font-sans: 'Plus Jakarta Sans', 'Segoe UI', system-ui, sans-serif;
 
   /* Teks & permukaan — nilai acuan (teks #323232, teks kedua #5e5e5e, latar putih / #F5F5F5 bergantian, kaki #1E1F1F).
      teks-3 (#727272) hanya di atas putih (4,8:1); di atas permukaan abu pakai teks-2 (5,9:1). */
@@ -70,7 +70,28 @@
   --shadow-melayang: 0 2px 10px rgb(0 0 0 / 0.12), 0 1px 2px rgb(0 0 0 / 0.06);
 }
 
-/* Inter (OFL) lokal — tanpa Google Fonts (siap CSP). Berkas sama dengan panel admin. */
+/* (2026-10-19) Plus Jakarta Sans (OFL) lokal = huruf seluruh situs publik — tanpa Google Fonts (siap CSP). Berkas sama dengan panel
+   admin (npm run vendor). */
+@font-face {
+  font-family: 'Plus Jakarta Sans';
+  font-style: normal;
+  font-display: swap;
+  font-weight: 200 800;
+  src: url('../fonts/plus-jakarta-sans/plus-jakarta-sans-latin-ext-wght-normal.woff2') format('woff2-variations');
+  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F,
+    U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+@font-face {
+  font-family: 'Plus Jakarta Sans';
+  font-style: normal;
+  font-display: swap;
+  font-weight: 200 800;
+  src: url('../fonts/plus-jakarta-sans/plus-jakarta-sans-latin-wght-normal.woff2') format('woff2-variations');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC,
+    U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+
+/* Inter (OFL) lokal — kini HANYA isi pratinjau dokumen (.dok-pratinjau) agar tampilan dokumen tidak berubah. */
 @font-face {
   font-family: 'Inter';
   font-style: normal;
@@ -443,7 +464,7 @@
   .penampil-tab button { @apply h-8 rounded-md bg-permukaan px-3 text-xs font-medium text-teks-2 hover:bg-garis; }
   .penampil-tab button[aria-pressed="true"] { @apply bg-brand-700 text-white hover:bg-brand-700; }
   /* Isi Word/Excel/CSV yang dipasang dokumen-penampil.js (mammoth/xlsx) */
-  .dok-pratinjau { @apply max-h-[72vh] overflow-auto text-teks; }
+  .dok-pratinjau { @apply max-h-[72vh] overflow-auto text-teks; font-family: 'Inter', 'Segoe UI', system-ui, sans-serif; }
   .dok-pratinjau table { @apply w-full border-collapse text-xs; }
   .dok-pratinjau :is(td, th) { @apply border border-garis px-2 py-1 align-top; }
   .dok-pratinjau tr:first-child td { @apply bg-permukaan font-semibold; }

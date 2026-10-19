@@ -21,7 +21,7 @@ $js         = static fn (string $berkas): string => '<script defer src="' . base
     <meta name="theme-color" content="#ffffff">
     <title><?= esc($title ?? 'Formulir') ?> &mdash; <?= esc($schoolName) ?></title>
     <?= view('partials/favicon') ?>
-    <link rel="preload" href="<?= base_url('assets/fonts/inter/inter-latin-wght-normal.woff2') ?>" as="font" type="font/woff2" crossorigin>
+    <link rel="preload" href="<?= base_url('assets/fonts/plus-jakarta-sans/plus-jakarta-sans-latin-wght-normal.woff2') ?>" as="font" type="font/woff2" crossorigin>
     <link rel="stylesheet" href="<?= base_url('assets/css/publik.css') ?>?v=<?= @filemtime(FCPATH . 'assets/css/publik.css') ?>" <?= csp_style_nonce() ?>>
 </head>
 <body class="flex min-h-screen flex-col bg-permukaan">
