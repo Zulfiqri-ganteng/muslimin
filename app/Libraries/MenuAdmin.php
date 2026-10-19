@@ -181,6 +181,7 @@ final class MenuAdmin
                 'audit'     => ['Audit Log', self::MENU, [['admin/audit', 'Audit Log', 'file-search']]],
                 'profil'    => ['Profil Saya', self::UMUM, [['admin/profile', 'Profil Saya', 'user']]],
                 'pemberitahuan' => ['Pemberitahuan (lonceng)', self::UMUM, [], ['awalan' => ['admin/pemberitahuan'], 'ket' => 'Isi ikon lonceng di bilah atas; disaring hak tiap peran.']],
+                'ui_kit'        => ['Kit Tampilan (alat pengembang)', self::ADMIN, [], ['awalan' => ['admin/ui-kit'], 'ket' => 'Halaman contoh & uji komponen tampilan (admin/ui-kit?uji=1); khusus Admin.']],
             ]],
         ];
     }

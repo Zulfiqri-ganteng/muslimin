@@ -862,7 +862,9 @@ class UjiPkl extends BaseCommand
             return $r;
         })();
         $setPeng = fn (array $data) => $this->db->table('pkl_pengaturan')->where('id', 1)->update($data);
-        $setPeng(['format_nomor' => '{urut}/PKL/{tgl}-{bln}-{thn}', 'nomor_awal' => 1, 'nomor_awal_tahun' => null, 'waka_hubin_nama' => 'Budi Santoso, S.Pd.', 'waka_hubin_nip' => '198001012005011001', 'template_surat' => null]);
+        // Format nama berkas = bawaan (isian sekolah di DB, mis. berisi nama singkat sekolah, tidak boleh memengaruhi uji; dikembalikan di akhir).
+        $setPeng(['format_nomor' => '{urut}/PKL/{tgl}-{bln}-{thn}', 'nomor_awal' => 1, 'nomor_awal_tahun' => null, 'waka_hubin_nama' => 'Budi Santoso, S.Pd.', 'waka_hubin_nip' => '198001012005011001', 'template_surat' => null,
+            'format_nama_berkas' => \App\Libraries\PklNamaBerkas::BAWAAN]);
 
         $ajuan = new PklAjuan();
         $svc   = new \App\Libraries\PklSurat();

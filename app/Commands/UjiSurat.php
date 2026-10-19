@@ -1103,10 +1103,10 @@ class UjiSurat extends BaseCommand
             $dHuD = html_entity_decode($dHu);
             $this->cek('detail menunggu — Hubin: tombol ACC & Kembalikan + dialog berformulir ke alamat yang benar; tanpa kolom wakil/paham', str_contains($dHu, 'ACC surat ini') && str_contains($dHu, 'Kembalikan untuk diperbaiki') && str_contains($dHuD, '/admin/surat/' . $v1 . '/acc"')
                 && str_contains($dHuD, '/admin/surat/' . $v1 . '/kembalikan"') && ! str_contains($dHu, 'name="wakil"') && ! str_contains($dHu, 'name="paham"'));
-            $this->cek('detail menunggu — Operator: TIDAK ada tombol ACC; ada keterangan menunggu ACC dan tombol Batalkan surat', ! str_contains($dOp, 'ACC surat ini') && str_contains($dOp, 'menunggu <b>ACC</b> dari Waka Hubin') && str_contains($dOp, "dlg = 'batal'"));
-            $this->cek('detail menunggu — Hubin: tidak ada tombol Batalkan surat (bukan haknya); Admin: tombol ACC tanpa kotak "mewakili" (dihapus)', ! str_contains($dHu, "dlg = 'batal'") && ! str_contains($dAd, 'name="wakil"') && str_contains($dAd, 'ACC surat ini'));
+            $this->cek('detail menunggu — Operator: TIDAK ada tombol ACC; ada keterangan menunggu ACC dan tombol Batalkan surat', ! str_contains($dOp, 'ACC surat ini') && str_contains($dOp, 'menunggu <b>ACC</b> dari Waka Hubin') && str_contains($dOp, 'data-buka-dialog="surat-batal"'));
+            $this->cek('detail menunggu — Hubin: tidak ada tombol Batalkan surat (bukan haknya); Admin: tombol ACC tanpa kotak "mewakili" (dihapus)', ! str_contains($dHu, 'data-buka-dialog="surat-batal"') &&! str_contains($dAd, 'name="wakil"') && str_contains($dAd, 'ACC surat ini'));
             $dBahaya = (string) $this->panggil($S, 'hubin', 'detail', [], [], $v5);
-            $this->cek('surat tanpa siswa: peringatan BAHAYA tampil dan dialog ACC meminta centang "sudah saya periksa"', str_contains($dBahaya, 'BAHAYA: Surat ini belum memuat satu pun siswa') && str_contains($dBahaya, 'name="paham"'));
+            $this->cek('surat tanpa siswa: peringatan BAHAYA tampil dan dialog ACC meminta centang "sudah saya periksa"', str_contains($dBahaya, '<b>Bahaya:</b> Surat ini belum memuat satu pun siswa') &&str_contains($dBahaya, 'name="paham"'));
             $this->atur(['kontak_surat_nama' => '']);
             $this->cek('kontak NB kosong: peringatan awas tampil (tanpa memblokir ACC)', str_contains((string) $this->panggil($S, 'hubin', 'detail', [], [], $v1), 'Kontak &quot;NB&quot; di bawah surat belum diisi'));
             $this->atur(['kontak_surat_nama' => 'Kontak Uji']);
@@ -1143,7 +1143,9 @@ class UjiSurat extends BaseCommand
             $this->db->table('siswa')->where('id', $s2)->update(['nama' => 'ZZUJI SS 2 Revisi']);
             $uUlang = (string) $this->panggil($S, 'operator', 'index', ['status' => 'disetujui', 'jenis' => 'izin_tka', 'q' => 'Berkas TKA B2']);
             $this->db->table('siswa')->where('id', $s2)->update(['nama' => 'ZZUJI SS 2']);
-            $this->cek('daftar menandai "⚠ perlu cetak ulang" untuk surat yang datanya berubah sesudah diunduh', str_contains($uUlang, '⚠ perlu cetak ulang') && str_contains($uUlang, 'ACC: ' . self::OLEH . ' hubin'));
+            // (rombak tampilan) tanda = lencana kuning ber-ikon "perlu cetak ulang"; nama yang meng-ACC bisa ditebalkan → bandingkan teks polos.
+            $this->cek('daftar menandai "perlu cetak ulang" untuk surat yang datanya berubah sesudah diunduh', str_contains($uUlang, 'perlu cetak ulang</span>')
+                && str_contains((string) preg_replace('/\s+/', ' ', strip_tags($uUlang)), 'ACC: ' . self::OLEH . ' hubin'));
 
             // --- Aksi controller (alur web utuh)
             $cAcc = $this->baru('izin_asts', 'Ctrl ACC');

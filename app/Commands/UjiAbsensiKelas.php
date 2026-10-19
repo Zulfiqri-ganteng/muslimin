@@ -326,16 +326,18 @@ class UjiAbsensiKelas extends BaseCommand
                 $baris = array_map(static fn ($x) => $x[1] . '-' . $x[2], $m);
                 sort($baris);
                 $this->cek("tampilan {$tampilan}: tiap sesi tepat satu baris", $baris === $harapan, count($baris) . ' vs ' . count($harapan));
+                // (rombak tampilan F6) tombol tampilan aktif = aria-pressed="true" (grup-tombol kit), bukan lagi kelas warna.
                 $this->cek("tampilan {$tampilan}: tombol aktif sesuai", (bool) preg_match(
-                    '/gantiTampilan\(\'' . $tampilan . '\'\)"\s+class="[^"]*bg-brand-700/',
+                    '/gantiTampilan\(\'' . $tampilan . '\'\)" aria-pressed="true"/',
                     $html
                 ));
 
                 if ($tampilan === 'kelas') {
-                    // esc(…, 'attr') menyandikan spasi & "|" → urai dulu (seperti dataset di browser).
-                    preg_match_all('/data-cari="([^"]*)"/', $html, $c);
+                    // (rombak tampilan F6) satu kartu kelas = <section … x-show="kelasTampil(id)" … aria-label="Kelas {nama}">; data saringan
+                    // pindah ke konfigurasi JS. esc(…, 'attr') menyandikan spasi → urai dulu.
+                    preg_match_all('/x-show="kelasTampil\(\d+\)"[^>]*aria-label="Kelas ([^"]*)"/', $html, $c);
                     $urutHtml = array_map(
-                        static fn ($v) => explode('|', html_entity_decode($v, ENT_QUOTES | ENT_HTML5))[0],
+                        static fn ($v) => strtolower(html_entity_decode($v, ENT_QUOTES | ENT_HTML5)),
                         $c[1]
                     );
                     $this->cek('tampilan kelas: jumlah kartu = jumlah kelas', count($urutHtml) === count($d['kelas']));

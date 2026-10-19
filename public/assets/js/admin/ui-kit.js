@@ -298,7 +298,8 @@
                 ? '' : 'laci tidak tertutup dengan Esc';
         }],
         ['kerangka: menu akun di bilah atas (buka & Esc)', async function () {
-            var pemicu = cari('.navbar [aria-haspopup="true"]');
+            // Bilah atas punya beberapa menu tarik (lonceng pemberitahuan lebih dulu) → pilih pemicu berlabel "Menu akun".
+            var pemicu = cari('.navbar [aria-haspopup="true"][aria-label^="Menu akun"]');
             var menu = pemicu ? pemicu.parentElement.querySelector('.dropdown-menu') : null;
             if (!menu) { return 'menu akun tidak ada'; }
             pemicu.click();
