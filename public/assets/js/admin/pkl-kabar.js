@@ -6,6 +6,9 @@
  */
 (function () {
     'use strict';
+    // Bisa dimuat dua kali (kotak kabar keputusan + kotak kabar siswa yang dikeluarkan): pasang pendengar sekali saja.
+    if (window.pklKabarTerpasang) { return; }
+    window.pklKabarTerpasang = true;
 
     var kabarMeta = function (nama) {
         var m = document.querySelector('meta[name="' + nama + '"]');

@@ -6,8 +6,10 @@ use App\Controllers\BaseController;
 use App\Libraries\HakAkses;
 use App\Libraries\IsianBantu;
 use App\Libraries\PklAjuan;
+use App\Libraries\PklAlasan;
 use App\Libraries\PklForm;
 use App\Libraries\PklHak;
+use App\Libraries\PklKeluar;
 use App\Libraries\PklKeputusan;
 use App\Libraries\PklLapor;
 use App\Libraries\PklNamaBerkas;
@@ -191,7 +193,75 @@ class Pkl extends BaseController
             // Kabar WhatsApp untuk ajuan yang dikembalikan/ditolak (hak acc/ubah/surat); terbuka sendiri sesudah keputusan.
             'kabar'             => PklWaKeputusan::boleh($peranIni) ? (new PklWaKeputusan())->daftar((int) $id, $this->p, (new SettingModel())->get()) : null,
             'kabarBuka'         => (int) session()->getFlashdata('pkl_kabar') === (int) $id,
+            // Revisi klien 2026-10-20: siswa yang dikeluarkan dari ajuan ini (+ kabar WA-nya), riwayat penolakan tiap anggota,
+            // template alasan untuk tiap jendela keputusan, dan hak keluarkan / ditolak perusahaan.
+            'keluar'            => $keluar = (new PklKeluar())->daftarAjuan((int) $id),
+            'kabarKeluar'       => $keluar !== [] && PklWaKeputusan::bolehKeluar($peranIni) ? (new PklWaKeputusan())->daftarKeluar((int) $id, $this->p, (new SettingModel())->get()) : [],
+            'kabarKeluarBuka'   => (int) session()->getFlashdata('pkl_kabar_keluar') === (int) $id,
+            'tolakAnggota'      => (new PklKeluar())->tolakSiswa(array_map(static fn (array $s): int => (int) $s['siswa_id'], $anggota), (int) $id),
+            'bolehKeluarkan'    => PklKeluar::bolehKeluarkan($peranIni, (string) $ajuan['status']) && count($anggota) > 1,
+            'bolehDitolakPt'    => PklKeluar::bolehDitolakPerusahaan($peranIni, (string) $ajuan['status']),
+            'alasanDialog'      => array_combine(array_keys(PklAlasan::DIALOG), array_map(static fn (string $d): array => (new PklAlasan())->untukDialog($d), array_keys(PklAlasan::DIALOG))),
+            'bolehKelolaAlasan' => PklAlasan::bolehKelola($peranIni),
+            'maksAlasan'        => PklAjuan::maksCatatan(),
         ]);
+    }
+
+    /** POST admin/pkl/{id}/keluarkan — siswa_ids[], jenis, catatan. Aturan di Libraries\PklKeluar (dipakai juga API). */
+    public function keluarkan($id): RedirectResponse
+    {
+        $id = (int) $id;
+        $r  = (new PklKeluar())->keluarkan($id, (array) $this->request->getPost(), $this->konteks(['saluran' => 'web']), $this->p);
+        if ($r['kode'] === 'tidak_ada') {
+            return $this->ke('admin/pkl/daftar/menunggu', 'error', $r['pesan']);
+        }
+        $balik = $this->ke('admin/pkl/' . $id, $r['ok'] ? 'success' : 'error', $r['pesan']);
+        // Sesudah mengeluarkan: kotak "Kabari siswa yang dikeluarkan" langsung terbuka (bila berhak).
+        if ($r['ok'] && PklWaKeputusan::bolehKeluar($this->peranSaya())) {
+            $balik->with('pkl_kabar_keluar', $id);
+        }
+
+        return $balik;
+    }
+
+    /** POST admin/pkl/{id}/ditolak-perusahaan — catatan. SEMUA siswa ditolak perusahaan (juga dari Disetujui), hak ACC. */
+    public function ditolakPerusahaan($id): RedirectResponse
+    {
+        $id = (int) $id;
+        $r  = (new PklKeluar())->ditolakPerusahaan($id, (array) $this->request->getPost(), $this->konteks(['saluran' => 'web']));
+        if ($r['kode'] === 'tidak_ada') {
+            return $this->ke('admin/pkl/daftar/menunggu', 'error', $r['pesan']);
+        }
+        $balik = $this->ke('admin/pkl/' . $id, $r['ok'] ? 'success' : 'error', $r['pesan']);
+        if ($r['ok'] && PklWaKeputusan::boleh($this->peranSaya())) {
+            $balik->with('pkl_kabar', $id);
+        }
+
+        return $balik;
+    }
+
+    /** POST admin/pkl/{ajuan}/kabar-keluar/{keluar_id}/tandai — staf menekan tombol WhatsApp untuk siswa yang dikeluarkan. */
+    public function tandaiKabarKeluar($id, $keluarId): ResponseInterface
+    {
+        if (! PklWaKeputusan::bolehKeluar($this->peranSaya())) {
+            return $this->json(['ok' => false, 'message' => 'Akun ' . HakAkses::label($this->peranSaya()) . ' tidak punya hak mengabari siswa. Admin bisa mengaturnya di Sistem → Hak Akses.'], 403, true);
+        }
+        $ok = (new PklWaKeputusan())->tandaiKeluar((int) $id, (int) $keluarId, $this->konteks(['saluran' => 'web']));
+
+        return $this->json($ok
+            ? ['ok' => true, 'waktu' => date('Y-m-d H:i:s'), 'oleh' => $this->konteks()['oleh']]
+            : ['ok' => false, 'message' => 'Catatan siswa yang dikeluarkan tidak ditemukan. Muat ulang halaman.'], $ok ? 200 : 404, true);
+    }
+
+    /** GET admin/pkl/riwayat/{siswa} — riwayat PKL lengkap satu siswa (semua ajuan + pernah dikeluarkan/ditolak di mana). */
+    public function riwayat($siswaId)
+    {
+        $data = (new PklKeluar())->riwayatSiswa((int) $siswaId);
+        if ($data === null) {
+            return $this->ke('admin/pkl/siswa', 'error', 'Siswa tidak ditemukan (mungkin sudah dihapus dari Master Siswa).');
+        }
+
+        return view('admin/pkl/riwayat', $this->dasar('Riwayat PKL ' . $data['siswa']['nama'], 'siswa') + ['r' => $data, 'kembali' => (string) $this->request->getGet('dari')]);
     }
 
     public function acc($id): RedirectResponse
@@ -505,7 +575,7 @@ class Pkl extends BaseController
     /** Nilai saringan fase yang sah (kosong = semua). */
     private const FASE_SARING = [
         '', 'belum_mengisi', 'sudah_mengisi', 'sudah_pkl', 'belum', 'ditolak', 'menunggu', 'perbaikan',
-        'belum_mulai', 'sedang', 'selesai', 'disetujui',
+        'belum_mulai', 'sedang', 'selesai', 'disetujui', 'pernah_ditolak',
     ];
 
     // =================================================================
@@ -556,6 +626,7 @@ class Pkl extends BaseController
             'waPesanBalasan' => (string) ($this->p['wa_pesan_balasan'] ?? ''),
             'waPesanPerbaikan' => (string) ($this->p['wa_pesan_perbaikan'] ?? ''),
             'waPesanTolak'     => (string) ($this->p['wa_pesan_tolak'] ?? ''),
+            'waPesanKeluar'    => (string) ($this->p['wa_pesan_keluar'] ?? ''),
             'sekolahNama' => (string) ((new SettingModel())->get()['school_name'] ?? ''),
         ];
     }
@@ -732,7 +803,7 @@ class Pkl extends BaseController
             case 'tidak_ada':
                 return 'Ajuan sudah berubah (mungkin diubah staf lain). Muat ulang halaman.';
             case 'pengaju_beda':
-                return 'Pengaju tidak boleh diganti. Hapus ajuan lalu isi ulang bila pengajunya salah.';
+                return 'Pengaju tidak bisa diganti lewat Ubah. Bila pengaju tidak jadi ikut, pakai tombol "Keluarkan siswa" di halaman ajuan (peran pengaju pindah otomatis ke anggota lain).';
             default:
                 return 'Penyimpanan gagal. Coba lagi sebentar.';
         }
@@ -741,6 +812,19 @@ class Pkl extends BaseController
     private function ke(string $alamat, string $jenis, string $pesan): RedirectResponse
     {
         return redirect()->to(site_url($alamat))->with($jenis, $pesan);
+    }
+
+    /**
+     * Balasan JSON tanpa cache (tombol latar seperti "sudah dikabari"). $dengancsrf: sertakan token CSRF baru (token berganti
+     * tiap POST). Dulu metode ini tidak ada di kelas ini sehingga POST kabar-keputusan berakhir galat 500 walau catatannya tersimpan.
+     */
+    private function json(array $isi, int $kode = 200, bool $dengancsrf = false): ResponseInterface
+    {
+        if ($dengancsrf) {
+            $isi['csrf'] = csrf_hash();
+        }
+
+        return $this->response->setStatusCode($kode)->setHeader('Cache-Control', 'no-store')->setJSON($isi);
     }
 
     /** Alamat form siswa untuk dibagikan (lihat Config\Pkl::tautan). */

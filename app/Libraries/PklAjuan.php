@@ -34,11 +34,135 @@ use CodeIgniter\Database\BaseConnection;
  */
 final class PklAjuan
 {
+    /**
+     * Panjang maksimum alasan/catatan yang disimpan (pkl_pengajuan.catatan_staf & pkl_riwayat.catatan, 1000 huruf sejak migrasi
+     * 2026-10-25-000001). Server yang belum migrasi memotong sendiri di 255 (lihat maksCatatan()).
+     */
+    public const MAKS_CATATAN = 1000;
+
+    private static ?bool $kolomTolakSumber = null;
+
     private BaseConnection $db;
 
     public function __construct(?BaseConnection $db = null)
     {
         $this->db = $db ?? db_connect();
+    }
+
+    /** Kolom pkl_pengajuan.tolak_sumber ada? (migrasi 2026-10-25-000001) */
+    public static function kolomTolakSumber(?BaseConnection $db = null): bool
+    {
+        if (self::$kolomTolakSumber === null) {
+            try {
+                self::$kolomTolakSumber = ($db ?? db_connect())->fieldExists('tolak_sumber', 'pkl_pengajuan');
+            } catch (\Throwable $e) {
+                self::$kolomTolakSumber = false;
+            }
+        }
+
+        return self::$kolomTolakSumber;
+    }
+
+    /** Batas huruf alasan yang benar-benar muat di database ini (1000 setelah migrasi, 255 sebelumnya). */
+    public static function maksCatatan(): int
+    {
+        return PklKeluar::tabelAda() ? self::MAKS_CATATAN : 255;
+    }
+
+    /**
+     * Keluarkan satu/lebih siswa dari ajuan AKTIF (menunggu/perbaikan/disetujui) — revisi klien 2026-10-20: siswa ditolak perusahaan,
+     * administrasi belum lunas, pindah kelompok, mengundurkan diri. Dalam SATU transaksi:
+     *   1. salinan barisnya (peran, kelas saat mengajukan, HP) + jenis + alasan + siapa/kapan disimpan di pkl_anggota_keluar (riwayat);
+     *   2. baris pkl_anggota dihapus → kunci siswa_aktif lepas, siswa langsung bebas mengajukan baru;
+     *   3. bila PENGAJU ikut dikeluarkan, anggota tersisa yang paling awal ditambahkan menjadi pengaju (HP-nya sudah ada di barisnya);
+     *   4. riwayat ajuan mencatat nama-nama + alasan.
+     * Minimal satu siswa harus tersisa (kode 'semua') — bila semua ditolak, ajuan ditolak lewat ubahStatus(..., ['sumber' => 'perusahaan']).
+     * Siapa yang BERHAK dijaga pemanggil (PklKeluar / PklLapor), bukan di sini.
+     *
+     * @param list<int>            $siswaIds
+     * @param array<string, mixed> $konteks ['oleh', 'admin_id', 'peran', 'ip', 'sumber' => 'staf'|'lapor']
+     *
+     * @return array{ok: bool, kode?: string, keluar?: list<array{id: int, siswa_id: int, nama: string}>, pengaju_baru?: ?string, status?: string}
+     */
+    public function keluarkan(int $id, array $siswaIds, string $jenis, string $alasan, array $konteks): array
+    {
+        $siswaIds = array_values(array_unique(array_filter(array_map('intval', $siswaIds), static fn (int $x): bool => $x > 0)));
+        if ($siswaIds === []) {
+            return ['ok' => false, 'kode' => 'kosong'];
+        }
+
+        return $this->transaksi(function () use ($id, $siswaIds, $jenis, $alasan, $konteks): array {
+            $now = date('Y-m-d H:i:s');
+            $row = $this->db->query('SELECT id, status FROM pkl_pengajuan WHERE id = ? FOR UPDATE', [$id])->getRowArray();
+            if ($row === null) {
+                return ['ok' => false, 'kode' => 'tidak_ada'];
+            }
+            if (! PklPengajuanModel::aktif((string) $row['status'])) {
+                return ['ok' => false, 'kode' => 'status', 'status' => (string) $row['status']];
+            }
+            $ada = $this->db->query(
+                'SELECT a.id, a.siswa_id, a.peran, a.kelas_id, a.hp, s.nama FROM pkl_anggota a JOIN siswa s ON s.id = a.siswa_id'
+                . ' WHERE a.pengajuan_id = ? ORDER BY (a.peran = \'pengaju\') DESC, a.id ASC',
+                [$id]
+            )->getResultArray();
+            $peta = [];
+            foreach ($ada as $a) {
+                $peta[(int) $a['siswa_id']] = $a;
+            }
+            foreach ($siswaIds as $sid) {
+                if (! isset($peta[$sid])) {
+                    return ['ok' => false, 'kode' => 'bukan_anggota'];
+                }
+            }
+            if (count($siswaIds) >= count($ada)) {
+                return ['ok' => false, 'kode' => 'semua'];
+            }
+
+            $keluar        = [];
+            $pengajuKeluar = false;
+            foreach ($siswaIds as $sid) {
+                $a = $peta[$sid];
+                $r = $this->sisip('pkl_anggota_keluar', [
+                    'pengajuan_id' => $id, 'siswa_id' => $sid, 'kelas_id' => $a['kelas_id'] !== null ? (int) $a['kelas_id'] : null,
+                    'peran' => (string) $a['peran'], 'hp' => $a['hp'], 'jenis' => $jenis, 'alasan' => mb_substr($alasan, 0, self::MAKS_CATATAN),
+                    'status_ajuan' => (string) $row['status'], 'sumber' => ($konteks['sumber'] ?? 'staf') === 'lapor' ? 'lapor' : 'staf',
+                    'oleh' => mb_substr((string) ($konteks['oleh'] ?? 'Staf'), 0, 150), 'admin_id' => $konteks['admin_id'] ?? null,
+                    'peran_staf' => ($konteks['peran'] ?? '') !== '' ? mb_substr((string) $konteks['peran'], 0, 20) : null,
+                    'ip_address' => $konteks['ip'] ?? null, 'created_at' => $now,
+                ]);
+                if (! $r['ok']) {
+                    return ['ok' => false, 'kode' => 'galat'];
+                }
+                if (! $this->jalankan('DELETE FROM pkl_anggota WHERE id = ?', [(int) $a['id']])['ok']) {
+                    return ['ok' => false, 'kode' => 'galat'];
+                }
+                $pengajuKeluar = $pengajuKeluar || $a['peran'] === 'pengaju';
+                $keluar[]      = ['id' => $r['id'], 'siswa_id' => $sid, 'nama' => (string) $a['nama']];
+            }
+
+            $pengajuBaru = null;
+            if ($pengajuKeluar) {
+                foreach ($ada as $a) {
+                    if (! in_array((int) $a['siswa_id'], $siswaIds, true)) {
+                        if (! $this->jalankan("UPDATE pkl_anggota SET peran = 'pengaju' WHERE id = ?", [(int) $a['id']])['ok']) {
+                            return ['ok' => false, 'kode' => 'galat'];
+                        }
+                        $pengajuBaru = (string) $a['nama'];
+                        break;
+                    }
+                }
+            }
+            if (! $this->jalankan('UPDATE pkl_pengajuan SET updated_at = ? WHERE id = ?', [$now, $id])['ok']) {
+                return ['ok' => false, 'kode' => 'galat'];
+            }
+
+            $teks = 'Dikeluarkan (' . PklKeluar::labelJenis($jenis) . '): ' . implode(', ', array_column($keluar, 'nama'))
+                . ($pengajuBaru !== null ? '; pengaju kini ' . $pengajuBaru : '') . ' — ' . $alasan;
+
+            return $this->catat($id, $konteks['aksi'] ?? 'keluarkan', $konteks, $teks)
+                ? ['ok' => true, 'keluar' => $keluar, 'pengaju_baru' => $pengajuBaru, 'status' => (string) $row['status']]
+                : ['ok' => false, 'kode' => 'galat'];
+        });
     }
 
     /**
@@ -270,12 +394,19 @@ final class PklAjuan
             $r     = $this->jalankan(
                 'UPDATE pkl_pengajuan SET status = ?, catatan_staf = ?, perusahaan_id = ?, diputuskan_at = ?, diputuskan_oleh = ?, updated_at = ? WHERE id = ?',
                 [
-                    $status, $catatan !== null ? mb_substr($catatan, 0, 255) : null, $perusahaanId,
+                    $status, $catatan !== null ? mb_substr($catatan, 0, self::maksCatatan()) : null, $perusahaanId,
                     $putus ? $now : null, $putus ? ($konteks['admin_id'] ?? null) : null, $now, $id,
                 ]
             );
             if (! $r['ok']) {
                 return ['ok' => false, 'kode' => 'galat'];
+            }
+            // Sumber penolakan: 'perusahaan' hanya untuk "Ditolak perusahaan"; perubahan status lain mengosongkannya lagi.
+            if (self::kolomTolakSumber($this->db)) {
+                $sumber = $status === 'ditolak' && ($opsi['sumber'] ?? '') === 'perusahaan' ? 'perusahaan' : null;
+                if (! $this->db->table('pkl_pengajuan')->where('id', $id)->update(['tolak_sumber' => $sumber])) {
+                    return ['ok' => false, 'kode' => 'galat'];
+                }
             }
 
             // Catatan ACC: terisi bila disetujui, dikosongkan bila status lain (persetujuan dicabut/ditolak).
@@ -468,7 +599,7 @@ final class PklAjuan
             'oleh'         => mb_substr((string) ($konteks['oleh'] ?? 'Sistem'), 0, 150),
             'admin_id'     => $konteks['admin_id'] ?? null,
             'peran'        => $konteks['peran'] ?? null,
-            'catatan'      => $catatan !== null ? mb_substr($catatan, 0, 255) : null,
+            'catatan'      => $catatan !== null ? mb_substr($catatan, 0, self::maksCatatan()) : null,
             'ip_address'   => $konteks['ip'] ?? null,
             'created_at'   => date('Y-m-d H:i:s'),
         ]);

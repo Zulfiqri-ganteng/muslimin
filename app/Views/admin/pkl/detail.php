@@ -27,6 +27,15 @@
  * @var list<array>|null $pembayaran   catatan biaya per siswa (hak surat/laporan)
  * @var array|null  $kabar             kabar WhatsApp ajuan dikembalikan/ditolak (PklWaKeputusan::daftar) atau null (tanpa hak / status lain)
  * @var bool        $kabarBuka         baru saja diputuskan → kotak kabar langsung terbuka
+ * @var list<array> $keluar            siswa yang dikeluarkan dari ajuan ini (PklKeluar::daftarAjuan)
+ * @var list<array> $kabarKeluar       kabar WA siswa yang dikeluarkan (PklWaKeputusan::daftarKeluar) — kosong bila tanpa hak
+ * @var bool        $kabarKeluarBuka   baru saja mengeluarkan siswa → kotak kabarnya langsung terbuka
+ * @var array<int, list<array>> $tolakAnggota riwayat penolakan tiap anggota (PklKeluar::tolakSiswa), di luar ajuan ini
+ * @var bool        $bolehKeluarkan    boleh mengeluarkan siswa dari ajuan ini (minimal 2 anggota)
+ * @var bool        $bolehDitolakPt    boleh menandai ajuan "Ditolak perusahaan"
+ * @var array<string, list<array>> $alasanDialog template alasan per jendela (PklAlasan::untukDialog)
+ * @var bool        $bolehKelolaAlasan boleh mengelola template alasan
+ * @var int         $maksAlasan        batas huruf alasan
  * Bersama dari PklDasar::dasar(): $tab, $hitungTab, $p, $peran, $batasHari, $bolehUbah, $bolehSurat, $bolehLaporan, $bolehPengaturan.
  */
 
@@ -50,11 +59,19 @@ $labelAksi = [
     'bayar' => 'Biaya dicatat', 'koreksi_bayar' => 'Catatan biaya dikoreksi', 'kabari' => 'Siswa dikabari (WhatsApp)',
     'kabari_keputusan' => 'Siswa dikabari keputusan (WhatsApp)',
     'periode' => 'Periode PKL diisi', 'surat_sekolah' => 'Surat sekolah',
-    'lapor_diterima' => 'Siswa lapor diterima perusahaan', 'lapor_proses' => 'Laporan diterima diproses', 'lapor_kembali' => 'Laporan diterima dikembalikan',
+    'lapor_diterima' => 'Siswa lapor hasil perusahaan', 'lapor_proses' => 'Laporan diterima diproses', 'lapor_kembali' => 'Laporan diterima dikembalikan',
+    'keluarkan' => 'Siswa dikeluarkan dari ajuan', 'tolak_perusahaan' => 'Ditolak perusahaan', 'kabari_keluar' => 'Siswa yang dikeluarkan dikabari (WhatsApp)',
 ];
 // Peringatan otomatis → jenis peringatan kit + kata awal.
 $jenisPeringatan = ['bahaya' => ['galat', 'Bahaya'], 'awas' => ['awas', 'Periksa'], 'info' => ['info', 'Info']];
 $labelDaftar = ['menunggu' => 'Menunggu ACC', 'perbaikan' => 'Perbaikan', 'disetujui' => 'Disetujui', 'ditolak' => 'Ditolak'][$status] ?? '';
+$olehPerusahaan = $status === 'ditolak' && ($a['tolak_sumber'] ?? null) === 'perusahaan';
+$keluar ??= [];
+$kabarKeluar ??= [];
+$tolakAnggota ??= [];
+$alasanDialog ??= [];
+$maksAlasan ??= 255;
+$jenisKeluarWarna = ['ditolak_perusahaan' => 'lencana-merah', 'administrasi' => 'lencana-kuning', 'pindah' => 'lencana-biru', 'mundur' => 'lencana-abu', 'lainnya' => 'lencana-abu'];
 $baris = static function (string $label, ?string $isi): string {
     $isi = trim((string) $isi);
 
@@ -73,7 +90,7 @@ $catatanKunci = static fn (string $html): string => '<div class="peringatan peri
 <?= $this->section('content') ?>
 
 <?= view('admin/partials/help', [
-    'helpKey'   => 'pkl_detail_v5',
+    'helpKey'   => 'pkl_detail_v6',
     'helpTitle' => 'Detail Ajuan PKL',
     'helpBody'  => '<p>Periksa dulu <b>peringatan otomatis</b> (merah = bahaya, kuning = periksa, biru = info), lalu putuskan:</p>'
         . '<ul class="mt-2 list-disc pl-5 space-y-1">'
@@ -81,6 +98,10 @@ $catatanKunci = static fn (string $html): string => '<div class="peringatan peri
         . '<li><b>Kembalikan</b> — siswa memperbaiki sendiri, tulis alasan yang jelas.</li>'
         . '<li><b>Tolak</b> / <b>Batalkan persetujuan</b> — hanya yang berhak ACC. Tolak: siswanya bebas mengajukan baru. Batalkan: bila perusahaan menarik diri.</li>'
         . '<li><b>Ubah</b> — memperbaiki langsung (nama perusahaan, daftar siswa, HP) tanpa mengubah statusnya. Ajuan yang sudah disetujui hanya boleh diubah yang berhak ACC.</li>'
+        . '<li><b>Keluarkan siswa</b> — bila hanya sebagian siswa yang bermasalah (ditolak perusahaan, administrasi belum lunas, pindah kelompok, mengundurkan diri): siswa itu keluar dari ajuan dan <b>langsung bebas mengajukan lagi</b>, siswa lain tetap lanjut. Jejaknya tetap tersimpan di riwayat siswa. Minimal satu siswa tersisa; bila pengaju yang keluar, peran pengaju pindah otomatis.</li>'
+        . '<li><b>Ditolak perusahaan</b> — bila perusahaan menolak SEMUA siswa (juga untuk ajuan yang sudah disetujui, cukup satu langkah). Hanya yang berhak ACC. Status menjadi Ditolak berlabel "oleh perusahaan".</li>'
+        . '<li><b>Alasan cepat</b> — di setiap jendela keputusan ada tombol template alasan; klik untuk mengisi kotak alasan, lalu sesuaikan bila perlu. Templatenya diatur di <b>PKL → Template Alasan</b>.</li>'
+        . '<li><b>Riwayat siswa</b> — di kartu Siswa terlihat bila seorang siswa pernah ditolak/dikeluarkan di tempat lain; klik <b>Riwayat</b> untuk rinciannya.</li>'
         . '<li><b>Batas keputusan</b> — keputusan diharapkan paling lambat sekian hari sejak siswa mengirim (diatur di Pengaturan); yang lewat ditandai merah.</li>'
         . '<li><b>Surat permohonan</b> (setelah Disetujui) — hanya yang diberi hak <i>unduh surat</i> oleh Admin (sekarang: ' . esc(\App\Libraries\PklHak::teksPemegang('surat')) . '). Sebelum berkas dibuat <u>wajib mencatat biaya</u> yang diterima tiap siswa (Biaya PKL, SPP, Tabungan, OSIS; atau Beasiswa / Keringanan beralasan) — bulannya terpilih otomatis (bulan pertama yang belum lunas). Bila semua siswa sudah tercatat, <b>Unduh surat</b> langsung mengunduh tanpa kotak biaya; untuk mencatat biaya tambahan pakai <b>Catat biaya lain</b>. Nomor ditetapkan sekali; bila data berubah sesudahnya muncul tanda <b>Perlu cetak ulang</b> dan nomor tetap sama. Setelah unduhan selesai, kotak <b>Kabari via WhatsApp</b> muncul bila masih ada siswa yang belum dikabari. Salah catat biaya? Hapus catatannya di kartu <b>Pembayaran siswa</b> (wajib beralasan).</li>'
         . '</ul>',
@@ -94,6 +115,7 @@ $catatanKunci = static fn (string $html): string => '<div class="peringatan peri
         <div class="flex flex-wrap items-center gap-2.5">
             <h2 id="judul-ajuan" class="text-xl font-bold text-gray-900 dark:text-white"><?= esc($a['perusahaan_nama']) ?></h2>
             <?= view('admin/pkl/_lencana', ['kode' => $fase ?? $status]) ?>
+            <?php if ($olehPerusahaan): ?><span class="lencana lencana-merah">oleh perusahaan</span><?php endif; ?>
             <?php if ($a['sumber'] !== 'siswa'): ?><span class="lencana lencana-ungu"><?= $a['sumber'] === 'staf' ? 'Diisi staf' : 'Impor data lama' ?></span><?php endif; ?>
             <?php if ((int) $a['kirim_ke'] > 1): ?><span class="lencana lencana-abu">Revisi ke-<?= (int) $a['kirim_ke'] - 1 ?></span><?php endif; ?>
         </div>
@@ -157,17 +179,28 @@ $catatanKunci = static fn (string $html): string => '<div class="peringatan peri
             <section class="kartu overflow-hidden" aria-labelledby="judul-siswa">
                 <div class="kartu-kepala">
                     <h3 id="judul-siswa" class="kartu-judul text-base">Siswa</h3>
-                    <span class="lencana lencana-abu"><?= count($anggota) ?> siswa</span>
+                    <div class="flex flex-wrap items-center gap-2">
+                        <span class="lencana lencana-abu"><?= count($anggota) ?> siswa</span>
+                        <?php if (! empty($bolehKeluarkan)): ?>
+                            <button type="button" class="btn btn-netral btn-sm" data-buka-dialog="pkl-keluarkan"><?= ikon('users', 'h-4 w-4') ?>Keluarkan siswa</button>
+                        <?php endif; ?>
+                    </div>
                 </div>
                 <ul class="divide-y divide-gray-200 dark:divide-gray-700">
-                    <?php foreach ($anggota as $s): ?>
+                    <?php foreach ($anggota as $s): $tolakS = $tolakAnggota[(int) $s['siswa_id']] ?? []; ?>
                         <li class="flex flex-col gap-1 px-4 py-3 sm:flex-row sm:items-center sm:justify-between sm:px-6">
                             <div class="min-w-0">
                                 <p class="flex flex-wrap items-center gap-2 font-semibold text-gray-900 dark:text-white">
                                     <?= esc($s['nama']) ?>
                                     <span class="lencana <?= $s['peran'] === 'pengaju' ? 'lencana-merek' : 'lencana-abu' ?>"><?= $s['peran'] === 'pengaju' ? 'Pengaju' : 'Teman' ?></span>
+                                    <?php if ($tolakS !== []): ?><span class="lencana lencana-kuning">Pernah ditolak <?= count($tolakS) ?>×</span><?php endif; ?>
                                 </p>
-                                <p class="text-sm text-gray-500 dark:text-gray-400">Kelas <?= esc($s['nama_kelas'] ?? '—') ?> · NIS <?= esc($s['nis'] ?: '—') ?> · NISN <?= esc($s['nisn'] ?: '—') ?></p>
+                                <p class="text-sm text-gray-500 dark:text-gray-400">Kelas <?= esc($s['nama_kelas'] ?? '—') ?> · NIS <?= esc($s['nis'] ?: '—') ?> · NISN <?= esc($s['nisn'] ?: '—') ?>
+                                    · <a href="<?= site_url('admin/pkl/riwayat/' . (int) $s['siswa_id']) . '?dari=' . $id ?>" class="font-medium text-brand-700 hover:underline dark:text-brand-400">Riwayat</a></p>
+                                <?php foreach (array_slice($tolakS, 0, 3) as $t): ?>
+                                    <p class="mt-0.5 text-xs text-yellow-800 dark:text-yellow-300"><?= ikon('exclamation-circle', 'me-0.5 inline h-3.5 w-3.5') ?><?= esc(\App\Libraries\PklKeluar::teksTolak($t)) ?><?= $t['alasan'] !== '' ? ' — ' . esc(mb_strimwidth($t['alasan'], 0, 120, '…')) : '' ?></p>
+                                <?php endforeach; ?>
+                                <?php if (count($tolakS) > 3): ?><p class="mt-0.5 text-xs text-yellow-800 dark:text-yellow-300">… dan <?= count($tolakS) - 3 ?> lagi (lihat Riwayat).</p><?php endif; ?>
                             </div>
                             <p class="text-sm text-gray-500 sm:text-right dark:text-gray-400">
                                 HP <b class="font-semibold text-gray-900 dark:text-white"><?= esc(($s['hp'] ?? '') !== '' ? $s['hp'] : (($s['hp_master'] ?? '') !== '' ? $s['hp_master'] : '—')) ?></b>
@@ -176,6 +209,26 @@ $catatanKunci = static fn (string $html): string => '<div class="peringatan peri
                         </li>
                     <?php endforeach; ?>
                 </ul>
+                <?php if ($keluar !== []): // siswa yang dikeluarkan dari ajuan ini (jejak tetap tersimpan) ?>
+                    <div class="border-t border-gray-200 bg-gray-50 px-4 py-3 sm:px-6 dark:border-gray-700 dark:bg-gray-800">
+                        <p class="text-xs font-semibold tracking-wide text-gray-500 uppercase dark:text-gray-400">Dikeluarkan dari ajuan ini (<?= count($keluar) ?>)</p>
+                        <ul class="mt-2 space-y-2.5">
+                            <?php foreach ($keluar as $k): ?>
+                                <li class="text-sm">
+                                    <p class="flex flex-wrap items-center gap-2">
+                                        <span class="font-semibold text-gray-500 line-through dark:text-gray-400"><?= esc($k['nama']) ?></span>
+                                        <span class="text-xs text-gray-500 dark:text-gray-400"><?= esc($k['kelas']) ?><?= $k['peran'] === 'pengaju' ? ' · dulu pengaju' : '' ?></span>
+                                        <span class="lencana <?= $jenisKeluarWarna[$k['jenis']] ?? 'lencana-abu' ?>"><?= esc($k['jenis_label']) ?></span>
+                                        <a href="<?= site_url('admin/pkl/riwayat/' . (int) $k['siswa_id']) . '?dari=' . $id ?>" class="text-xs font-medium text-brand-700 hover:underline dark:text-brand-400">Riwayat</a>
+                                    </p>
+                                    <p class="mt-0.5 text-xs text-gray-600 dark:text-gray-300">“<?= esc($k['alasan']) ?>”</p>
+                                    <p class="text-xs text-gray-500 dark:text-gray-400"><?= esc((string) $k['oleh']) ?><?= $k['sumber'] === 'lapor' ? ' (dari laporan siswa)' : '' ?> · <?= esc(date('d-m-Y H:i', strtotime($k['waktu']))) ?>
+                                        <?= $k['kabar_at'] ? ' · <span class="font-semibold text-green-700 dark:text-green-400">sudah dikabari ' . esc(date('d-m H:i', strtotime((string) $k['kabar_at']))) . '</span>' : '' ?></p>
+                                </li>
+                            <?php endforeach; ?>
+                        </ul>
+                    </div>
+                <?php endif; ?>
             </section>
         </div>
 
@@ -192,6 +245,17 @@ $catatanKunci = static fn (string $html): string => '<div class="peringatan peri
                     <?php endif; ?>
                     <?php if ($bolehAcc && in_array($status, ['menunggu', 'perbaikan'], true)): ?>
                         <button type="button" class="btn btn-bahaya w-full" data-buka-dialog="pkl-tolak"><?= ikon('close', 'h-4 w-4') ?>Tolak</button>
+                    <?php endif; ?>
+                    <?php if (! empty($bolehDitolakPt)): ?>
+                        <button type="button" class="btn btn-netral w-full text-red-700 dark:text-red-400" data-buka-dialog="pkl-ditolakpt"><?= ikon('briefcase', 'h-4 w-4') ?>Ditolak perusahaan (semua siswa)</button>
+                    <?php endif; ?>
+                    <?php if (! empty($bolehKeluarkan)): ?>
+                        <button type="button" class="btn btn-netral w-full" data-buka-dialog="pkl-keluarkan"><?= ikon('users', 'h-4 w-4') ?>Keluarkan sebagian siswa</button>
+                    <?php endif; ?>
+                    <?php if ($kabarKeluar !== []):
+                        $kabarKeluarBelum = count(array_filter($kabarKeluar, static fn (array $k): bool => $k['url'] !== null && $k['kabar_at'] === null)); ?>
+                        <button type="button" class="btn btn-sukses w-full" data-buka-dialog="pkl-kabar-keluar"><?= ikon('whatsapp', 'h-4 w-4', 'solid') ?>Kabari siswa yang dikeluarkan</button>
+                        <p class="-mt-1 text-center text-xs text-gray-500 dark:text-gray-400"><?= $kabarKeluarBelum > 0 ? 'Belum dikabari: ' . $kabarKeluarBelum . ' dari ' . count($kabarKeluar) . ' siswa' : 'Semua siswa ber-nomor HP sudah dikabari' ?></p>
                     <?php endif; ?>
                     <?php if (! empty($kabar)): // ajuan dikembalikan / ditolak → kabari siswa (PklWaKeputusan)
                         $kabarBelum = count(array_filter($kabar['siswa'], static fn (array $s): bool => $s['url'] !== null && $s['dikabari_at'] === null)); ?>
@@ -365,7 +429,7 @@ $catatanKunci = static fn (string $html): string => '<div class="peringatan peri
                 <?php else: ?>
                     <ol class="px-4 py-4 sm:px-6">
                         <?php foreach ($riwayat as $i => $r):
-                            $titik = $r['aksi'] === 'acc' ? 'bg-green-500' : (in_array($r['aksi'], ['tolak', 'batal_acc'], true) ? 'bg-red-500' : ($r['aksi'] === 'kembalikan' ? 'bg-yellow-400' : 'bg-brand-500')); ?>
+                            $titik = $r['aksi'] === 'acc' ? 'bg-green-500' : (in_array($r['aksi'], ['tolak', 'batal_acc', 'tolak_perusahaan'], true) ? 'bg-red-500' : (in_array($r['aksi'], ['kembalikan', 'keluarkan'], true) ? 'bg-yellow-400' : 'bg-brand-500')); ?>
                             <li class="relative ps-5 pb-4 last:pb-0">
                                 <span class="absolute start-0 top-1.5 h-2.5 w-2.5 rounded-full <?= $titik ?>" aria-hidden="true"></span>
                                 <?php if ($i < count($riwayat) - 1): ?><span class="absolute start-[4px] top-4 h-full w-px bg-gray-200 dark:bg-gray-700" aria-hidden="true"></span><?php endif; ?>
@@ -383,17 +447,21 @@ $catatanKunci = static fn (string $html): string => '<div class="peringatan peri
 
 <!-- ============ Dialog-dialog keputusan (dialog kit, dibuka tombol data-buka-dialog) ============ -->
 <?php
-$dialog = static function (string $nama, string $judul, string $aksiUrl, string $isi, string $tombol, string $kelasTombol): string {
-    return ui_dialog_buka(['nama' => 'pkl-' . $nama, 'judul' => $judul])
-        . '<form method="post" action="' . esc(site_url('admin/pkl/' . $aksiUrl), 'attr') . '">' . csrf_field()
-        . '<div class="dialog-isi text-sm text-gray-600 dark:text-gray-300">' . $isi . '</div>'
+$dialog = static function (string $nama, string $judul, string $aksiUrl, string $isi, string $tombol, string $kelasTombol, string $atributForm = '', string $ukuran = ''): string {
+    return ui_dialog_buka(['nama' => 'pkl-' . $nama, 'judul' => $judul] + ($ukuran !== '' ? ['ukuran' => $ukuran] : []))
+        . '<form method="post" action="' . esc(site_url('admin/pkl/' . $aksiUrl), 'attr') . '"' . $atributForm . '>' . csrf_field()
+        . '<div class="dialog-isi space-y-3 text-sm text-gray-600 dark:text-gray-300">' . $isi . '</div>'
         . '<div class="dialog-kaki"><button type="button" class="btn btn-netral" @click="tutup()">Batal</button>'
         . '<button type="submit" class="btn ' . $kelasTombol . '">' . $tombol . '</button></div></form>'
         . ui_dialog_tutup();
 };
-$kotakAlasan = static fn (string $idIsian, string $ph): string => '<div><label class="lbl" for="' . $idIsian . '">Alasan <span class="text-red-600 dark:text-red-400">*</span></label>'
-    . '<textarea id="' . $idIsian . '" name="catatan" rows="3" required minlength="5" maxlength="255" class="inp" placeholder="' . esc($ph, 'attr') . '"></textarea>'
-    . '<p class="hint">Minimal 5 huruf. Siswa akan membaca catatan ini.</p></div>';
+// Kotak alasan + tombol "alasan cepat" dari Template Alasan ($jendela = kunci PklAlasan::DIALOG).
+$kotakAlasan = static fn (string $idIsian, string $ph, string $jendela = ''): string => ($jendela !== ''
+        ? view('admin/pkl/_alasan_cepat', ['grup' => $alasanDialog[$jendela] ?? [], 'target' => $idIsian, 'kelola' => ! empty($bolehKelolaAlasan)])
+        : '')
+    . '<div><label class="lbl" for="' . $idIsian . '">Alasan <span class="text-red-600 dark:text-red-400">*</span></label>'
+    . '<textarea id="' . $idIsian . '" name="catatan" rows="4" required minlength="5" maxlength="' . (int) $maksAlasan . '" class="inp" placeholder="' . esc($ph, 'attr') . '"></textarea>'
+    . '<p class="hint">Minimal 5, maksimal ' . (int) $maksAlasan . ' huruf. Siswa akan membaca catatan ini.</p></div>';
 $kotakPaham = static fn (string $teks): string => '<label class="flex cursor-pointer items-start gap-2 rounded-lg border border-red-300 bg-red-50 p-3 text-red-800 dark:border-red-800 dark:bg-gray-700 dark:text-red-400">'
     . '<input type="checkbox" name="paham" value="1" required class="cek mt-0.5"><span class="text-sm font-semibold">' . $teks . '</span></label>';
 
@@ -418,15 +486,50 @@ $isiAcc .= ui_peringatan('netral', '', ['html' => 'Persetujuan ini akan <b>terca
 echo $dialog('acc', 'ACC ajuan ' . $kode . '?', $id . '/acc', $isiAcc, ikon('check', 'h-4 w-4') . 'Ya, ACC', 'btn-sukses');
 
 echo $dialog('kembalikan', 'Kembalikan untuk diperbaiki', $id . '/kembalikan',
-    '<p>Siswa pengaju akan membuka ajuannya lagi (dengan nomor HP-nya) dan memperbaikinya, lalu mengirim ulang untuk diputuskan (ACC).</p>' . $kotakAlasan('alasan-kembalikan', 'Contoh: Alamat perusahaan belum lengkap, tambahkan nomor gedung dan kode pos.'),
-    ikon('file-pen', 'h-4 w-4') . 'Kembalikan', 'btn-utama');
+    '<p>Siswa pengaju akan membuka ajuannya lagi (dengan nomor HP-nya) dan memperbaikinya, lalu mengirim ulang untuk diputuskan (ACC).</p>' . $kotakAlasan('alasan-kembalikan', 'Contoh: Alamat perusahaan belum lengkap, tambahkan nomor gedung dan kode pos.', 'kembalikan'),
+    ikon('file-pen', 'h-4 w-4') . 'Kembalikan', 'btn-utama', '', 'lg');
 echo $dialog('tolak', 'Tolak ajuan ' . $kode, $id . '/tolak',
-    '<p>Seluruh siswa dalam ajuan ini <b>dibebaskan</b> dan boleh mengajukan baru dari awal.</p>' . $kotakAlasan('alasan-tolak', 'Contoh: Perusahaan tidak menerima siswa PKL pada periode ini.'),
-    ikon('close', 'h-4 w-4') . 'Tolak', 'btn-bahaya');
+    '<p>Seluruh siswa dalam ajuan ini <b>dibebaskan</b> dan boleh mengajukan baru dari awal.' . (count($anggota) > 1 && ! empty($bolehKeluarkan) ? ' Bila hanya <b>sebagian</b> siswa yang bermasalah, pakai <b>Keluarkan sebagian siswa</b> agar yang lain tetap lanjut.' : '') . '</p>'
+        . $kotakAlasan('alasan-tolak', 'Contoh: Perusahaan tidak menerima siswa PKL pada periode ini.', 'tolak'),
+    ikon('close', 'h-4 w-4') . 'Tolak', 'btn-bahaya', '', 'lg');
 echo $dialog('batal', 'Batalkan persetujuan ' . $kode, $id . '/batal-acc',
-    ui_peringatan('awas', '', ['html' => 'Gunakan bila <b>perusahaan menarik diri</b>. Ajuan kembali ke status <b>Perlu perbaikan</b> supaya siswa bisa menggantinya; siswa tetap terkunci sampai mereka memperbaiki atau Anda menolak.'])
-        . $kotakAlasan('alasan-batal', 'Contoh: Perusahaan membatalkan penerimaan karena kuota penuh.'),
-    'Ya, batalkan persetujuan', 'btn-bahaya');
+    ui_peringatan('awas', '', ['html' => 'Ajuan kembali ke status <b>Perlu perbaikan</b> supaya siswa bisa memperbaikinya; siswa tetap terkunci sampai mereka memperbaiki atau Anda menolak.'
+        . (! empty($bolehDitolakPt) ? ' Bila <b>perusahaan menolak semua siswa</b>, pakai tombol <b>Ditolak perusahaan</b> (satu langkah, siswa langsung bebas).' : '')])
+        . $kotakAlasan('alasan-batal', 'Contoh: Nama perusahaan perlu diperbaiki sesuai nama resmi.', 'batal_acc'),
+    'Ya, batalkan persetujuan', 'btn-bahaya', '', 'lg');
+
+// ----- Ditolak perusahaan (semua siswa) — revisi klien 2026-10-20 -----
+if (! empty($bolehDitolakPt)) {
+    echo $dialog('ditolakpt', 'Ditolak perusahaan — ' . $kode, $id . '/ditolak-perusahaan',
+        ui_peringatan('awas', '', ['html' => 'Perusahaan <b>menolak semua siswa</b> (' . count($anggota) . ' siswa). Ajuan menjadi <b>Ditolak</b> berlabel <b>oleh perusahaan</b> dan seluruh siswanya <b>langsung bebas</b> mengajukan tempat PKL lain.'
+            . ($status === 'disetujui' ? ' Surat Izin yang sudah terbit tetap tersimpan sebagai arsip.' : '')])
+        . (count($anggota) > 1 && ! empty($bolehKeluarkan) ? '<p class="hint">Hanya sebagian yang ditolak? Pakai <b>Keluarkan sebagian siswa</b>.</p>' : '')
+        . $kotakAlasan('alasan-ditolakpt', 'Contoh: Perusahaan tidak membuka PKL pada periode ini.', 'ditolak_perusahaan'),
+        ikon('close', 'h-4 w-4') . 'Ya, ditolak perusahaan', 'btn-bahaya', '', 'lg');
+}
+
+// ----- Keluarkan sebagian siswa — revisi klien 2026-10-20 -----
+if (! empty($bolehKeluarkan)) {
+    $isiKeluar = '<p>Pilih siswa yang <b>keluar</b> dari ajuan ini. Siswa itu langsung <b>bebas mengajukan tempat PKL lain</b>; siswa lain tetap lanjut. Jejaknya tetap tersimpan di riwayat siswa.</p>'
+        . '<fieldset class="space-y-1.5"><legend class="lbl">Siswa yang dikeluarkan <span class="text-red-600 dark:text-red-400">*</span></legend>';
+    foreach ($anggota as $s) {
+        $isiKeluar .= '<label class="flex cursor-pointer items-center gap-2 rounded-lg border border-gray-200 px-3 py-2 text-gray-900 hover:bg-gray-50 dark:border-gray-600 dark:text-white dark:hover:bg-gray-700">'
+            . '<input type="checkbox" name="siswa_ids[]" value="' . (int) $s['siswa_id'] . '" class="cek">'
+            . '<span class="font-medium">' . esc($s['nama']) . '</span><span class="text-xs text-gray-500 dark:text-gray-400">' . esc((string) ($s['nama_kelas'] ?? '')) . '</span>'
+            . ($s['peran'] === 'pengaju' ? '<span class="lencana lencana-merek">Pengaju</span>' : '') . '</label>';
+    }
+    $isiKeluar .= '</fieldset><p class="err-msg" data-keluar-semua hidden>Minimal satu siswa harus tersisa. Bila semua ditolak perusahaan, pakai "Ditolak perusahaan"; bila ditolak sekolah, pakai "Tolak".</p>'
+        . '<p class="hint">Bila <b>pengaju</b> ikut dikeluarkan, peran pengaju pindah otomatis ke anggota tersisa yang paling awal.</p>'
+        . '<fieldset class="space-y-1.5"><legend class="lbl">Jenis <span class="text-red-600 dark:text-red-400">*</span></legend>';
+    foreach (\App\Libraries\PklKeluar::JENIS as $kj => [$labelJ, $ketJ]) {
+        $isiKeluar .= '<label class="flex cursor-pointer items-start gap-2 text-gray-900 dark:text-white"><input type="radio" name="jenis" value="' . esc($kj, 'attr') . '" required class="cek mt-0.5"' . ($kj === 'ditolak_perusahaan' ? ' checked' : '') . '>'
+            . '<span><b>' . esc($labelJ) . '</b><br><span class="text-xs text-gray-500 dark:text-gray-400">' . esc($ketJ) . '</span></span></label>';
+    }
+    $isiKeluar .= '</fieldset>'
+        . ($surat !== null ? '<p class="hint">Surat Izin ' . esc((string) $surat['nomor']) . ' sudah terbit: jenis <b>Ditolak perusahaan</b> tidak membuatnya "perlu cetak ulang" (surat lama tetap arsip sah); jenis lain menandainya perlu cetak ulang dengan nomor yang sama.</p>' : '')
+        . $kotakAlasan('alasan-keluar', 'Contoh: Perusahaan hanya menerima 2 siswa karena kuota terbatas.', 'keluarkan');
+    echo $dialog('keluarkan', 'Keluarkan siswa dari ' . $kode, $id . '/keluarkan', $isiKeluar, ikon('users', 'h-4 w-4') . 'Keluarkan siswa', 'btn-bahaya', ' data-keluar-form', 'lg');
+}
 if (! empty($bolehSurat)) {
     echo $dialog('hapusbayar', 'Hapus catatan biaya?', $id . '/pembayaran/hapus',
         '<input type="hidden" name="pembayaran_id" data-isi-pemicu="pembayaran_id">'
@@ -454,5 +557,9 @@ if ($bolehHapus) {
 <?php if (! empty($kabar)): // kotak kabar WhatsApp "dikembalikan / ditolak" ?>
     <?= view('admin/pkl/_kabar_keputusan', ['kabar' => $kabar, 'kabarBuka' => ! empty($kabarBuka), 'id' => $id]) ?>
 <?php endif; ?>
+<?php if ($kabarKeluar !== []): // kotak kabar WhatsApp "kamu dikeluarkan dari ajuan" ?>
+    <?= view('admin/pkl/_kabar_keluar', ['kabarKeluar' => $kabarKeluar, 'kabarBuka' => ! empty($kabarKeluarBuka), 'id' => $id]) ?>
+<?php endif; ?>
+<script defer src="<?= base_url('assets/js/admin/pkl-alasan.js') ?>?v=<?= @filemtime(FCPATH . 'assets/js/admin/pkl-alasan.js') ?>" <?= csp_script_nonce() ?>></script>
 
 <?= $this->endSection() ?>

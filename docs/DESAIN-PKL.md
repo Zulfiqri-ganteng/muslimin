@@ -365,3 +365,65 @@ biaya terpisah**; (4) siswa dikabari lewat WhatsApp setelah suratnya terbit (dip
 ### Pengujian
 `php spark dev:uji-pkl-biaya` (124 cek) · `php spark dev:uji-pkl` (322; satu cek diubah: Operator tidak lagi boleh hapus secara bawaan) · skrip HTTP+API (71+3) dan peramban Chrome (29) di folder sementara sesi (bukan di repo).
 Hasil 2026-10-09: semua hijau. Fixture Flutter: `C:\flutter-muslimin\test\fixtures\pkl\`. Kontrak Android: `C:\flutter-muslimin\BLUEPRINT-PKL-BIAYA.md`.
+
+## Revisi klien 2026-10-20 — siswa dikeluarkan, ditolak perusahaan, lapor sebagian, template alasan, riwayat siswa
+
+**Permintaan klien** (lewat user, telepon 2026-10-20): (1) kelompok 4 siswa mengajukan, perusahaan hanya menerima 2 — "2 yang ditolak
+mengisi ulang, statusnya bagaimana?" → aturan harus jelas untuk penolakan perusahaan pada kelompok berapa pun; (2) **template alasan**
+ditolak yang dibuat sendiri oleh Waka Hubin (contoh dari sekolah: `Alasan_PKL_Bina_Nusa.docx` — "Bank Kalimat Alasan", 7 alasan
+dikembalikan + 5 alasan ditolak); (3) tombol "suspend" → **dibatalkan klien** ("biarkan seperti sekarang"); tambahan user: Hubin harus
+bisa melihat siswa **pernah ditolak di PT mana**.
+
+**Temuan data hosting (20 Okt, 70 ajuan):** 6× kelompok DITOLAK SEMUA hanya karena 1–2 anggota belum bayar administrasi (lalu mengajukan
+ulang tanpa anggota itu); 6× "Batalkan ACC → Tolak" dalam satu menit (Tolak tak bisa dari Disetujui); "Ditolak oleh perusahaan" tercatat
+sebagai tolak sekolah; penggabungan kelompok dikerjakan manual; tombol **Ubah** yang membuang anggota menghapus jejaknya (Audit hanya
+"diubah langsung"); 26 siswa pernah ditolak, 20 sudah mengajukan lagi tanpa riwayat terlihat oleh Hubin.
+
+### Aturan (berlaku web, API, kotak laporan — satu sumber: `Libraries\PklKeluar`, `PklAlasan`, `PklLapor`)
+1. **Dua lapis status.** Status ajuan tetap keputusan sekolah (menunggu / perbaikan / disetujui / ditolak). Ajuan yang ditolak karena
+   perusahaan menolak SEMUA siswa = status `ditolak` + `pkl_pengajuan.tolak_sumber = 'perusahaan'` (tampil "Ditolak perusahaan";
+   tidak menambah status baru supaya aplikasi lama tetap jalan). Per siswa: anggota aktif, atau **dikeluarkan** (`pkl_anggota_keluar`).
+2. **Keluarkan siswa** (sebagian anggota). Jenis: ditolak perusahaan · administrasi belum lunas · pindah ke kelompok lain · mengundurkan
+   diri · lainnya, + alasan (template). Ajuan menunggu/perbaikan → hak `ubah`; ajuan DISETUJUI → hak `acc` (sama dengan mengubah ajuan
+   disetujui). Satu transaksi: salinan baris (peran, kelas saat mengajukan, HP) + jenis + alasan + siapa/kapan disimpan, baris anggota
+   dihapus → kunci lepas, siswa **langsung bebas mengajukan baru**. Minimal 1 siswa tersisa. Pengaju yang keluar digantikan anggota
+   tersisa paling awal (HP-nya sudah ada). Jenis *ditolak perusahaan*: Surat Izin yang sudah terbit dianggap arsip sah (sidik disegarkan,
+   tidak "perlu cetak ulang"); jenis lain: surat ditandai perlu cetak ulang, nomor sama.
+3. **Ditolak perusahaan (semua siswa)**: hak `acc`, dari menunggu/perbaikan/**disetujui** dalam satu langkah (tidak perlu Batalkan ACC lalu
+   Tolak). ACC ulang mengosongkan `tolak_sumber`.
+4. **Lapor Diterima**: siswa memilih **Semua diterima / Sebagian diterima (centang yang diterima) / Semua ditolak** (`pkl_lapor.hasil`,
+   `diterima` JSON). Siswa TIDAK melepas temannya: pelepasan terjadi saat STAF memproses. Sebagian → yang tidak dicentang dikeluarkan
+   (jenis ditolak perusahaan, sumber `lapor`) lalu Surat Balasan hanya untuk yang diterima. Semua ditolak → "Konfirmasi ditolak perusahaan"
+   (cukup hak memproses kotak; tanpa surat). Laporan sebagian/ditolak yang menunggu menolak Balasan lewat jalur lain dan formulir
+   "Periksa & ubah dulu".
+5. **Mengajukan ulang**: siswa yang dikeluarkan/ditolak mengisi form PKL biasa (ke perusahaan mana pun) → ajuan baru menunggu ACC → surat
+   izin baru bernomor baru. Biaya PKL sudah tercatat per siswa per tahun ajaran → **tidak bayar dua kali** (`PklBiaya` `kegiatan_ada`).
+6. **Riwayat siswa** = ajuan ditolak (sekolah/perusahaan) + dikeluarkan (kecuali *pindah kelompok*). Tampil di kartu Siswa detail ajuan
+   (lencana "Pernah ditolak N×" + 3 terakhir), halaman `admin/pkl/riwayat/{siswa}`, Status Siswa (lencana + saringan "pernah ditolak"),
+   Excel Status Siswa (kolom K), Data Prakerin (keterangan), API. Peringatan **periksa** bila siswa dulu ditolak perusahaan YANG SAMA
+   (nama pembanding sama / mirip ≥ 80%; ikut menahan ACC massal "aman"); selain itu **info**. Siswa yang dulu dibuang lewat tombol Ubah
+   (sebelum revisi ini) tidak bisa dipulihkan jejaknya.
+7. **Template alasan** (`pkl_alasan`): jenis kembalikan · tolak · keluar · lapor; tombol "alasan cepat" di jendela Kembalikan, Tolak,
+   Batalkan persetujuan, Keluarkan siswa, Ditolak perusahaan, dan kotak laporan (klik = kalimat masuk ke kotak alasan, masih bisa diubah,
+   boleh lebih dari satu). Kelola di **PKL → Template Alasan**: hak baru `alasan` (bawaan Waka Hubin; Admin selalu). Isi awal = 12 kalimat
+   sekolah + 5 alasan keluar + 3 alasan laporan. Alasan keputusan kini maksimal 1000 huruf (`catatan_staf`, `pkl_riwayat.catatan`,
+   `pkl_lapor.alasan`).
+8. **WhatsApp**: kotak "Kabari siswa yang dikeluarkan" (terbuka sendiri sesudah mengeluarkan) memakai templat baru
+   `pkl_pengaturan.wa_pesan_keluar` (juga dipakai untuk ajuan ditolak perusahaan); diubah di Pengaturan PKL.
+
+### Perubahan teknis
+Migrasi `2026-10-25-000001_PklKeluarAlasan` (tabel `pkl_alasan`, `pkl_anggota_keluar`; kolom `tolak_sumber`, `hasil`, `diterima`,
+`wa_pesan_keluar`; kolom alasan → 1000; Waka Hubin + hak `alasan`; idempoten, `down()` lengkap) · `Libraries\PklKeluar`, `PklAlasan` (baru),
+`PklAjuan::keluarkan`, `PklLapor` (hasil), `PklPeringatan` (riwayat), `PklWaKeputusan` (keluar), `PklPrakerin`, `PklHak` (hak `alasan`,
+alamat baru) · `Admin\PklAlasan` (baru), `Admin\Pkl` (keluarkan, ditolakPerusahaan, tandaiKabarKeluar, riwayat; **perbaikan**: metode
+`json()` yang hilang membuat POST "sudah dikabari" kabar keputusan berakhir galat 500 walau catatannya tersimpan) · view `alasan`,
+`riwayat`, `_alasan_cepat`, `_kabar_keluar` + detail/daftar/siswa/pengaturan/kotak laporan/form lapor · JS `admin/pkl-alasan.js`
+(baru), `pkl-lapor.js`, `pkl-kabar.js` (aman dimuat dua kali) · API (lihat `docs/API-PKL.md` & `docs/API-SURAT.md`).
+
+### Pengujian (2026-10-20)
+`php spark dev:uji-pkl-keluar` **115/115** (template, keluarkan, ditolak perusahaan, status/prakerin, lapor sebagian/ditolak, WhatsApp,
+halaman, gerbang alamat, API) · regresi `dev:uji-pkl` 339 · `dev:uji-lapor` 114 · `dev:uji-hak` 69 (cek kunci hak & rute baru
+disesuaikan) · `dev:uji-surat` 312 · `dev:uji-pkl-biaya` 130 · `dev:cek-ui` 0 temuan · migrasi naik-turun-naik di DB lokal ·
+migrasi + 251 halaman/panggilan (detail semua 70 ajuan × 3 peran, API detail, daftar, Status Siswa, Excel, Prakerin, riwayat) pada
+**salinan DB hosting 20 Okt** tanpa galat & tanpa mengubah data · peramban Chrome: form Lapor publik (8 cek, Alpine CSP tanpa galat)
+dan tombol alasan cepat + jendela Keluarkan (9 cek).

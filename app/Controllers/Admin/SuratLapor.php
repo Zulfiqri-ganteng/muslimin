@@ -44,6 +44,10 @@ class SuratLapor extends SuratDasar
             'laporBuka'    => PklLapor::terbuka($this->p),
             'bolehAtur'    => HakAkses::boleh($peran, 'admin/pkl/pengaturan'),
             'pemegangAcc'  => PklHak::teksPemegang(PklHak::kunciSurat('acc', SuratJenis::BALASAN)),
+            // Template alasan "laporan dikembalikan" (revisi 2026-10-20) + batas huruf alasan.
+            'alasanLapor'  => (new \App\Libraries\PklAlasan())->untukDialog('lapor'),
+            'kelolaAlasan' => \App\Libraries\PklAlasan::bolehKelola($peran),
+            'maksAlasan'   => \App\Libraries\PklAjuan::maksCatatan(),
         ]);
     }
 

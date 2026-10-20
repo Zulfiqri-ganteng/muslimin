@@ -79,6 +79,11 @@ final class PklPrakerin
             ->select("(SELECT p2.perusahaan_nama FROM pkl_anggota a2 JOIN pkl_pengajuan p2 ON p2.id = a2.pengajuan_id WHERE a2.siswa_id = s.id AND p2.status = 'ditolak' ORDER BY p2.id DESC LIMIT 1) AS ditolak_pt", false)
             ->join('pkl_anggota a', 'a.siswa_aktif = s.id', 'left')
             ->join('pkl_pengajuan p', 'p.id = a.pengajuan_id', 'left');
+        // Siswa yang dikeluarkan dari kelompok (revisi 2026-10-20): catatan terakhirnya "jenis|waktu|perusahaan", untuk keterangan.
+        if (PklKeluar::tabelAda()) {
+            $q->select("(SELECT p2.updated_at FROM pkl_anggota a2 JOIN pkl_pengajuan p2 ON p2.id = a2.pengajuan_id WHERE a2.siswa_id = s.id AND p2.status = 'ditolak' ORDER BY p2.id DESC LIMIT 1) AS ditolak_at", false)
+                ->select("(SELECT CONCAT(k3.jenis, '|', k3.created_at, '|', p3.perusahaan_nama) FROM pkl_anggota_keluar k3 JOIN pkl_pengajuan p3 ON p3.id = k3.pengajuan_id WHERE k3.siswa_id = s.id ORDER BY k3.id DESC LIMIT 1) AS keluar_info", false);
+        }
         if ($lapor) {
             $q->select('l.status AS lapor_status, l.tanggal_mulai AS lapor_mulai, l.tanggal_selesai AS lapor_selesai')
                 ->join('pkl_lapor l', 'l.pengajuan_id = p.id', 'left');
@@ -170,6 +175,14 @@ final class PklPrakerin
             $mulai = $akhir = null;
         }
         $lama = $mulai !== null && $akhir !== null ? SuratPkl::lamaBulan($mulai, $akhir) : 0;
+        // Tanpa ajuan aktif: dikeluarkan dari kelompok (bila lebih baru dari ajuan terakhir yang ditolak) → keterangannya.
+        $keluar = null;
+        if (! $aktif && ! empty($r['keluar_info'])) {
+            [$kJenis, $kWaktu, $kPt] = array_pad(explode('|', (string) $r['keluar_info'], 3), 3, '');
+            if (empty($r['ditolak_pt']) || $kWaktu >= (string) ($r['ditolak_at'] ?? '')) {
+                $keluar = 'Dikeluarkan dari ajuan ke ' . IsianBantu::rapikan($kPt) . ' (' . mb_strtolower(PklKeluar::labelJenis($kJenis)) . '), belum mengajukan ulang';
+            }
+        }
 
         return [
             'no' => 0, 'nama' => (string) $r['nama'], 'mitra' => $aktif ? IsianBantu::rapikan((string) $r['perusahaan_nama']) : '',
@@ -183,6 +196,7 @@ final class PklPrakerin
                 $status === 'disetujui'                   => 'Belum diterima perusahaan (belum isi Lapor Diterima)',
                 $status === 'menunggu'                    => 'Belum di-ACC Hubin (ajuan menunggu)',
                 $status === 'perbaikan'                   => 'Ajuan dikembalikan Hubin untuk diperbaiki',
+                $keluar !== null                          => $keluar,
                 ! empty($r['ditolak_pt'])                 => 'Ajuan ke ' . IsianBantu::rapikan((string) $r['ditolak_pt']) . ' ditolak, belum mengajukan ulang',
                 default                                   => 'Belum mengajukan PKL',
             },

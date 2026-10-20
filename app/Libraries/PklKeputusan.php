@@ -89,8 +89,8 @@ final class PklKeputusan
         if ($wajibCatatan && mb_strlen($catatan) < 5) {
             return $this->gagal('catatan', 'Alasan wajib diisi (minimal 5 huruf) — siswa akan membacanya.', 422);
         }
-        if (mb_strlen($catatan) > 255) {
-            return $this->gagal('catatan', 'Alasan terlalu panjang (maksimal 255 huruf).', 422);
+        if (mb_strlen($catatan) > PklAjuan::maksCatatan()) {
+            return $this->gagal('catatan', 'Alasan terlalu panjang (maksimal ' . PklAjuan::maksCatatan() . ' huruf).', 422);
         }
 
         $opsi = [];
@@ -206,7 +206,7 @@ final class PklKeputusan
             case 'tidak_ada':
                 return 'Ajuan sudah berubah (mungkin diubah staf lain). Muat ulang.';
             case 'pengaju_beda':
-                return 'Pengaju tidak boleh diganti. Hapus ajuan lalu isi ulang bila pengajunya salah.';
+                return 'Pengaju tidak bisa diganti lewat Ubah. Bila pengaju tidak jadi ikut, pakai tombol "Keluarkan siswa" di halaman ajuan (peran pengaju pindah otomatis ke anggota lain).';
             default:
                 return 'Penyimpanan gagal. Coba lagi sebentar.';
         }

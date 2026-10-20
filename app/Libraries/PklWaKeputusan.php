@@ -26,6 +26,8 @@ final class PklWaKeputusan
 
     public const PESAN_PERBAIKAN = 'Halo {nama}, ajuan PKL kamu ke {perusahaan} ({kode}) DIKEMBALIKAN sekolah untuk diperbaiki. Catatan: {alasan}. Pengaju silakan buka form PKL {tautan}, pilih namanya, masukkan nomor HP pengaju, perbaiki, lalu kirim ulang. Terima kasih. {sekolah}';
     public const PESAN_TOLAK     = 'Halo {nama}, mohon maaf, ajuan PKL kamu ke {perusahaan} ({kode}) DITOLAK sekolah. Alasan: {alasan}. Kamu boleh mengajukan tempat PKL lain lewat form PKL {tautan}. Terima kasih. {sekolah}';
+    /** Siswa dikeluarkan dari ajuan / ajuan ditolak perusahaan (revisi 2026-10-20; pkl_pengaturan.wa_pesan_keluar). */
+    public const PESAN_KELUAR    = 'Halo {nama}, kamu tidak lagi tercatat di ajuan PKL {kode} ke {perusahaan}. Alasan: {alasan}. Kamu boleh mengajukan tempat PKL lain lewat form PKL {tautan}. Terima kasih. {sekolah}';
     public const TOKEN           = ['{nama}', '{kelas}', '{perusahaan}', '{kode}', '{alasan}', '{tautan}', '{sekolah}'];
 
     private static ?bool $kolomAda = null;
@@ -58,13 +60,83 @@ final class PklWaKeputusan
         return self::kolomAda() && HakAkses::bolehPkl($peran, self::HAK);
     }
 
-    /** 'perbaikan' | 'ditolak' → templat aktif (dari Pengaturan PKL atau bawaan). */
-    public static function templat(string $status, array $p): string
+    /**
+     * 'perbaikan' | 'ditolak' | 'keluar' → templat aktif (dari Pengaturan PKL atau bawaan). Ajuan yang ditolak PERUSAHAAN
+     * ($sumber 'perusahaan') memakai templat 'keluar' (bukan "DITOLAK sekolah").
+     */
+    public static function templat(string $status, array $p, ?string $sumber = null): string
     {
+        if ($status === 'keluar' || ($status === 'ditolak' && $sumber === 'perusahaan')) {
+            return trim((string) ($p['wa_pesan_keluar'] ?? '')) !== '' ? (string) $p['wa_pesan_keluar'] : self::PESAN_KELUAR;
+        }
         $kolom  = $status === 'ditolak' ? 'wa_pesan_tolak' : 'wa_pesan_perbaikan';
         $bawaan = $status === 'ditolak' ? self::PESAN_TOLAK : self::PESAN_PERBAIKAN;
 
         return trim((string) ($p[$kolom] ?? '')) !== '' ? (string) $p[$kolom] : $bawaan;
+    }
+
+    /** Kabar untuk siswa yang dikeluarkan bisa dipakai? (hak sama + tabel pkl_anggota_keluar sudah ada) */
+    public static function bolehKeluar(?string $peran): bool
+    {
+        return self::boleh($peran) && PklKeluar::tabelAda();
+    }
+
+    /**
+     * Penerima kabar "kamu dikeluarkan dari ajuan" untuk satu ajuan (semua siswa yang pernah dikeluarkan, terbaru dulu).
+     *
+     * @param array<string, mixed> $p
+     * @param array<string, mixed> $setting
+     *
+     * @return list<array<string, mixed>>
+     */
+    public function daftarKeluar(int $ajuanId, array $p, array $setting): array
+    {
+        $a = $this->db->table('pkl_pengajuan')->select('id, perusahaan_nama')->where('id', $ajuanId)->get()->getRowArray();
+        if ($a === null) {
+            return [];
+        }
+        $templat = self::templat('keluar', $p);
+        $out     = [];
+        foreach ((new PklKeluar($this->db))->daftarAjuan($ajuanId) as $k) {
+            $hp    = (string) $k['hp'];
+            $wa    = $hp !== '' ? PklWa::nomorWa($hp) : null;
+            $pesan = PklWa::isi($templat, [
+                'nama' => IsianBantu::judul($k['nama']), 'kelas' => $k['kelas'], 'perusahaan' => (string) $a['perusahaan_nama'],
+                'kode' => PklPengajuanModel::kode($ajuanId), 'alasan' => $k['alasan'] !== '' ? $k['alasan'] : '-',
+                'tautan' => config('Pkl')->tautan(), 'sekolah' => (string) ($setting['school_name'] ?? ''),
+            ]);
+            $out[] = $k + [
+                'url'          => $wa !== null ? 'https://wa.me/' . $wa . '?text=' . rawurlencode($pesan) : null,
+                'wa'           => $wa,
+                'alasan_tidak' => $wa === null ? ($hp === '' ? 'Nomor HP kosong' : 'Nomor HP tidak valid') : null,
+                'pesan'        => $pesan,
+            ];
+        }
+
+        return $out;
+    }
+
+    /**
+     * Tandai siswa yang dikeluarkan sudah dikabari (setelah staf menekan tombol WhatsApp).
+     *
+     * @param array<string, mixed> $konteks
+     */
+    public function tandaiKeluar(int $ajuanId, int $keluarId, array $konteks): bool
+    {
+        if (! PklKeluar::tabelAda()) {
+            return false;
+        }
+        $k = $this->db->table('pkl_anggota_keluar k')->select('k.id, s.nama')->join('siswa s', 's.id = k.siswa_id')
+            ->where('k.id', $keluarId)->where('k.pengajuan_id', $ajuanId)->get()->getRowArray();
+        if ($k === null) {
+            return false;
+        }
+        $oleh = mb_substr((string) ($konteks['oleh'] ?? 'Staf'), 0, 150);
+        $this->db->table('pkl_anggota_keluar')->where('id', $keluarId)->update(['kabar_at' => date('Y-m-d H:i:s'), 'kabar_oleh' => $oleh]);
+        (new PklAjuan($this->db))->catat($ajuanId, 'kabari_keluar', $konteks, 'Dikabari lewat WhatsApp (dikeluarkan dari ajuan): ' . $k['nama']);
+        (new AuditModel())->record('update', 'pkl_anggota_keluar', $keluarId, mb_substr('Siswa yang dikeluarkan dari PKL ' . PklPengajuanModel::kode($ajuanId) . ' dikabari lewat WhatsApp: ' . $k['nama'], 0, 255));
+
+        return true;
     }
 
     /** Pesan galat untuk templat, atau null bila sah. */
@@ -98,7 +170,8 @@ final class PklWaKeputusan
         if ($a === null || ! in_array($a['status'], self::STATUS, true)) {
             return null;
         }
-        $templat = self::templat((string) $a['status'], $p);
+        $sumber  = (string) ($a['tolak_sumber'] ?? '');
+        $templat = self::templat((string) $a['status'], $p, $sumber !== '' ? $sumber : null);
         $putus   = (string) ($a['diputuskan_at'] ?? '');
         $kabar   = [];
         foreach ($this->db->table('pkl_anggota')->select('id, kabar_keputusan_at, kabar_keputusan_oleh')->where('pengajuan_id', $ajuanId)->get()->getResultArray() as $r) {
@@ -132,7 +205,7 @@ final class PklWaKeputusan
             ];
         }
 
-        return ['status' => (string) $a['status'], 'alasan' => $alasan, 'diputuskan_at' => $putus !== '' ? $putus : null, 'siswa' => $siswa];
+        return ['status' => (string) $a['status'], 'sumber' => $sumber !== '' ? $sumber : null, 'alasan' => $alasan, 'diputuskan_at' => $putus !== '' ? $putus : null, 'siswa' => $siswa];
     }
 
     /**

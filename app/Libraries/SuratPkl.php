@@ -426,6 +426,11 @@ final class SuratPkl
                 continue;
             }
             if ($jenis === SuratJenis::BALASAN) {
+                // Laporan siswa "sebagian diterima" / "semua ditolak" yang belum diproses: surat lewat kotak laporan saja.
+                if (($khusus = (new PklLapor($this->db))->menungguKhusus($aid)) !== null) {
+                    $gagal[] = PklLapor::pesanKhusus($khusus);
+                    continue;
+                }
                 $siswa = $a['siswa'];
                 $isi   = $h['isi'] + ['alamat' => $a['alamat']];
             } else {

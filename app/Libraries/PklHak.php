@@ -41,6 +41,10 @@ final class PklHak
             'Periksa, kembalikan, ubah & isi atas nama',
             'Mengembalikan ajuan untuk diperbaiki, mengubah data ajuan, dan mengisi ajuan atas nama siswa. (Ajuan yang sudah disetujui hanya boleh diubah peran yang juga punya hak ACC ajuan PKL.)',
         ],
+        'alasan' => [
+            'Kelola template alasan',
+            'Menambah, mengubah, menghapus, dan mengurutkan kalimat template alasan (tombol cepat di jendela Tolak, Kembalikan, Batalkan persetujuan, Keluarkan siswa, Ditolak perusahaan, dan Kembalikan laporan). Memakai template tetap boleh bagi siapa pun yang membuka jendela itu.',
+        ],
         'ttd' => [
             'Tanda tangan digital Waka Hubin',
             'Mengunggah atau menghapus gambar tanda tangan Waka Hubin. Gambar ini tercetak di semua surat, siapa pun yang meng-ACC.',
@@ -72,7 +76,7 @@ final class PklHak
 
     /** Hak bawaan dalam FORMAT LAMA (Waka Hubin menyetujui; Operator menangani surat & biaya). Lihat bawaanLengkap(). */
     public const BAWAAN = [
-        'hubin'    => ['acc', 'ubah', 'ttd'],
+        'hubin'    => ['acc', 'ubah', 'alasan', 'ttd'],
         'operator' => ['surat', 'surat_sekolah', 'laporan', 'ubah', 'pengaturan'],
     ];
 
@@ -321,8 +325,12 @@ final class PklHak
             (bool) preg_match('~^(surat|surat-massal|wa)(/|$)~', $sisa)         => 'surat',
             (bool) preg_match('~^acc-massal$~', $sisa)                          => 'acc',
             (bool) preg_match('~^(baru|siswa-kelas)$~', $sisa)                  => 'ubah',
-            (bool) preg_match('~^\d+/(acc|tolak|batal-acc)$~', $sisa)           => 'acc',
+            (bool) preg_match('~^alasan(/|$)~', $sisa)                          => 'alasan',
+            (bool) preg_match('~^\d+/(acc|tolak|batal-acc|ditolak-perusahaan)$~', $sisa) => 'acc',
             (bool) preg_match('~^\d+/(ubah|kembalikan)$~', $sisa)               => 'ubah',
+            // Keluarkan siswa: ajuan menunggu/perbaikan = hak ubah; ajuan disetujui = hak ACC (diperiksa lagi di PklKeluar).
+            (bool) preg_match('~^\d+/keluarkan$~', $sisa)                       => 'ubah|acc',
+            (bool) preg_match('~^\d+/kabar-keluar(/|$)~', $sisa)                => PklWaKeputusan::HAK,
             (bool) preg_match('~^\d+/(surat|pembayaran|wa)(/|$)~', $sisa)       => 'surat',
             (bool) preg_match('~^\d+/kabar-keputusan(/|$)~', $sisa)             => PklWaKeputusan::HAK,
             default                                                             => null,

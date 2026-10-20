@@ -112,6 +112,24 @@ final class PklPeringatan
             }
         }
 
+        // ---------- Riwayat penolakan anggota (revisi klien 2026-10-20) ----------
+        // Siswa yang dulu DITOLAK PERUSAHAAN YANG SAMA → "periksa" (ikut menahan ACC massal); riwayat penolakan lain → "info".
+        $tolak = $anggota !== [] ? (new PklKeluar())->tolakSiswa(array_map(static fn (array $a): int => (int) $a['siswa_id'], $anggota), (int) $ajuan['id']) : [];
+        foreach ($anggota as $a) {
+            $daftar = $tolak[(int) $a['siswa_id']] ?? [];
+            if ($daftar === []) {
+                continue;
+            }
+            $samaPt = array_values(array_filter($daftar, static fn (array $t): bool => $t['sumber'] === 'perusahaan'
+                && PklKeluar::perusahaanSama($t['perusahaan_norm'], (string) $ajuan['perusahaan_norm'])));
+            if ($samaPt !== [] && $aktif && $ajuan['status'] !== 'disetujui') {
+                $tmb('awas', $a['nama'] . ' pernah DITOLAK perusahaan ini: ' . PklKeluar::teksTolak($samaPt[0]) . '. Pastikan perusahaan memang mau menerimanya sekarang sebelum ACC.');
+            } else {
+                $tmb('info', $a['nama'] . ' pernah ditolak/dikeluarkan ' . count($daftar) . '×: ' . implode('; ', array_map([PklKeluar::class, 'teksTolak'], array_slice($daftar, 0, 3)))
+                    . (count($daftar) > 3 ? '; …' : '') . '. Rinciannya di kartu Siswa (tautan Riwayat).');
+            }
+        }
+
         // Urut: bahaya, awas, info.
         $bobot = ['bahaya' => 0, 'awas' => 1, 'info' => 2];
         usort($w, static fn ($x, $y) => $bobot[$x['tingkat']] <=> $bobot[$y['tingkat']]);

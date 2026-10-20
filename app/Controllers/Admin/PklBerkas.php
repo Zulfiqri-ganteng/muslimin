@@ -362,11 +362,13 @@ class PklBerkas extends BaseController
         $ws->getStyle('A1')->getFont()->setBold(true)->setSize(14);
         $ws->getStyle('A3')->getFont()->setBold(true);
 
-        $judul = ['No', 'Nama', 'Kelas', 'Status', 'Perusahaan', 'Kota', 'Disetujui oleh', 'Waktu ACC', 'No. Bukti', 'Nomor Surat'];
+        // Kolom K (revisi 2026-10-20): riwayat ditolak / dikeluarkan dari kelompok, tetap tampil walau siswa sudah mengajukan lagi.
+        $judul = ['No', 'Nama', 'Kelas', 'Status', 'Perusahaan', 'Kota', 'Disetujui oleh', 'Waktu ACC', 'No. Bukti', 'Nomor Surat', 'Riwayat Ditolak / Dikeluarkan'];
         $ws->fromArray($judul, null, 'A5');
-        $ws->getStyle('A5:J5')->getFont()->setBold(true);
-        $ws->getStyle('A5:J5')->getFill()->setFillType('solid')->getStartColor()->setRGB('D9E2F3');
-        $ws->getStyle('A5:J5')->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER);
+        $ws->getStyle('A5:K5')->getFont()->setBold(true);
+        $ws->getStyle('A5:K5')->getFill()->setFillType('solid')->getStartColor()->setRGB('D9E2F3');
+        $ws->getStyle('A5:K5')->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER);
+        $tolak = (new \App\Libraries\PklKeluar())->tolakSiswa(array_map('intval', array_column(array_filter($rows, static fn (array $x): bool => (int) ($x['jml_tolak'] ?? 0) > 0), 'id')));
 
         $no = 6;
         foreach ($rows as $i => $s) {
@@ -374,11 +376,14 @@ class PklBerkas extends BaseController
                 $i + 1, $s['nama'], $s['nama_kelas'], $label[$s['fase']] ?? $s['fase'], $s['perusahaan_nama'] ?? '', $s['perusahaan_kota'] ?? '',
                 $s['acc_nama'] ?? '', ! empty($s['acc_at']) ? date('d-m-Y H:i', strtotime((string) $s['acc_at'])) : '',
                 ! empty($s['ajuan_id']) ? PklPengajuanModel::kode((int) $s['ajuan_id']) : '', $s['nomor_surat'] ?? '',
+                implode('; ', array_map([\App\Libraries\PklKeluar::class, 'teksTolak'], $tolak[(int) $s['id']] ?? [])),
             ], null, 'A' . $no++);
         }
         foreach (range('A', 'J') as $c) {
             $ws->getColumnDimension($c)->setAutoSize(true);
         }
+        $ws->getColumnDimension('K')->setWidth(60);
+        $ws->getStyle('K6:K' . max(6, $no))->getAlignment()->setWrapText(true);
         $ws->freezePane('A6');
         $ws->getPageSetup()->setOrientation('landscape')->setPaperSize(9)->setFitToWidth(1)->setFitToHeight(0);
         $ws->getSheetView()->setZoomScale(100);

@@ -281,12 +281,14 @@ $kotakTautan = static fn (string $judul, string $url, string $pesan, string $ket
     <?php if (isset($jenisBiaya)): $galatBiaya = (array) (session()->getFlashdata('galat_biaya') ?? []); $waNilai = (string) (old('wa_pesan') ?? ($waPesan ?? ''));
         $waBalasanAda = \App\Libraries\SuratWa::kolomAda(); $waNilaiB = (string) (old('wa_pesan_balasan') ?? ($waPesanBalasan ?? ''));
         $waKeputusanAda = \App\Libraries\PklWaKeputusan::kolomAda(); $waNilaiP = (string) (old('wa_pesan_perbaikan') ?? ($waPesanPerbaikan ?? ''));
-        $waNilaiT = (string) (old('wa_pesan_tolak') ?? ($waPesanTolak ?? '')); ?>
+        $waNilaiT = (string) (old('wa_pesan_tolak') ?? ($waPesanTolak ?? ''));
+        $waKeluarAda = \App\Libraries\PklKeluar::tabelAda(); $waNilaiK = (string) (old('wa_pesan_keluar') ?? ($waPesanKeluar ?? '')); ?>
         <form id="biaya" method="post" action="<?= site_url('admin/pkl/pengaturan/biaya') ?>" class="scroll-mt-24 space-y-4" x-data="pklPesanWa"
               data-pesan="<?= esc($waNilai !== '' ? $waNilai : \App\Libraries\PklWa::PESAN_BAWAAN, 'attr') ?>"
               data-pesan-balasan="<?= esc($waNilaiB !== '' ? $waNilaiB : \App\Libraries\SuratWa::PESAN_BAWAAN, 'attr') ?>"
               data-pesan-perbaikan="<?= esc($waNilaiP !== '' ? $waNilaiP : \App\Libraries\PklWaKeputusan::PESAN_PERBAIKAN, 'attr') ?>"
               data-pesan-tolak="<?= esc($waNilaiT !== '' ? $waNilaiT : \App\Libraries\PklWaKeputusan::PESAN_TOLAK, 'attr') ?>"
+              data-pesan-keluar="<?= esc($waNilaiK !== '' ? $waNilaiK : \App\Libraries\PklWaKeputusan::PESAN_KELUAR, 'attr') ?>"
               data-tautan="<?= esc(config('Pkl')->tautan(), 'attr') ?>"
               data-sekolah="<?= esc((string) ($sekolahNama ?? 'SMK Bina Nusa'), 'attr') ?>">
             <?= csrf_field() ?>
@@ -340,6 +342,12 @@ $kotakTautan = static fn (string $judul, string $url, string $pesan, string $ket
                             <textarea id="wa_pesan_tolak" name="wa_pesan_tolak" rows="4" maxlength="<?= \App\Libraries\PklWa::MAKS_PESAN ?>" x-model="pesanT" class="inp"><?= esc($waNilaiT !== '' ? $waNilaiT : \App\Libraries\PklWaKeputusan::PESAN_TOLAK) ?></textarea>
                             <p class="text-sm text-gray-500 dark:text-gray-400">Contoh hasil: <span class="font-medium text-gray-900 dark:text-white" x-text="contohPesanWa(pesanT)"></span></p>
                             <button type="button" class="btn btn-teks btn-sm" @click="pesanT = <?= esc(json_encode(\App\Libraries\PklWaKeputusan::PESAN_TOLAK), 'attr') ?>"><?= ikon('clock-arrow', 'h-4 w-4') ?>Kembalikan ke pesan bawaan</button>
+                            <?php if ($waKeluarAda): ?>
+                                <label class="lbl" for="wa_pesan_keluar">Siswa dikeluarkan dari kelompok / ajuan ditolak perusahaan</label>
+                                <textarea id="wa_pesan_keluar" name="wa_pesan_keluar" rows="4" maxlength="<?= \App\Libraries\PklWa::MAKS_PESAN ?>" x-model="pesanK" class="inp"><?= esc($waNilaiK !== '' ? $waNilaiK : \App\Libraries\PklWaKeputusan::PESAN_KELUAR) ?></textarea>
+                                <p class="text-sm text-gray-500 dark:text-gray-400">Contoh hasil: <span class="font-medium text-gray-900 dark:text-white" x-text="contohPesanWa(pesanK)"></span></p>
+                                <button type="button" class="btn btn-teks btn-sm" @click="pesanK = <?= esc(json_encode(\App\Libraries\PklWaKeputusan::PESAN_KELUAR), 'attr') ?>"><?= ikon('clock-arrow', 'h-4 w-4') ?>Kembalikan ke pesan bawaan</button>
+                            <?php endif; ?>
                         </div>
                     <?php endif; ?>
                 </div>

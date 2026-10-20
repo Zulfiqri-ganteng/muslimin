@@ -164,6 +164,56 @@ Rancangan: `docs/DESAIN-HAK-AKSES.md`. Bagian ini MENGGANTIKAN tabel "Siapa bole
   bawaan template di semua surat bernomor). Unggah/hapus hanya lewat web (Tanda Tangan → bagian Kepala Sekolah; hak `ttd_kepsek`).
 - Riwayat ajuan punya aksi baru: `lapor_diterima`, `lapor_proses`, `lapor_kembali` (label di `pkl/meta → aksi_riwayat`).
 
+## Pembaruan 2026-10-20 — keluarkan siswa, ditolak perusahaan, riwayat siswa, template alasan
+
+Revisi klien (rancangan & aturan: `docs/DESAIN-PKL.md` bagian "Revisi klien 2026-10-20"). Semua aturan di `Libraries\PklKeluar`,
+`Libraries\PklAlasan`, `Libraries\PklLapor` — sama persis dengan web. Hanya MENAMBAH kolom: aplikasi lama tetap jalan.
+Butuh migrasi `2026-10-25-000001_PklKeluarAlasan` (server tanpa migrasi menjawab `503` untuk aksi baru).
+
+**Aturan singkat**
+- **Keluarkan siswa** (sebagian anggota): ajuan `menunggu`/`perbaikan` → hak `ubah`; ajuan `disetujui` → hak `acc`. Jenis wajib:
+  `ditolak_perusahaan | administrasi | pindah | mundur | lainnya` (label di `pkl/meta → jenis_keluar`) + `catatan` 5–1000 huruf.
+  Minimal satu siswa tersisa (`422 kode=semua`). Siswa yang dikeluarkan langsung bebas mengajukan baru, dan jejaknya tetap tersimpan.
+  Pengaju yang dikeluarkan digantikan anggota tersisa paling awal. Jenis `ditolak_perusahaan` tidak membuat Surat Izin "perlu cetak
+  ulang" (surat lama = arsip sah); jenis lain membuatnya perlu cetak ulang (nomor sama).
+- **Ditolak perusahaan** (SEMUA siswa): hak `acc`, dari `menunggu`/`perbaikan`/`disetujui` dalam satu langkah. Status tetap
+  `ditolak` + `tolak_sumber = "perusahaan"`; `status_label` = "Ditolak perusahaan". ACC ulang mengosongkan sumbernya.
+- **Riwayat penolakan siswa** = ajuan ditolak (sekolah/perusahaan) + pernah dikeluarkan (kecuali jenis `pindah`). Peringatan
+  `awas` di detail bila siswa dulu ditolak perusahaan YANG SAMA (ikut menahan ACC massal "aman"); selain itu `info`.
+- **Template alasan**: siapa pun yang membuka jendela keputusan boleh MEMAKAI; mengelola butuh hak baru `alasan` (bawaan Waka Hubin;
+  `admin.hak_pkl.alasan`, `pkl/meta → hak.kelola_alasan`). Jenis: `kembalikan | tolak | keluar | lapor`. Jendela → jenis:
+  `kembalikan → [kembalikan]`, `tolak → [tolak]`, `batal_acc → [kembalikan, tolak]`, `keluarkan → [keluar, tolak]`,
+  `ditolak_perusahaan → [keluar]`, `lapor → [lapor]`. Alasan keputusan kini maksimal **1000** huruf (`pkl/meta → aturan.alasan_maks_huruf`).
+- Kunci hak PKL kini 10: `acc, surat, laporan, ubah, alasan, ttd, ttd_kepsek, pengaturan, hapus, hapus_disetujui`.
+
+**Endpoint baru**
+
+| Metode & alamat | Body / query | Hak | Hasil |
+|---|---|---|---|
+| `POST pkl/ajuan/{id}/keluarkan` | `{siswa_ids: [int], jenis, catatan}` | ubah (menunggu/perbaikan) · acc (disetujui) | `{id, kode, keluar: [{id, siswa_id, nama}]}` |
+| `POST pkl/ajuan/{id}/ditolak-perusahaan` | `{catatan}` | acc | `{id, kode, status: "ditolak", tolak_sumber: "perusahaan"}` |
+| `GET pkl/ajuan/{id}/kabar-keluar` | — | acc \| ubah \| surat | daftar siswa dikeluarkan + `url` wa.me + `pesan` + `kabar_at` |
+| `POST pkl/ajuan/{id}/kabar-keluar/{keluar_id}/tandai` | — | acc \| ubah \| surat | `{waktu}` |
+| `GET pkl/siswa/{id}/riwayat` | — | modul PKL | `{siswa, aktif, jumlah_ditolak, riwayat: [{jenis: ajuan\|keluar, ajuan_id, kode, perusahaan, status, tolak_sumber, keterangan, jenis_keluar?, peran, alasan, waktu, diajukan}]}` |
+| `GET pkl/alasan` | `?jenis=` atau `?dialog=` | modul PKL | daftar template (`dialog` = berkelompok); `meta {jenis, dialog, boleh_kelola, maks_judul, maks_isi}` |
+| `POST pkl/alasan` | `{jenis, judul (3–80), isi (5–1000)}` | alasan | `201 {id}` |
+| `POST pkl/alasan/{id}` | `{jenis?, judul, isi}` | alasan | `{id}` |
+| `DELETE pkl/alasan/{id}` | — | alasan | `{id}` |
+| `POST pkl/alasan/urut` | `{jenis, ids: [semua id kelompok itu, urutan baru]}` | alasan | — (`409` bila daftar tidak lengkap/berubah) |
+
+**Respons yang diperluas**
+- `pkl/meta`: `jenis_keluar`, `alasan {jenis, dialog: {jendela: [ {jenis, judul, item: [{id, judul, isi}]} ]}}`, `aturan.alasan_maks_huruf`,
+  `hak.kelola_alasan`, `hak.hak_pkl.alasan`, `aksi_riwayat` + `keluarkan`, `tolak_perusahaan`, `kabari_keluar`.
+- Baris daftar & detail ajuan: `tolak_sumber` (`perusahaan` | `sekolah` | null), `jumlah_keluar`, `status_label` "Ditolak perusahaan".
+- Detail ajuan: `anggota[].riwayat_tolak` (riwayat penolakan siswa itu DI LUAR ajuan ini: `{ajuan_id, kode, perusahaan, sumber, jenis,
+  keterangan, alasan, waktu}`), `keluar` (siswa yang dikeluarkan dari ajuan ini: `{id, siswa_id, nama, kelas, peran, hp, jenis,
+  jenis_label, alasan, status_ajuan, sumber: staf|lapor, oleh, waktu, kabar_at, kabar_oleh}`), `hak.keluarkan`,
+  `hak.ditolak_perusahaan`, `hak.kabar_keluar`.
+- `pkl/siswa`: `?fase=pernah_ditolak` (siapa pun yang punya riwayat ditolak/dikeluarkan, apa pun statusnya) + `jumlah_ditolak` per baris.
+- `pkl/ajuan/{id}/kabar-keputusan` untuk ajuan ditolak perusahaan: `sumber = "perusahaan"` dan pesan memakai templat "keluar".
+- `POST pkl/biaya`: kunci baru `wa_pesan_keluar` (templat WhatsApp siswa dikeluarkan / ditolak perusahaan).
+- Kotak Lapor Diterima (API Surat) membawa `hasil` + `siswa_diterima`/`siswa_ditolak` — lihat `docs/API-SURAT.md`.
+
 ## Catatan untuk pembuat aplikasi
 1. Setelah login, baca `admin.akses_api`: bila `["pkl"]`, tampilkan HANYA menu PKL (jangan panggil API lain → 403).
 2. Tombol per ajuan dibaca dari `data.hak` pada detail; jangan menebak dari peran.

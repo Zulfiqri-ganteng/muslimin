@@ -50,11 +50,13 @@ document.addEventListener('alpine:init', function () {
             pesanB: '',
             pesanP: '',
             pesanT: '',
+            pesanK: '',
             init: function () {
                 this.pesan = this.$el.getAttribute('data-pesan') || '';
                 this.pesanB = this.$el.getAttribute('data-pesan-balasan') || '';
                 this.pesanP = this.$el.getAttribute('data-pesan-perbaikan') || '';
                 this.pesanT = this.$el.getAttribute('data-pesan-tolak') || '';
+                this.pesanK = this.$el.getAttribute('data-pesan-keluar') || '';
                 var s = this.$el.getAttribute('data-sekolah');
                 if (s !== null) { sekolah = s; }
                 var t = this.$el.getAttribute('data-tautan');

@@ -40,9 +40,9 @@ $galat  = static fn (string $k): string => '<p class="err-msg" x-cloak x-show="e
             <p class="font-semibold">Kapan mengisi form ini?</p>
             <ul class="mt-1 list-disc space-y-0.5 pl-5">
                 <li>Ajuan PKL-mu sudah <b>disetujui sekolah</b>, dan</li>
-                <li>perusahaan / instansi tempat PKL sudah <b>menyatakan menerima</b> kamu.</li>
+                <li>perusahaan / instansi sudah <b>memberi jawaban</b>: menerima semua, menerima <b>sebagian</b> siswa saja, atau menolak.</li>
             </ul>
-            <p class="mt-2">Isi tanggal mulai dan selesai PKL yang disepakati dengan perusahaan. Sekolah lalu membuatkan <b>Surat Balasan</b> untuk perusahaan. Cukup <b>satu orang per kelompok</b> yang melapor.</p>
+            <p class="mt-2">Isi hasilnya dan tanggal mulai–selesai PKL yang disepakati. Sekolah lalu membuatkan <b>Surat Balasan</b> untuk siswa yang diterima. Cukup <b>satu orang per kelompok</b> yang melapor. Teman yang tidak diterima akan dikeluarkan dari kelompok oleh sekolah dan bisa mengajukan tempat PKL lain.</p>
         </div>
     </div>
 
@@ -117,6 +117,12 @@ $galat  = static fn (string $k): string => '<p class="err-msg" x-cloak x-show="e
                             <p class="mt-1 text-sm text-amber-900">Lapor diterima baru bisa setelah ajuan PKL-mu disetujui sekolah. Tunggu keputusannya; bila ajuanmu dikembalikan untuk diperbaiki, perbaiki lewat form pengajuan PKL.</p>
                         </div>
                     </template>
+                    <template x-if="pilih && pilih.status === 'ajukan_lagi'">
+                        <div class="rounded-lg border border-amber-300 bg-amber-50 p-4">
+                            <p class="font-semibold text-amber-900">Kamu tidak punya ajuan PKL yang aktif</p>
+                            <p class="mt-1 text-sm text-amber-900">Ajuan atau kelompok PKL-mu sebelumnya ditolak / kamu dikeluarkan dari kelompok (misalnya tidak diterima perusahaan). Kamu boleh mengajukan tempat PKL baru lewat <a class="font-semibold text-brand-700 underline" href="<?= esc(config('Pkl')->tautan(), 'attr') ?>">form pengajuan PKL</a>.</p>
+                        </div>
+                    </template>
                     <template x-if="pilih && pilih.status === 'belum_ajuan'">
                         <div class="rounded-lg border border-garis bg-permukaan p-4">
                             <p class="font-semibold text-teks">Kamu belum mengajukan PKL</p>
@@ -151,7 +157,36 @@ $galat  = static fn (string $k): string => '<p class="err-msg" x-cloak x-show="e
                 Laporan sudah dikirim oleh <b x-text="data && data.lapor ? data.lapor.pelapor : ''"></b> dan sedang menunggu diproses sekolah. Kirim lagi hanya bila ada yang perlu diperbaiki.
             </div>
 
-            <div class="grid gap-4 sm:grid-cols-2">
+            <!-- Hasil dari perusahaan (revisi 2026-10-20): semua / sebagian / semua ditolak -->
+            <fieldset x-show="data && data.hasil_ada">
+                <legend class="lbl">Jawaban perusahaan <span class="tanda-wajib">*</span></legend>
+                <div class="grid gap-2 sm:grid-cols-3">
+                    <label class="pilih-item cursor-pointer" :aria-pressed="f.hasil === 'semua'"><input type="radio" class="sr-only" name="hasil" value="semua" x-model="f.hasil"><span class="font-medium">Semua diterima</span></label>
+                    <label class="pilih-item cursor-pointer" x-show="bolehSebagian()" :aria-pressed="f.hasil === 'sebagian'"><input type="radio" class="sr-only" name="hasil" value="sebagian" x-model="f.hasil"><span class="font-medium">Sebagian diterima</span></label>
+                    <label class="pilih-item cursor-pointer" :aria-pressed="f.hasil === 'ditolak'"><input type="radio" class="sr-only" name="hasil" value="ditolak" x-model="f.hasil"><span class="font-medium">Semua ditolak</span></label>
+                </div>
+                <?= $galat('hasil') ?>
+            </fieldset>
+
+            <div x-show="f.hasil === 'sebagian'" class="rounded-lg border-2 border-brand-200 bg-brand-50 px-4 py-3">
+                <p class="text-sm font-semibold text-teks">Centang siswa yang <b>DITERIMA</b> perusahaan:</p>
+                <div class="mt-2 space-y-1.5">
+                    <template x-for="a in anggotaKelompok()" :key="a.siswa_id">
+                        <label class="flex cursor-pointer items-center gap-2 text-sm text-teks">
+                            <input type="checkbox" class="cek" :value="a.siswa_id" :checked="diterimaAda(a.siswa_id)" @change="ubahDiterima(a.siswa_id)">
+                            <span x-text="a.nama"></span> <span class="text-teks-2" x-text="a.kelas ? '(' + a.kelas + ')' : ''"></span>
+                        </label>
+                    </template>
+                </div>
+                <p class="hint mt-2">Teman yang <b>tidak</b> dicentang akan dikeluarkan dari kelompok oleh sekolah (setelah diperiksa), lalu boleh mengajukan tempat PKL lain. Surat Balasan hanya memuat siswa yang diterima.</p>
+                <?= $galat('diterima') ?>
+            </div>
+
+            <div x-show="f.hasil === 'ditolak'" class="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800">
+                Perusahaan <b>menolak semua</b> anggota kelompok. Setelah sekolah mengonfirmasi, kalian semua boleh mengajukan tempat PKL lain. Tulis alasan dari perusahaan di kolom catatan (bila tahu).
+            </div>
+
+            <div class="grid gap-4 sm:grid-cols-2" x-show="f.hasil !== 'ditolak'">
                 <div>
                     <label class="lbl" for="tglMulai">Tanggal mulai PKL <span class="tanda-wajib">*</span></label>
                     <input id="tglMulai" type="date" x-model="f.tanggal_mulai" class="inp" :class="err.tanggal_mulai && 'inp-err'">
@@ -163,9 +198,9 @@ $galat  = static fn (string $k): string => '<p class="err-msg" x-cloak x-show="e
                     <?= $galat('tanggal_selesai') ?>
                 </div>
             </div>
-            <p x-show="lama()" class="-mt-2 text-sm font-semibold text-brand-800" x-text="lama()"></p>
+            <p x-show="f.hasil !== 'ditolak' && lama()" class="-mt-2 text-sm font-semibold text-brand-800" x-text="lama()"></p>
 
-            <div>
+            <div x-show="f.hasil !== 'ditolak'">
                 <label class="lbl" for="alamatPt">Alamat lengkap perusahaan <span class="tanda-opsional">(perbaiki bila kurang lengkap)</span></label>
                 <textarea id="alamatPt" x-model="f.alamat" rows="2" maxlength="300" class="inp" :class="err.alamat && 'inp-err'"></textarea>
                 <p class="hint">Alamat ini tercetak di Surat Balasan. Sertakan nama jalan, desa/kelurahan, kecamatan, kota/kabupaten, dan kode pos bila tahu.</p>
@@ -173,7 +208,7 @@ $galat  = static fn (string $k): string => '<p class="err-msg" x-cloak x-show="e
             </div>
             <div>
                 <label class="lbl" for="catatanLapor">Catatan untuk sekolah <span class="tanda-opsional">(boleh kosong)</span></label>
-                <textarea id="catatanLapor" x-model="f.catatan" rows="2" maxlength="300" class="inp" placeholder="Contoh: nama pembimbing di perusahaan, jam masuk, atau hal lain yang perlu sekolah ketahui."></textarea>
+                <textarea id="catatanLapor" x-model="f.catatan" rows="2" maxlength="300" class="inp" placeholder="Contoh: nama pembimbing di perusahaan, jam masuk, alasan perusahaan menolak, atau hal lain yang perlu sekolah ketahui."></textarea>
                 <?= $galat('catatan') ?>
             </div>
 

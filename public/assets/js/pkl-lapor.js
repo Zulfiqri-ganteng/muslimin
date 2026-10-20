@@ -1,7 +1,8 @@
 /**
  * Form LAPOR DITERIMA PKL (publik) — komponen Alpine `pklLapor`. docs/DESAIN-HAK-AKSES.md bagian 4.
  *
- * Langkah 1: pilih kelas → nama (status saja) → nomor HP (dibuktikan server). Langkah 2: periode PKL + alamat + catatan → kirim.
+ * Langkah 1: pilih kelas → nama (status saja) → nomor HP (dibuktikan server). Langkah 2: jawaban perusahaan (semua diterima /
+ * sebagian — centang siapa yang diterima / semua ditolak; revisi 2026-10-20) + periode PKL + alamat + catatan → kirim.
  * Validasi di sini hanya kenyamanan; penentu tetap server (App\Libraries\PklLapor). Kunci galat = nama kolom server.
  */
 document.addEventListener('alpine:init', function () {
@@ -32,7 +33,7 @@ document.addEventListener('alpine:init', function () {
             pesanCek: '',
             proses: false,
             data: null,
-            f: { tanggal_mulai: '', tanggal_selesai: '', alamat: '', catatan: '' },
+            f: { hasil: 'semua', diterima: [], tanggal_mulai: '', tanggal_selesai: '', alamat: '', catatan: '' },
             err: {},
             mengirim: false,
             pesanKirim: '',
@@ -78,6 +79,7 @@ document.addEventListener('alpine:init', function () {
                     dikembalikan: { teks: 'Perlu diperbaiki', kelas: 'label-merah' },
                     selesai: { teks: 'Selesai', kelas: 'label-buka' },
                     belum_disetujui: { teks: 'Ajuan belum disetujui', kelas: 'label-tutup' },
+                    ajukan_lagi: { teks: 'Perlu ajukan lagi', kelas: 'label-merah' },
                     belum_ajuan: { teks: '', kelas: '' },
                 }[status] || { teks: '', kelas: '' };
             },
@@ -90,6 +92,19 @@ document.addEventListener('alpine:init', function () {
             /** Anggota kelompok ajuan yang sedang dibuka (kosong bila belum ada data). */
             anggotaKelompok: function () {
                 return this.data && this.data.anggota ? this.data.anggota : [];
+            },
+
+            /** Pilihan "sebagian diterima" hanya bermakna bila kelompok berisi 2 siswa atau lebih. */
+            bolehSebagian: function () {
+                return this.anggotaKelompok().length >= 2;
+            },
+            diterimaAda: function (id) {
+                return this.f.diterima.indexOf(Number(id)) !== -1;
+            },
+            ubahDiterima: function (id) {
+                id = Number(id);
+                var i = this.f.diterima.indexOf(id);
+                if (i === -1) { this.f.diterima.push(id); } else { this.f.diterima.splice(i, 1); }
             },
 
             namaKelas: function () {
@@ -134,7 +149,11 @@ document.addEventListener('alpine:init', function () {
             isiDari: function (d) {
                 this.data = d;
                 var l = d.lapor || {};
+                var hasil = l.hasil || 'semua';
+                if (hasil === 'sebagian' && (d.anggota || []).length < 2) { hasil = 'semua'; }
                 this.f = {
+                    hasil: hasil,
+                    diterima: (l.diterima || []).map(Number),
                     tanggal_mulai: l.mulai || d.mulai || '',
                     tanggal_selesai: l.selesai || d.selesai || '',
                     alamat: l.alamat || d.alamat || '',
@@ -157,10 +176,17 @@ document.addEventListener('alpine:init', function () {
 
             periksa: function () {
                 var e = {};
-                if (!tglSah(this.f.tanggal_mulai)) { e.tanggal_mulai = 'Isi tanggal mulai PKL.'; }
-                if (!tglSah(this.f.tanggal_selesai)) { e.tanggal_selesai = 'Isi tanggal selesai PKL.'; }
-                if (!e.tanggal_mulai && !e.tanggal_selesai && this.f.tanggal_selesai <= this.f.tanggal_mulai) {
-                    e.tanggal_selesai = 'Tanggal selesai harus setelah tanggal mulai.';
+                var jml = this.anggotaKelompok().length;
+                if (this.f.hasil === 'sebagian') {
+                    if (!this.f.diterima.length) { e.diterima = 'Centang siswa yang DITERIMA perusahaan (minimal satu).'; }
+                    else if (this.f.diterima.length >= jml) { e.diterima = 'Semua siswa tercentang — kalau semua diterima, pilih "Semua diterima".'; }
+                }
+                if (this.f.hasil !== 'ditolak') {
+                    if (!tglSah(this.f.tanggal_mulai)) { e.tanggal_mulai = 'Isi tanggal mulai PKL.'; }
+                    if (!tglSah(this.f.tanggal_selesai)) { e.tanggal_selesai = 'Isi tanggal selesai PKL.'; }
+                    if (!e.tanggal_mulai && !e.tanggal_selesai && this.f.tanggal_selesai <= this.f.tanggal_mulai) {
+                        e.tanggal_selesai = 'Tanggal selesai harus setelah tanggal mulai.';
+                    }
                 }
                 this.err = e;
                 return Object.keys(e).length === 0;
@@ -175,6 +201,10 @@ document.addEventListener('alpine:init', function () {
                 var fd = new FormData();
                 fd.append('ajuan_id', this.data.ajuan_id);
                 ['tanggal_mulai', 'tanggal_selesai', 'alamat', 'catatan'].forEach(function (k) { fd.append(k, teks(self.f[k])); });
+                fd.append('hasil', this.f.hasil);
+                if (this.f.hasil === 'sebagian') {
+                    this.f.diterima.forEach(function (id) { fd.append('diterima[]', id); });
+                }
                 fd.append('website', this.$refs.jebakan ? this.$refs.jebakan.value : '');
                 fetch(this.cfg.urlKirim, { method: 'POST', body: fd, credentials: 'same-origin', headers: KEPALA })
                     .then(function (r) { return r.json(); })

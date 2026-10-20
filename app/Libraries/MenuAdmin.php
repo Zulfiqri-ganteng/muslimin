@@ -143,6 +143,7 @@ final class MenuAdmin
                     ['admin/pkl/prakerin', 'Data Prakerin', 'address-book'],
                     ['admin/pkl/laporan', 'Laporan Pembayaran', 'receipt'],
                     ['admin/pkl/ttd', 'Tanda Tangan', 'pen-nib'],
+                    ['admin/pkl/alasan', 'Template Alasan', 'clipboard-list'],
                     ['admin/pkl/pengaturan', 'Pengaturan PKL', 'adjustments-horizontal'],
                 ], ['api' => ['pkl'], 'ket' => 'Ajuan PKL siswa, surat izin, biaya, tanda tangan. Aksi di dalamnya diatur di bagian "PKL & Surat".']],
             ]],

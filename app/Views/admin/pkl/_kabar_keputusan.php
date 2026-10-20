@@ -16,7 +16,7 @@ $waktuKabar = static fn (?string $w): string => $w ? date('d-m H:i', strtotime($
 <?= ui_dialog_buka(['nama' => 'pkl-kabar', 'judul' => 'Kabari siswa lewat WhatsApp', 'ukuran' => 'lg', 'awalBuka' => $kabarBuka]) ?>
 <div class="dialog-isi space-y-3">
     <p class="text-sm text-gray-600 dark:text-gray-300">
-        Ajuan ini <b><?= $ditolak ? 'DITOLAK' : 'DIKEMBALIKAN untuk diperbaiki' ?></b>. Tekan tombol hijau: WhatsApp terbuka dengan pesan siap kirim, Anda tinggal menekan <b>Kirim</b>.
+        Ajuan ini <b><?= $ditolak ? (($kabar['sumber'] ?? null) === 'perusahaan' ? 'DITOLAK PERUSAHAAN' : 'DITOLAK') : 'DIKEMBALIKAN untuk diperbaiki' ?></b>. Tekan tombol hijau: WhatsApp terbuka dengan pesan siap kirim, Anda tinggal menekan <b>Kirim</b>.
         <?php if (! $ditolak): ?>Hanya <b>pengaju</b> yang bisa membuka dan memperbaiki ajuan di form PKL; anggota lain cukup tahu.<?php endif; ?>
     </p>
     <?php if ($kabar['alasan'] !== ''): ?>

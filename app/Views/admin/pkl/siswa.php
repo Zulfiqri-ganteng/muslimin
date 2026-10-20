@@ -38,6 +38,7 @@ $opsiFase = [
     'belum_mulai'   => '— Disetujui, belum mulai',
     'sedang'        => '— Sedang PKL',
     'selesai'       => '— Selesai PKL',
+    'pernah_ditolak' => 'Pernah ditolak / dikeluarkan (status apa pun)',
 ];
 $adaSaring = $q !== '' || $kelasId > 0 || $fase !== '';
 $urlExcel  = site_url('admin/pkl/siswa/excel') . '?' . http_build_query(array_filter(['q' => $q, 'kelas_id' => $kelasId ?: null, 'fase' => $fase]));
@@ -46,12 +47,13 @@ $urlExcel  = site_url('admin/pkl/siswa/excel') . '?' . http_build_query(array_fi
 <?= $this->section('content') ?>
 
 <?= view('admin/partials/help', [
-    'helpKey'   => 'pkl_siswa_v1',
+    'helpKey'   => 'pkl_siswa_v2',
     'helpTitle' => 'Status Siswa PKL',
     'helpBody'  => '<p>Status dihitung <b>otomatis</b> dari ajuan dan tanggal hari ini; tidak ada yang diketik manual.</p>'
         . '<ul class="mt-2 list-disc pl-5 space-y-1">'
         . '<li><b>Sudah mengisi</b> = punya ajuan aktif (menunggu, perlu perbaikan, atau disetujui). <b>Belum mengisi</b> = belum pernah, atau ajuannya ditolak.</li>'
         . '<li><b>Sudah PKL</b> = ajuannya sudah <b>disetujui</b> (sudah dapat tempat), lalu dirinci: belum mulai, sedang PKL, atau selesai menurut tanggalnya.</li>'
+        . '<li><b>Pernah ditolak</b> = pernah punya ajuan yang ditolak (sekolah/perusahaan) atau pernah <b>dikeluarkan</b> dari kelompok — tetap terlihat walau sekarang sudah mengajukan lagi. Klik nama siswa untuk melihat riwayatnya.</li>'
         . '<li>Yang dihitung hanya siswa aktif di tingkat yang diizinkan di <b>Pengaturan PKL</b>.</li>'
         . '</ul>',
 ]) ?>
@@ -82,9 +84,9 @@ $urlExcel  = site_url('admin/pkl/siswa/excel') . '?' . http_build_query(array_fi
 
     <!-- Rincian status -->
     <nav class="flex flex-wrap gap-2" aria-label="Rincian status siswa">
-        <?php foreach (['belum' => 'Belum mengisi', 'ditolak' => 'Ditolak', 'menunggu' => 'Menunggu ACC', 'perbaikan' => 'Perlu perbaikan', 'belum_mulai' => 'Belum mulai', 'sedang' => 'Sedang PKL', 'selesai' => 'Selesai PKL'] as $kode => $label): ?>
+        <?php foreach (['belum' => 'Belum mengisi', 'ditolak' => 'Ditolak', 'menunggu' => 'Menunggu ACC', 'perbaikan' => 'Perlu perbaikan', 'belum_mulai' => 'Belum mulai', 'sedang' => 'Sedang PKL', 'selesai' => 'Selesai PKL', 'pernah_ditolak' => 'Pernah ditolak'] as $kode => $label): ?>
             <a href="<?= esc($urlSaring(['fase' => $kode]), 'attr') ?>" class="tombol-saring inline-flex items-center gap-1.5"<?= $fase === $kode ? ' aria-current="true"' : '' ?>>
-                <?= esc($label) ?><span class="tabular-nums opacity-90"><?= (int) $ringkas[$kode] ?></span>
+                <?= esc($label) ?><span class="tabular-nums opacity-90"><?= (int) ($ringkas[$kode] ?? 0) ?></span>
             </a>
         <?php endforeach; ?>
     </nav>
@@ -133,7 +135,8 @@ $urlExcel  = site_url('admin/pkl/siswa/excel') . '?' . http_build_query(array_fi
                         <tbody>
                             <?php foreach ($rows as $r): ?>
                                 <tr>
-                                    <td class="font-medium text-gray-900 dark:text-white"><?= esc($r['nama']) ?></td>
+                                    <td class="font-medium text-gray-900 dark:text-white"><a href="<?= site_url('admin/pkl/riwayat/' . (int) $r['id']) ?>" class="hover:underline"><?= esc($r['nama']) ?></a>
+                                        <?php if ((int) ($r['jml_tolak'] ?? 0) > 0): ?><span class="lencana lencana-kuning ms-1">Pernah ditolak <?= (int) $r['jml_tolak'] ?>×</span><?php endif; ?></td>
                                     <td class="whitespace-nowrap"><?= esc($r['nama_kelas']) ?></td>
                                     <td><?= view('admin/pkl/_lencana', ['kode' => $r['fase'], 'siswa' => true]) ?></td>
                                     <td><?= esc($r['perusahaan_nama'] ?? '') ?: '<span class="text-gray-500 dark:text-gray-400">—</span>' ?></td>
@@ -148,7 +151,8 @@ $urlExcel  = site_url('admin/pkl/siswa/excel') . '?' . http_build_query(array_fi
             <ul class="divide-y divide-gray-200 md:hidden dark:divide-gray-700">
                 <?php foreach ($rows as $r): ?>
                     <li class="px-4 py-3">
-                        <p class="font-semibold text-gray-900 dark:text-white"><?= esc($r['nama']) ?> <span class="text-xs font-normal text-gray-500 dark:text-gray-400">· <?= esc($r['nama_kelas']) ?></span></p>
+                        <p class="font-semibold text-gray-900 dark:text-white"><a href="<?= site_url('admin/pkl/riwayat/' . (int) $r['id']) ?>" class="hover:underline"><?= esc($r['nama']) ?></a> <span class="text-xs font-normal text-gray-500 dark:text-gray-400">· <?= esc($r['nama_kelas']) ?></span></p>
+                        <?php if ((int) ($r['jml_tolak'] ?? 0) > 0): ?><p class="mt-1"><span class="lencana lencana-kuning">Pernah ditolak <?= (int) $r['jml_tolak'] ?>×</span></p><?php endif; ?>
                         <div class="mt-1.5 flex flex-wrap items-center gap-2">
                             <?= view('admin/pkl/_lencana', ['kode' => $r['fase'], 'siswa' => true]) ?>
                             <?php if (! empty($r['ajuan_id'])): ?><a href="<?= site_url('admin/pkl/' . $r['ajuan_id']) ?>" class="font-mono text-xs font-semibold text-brand-700 dark:text-brand-400"><?= esc(PklPengajuanModel::kode((int) $r['ajuan_id'])) ?></a><?php endif; ?>

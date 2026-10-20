@@ -57,6 +57,18 @@ Laporan DIKLAIM atomik: dua staf menekan bersamaan → yang kedua **409**. Ajuan
 (tertaut ke surat lama, `200`). Ajuan tak lagi disetujui / isian tak sah → **409/422** dan laporan kembali "baru". Surat Balasan
 yang dibuat lewat jalur LAIN (`POST surat/balasan`, web) ikut menandai laporan menunggu ajuan itu selesai.
 
+**Pembaruan 2026-10-20 — jawaban perusahaan (semua / sebagian / semua ditolak).** Baris laporan kini memuat `hasil`
+(`semua` | `sebagian` | `ditolak`), `hasil_teks`, `siswa_diterima[]` dan `siswa_ditolak[]` (`{siswa_id, nama, kelas}`, dihitung terhadap
+anggota aktif ajuan sekarang). Laporan `ditolak` tidak punya tanggal (`tanggal_mulai`/`tanggal_selesai`/`periode`/`lama` kosong).
+- `sebagian`: `setujui`/`buat` lebih dulu **mengeluarkan** `siswa_ditolak` dari ajuan (jenis `ditolak_perusahaan`, sumber `lapor`; mereka
+  bebas mengajukan baru dan tetap tercatat), lalu Surat Balasan dibuat **hanya untuk `siswa_diterima`**. Bila ajuan sudah punya Balasan
+  yang memuat semua siswa → `409` (batalkan surat itu dulu).
+- `ditolak`: `setujui` (atau `buat`) = **konfirmasi**: ajuan menjadi "Ditolak perusahaan" (`tolak_sumber = perusahaan`), tanpa surat;
+  cukup hak memproses kotak (Buat ATAU ACC Balasan). Respons: `surat_id` & `kode_surat` = `null`.
+- Laporan `sebagian`/`ditolak` yang masih menunggu MENOLAK pembuatan Balasan lewat jalur lain (`POST surat/balasan` → `gagal[]` berisi
+  pesan "Proses lewat kotak Lapor Diterima PKL").
+- `kembalikan`: `alasan` kini 5–1000 huruf. Template alasan jenis `lapor`: `GET pkl/alasan?dialog=lapor` (lihat `docs/API-PKL.md`).
+
 ### Kabar WhatsApp "surat siap diambil" (2026-10-13)
 Saat ini untuk **Surat Balasan PKL** (`Libraries\SuratWa`). Tersedia setelah surat DIUNDUH; hak = **Unduh** jenis itu. Sistem hanya
 menyiapkan tautan `wa.me` + pesan — staf mengirim dari WhatsApp-nya sendiri, lalu aplikasi memanggil `tandai`.

@@ -162,6 +162,15 @@ class PklBiaya extends PklDasar
                 }
                 $ubah[$kolom] = ($isi === '' || $isi === $bawaan) ? null : $isi;
             }
+            // Pesan siswa dikeluarkan / ajuan ditolak perusahaan (revisi 2026-10-20) — kolom ada setelah migrasi 2026-10-25-000001.
+            $kirimK = $this->request->getPost('wa_pesan_keluar');
+            if ($kirimK !== null && \App\Libraries\PklKeluar::tabelAda()) {
+                $isi = trim((string) $kirimK);
+                if ($isi !== '' && $isi !== PklWaKeputusan::PESAN_KELUAR) {
+                    $galatWa ??= ($g = PklWaKeputusan::periksaPesan($isi)) !== null ? 'Pesan siswa dikeluarkan: ' . $g : null;
+                }
+                $ubah['wa_pesan_keluar'] = ($isi === '' || $isi === PklWaKeputusan::PESAN_KELUAR) ? null : $isi;
+            }
         }
         if ($hasil['ok'] && $galatWa === null) {
             db_connect()->table('pkl_pengaturan')->where('id', 1)->update($ubah);

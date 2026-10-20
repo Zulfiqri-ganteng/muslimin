@@ -22,10 +22,29 @@ use CodeIgniter\Database\BaseConnection;
  *     (surat masuk antrean ACC); keduanya boleh "Kembalikan" dengan alasan. Laporan DIKLAIM dulu secara atomik (status baru →
  *     diproses) sehingga dua staf yang menekan bersamaan tidak membuat surat ganda.
  * Jejak: riwayat ajuan PKL (aksi lapor_diterima / lapor_proses / lapor_kembali) + Audit Log.
+ *
+ * HASIL PERUSAHAAN (revisi klien 2026-10-20, kolom pkl_lapor.hasil + diterima):
+ *   - 'semua'    = semua anggota diterima (seperti dulu) → Surat Balasan untuk semua;
+ *   - 'sebagian' = siswa mencentang siapa yang diterima (minimal 1, tidak semua). Saat staf memproses, anggota yang TIDAK diterima
+ *                  dikeluarkan dulu (PklAjuan::keluarkan, jenis ditolak_perusahaan → bebas mengajukan baru, tetap tercatat), lalu
+ *                  Surat Balasan dibuat HANYA untuk yang diterima;
+ *   - 'ditolak'  = perusahaan menolak semua → tanpa tanggal; staf mengonfirmasi → ajuan "Ditolak perusahaan" (tanpa surat).
+ *   Siswa tidak pernah melepas temannya sendiri: pelepasan terjadi saat STAF memproses. Laporan 'sebagian'/'ditolak' hanya diproses
+ *   lewat kotak laporan (formulir "Periksa & ubah dulu" dan pembuatan Balasan manual menolaknya, supaya surat tidak memuat siswa
+ *   yang ditolak).
  */
 final class PklLapor
 {
     public const STATUS = ['baru', 'diproses', 'dikembalikan'];
+
+    /** hasil => teks */
+    public const HASIL = [
+        'semua'    => 'Semua diterima',
+        'sebagian' => 'Sebagian diterima',
+        'ditolak'  => 'Semua ditolak perusahaan',
+    ];
+
+    private static ?bool $kolomHasil = null;
 
     /** status => [teks, kelas lencana] */
     public const TAMPIL = [
@@ -61,6 +80,58 @@ final class PklLapor
         }
 
         return self::$tabelAda;
+    }
+
+    /** Kolom pkl_lapor.hasil & diterima (migrasi 2026-10-25-000001) sudah ada? */
+    public static function kolomHasil(): bool
+    {
+        if (self::$kolomHasil === null) {
+            try {
+                self::$kolomHasil = self::tabelAda() && db_connect()->fieldExists('hasil', 'pkl_lapor');
+            } catch (\Throwable $e) {
+                self::$kolomHasil = false;
+            }
+        }
+
+        return self::$kolomHasil;
+    }
+
+    /**
+     * Rincian laporan terhadap anggota AKTIF ajuan sekarang: siapa diterima, siapa ditolak perusahaan (belum dikeluarkan).
+     * 'semua' → semua diterima; 'ditolak' → semua ditolak; 'sebagian' → sesuai centang (anggota yang belum tercentang = ditolak).
+     *
+     * @param array<string, mixed>                                $l       baris pkl_lapor
+     * @param list<array{siswa_id: int, nama: string}>            $anggota anggota aktif ajuan (SuratPkl::ajuan()['siswa'])
+     *
+     * @return array{hasil: string, diterima: list<array<string, mixed>>, ditolak: list<array<string, mixed>>}
+     */
+    public static function rincian(array $l, array $anggota): array
+    {
+        $hasil = (string) ($l['hasil'] ?? 'semua');
+        if (! isset(self::HASIL[$hasil])) {
+            $hasil = 'semua';
+        }
+        if ($hasil === 'semua') {
+            return ['hasil' => $hasil, 'diterima' => $anggota, 'ditolak' => []];
+        }
+        if ($hasil === 'ditolak') {
+            return ['hasil' => $hasil, 'diterima' => [], 'ditolak' => $anggota];
+        }
+        $ids = self::idDiterima($l);
+
+        return [
+            'hasil'    => $hasil,
+            'diterima' => array_values(array_filter($anggota, static fn (array $s): bool => in_array((int) $s['siswa_id'], $ids, true))),
+            'ditolak'  => array_values(array_filter($anggota, static fn (array $s): bool => ! in_array((int) $s['siswa_id'], $ids, true))),
+        ];
+    }
+
+    /** @return list<int> id siswa yang dicentang "diterima" pada laporan 'sebagian' */
+    public static function idDiterima(array $l): array
+    {
+        $j = json_decode((string) ($l['diterima'] ?? ''), true);
+
+        return is_array($j) ? array_values(array_unique(array_map('intval', array_filter($j, 'is_scalar')))) : [];
     }
 
     /** Form lapor terbuka? (migrasi sudah jalan + saklar Pengaturan PKL menyala — bawaan menyala) */
@@ -111,15 +182,19 @@ final class PklLapor
 
     /**
      * Siswa aktif satu kelas + status lapor. HANYA status (tanpa data perusahaan) — daftar ini bisa dilihat siapa saja.
-     * Status: boleh | sudah_lapor | dikembalikan | selesai | belum_disetujui | belum_ajuan.
+     * Status: boleh | sudah_lapor | dikembalikan | selesai | belum_disetujui | ajukan_lagi (ditolak / dikeluarkan dari kelompok,
+     * belum punya ajuan baru) | belum_ajuan.
      *
      * @return list<array{id: int, nama: string, status: string}>
      */
     public function siswaKelas(int $kelasId): array
     {
+        $tolak = "EXISTS (SELECT 1 FROM pkl_anggota ar JOIN pkl_pengajuan pr ON pr.id = ar.pengajuan_id WHERE ar.siswa_id = s.id AND pr.status = 'ditolak')"
+            . (PklKeluar::tabelAda() ? ' OR EXISTS (SELECT 1 FROM pkl_anggota_keluar kr WHERE kr.siswa_id = s.id)' : '');
         $rows = $this->db->table('siswa s')
             ->select('s.id, s.nama, p.id AS ajuan_id, p.status AS ajuan_status, l.status AS lapor_status')
             ->select("(SELECT COUNT(*) FROM surat_sekolah ss WHERE ss.pengajuan_id = p.id AND ss.jenis = 'balasan_pkl' AND ss.status != 'dibatalkan') AS balasan", false)
+            ->select('(' . $tolak . ') AS pernah_tolak', false)
             ->join('pkl_anggota a', 'a.siswa_aktif = s.id', 'left')
             ->join('pkl_pengajuan p', 'p.id = a.pengajuan_id', 'left')
             ->join('pkl_lapor l', 'l.pengajuan_id = p.id', 'left')
@@ -129,6 +204,7 @@ final class PklLapor
 
         return array_map(static function (array $r): array {
             $st = match (true) {
+                $r['ajuan_id'] === null && (int) $r['pernah_tolak'] > 0    => 'ajukan_lagi',
                 $r['ajuan_id'] === null                                    => 'belum_ajuan',
                 $r['ajuan_status'] !== 'disetujui'                         => 'belum_disetujui',
                 (int) $r['balasan'] > 0 || $r['lapor_status'] === 'diproses' => 'selesai',
@@ -154,7 +230,7 @@ final class PklLapor
         }
         $milik = (new PklPengajuanModel())->aktifMilik($siswaId);
         if ($milik === null) {
-            return $this->gagal(409, 'Kamu belum punya ajuan PKL. Ajukan dulu lewat form pengajuan PKL; setelah disetujui sekolah dan diterima perusahaan, baru lapor di sini.');
+            return $this->gagal(409, 'Kamu tidak punya ajuan PKL yang aktif (belum mengajukan, atau ajuan/kelompokmu sebelumnya ditolak). Ajukan tempat PKL lewat form pengajuan PKL; setelah disetujui sekolah dan diterima perusahaan, baru lapor di sini.');
         }
         if ($milik['status'] !== 'disetujui') {
             return $this->gagal(409, 'Ajuan PKL-mu (' . PklPengajuanModel::kode((int) $milik['id']) . ') belum disetujui sekolah' . ($milik['status'] === 'perbaikan' ? ' — ajuan itu sedang dikembalikan untuk diperbaiki' : '') . '. Lapor diterima baru bisa setelah ajuan disetujui.');
@@ -204,12 +280,14 @@ final class PklLapor
             'alamat'     => (string) ($a['alamat'] ?? ''),
             'mulai'      => $a['mulai'] ?? null,
             'selesai'    => $a['selesai'] ?? null,
-            'anggota'    => array_map(static fn (array $x): array => ['nama' => $x['nama'], 'kelas' => $x['kelas']], $a['siswa'] ?? []),
+            'anggota'    => array_map(static fn (array $x): array => ['siswa_id' => (int) $x['siswa_id'], 'nama' => $x['nama'], 'kelas' => $x['kelas']], $a['siswa'] ?? []),
             'balasan'    => ($a['balasan'] ?? null) !== null,
+            'hasil_ada'  => self::kolomHasil(),
             'lapor'      => $l === null ? null : [
                 'status' => $l['status'], 'status_teks' => self::TAMPIL[$l['status']][0] ?? $l['status'], 'alasan' => $l['alasan'],
                 'mulai' => $l['tanggal_mulai'], 'selesai' => $l['tanggal_selesai'], 'alamat' => $l['alamat'], 'catatan' => $l['catatan'],
                 'pelapor' => $l['pelapor_nama'], 'waktu' => $l['updated_at'],
+                'hasil' => (string) ($l['hasil'] ?? 'semua'), 'diterima' => self::idDiterima($l),
             ],
         ];
     }
@@ -243,23 +321,50 @@ final class PklLapor
 
         // Validasi (pesan per kolom supaya tampil di bawah kolomnya).
         $galat = [];
-        $thn   = (int) date('Y');
-        $mulai = IsianBantu::tanggal(trim((string) ($in['tanggal_mulai'] ?? '')), $thn - 1, $thn + 2);
-        $akhir = IsianBantu::tanggal(trim((string) ($in['tanggal_selesai'] ?? '')), $thn - 1, $thn + 3);
-        if ($mulai === null) {
-            $galat['tanggal_mulai'] = 'Isi tanggal mulai PKL (sesuai yang disepakati dengan perusahaan).';
+        // Hasil dari perusahaan: semua diterima (bawaan, juga bagi server yang belum migrasi) / sebagian / semua ditolak.
+        $hasil = self::kolomHasil() ? trim((string) ($in['hasil'] ?? 'semua')) : 'semua';
+        if ($hasil === '') {
+            $hasil = 'semua';
         }
-        if ($akhir === null) {
-            $galat['tanggal_selesai'] = 'Isi tanggal selesai PKL.';
-        }
-        if ($mulai !== null && $akhir !== null) {
-            if ($akhir <= $mulai) {
-                $galat['tanggal_selesai'] = 'Tanggal selesai harus setelah tanggal mulai.';
-            } elseif (IsianBantu::hariInklusif($mulai, $akhir) > SuratPkl::MAKS_HARI_PKL) {
-                $galat['tanggal_selesai'] = 'Periode PKL lebih dari ' . SuratPkl::MAKS_HARI_PKL . ' hari — periksa lagi bulan/tahunnya.';
+        $idAnggota = array_map('intval', array_column($a['siswa'], 'siswa_id'));
+        $diterima  = [];
+        if (! isset(self::HASIL[$hasil])) {
+            $galat['hasil'] = 'Pilih hasil dari perusahaan: semua diterima, sebagian diterima, atau semua ditolak.';
+        } elseif ($hasil === 'sebagian') {
+            $pilih = array_values(array_unique(array_map('intval', array_filter((array) ($in['diterima'] ?? []), 'is_scalar'))));
+            if (count($idAnggota) < 2) {
+                $galat['hasil'] = 'Kelompokmu hanya 1 siswa — pilih "Semua diterima" atau "Semua ditolak".';
+            } elseif ($pilih === []) {
+                $galat['diterima'] = 'Centang siswa yang DITERIMA perusahaan (minimal satu).';
+            } elseif (array_diff($pilih, $idAnggota) !== []) {
+                $galat['diterima'] = 'Ada siswa pilihan yang bukan anggota kelompokmu. Muat ulang halaman lalu pilih lagi.';
+            } elseif (count($pilih) >= count($idAnggota)) {
+                $galat['diterima'] = 'Semua siswa tercentang — kalau semua diterima, pilih "Semua diterima".';
+            } else {
+                $diterima = array_values(array_intersect($idAnggota, $pilih)); // urutan = urutan anggota
             }
         }
-        $alamat  = IsianBantu::rapikan((string) ($in['alamat'] ?? ''));
+        $thn   = (int) date('Y');
+        $mulai = null;
+        $akhir = null;
+        if ($hasil !== 'ditolak') { // laporan "semua ditolak" tidak punya periode
+            $mulai = IsianBantu::tanggal(trim((string) ($in['tanggal_mulai'] ?? '')), $thn - 1, $thn + 2);
+            $akhir = IsianBantu::tanggal(trim((string) ($in['tanggal_selesai'] ?? '')), $thn - 1, $thn + 3);
+            if ($mulai === null) {
+                $galat['tanggal_mulai'] = 'Isi tanggal mulai PKL (sesuai yang disepakati dengan perusahaan).';
+            }
+            if ($akhir === null) {
+                $galat['tanggal_selesai'] = 'Isi tanggal selesai PKL.';
+            }
+            if ($mulai !== null && $akhir !== null) {
+                if ($akhir <= $mulai) {
+                    $galat['tanggal_selesai'] = 'Tanggal selesai harus setelah tanggal mulai.';
+                } elseif (IsianBantu::hariInklusif($mulai, $akhir) > SuratPkl::MAKS_HARI_PKL) {
+                    $galat['tanggal_selesai'] = 'Periode PKL lebih dari ' . SuratPkl::MAKS_HARI_PKL . ' hari — periksa lagi bulan/tahunnya.';
+                }
+            }
+        }
+        $alamat  = $hasil === 'ditolak' ? '' : IsianBantu::rapikan((string) ($in['alamat'] ?? ''));
         $catatan = IsianBantu::rapikan((string) ($in['catatan'] ?? ''));
         if (mb_strlen($alamat) > self::MAKS_ALAMAT) {
             $galat['alamat'] = 'Alamat terlalu panjang (maksimal ' . self::MAKS_ALAMAT . ' huruf).';
@@ -282,6 +387,9 @@ final class PklLapor
             'status' => 'baru', 'alasan' => null, 'surat_id' => null, 'diproses_oleh' => null, 'diproses_peran' => null, 'diproses_admin_id' => null, 'diproses_at' => null,
             'ip_address' => $ip, 'updated_at' => $now,
         ];
+        if (self::kolomHasil()) {
+            $data += ['hasil' => $hasil, 'diterima' => $hasil === 'sebagian' ? json_encode($diterima) : null];
+        }
         $idLapor = $lama !== null ? (int) $lama['id'] : null;
         try {
             if ($lama === null) {
@@ -301,14 +409,23 @@ final class PklLapor
             return $this->gagal(409, 'Laporan gagal disimpan (mungkin temanmu baru saja mengirim). Muat ulang halaman, lalu periksa statusnya.');
         }
 
-        $periode = SuratPkl::periodeTeks($mulai, $akhir);
+        $periode = SuratPkl::periodeTeks((string) $mulai, (string) $akhir);
+        $rinci   = self::rincian(['hasil' => $hasil, 'diterima' => json_encode($diterima)], $a['siswa']);
+        $namaT   = array_column($rinci['diterima'], 'nama');
+        $namaX   = array_column($rinci['ditolak'], 'nama');
+        $ringkas = match ($hasil) {
+            'ditolak'  => 'perusahaan MENOLAK semua siswa' . ($catatan !== '' ? ' (' . $catatan . ')' : ''),
+            'sebagian' => count($namaT) . ' dari ' . count($a['siswa']) . ' diterima (' . implode(', ', $namaT) . '); ditolak perusahaan: ' . implode(', ', $namaX) . '; periode ' . $periode,
+            default    => 'periode ' . $periode,
+        };
         $konteks = ['oleh' => 'Siswa: ' . $milik['nama'], 'admin_id' => null, 'peran' => null, 'ip' => $ip];
-        (new PklAjuan($this->db))->catat($ajuanId, 'lapor_diterima', $konteks, mb_substr(($lama === null ? 'Lapor diterima' : 'Lapor diterima (kirim ulang)') . ': periode ' . $periode . ($alamat !== '' ? '; alamat diperbarui' : ''), 0, 255));
-        (new AuditModel())->record($lama === null ? 'create' : 'update', 'pkl_lapor', $idLapor, mb_substr(PklPengajuanModel::kode($ajuanId) . ': siswa ' . $milik['nama'] . ' melapor diterima perusahaan (' . $a['perusahaan'] . ', ' . $periode . ')', 0, 255));
+        (new PklAjuan($this->db))->catat($ajuanId, 'lapor_diterima', $konteks, ($lama === null ? 'Lapor hasil perusahaan' : 'Lapor hasil perusahaan (kirim ulang)') . ': ' . $ringkas . ($alamat !== '' ? '; alamat diperbarui' : ''));
+        (new AuditModel())->record($lama === null ? 'create' : 'update', 'pkl_lapor', $idLapor, mb_substr(PklPengajuanModel::kode($ajuanId) . ': siswa ' . $milik['nama'] . ' melapor (' . $a['perusahaan'] . '): ' . $ringkas, 0, 255));
 
         return ['ok' => true, 'http' => 200, 'pesan' => 'Laporan terkirim.', 'data' => [
             'kode' => PklPengajuanModel::kode($ajuanId), 'perusahaan' => $a['perusahaan'], 'periode' => $periode, 'pelapor' => $milik['nama'],
             'anggota' => array_column($a['siswa'], 'nama'), 'ulang' => $lama !== null,
+            'hasil' => $hasil, 'hasil_teks' => self::HASIL[$hasil], 'diterima' => $namaT, 'ditolak' => $namaX,
         ]];
     }
 
@@ -324,6 +441,24 @@ final class PklLapor
         }
 
         return $this->db->table('pkl_lapor')->where('pengajuan_id', $ajuanId)->get()->getRowArray() ?: null;
+    }
+
+    /**
+     * Laporan ajuan ini yang MENUNGGU dan berhasil "sebagian diterima" / "semua ditolak" — Surat Balasan untuk ajuan itu hanya boleh
+     * dibuat lewat kotak laporan (siswa yang ditolak dikeluarkan dulu). null bila tidak ada.
+     */
+    public function menungguKhusus(int $ajuanId): ?array
+    {
+        $l = self::kolomHasil() ? $this->untukAjuan($ajuanId) : null;
+
+        return $l !== null && $l['status'] === 'baru' && (string) ($l['hasil'] ?? 'semua') !== 'semua' ? $l : null;
+    }
+
+    /** Pesan baku bila Surat Balasan dibuat di luar kotak laporan padahal laporannya sebagian/ditolak. */
+    public static function pesanKhusus(array $l): string
+    {
+        return 'Ajuan ' . PklPengajuanModel::kode((int) $l['pengajuan_id']) . ' punya laporan siswa "' . (self::HASIL[(string) $l['hasil']] ?? $l['hasil'])
+            . '" yang belum diproses. Proses lewat kotak Lapor Diterima PKL: siswa yang ditolak perusahaan dikeluarkan dulu, lalu Surat Balasan hanya memuat siswa yang diterima.';
     }
 
     public function muat(int $id): ?array
@@ -372,11 +507,17 @@ final class PklLapor
         $out = [];
         foreach ($rows as $r) {
             $a     = $peta[(int) $r['pengajuan_id']] ?? null;
+            $rinci = self::rincian($r, $a['siswa'] ?? []);
             $out[] = $r + [
                 'kode'       => PklPengajuanModel::kode((int) $r['pengajuan_id']),
                 'perusahaan' => (string) ($a['perusahaan'] ?? '(ajuan tidak lagi disetujui)'),
                 'alamat_ajuan' => (string) ($a['alamat'] ?? ''),
                 'anggota'    => $a['siswa'] ?? [],
+                // Hasil perusahaan (revisi 2026-10-20): siapa diterima & siapa ditolak menurut laporan, terhadap anggota aktif sekarang.
+                'hasil'          => $rinci['hasil'],
+                'hasil_teks'     => self::HASIL[$rinci['hasil']],
+                'siswa_diterima' => $rinci['diterima'],
+                'siswa_ditolak'  => $rinci['ditolak'],
                 'balasan'    => $a['balasan'] ?? null,
                 'ajuan_sah'  => $a !== null,
                 'periode'    => SuratPkl::periodeTeks((string) $r['tanggal_mulai'], (string) $r['tanggal_selesai']),
@@ -418,14 +559,20 @@ final class PklLapor
         $p   ??= (new PklPengaturanModel())->ambil();
         $peran = (string) ($konteks['peran'] ?? '');
         $hak   = self::hak($peran, $p);
-        if (! ($setujui ? $hak['setujui'] : $hak['buat'])) {
-            return $this->gagal(403, $setujui
-                ? 'Akun ' . HakAkses::label($peran) . ' tidak punya hak menyetujui Surat Balasan (sekarang: ' . PklHak::teksPemegang(PklHak::kunciSurat($hak['perlu_acc'] ? 'acc' : 'buat', SuratJenis::BALASAN)) . '). Admin bisa mengaturnya di Sistem → Hak Akses.'
-                : 'Akun ' . HakAkses::label($peran) . ' tidak punya hak membuat Surat Balasan. Admin bisa mengaturnya di Sistem → Hak Akses.');
+        $tolakHak = fn (): array => $this->gagal(403, $setujui
+            ? 'Akun ' . HakAkses::label($peran) . ' tidak punya hak menyetujui Surat Balasan (sekarang: ' . PklHak::teksPemegang(PklHak::kunciSurat($hak['perlu_acc'] ? 'acc' : 'buat', SuratJenis::BALASAN)) . '). Admin bisa mengaturnya di Sistem → Hak Akses.'
+            : 'Akun ' . HakAkses::label($peran) . ' tidak punya hak membuat Surat Balasan. Admin bisa mengaturnya di Sistem → Hak Akses.');
+        if (! $hak['lihat']) {
+            return $tolakHak();
         }
         $l = $this->muat($id);
         if ($l === null) {
             return $this->gagal(404, 'Laporan tidak ditemukan (mungkin ajuannya sudah dihapus).');
+        }
+        $hasil = (string) ($l['hasil'] ?? 'semua');
+        // Laporan "semua ditolak perusahaan" tidak membuat surat: cukup hak memproses kotak laporan (Buat ATAU ACC Surat Balasan).
+        if ($hasil !== 'ditolak' && ! ($setujui ? $hak['setujui'] : $hak['buat'])) {
+            return $tolakHak();
         }
         if ($l['status'] !== 'baru') {
             return $this->gagal(409, 'Laporan ini ' . self::kalimatStatus((string) $l['status']) . '. Muat ulang halaman.');
@@ -445,8 +592,64 @@ final class PklLapor
         $batalKlaim = function (int $idLapor): void {
             $this->db->table('pkl_lapor')->where('id', $idLapor)->update(['status' => 'baru', 'diproses_oleh' => null, 'diproses_peran' => null, 'diproses_admin_id' => null, 'diproses_at' => null]);
         };
+        $catatanSiswa = trim((string) ($l['catatan'] ?? ''));
+        $dariLaporan  = 'Laporan siswa ' . ($l['pelapor_nama'] ?: '-') . ' (' . date('d-m-Y', strtotime((string) $l['updated_at'])) . ')' . ($catatanSiswa !== '' ? ': ' . $catatanSiswa : '');
 
-        $isian = ['tanggal_surat' => date('Y-m-d'), 'sapaan' => SuratPkl::SAPAAN_BAWAAN, 'periode_mulai' => (string) $l['tanggal_mulai'], 'periode_selesai' => (string) $l['tanggal_selesai']];
+        // ---- Semua ditolak perusahaan → ajuan "Ditolak perusahaan", tanpa surat ----
+        if ($hasil === 'ditolak') {
+            // Ajuan sudah ditolak lebih dulu (mis. Hubin menekan "Ditolak perusahaan" di halaman ajuan) → laporan cukup ditandai selesai.
+            if ((string) ($this->db->table('pkl_pengajuan')->select('status')->where('id', $ajuanId)->get()->getRowArray()['status'] ?? '') === 'ditolak') {
+                (new PklAjuan($this->db))->catat($ajuanId, 'lapor_proses', $konteks, 'Laporan "semua ditolak perusahaan" ditandai selesai: ajuan sudah berstatus ditolak');
+
+                return ['ok' => true, 'http' => 200, 'pesan' => 'Ajuan ' . $kode . ' sudah berstatus ditolak, jadi laporan ditandai selesai.', 'status_surat' => ''];
+            }
+            $r = (new PklKeluar($this->db))->ditolakPerusahaan($ajuanId, ['catatan' => 'Perusahaan tidak menerima siswa PKL. ' . $dariLaporan], $konteks, false);
+            if (! $r['ok']) {
+                $batalKlaim($id);
+
+                return $this->gagal($r['http'] === 409 ? 409 : $r['http'], $r['pesan'] . ($r['http'] === 409 ? ' Kembalikan laporan ke siswa bila sudah tidak sesuai.' : ''));
+            }
+            (new PklAjuan($this->db))->catat($ajuanId, 'lapor_proses', $konteks, 'Laporan "semua ditolak perusahaan" dikonfirmasi: ajuan ditandai Ditolak perusahaan');
+            (new AuditModel())->record('update', 'pkl_lapor', $id, mb_substr('Laporan ' . $kode . ' (semua ditolak perusahaan) dikonfirmasi oleh ' . ($konteks['oleh'] ?? '?') . (($konteks['saluran'] ?? 'web') === 'aplikasi' ? ' (via aplikasi)' : ''), 0, 255));
+
+            return ['ok' => true, 'http' => 200, 'pesan' => 'Laporan ' . $kode . ' dikonfirmasi: ajuan ditandai DITOLAK PERUSAHAAN dan seluruh siswanya bebas mengajukan tempat PKL lain.', 'status_surat' => ''];
+        }
+
+        // ---- Sebagian diterima → siswa yang ditolak dikeluarkan dulu, surat hanya untuk yang diterima ----
+        $keluarTeks = '';
+        if ($hasil === 'sebagian') {
+            $a = (new SuratPkl($this->db))->ajuan([$ajuanId])[0] ?? null;
+            if ($a === null) {
+                $batalKlaim($id);
+
+                return $this->gagal(409, 'Ajuan ' . $kode . ' tidak lagi berstatus disetujui, jadi laporan tidak bisa diproses. Kembalikan laporan ke siswa.');
+            }
+            $rinci = self::rincian($l, $a['siswa']);
+            if ($rinci['diterima'] === []) {
+                $batalKlaim($id);
+
+                return $this->gagal(409, 'Siswa yang dilaporkan diterima sudah tidak tercatat di ajuan ' . $kode . '. Kembalikan laporan ke siswa agar diperiksa ulang.');
+            }
+            if ($rinci['ditolak'] !== []) {
+                if ($a['balasan'] !== null) {
+                    $batalKlaim($id);
+
+                    return $this->gagal(409, 'Ajuan ' . $kode . ' sudah punya Surat Balasan ' . SuratSekolahModel::kode((int) $a['balasan']['id']) . ' yang memuat SEMUA siswa. Batalkan surat itu dulu, lalu proses laporan ini supaya surat baru hanya memuat siswa yang diterima.');
+                }
+                $k = (new PklKeluar($this->db))->keluarkan($ajuanId, [
+                    'siswa_ids' => array_column($rinci['ditolak'], 'siswa_id'), 'jenis' => 'ditolak_perusahaan',
+                    'catatan'   => 'Tidak diterima perusahaan. ' . $dariLaporan,
+                ], $konteks + ['sumber' => 'lapor'], $p, false);
+                if (! $k['ok']) {
+                    $batalKlaim($id);
+
+                    return $this->gagal($k['http'], 'Siswa yang ditolak perusahaan gagal dikeluarkan: ' . $k['pesan']);
+                }
+                $keluarTeks = implode(', ', array_column($rinci['ditolak'], 'nama')) . ' dikeluarkan dari ajuan (ditolak perusahaan) dan bebas mengajukan tempat lain. ';
+            }
+        }
+
+        $isian =['tanggal_surat' => date('Y-m-d'), 'sapaan' => SuratPkl::SAPAAN_BAWAAN, 'periode_mulai' => (string) $l['tanggal_mulai'], 'periode_selesai' => (string) $l['tanggal_selesai']];
         if ((string) ($l['alamat'] ?? '') !== '') {
             $isian['alamat'] = (string) $l['alamat'];
         }
@@ -470,7 +673,7 @@ final class PklLapor
             }
             $batalKlaim($id);
 
-            return $this->gagal(409, 'Surat Balasan gagal dibuat: ' . implode(' ', array_merge($buat['sama'], $buat['gagal'])));
+            return $this->gagal(409, $keluarTeks . 'Surat Balasan gagal dibuat: ' . implode(' ', array_merge($buat['sama'], $buat['gagal'])));
         }
 
         $suratId = (int) $buat['dibuat'][0];
@@ -486,7 +689,7 @@ final class PklLapor
         (new PklAjuan($this->db))->catat($ajuanId, 'lapor_proses', $konteks, mb_substr('Laporan diterima diproses: Surat Balasan ' . SuratSekolahModel::kode($suratId) . ' ' . ($status === 'disetujui' ? 'disetujui' : 'menunggu ACC'), 0, 255));
         (new AuditModel())->record('update', 'pkl_lapor', $id, mb_substr('Laporan diterima ' . $kode . ' diproses oleh ' . ($konteks['oleh'] ?? '?') . ' → Surat Balasan ' . SuratSekolahModel::kode($suratId) . ' (' . $status . ')' . (($konteks['saluran'] ?? 'web') === 'aplikasi' ? ' (via aplikasi)' : ''), 0, 255));
 
-        return ['ok' => true, 'http' => 200, 'pesan' => 'Surat Balasan ' . SuratSekolahModel::kode($suratId) . ' untuk ' . $kode . ' ' . $akhir . '.', 'surat_id' => $suratId, 'status_surat' => $status];
+        return ['ok' => true, 'http' => 200, 'pesan' => $keluarTeks . 'Surat Balasan ' . SuratSekolahModel::kode($suratId) . ' untuk ' . $kode . ' ' . $akhir . '.', 'surat_id' => $suratId, 'status_surat' => $status];
     }
 
     /**
@@ -500,7 +703,8 @@ final class PklLapor
     {
         $l = $this->untukAjuan($ajuanId);
 
-        return $l !== null && $l['status'] === 'baru' && $this->tautkanSurat((int) $l['id'], $suratId, $konteks);
+        // Hanya laporan "semua diterima": laporan sebagian/ditolak wajib lewat kotak laporan (siswa yang ditolak dikeluarkan dulu).
+        return $l !== null && $l['status'] === 'baru' && (string) ($l['hasil'] ?? 'semua') === 'semua' && $this->tautkanSurat((int) $l['id'], $suratId, $konteks);
     }
 
     /**
@@ -546,8 +750,8 @@ final class PklLapor
         if (mb_strlen($alasan) < 5) {
             return $this->gagal(422, 'Alasan wajib diisi (minimal 5 huruf) — siswa akan membacanya.');
         }
-        if (mb_strlen($alasan) > 255) {
-            return $this->gagal(422, 'Alasan terlalu panjang (maksimal 255 huruf).');
+        if (mb_strlen($alasan) > PklAjuan::maksCatatan()) {
+            return $this->gagal(422, 'Alasan terlalu panjang (maksimal ' . PklAjuan::maksCatatan() . ' huruf).');
         }
         $l = $this->muat($id);
         if ($l === null) {
@@ -562,7 +766,7 @@ final class PklLapor
             return $this->gagal(409, 'Laporan ini ' . self::kalimatStatus((string) $l['status']) . '. Muat ulang halaman.');
         }
         $kode = PklPengajuanModel::kode((int) $l['pengajuan_id']);
-        (new PklAjuan($this->db))->catat((int) $l['pengajuan_id'], 'lapor_kembali', $konteks, mb_substr('Laporan diterima dikembalikan: ' . $alasan, 0, 255));
+        (new PklAjuan($this->db))->catat((int) $l['pengajuan_id'], 'lapor_kembali', $konteks, 'Laporan diterima dikembalikan: ' . $alasan);
         (new AuditModel())->record('update', 'pkl_lapor', $id, mb_substr('Laporan diterima ' . $kode . ' dikembalikan oleh ' . ($konteks['oleh'] ?? '?') . ': ' . $alasan, 0, 255));
 
         return ['ok' => true, 'http' => 200, 'pesan' => 'Laporan ' . $kode . ' dikembalikan ke siswa. Siswa bisa memperbaiki dan mengirim ulang lewat form lapor.'];

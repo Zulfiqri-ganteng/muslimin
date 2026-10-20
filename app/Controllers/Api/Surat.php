@@ -531,8 +531,9 @@ class Surat extends BaseApiController
         }
         $suratId = (int) ($r['surat_id'] ?? 0);
 
+        // Laporan "semua ditolak perusahaan" tidak membuat surat → surat_id/kode_surat null.
         return $this->ok([
-            'id' => $id, 'status' => 'diproses', 'surat_id' => $suratId, 'kode_surat' => SuratSekolahModel::kode($suratId),
+            'id' => $id, 'status' => 'diproses', 'surat_id' => $suratId > 0 ? $suratId : null, 'kode_surat' => $suratId > 0 ? SuratSekolahModel::kode($suratId) : null,
             'status_surat' => (string) ($r['status_surat'] ?? ''),
         ], $r['pesan']);
     }
@@ -574,6 +575,12 @@ class Surat extends BaseApiController
             'kirim_ke'        => (int) $r['kirim_ke'],
             'dilaporkan_at'   => (string) $r['updated_at'],
             'anggota'         => array_map(static fn (array $s): array => ['siswa_id' => (int) $s['siswa_id'], 'nama' => (string) $s['nama'], 'kelas' => (string) $s['kelas']], $r['anggota']),
+            // Revisi 2026-10-20 — jawaban perusahaan: semua | sebagian | ditolak. Sebagian: siswa_ditolak dikeluarkan saat diproses,
+            // Balasan hanya untuk siswa_diterima. Ditolak: setujui/buat = konfirmasi "Ditolak perusahaan" (tanpa surat; cukup hak lihat).
+            'hasil'           => (string) ($r['hasil'] ?? 'semua'),
+            'hasil_teks'      => (string) ($r['hasil_teks'] ?? PklLapor::HASIL['semua']),
+            'siswa_diterima'  => array_map(static fn (array $s): array => ['siswa_id' => (int) $s['siswa_id'], 'nama' => (string) $s['nama'], 'kelas' => (string) $s['kelas']], $r['siswa_diterima'] ?? $r['anggota']),
+            'siswa_ditolak'   => array_map(static fn (array $s): array => ['siswa_id' => (int) $s['siswa_id'], 'nama' => (string) $s['nama'], 'kelas' => (string) $s['kelas']], $r['siswa_ditolak'] ?? []),
             'ajuan_sah'       => (bool) $r['ajuan_sah'],  // false = ajuan tak lagi disetujui → surat tak bisa dibuat, kembalikan
             'balasan'         => $b !== null ? ['id' => (int) $b['id'], 'kode' => SuratSekolahModel::kode((int) $b['id']), 'status' => (string) $b['status'], 'nomor' => $b['nomor'] ?? null] : null,
             'peringatan'      => $r['peringatan'],        // periode di luar batas Pengaturan PKL (tidak memblokir)

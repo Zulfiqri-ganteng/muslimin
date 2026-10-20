@@ -3,7 +3,7 @@
  * Tab navigasi PKL (dipakai semua halaman staf PKL) — bilah tab kit .tab-daftar/.tab (rombak tampilan F9), jumlah ajuan di
  * .tab-jumlah (kuning bila ada yang menunggu ACC). Bergulir menyamping di layar sempit.
  *
- * @var string                $tab        beranda | daftar_{status} | siswa | prakerin | baru | laporan | pengaturan | ttd | hak_akses
+ * @var string                $tab        beranda | daftar_{status} | siswa | prakerin | baru | laporan | pengaturan | ttd | alasan | hak_akses
  * @var array<string, int>    $hitungTab  jumlah ajuan per status
  */
 $tabs = [
@@ -22,6 +22,9 @@ if (\App\Libraries\HakAkses::bolehPkl($peranNav, 'laporan')) {
 }
 if (\App\Libraries\HakAkses::boleh($peranNav, 'admin/pkl/ttd')) {
     $tabs[] = ['ttd', 'Tanda Tangan', site_url('admin/pkl/ttd'), null];
+}
+if (\App\Libraries\PklAlasan::bolehKelola($peranNav)) {
+    $tabs[] = ['alasan', 'Template Alasan', site_url('admin/pkl/alasan'), null];
 }
 if (\App\Libraries\HakAkses::boleh($peranNav, 'admin/pkl/pengaturan')) {
     $tabs[] = ['pengaturan', 'Pengaturan', site_url('admin/pkl/pengaturan'), null];

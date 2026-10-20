@@ -122,6 +122,9 @@ class SuratPkl extends SuratDasar
         if ($l['status'] !== 'baru') {
             return [null, $this->ke($kotak, 'error', 'Laporan ' . \App\Models\PklPengajuanModel::kode((int) $l['pengajuan_id']) . ' ' . PklLapor::kalimatStatus((string) $l['status']) . ' — surat tidak dibuat dua kali. Muat ulang kotak laporan.')];
         }
+        if ((string) ($l['hasil'] ?? 'semua') !== 'semua') {
+            return [null, $this->ke($kotak, 'error', PklLapor::pesanKhusus($l))];
+        }
         foreach ($ajuan as $a) {
             if ($a['id'] === (int) $l['pengajuan_id']) {
                 if ($a['balasan'] !== null) {

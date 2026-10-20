@@ -28,7 +28,7 @@ class PklPengajuanModel extends Model
     protected $allowedFields = [
         'status', 'sumber', 'tahun_ajaran', 'perusahaan_id', 'perusahaan_nama', 'perusahaan_norm',
         'perusahaan_alamat', 'perusahaan_kota', 'perusahaan_telepon', 'kontak_nama', 'kontak_jabatan',
-        'tanggal_mulai', 'tanggal_selesai', 'catatan_staf', 'kirim_ke', 'ip_address',
+        'tanggal_mulai', 'tanggal_selesai', 'catatan_staf', 'tolak_sumber', 'kirim_ke', 'ip_address',
         'diputuskan_at', 'diputuskan_oleh', 'diajukan_at',
         'acc_admin_id', 'acc_nama', 'acc_peran', 'acc_at', 'acc_ip', 'acc_kode',
     ];
@@ -75,6 +75,31 @@ class PklPengajuanModel extends Model
         return (int) round((strtotime(substr($batas, 0, 10)) - strtotime(date('Y-m-d'))) / 86400);
     }
 
+    /**
+     * SQL (bernilai 0/1) "siswa s pernah ditolak": pernah punya ajuan berstatus ditolak, ATAU pernah dikeluarkan dari ajuan
+     * (pkl_anggota_keluar, kecuali jenis "pindah kelompok"; revisi 2026-10-20). Alias tabel siswa harus `s`.
+     */
+    public static function sqlPernahTolak(): string
+    {
+        $sql = "EXISTS (SELECT 1 FROM pkl_anggota ar JOIN pkl_pengajuan pr ON pr.id = ar.pengajuan_id WHERE ar.siswa_id = s.id AND pr.status = 'ditolak')";
+        if (\App\Libraries\PklKeluar::tabelAda()) {
+            $sql .= " OR EXISTS (SELECT 1 FROM pkl_anggota_keluar kr WHERE kr.siswa_id = s.id AND kr.jenis <> 'pindah')";
+        }
+
+        return $sql;
+    }
+
+    /** SQL jumlah penolakan siswa s (ajuan ditolak + dikeluarkan, kecuali "pindah kelompok"). */
+    public static function sqlJumlahTolak(): string
+    {
+        $sql = "(SELECT COUNT(*) FROM pkl_anggota ar JOIN pkl_pengajuan pr ON pr.id = ar.pengajuan_id WHERE ar.siswa_id = s.id AND pr.status = 'ditolak')";
+        if (\App\Libraries\PklKeluar::tabelAda()) {
+            $sql .= " + (SELECT COUNT(*) FROM pkl_anggota_keluar kr WHERE kr.siswa_id = s.id AND kr.jenis <> 'pindah')";
+        }
+
+        return $sql;
+    }
+
     /** Banyak ajuan MENUNGGU yang sudah lewat batas keputusan Waka Hubin. */
     public function hitungTerlambat(int $hari): int
     {
@@ -100,9 +125,7 @@ class PklPengajuanModel extends Model
     public function daftarSiswaKelas(int $kelasId): array
     {
         return $this->db->table('siswa s')
-            ->select("s.id, s.nama, s.jenis_kelamin, a.peran, p.status AS aktif, p.diajukan_at,"
-                . " EXISTS(SELECT 1 FROM pkl_anggota ar JOIN pkl_pengajuan pr ON pr.id = ar.pengajuan_id"
-                . " WHERE ar.siswa_id = s.id AND pr.status = 'ditolak') AS pernah_ditolak", false)
+            ->select("s.id, s.nama, s.jenis_kelamin, a.peran, p.status AS aktif, p.diajukan_at, (" . self::sqlPernahTolak() . ") AS pernah_ditolak", false)
             ->join('pkl_anggota a', 'a.siswa_aktif = s.id', 'left')
             ->join('pkl_pengajuan p', 'p.id = a.pengajuan_id', 'left')
             ->where('s.kelas_id', $kelasId)
@@ -208,6 +231,8 @@ class PklPengajuanModel extends Model
             ->select('p.id, p.status, p.sumber, p.perusahaan_nama, p.perusahaan_kota, p.tanggal_mulai, p.tanggal_selesai,'
                 . ' p.kirim_ke, p.catatan_staf, p.created_at, p.updated_at, p.diputuskan_at, p.diajukan_at,'
                 . ' p.acc_nama, p.acc_peran, p.acc_at, sp.nama AS pengaju, kp.nama_kelas AS pengaju_kelas,'
+                . (\App\Libraries\PklAjuan::kolomTolakSumber($this->db) ? ' p.tolak_sumber,' : ' NULL AS tolak_sumber,')
+                . (\App\Libraries\PklKeluar::tabelAda() ? ' (SELECT COUNT(*) FROM pkl_anggota_keluar kx WHERE kx.pengajuan_id = p.id) AS jumlah_keluar,' : ' 0 AS jumlah_keluar,')
                 . ' (SELECT COUNT(*) FROM pkl_anggota ax WHERE ax.pengajuan_id = p.id) AS jumlah', false)
             ->join("pkl_anggota ap", "ap.pengajuan_id = p.id AND ap.peran = 'pengaju'", 'left')
             ->join('siswa sp', 'sp.id = ap.siswa_id', 'left')
@@ -307,8 +332,9 @@ class PklPengajuanModel extends Model
         $bind = [$hariIni, $hariIni];
         $sql  = "SELECT s.id, s.nama, s.jenis_kelamin, k.id AS kelas_id, k.nama_kelas, k.tingkat,"
             . " p.id AS ajuan_id, p.perusahaan_nama, p.perusahaan_kota, p.tanggal_mulai, p.tanggal_selesai, p.acc_nama, p.acc_at, a.peran, sr.nomor AS nomor_surat,"
+            . ' ' . self::sqlJumlahTolak() . ' AS jml_tolak,'
             . " CASE"
-            . " WHEN p.id IS NULL AND EXISTS (SELECT 1 FROM pkl_anggota ar JOIN pkl_pengajuan pr ON pr.id = ar.pengajuan_id WHERE ar.siswa_id = s.id AND pr.status = 'ditolak') THEN 'ditolak'"
+            . ' WHEN p.id IS NULL AND (' . self::sqlPernahTolak() . ") THEN 'ditolak'"
             . " WHEN p.id IS NULL THEN 'belum'"
             . " WHEN p.status = 'menunggu' THEN 'menunggu'"
             . " WHEN p.status = 'perbaikan' THEN 'perbaikan'"
@@ -350,6 +376,8 @@ class PklPengajuanModel extends Model
             $where = " WHERE t.fase IN ('belum_mulai','sedang','selesai','disetujui')";
         } elseif ($fase === 'belum_mengisi') {
             $where = " WHERE t.fase IN ('belum','ditolak')";
+        } elseif ($fase === 'pernah_ditolak') { // siapa pun yang punya riwayat ditolak/dikeluarkan, apa pun status sekarang
+            $where = ' WHERE t.jml_tolak > 0';
         } elseif ($fase !== '') {
             $where = ' WHERE t.fase = ?';
             $bind[] = $fase;
@@ -373,14 +401,17 @@ class PklPengajuanModel extends Model
     {
         $kunci = ['belum', 'ditolak', 'menunggu', 'perbaikan', 'belum_mulai', 'sedang', 'selesai', 'disetujui'];
         $out   = array_fill_keys($kunci, 0);
+        $pernahTolak = 0;
         if ($tingkat !== []) {
             [$sql, $bind] = $this->sqlSiswaTurunan($tingkat, date('Y-m-d'), $kelasId, '');
-            foreach ($this->db->query("SELECT fase, COUNT(*) n FROM ({$sql}) t GROUP BY fase", $bind)->getResultArray() as $r) {
+            foreach ($this->db->query("SELECT fase, COUNT(*) n, SUM(t.jml_tolak > 0) tolak FROM ({$sql}) t GROUP BY fase", $bind)->getResultArray() as $r) {
                 $out[$r['fase']] = (int) $r['n'];
+                $pernahTolak    += (int) $r['tolak'];
             }
         }
 
         $total              = array_sum($out);
+        $out['pernah_ditolak'] = $pernahTolak; // punya riwayat ditolak/dikeluarkan (apa pun status sekarang) — tidak ikut dijumlah
         $out['total']       = $total;
         $out['sudah_pkl']   = $out['belum_mulai'] + $out['sedang'] + $out['selesai'] + $out['disetujui'];
         $out['sudah_isi']   = $out['sudah_pkl'] + $out['menunggu'] + $out['perbaikan'];

@@ -174,7 +174,7 @@ class UjiHak extends BaseCommand
             $contoh[$c] = true;
         }
         // Rute BARU yang sengaja berbeda dari aturan lama (diuji terpisah).
-        $baru = static fn (string $a): bool => (bool) preg_match('~^admin/(hak-akses|pkl/ttd-kepsek|surat/balasan/laporan)(/|$)~', strtolower(trim($a, '/')));
+        $baru = static fn (string $a): bool => (bool) preg_match('~^admin/(hak-akses|pkl/ttd-kepsek|surat/balasan/laporan|pkl/alasan|pkl/riwayat|pkl/\d+/(ditolak-perusahaan|keluarkan|kabar-keluar))(/|$)~', strtolower(trim($a, '/'))); // + revisi PKL 2026-10-20 (dev:uji-pkl-keluar)
 
         $beda = [];
         $n    = 0;
@@ -277,7 +277,7 @@ class UjiHak extends BaseCommand
             && PklHak::hakUntukAlamat('admin/pkl/ttd', 'POST') === 'ttd' && PklHak::hakUntukAlamat('admin/pkl/ttd-kepsek', 'POST') === 'ttd_kepsek' && PklHak::hakUntukAlamat('admin/pkl/ttd/gambar') === 'ttd|ttd_kepsek');
 
         $bw = PklHak::bawaanLengkap();
-        $this->cek('bawaan: Hubin = acc, ubah, ttd + ACC 4 jenis bernomor', $bw['hubin'] === ['acc', 'ubah', 'ttd', 'surat_acc:izin_asts', 'surat_acc:izin_tka', 'surat_acc:balasan_pkl', 'surat_acc:penarikan_pkl'], json_encode($bw['hubin']));
+        $this->cek('bawaan: Hubin = acc, ubah, alasan, ttd + ACC 4 jenis bernomor', $bw['hubin'] === ['acc', 'ubah', 'alasan', 'ttd', 'surat_acc:izin_asts', 'surat_acc:izin_tka', 'surat_acc:balasan_pkl', 'surat_acc:penarikan_pkl'], json_encode($bw['hubin']));
         $this->cek('bawaan: Operator = surat, laporan, ubah, pengaturan + buat & unduh 5 jenis (tanpa ACC)', count($bw['operator']) === 14 && in_array('surat_buat:pernyataan_ortu', $bw['operator'], true)
             && ! in_array('surat_acc:balasan_pkl', $bw['operator'], true) && ! in_array('acc', $bw['operator'], true), json_encode($bw['operator']));
         $this->cek('perluasLama: "acc" lama = ACC ajuan + ACC jenis bernomor; kunci asing dibuang; Pernyataan tak punya ACC', PklHak::perluasLama(['acc', 'ngawur']) === ['acc', 'surat_acc:izin_asts', 'surat_acc:izin_tka', 'surat_acc:balasan_pkl', 'surat_acc:penarikan_pkl']
@@ -287,7 +287,7 @@ class UjiHak extends BaseCommand
             && PklHak::boleh('hubin', 'surat_buat:balasan_pkl|surat_acc:balasan_pkl') && PklHak::boleh('operator', 'surat_sekolah') && ! PklHak::boleh('hubin', 'surat_sekolah')
             && ! PklHak::boleh('admin', 'ngawur') && PklHak::boleh('admin', 'surat_acc:*') && ! PklHak::boleh('guru', 'acc') && ! PklHak::boleh('', 'acc') && ! PklHak::boleh('operator', 'surat_ngawur:*'));
         $pu = PklHak::petaUntuk('operator');
-        $this->cek('petaUntuk: semua kunci PKL + kunci lama surat_sekolah (aplikasi lama)', array_keys($pu) === ['acc', 'surat', 'surat_sekolah', 'laporan', 'ubah', 'ttd', 'ttd_kepsek', 'pengaturan', 'hapus', 'hapus_disetujui'] && $pu['surat_sekolah'] && ! $pu['acc'], json_encode($pu));
+        $this->cek('petaUntuk: semua kunci PKL + kunci lama surat_sekolah (aplikasi lama)', array_keys($pu) === ['acc', 'surat', 'surat_sekolah', 'laporan', 'ubah', 'alasan', 'ttd', 'ttd_kepsek', 'pengaturan', 'hapus', 'hapus_disetujui'] && $pu['surat_sekolah'] && ! $pu['acc'], json_encode($pu));
         $ps = PklHak::petaSurat('hubin');
         $this->cek('petaSurat: Pernyataan tanpa ACC (null); Hubin ACC Balasan, tidak membuat', $ps['pernyataan_ortu']['acc'] === null && $ps['balasan_pkl']['acc'] === true && $ps['balasan_pkl']['buat'] === false && count($ps) === 5);
 

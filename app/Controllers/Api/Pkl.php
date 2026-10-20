@@ -5,10 +5,12 @@ namespace App\Controllers\Api;
 use App\Libraries\HakAkses;
 use App\Libraries\IsianBantu;
 use App\Libraries\PklAjuan;
+use App\Libraries\PklAlasan;
 use App\Libraries\PklBiaya;
 use App\Libraries\PklForm;
 use App\Libraries\HakPeran;
 use App\Libraries\PklHak;
+use App\Libraries\PklKeluar;
 use App\Libraries\PklKeputusan;
 use App\Libraries\PklLapor;
 use App\Libraries\PklLaporanBiaya;
@@ -55,6 +57,12 @@ use CodeIgniter\HTTP\ResponseInterface;
  *   GET    pkl/hak-akses  | POST pkl/hak-akses {hak:{hubin:[…],operator:[…]}}   KHUSUS ADMIN
  *   GET    pkl/siswa?kelas_id=&fase=&q=&page=&per=   Status Siswa
  *   GET    pkl/ttd | GET pkl/ttd/gambar | POST pkl/ttd (berkas "ttd") | DELETE pkl/ttd   tanda tangan Waka Hubin (hak "ttd", diatur Admin)
+ *   — revisi klien 2026-10-20 (docs/API-PKL.md bagian "Keluarkan siswa, ditolak perusahaan, template alasan"):
+ *   POST   pkl/ajuan/{id}/keluarkan          {siswa_ids, jenis, catatan}  keluarkan sebagian siswa (menunggu/perbaikan: hak ubah; disetujui: hak ACC)
+ *   POST   pkl/ajuan/{id}/ditolak-perusahaan {catatan}                    SEMUA siswa ditolak perusahaan (hak ACC; juga dari disetujui)
+ *   GET    pkl/ajuan/{id}/kabar-keluar  | POST …/kabar-keluar/{keluar_id}/tandai   WhatsApp siswa yang dikeluarkan
+ *   GET    pkl/siswa/{id}/riwayat            riwayat PKL lengkap satu siswa
+ *   GET    pkl/alasan?jenis=&dialog=  | POST pkl/alasan | POST pkl/alasan/{id} | DELETE pkl/alasan/{id} | POST pkl/alasan/urut   template alasan
  */
 class Pkl extends BaseApiController
 {
@@ -77,7 +85,8 @@ class Pkl extends BaseApiController
         'bayar' => 'Biaya dicatat', 'koreksi_bayar' => 'Catatan biaya dikoreksi', 'kabari' => 'Siswa dikabari (WhatsApp)',
         'kabari_keputusan' => 'Siswa dikabari keputusan (WhatsApp)',
         'periode' => 'Periode PKL diisi', 'surat_sekolah' => 'Surat sekolah',
-        'lapor_diterima' => 'Siswa lapor diterima perusahaan', 'lapor_proses' => 'Laporan diterima diproses', 'lapor_kembali' => 'Laporan diterima dikembalikan',
+        'lapor_diterima' => 'Siswa lapor hasil perusahaan', 'lapor_proses' => 'Laporan diterima diproses', 'lapor_kembali' => 'Laporan diterima dikembalikan',
+        'keluarkan' => 'Siswa dikeluarkan dari ajuan', 'tolak_perusahaan' => 'Ditolak perusahaan', 'kabari_keluar' => 'Siswa yang dikeluarkan dikabari (WhatsApp)',
     ];
 
     /** Label peran penyetuju: peran yang ada di Sistem → Hak Akses + 'impor' (data riwayat). */
@@ -120,12 +129,19 @@ class Pkl extends BaseApiController
                 'maks_siswa'           => PklPengaturanModel::maksSiswa($this->p),
                 'batas_keputusan_hari' => PklPengaturanModel::batasHari($this->p),
                 'alasan_min_huruf'     => 5,
+                'alasan_maks_huruf'    => PklAjuan::maksCatatan(),
                 'maks_acc_massal'      => PklKeputusan::MAKS_ACC_MASSAL,
                 'maks_surat_massal'    => self::MAKS_SURAT_MASSAL,
                 'ttd_maks_byte'        => PklSurat::MAKS_TTD,
             ],
             'kelas'         => array_map(static fn (array $k) => ['id' => (int) $k['id'], 'nama' => $k['nama_kelas'], 'tingkat' => $k['tingkat']], $this->model->kelasBersiswa()),
             'hak'           => $this->hakUmum(),
+            // Revisi 2026-10-20: jenis siswa dikeluarkan + template alasan (kelompok, jendela → jenis, template berkelompok per jendela).
+            'jenis_keluar'  => array_map(static fn (array $j): array => ['judul' => $j[0], 'keterangan' => $j[1]], PklKeluar::JENIS),
+            'alasan'        => [
+                'jenis'  => array_map(static fn (array $j): array => ['judul' => $j[0], 'keterangan' => $j[1]], PklAlasan::JENIS),
+                'dialog' => array_combine(array_keys(PklAlasan::DIALOG), array_map(static fn (string $d): array => (new PklAlasan())->untukDialog($d), array_keys(PklAlasan::DIALOG))),
+            ],
         ], 'Kamus PKL.');
     }
 
@@ -224,8 +240,9 @@ class Pkl extends BaseApiController
         $surat      = $svcSurat->surat($id);
         $hari       = PklPengaturanModel::batasHari($this->p);
         $kirim      = (string) ($a['diajukan_at'] ?? $a['created_at']);
+        $tolak      = (new PklKeluar())->tolakSiswa(array_map(static fn (array $s): int => (int) $s['siswa_id'], $anggota), $id);
 
-        $data = $this->ringkasBaris($a + ['pengaju' => $anggota[0]['nama'] ?? null, 'pengaju_kelas' => $anggota[0]['nama_kelas'] ?? null, 'jumlah' => count($anggota)], $hari);
+        $data = $this->ringkasBaris($a + ['pengaju' => $anggota[0]['nama'] ?? null, 'pengaju_kelas' => $anggota[0]['nama_kelas'] ?? null, 'jumlah' => count($anggota), 'jumlah_keluar' => count((new PklKeluar())->daftarAjuan($id))], $hari);
         $data += [
             'perusahaan' => [
                 'nama' => $a['perusahaan_nama'], 'alamat' => $a['perusahaan_alamat'], 'kota' => $a['perusahaan_kota'], 'telepon' => $a['perusahaan_telepon'],
@@ -235,7 +252,11 @@ class Pkl extends BaseApiController
             'anggota'       => array_map(static fn (array $s) => [
                 'siswa_id' => (int) $s['siswa_id'], 'nama' => $s['nama'], 'peran' => $s['peran'], 'kelas' => $s['nama_kelas'], 'jurusan' => $s['jurusan_nama'],
                 'nis' => $s['nis'], 'nisn' => $s['nisn'], 'hp' => $s['hp'], 'hp_master' => $s['hp_master'], 'status_siswa' => $s['status_siswa'],
+                // Riwayat penolakan siswa ini DI LUAR ajuan ini (ajuan ditolak sekolah/perusahaan + pernah dikeluarkan), terbaru dulu.
+                'riwayat_tolak' => $tolak[(int) $s['siswa_id']] ?? [],
             ], $anggota),
+            // Siswa yang dikeluarkan dari ajuan ini (revisi 2026-10-20): jenis, alasan, oleh, waktu, kabar WhatsApp.
+            'keluar'        => (new PklKeluar())->daftarAjuan($id),
             'peringatan'    => $peringatan,
             'ada_bahaya'    => in_array('bahaya', array_column($peringatan, 'tingkat'), true),
             'master'        => PklPeringatan::kandidatMaster((string) $a['perusahaan_norm']),
@@ -248,7 +269,11 @@ class Pkl extends BaseApiController
             'riwayat'       => array_map(static fn (array $r) => [
                 'aksi' => $r['aksi'], 'label' => self::LABEL_AKSI[$r['aksi']] ?? $r['aksi'], 'oleh' => $r['oleh'], 'peran' => $r['peran'], 'catatan' => $r['catatan'], 'waktu' => $r['created_at'],
             ], $this->model->riwayat($id)),
-            'hak'           => $this->hakAjuan((string) $a['status']),
+            'hak'           => $this->hakAjuan((string) $a['status']) + [
+                'keluarkan'          => PklKeluar::bolehKeluarkan($this->peran(), (string) $a['status']) && count($anggota) > 1,
+                'ditolak_perusahaan' => PklKeluar::bolehDitolakPerusahaan($this->peran(), (string) $a['status']),
+                'kabar_keluar'       => PklWaKeputusan::bolehKeluar($this->peran()),
+            ],
             'dikirim_pada'  => $kirim,
         ];
 
@@ -552,8 +577,8 @@ class Pkl extends BaseApiController
             }
             db_connect()->table('pkl_pengaturan')->where('id', 1)->update(['wa_pesan' => ($pesan === '' || $pesan === PklWa::PESAN_BAWAAN) ? null : $pesan, 'updated_at' => date('Y-m-d H:i:s')]);
         }
-        foreach (['wa_pesan_perbaikan' => PklWaKeputusan::PESAN_PERBAIKAN, 'wa_pesan_tolak' => PklWaKeputusan::PESAN_TOLAK] as $kolom => $bawaan) {
-            if (! array_key_exists($kolom, $in) || ! PklWaKeputusan::kolomAda()) {
+        foreach (['wa_pesan_perbaikan' => PklWaKeputusan::PESAN_PERBAIKAN, 'wa_pesan_tolak' => PklWaKeputusan::PESAN_TOLAK, 'wa_pesan_keluar' => PklWaKeputusan::PESAN_KELUAR] as $kolom => $bawaan) {
+            if (! array_key_exists($kolom, $in) || ! PklWaKeputusan::kolomAda() || ($kolom === 'wa_pesan_keluar' && ! \App\Libraries\PklKeluar::tabelAda())) {
                 continue;
             }
             $pesan = trim((string) $in[$kolom]);
@@ -662,6 +687,129 @@ class Pkl extends BaseApiController
         return $this->ok(['waktu' => date('Y-m-d H:i:s')], 'Siswa ditandai sudah dikabari.');
     }
 
+    // ================================================================= revisi klien 2026-10-20: keluarkan siswa, ditolak perusahaan,
+    // riwayat siswa, template alasan (aturan di Libraries\PklKeluar & PklAlasan — sama persis dengan web)
+
+    /** POST pkl/ajuan/{id}/keluarkan {siswa_ids: [..], jenis, catatan} — keluarkan sebagian siswa dari ajuan aktif. */
+    public function keluarkan($id): ResponseInterface
+    {
+        $r = (new PklKeluar())->keluarkan((int) $id, $this->body(), $this->konteks(), $this->p);
+
+        return $r['ok']
+            ? $this->ok(['id' => (int) $id, 'kode' => PklPengajuanModel::kode((int) $id), 'keluar' => $r['keluar']], $r['pesan'])
+            : $this->gagalAksi($r);
+    }
+
+    /** POST pkl/ajuan/{id}/ditolak-perusahaan {catatan} — SEMUA siswa ditolak perusahaan (juga dari Disetujui; hak ACC). */
+    public function ditolakPerusahaan($id): ResponseInterface
+    {
+        $r = (new PklKeluar())->ditolakPerusahaan((int) $id, $this->body(), $this->konteks());
+
+        return $r['ok']
+            ? $this->ok(['id' => (int) $id, 'kode' => PklPengajuanModel::kode((int) $id), 'status' => 'ditolak', 'tolak_sumber' => 'perusahaan'], $r['pesan'])
+            : $this->gagalAksi($r);
+    }
+
+    /** GET pkl/ajuan/{id}/kabar-keluar — siswa yang dikeluarkan dari ajuan + tautan WhatsApp + pesan (hak acc|ubah|surat). */
+    public function kabarKeluar($id): ResponseInterface
+    {
+        if (! PklWaKeputusan::bolehKeluar($this->peran())) {
+            return $this->forbidden('Akun ' . HakAkses::label($this->peran()) . ' tidak punya hak mengabari siswa.');
+        }
+        if ($this->model->find((int) $id) === null) {
+            return $this->missing('Ajuan tidak ditemukan.');
+        }
+
+        return $this->ok((new PklWaKeputusan())->daftarKeluar((int) $id, $this->p, (new SettingModel())->get()), 'Daftar WhatsApp siswa yang dikeluarkan.');
+    }
+
+    /** POST pkl/ajuan/{id}/kabar-keluar/{keluar_id}/tandai — catat "sudah dikabari" siswa yang dikeluarkan. */
+    public function kabarKeluarTandai($id, $keluarId): ResponseInterface
+    {
+        if (! PklWaKeputusan::bolehKeluar($this->peran())) {
+            return $this->forbidden('Akun ' . HakAkses::label($this->peran()) . ' tidak punya hak mengabari siswa.');
+        }
+        if (! (new PklWaKeputusan())->tandaiKeluar((int) $id, (int) $keluarId, $this->konteks())) {
+            return $this->missing('Catatan siswa yang dikeluarkan tidak ditemukan pada ajuan ini.');
+        }
+
+        return $this->ok(['waktu' => date('Y-m-d H:i:s')], 'Siswa ditandai sudah dikabari.');
+    }
+
+    /** GET pkl/siswa/{id}/riwayat — riwayat PKL lengkap satu siswa (semua ajuan + pernah dikeluarkan/ditolak). */
+    public function riwayatSiswa($siswaId): ResponseInterface
+    {
+        $data = (new PklKeluar())->riwayatSiswa((int) $siswaId);
+
+        return $data === null ? $this->missing('Siswa tidak ditemukan.') : $this->ok($data, 'Riwayat PKL siswa.');
+    }
+
+    /** GET pkl/alasan?jenis=&dialog= — template alasan (semua, satu jenis, atau berkelompok untuk satu jendela) + boleh_kelola. */
+    public function alasan(): ResponseInterface
+    {
+        $lib    = new PklAlasan();
+        $jenis  = (string) $this->request->getGet('jenis');
+        $dialog = (string) $this->request->getGet('dialog');
+        if ($jenis !== '' && ! isset(PklAlasan::JENIS[$jenis])) {
+            return $this->invalid(['jenis' => 'Jenis harus salah satu: ' . implode(', ', array_keys(PklAlasan::JENIS)) . '.']);
+        }
+        if ($dialog !== '' && ! isset(PklAlasan::DIALOG[$dialog])) {
+            return $this->invalid(['dialog' => 'Jendela harus salah satu: ' . implode(', ', array_keys(PklAlasan::DIALOG)) . '.']);
+        }
+
+        return $this->ok($dialog !== '' ? $lib->untukDialog($dialog) : $lib->daftar($jenis !== '' ? $jenis : null), 'Template alasan.', [
+            'jenis' => array_map(static fn (array $j): array => ['judul' => $j[0], 'keterangan' => $j[1]], PklAlasan::JENIS),
+            'dialog' => PklAlasan::DIALOG, 'boleh_kelola' => PklAlasan::bolehKelola($this->peran()),
+            'maks_judul' => PklAlasan::MAKS_JUDUL, 'maks_isi' => PklAlasan::MAKS_ISI,
+        ]);
+    }
+
+    /** POST pkl/alasan {jenis, judul, isi} — tambah template (hak 'alasan'). */
+    public function alasanTambah(): ResponseInterface
+    {
+        $r = (new PklAlasan())->simpan($this->body(), null, $this->konteks());
+
+        return $r['ok'] ? $this->created(['id' => $r['id']], $r['pesan']) : $this->gagalAksi($r);
+    }
+
+    /** POST pkl/alasan/{id} {jenis?, judul, isi} — ubah template (hak 'alasan'). */
+    public function alasanUbah($id): ResponseInterface
+    {
+        $r = (new PklAlasan())->simpan($this->body(), (int) $id, $this->konteks());
+
+        return $r['ok'] ? $this->ok(['id' => (int) $id], $r['pesan']) : $this->gagalAksi($r);
+    }
+
+    /** DELETE pkl/alasan/{id} — hapus template (hak 'alasan'). */
+    public function alasanHapus($id): ResponseInterface
+    {
+        $r = (new PklAlasan())->hapus((int) $id, $this->konteks());
+
+        return $r['ok'] ? $this->ok(['id' => (int) $id], $r['pesan']) : $this->gagalAksi($r);
+    }
+
+    /** POST pkl/alasan/urut {jenis, ids: [semua id kelompok itu, urutan baru]} — atur urutan (hak 'alasan'). */
+    public function alasanUrut(): ResponseInterface
+    {
+        $in = $this->body();
+        $r  = (new PklAlasan())->urutkan((string) ($in['jenis'] ?? ''), (array) ($in['ids'] ?? []), $this->konteks());
+
+        return $r['ok'] ? $this->ok(null, $r['pesan']) : $this->gagalAksi($r);
+    }
+
+    /** Hasil gagal PklKeluar / PklAlasan → respons API sesuai kode HTTP-nya. */
+    private function gagalAksi(array $r): ResponseInterface
+    {
+        $http = (int) ($r['http'] ?? 400);
+
+        return match ($http) {
+            404     => $this->missing($r['pesan']),
+            403     => $this->forbidden($r['pesan']),
+            422     => $this->invalid($r['galat'] ?? [($r['kode'] ?? 'umum') => $r['pesan']], $r['pesan']),
+            default => $this->failure($r['pesan'], $http, ['kode' => $r['kode'] ?? 'galat']),
+        };
+    }
+
     // ================================================================= laporan pembayaran
 
     /** @return array{kelas_id: int, jurusan: string, status: string, q: string, dari: string, sampai: string, beasiswa: bool} */
@@ -761,7 +909,7 @@ class Pkl extends BaseApiController
         $fase    = (string) $this->request->getGet('fase');
         $page    = max(1, (int) $this->request->getGet('page'));
         $per     = max(1, min(100, (int) ($this->request->getGet('per') ?: 50)));
-        $sah     = ['', 'belum_mengisi', 'sudah_mengisi', 'sudah_pkl', 'belum', 'ditolak', 'menunggu', 'perbaikan', 'belum_mulai', 'sedang', 'selesai', 'disetujui'];
+        $sah     = ['', 'belum_mengisi', 'sudah_mengisi', 'sudah_pkl', 'belum', 'ditolak', 'menunggu', 'perbaikan', 'belum_mulai', 'sedang', 'selesai', 'disetujui', 'pernah_ditolak'];
         if (! in_array($fase, $sah, true)) {
             return $this->invalid(['fase' => 'Saringan fase tidak dikenal.']);
         }
@@ -773,6 +921,7 @@ class Pkl extends BaseApiController
             'ajuan_id' => $r['ajuan_id'] !== null ? (int) $r['ajuan_id'] : null, 'kode' => $r['ajuan_id'] !== null ? PklPengajuanModel::kode((int) $r['ajuan_id']) : null,
             'perusahaan' => $r['perusahaan_nama'], 'kota' => $r['perusahaan_kota'], 'nomor_surat' => $r['nomor_surat'],
             'acc_nama' => $r['acc_nama'], 'acc_waktu' => $r['acc_at'],
+            'jumlah_ditolak' => (int) ($r['jml_tolak'] ?? 0), // ditolak/dikeluarkan (apa pun status sekarang); rincian: pkl/siswa/{id}/riwayat
         ], $rows);
 
         return $this->collection($item, ['page' => $page, 'perPage' => $per, 'total' => $total], 'Status PKL siswa.');
@@ -919,6 +1068,7 @@ class Pkl extends BaseApiController
             'laporan'         => HakAkses::bolehPkl($peran, 'laporan'),
             'ubah'            => HakAkses::bolehPkl($peran, 'ubah'),
             'atur_hak'        => HakAkses::boleh($peran, 'admin/hak-akses'),
+            'kelola_alasan'   => PklAlasan::bolehKelola($peran),
             'hak_pkl'         => PklHak::petaUntuk($peran),
         ];
     }
@@ -973,13 +1123,16 @@ class Pkl extends BaseApiController
             'id'              => (int) $r['id'],
             'kode'            => PklPengajuanModel::kode((int) $r['id']),
             'status'          => $r['status'],
-            'status_label'    => self::LABEL_STATUS[$r['status']] ?? $r['status'],
+            'status_label'    => ($r['tolak_sumber'] ?? null) === 'perusahaan' ? 'Ditolak perusahaan' : (self::LABEL_STATUS[$r['status']] ?? $r['status']),
+            // 'perusahaan' | 'sekolah' untuk ajuan ditolak (revisi 2026-10-20), null untuk status lain.
+            'tolak_sumber'    => $r['status'] === 'ditolak' ? (($r['tolak_sumber'] ?? null) === 'perusahaan' ? 'perusahaan' : 'sekolah') : null,
             'sumber'          => $r['sumber'],
             'perusahaan_nama' => $r['perusahaan_nama'],
             'perusahaan_kota' => $r['perusahaan_kota'] ?? null,
             'pengaju'         => $r['pengaju'] ?? null,
             'pengaju_kelas'   => $r['pengaju_kelas'] ?? null,
             'jumlah_siswa'    => isset($r['jumlah']) ? (int) $r['jumlah'] : null,
+            'jumlah_keluar'   => isset($r['jumlah_keluar']) ? (int) $r['jumlah_keluar'] : null, // siswa yang dikeluarkan dari ajuan ini
             'dikirim_pada'    => $kirim,
             'diperbarui_pada' => $r['updated_at'] ?? null,
             'revisi_ke'       => max(0, (int) ($r['kirim_ke'] ?? 1) - 1),
