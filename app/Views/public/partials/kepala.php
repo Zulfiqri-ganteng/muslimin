@@ -79,7 +79,7 @@ foreach (['jadwal_kelas', 'jadwal_guru', 'absensi', 'pengumuman', 'pkl', 'lapor_
                     <?php foreach ($kisi as [$url, $label, $ilu, $luar]): ?>
                         <li>
                             <a href="<?= esc($url, 'attr') ?>"<?= $luar ? ' target="_blank" rel="noopener"' : $aktif($url) ?>>
-                                <img src="<?= LayananPublik::ilustrasi($ilu) ?>" alt="" width="56" height="56" loading="lazy">
+                                <img src="<?= LayananPublik::ilustrasi($ilu) ?>" alt="" width="56" height="56" decoding="async"><?php /* tanpa lazy: diunduh sejak awal agar tidak muncul mendadak saat laci bergeser */ ?>
                                 <span><?= esc($label) ?></span>
                             </a>
                         </li>

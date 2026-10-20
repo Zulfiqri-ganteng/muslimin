@@ -58,7 +58,7 @@ document.addEventListener('alpine:init', function () {
                 document.documentElement.classList.add('kunci-gulir');
                 this.$nextTick(function () {
                     var p = akar.querySelector((self.daftar ? '#daftar-layanan' : '#laci-portal') + ' .laci-panel');
-                    if (p) { p.focus(); }
+                    if (p) { p.focus({ preventScroll: true }); } // tanpa gulir: panel masih di luar layar saat animasi mulai
                 });
             },
             bukaLaci: function () { this.buka('laci'); },
@@ -88,7 +88,7 @@ document.addEventListener('alpine:init', function () {
                 this.laci = false;
                 this.daftar = false;
                 document.documentElement.classList.remove('kunci-gulir');
-                if (asal && asal.focus) { asal.focus(); }
+                if (asal && asal.focus) { asal.focus({ preventScroll: true }); }
                 asal = null;
             },
         };

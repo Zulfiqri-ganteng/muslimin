@@ -121,6 +121,8 @@
   ::selection { background-color: var(--color-brand-200); color: var(--color-teks); }
   /* Gulir halaman terkunci saat laci menu HP terbuka. */
   html.kunci-gulir { overflow: hidden; }
+  /* Ruang scrollbar tetap disediakan → halaman tidak bergeser ke kanan saat gulir dikunci (laptop). */
+  html { scrollbar-gutter: stable; }
   /* Area konten menerima fokus dari tautan "Langsung ke konten utama" (tabindex=-1) — tanpa garis fokus. */
   #konten:focus { outline: none; }
 
