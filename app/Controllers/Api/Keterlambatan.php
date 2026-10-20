@@ -92,15 +92,29 @@ class Keterlambatan extends BaseApiController
      * GET keterlambatan/siswa?q=&tanggal=&manual=1 — siswa aktif yang cocok (≥ 2 huruf); 'tercatat' = sudah dicatat pada tanggal itu.
      * manual=1: + di akhir, siswa BELUM TERDAFTAR yang pernah dicatat manual (id null, manual true, jumlah, hp_ortu). Tanpa manual=1
      * isinya hanya siswa terdaftar (aplikasi versi lama tetap aman).
+     * GET keterlambatan/siswa?kelas_id=&tanggal=&manual=1 — SEMUA siswa aktif kelas itu, urut nama, bentuk baris sama (q diabaikan;
+     * manual=1: + siswa belum terdaftar kelas itu tahun ajaran ini). Kelas tidak ada → 404.
      */
     public function siswa(): ResponseInterface
     {
         if (($t = $this->tolak(self::WEB, 'GET', 'mencari siswa')) !== null) {
             return $t;
         }
+        $buku    = new Buku('aplikasi');
         $tanggal = Buku::tanggalSah((string) $this->request->getGet('tanggal')) ?? date('Y-m-d');
+        $manual  = Buku::mintaManual($this->request->getGet('manual'));
+        $kelasId = (int) $this->request->getGet('kelas_id');
+        if ($kelasId > 0) {
+            $r = $buku->siswaKelas($kelasId, $tanggal, $manual);
+            if ($r === null) {
+                return $this->missing('Kelas tidak ditemukan (mungkin sudah dihapus). Muat ulang daftar kelas.');
+            }
+            $terdaftar = count(array_filter($r['hasil'], static fn (array $s): bool => ! $s['manual']));
 
-        return $this->ok((new Buku('aplikasi'))->cariSiswa((string) $this->request->getGet('q'), $tanggal, 15, Buku::mintaManual($this->request->getGet('manual'))));
+            return $this->ok($r['hasil'], $terdaftar . ' siswa aktif di ' . $r['kelas']['nama'] . '.');
+        }
+
+        return $this->ok($buku->cariSiswa((string) $this->request->getGet('q'), $tanggal, 15, $manual));
     }
 
     // ================================================================= catat, ubah, hapus, tautkan
@@ -139,6 +153,7 @@ class Keterlambatan extends BaseApiController
 
     /**
      * POST keterlambatan/{id}/ubah — {guru_id, jam?, sanksi?, keterangan?}; siswa terdaftar & tanggal tidak bisa diubah.
+     * jam/sanksi/keterangan yang TIDAK dikirim = tetap (dulu ikut terhapus); "" = dikosongkan.
      * Catatan siswa belum terdaftar (baris.manual): + nama_siswa?, kelas_id?, hp_ortu? — kunci yang tidak dikirim = tidak diubah;
      * hp_ortu "" = dikosongkan.
      */
@@ -149,7 +164,11 @@ class Keterlambatan extends BaseApiController
         }
         $in   = $this->body();
         $buku = new Buku('aplikasi');
-        $data = ['jam' => $in['jam'] ?? null, 'guru_id' => $in['guru_id'] ?? null, 'sanksi' => $in['sanksi'] ?? null, 'keterangan' => $in['keterangan'] ?? null];
+        $lama = $buku->cari((int) $id) ?? [];
+        $data = ['guru_id' => $in['guru_id'] ?? null];
+        foreach (['jam', 'sanksi', 'keterangan'] as $k) {
+            $data[$k] = array_key_exists($k, $in) ? $in[$k] : ($lama[$k] ?? null);
+        }
         foreach (['nama_siswa', 'kelas_id', 'hp_ortu'] as $k) {
             if (array_key_exists($k, $in)) {
                 $data[$k] = $in[$k] ?? '';

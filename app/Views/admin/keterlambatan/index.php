@@ -3,7 +3,8 @@
  * Catat Keterlambatan (menu KURIKULUM → Guru Piket) — kartu formulir catat cepat + kartu daftar terlambat per tanggal + dialog Ubah
  * (layar ≥ 1536 px: formulir di kiri, daftar di kanan; lebih sempit: formulir di atas dengan isian 2 kolom, tabel selebar halaman)
  * (kit F5). Komponen Alpine "keterlambatanPage" (perluasan masterList) di assets/js/admin/keterlambatan.js: kotak cari siswa
- * (GET admin/keterlambatan/siswa, hasil dari server, + saran siswa belum terdaftar yang pernah dicatat manual), isian manual untuk
+ * (GET admin/keterlambatan/siswa, hasil dari server, + saran siswa belum terdaftar yang pernah dicatat manual), tombol kelas "Pilih
+ * dari kelas" (GET …/siswa?kelas_id= → semua siswa kelas itu, tekan nama = terpilih), isian manual untuk
  * siswa yang BELUM TERDAFTAR di Data Siswa (nama, kelas, HP orang tua), dialog ubah, dialog Tautkan ("tautkanSiswa") — tanpa skrip
  * sebaris (siap CSP).
  *
@@ -12,7 +13,7 @@
  * @var list<array> $rows       catatan tanggal itu (Libraries\Keterlambatan::daftar)
  * @var array{pagi: list<array{id: int, nama: string}>, siang: list<array{id: int, nama: string}>} $piket  jadwal piket hari itu
  * @var list<array{id: int, nama: string}> $guru  semua guru yang bisa dipilih
- * @var list<array{id: int, nama: string}> $kelas kelas untuk isian siswa manual
+ * @var list<array{id: int, nama: string, tingkat: string, jumlah_siswa: int}> $kelas kelas untuk isian siswa manual & tombol kelas
  * @var list<string> $saranSanksi
  * @var int        $guruIngat   guru piket yang terakhir dipilih hari ini (0 = belum)
  * @var bool       $bolehKabari boleh menekan tombol WA orang tua & mengisi nomor HP orang tua (level Kelola)
@@ -37,6 +38,11 @@ $manualAwal  = Buku::mintaManual(old('manual'));
 $siswaAwal   = ! $manualAwal && old('siswa_id') ? ['id' => (int) old('siswa_id'), 'nama' => (string) old('siswa_label'), 'kelas' => '', 'nis' => ''] : null;
 $isianManual = $manualAwal ? ['nama' => (string) old('nama_siswa'), 'kelas_id' => (string) old('kelas_id'), 'hp_ortu' => (string) old('hp_ortu')] : null;
 $bolehRekap  = \App\Libraries\HakAkses::boleh((string) (session('admin')['role'] ?? ''), 'admin/keterlambatan/rekap');
+// Tombol "Pilih dari kelas": satu baris tombol per tingkat (X, XI, XII), urutan dari pilihanKelas().
+$kelasTingkat = [];
+foreach ($kelas as $k) {
+    $kelasTingkat[$k['tingkat'] !== '' ? $k['tingkat'] : 'lain'][] = $k;
+}
 
 // Pilihan kelas (isian siswa manual & dialog ubah).
 $opsiKelas = static function () use ($kelas): string {
@@ -75,7 +81,7 @@ $opsiGuru = static function (int $pilih) use ($piket, $guruLain, $namaHari, $har
 <?= view('admin/partials/help', [
     'helpKey'   => 'keterlambatan_v1',
     'helpTitle' => 'Catat keterlambatan siswa',
-    'helpBody'  => '<p>Catat siswa yang <b>datang terlambat</b>. Pilih dulu <b>guru piket</b> yang bertugas (disarankan dari Jadwal Piket hari itu; pilihan diingat sampai hari berganti), lalu ketik <b>nama atau NIS</b> siswa — kelasnya terisi otomatis. Sanksi dan keterangan bebas ditulis.</p>'
+    'helpBody'  => '<p>Catat siswa yang <b>datang terlambat</b>. Pilih dulu <b>guru piket</b> yang bertugas (disarankan dari Jadwal Piket hari itu; pilihan diingat sampai hari berganti), lalu ketik <b>nama atau NIS</b> siswa — kelasnya terisi otomatis. Tidak mau mengetik? Tekan <b>kelasnya</b> di bawah kotak cari, lalu tekan <b>nama siswanya</b>. Sanksi dan keterangan bebas ditulis.</p>'
         . '<p class="mt-2">Nama siswa <b>tidak ditemukan</b> karena belum terdaftar di Data Siswa? Tekan <b>Tulis manual</b>, ketik namanya dan pilih kelasnya. Catatan itu ditandai <b>Belum terdaftar</b>; setelah siswanya dimasukkan ke Data Siswa, tekan <b>Tautkan</b> agar catatannya menyatu.</p>'
         . '<p class="mt-2">Satu siswa hanya bisa dicatat <b>sekali per hari</b>. Salah pilih siswa? Hapus catatannya lalu catat ulang. Untuk melihat atau mencatat hari lain, pilih tanggal di atas daftar.</p>',
 ]) ?>
@@ -164,6 +170,41 @@ $opsiGuru = static function (int $pilih) use ($piket, $guruLain, $namaHari, $har
                     <p class="hint">Catatan ditandai <b>Belum terdaftar</b>. Nomor HP orang tua dipakai tombol WhatsApp. Setelah siswa ini dimasukkan ke Data Siswa, tekan <b>Tautkan</b> di daftar.</p>
                 </div>
             </div>
+
+            <!-- Pilih dari kelas (tanpa mengetik): tekan kelas → nama siswanya muncul → tekan nama. Selebar kartu agar tombol kelas lega. -->
+            <?php if ($kelas !== []): ?>
+                <section class="lg:col-span-2 2xl:col-span-1" x-show="mencari()" aria-labelledby="tl-kelas-judul">
+                    <div class="mb-2 flex flex-wrap items-center justify-between gap-2">
+                        <p class="lbl mb-0" id="tl-kelas-judul">Atau pilih dari kelas</p>
+                        <button type="button" class="btn btn-netral btn-sm" x-show="kelasAktif" x-cloak @click="tutupKelas()"><?= ikon('chevron-left', 'h-4 w-4') ?>Semua kelas</button>
+                    </div>
+                    <div class="space-y-2" x-show="! kelasAktif">
+                        <?php foreach ($kelasTingkat as $tingkat => $daftar): ?>
+                            <div class="flex flex-wrap gap-1.5" role="group" aria-label="Kelas <?= esc((string) $tingkat, 'attr') ?>">
+                                <?php foreach ($daftar as $k): ?>
+                                    <button type="button" class="btn btn-netral btn-sm" data-kelas-id="<?= $k['id'] ?>" data-kelas-nama="<?= esc($k['nama'], 'attr') ?>"
+                                            title="<?= esc($k['nama'] . ' · ' . $k['jumlah_siswa'] . ' siswa', 'attr') ?>" @click="bukaKelas()"><?= esc($k['nama']) ?></button>
+                                <?php endforeach; ?>
+                            </div>
+                        <?php endforeach; ?>
+                    </div>
+                    <div x-show="kelasAktif" x-cloak>
+                        <p class="hint" x-text="judulKelas()" aria-live="polite"></p>
+                        <ul class="mt-2 grid max-h-80 gap-1 overflow-y-auto rounded-lg border border-gray-200 p-1 sm:grid-cols-2 dark:border-gray-700" x-show="daftarKelas.length" aria-label="Siswa di kelas terpilih">
+                            <template x-for="s in daftarKelas" :key="kunci(s)">
+                                <li>
+                                    <button type="button" class="flex w-full flex-col items-start gap-0.5 rounded-md px-3 py-2 text-left hover:bg-gray-100 focus:bg-gray-100 focus:outline-none disabled:cursor-not-allowed disabled:opacity-60 dark:hover:bg-gray-700 dark:focus:bg-gray-700"
+                                            :disabled="sudah(s)" @click="pilih(s)">
+                                        <span class="text-sm font-medium text-gray-900 dark:text-white" x-text="s.nama"></span>
+                                        <span class="text-xs text-gray-500 dark:text-gray-400" x-text="ketDiKelas(s)"></span>
+                                    </button>
+                                </li>
+                            </template>
+                        </ul>
+                        <button type="button" class="btn btn-teks btn-sm mt-1 -ms-2" x-show="! memuatKelas" @click="manualDiKelas()"><?= ikon('user-edit', 'h-4 w-4') ?>Namanya tidak ada? Tulis manual di kelas ini</button>
+                    </div>
+                </section>
+            <?php endif; ?>
 
             <div class="grid gap-4 sm:grid-cols-[9rem_minmax(0,1fr)]">
                 <div>

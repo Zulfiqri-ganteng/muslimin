@@ -26,8 +26,9 @@ final class KeterlambatanExcel
     private const HURUF  = 'Times New Roman';
     private const LEBAR  = ['A' => 5, 'B' => 15.7265625, 'C' => 31.26953125, 'D' => 15.1796875, 'E' => 15.1796875, 'F' => 16.54296875];
     private const KEPALA = ['NO', 'HARI/TANGGAL', 'NAMA', 'KELAS', 'SANKSI', 'KETERANGAN'];
-    // Perkiraan jumlah huruf Times 11 yang muat per kolom (untuk melipat isian panjang).
-    private const MUAT   = ['B' => 17, 'C' => 36, 'D' => 17, 'E' => 17, 'F' => 18];
+    // Perkiraan jumlah huruf Times 11 yang muat per kolom (untuk melipat isian panjang). Kolom B (HARI/TANGGAL) tidak dilipat: panjangnya
+    // tetap 17–18 huruf ("Selasa, 20-10-2026") → "perkecil agar muat", supaya baris Selasa/Jum'at/Minggu tidak jadi dua kali tinggi.
+    private const MUAT   = ['C' => 36, 'D' => 17, 'E' => 17, 'F' => 18];
     private const KOSONG = ': _____________________________';
 
     /** "SMK BINA NUSA (BINUS)" + kota "Bekasi" → "SMK BINA NUSA KABUPATEN BEKASI" (sama dengan judul Excel Honor). */
@@ -126,14 +127,17 @@ final class KeterlambatanExcel
                 ];
                 foreach ($isi as $kol => $teks) {
                     $ws->setCellValueExplicit("{$kol}{$b}", $teks, \PhpOffice\PhpSpreadsheet\Cell\DataType::TYPE_STRING);
-                    $tinggi = max($tinggi, (int) ceil(mb_strlen($teks) / self::MUAT[$kol]));
+                    if (isset(self::MUAT[$kol])) {
+                        $tinggi = max($tinggi, (int) ceil(mb_strlen($teks) / self::MUAT[$kol]));
+                    }
                 }
                 if ($tinggi > 1) {
-                    $ws->getStyle("B{$b}:F{$b}")->getAlignment()->setWrapText(true);
+                    $ws->getStyle("C{$b}:F{$b}")->getAlignment()->setWrapText(true);
                 }
             }
             $ws->getRowDimension($b)->setRowHeight(14 * $tinggi);
         }
+        $ws->getStyle('B9:B' . $akhir)->getAlignment()->setShrinkToFit(true);
         $ws->getStyle('A9:A' . $akhir)->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER);
         $ws->getStyle('A9:F' . $akhir)->getAlignment()->setVertical(Alignment::VERTICAL_BOTTOM);
         $ws->getStyle('A8:F' . $akhir)->getBorders()->getAllBorders()->setBorderStyle(Border::BORDER_THIN);

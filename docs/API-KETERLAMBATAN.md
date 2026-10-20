@@ -10,6 +10,13 @@ dan **Rekap Keterlambatan** (`admin/keterlambatan/rekap`) untuk aplikasi Android
 > Semua tambahan bersifat **menambah** (kunci baru, parameter opsional) — aplikasi versi lama tetap jalan. Butuh migrasi
 > `2026-10-23-000001_KeterlambatanManual` (`phpm spark migrate`).
 
+> **PEMBARUAN 2026-10-20 (permintaan klien — guru piket kurang lancar mengetik): "Pilih dari kelas".** Di bawah kotak cari ada
+> tombol kelas; tekan kelas → semua nama siswanya muncul → tekan nama. API: **`GET keterlambatan/siswa?kelas_id=`** (lihat tabel
+> endpoint + bagian "Pilih dari kelas"). `meta.kelas[]` kini `{id, nama, tingkat, jumlah_siswa}` dan urut tingkat lalu nama alami
+> ("X TKJ 2" sebelum "X TKJ 10"). **Perbaikan:** `POST {id}/ubah` — `jam`/`sanksi`/`keterangan` yang TIDAK dikirim kini tetap
+> (dulu ikut terhapus); Excel buku piket hari Selasa/Jum'at/Minggu tidak lagi membuat baris data dua kali tinggi. Semua bersifat
+> menambah — aplikasi lama tetap jalan; tanpa migrasi (cukup `git pull`).
+
 ## Prinsip
 - Controller tipis `App\Controllers\Api\Keterlambatan`; SEMUA aturan dari library yang sama dengan web:
   `Libraries\Keterlambatan` (cari siswa, catat, ubah, hapus, daftar, rentang, rekap, guru piket hari itu),
@@ -42,12 +49,13 @@ dan **Rekap Keterlambatan** (`admin/keterlambatan/rekap`) untuk aplikasi Android
 
 | Metode | Alamat | Isi / catatan |
 |---|---|---|
-| GET | `keterlambatan/meta?tanggal=` | `hari_ini`, `tanggal`, `hari_tanggal`, `tahun_ajaran`, `guru_piket` {pagi[], siang[]} (jadwal piket hari itu, {id,nama}), `guru[]` (semua pilihan guru piket), `kelas[]` {id,nama} (juga pilihan kelas siswa manual), `saran_sanksi[]`, `batas` {sanksi:150, keterangan:255, rentang_hari:366, cari_min:2, baris_excel:50, **nama_min:3, nama:150**}, `hak` {lihat, catat, ubah, hapus, kabari, isi_hp, **tautkan**, excel, rekap, ubah_pesan}, `wa` {templat, bawaan, penanda[], maks:600} |
+| GET | `keterlambatan/meta?tanggal=` | `hari_ini`, `tanggal`, `hari_tanggal`, `tahun_ajaran`, `guru_piket` {pagi[], siang[]} (jadwal piket hari itu, {id,nama}), `guru[]` (semua pilihan guru piket), `kelas[]` {id, nama, **tingkat, jumlah_siswa**} (urut tingkat lalu nama alami; juga pilihan kelas siswa manual & tombol "Pilih dari kelas"), `saran_sanksi[]`, `batas` {sanksi:150, keterangan:255, rentang_hari:366, cari_min:2, baris_excel:50, **nama_min:3, nama:150**}, `hak` {lihat, catat, ubah, hapus, kabari, isi_hp, **tautkan**, excel, rekap, ubah_pesan}, `wa` {templat, bawaan, penanda[], maks:600} |
 | GET | `keterlambatan?tanggal=YYYY-MM-DD` | catatan satu tanggal (bawaan hari ini; tanggal tak sah/masa depan → hari ini), urut jam datang (tanpa jam di akhir): `tanggal`, `hari_tanggal`, `guru_piket`, `jumlah`, `baris[]` |
 | GET | `keterlambatan/{id}` | satu `baris`; tidak ada → 404 |
 | GET | `keterlambatan/siswa?q=&tanggal=&manual=1` | siswa **aktif** yang namanya memuat `q` atau NIS/NISN diawali `q` (≥ 2 huruf, maks 15): `[{id, manual:false, nama, nis, kelas, kelas_id, shift, tercatat}]` — `tercatat` = `"jam 07:20"`/`"sudah dicatat"` bila siswa itu sudah dicatat pada tanggal itu (tampilkan redup, tidak bisa dipilih), selain itu `null`. **`manual=1`**: + di AKHIR daftar, maks 5 siswa **belum terdaftar** yang pernah dicatat manual: `{id:null, manual:true, nama, nis:"", kelas, kelas_id, shift, tercatat, jumlah, hp_ortu}` |
+| GET | `keterlambatan/siswa?kelas_id=&tanggal=&manual=1` | **baru 2026-10-20** — SEMUA siswa aktif kelas itu, urut nama (maks 200), bentuk baris SAMA dengan cari (`q` diabaikan). `message` = `"38 siswa aktif di XII AKL."`. **`manual=1`**: + di AKHIR siswa belum terdaftar yang pernah dicatat manual di kelas itu **tahun ajaran ini**. Kelas tidak ada/terhapus → **404** |
 | POST | `keterlambatan` | `{siswa_id*, guru_id*, tanggal? (bawaan hari ini), jam? "07:15", sanksi?, keterangan?}` → **201** `baris`. Ganda (siswa sama, tanggal sama) → **409**; isian tak sah → **422**. **Siswa belum terdaftar:** `{manual:true, nama_siswa*, kelas_id*, hp_ortu?, guru_id*, tanggal?, jam?, sanksi?, keterangan?}` (lihat bagian manual) |
-| POST | `keterlambatan/{id}/ubah` | `{guru_id*, jam?, sanksi?, keterangan?}` → `baris`. Siswa terdaftar & tanggal TIDAK bisa diubah (salah siswa → hapus lalu catat ulang). Catatan manual: + `nama_siswa?`, `kelas_id?`, `hp_ortu?` (kunci tak dikirim = tetap). 404/409/422 |
+| POST | `keterlambatan/{id}/ubah` | `{guru_id*, jam?, sanksi?, keterangan?}` → `baris`. Kunci `jam`/`sanksi`/`keterangan` yang **tidak dikirim = tetap**, `""` = dikosongkan (sejak 2026-10-20; dulu tidak dikirim = terhapus). Siswa terdaftar & tanggal TIDAK bisa diubah (salah siswa → hapus lalu catat ulang). Catatan manual: + `nama_siswa?`, `kelas_id?`, `hp_ortu?` (kunci tak dikirim = tetap). 404/409/422 |
 | DELETE | `keterlambatan/{id}` | → `{id, tanggal}`; tidak ada → 404 |
 | POST | `keterlambatan/{id}/kabari` | panggil SESUDAH membuka `baris.wa.url` → `{id, dikabari_at, dikabari_oleh}` |
 | POST | `keterlambatan/{id}/hp` | `{hp}` — isi nomor HP orang tua ke **Data Siswa** (hanya kolom yang masih kosong: Telepon orang tua, lalu HP wali; nomor yang sudah ada TIDAK ditimpa) → `baris` terbaru (kini `wa.url` terisi). Nomor bukan HP 08… → 422; data siswa sudah punya nomor HP → 409. **Catatan manual:** nomor disimpan di catatan itu (`baris.hp_ortu`); sudah ada → 409 (ganti lewat ubah) |
@@ -133,6 +141,17 @@ Keluhan klien: guru piket tidak bisa memilih anak yang namanya belum ada di Data
 { "status": "error", "ok": false, "message": "Akun Operator Sekolah tidak punya hak melihat catatan keterlambatan. Admin bisa mengaturnya di Sistem → Hak Akses.", "data": null }
 ```
 
+## Pilih dari kelas — 2026-10-20 (permintaan klien)
+Guru piket yang kurang lancar mengetik cukup menekan **kelas** lalu **nama**:
+- Tombol kelas dari `meta.kelas[]` — kelompokkan per `tingkat` (X / XI / XII), urutan sudah benar dari server; `jumlah_siswa` boleh
+  ditampilkan kecil ("38 siswa"). Kelas `jumlah_siswa: 0` tetap tampil (anak belum terdaftar bisa dicatat manual di kelas itu).
+- Tekan kelas → `GET keterlambatan/siswa?kelas_id={id}&tanggal={tanggal}&manual=1` → daftar nama urut abjad. Baris berbentuk SAMA
+  dengan hasil cari: `tercatat` ≠ null → redup & tidak bisa dipilih; `manual:true` → memilihnya mengisi formulir manual (seperti saran
+  manual di pencarian). Memilih siswa biasa = sama persis dengan memilih hasil cari (`siswa_id` untuk `POST keterlambatan`).
+- Tombol "Namanya tidak ada? Tulis manual di kelas ini" → formulir manual dengan `kelas_id` kelas itu sudah terpilih.
+- Contoh: `GET keterlambatan/siswa?kelas_id=82&tanggal=2026-10-20&manual=1` →
+  `{"ok":true,"message":"38 siswa aktif di XII AKL.","data":[{"id":3101,"manual":false,"nama":"ADE …","nis":"…","kelas":"XII AKL","kelas_id":82,"shift":"pagi","tercatat":null}, …]}`.
+
 ## Aturan (sama dengan web)
 - Satu siswa paling banyak **satu catatan per tanggal**; tanggal tidak boleh di masa depan (tanggal lampau boleh).
 - Yang bisa dicatat dari pencarian hanya siswa **aktif**; nama/kelas/shift/tahun ajaran disalin. Siswa yang belum ada di Data Siswa
@@ -156,7 +175,8 @@ Keluhan klien: guru piket tidak bisa memilih anak yang namanya belum ada di Data
 
 ## Saran layar Flutter (T0–T5 sudah dibangun; T6 siswa manual — lihat BLUEPRINT-KETERLAMBATAN.md §14)
 1. **Catat** (beranda akun Guru Piket): pilih guru piket (saran jadwal hari ini di atas) → kotak cari siswa (`siswa?q=&manual=1`, ≥ 2
-   huruf, jeda ±300 md; tombol "Siswa belum terdaftar? Tulis manual") → jam (isi jam sekarang) → sanksi (saran `meta.saran_sanksi`) →
+   huruf, jeda ±300 md; tombol "Siswa belum terdaftar? Tulis manual"; di bawahnya **tombol kelas → daftar nama** (`siswa?kelas_id=`,
+   bagian "Pilih dari kelas")) → jam (isi jam sekarang) → sanksi (saran `meta.saran_sanksi`) →
    keterangan → Simpan (`POST keterlambatan`).
 2. **Daftar hari ini** (`GET keterlambatan`): kartu per siswa; tombol hijau **Kabari ortu** (`wa.url` → buka → `POST kabari`),
    status "Sudah dikabari {waktu} oleh {nama}", **Isi no. ortu** bila `wa.bisa_isi_hp`, Ubah, Hapus (konfirmasi); pilih tanggal lain.
@@ -165,10 +185,11 @@ Keluhan klien: guru piket tidak bisa memilih anak yang namanya belum ada di Data
 5. **Pesan WA** (hanya bila `hak.ubah_pesan`): teks templat + daftar penanda + kembali ke bawaan (kirim kosong).
 
 ## Pengujian
-- `php spark dev:uji-telat` — 119 cek (hak & gerbang, pustaka, Excel dibanding langsung dengan contoh sekolah, WA, halaman web,
+- `php spark dev:uji-telat` — 129 cek (hak & gerbang, pustaka, Excel dibanding langsung dengan contoh sekolah, WA, halaman web,
   bagian **API**: meta, daftar, cari, catat 201/409/422, ubah, hapus, kabari, isi nomor, templat Admin-only, Excel, rekap,
-  Audit "(via aplikasi)"; dan bagian **siswa manual & tautkan** (28 cek: pustaka, WA, halaman, API)). Data uji & nomor HP siswa
-  dikembalikan otomatis.
+  Audit "(via aplikasi)"; bagian **siswa manual & tautkan** (28 cek: pustaka, WA, halaman, API); bagian **pilih dari kelas** (10 cek,
+  2026-10-20: urutan & jumlah kelas, daftar kelas web/API 200/404/403, ubah tanpa kunci = tetap, Excel hari Selasa)). Data uji &
+  nomor HP siswa dikembalikan otomatis.
 - Fixture T6 ditangkap 2026-10-19 malam lewat HTTP + token sungguhan (server `php spark serve` :8080; guru/siswa/akun fiktif lalu
   dihapus): `C:\flutter-muslimin\test\fixtures\keterlambatan\manual\`.
 - Uji HTTP lewat token sungguhan (2026-10-19): login akun Guru Piket → `keterlambatan/*` 200, Excel `PK…`; `surat`, `pkl/ajuan`,

@@ -4,6 +4,8 @@
  *     dicatat manual). Panah atas/bawah + Enter memilih; siswa yang sudah dicatat pada tanggal itu tampil redup dan tidak bisa dipilih.
  *   - "Siswa belum terdaftar? Tulis manual": isian nama (awal = ketikan cari), kelas, HP orang tua; memilih saran manual mengisinya
  *     dengan ejaan yang sama. Isian manual nonaktif saat tidak dipakai (tidak terkirim).
+ *   - "Pilih dari kelas" (tanpa mengetik): tombol kelas → GET data-cari?kelas_id=&tanggal= (semua siswa aktif kelas itu + siswa belum
+ *     terdaftar kelas itu) → tekan nama = sama dengan memilih hasil cari. "Namanya tidak ada?" → isian manual dengan kelas terpilih.
  *   - Memilih siswa saat mencatat HARI INI mengisi jam datang dengan jam sekarang, kecuali jamnya sudah diubah tangan.
  *   - Kirim tanpa siswa terpilih / isian manual belum lengkap dicegah (pesan di bawah kotak cari).
  * Elemen akar: data-cari, data-tanggal, data-hari-ini, data-siswa-awal & data-manual-awal (isian sebelum galat simpan), data-nama-min.
@@ -58,6 +60,7 @@ document.addEventListener('alpine:init', function () {
         var jamDiubah = false;
         var namaMin = 3;
         var nomor = 0; // urutan permintaan cari: jawaban lama yang datang belakangan diabaikan
+        var nomorKelas = 0; // sama, untuk daftar siswa per kelas
 
         function fokus(sel) {
             setTimeout(function () {
@@ -77,6 +80,11 @@ document.addEventListener('alpine:init', function () {
             mNama: '',
             mKelas: '',
             mHp: '',
+            // "Pilih dari kelas": kelas yang sedang dibuka {id, nama} + daftar siswanya
+            kelasAktif: null,
+            daftarKelas: [],
+            memuatKelas: false,
+            pesanKelas: '',
 
             onInit: function () {
                 akar = this.$el;
@@ -166,6 +174,67 @@ document.addEventListener('alpine:init', function () {
             },
             tandaiJam: function () { jamDiubah = true; },
 
+            // ----- pilih dari kelas: tombol kelas [data-kelas-id][data-kelas-nama] → GET data-cari?kelas_id=&tanggal= -----
+            bukaKelas: function () {
+                var self = this;
+                var id = parseInt(this.$el.getAttribute('data-kelas-id') || '0', 10);
+                if (!id) { return; }
+                var ke = ++nomorKelas;
+                this.kelasAktif = { id: id, nama: this.$el.getAttribute('data-kelas-nama') || '' };
+                this.daftarKelas = [];
+                this.memuatKelas = true;
+                this.pesanKelas = '';
+                ambil(urlCari + '?kelas_id=' + id + '&tanggal=' + encodeURIComponent(tanggal))
+                    .then(function (j) {
+                        if (ke !== nomorKelas) { return; }
+                        self.memuatKelas = false;
+                        if (!j || !j.ok) {
+                            self.pesanKelas = 'Daftar siswa gagal dimuat. Muat ulang halaman (mungkin sesi masuk sudah habis).';
+                            return;
+                        }
+                        self.daftarKelas = Array.isArray(j.hasil) ? j.hasil : [];
+                        fokus('[aria-label="Siswa di kelas terpilih"] button:not([disabled])');
+                    })
+                    .catch(function () {
+                        if (ke === nomorKelas) {
+                            self.memuatKelas = false;
+                            self.pesanKelas = 'Daftar siswa gagal dimuat. Periksa sambungan internet.';
+                        }
+                    });
+            },
+            tutupKelas: function () {
+                var id = this.kelasAktif ? this.kelasAktif.id : 0;
+                nomorKelas++;
+                this.kelasAktif = null;
+                this.daftarKelas = [];
+                this.memuatKelas = false;
+                this.pesanKelas = '';
+                if (id) { fokus('[data-kelas-id="' + id + '"]'); }
+            },
+            judulKelas: function () {
+                if (!this.kelasAktif) { return ''; }
+                if (this.memuatKelas) { return 'Memuat siswa ' + this.kelasAktif.nama + '…'; }
+                if (this.pesanKelas) { return this.pesanKelas; }
+                var n = this.daftarKelas.filter(function (s) { return !s.manual; }).length;
+                return n ? this.kelasAktif.nama + ' · ' + n + ' siswa — tekan nama siswa yang terlambat.'
+                    : 'Belum ada siswa aktif di ' + this.kelasAktif.nama + '.';
+            },
+            /** "NIS 123 · sudah dicatat (jam 07:20)" — kelas tidak diulang (sudah jelas dari judul). */
+            ketDiKelas: function (s) {
+                var bagian = [];
+                if (s.nis) { bagian.push('NIS ' + s.nis); }
+                if (s.manual) { bagian.push('belum terdaftar, dicatat manual ' + (s.jumlah || 1) + '×'); }
+                if (s.tercatat) { bagian.push('sudah dicatat (' + s.tercatat + ')'); }
+                return bagian.join(' · ');
+            },
+            /** Nama anak tidak ada di daftar kelas → isian manual dengan kelas itu sudah terpilih. */
+            manualDiKelas: function () {
+                if (!this.kelasAktif) { return; }
+                this.isiManual('', String(this.kelasAktif.id), '');
+                this.isiJamSekarang();
+                fokus('#tl-m-nama');
+            },
+
             // ----- siswa belum terdaftar (manual) -----
             mencari: function () { return !this.siswa && !this.manual; },
             isiManual: function (nama, kelasId, hp) {
@@ -215,7 +284,7 @@ document.addEventListener('alpine:init', function () {
                 }
                 if (!this.siswa) {
                     e.preventDefault();
-                    this.pesanCari = 'Pilih dulu siswa yang terlambat dari hasil pencarian (atau tekan "Tulis manual" bila belum terdaftar).';
+                    this.pesanCari = 'Pilih dulu siswa yang terlambat: ketik namanya, atau tekan kelasnya lalu namanya (bila belum terdaftar, tekan "Tulis manual").';
                     fokus('#tl-cari');
                 }
             },

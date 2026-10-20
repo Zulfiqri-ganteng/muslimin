@@ -74,6 +74,7 @@ class UjiKeterlambatan extends BaseCommand
             $this->ujiHalaman();
             $this->ujiApi();
             $this->ujiManual();
+            $this->ujiPilihKelas();
         } catch (\Throwable $e) {
             $this->cek('tanpa galat fatal', false, get_class($e) . ': ' . $e->getMessage() . ' @ ' . $e->getFile() . ':' . $e->getLine());
         } finally {
@@ -865,6 +866,94 @@ class UjiKeterlambatan extends BaseCommand
         $this->cek('API tautkan: bentrok → 409; siswa kosong → 422; sah → 200 {jumlah 1, dilewati [hari ini], baris.manual false, siswa_id}; Operator → 403', $k === 409 && $k2 === 422
             && $k3 === 200 && $j3['data']['jumlah'] === 1 && $j3['data']['dilewati'] === [$hari] && $j3['data']['baris']['manual'] === false
             && $j3['data']['baris']['siswa_id'] === (int) $s['id'] && $j3['data']['baris']['nama_siswa'] === $s['nama'] && $k4 === 403, json_encode([$j, $j2, $j3]));
+    }
+
+    // =================================================================
+    // 7. "Pilih dari kelas" (tekan kelas → semua siswanya), ubah API tanpa kunci, Excel hari Selasa
+    // =================================================================
+
+    private function ujiPilihKelas(): void
+    {
+        $this->bagian('Pilih dari kelas, ubah lewat aplikasi, Excel hari Selasa');
+        $buku = new Keterlambatan();
+        $hari = date('Y-m-d');
+        $guru = $buku->pilihanGuru();
+        $s    = $this->db->query("SELECT s.id, s.nama, s.kelas_id, k.nama_kelas FROM siswa s JOIN kelas k ON k.id = s.kelas_id AND k.deleted_at IS NULL
+            WHERE s.deleted_at IS NULL AND s.status = 'aktif' AND NOT EXISTS (SELECT 1 FROM keterlambatan_siswa t WHERE t.siswa_id = s.id AND t.tanggal = ?)
+            ORDER BY s.id DESC LIMIT 1 OFFSET 5", [$hari])->getRowArray();
+        if (! $s || $guru === []) {
+            $this->cek('data uji pilih kelas tersedia', false);
+
+            return;
+        }
+        $kelasId = (int) $s['kelas_id'];
+        $jml     = $this->db->table('siswa')->where('kelas_id', $kelasId)->where('deleted_at', null)->where('status', 'aktif')->countAllResults();
+
+        $kelas = $buku->pilihanKelas();
+        $urut  = true;
+        for ($i = 1; $i < count($kelas); $i++) {
+            $urut = $urut && (strcmp($kelas[$i - 1]['tingkat'], $kelas[$i]['tingkat']) ?: strnatcasecmp($kelas[$i - 1]['nama'], $kelas[$i]['nama'])) < 0;
+        }
+        $kk = $this->dari($kelas, $kelasId);
+        $this->cek('pilihanKelas: urut tingkat lalu nama alami (X TKJ 2 sebelum X TKJ 10) + tingkat & jumlah siswa aktif', $urut && ($kk['jumlah_siswa'] ?? -1) === $jml && ($kk['tingkat'] ?? null) !== null,
+            json_encode(array_slice(array_column($kelas, 'nama'), 0, 12)));
+
+        $r  = $buku->siswaKelas($kelasId, $hari);
+        $ds = $this->dari($r['hasil'] ?? [], $s['id']);
+        $this->cek('siswaKelas: SEMUA siswa aktif kelas ' . $s['nama_kelas'] . ' (' . $jml . '), berkelas sama, bentuk sama dengan cari', $r !== null && count($r['hasil']) === $jml
+            && $r['kelas']['nama'] === $s['nama_kelas'] && array_unique(array_column($r['hasil'], 'kelas_id')) === [$kelasId] && $ds !== [] && $ds['tercatat'] === null
+            && array_keys($ds) === ['id', 'manual', 'nama', 'nis', 'kelas', 'kelas_id', 'shift', 'tercatat'], json_encode($ds));
+        $this->cek('siswaKelas: kelas tidak ada → null', $buku->siswaKelas(99999999, $hari) === null && $buku->siswaKelas(0, $hari) === null);
+
+        $saja = ['id' => null, 'nama' => 'ZZUJI Guru Piket'];
+        $this->ingat($c1 = $buku->catat(['siswa_id' => $s['id'], 'tanggal' => $hari, 'jam' => '07:05', 'guru_id' => $guru[0]['id'], 'sanksi' => 'Uji kelas', 'keterangan' => 'Ket kelas'], $saja));
+        $this->ingat($c2 = $buku->catat(['manual' => 1, 'nama_siswa' => 'zzuji kelas pilih', 'kelas_id' => $kelasId, 'tanggal' => $hari, 'guru_id' => $guru[0]['id']], $saja));
+        // Hitung terpisah: siswa terdaftar (= $jml) & catatan manual (DB bisa punya catatan manual lain di kelas ini).
+        $terdaftar = static fn (array $h): int => count(array_filter($h, static fn (array $x): bool => ! $x['manual']));
+        $manualUji = static fn (array $h): array => array_values(array_filter($h, static fn (array $x): bool => $x['manual'] && $x['nama'] === 'ZZUJI KELAS PILIH'))[0] ?? [];
+        $r  = $buku->siswaKelas($kelasId, $hari, true);
+        $r0 = $buku->siswaKelas($kelasId, $hari);
+        $m  = $manualUji($r['hasil']);
+        $this->cek('siswaKelas: siswa yang sudah dicatat → tercatat "jam 07:05"; + siswa belum terdaftar kelas itu di akhir (hanya bila diminta)', $c1['ok'] && $c2['ok']
+            && ($this->dari($r['hasil'], $s['id'])['tercatat'] ?? null) === 'jam 07:05' && ($m['tercatat'] ?? null) === 'sudah dicatat' && $terdaftar($r['hasil']) === $jml
+            && end($r['hasil'])['manual'] === true && count($r0['hasil']) === $jml && ! in_array(true, array_column($r0['hasil'], 'manual'), true), json_encode([$c1['pesan'], $c2['pesan'], $m]));
+
+        // --- halaman & JSON web ---
+        $html = (string) $this->panggil('admin/keterlambatan', 'GET', 'index');
+        $this->cek('halaman catat: tombol kelas di bawah kotak cari', str_contains($html, 'Atau pilih dari kelas') && str_contains($html, 'data-kelas-id="' . $kelasId . '"')
+            && strpos($html, 'id="tl-cari"') < strpos($html, 'data-kelas-id="'));
+        $res = $this->panggil('admin/keterlambatan/siswa', 'GET', 'siswa', [], ['kelas_id' => $kelasId, 'tanggal' => $hari]);
+        $j   = json_decode((string) $res->getBody(), true);
+        $res2 = $this->panggil('admin/keterlambatan/siswa', 'GET', 'siswa', [], ['kelas_id' => 99999999, 'tanggal' => $hari]);
+        $this->cek('JSON web ?kelas_id= → ok + kelas + semua siswa (+ belum terdaftar); kelas tak ada → 404', ($j['ok'] ?? false) && ($j['kelas']['id'] ?? 0) === $kelasId
+            && $terdaftar($j['hasil']) === $jml && $manualUji($j['hasil']) !== [] && $res2->getStatusCode() === 404, json_encode($j['kelas'] ?? $j));
+
+        // --- API ---
+        [$k, $j]   = $this->api('guru_piket', 'siswa', ['kelas_id' => $kelasId, 'tanggal' => $hari, 'manual' => '1']);
+        [$k2, $j2] = $this->api('guru_piket', 'siswa', ['kelas_id' => $kelasId, 'tanggal' => $hari]);
+        [$k3]      = $this->api('guru_piket', 'siswa', ['kelas_id' => 99999999]);
+        [$k4]      = $this->api('operator', 'siswa', ['kelas_id' => $kelasId]);
+        $this->cek('API GET siswa?kelas_id= → 200 daftar kelas (manual=1 + belum terdaftar), pesan "N siswa aktif di …"; kelas tak ada → 404; Operator → 403', $k === 200
+            && $terdaftar($j['data']) === $jml && $manualUji($j['data']) !== [] && ($this->dari($j['data'], $s['id'])['tercatat'] ?? null) === 'jam 07:05' && $j['message'] === $jml . ' siswa aktif di ' . $s['nama_kelas'] . '.'
+            && $k2 === 200 && count($j2['data']) === $jml && $k3 === 404 && $k4 === 403, json_encode([$k, $j['message'] ?? null, $k2, $k3, $k4]));
+        [$k, $j] = $this->api('guru_piket', 'meta');
+        $mk      = $this->dari($j['data']['kelas'] ?? [], $kelasId);
+        $this->cek('API meta.kelas[] membawa tingkat & jumlah_siswa', $k === 200 && ($mk['jumlah_siswa'] ?? -1) === $jml && isset($mk['tingkat']), json_encode($mk));
+
+        [$k, $j]   = $this->api('guru_piket', 'ubah', [], ['guru_id' => $guru[0]['id']], (int) $c1['id']);
+        [$k2, $j2] = $this->api('guru_piket', 'ubah', [], ['guru_id' => $guru[0]['id'], 'sanksi' => '', 'jam' => '07:09'], (int) $c1['id']);
+        $this->cek('API ubah: kunci jam/sanksi/keterangan yang TIDAK dikirim → tetap; "" → dikosongkan', $k === 200 && $j['data']['jam'] === '07:05' && $j['data']['sanksi'] === 'Uji kelas'
+            && $j['data']['keterangan'] === 'Ket kelas' && $k2 === 200 && $j2['data']['sanksi'] === null && $j2['data']['jam'] === '07:09' && $j2['data']['keterangan'] === 'Ket kelas', json_encode([$j['data'] ?? $j, $j2['data'] ?? $j2]));
+
+        // --- Excel: hari Selasa ("Selasa, 20-10-2026" 18 huruf) tidak boleh membuat baris dua kali tinggi ---
+        $ss = $this->baca(KeterlambatanExcel::bukuPiket([['tanggal' => '2026-10-20', 'guru' => '', 'rows' => [
+            ['tanggal' => '2026-10-20', 'nama_siswa' => 'ZZUJI SELASA', 'nama_kelas' => 'X TKJ 1', 'sanksi' => 'Uji', 'keterangan' => '', 'tahun_ajaran' => null],
+            ['tanggal' => '2026-10-20', 'nama_siswa' => 'ZZUJI SELASA DUA', 'nama_kelas' => 'X TKJ 1', 'sanksi' => '', 'keterangan' => str_repeat('Hujan deras dan macet ', 3), 'tahun_ajaran' => null],
+        ]]]));
+        $ws = $ss->getSheet(0);
+        $this->cek('Excel hari Selasa: baris setinggi contoh (14), tanggal "perkecil agar muat"; keterangan panjang tetap dilipat', $ws->getCell('B9')->getValue() === 'Selasa, 20-10-2026'
+            && $ws->getRowDimension(9)->getRowHeight() == 14 && $ws->getStyle('B9')->getAlignment()->getShrinkToFit() && ! $ws->getStyle('B9')->getAlignment()->getWrapText()
+            && $ws->getRowDimension(10)->getRowHeight() > 14 && $ws->getStyle('F10')->getAlignment()->getWrapText(), (string) $ws->getRowDimension(9)->getRowHeight());
     }
 
     /**

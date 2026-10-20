@@ -55,14 +55,25 @@ class Keterlambatan extends BaseController
     /**
      * GET ?q=&tanggal=[&manual=0] → JSON siswa aktif yang cocok + (bawaan) saran siswa belum terdaftar yang pernah dicatat manual
      * (kotak cari formulir catat). manual=0: hanya Data Siswa (kotak cari dialog Tautkan).
+     * GET ?kelas_id=&tanggal= → SEMUA siswa aktif kelas itu (tombol "Pilih dari kelas"; q diabaikan) + {kelas: {id, nama}}.
      */
     public function siswa()
     {
+        $buku    = new Buku();
         $tanggal = Buku::tanggalSah((string) $this->request->getGet('tanggal')) ?? date('Y-m-d');
+        $manual  = $this->request->getGet('manual') !== '0';
+        $kelasId = (int) $this->request->getGet('kelas_id');
+        if ($kelasId > 0) {
+            $r = $buku->siswaKelas($kelasId, $tanggal, $manual);
+
+            return $r === null
+                ? $this->response->setStatusCode(404)->setJSON(['ok' => false, 'pesan' => 'Kelas tidak ditemukan. Muat ulang halaman.'])
+                : $this->response->setJSON(['ok' => true, 'kelas' => $r['kelas'], 'hasil' => $r['hasil']]);
+        }
 
         return $this->response->setJSON([
             'ok'    => true,
-            'hasil' => (new Buku())->cariSiswa((string) $this->request->getGet('q'), $tanggal, 15, $this->request->getGet('manual') !== '0'),
+            'hasil' => $buku->cariSiswa((string) $this->request->getGet('q'), $tanggal, 15, $manual),
         ]);
     }
 

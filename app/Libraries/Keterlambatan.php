@@ -174,12 +174,7 @@ final class Keterlambatan
         if (mb_strlen($q) < 2) {
             return [];
         }
-        $db   = db_connect();
-        $rows = $db->table('siswa s')
-            ->select('s.id, s.nama, s.nis, s.kelas_id, k.nama_kelas, k.shift')
-            ->join('kelas k', 'k.id = s.kelas_id', 'left')
-            ->where('s.deleted_at', null)
-            ->where('s.status', 'aktif')
+        $rows = $this->siswaAktif()
             ->groupStart()
                 ->like('s.nama', $q)
                 ->orLike('s.nis', $q, 'after')
@@ -188,13 +183,61 @@ final class Keterlambatan
             ->orderBy('s.nama', 'ASC')
             ->limit(max(1, min($batas, 50)))
             ->get()->getResultArray();
+        $out = $this->bentukSiswa($rows, $tanggal);
+
+        return $denganManual ? array_merge($out, $this->saranManual($tanggal, $q)) : $out;
+    }
+
+    /** Siswa aktif per kelas paling banyak sekian (kelas terbesar sekarang ±60). */
+    public const MAKS_SISWA_KELAS = 200;
+
+    /**
+     * SEMUA siswa aktif satu kelas, urut nama — tombol "Pilih dari kelas" di formulir catat (guru piket menekan kelas lalu nama,
+     * tanpa mengetik). Baris berbentuk sama dengan cariSiswa(). $denganManual: + di AKHIR, siswa BELUM TERDAFTAR yang pernah dicatat
+     * manual di kelas itu pada tahun ajaran sekarang. null = kelas tidak ada / sudah dihapus.
+     *
+     * @return array{kelas: array{id: int, nama: string}, hasil: list<array<string, mixed>>}|null
+     */
+    public function siswaKelas(int $kelasId, string $tanggal, bool $denganManual = false): ?array
+    {
+        $kelas = $kelasId > 0 ? db_connect()->table('kelas')->select('id, nama_kelas')->where('id', $kelasId)->where('deleted_at', null)->get()->getRowArray() : null;
+        if ($kelas === null) {
+            return null;
+        }
+        $rows = $this->siswaAktif()->where('s.kelas_id', $kelasId)->orderBy('s.nama', 'ASC')->limit(self::MAKS_SISWA_KELAS)->get()->getResultArray();
+        $out  = $this->bentukSiswa($rows, $tanggal);
+
+        return [
+            'kelas' => ['id' => (int) $kelas['id'], 'nama' => (string) $kelas['nama_kelas']],
+            'hasil' => $denganManual ? array_merge($out, $this->saranManual($tanggal, '', $kelasId, self::MAKS_SISWA_KELAS)) : $out,
+        ];
+    }
+
+    /** Pembangun kueri siswa aktif (tidak terhapus) + kelasnya — dasar cariSiswa() & siswaKelas(). */
+    private function siswaAktif(): \CodeIgniter\Database\BaseBuilder
+    {
+        return db_connect()->table('siswa s')
+            ->select('s.id, s.nama, s.nis, s.kelas_id, k.nama_kelas, k.shift')
+            ->join('kelas k', 'k.id = s.kelas_id', 'left')
+            ->where('s.deleted_at', null)
+            ->where('s.status', 'aktif');
+    }
+
+    /**
+     * Baris siswa untuk pencarian/daftar kelas; 'tercatat' = jam/teks bila siswa itu sudah dicatat terlambat pada $tanggal.
+     *
+     * @return list<array{id: int, manual: bool, nama: string, nis: string, kelas: string, kelas_id: ?int, shift: ?string, tercatat: ?string}>
+     */
+    private function bentukSiswa(array $rows, string $tanggal): array
+    {
         $sudah = [];
         if ($rows !== []) {
             foreach ($this->model->select('siswa_id, jam')->where('tanggal', $tanggal)->whereIn('siswa_id', array_column($rows, 'id'))->findAll() as $r) {
                 $sudah[(int) $r['siswa_id']] = self::teksTercatat($r['jam']);
             }
         }
-        $out = array_map(static fn (array $r): array => [
+
+        return array_map(static fn (array $r): array => [
             'id'       => (int) $r['id'],
             'manual'   => false,
             'nama'     => (string) $r['nama'],
@@ -204,25 +247,33 @@ final class Keterlambatan
             'shift'    => $r['shift'] ?? null,
             'tercatat' => $sudah[(int) $r['id']] ?? null,
         ], $rows);
-
-        return $denganManual ? array_merge($out, $this->saranManual($q, $tanggal)) : $out;
     }
 
     /**
-     * Siswa belum terdaftar yang pernah dicatat manual (nama memuat $q), dikelompokkan per nama + kelas.
+     * Siswa belum terdaftar yang pernah dicatat manual, dikelompokkan per nama + kelas: nama memuat $q (pencarian), atau semua di kelas
+     * $kelasId pada tahun ajaran sekarang (daftar kelas).
      *
      * @return list<array<string, mixed>>
      */
-    private function saranManual(string $q, string $tanggal): array
+    private function saranManual(string $tanggal, string $q = '', int $kelasId = 0, int $batas = self::MAKS_SARAN_MANUAL): array
     {
         $db    = db_connect();
-        $grup  = $db->table('keterlambatan_siswa t')
+        $kueri = $db->table('keterlambatan_siswa t')
             ->select("t.nama_siswa, t.kelas_id, MAX(t.id) id_akhir, COUNT(*) n, SUBSTRING_INDEX(GROUP_CONCAT(t.hp_ortu ORDER BY t.id DESC SEPARATOR ','), ',', 1) hp", false)
-            ->where('t.manual', 1)->where('t.siswa_id', null)
-            ->like('t.nama_siswa', $q)
-            ->groupBy(['t.nama_siswa', 't.kelas_id'])
+            ->where('t.manual', 1)->where('t.siswa_id', null);
+        if ($q !== '') {
+            $kueri->like('t.nama_siswa', $q);
+        }
+        if ($kelasId > 0) {
+            // Anggota kelas berganti tiap tahun ajaran: catatan manual tahun lalu di kelas ini bukan anak kelas ini lagi.
+            $kueri->where('t.kelas_id', $kelasId);
+            if (($ta = self::tahunAjaran()) !== '') {
+                $kueri->groupStart()->where('t.tahun_ajaran', $ta)->orWhere('t.tahun_ajaran', null)->groupEnd();
+            }
+        }
+        $grup = $kueri->groupBy(['t.nama_siswa', 't.kelas_id'])
             ->orderBy('t.nama_siswa', 'ASC')
-            ->limit(self::MAKS_SARAN_MANUAL)
+            ->limit($batas)
             ->get()->getResultArray();
         if ($grup === []) {
             return [];
@@ -424,11 +475,22 @@ final class Keterlambatan
         return ['siswa' => $siswa, 'kelas' => $kelas, 'total' => count($rows), 'jumlah_siswa' => count($siswa), 'jumlah_hari' => count($hari)];
     }
 
-    /** @return list<array{id: int, nama: string}> kelas aktif untuk saringan rekap */
+    /**
+     * Kelas aktif urut tingkat lalu nama secara alami ("X TKJ 2" sebelum "X TKJ 10") + tingkat & jumlah siswa aktif — saringan rekap,
+     * pilihan kelas siswa manual, dan tombol "Pilih dari kelas" di formulir catat.
+     *
+     * @return list<array{id: int, nama: string, tingkat: string, jumlah_siswa: int}>
+     */
     public function pilihanKelas(): array
     {
-        return array_map(static fn (array $k): array => ['id' => (int) $k['id'], 'nama' => (string) $k['nama_kelas']],
-            db_connect()->table('kelas')->select('id, nama_kelas')->where('deleted_at', null)->orderBy('tingkat', 'ASC')->orderBy('nama_kelas', 'ASC')->get()->getResultArray());
+        $db     = db_connect();
+        $jumlah = array_column($db->table('siswa')->select('kelas_id, COUNT(*) n')->where('deleted_at', null)->where('status', 'aktif')
+            ->where('kelas_id IS NOT NULL')->groupBy('kelas_id')->get()->getResultArray(), 'n', 'kelas_id');
+        $kelas  = $db->table('kelas')->select('id, nama_kelas, tingkat')->where('deleted_at', null)->get()->getResultArray();
+        usort($kelas, static fn (array $a, array $b): int => strcmp((string) $a['tingkat'], (string) $b['tingkat']) ?: strnatcasecmp((string) $a['nama_kelas'], (string) $b['nama_kelas']));
+
+        return array_map(static fn (array $k): array => ['id' => (int) $k['id'], 'nama' => (string) $k['nama_kelas'], 'tingkat' => (string) ($k['tingkat'] ?? ''),
+            'jumlah_siswa' => (int) ($jumlah[$k['id']] ?? 0)], $kelas);
     }
 
     /**
