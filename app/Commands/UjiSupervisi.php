@@ -128,7 +128,7 @@ class UjiSupervisi extends BaseCommand
         $s = Supervisi::saringan(['ta' => '2025/2027', 'semester' => 'x', 'status' => 'batal']);
         $this->cek('saringan: tahun ajaran/semester tak sah → periode sekarang; status sah dipakai', $s['ta'] === Supervisi::periodeSekarang()['tahun_ajaran'] && $s['semester'] === Supervisi::periodeSekarang()['semester'] && $s['status'] === 'batal');
 
-        $this->cek('hak: Admin boleh kelola; Operator & Guru Piket tidak (menu masih Segera = khusus Admin)', HakAkses::boleh('admin', 'admin/supervisi/jadwal', 'POST')
+        $this->cek('hak: Admin boleh kelola; Operator & Guru Piket tidak (bawaan: hanya Admin, peran lain lewat Hak Akses)', HakAkses::boleh('admin', 'admin/supervisi/jadwal', 'POST')
             && HakAkses::boleh('admin', 'admin/supervisi/instrumen/3/butir') && ! HakAkses::boleh('operator', 'admin/supervisi/jadwal') && ! HakAkses::boleh('guru_piket', 'admin/supervisi/instrumen'));
     }
 

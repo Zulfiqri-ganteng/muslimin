@@ -128,7 +128,7 @@ class UjiApiAndroid extends BaseCommand
         $this->cek('judul grup ditulis seperti web ("Uji Kompetensi (UKK)", "PKL / Prakerin", "Guru Piket")', in_array('Uji Kompetensi (UKK)', $judul, true) && in_array('PKL / Prakerin', $judul, true) && in_array('Guru Piket', $judul, true), json_encode($judul));
         $semuaItem = array_merge(...array_column($g, 'item'));
         $segera    = array_column(array_filter($semuaItem, static fn (array $i): bool => $i['segera']), 'label');
-        $this->cek('item fitur belum jadi bertanda segera (Supervisi, Beasiswa) & tiap item punya kunci katalog + ikon', in_array('Jadwal Supervisi', $segera, true) && in_array('Beasiswa Sekolah', $segera, true)
+        $this->cek('item fitur belum jadi bertanda segera (Rekap Supervisi, Beasiswa; Jadwal Supervisi sudah aktif) & tiap item punya kunci katalog + ikon', in_array('Rekap Supervisi', $segera, true) && ! in_array('Jadwal Supervisi', $segera, true) && in_array('Beasiswa Sekolah', $segera, true)
             && array_filter($semuaItem, static fn (array $i): bool => $i['kunci'] === null || $i['ikon'] === '') === [], json_encode($segera));
         $catat = array_values(array_filter($semuaItem, static fn (array $i): bool => $i['kunci'] === 'keterlambatan'))[0] ?? [];
         $this->cek('item membawa alamat_web, level, dan awalan API (Catat Keterlambatan → api ["keterlambatan"])', ($catat['alamat_web'] ?? '') === 'admin/keterlambatan' && ($catat['api'] ?? []) === ['keterlambatan'] && ($catat['level'] ?? null) !== null);
