@@ -158,10 +158,22 @@
   .tombol-ikon[aria-expanded="true"] { @apply bg-brand-50 text-brand-800; }
 
   /* Laci samping "Daftar layanan" (acuan: sheet daftar ruang) — tombol kisi di layar lebar, tombol menu di HP */
-  .laci-portal { @apply fixed inset-0 z-50; }
-  .laci-portal:not([data-buka]) { display: none; }
-  .laci-latar { @apply absolute inset-0 bg-black/40; }
-  .laci-panel { @apply absolute inset-y-0 right-0 flex w-[min(21rem,88vw)] flex-col overflow-y-auto bg-white shadow-melayang outline-none; }
+  /* Laci: latar memudar + panel bergeser dari kanan (buka & tutup). display ditunda sampai animasi tutup selesai (allow-discrete),
+     awal animasi buka lewat @starting-style. Kurangi gerak (prefers-reduced-motion) → tanpa animasi. */
+  .laci-portal { @apply fixed inset-0 z-50; transition: display 0.32s allow-discrete; }
+  .laci-portal:not([data-buka]) { display: none; pointer-events: none; }
+  .laci-latar { @apply absolute inset-0 bg-black/40; opacity: 1; transition: opacity 0.28s ease; }
+  .laci-panel { @apply absolute inset-y-0 right-0 flex w-[min(21rem,88vw)] flex-col overflow-y-auto bg-white shadow-melayang outline-none;
+    transform: translateX(0); transition: transform 0.32s cubic-bezier(0.32, 0.72, 0, 1); will-change: transform; }
+  .laci-portal:not([data-buka]) .laci-latar { opacity: 0; }
+  .laci-portal:not([data-buka]) .laci-panel { transform: translateX(100%); }
+  @starting-style {
+    .laci-portal[data-buka] .laci-latar { opacity: 0; }
+    .laci-portal[data-buka] .laci-panel { transform: translateX(100%); }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .laci-portal, .laci-latar, .laci-panel { transition: none; }
+  }
   .laci-kepala { @apply flex h-16 shrink-0 items-center justify-between border-b border-garis px-4; }
   .laci-judul { @apply text-heading-sm text-teks; }
   .laci-isi { @apply flex-1 px-3 py-3; }
