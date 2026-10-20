@@ -1,6 +1,6 @@
 # DESAIN — Supervisi Guru (menu KURIKULUM → Supervisi Guru)
 
-Ditulis 2026-10-19 malam. **Status: RANCANGAN SIAP KODING — belum ada kode.** User: "pakai saran lu untuk konsep fitur & output
+Ditulis 2026-10-19 malam. **Status 2026-10-20: S1 + S2 SELESAI (lokal, belum commit) — berikutnya S3 Laporan.** User: "pakai saran lu untuk konsep fitur & output
 laporannya" (klien belum punya format lembar supervisi). Kerjakan per fase S1–S5, satu fase lalu BERHENTI & lapor; JANGAN commit/push
 sebelum diminta. Setiap fase = web + (bila ada) API + kontrak; uji secukupnya (perintah `php spark dev:uji-supervisi`).
 
@@ -105,8 +105,25 @@ TIDAK di aplikasi (web saja).
 ## 8. Fase kerja
 - **S1** — migrasi (5 tabel + instrumen bawaan) · `Libraries\Supervisi` bagian instrumen & jadwal · halaman **Instrumen** & **Jadwal**
   (termasuk buat massal) · uji `dev:uji-supervisi` (instrumen, jadwal, hak).
+  **✅ S1 SELESAI 2026-10-20.** Berkas: migrasi `2026-10-24-000001_SupervisiGuru` · `Libraries\Supervisi` · model `Supervisi{Instrumen,Butir,Jadwal}Model`
+  · `Admin\SupervisiInstrumen` (+ halaman butir, geser naik/turun, "Pasang instrumen bawaan") · `Admin\SupervisiJadwal` (saringan, saran
+  Penugasan JSON `jadwal/saran?guru_id=`, Buat massal) · view `admin/supervisi/{instrumen,butir,jadwal}.php` · `assets/js/admin/supervisi.js`
+  · `php spark dev:uji-supervisi` (40 cek). Keputusan yang berbeda dari rancangan: **tahun ajaran & semester dihitung dari TANGGAL jadwal**
+  (Jul–Des ganjil, Jan–Jun genap; tidak ikut `settings.academic_year`, supaya jadwal tak salah semester bila pengaturan telat diganti);
+  `supervisi_nilai_butir` diberi kolom `urut`; jadwal batal tidak dihitung bentrok (guru sama + tanggal sama hanya dicek untuk yang tidak batal);
+  Buat massal melewati guru yang sudah terjadwal semester itu & supervisor yang ikut dicentang. Menu masih "Segera" (dibuka lewat alamat
+  langsung oleh Admin: `admin/supervisi/instrumen`, `admin/supervisi/jadwal`).
 - **S2** — penilaian: `simpanPenilaian`, hitung nilai/predikat, salinan butir, draf/selesai · halaman **Penilaian** (lembar per
   instrumen, JS hitung langsung) · uji perhitungan & batas predikat (60,99/61/75,99/76/90,99/91).
+  **✅ S2 SELESAI 2026-10-20.** `Libraries\SupervisiPenilaian` (SKOR, PREDIKAT, TINDAK_LANJUT, hitung, rataRata, lembar, simpan) · model
+  `SupervisiNilai{,Butir}Model` · `Admin\SupervisiPenilaian` (daftar `admin/supervisi/penilaian`, lembar `…/penilaian/{id}` GET+POST
+  `aksi=draf|selesai`) · view `penilaian.php`, `lembar.php`, partial `saringan.php` (dipakai Jadwal juga) · komponen `supervisiLembar`
+  di supervisi.js · tombol Nilai/Hasil di Jadwal · `dev:uji-supervisi` 63 cek. Rincian yang ditetapkan saat koding: skor **0 = tidak dinilai
+  (TD)**, null = belum diisi (hanya di draf); isian lembar dikirim UTUH `nilai[{instrumen_id}][skor|catatan][{kunci}]` (+ kekuatan,
+  kelemahan, rekomendasi, tindak_lanjut[]) — kunci butir "b{butir_id}" sebelum tersimpan / "n{id nilai_butir}" sesudahnya (kunci "b…" lama
+  tetap diterima); draf hanya membuat hasil untuk instrumen yang disentuh; selesai wajib semua butir terisi + minimal 1 berskor per
+  instrumen; jadwal selesai tak bisa kembali draf lewat lembar; jadwal selesai yang ditambah instrumen baru / dibatalkan → nilai akhir
+  dikosongkan (status dijadwalkan/batal). Tombol PDF lembar hasil menyusul di S3.
 - **S3** — `SupervisiCetak`: Excel Program, PDF Lembar Hasil (satuan & gabungan), Excel Rekap · halaman **Rekap** · hapus tanda
   `segera` · uji isi berkas (baca ulang .xlsx, PDF berawalan `%PDF`).
 - **S4** — `Api\Supervisi` + rute + `'api' => ['supervisi']` + `docs/API-SUPERVISI.md` · uji API di `dev:uji-supervisi`.

@@ -701,6 +701,28 @@ $routes->group('admin', static function ($routes) {
         $routes->post('keterlambatan/pesan', 'Admin\Keterlambatan::pesan');
         $routes->post('keterlambatan/delete/(:num)', 'Admin\Keterlambatan::delete/$1');
 
+        // ===== SUPERVISI GURU (docs/DESAIN-SUPERVISI.md) =====
+        $routes->get('supervisi', static fn () => redirect()->to(site_url('admin/supervisi/jadwal')));
+        $routes->get('supervisi/instrumen', 'Admin\SupervisiInstrumen::index');
+        $routes->post('supervisi/instrumen', 'Admin\SupervisiInstrumen::store');
+        $routes->post('supervisi/instrumen/bawaan', 'Admin\SupervisiInstrumen::bawaan');
+        $routes->post('supervisi/instrumen/(:num)', 'Admin\SupervisiInstrumen::update/$1');
+        $routes->post('supervisi/instrumen/delete/(:num)', 'Admin\SupervisiInstrumen::delete/$1');
+        $routes->get('supervisi/instrumen/(:num)/butir', 'Admin\SupervisiInstrumen::butir/$1');
+        $routes->post('supervisi/instrumen/(:num)/butir', 'Admin\SupervisiInstrumen::butirStore/$1');
+        $routes->post('supervisi/instrumen/(:num)/butir/(:num)', 'Admin\SupervisiInstrumen::butirUpdate/$2');
+        $routes->post('supervisi/butir/(:num)/geser', 'Admin\SupervisiInstrumen::butirGeser/$1');
+        $routes->post('supervisi/butir/delete/(:num)', 'Admin\SupervisiInstrumen::butirDelete/$1');
+        $routes->get('supervisi/jadwal', 'Admin\SupervisiJadwal::index');
+        $routes->get('supervisi/jadwal/saran', 'Admin\SupervisiJadwal::saran');
+        $routes->post('supervisi/jadwal', 'Admin\SupervisiJadwal::store');
+        $routes->post('supervisi/jadwal/massal', 'Admin\SupervisiJadwal::massal');
+        $routes->post('supervisi/jadwal/(:num)', 'Admin\SupervisiJadwal::update/$1');
+        $routes->post('supervisi/jadwal/delete/(:num)', 'Admin\SupervisiJadwal::delete/$1');
+        $routes->get('supervisi/penilaian', 'Admin\SupervisiPenilaian::index');
+        $routes->get('supervisi/penilaian/(:num)', 'Admin\SupervisiPenilaian::lembar/$1');
+        $routes->post('supervisi/penilaian/(:num)', 'Admin\SupervisiPenilaian::simpan/$1');
+
         // ===== PENGUMUMAN =====
         $routes->get('pengumuman', 'Admin\Pengumuman::index');
         $routes->post('pengumuman', 'Admin\Pengumuman::store');

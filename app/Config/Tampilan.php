@@ -47,8 +47,8 @@ class Tampilan extends BaseConfig
         ],
         'kesiswaan' => [
             'fase' => 'F6', 'label' => 'Kesiswaan, Guru, Jadwal & Absensi',
-            'view' => ['admin/biodata', 'admin/submissions', 'admin/jadwal', 'admin/kurikulum/bentrok.php', 'admin/kurikulum/rekap.php', 'admin/absensi', 'admin/keterlambatan'],
-            'url'  => ['admin/biodata', 'admin/submissions', 'admin/export', 'admin/jadwal', 'admin/jadwal-guru', 'admin/cetak', 'admin/kurikulum', 'admin/absensi', 'admin/keterlambatan'],
+            'view' => ['admin/biodata', 'admin/submissions', 'admin/jadwal', 'admin/kurikulum/bentrok.php', 'admin/kurikulum/rekap.php', 'admin/absensi', 'admin/keterlambatan', 'admin/supervisi'],
+            'url'  => ['admin/biodata', 'admin/submissions', 'admin/export', 'admin/jadwal', 'admin/jadwal-guru', 'admin/cetak', 'admin/kurikulum', 'admin/absensi', 'admin/keterlambatan', 'admin/supervisi'],
         ],
         'ujian' => [
             'fase' => 'F7', 'label' => 'Ujian, Honor/Koreksi & SKBM',
