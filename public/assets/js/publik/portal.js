@@ -3,7 +3,7 @@
  * Rancangan: docs/RENCANA-TAMPILAN-PUBLIK.md. Jebakan versi CSP: di dalam metode, this.$el = elemen PEMICU — elemen akar
  * komponen disimpan di init().
  *
- *   kepalaPortal  : laci menu HP (Esc, Tab berputar, fokus kembali) + panel "Daftar layanan" (tombol kisi, acuan rumah.pendidikan.go.id)
+ *   kepalaPortal  : panel "Daftar layanan" (Esc, Tab berputar, fokus kembali; laci menu HP dihapus 2026-10-20) (tombol kisi, acuan rumah.pendidikan.go.id)
  *   cariPortal    : kotak cari dengan saran (data dari <script type="application/json" id="data-saran-portal">), panah atas/bawah, Enter
  *   bannerGeser   : banner foto geser (scroll-snap) + tombol kiri/kanan, titik, jeda; berhenti saat "kurangi gerakan"
  *   aksesibilitas : ukuran huruf, kontras tinggi, garis bawah tautan — disimpan di cookie, dibaca server (tanpa kedipan)

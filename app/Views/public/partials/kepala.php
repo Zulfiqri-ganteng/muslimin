@@ -1,8 +1,9 @@
 <?php
 /**
  * Kepala portal publik — struktur sama dengan rumah.pendidikan.go.id: bayangan (bukan garis), wadah selebar layar; kiri logo
- * (+ di HP: tombol kisi "Daftar layanan" & tombol menu); tengah kotak cari (layar ≥ md); kanan ikon Bantuan · tombol kisi · Masuk.
- * Tombol kisi membuka LACI SAMPING berisi kisi ilustrasi HD (acuan: sheet "Daftar ruang"); tombol menu (HP) membuka laci navigasi.
+ * (+ di HP: tombol kisi "Daftar layanan"); tengah kotak cari (layar ≥ md); kanan ikon Bantuan · tombol kisi · Masuk.
+ * Tombol kisi membuka LACI SAMPING berisi kisi ilustrasi HD (acuan: sheet "Daftar ruang"); di HP laci itu juga memuat tombol Masuk.
+ * (2026-10-20: laci "Menu" HP + tombol garis tiga dihapus atas permintaan user — isinya sama dengan Daftar layanan.)
  * Komponen: kepalaPortal (publik/portal.js).
  *
  * @var array       $setting
@@ -27,12 +28,6 @@ foreach (['jadwal_kelas', 'jadwal_guru', 'absensi', 'pengumuman', 'pkl', 'lapor_
         $kisi[] = [$layanan[$k]['url'], $layanan[$k]['judul'], $layanan[$k]['ilu'], ! empty($layanan[$k]['luar'])];
     }
 }
-$menu = [[site_url('/'), 'Beranda', 'home']];
-foreach ($kelompok as $g) {
-    $menu[] = [$g['url'], $g['label'], $g['ikon']];
-}
-$menu[] = [site_url('pengumuman'), 'Pengumuman', 'bullhorn'];
-$menu[] = [site_url('bantuan'), 'Bantuan', 'question-circle'];
 ?>
 <header class="kepala-portal" x-data="kepalaPortal" @keydown.escape.window="tutupSemua">
     <nav class="kepala-nav" aria-label="Navigasi <?= esc($schoolName, 'attr') ?>">
@@ -50,7 +45,6 @@ $menu[] = [site_url('bantuan'), 'Bantuan', 'question-circle'];
             </a>
             <div class="flex h-12 items-center gap-1 md:hidden">
                 <button type="button" class="tombol-ikon" @click="bukaDaftar" :aria-expanded="daftar" aria-haspopup="dialog" aria-controls="daftar-layanan" aria-label="Daftar layanan"><?= ikon('grid', 'h-6 w-6') ?></button>
-                <button type="button" class="tombol-ikon" @click="bukaLaci" :aria-expanded="laci" aria-haspopup="dialog" aria-controls="laci-portal" aria-label="Buka menu navigasi"><?= ikon('bars', 'h-6 w-6') ?></button>
             </div>
         </div>
 
@@ -92,23 +86,8 @@ $menu[] = [site_url('bantuan'), 'Bantuan', 'question-circle'];
                     <?php endforeach; ?>
                 </ul>
             </nav>
-        </div>
-    </div>
-
-    <!-- Laci menu navigasi (HP) -->
-    <div id="laci-portal" class="laci-portal md:hidden" :data-buka="laci">
-        <div class="laci-latar" @click="tutupSemua" aria-hidden="true"></div>
-        <div class="laci-panel" role="dialog" aria-modal="true" aria-labelledby="laci-judul" tabindex="-1" @keydown.tab="kunciTab($event)">
-            <div class="laci-kepala">
-                <p id="laci-judul" class="laci-judul">Menu</p>
-                <button type="button" class="tombol-ikon" @click="tutupSemua" aria-label="Tutup menu"><?= ikon('close', 'h-6 w-6') ?></button>
-            </div>
-            <nav class="laci-isi" aria-label="Menu utama">
-                <?php foreach ($menu as [$url, $label, $ikon]): ?>
-                    <a href="<?= esc($url, 'attr') ?>" class="laci-tautan"<?= $aktif($url) ?>><?= ikon($ikon) ?><?= esc($label) ?></a>
-                <?php endforeach; ?>
-            </nav>
-            <div class="laci-kaki">
+            <!-- Di HP tombol Masuk di kepala tersembunyi (kepala-kanan) → disediakan di sini. -->
+            <div class="laci-kaki md:hidden">
                 <a href="<?= site_url('admin/login') ?>" class="tombol tombol-utama tombol-blok tombol-besar">Masuk</a>
             </div>
         </div>
