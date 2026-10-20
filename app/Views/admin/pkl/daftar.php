@@ -179,7 +179,7 @@ $peranAcc = static fn (array $r): string => match ((string) ($r['acc_peran'] ?? 
                                 <td>
                                     <a href="<?= site_url('admin/pkl/' . $id) ?>" class="font-semibold text-gray-900 hover:text-brand-700 dark:text-white dark:hover:text-brand-400"><?= esc($r['perusahaan_nama']) ?></a>
                                     <p class="text-xs text-gray-500 dark:text-gray-400"><?= esc($r['perusahaan_kota'] ?? '') ?><?= $r['sumber'] !== 'siswa' ? ' · ' . ($r['sumber'] === 'staf' ? 'diisi staf' : 'impor') : '' ?><?= (int) $r['kirim_ke'] > 1 ? ' · revisi ke-' . ((int) $r['kirim_ke'] - 1) : '' ?></p>
-                                    <?php if (($r['tolak_sumber'] ?? null) === 'perusahaan'): ?><span class="lencana lencana-merah mt-1">Ditolak perusahaan</span><?php endif; ?>
+                                    <?php if (($r['tolak_sumber'] ?? null) === 'perusahaan'): ?><span class="lencana lencana-merah mt-1">Ditolak perusahaan</span><?php elseif (($r['tolak_sumber'] ?? null) === 'gabung'): ?><span class="lencana lencana-biru mt-1">Digabung ke ajuan lain</span><?php endif; ?>
                                 </td>
                                 <td>
                                     <p class="font-medium text-gray-900 dark:text-white"><?= esc($r['pengaju'] ?? '—') ?></p>
@@ -246,7 +246,7 @@ $peranAcc = static fn (array $r): string => match ((string) ($r['acc_peran'] ?? 
                                 <span class="shrink-0 font-mono text-xs font-semibold text-gray-500 dark:text-gray-400"><?= esc(PklPengajuanModel::kode($id)) ?></span>
                             </div>
                             <p class="mt-0.5 text-sm text-gray-500 dark:text-gray-400"><?= esc($r['pengaju'] ?? '—') ?> (<?= esc($r['pengaju_kelas'] ?? '') ?>)<?= (int) $r['jumlah'] > 1 ? ' + ' . ((int) $r['jumlah'] - 1) . ' teman' : '' ?><?= (int) ($r['jumlah_keluar'] ?? 0) > 0 ? ' · ' . (int) $r['jumlah_keluar'] . ' dikeluarkan' : '' ?></p>
-                            <?php if (($r['tolak_sumber'] ?? null) === 'perusahaan'): ?><p class="mt-1"><span class="lencana lencana-merah">Ditolak perusahaan</span></p><?php endif; ?>
+                            <?php if (($r['tolak_sumber'] ?? null) === 'perusahaan'): ?><p class="mt-1"><span class="lencana lencana-merah">Ditolak perusahaan</span></p><?php elseif (($r['tolak_sumber'] ?? null) === 'gabung'): ?><p class="mt-1"><span class="lencana lencana-biru">Digabung ke ajuan lain</span></p><?php endif; ?>
                             <p class="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-gray-500 dark:text-gray-400">Dikirim <?= esc(date('d-m-Y H:i', strtotime($kirimHp))) ?><?= $sisaHp !== null ? $lencanaSisa($sisaHp) : '' ?></p>
                             <?php if ($status === 'disetujui' && ! empty($r['acc_nama'])): ?><p class="mt-1 text-xs text-gray-500 dark:text-gray-400">Disetujui: <b class="text-gray-700 dark:text-gray-300"><?= esc($r['acc_nama']) ?></b><?= (string) ($r['acc_peran'] ?? '') !== '' && ($r['acc_peran'] ?? '') !== 'impor' ? ' (' . esc(\App\Libraries\HakAkses::label((string) ($r['acc_peran'] ?? ''))) . ')' : '' ?></p><?php endif; ?>
                             <?php if ($status === 'menunggu' && isset($cek[$id])): ?><div class="mt-1.5"><?= $lencanaCek($cek[$id]) ?></div><?php endif; ?>

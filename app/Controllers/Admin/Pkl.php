@@ -201,6 +201,8 @@ class Pkl extends BaseController
             'tolakAnggota'      => (new PklKeluar())->tolakSiswa(array_map(static fn (array $s): int => (int) $s['siswa_id'], $anggota), (int) $id),
             'bolehKeluarkan'    => PklKeluar::bolehKeluarkan($peranIni, (string) $ajuan['status']) && count($anggota) > 1,
             'bolehDitolakPt'    => PklKeluar::bolehDitolakPerusahaan($peranIni, (string) $ajuan['status']),
+            // Gabungkan ke ajuan lain di perusahaan yang sama (hak diperiksa lagi di PklKeluar::gabungkan).
+            'kandidatGabung'    => PklKeluar::bolehKeluarkan($peranIni, (string) $ajuan['status']) ? (new PklKeluar())->kandidatGabung($ajuan) : [],
             'alasanDialog'      => array_combine(array_keys(PklAlasan::DIALOG), array_map(static fn (string $d): array => (new PklAlasan())->untukDialog($d), array_keys(PklAlasan::DIALOG))),
             'bolehKelolaAlasan' => PklAlasan::bolehKelola($peranIni),
             'maksAlasan'        => PklAjuan::maksCatatan(),
@@ -222,6 +224,18 @@ class Pkl extends BaseController
         }
 
         return $balik;
+    }
+
+    /** POST admin/pkl/{id}/gabungkan — tujuan_id, catatan (opsional). Siswa pindah ke ajuan tujuan; ajuan ini ditutup. */
+    public function gabungkan($id): RedirectResponse
+    {
+        $id = (int) $id;
+        $r  = (new PklKeluar())->gabungkan($id, (array) $this->request->getPost(), $this->konteks(['saluran' => 'web']), $this->p);
+        if ($r['kode'] === 'tidak_ada') {
+            return $this->ke('admin/pkl/daftar/menunggu', 'error', $r['pesan']);
+        }
+
+        return $r['ok'] ? $this->ke('admin/pkl/' . (int) $r['tujuan_id'], 'success', $r['pesan']) : $this->ke('admin/pkl/' . $id, 'error', $r['pesan']);
     }
 
     /** POST admin/pkl/{id}/ditolak-perusahaan — catatan. SEMUA siswa ditolak perusahaan (juga dari Disetujui), hak ACC. */

@@ -191,6 +191,7 @@ Butuh migrasi `2026-10-25-000001_PklKeluarAlasan` (server tanpa migrasi menjawab
 | Metode & alamat | Body / query | Hak | Hasil |
 |---|---|---|---|
 | `POST pkl/ajuan/{id}/keluarkan` | `{siswa_ids: [int], jenis, catatan}` | ubah (menunggu/perbaikan) · acc (disetujui) | `{id, kode, keluar: [{id, siswa_id, nama}]}` |
+| `POST pkl/ajuan/{id}/gabungkan` | `{tujuan_id, catatan?}` | boleh mengubah KEDUA ajuan (ubah / acc bila disetujui) | `{id, kode, tujuan_id, kode_tujuan}` — semua siswa pindah ke tujuan (teman), ajuan ini ditutup: `ditolak` + `tolak_sumber = "gabung"`; perusahaan harus sama/mirip, total ≤ batas siswa |
 | `POST pkl/ajuan/{id}/ditolak-perusahaan` | `{catatan}` | acc | `{id, kode, status: "ditolak", tolak_sumber: "perusahaan"}` |
 | `GET pkl/ajuan/{id}/kabar-keluar` | — | acc \| ubah \| surat | daftar siswa dikeluarkan + `url` wa.me + `pesan` + `kabar_at` |
 | `POST pkl/ajuan/{id}/kabar-keluar/{keluar_id}/tandai` | — | acc \| ubah \| surat | `{waktu}` |
@@ -204,7 +205,9 @@ Butuh migrasi `2026-10-25-000001_PklKeluarAlasan` (server tanpa migrasi menjawab
 **Respons yang diperluas**
 - `pkl/meta`: `jenis_keluar`, `alasan {jenis, dialog: {jendela: [ {jenis, judul, item: [{id, judul, isi}]} ]}}`, `aturan.alasan_maks_huruf`,
   `hak.kelola_alasan`, `hak.hak_pkl.alasan`, `aksi_riwayat` + `keluarkan`, `tolak_perusahaan`, `kabari_keluar`.
-- Baris daftar & detail ajuan: `tolak_sumber` (`perusahaan` | `sekolah` | null), `jumlah_keluar`, `status_label` "Ditolak perusahaan".
+- Baris daftar & detail ajuan: `tolak_sumber` (`perusahaan` | `gabung` | `sekolah` | null), `jumlah_keluar`, `status_label` "Ditolak perusahaan" / "Digabung ke ajuan lain".
+- Detail ajuan: `kandidat_gabung` (`[{id, kode, status, perusahaan, pengaju, jumlah}]`, ajuan aktif lain di perusahaan sama/mirip) + `hak.gabungkan`;
+  aksi riwayat baru `gabung`, `gabung_masuk`.
 - Detail ajuan: `anggota[].riwayat_tolak` (riwayat penolakan siswa itu DI LUAR ajuan ini: `{ajuan_id, kode, perusahaan, sumber, jenis,
   keterangan, alasan, waktu}`), `keluar` (siswa yang dikeluarkan dari ajuan ini: `{id, siswa_id, nama, kelas, peran, hp, jenis,
   jenis_label, alasan, status_ajuan, sumber: staf|lapor, oleh, waktu, kabar_at, kabar_oleh}`), `hak.keluarkan`,

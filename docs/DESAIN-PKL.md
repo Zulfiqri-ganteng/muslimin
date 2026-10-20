@@ -408,7 +408,11 @@ sebagai tolak sekolah; penggabungan kelompok dikerjakan manual; tombol **Ubah** 
    boleh lebih dari satu). Kelola di **PKL → Template Alasan**: hak baru `alasan` (bawaan Waka Hubin; Admin selalu). Isi awal = 12 kalimat
    sekolah + 5 alasan keluar + 3 alasan laporan. Alasan keputusan kini maksimal 1000 huruf (`catatan_staf`, `pkl_riwayat.catatan`,
    `pkl_lapor.alasan`).
-8. **WhatsApp**: kotak "Kabari siswa yang dikeluarkan" (terbuka sendiri sesudah mengeluarkan) memakai templat baru
+8. **Gabungkan ajuan** (siswa satu tempat mengajukan terpisah → satu ajuan & satu surat): tombol di detail ajuan bila ada ajuan aktif
+   lain di perusahaan sama/mirip; semua siswa pindah ke ajuan tujuan (teman), ajuan asal ditutup (`ditolak`, `tolak_sumber=gabung`,
+   jejak siswa jenis *pindah* = bukan penolakan). Hak: boleh mengubah KEDUA ajuan; total ≤ batas siswa; tujuan dipilih manual (tanpa
+   pilihan bawaan). Surat Izin tujuan yang sudah terbit → perlu cetak ulang (nomor tetap).
+9. **WhatsApp**: kotak "Kabari siswa yang dikeluarkan" (terbuka sendiri sesudah mengeluarkan) memakai templat baru
    `pkl_pengaturan.wa_pesan_keluar` (juga dipakai untuk ajuan ditolak perusahaan); diubah di Pengaturan PKL.
 
 ### Perubahan teknis

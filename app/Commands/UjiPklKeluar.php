@@ -128,6 +128,7 @@ class UjiPklKeluar extends BaseCommand
         $this->ujiStatus();
         $this->ujiLapor();
         $this->ujiWa();
+        $this->ujiGabung();
         $this->ujiHalaman();
         $this->ujiApi();
 
@@ -146,7 +147,7 @@ class UjiPklKeluar extends BaseCommand
     private function siapkanData(): void
     {
         $now = date('Y-m-d H:i:s');
-        for ($n = 1; $n <= 18; $n++) {
+        for ($n = 1; $n <= 22; $n++) {
             $this->db->table('siswa')->insert([
                 'nis' => self::NIS . $n, 'nama' => self::OLEH . ' ' . $n, 'jenis_kelamin' => 'P', 'kelas_id' => $this->kelasId,
                 'no_hp' => $this->hp($n), 'status' => 'aktif', 'tanggal_lahir' => '2010-05-17', 'created_at' => $now, 'updated_at' => $now,
@@ -166,9 +167,9 @@ class UjiPklKeluar extends BaseCommand
     }
 
     /** @param list<int> $teman */
-    private function ajuan(int $pengaju, string $huruf, array $teman = [], string $status = 'disetujui'): int
+    private function ajuan(int $pengaju, string $huruf, array $teman = [], string $status = 'disetujui', ?string $namaPt = null): int
     {
-        $nama = self::PT . $huruf;
+        $nama = $namaPt ?? self::PT . $huruf;
         $data = [
             'perusahaan_nama' => $nama, 'perusahaan_norm' => PklForm::normPerusahaan($nama), 'perusahaan_alamat' => 'Jl. Uji Keluar No. 2',
             'perusahaan_kota' => 'Bekasi', 'perusahaan_telepon' => '0218888888', 'kontak_nama' => null, 'kontak_jabatan' => null,
@@ -534,6 +535,53 @@ class UjiPklKeluar extends BaseCommand
         $r = $this->panggil(AdminPkl::class, 'operator', 'tandaiKabarKeluar', [], [], $this->aj['B'], (int) $d[1]['id']);
         $j = $r instanceof ResponseInterface ? json_decode((string) $r->getBody(), true) : null;
         $this->cek('tandaiKabarKeluar (web) membalas JSON ok', is_array($j) && ($j['ok'] ?? false) === true);
+    }
+
+    // =================================================================
+    // 6b. Gabungkan ajuan (perusahaan sama)
+    // =================================================================
+
+    private function ujiGabung(): void
+    {
+        $this->bagian('Gabungkan ajuan: kandidat, hak, perusahaan sama, batas, hasil');
+        $this->aj['K'] = $this->ajuan($this->s[19], 'KL', [$this->s[20]], 'menunggu');
+        $this->aj['L'] = $this->ajuan($this->s[21], 'KL');
+        $this->aj['M'] = $this->ajuan($this->s[22], 'M', [], 'menunggu', 'ZZUJIKL Toko Sentosa Abadi');
+        $lib   = new PklKeluar();
+        $model = new PklPengajuanModel();
+        $kand  = array_column($lib->kandidatGabung($model->detail($this->aj['K'])), 'id');
+        $this->cek('kandidat gabung K = ajuan aktif perusahaan sama (L), bukan M', in_array($this->aj['L'], $kand, true) && ! in_array($this->aj['M'], $kand, true), json_encode($kand));
+        $p = (new PklPengaturanModel())->ambil();
+        $r = $lib->gabungkan($this->aj['K'], ['tujuan_id' => $this->aj['L']], $this->ctx('operator'), $p);
+        $this->cek('Operator menggabungkan ke ajuan DISETUJUI → 403', ! $r['ok'] && $r['http'] === 403);
+        $r = $lib->gabungkan($this->aj['K'], ['tujuan_id' => $this->aj['M']], $this->ctx('hubin'), $p);
+        $this->cek('perusahaan berbeda → 422', ! $r['ok'] && $r['http'] === 422 && str_contains($r['pesan'], 'berbeda'));
+        $r = $lib->gabungkan($this->aj['K'], ['tujuan_id' => $this->aj['K']], $this->ctx('hubin'), $p);
+        $this->cek('tujuan = dirinya sendiri → 422', ! $r['ok'] && $r['http'] === 422);
+        $r = $lib->gabungkan($this->aj['K'], ['tujuan_id' => $this->aj['L']], $this->ctx('hubin'), ['maks_anggota' => 2] + $p);
+        $this->cek('melebihi batas siswa per ajuan → 422', ! $r['ok'] && str_contains($r['pesan'], 'melebihi batas'), $r['pesan']);
+
+        $rr = $this->panggil(AdminPkl::class, 'hubin', 'gabungkan', [], ['tujuan_id' => (string) $this->aj['L'], 'catatan' => 'Satu kelompok di tempat sama.'], $this->aj['K']);
+        $k = $model->find($this->aj['K']);
+        $angL = array_column($model->anggotaDetail($this->aj['L']), 'peran', 'siswa_id');
+        $this->cek('POST gabungkan (Hubin) → ke halaman L; K ditutup (ditolak, sumber gabung, tanpa anggota)', str_contains($this->lokasi($rr), 'admin/pkl/' . $this->aj['L'])
+            && $k['status'] === 'ditolak' && $k['tolak_sumber'] === 'gabung' && $this->db->table('pkl_anggota')->where('pengajuan_id', $this->aj['K'])->countAllResults() === 0, (string) session('error'));
+        $this->cek('… L kini 3 siswa: 21 tetap pengaju, 19 & 20 teman dan terkunci di L', ($angL[$this->s[21]] ?? '') === 'pengaju' && ($angL[$this->s[19]] ?? '') === 'teman'
+            && ($angL[$this->s[20]] ?? '') === 'teman' && (int) ($this->aktif(19)['id'] ?? 0) === $this->aj['L'] && (int) ($this->aktif(20)['id'] ?? 0) === $this->aj['L']);
+        $this->cek('… jejak: keluar jenis "pindah" + riwayat gabung/gabung_masuk; BUKAN dihitung penolakan', $this->db->table('pkl_anggota_keluar')->where('pengajuan_id', $this->aj['K'])->where('jenis', 'pindah')->countAllResults() === 2
+            && $this->db->table('pkl_riwayat')->where('pengajuan_id', $this->aj['K'])->where('aksi', 'gabung')->countAllResults() === 1
+            && $this->db->table('pkl_riwayat')->where('pengajuan_id', $this->aj['L'])->where('aksi', 'gabung_masuk')->countAllResults() === 1
+            && ! isset($lib->tolakSiswa([$this->s[19]])[$this->s[19]]) && (new PklAjuan())->periksaKonsistensi() === []);
+        $html = $this->halaman(AdminPkl::class, 'hubin', 'detail', [], [], $this->aj['K']);
+        $this->cek('detail K: lencana "digabung", tanpa tombol kabar keputusan kosong', str_contains($html, 'digabung ke ajuan lain') && ! str_contains($html, 'data-buka-dialog="pkl-kabar"'));
+        $html = $this->halaman(AdminPkl::class, 'operator', 'detail', [], [], $this->aj['M']);
+        $this->cek('detail M (tanpa ajuan sejenis): tanpa tombol Gabungkan', ! str_contains($html, 'data-buka-dialog="pkl-gabung"'));
+        [$k2, $j] = $this->api(\App\Controllers\Api\Pkl::class, 'operator', 'gabungkan', [], ['tujuan_id' => $this->aj['L']], $this->aj['M']);
+        $this->cek('API gabungkan ke ajuan disetujui oleh Operator → 403', $k2 === 403, json_encode($j));
+        [$k2, $j] = $this->api(\App\Controllers\Api\Pkl::class, 'hubin', 'gabungkan', [], ['tujuan_id' => $this->aj['L']], $this->aj['M']);
+        $this->cek('API gabungkan perusahaan berbeda → 422 + galat tujuan_id', $k2 === 422 && isset($j['data']['errors']['tujuan_id']), json_encode($j));
+        [$k2, $j] = $this->api(\App\Controllers\Api\Pkl::class, 'hubin', 'daftar', ['status' => 'ditolak', 'q' => self::PT . 'KL']);
+        $this->cek('API daftar: tolak_sumber "gabung" + label "Digabung ke ajuan lain"', ($j['data'][0]['tolak_sumber'] ?? '') === 'gabung' && ($j['data'][0]['status_label'] ?? '') === 'Digabung ke ajuan lain', json_encode($j['data'] ?? $j));
     }
 
     // =================================================================

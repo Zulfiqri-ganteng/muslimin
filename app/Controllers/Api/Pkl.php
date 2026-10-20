@@ -87,6 +87,7 @@ class Pkl extends BaseApiController
         'periode' => 'Periode PKL diisi', 'surat_sekolah' => 'Surat sekolah',
         'lapor_diterima' => 'Siswa lapor hasil perusahaan', 'lapor_proses' => 'Laporan diterima diproses', 'lapor_kembali' => 'Laporan diterima dikembalikan',
         'keluarkan' => 'Siswa dikeluarkan dari ajuan', 'tolak_perusahaan' => 'Ditolak perusahaan', 'kabari_keluar' => 'Siswa yang dikeluarkan dikabari (WhatsApp)',
+        'gabung' => 'Digabung ke ajuan lain', 'gabung_masuk' => 'Menerima siswa dari ajuan lain',
     ];
 
     /** Label peran penyetuju: peran yang ada di Sistem → Hak Akses + 'impor' (data riwayat). */
@@ -257,6 +258,8 @@ class Pkl extends BaseApiController
             ], $anggota),
             // Siswa yang dikeluarkan dari ajuan ini (revisi 2026-10-20): jenis, alasan, oleh, waktu, kabar WhatsApp.
             'keluar'        => (new PklKeluar())->daftarAjuan($id),
+            // Calon tujuan "Gabungkan ajuan" (ajuan aktif lain di perusahaan sama/mirip): {id, kode, status, perusahaan, pengaju, jumlah}.
+            'kandidat_gabung' => PklKeluar::bolehKeluarkan($this->peran(), (string) $a['status']) ? (new PklKeluar())->kandidatGabung($a) : [],
             'peringatan'    => $peringatan,
             'ada_bahaya'    => in_array('bahaya', array_column($peringatan, 'tingkat'), true),
             'master'        => PklPeringatan::kandidatMaster((string) $a['perusahaan_norm']),
@@ -273,6 +276,7 @@ class Pkl extends BaseApiController
                 'keluarkan'          => PklKeluar::bolehKeluarkan($this->peran(), (string) $a['status']) && count($anggota) > 1,
                 'ditolak_perusahaan' => PklKeluar::bolehDitolakPerusahaan($this->peran(), (string) $a['status']),
                 'kabar_keluar'       => PklWaKeputusan::bolehKeluar($this->peran()),
+                'gabungkan'          => PklKeluar::bolehKeluarkan($this->peran(), (string) $a['status']),
             ],
             'dikirim_pada'  => $kirim,
         ];
@@ -700,6 +704,16 @@ class Pkl extends BaseApiController
             : $this->gagalAksi($r);
     }
 
+    /** POST pkl/ajuan/{id}/gabungkan {tujuan_id, catatan?} — pindahkan semua siswa ke ajuan lain di perusahaan sama; ajuan ini ditutup. */
+    public function gabungkan($id): ResponseInterface
+    {
+        $r = (new PklKeluar())->gabungkan((int) $id, $this->body(), $this->konteks(), $this->p);
+
+        return $r['ok']
+            ? $this->ok(['id' => (int) $id, 'kode' => PklPengajuanModel::kode((int) $id), 'tujuan_id' => $r['tujuan_id'], 'kode_tujuan' => PklPengajuanModel::kode((int) $r['tujuan_id'])], $r['pesan'])
+            : $this->gagalAksi($r);
+    }
+
     /** POST pkl/ajuan/{id}/ditolak-perusahaan {catatan} — SEMUA siswa ditolak perusahaan (juga dari Disetujui; hak ACC). */
     public function ditolakPerusahaan($id): ResponseInterface
     {
@@ -1123,9 +1137,9 @@ class Pkl extends BaseApiController
             'id'              => (int) $r['id'],
             'kode'            => PklPengajuanModel::kode((int) $r['id']),
             'status'          => $r['status'],
-            'status_label'    => ($r['tolak_sumber'] ?? null) === 'perusahaan' ? 'Ditolak perusahaan' : (self::LABEL_STATUS[$r['status']] ?? $r['status']),
+            'status_label'    => match ($r['tolak_sumber'] ?? null) { 'perusahaan' => 'Ditolak perusahaan', 'gabung' => 'Digabung ke ajuan lain', default => self::LABEL_STATUS[$r['status']] ?? $r['status'] },
             // 'perusahaan' | 'sekolah' untuk ajuan ditolak (revisi 2026-10-20), null untuk status lain.
-            'tolak_sumber'    => $r['status'] === 'ditolak' ? (($r['tolak_sumber'] ?? null) === 'perusahaan' ? 'perusahaan' : 'sekolah') : null,
+            'tolak_sumber'    => $r['status'] === 'ditolak' ? (in_array($r['tolak_sumber'] ?? null, ['perusahaan', 'gabung'], true) ? $r['tolak_sumber'] : 'sekolah') : null,
             'sumber'          => $r['sumber'],
             'perusahaan_nama' => $r['perusahaan_nama'],
             'perusahaan_kota' => $r['perusahaan_kota'] ?? null,

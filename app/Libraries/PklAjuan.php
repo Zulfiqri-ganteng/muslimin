@@ -70,6 +70,74 @@ final class PklAjuan
     }
 
     /**
+     * GABUNGKAN ajuan $asalId ke $tujuanId (perusahaan sama; dicek pemanggil PklKeluar::gabungkan). Dalam SATU transaksi:
+     * seluruh anggota asal dicatat di pkl_anggota_keluar (jenis 'pindah' → riwayat, bukan penolakan), dipindah ke ajuan tujuan
+     * sebagai teman (HP & kelas ikut), lalu ajuan asal ditutup: status 'ditolak' + tolak_sumber 'gabung' + catatan "Digabung ke …".
+     * Riwayat kedua ajuan mencatatnya. Surat Izin tujuan otomatis "perlu cetak ulang" (nomor tetap).
+     *
+     * @param array<string, mixed> $konteks
+     *
+     * @return array{ok: bool, kode?: string, nama?: list<string>}
+     */
+    public function gabungkan(int $asalId, int $tujuanId, string $alasan, array $konteks): array
+    {
+        return $this->transaksi(function () use ($asalId, $tujuanId, $alasan, $konteks): array {
+            $now   = date('Y-m-d H:i:s');
+            $baris = [];
+            foreach ($this->db->query('SELECT id, status FROM pkl_pengajuan WHERE id IN (?, ?) ORDER BY id FOR UPDATE', [$asalId, $tujuanId])->getResultArray() as $r) {
+                $baris[(int) $r['id']] = (string) $r['status'];
+            }
+            if (! isset($baris[$asalId], $baris[$tujuanId])) {
+                return ['ok' => false, 'kode' => 'tidak_ada'];
+            }
+            if (! PklPengajuanModel::aktif($baris[$asalId]) || ! PklPengajuanModel::aktif($baris[$tujuanId])) {
+                return ['ok' => false, 'kode' => 'status'];
+            }
+            $ada = $this->db->query(
+                'SELECT a.id, a.siswa_id, a.peran, a.kelas_id, a.hp, s.nama FROM pkl_anggota a JOIN siswa s ON s.id = a.siswa_id'
+                . ' WHERE a.pengajuan_id = ? ORDER BY (a.peran = \'pengaju\') DESC, a.id ASC',
+                [$asalId]
+            )->getResultArray();
+            if ($ada === []) {
+                return ['ok' => false, 'kode' => 'kosong'];
+            }
+            $kodeTujuan = PklPengajuanModel::kode($tujuanId);
+            $kodeAsal   = PklPengajuanModel::kode($asalId);
+            $catatanK   = mb_substr('Digabung ke ' . $kodeTujuan . ' (perusahaan sama)' . ($alasan !== '' ? ': ' . $alasan : ''), 0, self::MAKS_CATATAN);
+            $aktifTujuan = PklPengajuanModel::aktif($baris[$tujuanId]);
+            foreach ($ada as $a) {
+                $k = $this->sisip('pkl_anggota_keluar', [
+                    'pengajuan_id' => $asalId, 'siswa_id' => (int) $a['siswa_id'], 'kelas_id' => $a['kelas_id'] !== null ? (int) $a['kelas_id'] : null,
+                    'peran' => (string) $a['peran'], 'hp' => $a['hp'], 'jenis' => 'pindah', 'alasan' => $catatanK, 'status_ajuan' => $baris[$asalId],
+                    'sumber' => 'staf', 'oleh' => mb_substr((string) ($konteks['oleh'] ?? 'Staf'), 0, 150), 'admin_id' => $konteks['admin_id'] ?? null,
+                    'peran_staf' => ($konteks['peran'] ?? '') !== '' ? mb_substr((string) $konteks['peran'], 0, 20) : null,
+                    'ip_address' => $konteks['ip'] ?? null, 'created_at' => $now,
+                ]);
+                if (! $k['ok'] || ! $this->jalankan('DELETE FROM pkl_anggota WHERE id = ?', [(int) $a['id']])['ok']) {
+                    return ['ok' => false, 'kode' => 'galat'];
+                }
+                $gagal = $this->sisipAnggota($tujuanId, ['siswa_id' => (int) $a['siswa_id'], 'kelas_id' => $a['kelas_id'] !== null ? (int) $a['kelas_id'] : null,
+                    'peran' => 'teman', 'hp' => $a['hp']], [], $now, $aktifTujuan);
+                if ($gagal !== null) {
+                    return $gagal;
+                }
+            }
+            $nama = array_column($ada, 'nama');
+            $ok   = $this->jalankan(
+                'UPDATE pkl_pengajuan SET status = \'ditolak\', catatan_staf = ?, diputuskan_at = ?, diputuskan_oleh = ?, updated_at = ?,'
+                . ' acc_admin_id = NULL, acc_nama = NULL, acc_peran = NULL, acc_at = NULL, acc_ip = NULL, acc_kode = NULL'
+                . (self::kolomTolakSumber($this->db) ? ', tolak_sumber = \'gabung\'' : '') . ' WHERE id = ?',
+                [mb_substr('Digabung ke ' . $kodeTujuan . ($alasan !== '' ? ': ' . $alasan : ''), 0, self::maksCatatan()), $now, $konteks['admin_id'] ?? null, $now, $asalId]
+            )['ok'] && $this->jalankan('UPDATE pkl_pengajuan SET updated_at = ? WHERE id = ?', [$now, $tujuanId])['ok'];
+
+            return $ok && $this->catat($asalId, 'gabung', $konteks, 'Digabung ke ' . $kodeTujuan . ': ' . implode(', ', $nama) . ($alasan !== '' ? ' — ' . $alasan : ''))
+                && $this->catat($tujuanId, 'gabung_masuk', $konteks, 'Menerima siswa dari ' . $kodeAsal . ': ' . implode(', ', $nama))
+                ? ['ok' => true, 'nama' => $nama]
+                : ['ok' => false, 'kode' => 'galat'];
+        });
+    }
+
+    /**
      * Keluarkan satu/lebih siswa dari ajuan AKTIF (menunggu/perbaikan/disetujui) — revisi klien 2026-10-20: siswa ditolak perusahaan,
      * administrasi belum lunas, pindah kelompok, mengundurkan diri. Dalam SATU transaksi:
      *   1. salinan barisnya (peran, kelas saat mengajukan, HP) + jenis + alasan + siapa/kapan disimpan di pkl_anggota_keluar (riwayat);

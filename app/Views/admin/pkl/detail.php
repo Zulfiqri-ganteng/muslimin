@@ -61,12 +61,15 @@ $labelAksi = [
     'periode' => 'Periode PKL diisi', 'surat_sekolah' => 'Surat sekolah',
     'lapor_diterima' => 'Siswa lapor hasil perusahaan', 'lapor_proses' => 'Laporan diterima diproses', 'lapor_kembali' => 'Laporan diterima dikembalikan',
     'keluarkan' => 'Siswa dikeluarkan dari ajuan', 'tolak_perusahaan' => 'Ditolak perusahaan', 'kabari_keluar' => 'Siswa yang dikeluarkan dikabari (WhatsApp)',
+    'gabung' => 'Digabung ke ajuan lain', 'gabung_masuk' => 'Menerima siswa dari ajuan lain',
 ];
 // Peringatan otomatis → jenis peringatan kit + kata awal.
 $jenisPeringatan = ['bahaya' => ['galat', 'Bahaya'], 'awas' => ['awas', 'Periksa'], 'info' => ['info', 'Info']];
 $labelDaftar = ['menunggu' => 'Menunggu ACC', 'perbaikan' => 'Perbaikan', 'disetujui' => 'Disetujui', 'ditolak' => 'Ditolak'][$status] ?? '';
 $olehPerusahaan = $status === 'ditolak' && ($a['tolak_sumber'] ?? null) === 'perusahaan';
 $keluar ??= [];
+$kandidatGabung ??= [];
+$digabung = $status === 'ditolak' && ($a['tolak_sumber'] ?? null) === 'gabung';
 $kabarKeluar ??= [];
 $tolakAnggota ??= [];
 $alasanDialog ??= [];
@@ -116,6 +119,7 @@ $catatanKunci = static fn (string $html): string => '<div class="peringatan peri
             <h2 id="judul-ajuan" class="text-xl font-bold text-gray-900 dark:text-white"><?= esc($a['perusahaan_nama']) ?></h2>
             <?= view('admin/pkl/_lencana', ['kode' => $fase ?? $status]) ?>
             <?php if ($olehPerusahaan): ?><span class="lencana lencana-merah">oleh perusahaan</span><?php endif; ?>
+            <?php if ($digabung): ?><span class="lencana lencana-biru">digabung ke ajuan lain</span><?php endif; ?>
             <?php if ($a['sumber'] !== 'siswa'): ?><span class="lencana lencana-ungu"><?= $a['sumber'] === 'staf' ? 'Diisi staf' : 'Impor data lama' ?></span><?php endif; ?>
             <?php if ((int) $a['kirim_ke'] > 1): ?><span class="lencana lencana-abu">Revisi ke-<?= (int) $a['kirim_ke'] - 1 ?></span><?php endif; ?>
         </div>
@@ -252,12 +256,15 @@ $catatanKunci = static fn (string $html): string => '<div class="peringatan peri
                     <?php if (! empty($bolehKeluarkan)): ?>
                         <button type="button" class="btn btn-netral w-full" data-buka-dialog="pkl-keluarkan"><?= ikon('users', 'h-4 w-4') ?>Keluarkan sebagian siswa</button>
                     <?php endif; ?>
+                    <?php if ($kandidatGabung !== []): ?>
+                        <button type="button" class="btn btn-netral w-full" data-buka-dialog="pkl-gabung"><?= ikon('users-group', 'h-4 w-4') ?>Gabungkan ke ajuan lain (<?= count($kandidatGabung) ?>)</button>
+                    <?php endif; ?>
                     <?php if ($kabarKeluar !== []):
                         $kabarKeluarBelum = count(array_filter($kabarKeluar, static fn (array $k): bool => $k['url'] !== null && $k['kabar_at'] === null)); ?>
                         <button type="button" class="btn btn-sukses w-full" data-buka-dialog="pkl-kabar-keluar"><?= ikon('whatsapp', 'h-4 w-4', 'solid') ?>Kabari siswa yang dikeluarkan</button>
                         <p class="-mt-1 text-center text-xs text-gray-500 dark:text-gray-400"><?= $kabarKeluarBelum > 0 ? 'Belum dikabari: ' . $kabarKeluarBelum . ' dari ' . count($kabarKeluar) . ' siswa' : 'Semua siswa ber-nomor HP sudah dikabari' ?></p>
                     <?php endif; ?>
-                    <?php if (! empty($kabar)): // ajuan dikembalikan / ditolak → kabari siswa (PklWaKeputusan)
+                    <?php if (! empty($kabar) && $kabar['siswa'] !== []): // ajuan dikembalikan / ditolak → kabari siswa (PklWaKeputusan; ajuan digabung tak bersiswa)
                         $kabarBelum = count(array_filter($kabar['siswa'], static fn (array $s): bool => $s['url'] !== null && $s['dikabari_at'] === null)); ?>
                         <button type="button" class="btn btn-sukses w-full" data-buka-dialog="pkl-kabar"><?= ikon('whatsapp', 'h-4 w-4', 'solid') ?>Kabari siswa via WhatsApp</button>
                         <p class="-mt-1 text-center text-xs text-gray-500 dark:text-gray-400"><?= $kabarBelum > 0 ? 'Belum dikabari: ' . $kabarBelum . ' dari ' . count($kabar['siswa']) . ' siswa' : 'Semua siswa ber-nomor HP sudah dikabari' ?></p>
@@ -508,6 +515,20 @@ if (! empty($bolehDitolakPt)) {
         ikon('close', 'h-4 w-4') . 'Ya, ditolak perusahaan', 'btn-bahaya', '', 'lg');
 }
 
+// ----- Gabungkan ke ajuan lain di perusahaan yang sama — revisi klien 2026-10-20 -----
+if ($kandidatGabung !== []) {
+    $isiGabung = '<p>Seluruh siswa ajuan ini (' . count($anggota) . ') <b>dipindah</b> ke ajuan tujuan sebagai teman, lalu ' . esc($kode) . ' <b>ditutup</b> (tercatat "digabung"). Gunanya: siswa yang mengajukan terpisah ke tempat yang sama menjadi <b>satu ajuan &amp; satu surat</b>.</p>'
+        . '<fieldset class="space-y-1.5"><legend class="lbl">Ajuan tujuan <span class="text-red-600 dark:text-red-400">*</span></legend>';
+    foreach ($kandidatGabung as $kg) { // sengaja tanpa pilihan bawaan: tujuan dipilih sadar
+        $isiGabung .= '<label class="flex cursor-pointer items-start gap-2 rounded-lg border border-gray-200 px-3 py-2 text-gray-900 hover:bg-gray-50 dark:border-gray-600 dark:text-white dark:hover:bg-gray-700">'
+            . '<input type="radio" name="tujuan_id" value="' . (int) $kg['id'] . '" required class="cek mt-0.5">'
+            . '<span><b class="font-mono">' . esc($kg['kode']) . '</b> ' . esc($kg['perusahaan']) . '<br><span class="text-xs text-gray-500 dark:text-gray-400">' . esc(ucfirst($kg['status'])) . ' · pengaju ' . esc($kg['pengaju']) . ' · ' . (int) $kg['jumlah'] . ' siswa</span></span></label>';
+    }
+    $isiGabung .= '</fieldset><p class="hint">Batas ' . (int) \App\Models\PklPengaturanModel::maksSiswa($p) . ' siswa per ajuan tetap berlaku. Bila ajuan tujuan sudah disetujui dan suratnya terbit, surat itu ditandai perlu cetak ulang (nomor tetap). Butuh hak mengubah kedua ajuan.</p>'
+        . '<div><label class="lbl" for="catatan-gabung">Catatan <span class="text-xs font-normal text-gray-500">(opsional)</span></label><textarea id="catatan-gabung" name="catatan" rows="2" maxlength="' . (int) $maksAlasan . '" class="inp" placeholder="Contoh: Satu kelompok dengan Rifki di tempat yang sama."></textarea></div>';
+    echo $dialog('gabung', 'Gabungkan ' . $kode . ' ke ajuan lain', $id . '/gabungkan', $isiGabung, ikon('users-group', 'h-4 w-4') . 'Gabungkan', 'btn-utama', '', 'lg');
+}
+
 // ----- Keluarkan sebagian siswa — revisi klien 2026-10-20 -----
 if (! empty($bolehKeluarkan)) {
     $isiKeluar = '<p>Pilih siswa yang <b>keluar</b> dari ajuan ini. Siswa itu langsung <b>bebas mengajukan tempat PKL lain</b>; siswa lain tetap lanjut. Jejaknya tetap tersimpan di riwayat siswa.</p>'
@@ -554,7 +575,7 @@ if ($bolehHapus) {
 <?php if (! empty($bolehSurat) && $status === 'disetujui'): // kotak dialog catat biaya + kabar WhatsApp ?>
     <?= view('admin/pkl/_unduh') ?>
 <?php endif; ?>
-<?php if (! empty($kabar)): // kotak kabar WhatsApp "dikembalikan / ditolak" ?>
+<?php if (! empty($kabar) && $kabar['siswa'] !== []): // kotak kabar WhatsApp "dikembalikan / ditolak" ?>
     <?= view('admin/pkl/_kabar_keputusan', ['kabar' => $kabar, 'kabarBuka' => ! empty($kabarBuka), 'id' => $id]) ?>
 <?php endif; ?>
 <?php if ($kabarKeluar !== []): // kotak kabar WhatsApp "kamu dikeluarkan dari ajuan" ?>

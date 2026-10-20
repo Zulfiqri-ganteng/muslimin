@@ -329,7 +329,7 @@ final class PklHak
             (bool) preg_match('~^\d+/(acc|tolak|batal-acc|ditolak-perusahaan)$~', $sisa) => 'acc',
             (bool) preg_match('~^\d+/(ubah|kembalikan)$~', $sisa)               => 'ubah',
             // Keluarkan siswa: ajuan menunggu/perbaikan = hak ubah; ajuan disetujui = hak ACC (diperiksa lagi di PklKeluar).
-            (bool) preg_match('~^\d+/keluarkan$~', $sisa)                       => 'ubah|acc',
+            (bool) preg_match('~^\d+/(keluarkan|gabungkan)$~', $sisa)           => 'ubah|acc',
             (bool) preg_match('~^\d+/kabar-keluar(/|$)~', $sisa)                => PklWaKeputusan::HAK,
             (bool) preg_match('~^\d+/(surat|pembayaran|wa)(/|$)~', $sisa)       => 'surat',
             (bool) preg_match('~^\d+/kabar-keputusan(/|$)~', $sisa)             => PklWaKeputusan::HAK,

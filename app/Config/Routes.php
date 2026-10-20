@@ -154,6 +154,7 @@ $routes->group('admin', static function ($routes) {
         // Revisi klien 2026-10-20 (docs/DESAIN-PKL.md): keluarkan siswa, ditolak perusahaan, kabar WA siswa yang dikeluarkan,
         // riwayat PKL siswa, dan Template Alasan (hak 'alasan'). Hak dijaga PklHak::hakUntukAlamat + diperiksa lagi di PklKeluar/PklAlasan.
         $routes->post('pkl/(:num)/keluarkan', 'Admin\Pkl::keluarkan/$1', ['filter' => 'csrf']);
+        $routes->post('pkl/(:num)/gabungkan', 'Admin\Pkl::gabungkan/$1', ['filter' => 'csrf']);
         $routes->post('pkl/(:num)/ditolak-perusahaan', 'Admin\Pkl::ditolakPerusahaan/$1', ['filter' => 'csrf']);
         $routes->post('pkl/(:num)/kabar-keluar/(:num)/tandai', 'Admin\Pkl::tandaiKabarKeluar/$1/$2', ['filter' => 'csrf']);
         $routes->get('pkl/riwayat/(:num)', 'Admin\Pkl::riwayat/$1');
@@ -1183,6 +1184,7 @@ $routes->group('api/v1', ['namespace' => 'App\Controllers\Api', 'filter' => 'cor
         $routes->post('pkl/ajuan/(:num)/kabar-keputusan/(:num)/tandai', 'Pkl::kabarKeputusanTandai/$1/$2');
         // Revisi klien 2026-10-20 (docs/API-PKL.md): keluarkan siswa, ditolak perusahaan, kabar siswa dikeluarkan, riwayat, template alasan.
         $routes->post('pkl/ajuan/(:num)/keluarkan', 'Pkl::keluarkan/$1');
+        $routes->post('pkl/ajuan/(:num)/gabungkan', 'Pkl::gabungkan/$1');
         $routes->post('pkl/ajuan/(:num)/ditolak-perusahaan', 'Pkl::ditolakPerusahaan/$1');
         $routes->get('pkl/ajuan/(:num)/kabar-keluar', 'Pkl::kabarKeluar/$1');
         $routes->post('pkl/ajuan/(:num)/kabar-keluar/(:num)/tandai', 'Pkl::kabarKeluarTandai/$1/$2');

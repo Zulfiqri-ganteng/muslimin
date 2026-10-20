@@ -218,6 +218,93 @@ final class PklKeluar
         return ['ok' => true, 'http' => 200, 'kode' => 'ok', 'pesan' => 'Ajuan ' . $kode . ' ditandai DITOLAK PERUSAHAAN. Seluruh siswanya bebas mengajukan tempat PKL lain.'];
     }
 
+    /**
+     * Ajuan AKTIF lain di perusahaan yang sama/mirip (nama pembanding sama atau mirip ≥ 80%) — calon tujuan "Gabungkan ajuan".
+     *
+     * @return list<array{id: int, kode: string, status: string, perusahaan: string, pengaju: string, jumlah: int}>
+     */
+    public function kandidatGabung(array $ajuan): array
+    {
+        if (! self::tabelAda() || ! PklPengajuanModel::aktif((string) $ajuan['status'])) {
+            return [];
+        }
+        $out = [];
+        foreach ((new PklPengajuanModel())->ajuanSerupa((string) $ajuan['perusahaan_norm'], (int) $ajuan['id']) as $r) {
+            if (! PklPengajuanModel::aktif((string) $r['status'])) {
+                continue;
+            }
+            $ang   = $this->db->table('pkl_anggota a')->select('a.peran, s.nama')->join('siswa s', 's.id = a.siswa_id')->where('a.pengajuan_id', (int) $r['id'])->get()->getResultArray();
+            $peng  = array_values(array_filter($ang, static fn (array $x): bool => $x['peran'] === 'pengaju'));
+            $out[] = ['id' => (int) $r['id'], 'kode' => PklPengajuanModel::kode((int) $r['id']), 'status' => (string) $r['status'], 'perusahaan' => (string) $r['perusahaan_nama'],
+                'pengaju' => (string) ($peng[0]['nama'] ?? ''), 'jumlah' => count($ang)];
+        }
+
+        return $out;
+    }
+
+    /**
+     * GABUNGKAN ajuan $asalId ke ajuan lain di perusahaan yang sama ($in['tujuan_id']; catatan opsional). Hak: boleh mengubah KEDUA
+     * ajuan (menunggu/perbaikan = hak ubah, disetujui = hak ACC). Jumlah siswa gabungan ≤ batas per ajuan (Pengaturan PKL).
+     *
+     * @param array<string, mixed> $in
+     * @param array<string, mixed> $konteks
+     *
+     * @return array{ok: bool, http: int, kode: string, pesan: string, tujuan_id?: int}
+     */
+    public function gabungkan(int $asalId, array $in, array $konteks, ?array $p = null): array
+    {
+        if (! self::tabelAda()) {
+            return $this->gagal(503, 'belum_migrasi', 'Fitur gabungkan ajuan belum aktif di server ini: jalankan "php spark migrate".');
+        }
+        $model    = new PklPengajuanModel();
+        $asal     = $model->detail($asalId);
+        $tujuanId = (int) ($in['tujuan_id'] ?? 0);
+        $tujuan   = $tujuanId > 0 ? $model->detail($tujuanId) : null;
+        if ($asal === null) {
+            return $this->gagal(404, 'tidak_ada', 'Ajuan tidak ditemukan (mungkin sudah dihapus).');
+        }
+        if ($tujuan === null || $tujuanId === $asalId) {
+            return $this->gagal(422, 'tujuan_id', 'Pilih ajuan tujuan (ajuan lain di perusahaan yang sama).') + ['galat' => ['tujuan_id' => 'Pilih ajuan tujuan.']];
+        }
+        $peran = (string) ($konteks['peran'] ?? '');
+        if (! PklPengajuanModel::aktif((string) $asal['status']) || ! PklPengajuanModel::aktif((string) $tujuan['status'])) {
+            return $this->gagal(409, 'status', 'Kedua ajuan harus masih aktif (menunggu, perlu perbaikan, atau disetujui). Muat ulang halaman.');
+        }
+        if (! self::bolehKeluarkan($peran, (string) $asal['status']) || ! self::bolehKeluarkan($peran, (string) $tujuan['status'])) {
+            (new AuditModel())->record('update', 'pkl_pengajuan', $asalId, 'DITOLAK: ' . HakAkses::label($peran) . ' mencoba menggabungkan PKL ' . PklPengajuanModel::kode($asalId) . ' ke ' . PklPengajuanModel::kode($tujuanId) . $this->saluran($konteks));
+
+            return $this->gagal(403, 'dilarang', 'Menggabungkan butuh hak mengubah KEDUA ajuan (ajuan yang sudah disetujui: hak ACC ajuan PKL — ' . PklHak::teksPemegang('acc') . ').');
+        }
+        if (! self::perusahaanSama((string) $asal['perusahaan_norm'], (string) $tujuan['perusahaan_norm'])
+            && ! ($asal['perusahaan_id'] !== null && (int) $asal['perusahaan_id'] === (int) ($tujuan['perusahaan_id'] ?? 0))) {
+            return $this->gagal(422, 'tujuan_id', 'Perusahaannya berbeda (' . $asal['perusahaan_nama'] . ' ≠ ' . $tujuan['perusahaan_nama'] . '). Gabungkan hanya untuk tempat PKL yang sama.') + ['galat' => ['tujuan_id' => 'Perusahaan berbeda.']];
+        }
+        $p     ??= (new PklPengaturanModel())->ambil();
+        $maks  = PklPengaturanModel::maksSiswa($p);
+        $jumlah = count($model->anggotaDetail($asalId)) + count($model->anggotaDetail($tujuanId));
+        if ($maks > 0 && $jumlah > $maks) {
+            return $this->gagal(422, 'tujuan_id', 'Gabungan menjadi ' . $jumlah . ' siswa, melebihi batas ' . $maks . ' siswa per ajuan (Pengaturan PKL).') + ['galat' => ['tujuan_id' => 'Melebihi batas siswa.']];
+        }
+        $alasan = IsianBantu::rapikan((string) ($in['catatan'] ?? ''));
+        if (mb_strlen($alasan) > PklAjuan::MAKS_CATATAN) {
+            return $this->gagal(422, 'catatan', 'Catatan terlalu panjang (maksimal ' . PklAjuan::MAKS_CATATAN . ' huruf).');
+        }
+        $h = (new PklAjuan($this->db))->gabungkan($asalId, $tujuanId, $alasan, $konteks);
+        if (! $h['ok']) {
+            return match ($h['kode'] ?? 'galat') {
+                'bentrok' => $this->gagal(409, 'bentrok', 'Ada siswa yang sudah aktif di ajuan lain. Muat ulang halaman.'),
+                'status', 'tidak_ada', 'kosong' => $this->gagal(409, 'status', 'Ajuan baru saja berubah. Muat ulang halaman.'),
+                default   => $this->gagal(500, 'galat', 'Penyimpanan gagal. Coba lagi sebentar.'),
+            };
+        }
+        $kodeA = PklPengajuanModel::kode($asalId);
+        $kodeT = PklPengajuanModel::kode($tujuanId);
+        (new AuditModel())->record('update', 'pkl_pengajuan', $asalId, mb_substr('PKL ' . $kodeA . ' DIGABUNG ke ' . $kodeT . ' (' . $tujuan['perusahaan_nama'] . '): ' . implode(', ', $h['nama']) . $this->saluran($konteks), 0, 255));
+
+        return ['ok' => true, 'http' => 200, 'kode' => 'ok', 'tujuan_id' => $tujuanId,
+            'pesan' => implode(', ', $h['nama']) . ' dipindah ke ' . $kodeT . '; ' . $kodeA . ' ditutup (digabung).' . ($tujuan['status'] === 'disetujui' ? ' Surat Izin ' . $kodeT . ' perlu diunduh ulang (nomor tetap).' : '')];
+    }
+
     // =================================================================
     // Bacaan
     // =================================================================

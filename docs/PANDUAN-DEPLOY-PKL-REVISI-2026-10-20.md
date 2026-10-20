@@ -35,6 +35,10 @@ atau Hubin langsung menekan **Ditolak perusahaan (semua siswa)** di halaman ajua
 **Satu siswa belum bayar administrasi (yang lain lanjut):** Hubin/Operator menekan **Keluarkan sebagian siswa** → pilih siswanya → jenis
 **Administrasi belum lunas** → klik alasan cepat → simpan. Tidak perlu menolak seluruh kelompok lagi.
 
+**Dua kelompok/siswa mengajukan terpisah ke tempat yang sama:** buka salah satu ajuan → **Gabungkan ke ajuan lain** → pilih ajuan
+tujuan → semua siswanya pindah ke ajuan itu dan ajuan asal tertutup ("digabung"). Hanya muncul bila ada ajuan aktif lain di
+perusahaan yang sama/mirip. Bila ajuan tujuan sudah punya surat, unduh ulang suratnya (nomor tetap).
+
 **Template alasan:** di setiap jendela Tolak / Kembalikan / Batalkan persetujuan / Keluarkan / Ditolak perusahaan ada tombol kalimat siap
 pakai — klik, lalu ubah bila perlu. Hubin bisa menambah/mengubah/mengurutkan kalimatnya di **PKL → Template Alasan**.
 
