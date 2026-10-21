@@ -5,7 +5,6 @@ namespace App\Controllers\Admin;
 use App\Controllers\BaseController;
 use App\Libraries\HakPeran;
 use App\Libraries\Tampilan;
-use App\Models\AuditModel;
 use App\Models\SettingModel;
 
 class Settings extends BaseController
@@ -48,9 +47,9 @@ class Settings extends BaseController
             return redirect()->to(site_url('admin/settings') . '#tampilan')->with('error', 'Pilihan tema tidak dikenali.');
         }
 
+        // Sengaja TIDAK dicatat di Audit Log (permintaan 2026-10-21): ganti tema hanya urusan tampilan, bukan perubahan data.
         $this->model->store(['tema_warna' => Tampilan::MODE[$pilihan]['warna'], 'tema_sidebar' => Tampilan::MODE[$pilihan]['sidebar']]);
         $nama = Tampilan::namaTema($pilihan);
-        (new AuditModel())->record('update', 'settings', 1, 'Tema tampilan panel admin diganti: ' . $nama);
 
         return redirect()->to(site_url('admin/settings') . '#tampilan')->with('success', 'Tema tampilan disimpan: ' . $nama . '. Berlaku untuk semua akun.');
     }

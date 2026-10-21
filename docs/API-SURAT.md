@@ -4,6 +4,20 @@ Dibuat 2026-10-12 (Surat Sekolah **L8**). Cermin menu web *SURAT SEKOLAH* (Dafta
 Android staf. Kontrak sisi Flutter (layar, tahap kerja, contoh respons nyata): `C:\flutter-muslimin\BLUEPRINT-SURAT.md`
 (**L9**) + fixture `C:\flutter-muslimin\test\fixtures\surat\*.json`. Rancangan modul: `docs/DESAIN-SURAT-SEKOLAH.md`.
 
+> **PEMBARUAN 2026-10-21 (permintaan klien): Surat Balasan — staf mengatur siswa yang DITERIMA perusahaan** (dulu daftar siswa
+> terkunci = semua anggota ajuan; perbaikan hanya lewat lapor ulang siswa). Siswa yang tidak dicentang **dikeluarkan dari ajuan
+> sebagai "ditolak perusahaan"** saat disimpan (sama dengan memproses laporan "sebagian diterima": bebas mengajukan tempat lain,
+> tercatat di riwayatnya, Surat Izin yang terbit tetap sah). Hak = hak Buat Surat Balasan (tanpa hak ACC ajuan). Minimal satu siswa
+> diterima (semua ditolak = tombol "Ditolak perusahaan" di ajuan). Semua bersifat menambah — aplikasi lama tetap jalan:
+> - `POST surat/balasan` + **`diterima`** `{"<ajuan_id>": [siswa_id, …]}` (ajuan yang tidak disebut = semua diterima) + **`alasan_tolak`**
+>   (wajib ≥ 5 huruf bila ada yang tidak diterima; dibaca siswa). Jawaban 201 + **`data.dilepas`** = nama siswa yang dikeluarkan.
+>   Galat per ajuan masuk `data.gagal[]` seperti biasa (mis. "Centang minimal satu siswa yang diterima perusahaan…").
+> - `POST surat/{id}/ubah` (Balasan) + **`siswa`** `[siswa_id, …]` = siswa yang diterima (kunci **tidak dikirim = daftar tetap**) +
+>   `alasan_tolak` → 200 + `data.dilepas`; isian siswa salah → **422** `data.errors.siswa` (pesan siap tampil).
+> - Berkas Word Balasan & Penarikan: kaki "Surat ini disetujui secara elektronik…" kini di **paling bawah** (sesudah "NB : … 1. kontak"),
+>   2 baris kecil bergaris tipis; tetap 1 halaman F4 sampai 5 siswa (diukur di Microsoft Word).
+> - Tanpa migrasi (cukup `git pull`).
+
 ## Prinsip
 - Controller tipis `App\Controllers\Api\Surat`; SEMUA aturan dari library yang sama dengan web: `SuratSekolah` (daftar, muat,
   hitung, pilih unduhan, `alasanTakBisaUbah`), `SuratKeputusan` (ACC/kembalikan/batal ACC/ajukan ulang/batal, ACC massal),

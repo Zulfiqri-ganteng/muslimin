@@ -357,7 +357,14 @@ class Surat extends BaseApiController
             if (! $h['ok']) {
                 return $this->invalid(['galat' => $h['galat']], $h['galat'][0]);
             }
-            $hasil = (new SuratPkl())->buat($jenis, $h, (array) ($in['ajuan'] ?? []), (array) ($in['siswa'] ?? []), $this->konteks(), $this->p);
+            // Balasan: `diterima` = {"<ajuan_id>": [siswa_id, …]} siswa yang DITERIMA perusahaan per ajuan (ajuan yang tidak disebut =
+            // semua diterima); sisanya dikeluarkan dari ajuan sebagai "ditolak perusahaan" dengan `alasan_tolak` (2026-10-21).
+            $terima = [];
+            foreach ($jenis === SuratJenis::BALASAN && is_array($in['diterima'] ?? null) ? $in['diterima'] : [] as $aid => $ids) {
+                $terima[(int) $aid] = array_map('intval', array_filter((array) $ids, 'is_scalar'));
+            }
+            $hasil = (new SuratPkl())->buat($jenis, $h, (array) ($in['ajuan'] ?? []), (array) ($in['siswa'] ?? []), $this->konteks(), $this->p,
+                ['terima' => $terima, 'alasan_tolak' => (string) ($in['alasan_tolak'] ?? '')]);
         }
 
         $perluAcc = SuratJenis::perluAcc($jenis, $this->p);
@@ -365,6 +372,7 @@ class Surat extends BaseApiController
             'dibuat'    => array_map(static fn (int $id): array => ['id' => $id, 'kode' => SuratSekolahModel::kode($id)], array_map('intval', $hasil['dibuat'])),
             'sama'      => $hasil['sama'],
             'gagal'     => $hasil['gagal'],
+            'dilepas'   => $hasil['dilepas'] ?? [],
             'perlu_acc' => $perluAcc,
         ];
         if (! $hasil['ok']) {
@@ -414,14 +422,22 @@ class Surat extends BaseApiController
             if (! $h['ok']) {
                 return $this->invalid(['galat' => $h['galat']], $h['galat'][0]);
             }
-            $r = (new SuratPkl())->ubahSurat($m, $h, (array) ($in['siswa'] ?? []), $this->konteks());
+            // Balasan: `siswa` = siswa yang DITERIMA perusahaan (tidak dikirim = daftar tetap); yang tidak disebut dikeluarkan dari ajuan
+            // sebagai "ditolak perusahaan" dengan `alasan_tolak` (2026-10-21). Penarikan: `siswa` = siswa yang ditarik.
+            $opsi = $jenis === SuratJenis::BALASAN && array_key_exists('siswa', $in)
+                ? ['terima' => (array) $in['siswa'], 'alasan_tolak' => (string) ($in['alasan_tolak'] ?? '')] : [];
+            $r = (new SuratPkl())->ubahSurat($m, $h, (array) ($in['siswa'] ?? []), $this->konteks(), $opsi);
         }
         if (! $r['ok']) {
-            return $this->failure((string) ($r['pesan'] ?? 'Perubahan gagal disimpan.'), 409, ['kode' => (string) ($r['kode'] ?? 'gagal')]);
+            return ($r['kode'] ?? '') === 'siswa'
+                ? $this->invalid(['siswa' => (string) $r['pesan']], (string) $r['pesan'])
+                : $this->failure((string) ($r['pesan'] ?? 'Perubahan gagal disimpan.'), 409, ['kode' => (string) ($r['kode'] ?? 'gagal')]);
         }
+        $dilepas = $r['dilepas'] ?? [];
 
-        return $this->ok(['id' => $id, 'kode' => SuratSekolahModel::kode($id), 'status' => (string) $s['status']],
-            'Data surat diperbarui.' . ($s['status'] === 'dikembalikan' ? ' Surat masih berstatus Dikembalikan: ajukan ulang untuk ACC bila sudah siap.' : ''));
+        return $this->ok(['id' => $id, 'kode' => SuratSekolahModel::kode($id), 'status' => (string) $s['status'], 'dilepas' => $dilepas],
+            'Data surat diperbarui.' . ($dilepas !== [] ? ' ' . SuratPkl::teksDilepas($dilepas) : '')
+            . ($s['status'] === 'dikembalikan' ? ' Surat masih berstatus Dikembalikan: ajukan ulang untuk ACC bila sudah siap.' : ''));
     }
 
     // ================================================================= kabar WhatsApp "siap diambil" (Libraries\SuratWa)

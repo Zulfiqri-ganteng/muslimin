@@ -165,14 +165,15 @@ class SuratPkl extends SuratDasar
         if (! $h['ok']) {
             return redirect()->to($balik)->withInput()->with('errors', $h['galat']);
         }
-        $hasil   = (new Lib())->buat($jenis, $h, (array) ($post['ajuan'] ?? []), (array) ($post['siswa'] ?? []), $this->konteks(['saluran' => 'web']), $this->p);
+        $hasil   = (new Lib())->buat($jenis, $h, (array) ($post['ajuan'] ?? []), (array) ($post['siswa'] ?? []), $this->konteks(['saluran' => 'web']), $this->p, self::opsiTerima($jenis, $post));
         $catatan = array_merge($hasil['sama'], $hasil['gagal']);
+        $tautan  = $hasil['dilepas'] !== [] ? ' ' . Lib::teksDilepas($hasil['dilepas']) : '';
         if (! $hasil['ok']) {
             return redirect()->to($balik)->withInput()->with('error', 'Tidak ada surat yang dibuat. ' . implode(' ', $catatan));
         }
         // Laporan siswa ajuan itu ditandai selesai oleh SuratPkl::buat (jalur mana pun surat dibuat).
-        $n      = (int) ($hasil['lapor'] ?? 0);
-        $tautan = $n > 0 ? ($n === 1 ? ' Laporan siswa ditandai selesai.' : ' ' . $n . ' laporan siswa ditandai selesai.') : '';
+        $n       = (int) ($hasil['lapor'] ?? 0);
+        $tautan .= $n > 0 ? ($n === 1 ? ' Laporan siswa ditandai selesai.' : ' ' . $n . ' laporan siswa ditandai selesai.') : '';
 
         $acc     = $this->langsungAcc($hasil['dibuat'], $jenis);
         $catatan = array_merge($catatan, $acc['catatan']);
@@ -225,12 +226,38 @@ class SuratPkl extends SuratDasar
         if (! $h['ok']) {
             return redirect()->to($balik)->withInput()->with('errors', $h['galat']);
         }
-        $r = (new Lib())->ubahSurat($m, $h, (array) ($post['siswa'] ?? []), $this->konteks(['saluran' => 'web']));
+        $aid = (int) ($m['surat']['pengajuan_id'] ?? 0);
+        $r   = (new Lib())->ubahSurat($m, $h, (array) ($post['siswa'] ?? []), $this->konteks(['saluran' => 'web']), [
+            'terima'       => self::opsiTerima($jenis, $post)['terima'][$aid] ?? null,
+            'alasan_tolak' => (string) ($post['alasan_tolak'] ?? ''),
+        ]);
         if (! $r['ok']) {
             return redirect()->to($balik)->withInput()->with('error', (string) ($r['pesan'] ?? 'Perubahan gagal disimpan.'));
         }
 
-        return $this->ke('admin/surat/' . $id, 'success', 'Data surat diperbarui.' . ($m['surat']['status'] === 'dikembalikan' ? ' Surat masih berstatus Dikembalikan: tekan "Ajukan ulang untuk ACC" bila sudah siap.' : ''));
+        return $this->ke('admin/surat/' . $id, 'success', 'Data surat diperbarui.' . (($r['dilepas'] ?? []) !== [] ? ' ' . Lib::teksDilepas($r['dilepas']) : '')
+            . ($m['surat']['status'] === 'dikembalikan' ? ' Surat masih berstatus Dikembalikan: tekan "Ajukan ulang untuk ACC" bila sudah siap.' : ''));
+    }
+
+    /**
+     * Balasan: centang "siswa yang diterima perusahaan" dari formulir — atur_terima[{ajuan}] = 1 menandai daftar ajuan itu diatur,
+     * terima[{ajuan}][] = siswa yang dicentang (kosong = tidak ada yang dicentang → ditolak dengan pesan). Ajuan tanpa atur_terima =
+     * semua siswa diterima (perilaku lama).
+     *
+     * @param array<string, mixed> $post
+     *
+     * @return array{terima: array<int, list<int>>, alasan_tolak: string}
+     */
+    private static function opsiTerima(string $jenis, array $post): array
+    {
+        $terima = [];
+        if ($jenis === SuratJenis::BALASAN) {
+            foreach (array_keys((array) ($post['atur_terima'] ?? [])) as $aid) {
+                $terima[(int) $aid] = array_map('intval', array_filter((array) ($post['terima'][$aid] ?? []), 'is_scalar'));
+            }
+        }
+
+        return ['terima' => $terima, 'alasan_tolak' => (string) ($post['alasan_tolak'] ?? '')];
     }
 
     // ----- pembantu ---------------------------------------------------
@@ -242,6 +269,7 @@ class SuratPkl extends SuratDasar
             'label'       => SuratJenis::label($jenis),
             'sapaanSaran' => Lib::SAPAAN_SARAN,
             'alasanSaran' => Lib::ALASAN_SARAN,
+            'alasanTolak' => $jenis === SuratJenis::BALASAN ? (new Lib())->alasanTolak() : ['bawaan' => '', 'saran' => []],
             'batas'       => [
                 'awal' => (string) ($this->p['mulai_paling_awal'] ?? ''), 'akhir' => (string) ($this->p['selesai_paling_akhir'] ?? ''),
                 'min' => (int) ($this->p['durasi_min_hari'] ?? 0), 'maks' => (int) ($this->p['durasi_maks_hari'] ?? 0),

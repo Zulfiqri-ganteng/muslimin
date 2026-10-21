@@ -20,6 +20,10 @@
  * @var list<array>          $siswaSurat  (hanya saat ubah) siswa pada surat
  * @var array|null           $lapor       (Balasan baru) laporan siswa dari kotak "Lapor Diterima PKL" — formulir terisi dari laporan
  * @var int                  $laporMenunggu (Balasan baru) jumlah laporan siswa yang menunggu diproses
+ * @var array{bawaan: string, saran: list<array{judul: string, isi: string}>} $alasanTolak (Balasan) alasan siswa yang tidak diterima
+ *
+ * Balasan (2026-10-21): tiap ajuan terpilih menampilkan centang "siswa yang diterima perusahaan" (atur_terima[{ajuan}] + terima[{ajuan}][]);
+ * siswa yang tidak dicentang dikeluarkan dari ajuan sebagai "ditolak perusahaan" saat disimpan (Libraries\SuratPkl::pilahTerima).
  */
 
 use App\Libraries\SuratJenis;
@@ -28,12 +32,37 @@ $balasan = $jenis === SuratJenis::BALASAN;
 $lapor   = $ubah ? null : ($lapor ?? null);
 $alamat  = SuratJenis::alamat($jenis);
 $aksi    = $ubah ? site_url($alamat . '/' . (int) $surat['id'] . '/ubah') : site_url($alamat);
+
+// Balasan: siswa yang awalnya TIDAK dicentang ("ajuan:siswa" => true) — isian lama sesudah galat simpan, atau (ubah) anggota aktif ajuan
+// yang tidak tercantum di surat.
+$tolakAwal = [];
+if ($balasan) {
+    $aturLama = old('atur_terima');
+    foreach ($ajuan as $a) {
+        if (is_array($aturLama)) {
+            if (! isset($aturLama[$a['id']])) {
+                continue;
+            }
+            $dicentang = array_map('intval', (array) (old('terima')[$a['id']] ?? []));
+        } elseif ($ubah) {
+            $dicentang = array_map('intval', array_column($siswaSurat, 'siswa_id'));
+        } else {
+            continue;
+        }
+        foreach ($a['siswa'] as $s) {
+            if (! in_array($s['siswa_id'], $dicentang, true)) {
+                $tolakAwal[$a['id'] . ':' . $s['siswa_id']] = true;
+            }
+        }
+    }
+}
 $kembali = $ubah ? site_url('admin/surat/' . (int) $surat['id']) : site_url($lapor !== null ? 'admin/surat/balasan/laporan' : 'admin/surat');
 $cfg     = [
     'jenis' => $balasan ? 'balasan' : 'penarikan', 'ubah' => $ubah, 'tempat' => $ubah ? (string) $surat['perusahaan_nama'] : '',
     'dipilih' => array_map('strval', $nilai['ajuan']), 'siswaDipilih' => array_map('strval', $nilai['siswa']),
     'mulai' => $nilai['periode_mulai'], 'selesai' => $nilai['periode_selesai'], 'tglEfektif' => $nilai['tgl_efektif'],
     'alasanPilih' => $nilai['alasan_pilih'], 'alasanLain' => $nilai['alasan_lain'], 'alasanSaran' => $alasanSaran, 'batas' => $batas,
+    'tolakAwal' => (object) $tolakAwal, 'alasanTolak' => (string) (old('alasan_tolak') ?? $alasanTolak['bawaan']), 'alasanTolakSaran' => $alasanTolak['saran'],
     'ajuan' => array_map(static fn (array $a) => [
         'id' => $a['id'], 'kode' => $a['kode'], 'perusahaan' => $a['perusahaan'], 'alamat' => $a['alamat'], 'mulai' => $a['mulai'], 'selesai' => $a['selesai'],
         'siswa' => array_map(static fn (array $s) => ['id' => $s['siswa_id'], 'nama' => $s['nama'], 'kelas' => $s['kelas']], $a['siswa']),
@@ -42,6 +71,16 @@ $cfg     = [
     ], $ajuan),
 ];
 $kepala = static fn (string $judul): string => '<div class="kartu-kepala"><h3 class="kartu-judul text-base">' . $judul . '</h3></div>';
+// Balasan: centang siswa yang DITERIMA perusahaan untuk satu ajuan `a` (dipakai di daftar ajuan [buat] dan di formulir ubah).
+$blokTerima = static fn (string $kelas): string => '<div class="rounded-lg border border-gray-200 px-4 py-3 dark:border-gray-700 ' . $kelas . '">'
+    . '<input type="hidden" :name="namaAtur(a)" value="1">'
+    . '<p class="text-xs font-semibold text-gray-500 uppercase dark:text-gray-400">Siswa yang diterima perusahaan</p>'
+    . '<div class="mt-2 space-y-1.5"><template x-for="s in a.siswa" :key="s.id">'
+    . '<label class="flex cursor-pointer flex-wrap items-center gap-2 text-sm text-gray-900 dark:text-white">'
+    . '<input type="checkbox" :name="namaTerima(a)" :value="s.id" :checked="diterima(a, s)" @change="ubahTerima(a, s)" class="cek">'
+    . '<span><span class="font-semibold" x-text="s.nama"></span> <span class="text-xs text-gray-500 dark:text-gray-400" x-text="s.kelas"></span></span>'
+    . '<span x-show="!diterima(a, s)" class="lencana lencana-merah">Tidak diterima</span></label></template></div>'
+    . '<p x-show="jumlahTerima(a) === 0" class="err-msg mt-2">Minimal satu siswa harus diterima. Bila semua ditolak, buka ajuan PKL-nya lalu tekan "Ditolak perusahaan".</p></div>';
 // Pratinjau: kotak info kit dengan judul.
 $bukaPratinjau = '<div class="peringatan peringatan-info sm:col-span-2">' . ikon('eye', 'mt-0.5 h-5 w-5 shrink-0') . '<div class="min-w-0 flex-1"><p class="font-semibold">Pratinjau di surat</p>';
 ?>
@@ -93,8 +132,11 @@ $bukaPratinjau = '<div class="peringatan peringatan-info sm:col-span-2">' . ikon
             <div class="kartu-isi space-y-3">
                 <?php if ($ubah): ?>
                     <p class="text-sm text-gray-700 dark:text-gray-300"><b><?= esc((string) $surat['perusahaan_nama']) ?></b><?php if (! empty($surat['pengajuan_id'])): ?> — <a href="<?= site_url('admin/pkl/' . (int) $surat['pengajuan_id']) ?>" class="font-medium text-brand-700 hover:underline dark:text-brand-400">lihat ajuan PKL</a><?php endif; ?></p>
-                    <?php if ($balasan): ?>
-                        <p class="hint">Tempat dan daftar siswa tidak bisa diganti di sini. Bila keliru, batalkan surat ini lalu buat yang baru.</p>
+                    <?php if ($balasan && $ajuan === []): ?>
+                        <?= ui_peringatan('awas', 'Ajuan PKL surat ini sudah tidak berstatus disetujui, jadi daftar siswa tidak bisa diubah (tetap: ' . implode(', ', array_column($siswaSurat, 'nama')) . ').') ?>
+                    <?php elseif ($balasan): ?>
+                        <p class="hint">Tempat tidak bisa diganti di sini (bila keliru, batalkan surat ini lalu buat yang baru). Lepas centang siswa yang <b>tidak diterima</b> perusahaan.</p>
+                        <template x-for="a in ajuan" :key="a.id"><?= $blokTerima('') ?></template>
                     <?php elseif ($ajuan === []): ?>
                         <?= ui_peringatan('awas', 'Ajuan PKL surat ini sudah tidak berstatus disetujui, jadi daftar siswa tidak bisa diubah (tetap: ' . implode(', ', array_column($siswaSurat, 'nama')) . ').') ?>
                         <?php foreach ($siswaSurat as $s): ?><input type="hidden" name="siswa[]" value="<?= (int) $s['siswa_id'] ?>"><?php endforeach; ?>
@@ -128,9 +170,29 @@ $bukaPratinjau = '<div class="peringatan peringatan-info sm:col-span-2">' . ikon
                                         <span x-show="jenis === 'penarikan' && a.penarikan > 0" class="lencana lencana-merah mt-1" x-text="a.penarikan + ' surat penarikan sudah ada'"></span>
                                     </span>
                                 </label>
+                                <?php if ($balasan): ?><template x-if="terpilih(a)"><?= $blokTerima('mx-4 mb-3') ?></template><?php endif; ?>
                             </li>
                         </template>
                     </ul>
+                <?php endif; ?>
+
+                <?php if ($balasan && $ajuan !== []): ?>
+                    <div x-show="adaTolak()" x-cloak class="peringatan peringatan-awas">
+                        <?= ikon('exclamation-circle', 'mt-0.5 h-5 w-5 shrink-0') ?>
+                        <div class="min-w-0 flex-1 space-y-2">
+                            <p>Siswa yang tidak dicentang akan <b>dikeluarkan dari ajuan</b> sebagai <b>"Ditolak perusahaan"</b> saat disimpan: ia bebas mengajukan tempat PKL lain dan tetap tercatat di riwayatnya. Surat Balasan hanya memuat siswa yang diterima.</p>
+                            <label class="lbl" for="alasan_tolak">Alasan untuk siswa yang tidak diterima <span class="text-red-600 dark:text-red-400">*</span></label>
+                            <textarea id="alasan_tolak" name="alasan_tolak" x-model="alasanTolak" rows="2" maxlength="1000" class="inp"></textarea>
+                            <?php if ($alasanTolak['saran'] !== []): ?>
+                                <div class="flex flex-wrap gap-2">
+                                    <?php foreach ($alasanTolak['saran'] as $i => $t): ?>
+                                        <button type="button" class="btn btn-netral btn-sm" @click="pakaiAlasanTolak(<?= (int) $i ?>)"><?= ikon('file-lines', 'h-4 w-4') ?><?= esc($t['judul']) ?></button>
+                                    <?php endforeach; ?>
+                                </div>
+                            <?php endif; ?>
+                            <p class="hint">Siswa membaca alasan ini di halaman status PKL. Template alasan bisa diatur di PKL → Template alasan.</p>
+                        </div>
+                    </div>
                 <?php endif; ?>
 
                 <?php if (! $balasan && $ajuan !== []): ?>

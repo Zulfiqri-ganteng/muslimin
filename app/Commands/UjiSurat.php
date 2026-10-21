@@ -7,6 +7,7 @@ use App\Libraries\PklAjuan;
 use App\Libraries\PklDocx;
 use App\Libraries\PklForm;
 use App\Libraries\PklHak;
+use App\Libraries\PklKeluar;
 use App\Libraries\PklSurat;
 use App\Libraries\SuratAcara;
 use App\Libraries\SuratBerkas;
@@ -103,6 +104,7 @@ class UjiSurat extends BaseCommand
             $this->ujiTampilanKeputusan();
             $this->ujiAcara();
             $this->ujiSuratPkl();
+            $this->ujiBalasanTerima();
             $this->ujiSidikDanTabel(); // paling akhir: menghapus data uji (CASCADE / SET NULL)
         }
 
@@ -1066,6 +1068,88 @@ class UjiSurat extends BaseCommand
 
     private bool $jagaMasukan = false;
 
+    /**
+     * Surat Balasan: staf mencentang siswa yang DITERIMA perusahaan saat membuat/mengubah surat; yang tidak dicentang dikeluarkan dari
+     * ajuan sebagai "ditolak perusahaan" (permintaan klien 2026-10-21 — operator memperbaiki sendiri, bukan lewat lapor ulang siswa).
+     */
+    private function ujiBalasanTerima(): void
+    {
+        $this->bagian('Surat Balasan: centang siswa yang diterima perusahaan (yang lain dikeluarkan, ditolak perusahaan)');
+        $lib = new SuratPkl();
+        $p   = (new PklPengaturanModel())->ambil();
+        [$s71, $s72, $s73] = [$this->buatSiswa(71), $this->buatSiswa(72), $this->buatSiswa(73)];
+        $aid     = $this->buatAjuanDisetujui($s71, 'ZZUJISS Terima Sebagian', [$s72, $s73]);
+        $anggota = fn (): array => array_map('intval', array_column($this->db->table('pkl_anggota')->select('siswa_id')->where('pengajuan_id', $aid)->orderBy('id')->get()->getResultArray(), 'siswa_id'));
+        $siswaSurat = fn (int $id): array => array_map('intval', array_column($this->db->table('surat_sekolah_siswa')->select('siswa_id')->where('surat_id', $id)->orderBy('urut')->get()->getResultArray(), 'siswa_id'));
+        $h  = SuratPkl::periksa(SuratJenis::BALASAN, ['tanggal_surat' => date('Y-m-d'), 'sapaan' => '', 'periode_mulai' => '2027-08-24', 'periode_selesai' => '2027-11-24']);
+        $op = ['oleh' => self::OLEH . ' operator', 'admin_id' => 3, 'peran' => 'operator', 'ip' => self::IP];
+
+        $r = $lib->buat(SuratJenis::BALASAN, $h, [$aid], [], $op, $p, ['terima' => [$aid => []], 'alasan_tolak' => 'Ditolak semua']);
+        $this->cek('buat Balasan tanpa satu pun siswa dicentang → ditolak, tidak ada yang dikeluarkan', ! $r['ok'] && str_contains(implode(' ', $r['gagal']), 'Centang minimal satu') && $anggota() === [$s71, $s72, $s73], json_encode($r['gagal']));
+        $r = $lib->buat(SuratJenis::BALASAN, $h, [$aid], [], $op, $p, ['terima' => [$aid => [$s71, $s72]], 'alasan_tolak' => ' ']);
+        $this->cek('ada siswa tidak dicentang tanpa alasan → ditolak ("Tulis alasan"), ajuan utuh', ! $r['ok'] && str_contains(implode(' ', $r['gagal']), 'Tulis alasan') && count($anggota()) === 3);
+        $r = $lib->buat(SuratJenis::BALASAN, $h, [$aid], [], $op, $p, ['terima' => [$aid => [$s71, 999999]], 'alasan_tolak' => 'Ditolak perusahaan.']);
+        $this->cek('siswa yang bukan anggota ajuan → ditolak', ! $r['ok'] && str_contains(implode(' ', $r['gagal']), 'bukan anggota aktif'));
+
+        $r   = $lib->buat(SuratJenis::BALASAN, $h, [$aid], [], $op, $p, ['terima' => [$aid => [$s71, $s72]], 'alasan_tolak' => 'Perusahaan hanya menerima dua siswa.']);
+        $id  = (int) ($r['dibuat'][0] ?? 0);
+        $kel = $this->db->table('pkl_anggota_keluar')->where(['pengajuan_id' => $aid, 'siswa_id' => $s73])->get()->getRowArray();
+        $this->cek('buat (operator, tanpa hak ACC ajuan): surat hanya 2 siswa yang dicentang; siswa 73 dikeluarkan "ditolak perusahaan" + alasan; pesan menyebutnya', $r['ok'] && $siswaSurat($id) === [$s71, $s72]
+            && $anggota() === [$s71, $s72] && ($kel['jenis'] ?? '') === 'ditolak_perusahaan' && ($kel['alasan'] ?? '') === 'Perusahaan hanya menerima dua siswa.' && ($kel['peran_staf'] ?? '') === 'operator'
+            && $r['dilepas'] === ['ZZUJI SS 73'] && str_contains($r['pesan'], 'ZZUJI SS 73 tidak diterima perusahaan') && str_ends_with((string) $this->surat($id)['judul'], '(2 siswa)'), json_encode($r));
+        $this->cek('siswa yang dikeluarkan: riwayat "ditolak 1×", bebas mengajukan lagi (bukan anggota aktif)', ((new PklKeluar())->riwayatSiswa($s73)['jumlah_ditolak'] ?? 0) === 1
+            && $this->db->table('pkl_anggota')->where('siswa_aktif', $s73)->countAllResults() === 0);
+
+        // Ubah (surat menunggu ACC / dikembalikan): lepas siswa 72.
+        $m  = (new SuratSekolah())->muat($id);
+        $ru = $lib->ubahSurat($m, $h, [], $op, ['terima' => [$s71], 'alasan_tolak' => 'Kuota hanya satu siswa.']);
+        $this->cek('ubah Balasan: lepas centang siswa 72 → surat 1 siswa, siswa 72 dikeluarkan (ditolak perusahaan), judul "(1 siswa)"', $ru['ok'] && ($ru['dilepas'] ?? []) === ['ZZUJI SS 72']
+            && $siswaSurat($id) === [$s71] && $anggota() === [$s71] && str_ends_with((string) $this->surat($id)['judul'], '(1 siswa)'), json_encode($ru));
+        $m  = (new SuratSekolah())->muat($id);
+        $this->cek('ubah tanpa opsi terima → daftar siswa tetap; terima kosong → ditolak tanpa perubahan', $lib->ubahSurat($m, $h, [], $op)['ok'] && $siswaSurat($id) === [$s71]
+            && ! $lib->ubahSurat($m, $h, [], $op, ['terima' => [], 'alasan_tolak' => 'x x x x'])['ok'] && $anggota() === [$s71]);
+
+        // Formulir web (operator): ubah Balasan menampilkan centang siswa + kotak alasan; simpan lewat controller.
+        [$s74, $s75] = [$this->buatSiswa(74), $this->buatSiswa(75)];
+        $aid2 = $this->buatAjuanDisetujui($s74, 'ZZUJISS Terima Web', [$s75]);
+        $id2  = (int) ($lib->buat(SuratJenis::BALASAN, $h, [$aid2], [], $op, $p)['dibuat'][0] ?? 0);
+        $C    = \App\Controllers\Admin\SuratPkl::class;
+        $html = (string) $this->panggil($C, 'operator', 'ubahBalasan', [], [], $id2);
+        $this->cek('formulir Ubah Balasan: blok "Siswa yang diterima perusahaan" (centang per siswa) + kotak alasan + template "Ditolak perusahaan"', str_contains($html, 'Siswa yang diterima perusahaan')
+            && str_contains($html, ':name="namaTerima(a)"') && str_contains($html, 'name="alasan_tolak"') && str_contains($html, 'Tempat tidak bisa diganti di sini') && str_contains($html, 'tolakAwal'));
+        $res = $this->panggil($C, 'operator', 'simpanUbahBalasan', [], ['tanggal_surat' => date('Y-m-d'), 'sapaan' => 'Pimpinan', 'periode_mulai' => '2027-08-24', 'periode_selesai' => '2027-11-24',
+            'atur_terima' => [$aid2 => '1'], 'terima' => [$aid2 => [(string) $s75]], 'alasan_tolak' => 'Perusahaan memilih satu siswa saja.'], $id2);
+        $this->cek('POST ubah (operator): siswa 74 tak dicentang → dikeluarkan, surat hanya siswa 75, pesan sukses menyebutnya', $res instanceof \CodeIgniter\HTTP\RedirectResponse
+            && $siswaSurat($id2) === [$s75] && str_contains((string) session('success'), 'ZZUJI SS 74 tidak diterima perusahaan')
+            && (int) ($this->db->table('pkl_anggota')->where(['pengajuan_id' => $aid2, 'siswa_id' => $s75])->get()->getRowArray()['peran'] === 'pengaju'), (string) session('success') . ' ' . (string) session('error'));
+
+        // API Android: ubah (siswa = diterima) & buat (diterima = {ajuan: [siswa]}).
+        [$s76, $s77] = [$this->buatSiswa(76), $this->buatSiswa(77)];
+        $aid3 = $this->buatAjuanDisetujui($s76, 'ZZUJISS Terima Api', [$s77]);
+        [$k, $j] = $this->apiSurat('operator', 'buat', [], ['tanggal_surat' => date('Y-m-d'), 'periode_mulai' => '2027-08-24', 'periode_selesai' => '2027-11-24', 'ajuan' => [$aid3],
+            'diterima' => [(string) $aid3 => [$s76]], 'alasan_tolak' => 'Hanya satu yang diterima.'], 'balasan');
+        $id3 = (int) ($j['data']['dibuat'][0]['id'] ?? 0);
+        $this->cek('API POST surat/balasan + diterima {ajuan: [siswa]} → 201, data.dilepas, surat hanya siswa yang diterima', $k === 201 && ($j['data']['dilepas'] ?? []) === ['ZZUJI SS 77']
+            && $siswaSurat($id3) === [$s76], json_encode($j));
+        [$k, $j] = $this->apiSurat('operator', 'ubah', [], ['tanggal_surat' => date('Y-m-d'), 'periode_mulai' => '2027-08-24', 'periode_selesai' => '2027-11-24', 'siswa' => []], $id3);
+        $this->cek('API POST surat/{id}/ubah Balasan dengan siswa [] → 422 (minimal satu diterima)', $k === 422 && str_contains((string) ($j['message'] ?? ''), 'Centang minimal satu'), json_encode($j));
+    }
+
+    /** @return array{0: int, 1: array} panggil Api\Surat sebagai peran (token sudah lolos ApiAuthFilter) */
+    private function apiSurat(string $peran, string $metode, array $get, array $post, mixed ...$arg): array
+    {
+        \App\Libraries\ApiAuth::set(['id' => ['admin' => 1, 'hubin' => 2, 'operator' => 3][$peran] ?? 3, 'full_name' => self::OLEH . ' ' . $peran, 'role' => $peran]);
+        $request = (new \CodeIgniter\HTTP\IncomingRequest(config('App'), new \CodeIgniter\HTTP\SiteURI(config('App'), 'api/v1/surat'), null, new \CodeIgniter\HTTP\UserAgent()))->withMethod('POST');
+        \Config\Services::injectMock('request', $request);
+        $request->setGlobal('get', $get);
+        $request->setGlobal('post', $post);
+        $c = new \App\Controllers\Api\Surat();
+        $c->initController($request, service('response'), service('logger'));
+        $r = $c->{$metode}(...$arg);
+
+        return [$r->getStatusCode(), json_decode((string) $r->getBody(), true) ?: []];
+    }
+
     private function ujiTampilanKeputusan(): void
     {
         $this->bagian('Tampilan & controller: tombol per peran/status, unduhan, ACC massal, halaman Hak Akses');
@@ -1845,6 +1929,14 @@ class UjiSurat extends BaseCommand
             && substr_count($tP, 'ZZUJISS Balasan Satu') === 4 && ! str_contains($tP, 'ZZUJI SS 61') && ! str_contains($tP, '${'),
             'tak ditemukan: ' . implode(' | ', $kurang) . ' · perusahaan ' . substr_count($tP, 'ZZUJISS Balasan Satu') . '× · ada siswa 61: ' . (str_contains($tP, 'ZZUJI SS 61') ? 'ya' : 'tidak'));
         $this->cek('berkas Penarikan: tanggal "terhitung sejak" tetap TEBAL seperti contoh', preg_match('~<w:r>(<w:rPr>[^<]*+(?:<(?!/w:rPr>)[^<]*+)*+</w:rPr>)<w:t[^>]*>28 September 2027</w:t>~', $xP, $mb) === 1 && str_contains($mb[1], '<w:b/>'));
+        // Kaki ACC = paragraf terakhir, SESUDAH "NB :" dan kontak "1. …" (permintaan klien 2026-10-21; dulu di atas NB), dua baris.
+        $urutKaki = static fn (string $t): bool => ($nb = strpos($t, 'NB :')) !== false && ($ko = strpos($t, 'Kontak Uji', $nb)) !== false
+            && ($ka = strpos($t, 'disetujui secara elektronik')) !== false && $ka > $ko;
+        $posKaki  = (int) strpos($xP, 'disetujui secara elektronik');
+        $awalKaki = (int) strrpos(substr($xP, 0, $posKaki), '<w:p>');
+        $kakiXml  = $posKaki > 0 ? substr($xP, $awalKaki, (int) strpos($xP, '</w:p>', $posKaki) - $awalKaki) : '';
+        $this->cek('berkas Balasan & Penarikan: kaki "disetujui secara elektronik" di PALING BAWAH (sesudah NB & kontak), dua baris', $urutKaki($tB) && $urutKaki($tP)
+            && substr_count($kakiXml, '<w:br/>') === 1 && str_contains($kakiXml, 'Kode verifikasi') && str_contains($kakiXml, 'Dicetak oleh'), substr($tP, -260));
 
         // --- Badan surat = contoh sekolah (data contoh dibaca dari berkasnya; baris siswa dibandingkan terpisah)
         $this->atur(['kepsek_nama' => 'Napis Kuturupi, S.T.', 'kontak_surat_nama' => 'Puguh Wira Sakti, S.Pd.', 'kontak_surat_hp' => '0812 8584 526']);

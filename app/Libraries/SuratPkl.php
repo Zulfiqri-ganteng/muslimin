@@ -263,18 +263,18 @@ final class SuratPkl
     }
 
     /**
-     * Kaki ACC tepat 4 baris. Template Balasan/Penarikan menaruh kaki ACC di ruang DUA BARIS KOSONG contoh sekolah (antara
-     * nama penanda tangan dan "NB :") dengan 4 baris berjarak tetap — kurang dari 4 baris diisi baris kosong, lebih digabung
-     * ke baris ke-4 — supaya tinggi bagian itu selalu sama dan tata letak surat tidak bergeser dari contoh.
+     * Kaki ACC dua baris. Template Balasan/Penarikan menaruh kaki ACC di PALING BAWAH (sesudah kontak "NB : … 1. …", seperti
+     * Surat Izin PKL; permintaan klien 2026-10-21 — dulu di atas "NB :"). Surat padat 5 siswa nyaris sepenuh halaman F4, jadi
+     * keterangannya dipadatkan: baris 1 = "disetujui secara elektronik" + penyetuju, baris 2 = waktu, kode verifikasi, pencetak.
      */
-    public static function kakiEmpatBaris(string $kaki): string
+    public static function kakiDuaBaris(string $kaki): string
     {
-        $baris = trim($kaki) === '' ? [] : explode("\n", $kaki);
-        if (count($baris) > 4) {
-            $baris = array_merge(array_slice($baris, 0, 3), [implode(' · ', array_slice($baris, 3))]);
+        $baris = array_values(array_filter(array_map('trim', explode("\n", $kaki)), static fn (string $b): bool => $b !== ''));
+        if (count($baris) <= 2) {
+            return implode("\n", $baris);
         }
 
-        return implode("\n", array_pad($baris, 4, ''));
+        return $baris[0] . ' ' . $baris[1] . "\n" . implode(' · ', array_slice($baris, 2));
     }
 
     /**
@@ -392,10 +392,13 @@ final class SuratPkl
      * @param list<int>                                                $siswaIds siswa yang ditarik (Penarikan)
      * @param array<string, mixed>                                     $konteks
      *
-     * @return array{ok: bool, dibuat: list<int>, sama: list<string>, gagal: list<string>, pesan: string, lapor: int} lapor = jumlah
-     *         laporan "diterima" siswa yang ikut ditandai selesai (Balasan)
+     * @param array{terima?: array<int, list<int>>, alasan_tolak?: string} $opsi Balasan: per ajuan, siswa yang DITERIMA perusahaan
+     *        (ajuan yang tidak disebut = semua diterima); yang tidak dicentang dikeluarkan dulu sebagai "ditolak perusahaan" (pilahTerima)
+     *
+     * @return array{ok: bool, dibuat: list<int>, sama: list<string>, gagal: list<string>, pesan: string, lapor: int, dilepas: list<string>}
+     *         lapor = jumlah laporan "diterima" siswa yang ikut ditandai selesai (Balasan); dilepas = nama siswa yang dikeluarkan
      */
-    public function buat(string $jenis, array $h, array $ajuanIds, array $siswaIds, array $konteks, ?array $p = null): array
+    public function buat(string $jenis, array $h, array $ajuanIds, array $siswaIds, array $konteks, ?array $p = null, array $opsi = []): array
     {
         $ajuanIds = array_values(array_unique(array_filter(array_map('intval', $ajuanIds), static fn (int $x) => $x > 0)));
         $siswaIds = array_values(array_unique(array_filter(array_map('intval', $siswaIds), static fn (int $x) => $x > 0)));
@@ -403,6 +406,7 @@ final class SuratPkl
         $sama     = [];
         $gagal    = [];
         $lapor    = 0;
+        $dilepas  = [];
 
         if ($ajuanIds === []) {
             $gagal[] = $jenis === SuratJenis::BALASAN ? 'Pilih minimal satu ajuan PKL yang sudah disetujui.' : 'Pilih ajuan PKL tempat siswa ditarik.';
@@ -431,7 +435,12 @@ final class SuratPkl
                     $gagal[] = PklLapor::pesanKhusus($khusus);
                     continue;
                 }
-                $siswa = $a['siswa'];
+                $pilah = self::pilahTerima($a, array_key_exists($aid, $opsi['terima'] ?? []) ? (array) $opsi['terima'][$aid] : null, (string) ($opsi['alasan_tolak'] ?? ''));
+                if (! $pilah['ok']) {
+                    $gagal[] = $a['perusahaan'] . ' (' . $a['kode'] . ') — ' . $pilah['pesan'];
+                    continue;
+                }
+                $siswa = $pilah['diterima'];
                 $isi   = $h['isi'] + ['alamat' => $a['alamat']];
             } else {
                 $siswa = array_values(array_filter($a['siswa'], static fn (array $s) => in_array($s['siswa_id'], $siswaIds, true)));
@@ -450,6 +459,14 @@ final class SuratPkl
                 $sama[] = $a['perusahaan'] . ' (' . $a['kode'] . ') — ' . ($jenis === SuratJenis::BALASAN ? 'sudah punya Surat Balasan' : 'surat penarikan yang sama sudah ada')
                     . ' (' . SuratSekolahModel::kode($ada['id']) . ($ada['nomor'] ? ', nomor ' . $ada['nomor'] : '') . ').';
                 continue;
+            }
+            if ($jenis === SuratJenis::BALASAN && $pilah['tolak'] !== []) {
+                $k = $this->lepasTolak($aid, $pilah['tolak'], $pilah['alasan'], $konteks, $p);
+                if (! $k['ok']) {
+                    $gagal[] = $a['perusahaan'] . ' (' . $a['kode'] . ') — siswa yang tidak diterima gagal dikeluarkan: ' . $k['pesan'];
+                    continue;
+                }
+                $dilepas = array_merge($dilepas, array_column($pilah['tolak'], 'nama'));
             }
             $r = $svc->buat($jenis, [
                 'judul' => self::judul($jenis, $a['perusahaan'], array_column($siswa, 'nama')), 'tanggal_surat' => $h['tanggal_surat'], 'isi' => $isi,
@@ -478,22 +495,109 @@ final class SuratPkl
         if ($gagal !== []) {
             $pesan[] = count($gagal) . ' tidak bisa dibuat.';
         }
+        if ($dilepas !== []) {
+            $pesan[] = self::teksDilepas($dilepas);
+        }
 
-        return ['ok' => $dibuat !== [], 'dibuat' => $dibuat, 'sama' => $sama, 'gagal' => $gagal, 'pesan' => implode(' ', $pesan), 'lapor' => $lapor];
+        return ['ok' => $dibuat !== [], 'dibuat' => $dibuat, 'sama' => $sama, 'gagal' => $gagal, 'pesan' => implode(' ', $pesan), 'lapor' => $lapor, 'dilepas' => $dilepas];
+    }
+
+    /**
+     * Balasan: pisahkan anggota aktif ajuan menjadi yang DITERIMA perusahaan (masuk surat) dan yang TIDAK. $ids = centang "diterima"
+     * dari staf; null = tidak diatur → semua diterima. Minimal satu diterima (semua ditolak = tombol "Ditolak perusahaan" di ajuan).
+     * Yang tidak diterima wajib beralasan (dibaca siswa).
+     *
+     * @param array{kode: string, siswa: list<array{siswa_id: int, nama: string}>} $a baris ajuan()
+     * @param list<int|string>|null                                            $ids
+     *
+     * @return array{ok: bool, pesan?: string, diterima: list<array<string, mixed>>, tolak: list<array<string, mixed>>, alasan: string}
+     */
+    public static function pilahTerima(array $a, ?array $ids, string $alasan): array
+    {
+        $kosong = ['diterima' => [], 'tolak' => [], 'alasan' => ''];
+        if ($ids === null) {
+            return ['ok' => true, 'diterima' => $a['siswa']] + $kosong;
+        }
+        $ids = array_values(array_unique(array_filter(array_map('intval', array_filter($ids, 'is_scalar')), static fn (int $x) => $x > 0)));
+        if (array_diff($ids, array_column($a['siswa'], 'siswa_id')) !== []) {
+            return ['ok' => false, 'pesan' => 'Ada siswa pilihan yang bukan anggota aktif ajuan ini. Muat ulang halaman lalu pilih lagi.'] + $kosong;
+        }
+        if ($ids === []) {
+            return ['ok' => false, 'pesan' => 'Centang minimal satu siswa yang diterima perusahaan. Bila semua ditolak, buka ajuan ' . $a['kode'] . ' lalu tekan "Ditolak perusahaan".'] + $kosong;
+        }
+        $diterima = array_values(array_filter($a['siswa'], static fn (array $s) => in_array($s['siswa_id'], $ids, true)));
+        $tolak    = array_values(array_filter($a['siswa'], static fn (array $s) => ! in_array($s['siswa_id'], $ids, true)));
+        $alasan   = $tolak !== [] ? IsianBantu::rapikan($alasan) : '';
+        if ($tolak !== [] && mb_strlen($alasan) < PklKeluar::MIN_ALASAN) {
+            return ['ok' => false, 'pesan' => 'Tulis alasan untuk siswa yang tidak diterima (minimal ' . PklKeluar::MIN_ALASAN . ' huruf) — siswa akan membacanya.'] + $kosong;
+        }
+        if (mb_strlen($alasan) > PklAjuan::MAKS_CATATAN) {
+            return ['ok' => false, 'pesan' => 'Alasan terlalu panjang (maksimal ' . PklAjuan::MAKS_CATATAN . ' huruf).'] + $kosong;
+        }
+
+        return ['ok' => true, 'diterima' => $diterima, 'tolak' => $tolak, 'alasan' => $alasan];
+    }
+
+    /**
+     * Siswa yang tidak diterima perusahaan dikeluarkan dari ajuan (jenis "ditolak perusahaan": bebas mengajukan tempat lain, tetap
+     * tercatat di riwayatnya, Surat Izin yang terbit tetap sah). Hak: pemegang hak Buat Surat Balasan — tanpa hak ACC ajuan, SAMA
+     * dengan memproses laporan "sebagian diterima" di kotak Lapor Diterima (PklLapor::proses), karena surat ini memang menegaskan
+     * siapa yang diterima perusahaan dan masih melewati ACC Waka Hubin.
+     *
+     * @param list<array{siswa_id: int}> $tolak
+     *
+     * @return array{ok: bool, pesan: string}
+     */
+    private function lepasTolak(int $aid, array $tolak, string $alasan, array $konteks, ?array $p): array
+    {
+        return (new PklKeluar($this->db))->keluarkan($aid, [
+            'siswa_ids' => array_column($tolak, 'siswa_id'), 'jenis' => 'ditolak_perusahaan', 'catatan' => $alasan,
+        ], $konteks + ['sumber' => 'staf'], $p, false);
+    }
+
+    /** @param list<string> $nama */
+    public static function teksDilepas(array $nama): string
+    {
+        return implode(', ', $nama) . ' tidak diterima perusahaan: dikeluarkan dari ajuan (ditolak perusahaan) dan bebas mengajukan tempat PKL lain.';
+    }
+
+    /**
+     * Alasan bawaan untuk siswa yang tidak diterima + saran dari template alasan "keluar" yang judulnya "Ditolak perusahaan…"
+     * (Pengaturan PKL → Template alasan).
+     *
+     * @return array{bawaan: string, saran: list<array{judul: string, isi: string}>}
+     */
+    public function alasanTolak(): array
+    {
+        $saran = [];
+        foreach ((new PklAlasan($this->db))->daftar('keluar') as $t) {
+            if (str_starts_with(mb_strtolower($t['judul']), 'ditolak perusahaan')) {
+                $saran[] = ['judul' => $t['judul'], 'isi' => $t['isi']];
+            }
+        }
+        $bawaan = 'Perusahaan tidak menerima siswa ini untuk PKL. Silakan mengajukan tempat PKL lain.';
+        foreach ($saran as $s) {
+            $bawaan = mb_strtolower($s['judul']) === 'ditolak perusahaan' ? $s['isi'] : $bawaan;
+        }
+
+        return ['bawaan' => $bawaan, 'saran' => $saran];
     }
 
     /**
      * Ubah data surat (belum bernomor, status menunggu/dikembalikan). Balasan: tanggal, sapaan, alamat, periode (periode
-     * ajuan ikut diperbarui). Penarikan: tanggal, sapaan, tanggal efektif, alasan, dan siswa (dari ajuan yang sama).
+     * ajuan ikut diperbarui) + siswa yang DITERIMA perusahaan ($opsi['terima'], bila diatur; yang tidak dicentang dikeluarkan dari
+     * ajuan sebagai "ditolak perusahaan" — permintaan klien 2026-10-21: operator memperbaiki sendiri, bukan lewat lapor ulang siswa).
+     * Penarikan: tanggal, sapaan, tanggal efektif, alasan, dan siswa (dari ajuan yang sama).
      *
      * @param array<string, mixed>                                     $m       hasil SuratSekolah::muat()
      * @param array{tanggal_surat: string, isi: array<string, mixed>} $h       hasil periksa()
-     * @param list<int>                                                $siswaIds
+     * @param list<int>                                                $siswaIds siswa yang ditarik (Penarikan)
      * @param array<string, mixed>                                     $konteks
+     * @param array{terima?: ?list<int>, alasan_tolak?: string}       $opsi    Balasan: terima null/tak ada = daftar siswa tetap
      *
-     * @return array{ok: bool, pesan?: string}
+     * @return array{ok: bool, pesan?: string, kode?: string, dilepas?: list<string>}
      */
-    public function ubahSurat(array $m, array $h, array $siswaIds, array $konteks): array
+    public function ubahSurat(array $m, array $h, array $siswaIds, array $konteks, array $opsi = []): array
     {
         $surat = $m['surat'];
         $jenis = (string) $surat['jenis'];
@@ -501,10 +605,26 @@ final class SuratPkl
         $lama  = $surat['isi_arr'];
         $isi   = $h['isi'];
         $data  = ['tanggal_surat' => $h['tanggal_surat']];
+        $tolak = [];
+        $alasanTolak = '';
 
         if ($jenis === SuratJenis::BALASAN) {
             $isi += ['alamat' => (string) ($lama['alamat'] ?? '')];
             $nama = array_column($m['siswa'], 'nama');
+            if (($opsi['terima'] ?? null) !== null) {
+                $ajuan = $aid > 0 ? ($this->ajuan([$aid])[0] ?? null) : null;
+                if ($ajuan === null) {
+                    return ['ok' => false, 'kode' => 'siswa', 'pesan' => 'Ajuan PKL surat ini sudah tidak berstatus disetujui, jadi daftar siswa tidak bisa diubah.'];
+                }
+                $pilah = self::pilahTerima($ajuan, (array) $opsi['terima'], (string) ($opsi['alasan_tolak'] ?? ''));
+                if (! $pilah['ok']) {
+                    return ['ok' => false, 'kode' => 'siswa', 'pesan' => (string) $pilah['pesan']];
+                }
+                $data['siswa'] = array_map(static fn (array $s) => ['siswa_id' => $s['siswa_id'], 'kelas_id' => $s['kelas_id'], 'hp' => $s['hp']], $pilah['diterima']);
+                $nama          = array_column($pilah['diterima'], 'nama');
+                $tolak         = $pilah['tolak'];
+                $alasanTolak   = $pilah['alasan'];
+            }
         } else {
             $ajuan = $aid > 0 ? ($this->ajuan([$aid])[0] ?? null) : null;
             $ids   = array_values(array_unique(array_filter(array_map('intval', $siswaIds), static fn (int $x) => $x > 0)));
@@ -529,6 +649,15 @@ final class SuratPkl
         if (($ada = $svc->adaKunci($isi['kunci'], (int) $surat['id'])) !== null) {
             return ['ok' => false, 'pesan' => 'Surat yang sama sudah ada (' . SuratSekolahModel::kode($ada['id']) . ($ada['nomor'] ? ', nomor ' . $ada['nomor'] : '') . '). Tidak dibuat dobel.'];
         }
+        if (($s = SuratSekolah::alasanTakBisaUbah($surat)) !== null) {
+            return ['ok' => false, 'kode' => 'status', 'pesan' => $s]; // diperiksa SEBELUM siswa dikeluarkan dari ajuan
+        }
+        if ($tolak !== []) {
+            $k = $this->lepasTolak($aid, $tolak, $alasanTolak, $konteks, null);
+            if (! $k['ok']) {
+                return ['ok' => false, 'kode' => 'siswa', 'pesan' => 'Siswa yang tidak diterima gagal dikeluarkan dari ajuan: ' . $k['pesan']];
+            }
+        }
 
         $r = $svc->ubah((int) $surat['id'], $data + [
             'judul' => self::judul($jenis, (string) $surat['perusahaan_nama'], $nama), 'isi' => $isi,
@@ -540,7 +669,7 @@ final class SuratPkl
             $this->catatAjuan($jenis, $aid, (int) $surat['id'], $isi, $nama, $konteks, false);
         }
 
-        return ['ok' => true];
+        return ['ok' => true, 'dilepas' => array_column($tolak, 'nama')];
     }
 
     /**

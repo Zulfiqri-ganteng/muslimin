@@ -109,6 +109,8 @@ document.addEventListener('alpine:init', function () {
         return {
             jenis: 'balasan', ubah: false, tempat: '', ajuan: [], dipilih: [], ajuanTunggal: '', siswaDipilih: [], cari: '',
             mulai: '', selesai: '', tglEfektif: '', alasanPilih: '0', alasanLain: '', alasanSaran: [], batas: {},
+            // Balasan: siswa yang TIDAK diterima perusahaan ("ajuan:siswa" => true) + alasannya (dibaca siswa).
+            tolak: {}, alasanTolak: '', alasanTolakSaran: [],
 
             init: function () {
                 var self = this;
@@ -127,6 +129,9 @@ document.addEventListener('alpine:init', function () {
                 this.alasanLain = c.alasanLain || '';
                 this.alasanSaran = c.alasanSaran || [];
                 this.batas = c.batas || {};
+                this.tolak = c.tolakAwal || {};
+                this.alasanTolak = c.alasanTolak || '';
+                this.alasanTolakSaran = c.alasanTolakSaran || [];
 
                 // Balasan: satu ajuan dipilih dan periodenya sudah tercatat → isi otomatis bila kolom periode masih kosong.
                 this.$watch('dipilih', function (v) {
@@ -151,6 +156,24 @@ document.addEventListener('alpine:init', function () {
                 this.dipilih = this.ajuan.filter(function (a) { return !a.balasan && self.tampil(a); }).map(function (a) { return String(a.id); });
             },
             siswaAjuan: function () { var a = this.cariAjuan(this.ajuanTunggal); return a ? a.siswa : []; },
+
+            /* Balasan: centang "siswa yang diterima perusahaan" per ajuan terpilih (ubah: ajuan surat itu). */
+            terpilih: function (a) { return this.ubah || this.dipilih.indexOf(String(a.id)) !== -1; },
+            kunciTerima: function (a, s) { return String(a.id) + ':' + String(s.id); },
+            diterima: function (a, s) { return !this.tolak[this.kunciTerima(a, s)]; },
+            ubahTerima: function (a, s) {
+                var baru = Object.assign({}, this.tolak), k = this.kunciTerima(a, s);
+                if (baru[k]) { delete baru[k]; } else { baru[k] = true; }
+                this.tolak = baru;
+            },
+            namaTerima: function (a) { return 'terima[' + a.id + '][]'; },
+            namaAtur: function (a) { return 'atur_terima[' + a.id + ']'; },
+            jumlahTerima: function (a) { var self = this; return a.siswa.filter(function (s) { return self.diterima(a, s); }).length; },
+            adaTolak: function () {
+                var self = this;
+                return this.ajuan.some(function (a) { return self.terpilih(a) && a.siswa.some(function (s) { return !self.diterima(a, s); }); });
+            },
+            pakaiAlasanTolak: function (i) { var t = this.alasanTolakSaran[i]; if (t) { this.alasanTolak = t.isi; } },
             // (F9) nama siswa satu ajuan, dipisah koma (dulu fungsi sebaris di x-text — tak didukung Alpine versi CSP).
             daftarNamaSiswa: function (a) { return (a && a.siswa ? a.siswa : []).map(function (s) { return s.nama; }).join(", "); },
             namaTempat: function () { var a = this.cariAjuan(this.ajuanTunggal); return this.tempat || (a ? a.perusahaan : ''); },

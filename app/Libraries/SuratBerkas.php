@@ -279,7 +279,7 @@ final class SuratBerkas
         ];
         $v = array_merge($v, self::khusus((string) $surat['jenis'], $surat, $siswa, $ajuan, $setting, $p));
         if (SuratPkl::untuk((string) $surat['jenis'])) {
-            $v['acc_footer'] = SuratPkl::kakiEmpatBaris($v['acc_footer']); // ruang kaki tetap 4 baris (lihat template)
+            $v['acc_footer'] = SuratPkl::kakiDuaBaris($v['acc_footer']); // paragraf terakhir surat, sesudah kontak NB (lihat template)
         }
 
         return [
