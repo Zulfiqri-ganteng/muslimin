@@ -1231,6 +1231,13 @@ $routes->group('api/v1', ['namespace' => 'App\Controllers\Api', 'filter' => 'cor
         $routes->get('surat', 'Surat::daftar');
         $routes->get('surat/form/(:segment)', 'Surat::form/$1');
         $routes->get('surat/siswa', 'Surat::siswa');
+        // Jadwal Ujian & TKA untuk permintaan surat dari siswa (Layanan Siswa; hak Buat Izin Ujian / Izin TKA).
+        $routes->get('surat/jadwal', 'Surat::jadwal');
+        $routes->post('surat/jadwal', 'Surat::jadwalTambah');
+        $routes->post('surat/jadwal/(:num)', 'Surat::jadwalUbah/$1');
+        $routes->post('surat/jadwal/(:num)/buka', 'Surat::jadwalBuka/$1');
+        $routes->post('surat/jadwal/(:num)/tutup', 'Surat::jadwalTutup/$1');
+        $routes->delete('surat/jadwal/(:num)', 'Surat::jadwalHapus/$1');
         $routes->post('surat/acc-massal', 'Surat::accMassal');
         $routes->post('surat/unduh-massal', 'Surat::unduhMassal');
         // Kotak "Lapor Diterima PKL" (laporan siswa → Surat Balasan); hak = Buat ATAU ACC Surat Balasan (PklLapor::hak).

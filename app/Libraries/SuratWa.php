@@ -7,23 +7,31 @@ use App\Models\SuratSekolahModel;
 use CodeIgniter\Database\BaseConnection;
 
 /**
- * Kabar WhatsApp MANUAL ke siswa bahwa surat sekolahnya SIAP DIAMBIL — saat ini untuk Surat Balasan PKL (surat yang diambil
- * siswa di Tata Usaha lalu diserahkan ke perusahaan). Pola sama dengan kabar Surat Izin PKL (Libraries\PklWa): sistem hanya
+ * Kabar WhatsApp MANUAL ke siswa bahwa surat sekolahnya SIAP DIAMBIL — semua jenis surat sekolah (sejak 2026-10-22, Layanan
+ * Siswa; dulu hanya Surat Balasan PKL). Pola sama dengan kabar Surat Izin PKL (Libraries\PklWa): sistem hanya
  * menyiapkan nomor, pesan, dan tautan wa.me — staf yang menekan tombol dan mengirim dari WhatsApp-nya sendiri (tanpa gateway,
  * tanpa biaya, tanpa risiko nomor sekolah diblokir).
  *
  * Kabar baru tersedia setelah surat DIUNDUH (cetak_ke > 0): sistem tahu surat sudah diunduh, bukan sudah dicetak di kertas,
  * jadi redaksi "siap diambil" aman (keputusan user 2026-10-13). Nomor = HP siswa di surat (dari ajuan PKL), cadangan no_hp di
- * Master Siswa. Templat diatur di Pengaturan PKL (pkl_pengaturan.wa_pesan_balasan; kosong = PESAN_BAWAAN), penanda sama
- * dengan PklWa. Yang boleh mengabari = pemegang hak Unduh jenis surat itu. Jejak: dikabari_at/oleh per siswa, riwayat surat
+ * Master Siswa. Templat Surat Balasan diatur di Pengaturan PKL (pkl_pengaturan.wa_pesan_balasan; kosong = PESAN_BAWAAN); jenis
+ * lain memakai PESAN_JENIS (penanda {surat} = nama surat, mis. "Surat Izin ASAS"). Penanda lain sama dengan PklWa. Yang boleh mengabari = pemegang hak Unduh jenis surat itu. Jejak: dikabari_at/oleh per siswa, riwayat surat
  * (aksi "kabari"), Audit Log.
  */
 final class SuratWa
 {
     /** Jenis surat yang punya kabar "siap diambil". */
-    public const JENIS = [SuratJenis::BALASAN];
+    public const JENIS = [SuratJenis::BALASAN, SuratJenis::ASTS, SuratJenis::TKA, SuratJenis::PERNYATAAN, SuratJenis::PENARIKAN];
 
     public const PESAN_BAWAAN = 'Halo {nama}, Surat Balasan PKL untuk {perusahaan} (No. {nomor_surat}) sudah selesai dan siap diambil di Tata Usaha {sekolah}. Setelah diambil, serahkan ke perusahaan tempat PKL. Terima kasih.';
+
+    /** Templat jenis selain Surat Balasan (tidak diatur di Pengaturan). */
+    public const PESAN_JENIS = [
+        SuratJenis::ASTS       => 'Halo {nama}, {surat} untuk {perusahaan} (No. {nomor_surat}) sudah selesai dan siap diambil di Tata Usaha {sekolah}. Setelah diambil, serahkan ke perusahaan tempat PKL-mu. Terima kasih.',
+        SuratJenis::TKA        => 'Halo {nama}, {surat} untuk {perusahaan} (No. {nomor_surat}) sudah selesai dan siap diambil di Tata Usaha {sekolah}. Setelah diambil, serahkan ke perusahaan tempat PKL-mu. Terima kasih.',
+        SuratJenis::PENARIKAN  => 'Halo {nama}, {surat} dari {perusahaan} (No. {nomor_surat}) sudah selesai dan siap diambil di Tata Usaha {sekolah}. Setelah diambil, serahkan ke perusahaan tempat PKL-mu. Terima kasih.',
+        SuratJenis::PERNYATAAN => 'Halo {nama}, {surat} sudah dicetak dan siap diambil di Tata Usaha {sekolah}. Minta orang tua/wali menandatanganinya di atas materai Rp10.000. Terima kasih.',
+    ];
 
     /** Batas baris sekali tampil (kabar massal per jenis). */
     public const MAKS_BARIS = 300;
@@ -57,12 +65,27 @@ final class SuratWa
         return self::$kolomAda;
     }
 
-    /** Templat yang berlaku (isian Pengaturan PKL, atau bawaan). */
-    public static function templat(array $p): string
+    /** Templat yang berlaku untuk jenis $jenis (Surat Balasan: isian Pengaturan PKL atau bawaan; jenis lain: PESAN_JENIS). */
+    public static function templat(array $p, string $jenis = SuratJenis::BALASAN): string
     {
+        if ($jenis !== SuratJenis::BALASAN && isset(self::PESAN_JENIS[$jenis])) {
+            return self::PESAN_JENIS[$jenis];
+        }
         $t = trim((string) ($p['wa_pesan_balasan'] ?? ''));
 
         return $t !== '' ? $t : self::PESAN_BAWAAN;
+    }
+
+    /** Nama surat di pesan: "Surat Izin ASAS" (ujian dari isian), "Surat Izin TKA", "Surat Pernyataan Orang Tua PKL", … */
+    public static function namaSurat(string $jenis, array $isi): string
+    {
+        return match ($jenis) {
+            SuratJenis::ASTS       => 'Surat Izin ' . SuratAcara::kodeUjian($isi['kegiatan'] ?? ''),
+            SuratJenis::TKA        => 'Surat Izin TKA',
+            SuratJenis::PERNYATAAN => 'Surat Pernyataan Orang Tua PKL',
+            SuratJenis::PENARIKAN  => 'Surat Penarikan PKL',
+            default                => SuratJenis::label($jenis),
+        };
     }
 
     /**
@@ -148,19 +171,19 @@ final class SuratWa
         }
         $b = $this->db->table('surat_sekolah_siswa ss')
             ->select('ss.surat_id, ss.siswa_id, ss.hp, ss.dikabari_at, ss.dikabari_oleh, s.nama, s.no_hp AS hp_master, k.nama_kelas')
-            ->select('ws.jenis, ws.nomor, ws.tanggal_surat, ws.perusahaan_nama')
+            ->select('ws.jenis, ws.nomor, ws.tanggal_surat, ws.perusahaan_nama, ws.isi')
             ->join('surat_sekolah ws', 'ws.id = ss.surat_id')
             ->join('siswa s', 's.id = ss.siswa_id')
             ->join('kelas k', 'k.id = ss.kelas_id', 'left')
             ->whereIn('ws.jenis', self::JENIS)->where('ws.status', 'disetujui')->where('ws.cetak_ke >', 0);
         $saring($b);
         $rows    = $b->orderBy('ws.terakhir_cetak_at', 'ASC')->orderBy('ws.id', 'ASC')->orderBy('ss.urut', 'ASC')->orderBy('ss.id', 'ASC')->limit(self::MAKS_BARIS)->get()->getResultArray();
-        $templat = self::templat($p);
-        $out     = [];
+        $out = [];
         foreach ($rows as $r) {
             $hp    = trim((string) ($r['hp'] ?? '')) !== '' ? (string) $r['hp'] : trim((string) ($r['hp_master'] ?? ''));
             $wa    = $hp !== '' ? PklWa::nomorWa($hp) : null;
-            $pesan = PklWa::isi($templat, [
+            $pesan = PklWa::isi(self::templat($p, (string) $r['jenis']), [
+                'surat' => self::namaSurat((string) $r['jenis'], SuratSekolah::dekodeIsi((string) ($r['isi'] ?? ''))),
                 'nama' => IsianBantu::judul((string) $r['nama']), 'kelas' => (string) ($r['nama_kelas'] ?? ''), 'perusahaan' => (string) $r['perusahaan_nama'],
                 'nomor_surat' => (string) ($r['nomor'] ?? ''), 'tanggal_surat' => IsianBantu::tanggalIndo((string) $r['tanggal_surat']),
                 'sekolah' => (string) ($setting['school_name'] ?? ''),

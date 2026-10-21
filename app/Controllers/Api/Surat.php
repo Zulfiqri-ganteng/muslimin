@@ -8,6 +8,7 @@ use App\Libraries\PklHak;
 use App\Libraries\PklLapor;
 use App\Libraries\SuratAcara;
 use App\Libraries\SuratBerkas;
+use App\Libraries\SuratJadwal;
 use App\Libraries\SuratJenis;
 use App\Libraries\SuratKeputusan;
 use App\Libraries\SuratPeriksa;
@@ -45,7 +46,11 @@ use CodeIgniter\HTTP\ResponseInterface;
  *   GET  surat/balasan/laporan?status=           kotak "Lapor Diterima PKL" (laporan siswa → Surat Balasan) + hak peran ini
  *   POST surat/balasan/laporan/{id}/setujui|buat  proses laporan jadi Surat Balasan ("Setujui & buat" / masuk antrean ACC)
  *   POST surat/balasan/laporan/{id}/kembalikan    {alasan} — kembalikan laporan ke siswa
- *   GET  surat/{id}/wa · GET surat/wa?jenis=     kabar WhatsApp "surat siap diambil" (Surat Balasan; hak Unduh; surat sudah diunduh)
+ *   GET  surat/{id}/wa · GET surat/wa?jenis=     kabar WhatsApp "surat siap diambil" (semua jenis sejak 2026-10-22; hak Unduh; sudah diunduh)
+ *   — Layanan Siswa (2026-10-22, docs/API-SURAT.md "Pembaruan 2026-10-22"):
+ *   GET  surat?asal=siswa|staf                   + baris jml_minta/diajukan_siswa, meta.permintaan_siswa {jenis: {menunggu, siap, perlu_acc}}
+ *   GET  surat/{id}                              + peminta [{nama, kelas, waktu}], ortu_isian [{siswa_id, nama, pekerjaan, alamat, hp}]
+ *   GET  surat/jadwal · POST surat/jadwal · POST surat/jadwal/{id} · POST surat/jadwal/{id}/buka|tutup · DELETE surat/jadwal/{id}
  *   POST surat/{id}/wa/{siswa_id}/tandai          catat siswa sudah dikabari
  */
 class Surat extends BaseApiController
@@ -99,8 +104,12 @@ class Surat extends BaseApiController
             'jenis'  => (string) $this->request->getGet('jenis'),
             'tahun'  => (int) $this->request->getGet('tahun'),
             'q'      => mb_substr(IsianBantu::rapikan((string) $this->request->getGet('q')), 0, 80),
+            'asal'   => (string) $this->request->getGet('asal'), // siswa | staf | '' (Layanan Siswa, 2026-10-22)
         ];
         $galat = [];
+        if ($f['asal'] !== '' && ! in_array($f['asal'], ['siswa', 'staf'], true)) {
+            $galat['asal'] = 'Asal harus "siswa" (diminta lewat Layanan Siswa) atau "staf" (kosong = semua).';
+        }
         if ($f['status'] !== '' && ! in_array($f['status'], SuratSekolahModel::STATUS, true)) {
             $galat['status'] = 'Status harus salah satu: ' . implode(', ', SuratSekolahModel::STATUS) . ' (kosong = semua).';
         }
@@ -121,6 +130,8 @@ class Surat extends BaseApiController
         return $this->ok(array_map(fn (array $r): array => $this->ringkas($r, $ulang), $hasil['rows']), 'Daftar surat.', [
             'pagination' => ['page' => $hasil['page'], 'per_page' => $per, 'total' => $hasil['total'], 'total_pages' => $hasil['jml_hal']],
             'hitung'     => $this->svc->hitungStatus(),
+            // Kotak "Permintaan dari siswa" per jenis (sama dengan web): {jenis: {menunggu, siap, perlu_acc}}; {} = tak ada / tak berhak.
+            'permintaan_siswa' => (object) $this->svc->ringkasPermintaanUntuk($this->peran(), $this->p),
         ]);
     }
 
@@ -134,8 +145,9 @@ class Surat extends BaseApiController
         $jenis  = (string) $s['jenis'];
         $status = (string) $s['status'];
         $ulang  = $status === 'disetujui' && SuratSekolah::perluCetakUlang($s, $m['siswa'], $this->p);
+        $peminta = $this->svc->peminta((int) $s['id']);
 
-        $data = $this->ringkas($s + ['jml_siswa' => count($m['siswa'])], $ulang ? [(int) $s['id'] => true] : []);
+        $data = $this->ringkas($s + ['jml_siswa' => count($m['siswa']), 'jml_minta' => count($peminta)], $ulang ? [(int) $s['id'] => true] : []);
         $data += [
             'pengajuan_id' => ! empty($s['pengajuan_id']) ? (int) $s['pengajuan_id'] : null,
             'isi'          => array_diff_key((array) $s['isi_arr'], array_flip(SuratJenis::ISI_TERSEMBUNYI)),
@@ -144,6 +156,11 @@ class Surat extends BaseApiController
                 'siswa_id' => (int) $x['siswa_id'], 'nama' => $x['nama'], 'nis' => $x['nis'], 'nisn' => $x['nisn'],
                 'kelas' => $x['nama_kelas'], 'jurusan' => $x['jurusan_nama'], 'hp' => ($x['hp'] ?? '') !== '' ? $x['hp'] : ($x['hp_master'] ?: null),
             ], $m['siswa']),
+            // Layanan Siswa: siswa yang meminta surat ini + data orang tua yang diisi siswa (Pernyataan Orang Tua).
+            'peminta'      => $peminta,
+            'ortu_isian'   => array_values(array_map(static fn ($sid, $o): array => ['siswa_id' => (int) $sid, 'nama' => (string) ($o['nama'] ?? ''),
+                'pekerjaan' => (string) ($o['pekerjaan'] ?? ''), 'alamat' => (string) ($o['alamat'] ?? ''), 'hp' => (string) ($o['hp'] ?? '')],
+                array_keys((array) ($s['isi_arr']['ortu_isian'] ?? [])), array_values((array) ($s['isi_arr']['ortu_isian'] ?? [])))),
             'peringatan'   => in_array($status, ['menunggu', 'disetujui'], true) ? SuratPeriksa::untuk($s, $m['siswa'], $this->p) : [],
             'template_ada' => is_file(SuratJenis::pathTemplate($jenis, SuratJenis::varian($jenis, (array) $s['isi_arr']))),
             'riwayat'      => array_map(static fn (array $r): array => [
@@ -621,6 +638,131 @@ class Surat extends BaseApiController
         return array_map(static fn ($v) => is_bool($v) ? ($v ? '1' : '0') : $v, parent::body());
     }
 
+    // ================================================================= Jadwal Ujian & TKA (Layanan Siswa, 2026-10-22)
+
+    /**
+     * GET surat/jadwal — jadwal yang dibuka untuk permintaan surat izin dari siswa (sama dengan web Surat Sekolah → Jadwal Ujian & TKA):
+     * hanya jenis yang boleh DIBUAT peran ini (Izin Ujian dan/atau Izin TKA) + bahan formulir (periode menu Ujian, pilihan ujian).
+     */
+    public function jadwal(): ResponseInterface
+    {
+        if (! SuratJadwal::tabelAda()) {
+            return $this->failure('Fitur jadwal belum aktif di server ini (migrasi belum dijalankan).', 409);
+        }
+        $jenis = array_values(array_filter(SuratJadwal::JENIS, fn (string $j): bool => PklHak::bolehSurat($this->peran(), 'buat', $j)));
+        if ($jenis === []) {
+            return $this->forbidden('Akun ' . HakAkses::label($this->peran()) . ' tidak punya hak membuat Surat Izin Ujian / TKA, jadi tidak bisa mengatur jadwalnya.');
+        }
+
+        return $this->ok([
+            'jenis'           => $jenis,
+            'jadwal'          => array_map(fn (array $j): array => $this->barisJadwal($j), (new SuratJadwal())->daftar($jenis)),
+            'ujian'           => array_map(static fn (string $k, array $u): array => ['kode' => $k, 'nama' => $u[0]], array_keys(SuratAcara::UJIAN), SuratAcara::UJIAN),
+            'periode_ujian'   => in_array(SuratJenis::ASTS, $jenis, true) ? (new SuratAcara())->periodeUjian() : [],
+            'sesi_saran'      => SuratAcara::SESI_SARAN,
+            'tempat_bawaan'   => SuratAcara::TEMPAT_BAWAAN,
+            'tahun_pelajaran' => (string) ((new SettingModel())->get()['academic_year'] ?? ''),
+        ], 'Jadwal ujian & TKA.');
+    }
+
+    /** POST surat/jadwal {jenis, kegiatan?, periode? (indeks periode_ujian), semester?, tahun_pelajaran?, sesi?, tgl_mulai, tgl_selesai, tempat?, buka} */
+    public function jadwalTambah(): ResponseInterface
+    {
+        $in    = $this->body();
+        $jenis = (string) ($in['jenis'] ?? '');
+        if (! in_array($jenis, SuratJadwal::JENIS, true)) {
+            return $this->invalid(['jenis' => 'Jenis harus izin_asts (ujian) atau izin_tka.']);
+        }
+        if (($tolak = $this->tolakJenis('buat', $jenis)) !== null) {
+            return $tolak;
+        }
+
+        return $this->hasilJadwal((new SuratJadwal())->simpan($jenis, $in, null, $this->konteks()), true);
+    }
+
+    /** POST surat/jadwal/{id} — ubah (jadwal yang belum dipakai permintaan siswa). */
+    public function jadwalUbah($id): ResponseInterface
+    {
+        [$j, $tolak] = $this->muatJadwal((int) $id);
+        if ($tolak !== null) {
+            return $tolak;
+        }
+
+        return $this->hasilJadwal((new SuratJadwal())->simpan($j['jenis'], $this->body(), $j['id'], $this->konteks()));
+    }
+
+    /** POST surat/jadwal/{id}/buka */
+    public function jadwalBuka($id): ResponseInterface
+    {
+        return $this->aturBukaJadwal((int) $id, true);
+    }
+
+    /** POST surat/jadwal/{id}/tutup */
+    public function jadwalTutup($id): ResponseInterface
+    {
+        return $this->aturBukaJadwal((int) $id, false);
+    }
+
+    /** DELETE surat/jadwal/{id} — hapus jadwal yang belum dipakai permintaan siswa. */
+    public function jadwalHapus($id): ResponseInterface
+    {
+        [$j, $tolak] = $this->muatJadwal((int) $id);
+        if ($tolak !== null) {
+            return $tolak;
+        }
+        $r = (new SuratJadwal())->hapus($j['id'], $this->konteks());
+
+        return $r['ok'] ? $this->ok(null, $r['pesan']) : $this->failure($r['pesan'], 409);
+    }
+
+    private function aturBukaJadwal(int $id, bool $buka): ResponseInterface
+    {
+        [$j, $tolak] = $this->muatJadwal($id);
+        if ($tolak !== null) {
+            return $tolak;
+        }
+        $r = (new SuratJadwal())->aturBuka($j['id'], $buka, $this->konteks());
+
+        return $r['ok'] ? $this->ok($this->barisJadwal((new SuratJadwal())->muat($j['id']) ?? $j), $r['pesan']) : $this->failure($r['pesan'], 409);
+    }
+
+    /** @return array{0: array<string, mixed>|null, 1: ResponseInterface|null} */
+    private function muatJadwal(int $id): array
+    {
+        $j = (new SuratJadwal())->muat($id);
+        if ($j === null) {
+            return [null, $this->missing('Jadwal tidak ditemukan (mungkin sudah dihapus).')];
+        }
+
+        return [$j, $this->tolakJenis('buat', $j['jenis'])];
+    }
+
+    /** @param array{ok: bool, pesan: string, galat?: array<string, string>, id?: int} $r */
+    private function hasilJadwal(array $r, bool $baru = false): ResponseInterface
+    {
+        if (! $r['ok']) {
+            return isset($r['galat']) ? $this->invalid($r['galat'], $r['pesan']) : $this->failure($r['pesan'], 409);
+        }
+        $data = $this->barisJadwal((new SuratJadwal())->muat((int) $r['id']) ?? []);
+
+        return $baru ? $this->created($data, $r['pesan']) : $this->ok($data, $r['pesan']);
+    }
+
+    /** Satu jadwal untuk aplikasi. */
+    private function barisJadwal(array $j): array
+    {
+        return [
+            'id' => (int) ($j['id'] ?? 0), 'jenis' => (string) ($j['jenis'] ?? ''), 'label' => (string) ($j['label'] ?? ''),
+            'kegiatan' => ($j['jenis'] ?? '') === SuratJenis::ASTS ? SuratAcara::kodeUjian($j['kegiatan'] ?? '') : 'TKA',
+            'semester' => $j['semester'] ?? null, 'tahun_pelajaran' => $j['tahun_pelajaran'] ?? null, 'sesi' => $j['sesi'] ?? null,
+            'tgl_mulai' => (string) ($j['tgl_mulai'] ?? ''), 'tgl_selesai' => (string) ($j['tgl_selesai'] ?? ''), 'hari_tanggal' => (string) ($j['hari_tanggal'] ?? ''),
+            'tempat' => (string) ($j['tempat'] ?? ''), 'buka' => (int) ($j['buka'] ?? 0) === 1,
+            'keadaan' => (string) ($j['keadaan'] ?? ''), 'keadaan_label' => SuratJadwal::TAMPIL[$j['keadaan'] ?? ''][0] ?? '',
+            'jml_permintaan' => (int) ($j['jml_permintaan'] ?? 0), 'bisa_diubah' => (int) ($j['jml_permintaan'] ?? 0) === 0,
+            'dibuat_oleh' => $j['dibuat_nama'] ?? null,
+        ];
+    }
+
     private function peran(): string
     {
         return (string) ($this->admin()['role'] ?? '');
@@ -722,6 +864,8 @@ class Surat extends BaseApiController
             'nomor'             => ($r['nomor'] ?? '') !== '' ? (string) $r['nomor'] : null,
             'perusahaan'        => ($r['perusahaan_nama'] ?? '') !== '' ? (string) $r['perusahaan_nama'] : null,
             'jml_siswa'         => (int) ($r['jml_siswa'] ?? 0),
+            'jml_minta'         => (int) ($r['jml_minta'] ?? 0),          // siswa yang meminta lewat Layanan Siswa
+            'diajukan_siswa'    => (int) ($r['jml_minta'] ?? 0) > 0,      // lencana "Diajukan siswa"
             'diunduh_kali'      => (int) $r['cetak_ke'],
             'perlu_cetak_ulang' => ! empty($ulang[$id]),
             'catatan_staf'      => ($r['catatan_staf'] ?? '') !== '' ? (string) $r['catatan_staf'] : null,

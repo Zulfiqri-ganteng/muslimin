@@ -38,6 +38,15 @@ document.addEventListener('change', function (e) {
     if (el.form.requestSubmit) { el.form.requestSubmit(); } else { el.form.submit(); }
 });
 
+// Tautan "Lihat semua" layanan di beranda (<a data-buka-daftar href="…/cari">): membuka panel "Daftar layanan" di kepala
+// (kepalaPortal mendengar acara 'buka-daftar'). Tanpa JS tautan tetap menuju halaman Cari.
+document.addEventListener('click', function (e) {
+    var a = e.target && e.target.closest ? e.target.closest('[data-buka-daftar]') : null;
+    if (!a) { return; }
+    e.preventDefault();
+    window.dispatchEvent(new CustomEvent('buka-daftar'));
+});
+
 document.addEventListener('alpine:init', function () {
     var normal = function (s) {
         return String(s || '').toLowerCase().replace(/[^0-9a-zÀ-ɏ]+/g, ' ').replace(/\s+/g, ' ').trim();
@@ -62,9 +71,19 @@ document.addEventListener('alpine:init', function () {
                 var self = this;
                 akar = this.$el;
                 window.addEventListener('resize', function () { if (self.daftar) { aturLetak(); } });
+                // Tautan "Lihat semua" di beranda ([data-buka-daftar]) → panel dibuka di bawah tombol kisi yang sedang tampil.
+                window.addEventListener('buka-daftar', function () {
+                    var tampil = Array.prototype.filter.call(akar.querySelectorAll('[aria-controls="daftar-layanan"]'), function (b) {
+                        return b.getClientRects().length > 0;
+                    });
+                    if (tampil.length) { self.bukaDari(tampil[0]); }
+                });
             },
             bukaDaftar: function () {
-                tombol = this.$el; // Alpine versi CSP: $el di dalam metode = elemen pemicu (tombol kisi yang diklik)
+                this.bukaDari(this.$el); // Alpine versi CSP: $el di dalam metode = elemen pemicu (tombol kisi yang diklik)
+            },
+            bukaDari: function (el) {
+                tombol = el;
                 asal = document.activeElement;
                 aturLetak();
                 this.daftar = true;

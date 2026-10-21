@@ -108,6 +108,28 @@ $dd = 'font-semibold text-gray-900 dark:text-white';
                         <div><dt class="<?= $dt ?>"><?= esc($label) ?></dt><dd class="<?= $dd ?>"><?= esc($nilai) ?></dd></div>
                     <?php endforeach; ?>
                     <div><dt class="<?= $dt ?>">Dibuat oleh</dt><dd class="<?= $dd ?>"><?= esc((string) $surat['dibuat_nama'] !== '' ? $surat['dibuat_nama'] : '—') ?></dd><dd class="<?= $dt ?>"><?= esc(date('d-m-Y H:i', strtotime((string) $surat['created_at']))) ?></dd></div>
+                    <?php if (! empty($peminta)): // Layanan Siswa: siswa yang meminta surat ini sendiri ?>
+                        <div class="sm:col-span-2">
+                            <dt class="<?= $dt ?> flex items-center gap-2">Diajukan siswa <span class="lencana lencana-hijau"><?= count($peminta) ?></span></dt>
+                            <dd class="<?= $dd ?>">
+                                <ul class="mt-1 space-y-0.5">
+                                    <?php foreach ($peminta as $pm): ?>
+                                        <li><?= esc($pm['nama']) ?><?= $pm['kelas'] !== '' ? ' <span class="text-gray-500 dark:text-gray-400">(' . esc($pm['kelas']) . ')</span>' : '' ?> <span class="text-xs text-gray-500 dark:text-gray-400">· <?= esc(date('d-m-Y H:i', strtotime($pm['waktu']))) ?></span></li>
+                                    <?php endforeach; ?>
+                                </ul>
+                            </dd>
+                        </div>
+                    <?php endif; ?>
+                    <?php
+                    // Pernyataan Orang Tua: data orang tua yang diisi siswa sendiri (dicetak menimpa data sekolah).
+                    $ortuIsian = is_array($surat['isi_arr']['ortu_isian'] ?? null) ? $surat['isi_arr']['ortu_isian'] : [];
+                    $namaSiswa = array_column($siswa, 'nama', 'siswa_id');
+                    foreach ($ortuIsian as $sid => $o): if (! is_array($o)) { continue; } ?>
+                        <div class="sm:col-span-2">
+                            <dt class="<?= $dt ?>">Data orang tua diisi siswa<?= isset($namaSiswa[$sid]) ? ' (' . esc($namaSiswa[$sid]) . ')' : '' ?></dt>
+                            <dd class="<?= $dd ?>"><?= esc(implode(' · ', array_filter([(string) ($o['nama'] ?? ''), (string) ($o['pekerjaan'] ?? ''), (string) ($o['alamat'] ?? ''), (string) ($o['hp'] ?? '')], static fn (string $x): bool => $x !== ''))) ?></dd>
+                        </div>
+                    <?php endforeach; ?>
                 </dl>
             </section>
 

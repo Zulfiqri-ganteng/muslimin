@@ -37,7 +37,11 @@ class Surat extends SuratDasar
             'jenis'  => (string) $this->request->getGet('jenis'),
             'tahun'  => (int) $this->request->getGet('tahun'),
             'q'      => mb_substr(IsianBantu::rapikan((string) $this->request->getGet('q')), 0, 80),
+            'asal'   => (string) $this->request->getGet('asal'), // siswa (diminta lewat Layanan Siswa) | staf | '' semua
         ];
+        if (! in_array($f['asal'], ['siswa', 'staf'], true)) {
+            $f['asal'] = '';
+        }
         if (! in_array($f['status'], SuratSekolahModel::STATUS, true)) {
             $f['status'] = '';
         }
@@ -83,12 +87,14 @@ class Surat extends SuratDasar
             'jmlHal'     => $hasil['jml_hal'],
             'tahun'      => $this->surat->tahunTersedia(),
             'perluUlang' => $this->surat->perluUlangBanyak($hasil['rows'], $this->p),
+            // Kotak "Permintaan dari siswa" per jenis (Layanan Siswa) — hanya jenis yang boleh ditangani peran ini (Buat/ACC/Unduh).
+            'permintaanSiswa' => $this->surat->ringkasPermintaanUntuk($peran, $this->p),
             // Unduhan massal: hanya bagi yang berhak mengunduh jenis itu, pada tab "Siap unduh" yang sudah disaring ke SATU jenis
             // yang templatenya ada.
             'bisaUnduhMassal' => $f['status'] === 'disetujui' && $f['jenis'] !== '' && PklHak::bolehSurat($peran, 'unduh', $f['jenis']) && SuratJenis::templateLengkap($f['jenis']),
             // ACC massal: kotak centang hanya pada surat yang jenisnya boleh di-ACC peran ini.
             'jenisAcc'   => PklHak::jenisBoleh($peran, 'acc'),
-            // Kabar WhatsApp massal "siap diambil": tab Siap unduh yang disaring ke jenis berkabar (Surat Balasan), hak Unduh.
+            // Kabar WhatsApp massal "siap diambil": tab Siap unduh yang disaring ke satu jenis surat, hak Unduh.
             'kabarWaJenis' => $f['status'] === 'disetujui' && SuratWa::berlaku($f['jenis']) && SuratWa::kolomAda() && PklHak::bolehSurat($peran, 'unduh', $f['jenis']),
         ]);
     }
@@ -113,6 +119,7 @@ class Surat extends SuratDasar
             'bolehUnduh' => PklHak::bolehSurat($peran, 'unduh', $jenis),
         ] + $this->dasarSurat(SuratJenis::label($jenis), 'daftar') + $m + [
             'kode'       => SuratSekolahModel::kode((int) $surat['id']),
+            'peminta'    => $this->surat->peminta((int) $surat['id']), // siswa yang meminta surat ini lewat Layanan Siswa
             'perluUlang' => $status === 'disetujui' && SuratSekolah::perluCetakUlang($surat, $m['siswa'], $this->p),
             'ringkasIsi' => SuratJenis::ringkasIsi($surat['isi_arr']),
             'periksa'    => in_array($status, ['menunggu', 'disetujui'], true) ? SuratPeriksa::untuk($surat, $m['siswa'], $this->p) : [],
@@ -126,7 +133,7 @@ class Surat extends SuratDasar
             'bisaBatalAcc' => $status === 'disetujui' && (int) $surat['perlu_acc'] === 1 && (string) ($surat['nomor'] ?? '') === '' && (int) $surat['cetak_ke'] === 0,
             'pemegangAcc'   => PklHak::teksPemegang(PklHak::kunciSurat('acc', $jenis)),
             'pemegangUnduh' => PklHak::teksPemegang(PklHak::kunciSurat('unduh', $jenis)),
-            // Kabar WhatsApp "siap diambil" (Surat Balasan): tombol bagi pemegang hak Unduh; aktif setelah surat diunduh.
+            // Kabar WhatsApp "siap diambil" (semua jenis surat): tombol bagi pemegang hak Unduh; aktif setelah surat diunduh.
             'kabarWa'    => SuratWa::berlaku($jenis) && SuratWa::kolomAda() && PklHak::bolehSurat($peran, 'unduh', $jenis) && $status === 'disetujui',
             'hitungWa'   => SuratWa::berlaku($jenis) ? (new SuratWa())->hitung((int) $surat['id']) : ['total' => 0, 'dikabari' => 0],
         ]);
@@ -216,7 +223,7 @@ class Surat extends SuratDasar
     }
 
     // =================================================================
-    // Kabar WhatsApp "siap diambil" (Surat Balasan) — Libraries\SuratWa
+    // Kabar WhatsApp "siap diambil" (semua jenis surat) — Libraries\SuratWa
     // =================================================================
 
     /** GET admin/surat/(:num)/wa — siswa surat ini + tautan wa.me (hak Unduh jenis itu; surat sudah diunduh). */

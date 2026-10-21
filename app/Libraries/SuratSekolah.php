@@ -315,7 +315,9 @@ final class SuratSekolah
         $b = $this->terapkan($this->db->table('surat_sekolah s'), $f)
             ->select('s.id, s.jenis, s.status, s.perlu_acc, s.judul, s.tanggal_surat, s.nomor, s.perusahaan_nama, s.cetak_ke, s.catatan_staf')
             ->select('s.acc_nama, s.acc_peran, s.acc_at, s.acc_kode, s.dibuat_nama, s.created_at, s.updated_at, s.isi, s.sidik')
-            ->select('(SELECT COUNT(*) FROM surat_sekolah_siswa x WHERE x.surat_id = s.id) AS jml_siswa', false);
+            ->select('(SELECT COUNT(*) FROM surat_sekolah_siswa x WHERE x.surat_id = s.id) AS jml_siswa', false)
+            // Jumlah siswa yang meminta surat ini lewat Layanan Siswa (> 0 = lencana "Diajukan siswa").
+            ->select(self::adaPermintaan() ? '(SELECT COUNT(*) FROM surat_permintaan sp WHERE sp.surat_id = s.id) AS jml_minta' : '0 AS jml_minta', false);
         if ((string) ($f['status'] ?? '') === 'menunggu') {
             $b->orderBy('s.created_at', 'ASC')->orderBy('s.id', 'ASC');
         } else {
@@ -627,8 +629,81 @@ final class SuratSekolah
         if ($q !== '') {
             $b->groupStart()->like('s.nomor', $q)->orLike('s.judul', $q)->orLike('s.perusahaan_nama', $q)->groupEnd();
         }
+        // Asal: 'siswa' = ada permintaan siswa (Layanan Siswa) yang tertaut ke surat ini; 'staf' = tidak ada.
+        $asal = (string) ($f['asal'] ?? '');
+        if (in_array($asal, ['siswa', 'staf'], true) && self::adaPermintaan()) {
+            $b->where(($asal === 'staf' ? 'NOT ' : '') . 'EXISTS (SELECT 1 FROM surat_permintaan sp WHERE sp.surat_id = s.id)', null, false);
+        }
 
         return $b;
+    }
+
+    /** Tabel surat_permintaan (Layanan Siswa) sudah ada. */
+    public static function adaPermintaan(): bool
+    {
+        return SuratJadwal::tabelAda();
+    }
+
+    /**
+     * Kotak "Permintaan dari siswa" di Daftar Surat: per jenis, surat yang diminta siswa dan masih perlu ditindaklanjuti —
+     * menunggu ACC, dan sudah disetujui tetapi belum diunduh/dicetak (termasuk Pernyataan Orang Tua yang tanpa ACC).
+     *
+     * @return array<string, array{menunggu: int, siap: int}>
+     */
+    public function ringkasPermintaan(): array
+    {
+        $out = array_fill_keys(SuratJenis::kode(), ['menunggu' => 0, 'siap' => 0]);
+        if (! self::adaPermintaan()) {
+            return $out;
+        }
+        $rows = $this->db->query(
+            "SELECT s.jenis, SUM(s.status = 'menunggu') AS menunggu, SUM(s.status = 'disetujui' AND s.cetak_ke = 0) AS siap"
+            . ' FROM surat_sekolah s WHERE EXISTS (SELECT 1 FROM surat_permintaan sp WHERE sp.surat_id = s.id) GROUP BY s.jenis'
+        )->getResultArray();
+        foreach ($rows as $r) {
+            $out[(string) $r['jenis']] = ['menunggu' => (int) $r['menunggu'], 'siap' => (int) $r['siap']];
+        }
+
+        return $out;
+    }
+
+    /**
+     * Kotak "Permintaan dari siswa" untuk peran $peran (web Daftar Surat & API surat meta): hanya jenis yang bisa diminta siswa
+     * (LayananSiswa::SURAT) DAN boleh ditangani peran ini (Buat/ACC/Unduh), plus apakah jenis itu wajib ACC.
+     *
+     * @return array<string, array{menunggu: int, siap: int, perlu_acc: bool}>
+     */
+    public function ringkasPermintaanUntuk(string $peran, array $p): array
+    {
+        if (! self::adaPermintaan()) {
+            return [];
+        }
+        $out = [];
+        foreach ($this->ringkasPermintaan() as $j => $n) {
+            if (in_array($j, array_column(LayananSiswa::SURAT, 3), true)
+                && (PklHak::bolehSurat($peran, 'buat', $j) || PklHak::bolehSurat($peran, 'acc', $j) || PklHak::bolehSurat($peran, 'unduh', $j))) {
+                $out[$j] = $n + ['perlu_acc' => SuratJenis::perluAcc($j, $p)];
+            }
+        }
+
+        return $out;
+    }
+
+    /**
+     * Siswa yang meminta surat ini lewat Layanan Siswa (urutan permintaan).
+     *
+     * @return list<array{nama: string, kelas: string, waktu: string}>
+     */
+    public function peminta(int $suratId): array
+    {
+        if (! self::adaPermintaan()) {
+            return [];
+        }
+
+        return array_map(static fn (array $r): array => ['nama' => (string) $r['nama'], 'kelas' => (string) ($r['nama_kelas'] ?? ''), 'waktu' => (string) $r['created_at']],
+            $this->db->table('surat_permintaan sp')->select('s.nama, k.nama_kelas, sp.created_at')
+                ->join('siswa s', 's.id = sp.siswa_id')->join('kelas k', 'k.id = sp.kelas_id', 'left')
+                ->where('sp.surat_id', $suratId)->orderBy('sp.id', 'ASC')->get()->getResultArray());
     }
 
     /**

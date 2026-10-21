@@ -12,7 +12,7 @@ use App\Models\SuratSekolahModel;
 
 $statusAktif = (string) ($f['status'] ?? '');
 $bawa        = array_filter(
-    ['jenis' => $f['jenis'] ?? '', 'tahun' => $f['tahun'] ?? 0, 'q' => $f['q'] ?? ''],
+    ['jenis' => $f['jenis'] ?? '', 'tahun' => $f['tahun'] ?? 0, 'q' => $f['q'] ?? '', 'asal' => $f['asal'] ?? ''],
     static fn ($v) => $v !== '' && $v !== 0 && $v !== null
 );
 $tabs = [['', 'Semua', (int) ($hitung['semua'] ?? 0)]];

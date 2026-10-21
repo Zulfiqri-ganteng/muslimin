@@ -72,7 +72,7 @@ final class SuratJenis
     ];
 
     /** Kunci isian yang untuk mesin saja (tidak ditampilkan di halaman detail). */
-    public const ISI_TERSEMBUNYI = ['kunci', 'pkey'];
+    public const ISI_TERSEMBUNYI = ['kunci', 'pkey', 'jadwal_id', 'ortu_isian']; // jadwal_id & ortu_isian: Layanan Siswa (ortu tampil di bagian peminta)
 
     /** Nilai isian berkode → teks yang ramah dibaca. */
     public const NILAI_ISI = [

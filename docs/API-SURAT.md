@@ -107,6 +107,29 @@ jadi aplikasi lama tetap jalan; nilai lain → 422). `ASAT` selalu semester Gena
 periode mencakup ASTS 1, ASAS, ASTS 2, ASAT dari menu Ujian. Judul surat: "ASAS Ganjil 2026/2027 - …", "ASAT 2026/2027 - …". Label jenis
 = "Surat Izin ASTS/ASAS/ASAT". Surat Izin TKA per perusahaan kini hanya memuat siswa yang SEKARANG kelas XII.
 
+### Pembaruan 2026-10-22 — Layanan Siswa (siswa meminta surat sendiri, Operator ACC)
+Siswa kini meminta Surat Izin Ujian / Izin TKA / Pernyataan Orang Tua / Penarikan PKL sendiri lewat web publik (`/layanan/surat/{…}`,
+masuk NISN atau tanggal lahir). Surat dari siswa masuk Daftar Surat seperti biasa (pembuat "Siswa: {nama}"). Migrasi
+`2026-10-26-000001` memindah hak ACC Izin Ujian / Izin TKA / Penarikan dari Waka Hubin ke **Operator** (`surat_acc:*` di peran).
+- `GET surat?asal=siswa|staf` — saringan baru (nilai lain → 422 `errors.asal`). Tiap baris: `jml_minta` (jumlah siswa yang meminta)
+  dan `diajukan_siswa` (bool → lencana "Diajukan siswa"). `meta.permintaan_siswa` = `{izin_asts|izin_tka|pernyataan_ortu|penarikan_pkl:
+  {menunggu, siap, perlu_acc}}` — kotak "Permintaan dari siswa" (hanya jenis yang boleh ditangani akun ini; `{}` bila tidak ada).
+  Ketuk kotak → `surat?jenis={j}&asal=siswa&status=menunggu` (atau `disetujui` untuk "siap dicetak").
+- `GET surat/{id}` — `peminta: [{nama, kelas, waktu}]` (urutan permintaan) dan `ortu_isian: [{siswa_id, nama, pekerjaan, alamat, hp}]`
+  (Pernyataan: data orang tua yang diisi siswa, dicetak menimpa data sekolah). Kunci `jadwal_id` & `ortu_isian` tidak lagi ada di `isi`.
+- **Jadwal Ujian & TKA** (hak Buat Izin Ujian / Izin TKA; jenis lain → 403):
+  - `GET surat/jadwal` → `{jenis: [...], jadwal: [{id, jenis, label, kegiatan, semester, tahun_pelajaran, sesi, tgl_mulai, tgl_selesai,
+    hari_tanggal, tempat, buka, keadaan (buka|tutup|selesai), keadaan_label, jml_permintaan, bisa_diubah, dibuat_oleh}], ujian:
+    [{kode, nama}], periode_ujian: [...], sesi_saran, tempat_bawaan, tahun_pelajaran}`.
+  - `POST surat/jadwal` `{jenis: izin_asts|izin_tka, kegiatan?: ASTS|ASAS|ASAT, periode?: indeks periode_ujian (mengisi ujian,
+    semester, tahun, tanggal), semester?, tahun_pelajaran?, sesi? (TKA, wajib), tgl_mulai, tgl_selesai, tempat?, buka: bool}` → 201
+    jadwal; galat isian → 422 `errors.{kolom}`; kembar → 409.
+  - `POST surat/jadwal/{id}` (ubah; jadwal yang sudah dipakai permintaan siswa → 409), `POST surat/jadwal/{id}/buka|tutup` (kegiatan
+    yang sudah lewat tidak bisa dibuka → 409), `DELETE surat/jadwal/{id}` (sudah dipakai → 409, cukup ditutup).
+- **WhatsApp "siap diambil"** (`surat/{id}/wa`, `surat/wa?jenis=`, `…/tandai`) kini berlaku untuk SEMUA jenis surat. Pesan: Surat
+  Balasan = templat Pengaturan PKL; jenis lain = kalimat bawaan dengan nama surat ("Surat Izin ASAS", "Surat Izin TKA", …;
+  Pernyataan + pengingat materai).
+
 ## Galat
 - **422 isian** (buat/ubah): `data.errors.galat` = LIST kalimat dari library (`periksa()`); `message` = kalimat pertama.
 - **422 keputusan**: `data.errors.{catatan|bahaya|ids}` (`wakil` tidak dipakai lagi sejak 2026-10-13).

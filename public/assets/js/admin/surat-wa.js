@@ -1,5 +1,5 @@
 /**
- * Kabar WhatsApp "surat siap diambil" (Surat Balasan) — komponen Alpine `suratWa`. Pola sama dengan kabar Surat Izin PKL
+ * Kabar WhatsApp "surat siap diambil" (semua jenis surat) — komponen Alpine `suratWa`. Pola sama dengan kabar Surat Izin PKL
  * (pkl-unduh.js → pklWa): daftar siswa + tombol hijau yang membuka WhatsApp staf dengan pesan siap kirim (wa.me); staf tinggal
  * menekan Kirim. Server: Admin\Surat::wa / waJenis / tandaiWa, aturan di Libraries\SuratWa.
  *

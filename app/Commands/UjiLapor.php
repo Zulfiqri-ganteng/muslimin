@@ -656,7 +656,10 @@ class UjiLapor extends BaseCommand
         $belum = array_column($wa->belumDikabari(SuratJenis::BALASAN, [], $set), 'siswa_id');
         $this->cek('kabar massal: hanya siswa yang BELUM dikabari pada surat yang SUDAH diunduh', in_array($this->s[2], $belum, true) && ! in_array($this->s[1], $belum, true)
             && ! in_array($this->s[3], $belum, true), json_encode($belum));
-        $this->cek('jenis lain (mis. Penarikan) tidak punya kabar', $wa->belumDikabari(SuratJenis::PENARIKAN, [], $set) === [] && ! SuratWa::berlaku(SuratJenis::ASTS));
+        // Sejak 2026-10-22 (Layanan Siswa) kabar "siap diambil" berlaku untuk SEMUA jenis surat; templat jenis lain = PESAN_JENIS.
+        $this->cek('kabar berlaku untuk semua jenis (Penarikan, Izin Ujian, …); templat jenis lain menyebut nama suratnya, Balasan tetap memakai Pengaturan PKL',
+            SuratWa::berlaku(SuratJenis::PENARIKAN) && SuratWa::berlaku(SuratJenis::ASTS) && str_contains(SuratWa::templat([], SuratJenis::PENARIKAN), '{surat}')
+            && SuratWa::templat(['wa_pesan_balasan' => 'Templat X {nama}'], SuratJenis::BALASAN) === 'Templat X {nama}');
 
         // Hak: yang boleh mengabari = pemegang hak Unduh Surat Balasan (bawaan Operator).
         $this->cek('penjaga rute: Operator (Unduh) boleh, Waka Hubin (hanya ACC) tidak', HakAkses::boleh('operator', 'admin/surat/' . $sid . '/wa') && ! HakAkses::boleh('hubin', 'admin/surat/' . $sid . '/wa')

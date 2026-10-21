@@ -66,6 +66,35 @@ $bilah = 'flex flex-col gap-3 border-b border-gray-200 bg-gray-50 px-4 py-3 sm:f
         . '</ul>',
 ]) ?>
 
+<?php if (! empty($permintaanSiswa)): // Layanan Siswa: surat yang diminta siswa sendiri, per jenis — klik angka = daftar tersaring ?>
+    <section class="mb-5" aria-labelledby="judul-permintaan-siswa">
+        <h2 id="judul-permintaan-siswa" class="mb-2 flex items-center gap-2 text-sm font-semibold text-gray-700 dark:text-gray-300"><?= ikon('users', 'h-4 w-4') ?>Permintaan dari siswa</h2>
+        <div class="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+            <?php foreach ($permintaanSiswa as $j => $n):
+                $saring   = static fn (string $st): string => site_url('admin/surat') . '?' . http_build_query(['jenis' => $j, 'asal' => 'siswa', 'status' => $st]);
+                $tanpaAcc = ! $n['perlu_acc'];
+            ?>
+                <div class="kartu kartu-isi flex flex-col gap-2">
+                    <p class="flex items-center justify-between gap-2 font-semibold text-gray-900 dark:text-white">
+                        <span class="min-w-0 truncate"><?= esc(SuratJenis::label($j)) ?></span>
+                        <span class="lencana <?= esc(SuratJenis::badge($j), 'attr') ?> shrink-0"><?= esc(SuratJenis::singkat($j)) ?></span>
+                    </p>
+                    <?php if (! $tanpaAcc): ?>
+                        <a href="<?= esc($saring('menunggu'), 'attr') ?>" class="flex items-center justify-between rounded-lg px-2 py-1.5 text-sm hover:bg-gray-50 dark:hover:bg-gray-700">
+                            <span class="text-gray-600 dark:text-gray-300">Perlu ACC</span>
+                            <span class="lencana <?= $n['menunggu'] > 0 ? 'lencana-kuning' : 'lencana-abu' ?>"><?= (int) $n['menunggu'] ?></span>
+                        </a>
+                    <?php endif; ?>
+                    <a href="<?= esc($saring('disetujui'), 'attr') ?>" class="flex items-center justify-between rounded-lg px-2 py-1.5 text-sm hover:bg-gray-50 dark:hover:bg-gray-700">
+                        <span class="text-gray-600 dark:text-gray-300"><?= $tanpaAcc ? 'Siap dicetak (tanpa ACC)' : 'Siap dicetak' ?></span>
+                        <span class="lencana <?= $n['siap'] > 0 ? 'lencana-hijau' : 'lencana-abu' ?>"><?= (int) $n['siap'] ?></span>
+                    </a>
+                </div>
+            <?php endforeach; ?>
+        </div>
+    </section>
+<?php endif; ?>
+
 <?= view('admin/surat/_nav', ['hitung' => $hitung, 'f' => $f]) ?>
 
 <section class="kartu overflow-hidden" aria-labelledby="judul-daftar-surat">
@@ -96,8 +125,15 @@ $bilah = 'flex flex-col gap-3 border-b border-gray-200 bg-gray-50 px-4 py-3 sm:f
                     <option value="<?= (int) $t ?>"<?= $f['tahun'] === (int) $t ? ' selected' : '' ?>><?= (int) $t ?></option>
                 <?php endforeach; ?>
             </select>
+            <?php if (\App\Libraries\SuratSekolah::adaPermintaan()): ?>
+                <select name="asal" data-autosubmit class="inp alat-crud-pilih" aria-label="Asal surat">
+                    <option value="">Semua asal</option>
+                    <option value="siswa"<?= $f['asal'] === 'siswa' ? ' selected' : '' ?>>Diajukan siswa</option>
+                    <option value="staf"<?= $f['asal'] === 'staf' ? ' selected' : '' ?>>Dibuat staf</option>
+                </select>
+            <?php endif; ?>
             <button type="submit" class="btn btn-netral"><?= ikon('search', 'h-4 w-4') ?>Cari</button>
-            <?php if ($f['jenis'] !== '' || $f['tahun'] > 0 || $f['q'] !== ''): ?>
+            <?php if ($f['jenis'] !== '' || $f['tahun'] > 0 || $f['q'] !== '' || $f['asal'] !== ''): ?>
                 <a href="<?= site_url('admin/surat') . ($f['status'] !== '' ? '?status=' . urlencode($f['status']) : '') ?>" class="btn btn-teks"><?= ikon('close', 'h-4 w-4') ?>Reset</a>
             <?php endif; ?>
         </form>
@@ -194,6 +230,7 @@ $bilah = 'flex flex-col gap-3 border-b border-gray-200 bg-gray-50 px-4 py-3 sm:f
                                 <td><span class="lencana <?= esc(SuratJenis::badge((string) $r['jenis']), 'attr') ?>"><?= esc(SuratJenis::singkat((string) $r['jenis'])) ?></span></td>
                                 <td>
                                     <a href="<?= $lihat ?>" class="font-semibold text-gray-900 hover:text-brand-700 dark:text-white dark:hover:text-brand-400"><?= esc($r['judul']) ?></a>
+                                    <?php if ((int) ($r['jml_minta'] ?? 0) > 0): ?><span class="lencana lencana-hijau ms-1 align-middle"><?= (int) $r['jml_minta'] > 1 ? 'Diajukan ' . (int) $r['jml_minta'] . ' siswa' : 'Diajukan siswa' ?></span><?php endif; ?>
                                     <p class="text-xs text-gray-500 dark:text-gray-400"><?= esc(trim(((string) $r['perusahaan_nama'] !== '' ? $r['perusahaan_nama'] : '') . ((int) $r['jml_siswa'] > 0 ? ((string) $r['perusahaan_nama'] !== '' ? ' · ' : '') . (int) $r['jml_siswa'] . ' siswa' : ''))) ?></p>
                                 </td>
                                 <td class="text-xs whitespace-nowrap"><?= esc(IsianBantu::tanggalIndo((string) $r['tanggal_surat'])) ?></td>
@@ -231,6 +268,7 @@ $bilah = 'flex flex-col gap-3 border-b border-gray-200 bg-gray-50 px-4 py-3 sm:f
                             </div>
                             <p class="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-gray-500 dark:text-gray-400">
                                 <span class="lencana <?= esc(SuratJenis::badge((string) $r['jenis']), 'attr') ?>"><?= esc(SuratJenis::singkat((string) $r['jenis'])) ?></span>
+                                <?php if ((int) ($r['jml_minta'] ?? 0) > 0): ?><span class="lencana lencana-hijau">Diajukan siswa</span><?php endif; ?>
                                 <span class="font-mono font-semibold text-gray-700 dark:text-gray-300"><?= (string) $r['nomor'] !== '' ? esc($r['nomor']) : 'belum bernomor' ?></span>
                             </p>
                             <p class="mt-1 text-xs text-gray-500 dark:text-gray-400"><?= esc(IsianBantu::tanggalIndo((string) $r['tanggal_surat'])) ?><?= (int) $r['jml_siswa'] > 0 ? ' · ' . (int) $r['jml_siswa'] . ' siswa' : '' ?> · oleh <?= esc((string) $r['dibuat_nama'] !== '' ? $r['dibuat_nama'] : '—') ?></p>

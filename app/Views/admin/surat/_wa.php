@@ -1,6 +1,6 @@
 <?php
 /**
- * Dialog "Kabari siswa lewat WhatsApp" — surat siap diambil (Surat Balasan). Komponen Alpine `suratWa`
+ * Dialog "Kabari siswa lewat WhatsApp" — surat siap diambil (semua jenis surat). Komponen Alpine `suratWa`
  * (assets/js/admin/surat-wa.js); dibuka lewat event 'surat-wa' {id | jenis} atau otomatis setelah unduhan selesai.
  * Tombol pemicu di halaman: data-kabari-surat="ID" / data-kabari-surat-jenis="jenis" (delegasi di surat-wa.js).
  * Rombak tampilan F9: bingkai dialog kit (.dialog + :data-buka; kepala/kaki diam, isi bergulir), tombol kit ber-ikon, ikon

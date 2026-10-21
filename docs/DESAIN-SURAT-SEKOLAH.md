@@ -199,3 +199,13 @@ langsung ke formulir, data orang tua terisi, Penarikan menampilkan perusahaan, I
 sekolah" di /siswa) → `layanan/surat/{kunci}`; kisi "Daftar layanan" (`public/partials/kepala.php`) memuat keempatnya; kartu
 "Layanan unggulan" beranda TIDAK diubah. Belum masuk → `layanan/masuk?tujuan={kunci}` berjudul "Minta {nama surat}" (langkah 1
 dari 2), lalu langsung ke formulir. Halaman `/layanan` tetap ada (status permintaan ada di `/layanan/saya`).
+
+**T5 (2026-10-22) — layar staf:** Daftar Surat = kotak "Permintaan dari siswa" per jenis (perlu ACC / siap dicetak, klik = tersaring;
+`SuratSekolah::ringkasPermintaanUntuk`), saringan Asal (siswa = ada `surat_permintaan`, staf = tidak), lencana "Diajukan siswa"
+(`jml_minta`); detail = daftar peminta + data orang tua isian siswa (`jadwal_id`/`ortu_isian` disembunyikan dari ringkasan isi).
+WhatsApp "siap diambil" (`SuratWa`) kini SEMUA jenis: Balasan = templat Pengaturan, lainnya `PESAN_JENIS` + `{surat}`
+(`namaSurat`: "Surat Izin ASAS", Pernyataan + materai). Lonceng tidak diubah: butir "surat menunggu ACC" & "sudah di-ACC belum
+diunduh" sudah menghitung surat dari siswa (Operator kini pemegang ACC).
+**T6 (2026-10-22) — API + kontrak Flutter:** `GET surat?asal=` + `jml_minta`/`diajukan_siswa` + `meta.permintaan_siswa`; detail +
+`peminta`/`ortu_isian`; `surat/jadwal` (GET/POST/ubah/buka/tutup/DELETE). docs/API-SURAT.md "Pembaruan 2026-10-22";
+`C:\flutter-muslimin\BLUEPRINT-SURAT.md` blok PEMBARUAN 2026-10-22 (S6–S8). Uji `dev:uji-surat` 373 (+6 T5, +4 API).

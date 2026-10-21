@@ -1211,6 +1211,59 @@ class UjiSurat extends BaseCommand
         $t3 = $lib->ajukanPenarikan($s13, ['alasan_pilih' => '0', 'tgl_efektif' => date('Y-m-d')], $ip, $p);
         $t4 = $lib->ajukanPenarikan($s11, ['alasan_pilih' => '0', 'tgl_efektif' => date('Y-m-d')], $ip, $p);
         $this->cek('Penarikan: minta lagi → "sudah" (surat sama); siswa tanpa ajuan PKL disetujui → ditolak dengan alasan', $t3['kode'] === 'sudah' && $t3['surat_id'] === $t2['surat_id'] && ! $t4['ok'] && str_contains($t4['pesan'], 'sedang PKL'));
+
+        // T5 — layar staf: saringan asal, kotak per jenis, peminta, WhatsApp "siap diambil" semua jenis.
+        $svc  = new SuratSekolah();
+        $idSw = array_map('intval', array_column($svc->daftar(['asal' => 'siswa', 'jenis' => SuratJenis::TKA], 1, 200)['rows'], 'id'));
+        $idSt = array_map('intval', array_column($svc->daftar(['asal' => 'staf', 'jenis' => SuratJenis::TKA], 1, 200)['rows'], 'id'));
+        $rowA6 = array_values(array_filter($svc->daftar(['asal' => 'siswa'], 1, 200)['rows'], static fn (array $x): bool => (int) $x['id'] === (int) $a6['surat_id']));
+        $this->cek('Daftar Surat saringan asal: surat permintaan siswa ada di "Diajukan siswa", tidak di "Dibuat staf"; baris membawa jml_minta', in_array((int) $a6['surat_id'], $idSw, true)
+            && ! in_array((int) $a6['surat_id'], $idSt, true) && (int) ($rowA6[0]['jml_minta'] ?? 0) === 1);
+        $rk = $svc->ringkasPermintaan();
+        $this->cek('kotak per jenis: Penarikan (diminta siswa) menunggu ACC ≥ 1; jenis tanpa permintaan = 0', $rk[SuratJenis::PENARIKAN]['menunggu'] >= 1 && isset($rk[SuratJenis::BALASAN]) && is_int($rk[SuratJenis::ASTS]['siap']));
+        $pm2 = $svc->peminta($sid);
+        $this->cek('peminta surat Izin TKA pertama: kedua siswa (urutan permintaan) beserta kelas', array_column($pm2, 'nama') === ['ZZUJI SS 91', 'ZZUJI SS 94'] && $pm2[0]['kelas'] !== '');
+        $wa  = (new \App\Libraries\SuratWa())->daftar([(int) $a6['surat_id']], $p, ['school_name' => 'SMK Uji']);
+        $this->cek('WhatsApp "siap diambil" kini juga untuk Izin TKA: pesan menyebut "Surat Izin TKA" + perusahaan + nomor surat', \App\Libraries\SuratWa::berlaku(SuratJenis::TKA) && $wa !== []
+            && str_contains($wa[0]['pesan'], 'Surat Izin TKA untuk ZZUJISS Layanan') && str_contains($wa[0]['pesan'], 'SMK Uji'), json_encode($wa[0]['pesan'] ?? null));
+        if (isset($b1['surat_id'])) {
+            $waP = (new \App\Libraries\SuratWa())->daftar([(int) $b1['surat_id']], $p, ['school_name' => 'SMK Uji']);
+            $this->cek('WhatsApp Pernyataan Orang Tua: pesan berisi pengingat tanda tangan di atas materai', $waP !== [] && str_contains($waP[0]['pesan'], 'materai'), json_encode($waP[0]['pesan'] ?? null));
+        }
+        $C   = \App\Controllers\Admin\Surat::class;
+        $hD  = html_entity_decode((string) $this->panggil($C, 'operator', 'index', ['asal' => 'siswa']));
+        $hDt = html_entity_decode((string) $this->panggil($C, 'operator', 'detail', [], [], $sid));
+        $this->cek('halaman Daftar Surat (Operator): kotak "Permintaan dari siswa" per jenis, saringan Asal, lencana "Diajukan … siswa"; detail: peminta + kelas',
+            str_contains($hD, 'Permintaan dari siswa') && str_contains($hD, 'name="asal"') && str_contains($hD, 'Diajukan') && str_contains($hD, 'Perlu ACC')
+            && str_contains($hDt, 'Diajukan siswa') && str_contains($hDt, 'ZZUJI SS 94'));
+
+        // T6 — API Android: daftar (asal, diajukan_siswa, meta.permintaan_siswa), detail (peminta, ortu_isian), jadwal.
+        [$k1, $j1] = $this->apiSurat('operator', 'daftar', ['asal' => 'siswa', 'jenis' => SuratJenis::TKA], []);
+        $baris = array_values(array_filter((array) ($j1['data'] ?? []), static fn (array $x): bool => (int) $x['id'] === (int) $a6['surat_id']));
+        [$k2] = $this->apiSurat('operator', 'daftar', ['asal' => 'guru'], []);
+        $this->cek('API surat?asal=siswa: surat permintaan siswa ada + diajukan_siswa/jml_minta; meta.permintaan_siswa per jenis; asal tak dikenal → 422', $k1 === 200
+            && ($baris[0]['diajukan_siswa'] ?? false) === true && (int) ($baris[0]['jml_minta'] ?? 0) === 1 && isset($j1['meta']['permintaan_siswa'][SuratJenis::TKA]['menunggu']) && $k2 === 422, json_encode($j1['meta'] ?? null));
+        [$k3, $j3] = $this->apiSurat('operator', 'detail', [], [], $sid);
+        $okOrtu = true;
+        if (isset($b1['surat_id'])) {
+            [, $j4] = $this->apiSurat('operator', 'detail', [], [], (int) $b1['surat_id']);
+            $okOrtu = ($j4['data']['ortu_isian'][0]['nama'] ?? '') === 'Ibu ' . self::NIS && ! isset($j4['data']['isi']['ortu_isian']);
+        }
+        $this->cek('API detail surat: peminta (nama, kelas, waktu), ortu_isian Pernyataan sebagai daftar (tidak bocor di isi mentah)', $k3 === 200
+            && array_column((array) ($j3['data']['peminta'] ?? []), 'nama') === ['ZZUJI SS 91', 'ZZUJI SS 94'] && $okOrtu);
+        [$k5, $j5] = $this->apiSurat('operator', 'jadwal', [], []);
+        [$k6] = $this->apiSurat('hubin', 'jadwal', [], []);
+        $this->cek('API GET surat/jadwal (Operator): jenis yang boleh, jadwal + label/keadaan/jml_permintaan, pilihan ujian; Waka Hubin (tanpa hak Buat) → 403', $k5 === 200
+            && in_array(SuratJenis::TKA, (array) ($j5['data']['jenis'] ?? []), true) && in_array('TKA Gelombang ' . self::NIS . ' L', array_column((array) ($j5['data']['jadwal'] ?? []), 'label'), true)
+            && count((array) ($j5['data']['ujian'] ?? [])) === 3 && $k6 === 403);
+        $tglA = date('Y-m-d', strtotime('+40 days'));
+        [$k7, $j7] = $this->apiSurat('operator', 'jadwalTambah', [], ['jenis' => SuratJenis::TKA, 'sesi' => 'Gelombang ' . self::NIS . ' API', 'tgl_mulai' => $tglA, 'tgl_selesai' => $tglA, 'buka' => true]);
+        $jid7 = (int) ($j7['data']['id'] ?? 0);
+        [$k8, $j8] = $this->apiSurat('operator', 'jadwalTutup', [], [], $jid7);
+        [$k9] = $this->apiSurat('operator', 'jadwalTambah', [], ['jenis' => SuratJenis::TKA, 'sesi' => '', 'tgl_mulai' => $tglA, 'tgl_selesai' => $tglA]);
+        [$k10] = $this->apiSurat('operator', 'jadwalHapus', [], [], $jid7);
+        $this->cek('API jadwal: tambah → 201 (buka=true dibaca), tutup → keadaan "tutup", isian salah → 422, hapus → 200', $k7 === 201 && ($j7['data']['buka'] ?? null) === true
+            && $k8 === 200 && ($j8['data']['keadaan'] ?? '') === 'tutup' && $k9 === 422 && $k10 === 200 && (new \App\Libraries\SuratJadwal())->muat($jid7) === null, json_encode([$k7, $j7['message'] ?? '', $k8, $k9, $k10]));
     }
 
     /**

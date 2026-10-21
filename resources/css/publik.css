@@ -192,6 +192,29 @@
   .daftar-ikon img { @apply h-10 w-10 object-contain sm:h-11 sm:w-11; }
   .daftar-kaki { @apply border-t border-garis p-4 md:hidden; }
 
+  /* Beranda ringkas (2026-10-22, acuan beranda aplikasi Android): bagian rapat, judul kecil rata kiri + tautan "Lihat semua". */
+  .seksi { @apply py-7 sm:py-9; }
+  .seksi-kepala { @apply mb-4 flex items-end justify-between gap-4 sm:mb-5; }
+  .seksi-judul { @apply text-heading-lg text-teks sm:text-[1.5rem] sm:leading-8; }
+  .seksi-tautan { @apply inline-flex shrink-0 items-center gap-1 text-sm font-semibold text-brand-700 hover:underline; }
+  .seksi-tautan svg { @apply h-4 w-4; }
+
+  /* Kisi ikon layanan (beranda "Layanan unggulan" & halaman Siswa/Guru/Orang Tua; acuan aplikasi Android KisiLayanan): ilustrasi
+     dalam kotak abu muda + nama saja — tanpa paragraf. Sama rupanya dengan isi panel "Daftar layanan". */
+  .kisi-layanan { @apply grid grid-cols-3 gap-x-2 gap-y-5 sm:grid-cols-4 lg:grid-cols-6; }
+  .kisi-layanan-lebar { @apply lg:grid-cols-8; }
+  .kisi-item { @apply flex h-full flex-col items-center gap-2 rounded-lg p-1.5 text-center text-sm leading-snug text-teks transition-colors hover:text-brand-800; }
+  .kisi-ikon { @apply grid h-16 w-16 place-items-center rounded-xl bg-permukaan transition-colors sm:h-20 sm:w-20; }
+  .bagian-abu .kisi-ikon { @apply bg-white; }
+  .kisi-item:hover .kisi-ikon { @apply bg-brand-50; }
+  .kisi-ikon img { @apply h-10 w-10 object-contain sm:h-11 sm:w-11; }
+  .kisi-status { @apply text-xs text-teks-2; }
+
+  /* Baris "jam pelajaran sekarang" di beranda (acuan Android _BarisSekarang). */
+  .baris-sekarang { @apply flex items-center gap-3 rounded-lg border border-garis bg-white px-4 py-3 transition-colors hover:border-brand-300 sm:px-5; }
+  .baris-sekarang-ikon { @apply grid h-10 w-10 shrink-0 place-items-center rounded-lg bg-brand-50 text-brand-700; }
+  .baris-sekarang-ikon svg { @apply h-5 w-5; }
+
   /* Tautan daftar bergaya laci (halaman Bantuan). */
   .laci-tautan { @apply flex items-center gap-3 rounded-lg px-3 py-2.5 text-base font-medium text-teks transition-colors hover:bg-permukaan; }
   .laci-tautan[aria-current="page"] { @apply bg-brand-50 text-brand-800; }
@@ -275,9 +298,9 @@
 
   /* Ubin pengguna (acuan "Jelajahi Ruang": ikon + nama, 4 kolom) */
   /* Ubin pengguna (acuan "Jelajahi Ruang": ilustrasi HD + nama, 4 kolom × 184px; di HP tanpa kotak) */
-  .ubin-grid { @apply grid grid-cols-4 items-start gap-4 md:items-center md:justify-center lg:grid-cols-[repeat(4,184px)]; }
-  .ubin { @apply flex h-full flex-col items-center justify-center gap-2 rounded-lg bg-white text-center transition-colors hover:bg-[#ececec] sm:border sm:border-permukaan sm:bg-permukaan-2 sm:p-6; }
-  .ubin-gambar { @apply h-9 w-9 object-contain sm:h-16 sm:w-16 lg:h-[72px] lg:w-[72px]; }
+  .ubin-grid { @apply grid grid-cols-4 items-start gap-2 sm:gap-4; }
+  .ubin { @apply flex h-full flex-col items-center justify-center gap-2 rounded-lg bg-white text-center transition-colors hover:bg-[#ececec] sm:border sm:border-permukaan sm:bg-permukaan-2 sm:p-5; }
+  .ubin-gambar { @apply h-9 w-9 object-contain sm:h-14 sm:w-14 lg:h-16 lg:w-16; }
   .ubin-label { @apply text-sm leading-tight text-balance text-teks sm:text-heading-sm; }
 
   /* Kartu layanan (acuan "Layanan yang Tersedia": ikon + judul + satu kalimat) */
@@ -578,7 +601,7 @@
   .banner-jalur::-webkit-scrollbar { display: none; }
   .banner-slaid { @apply relative w-full shrink-0 snap-center; }
   /* Slide foto sekolah (menu Foto Sekolah): setinggi kotak sorotan, foto mengisi penuh (tepi terpotong), keterangan di kiri bawah */
-  .banner-foto { @apply relative h-full min-h-[300px] overflow-hidden bg-permukaan sm:min-h-[320px] lg:min-h-[360px]; }
+  .banner-foto { @apply relative h-full min-h-[220px] overflow-hidden bg-permukaan sm:min-h-[250px] lg:min-h-[280px]; }
   .banner-gambar { @apply absolute inset-0 h-full w-full object-cover; }
   .banner-teks { @apply absolute right-3 bottom-3 left-3 rounded-lg bg-black/65 px-4 py-3 text-white sm:right-auto sm:bottom-5 sm:left-5 sm:max-w-lg sm:px-5 sm:py-4; }
   .banner-judul { @apply text-heading-sm sm:text-heading-md; }
@@ -595,7 +618,7 @@
   .banner-jeda svg { @apply h-4 w-4; }
 
   /* Sorotan banner berupa kotak isi (sambutan, formulir dibuka, pengumuman) — foto sekolah menyusul */
-  .banner-kotak { @apply flex min-h-[300px] items-center justify-between gap-8 px-6 py-9 sm:min-h-[320px] sm:px-10 lg:min-h-[360px] lg:px-16; }
+  .banner-kotak { @apply flex min-h-[220px] items-center justify-between gap-8 px-6 py-8 sm:min-h-[250px] sm:px-10 lg:min-h-[280px] lg:px-16; }
   .banner-kotak-gelap { @apply bg-brand-800 text-white; }
   .banner-kotak-terang { @apply bg-brand-100 text-teks; }
   .banner-isi { @apply max-w-2xl; }
