@@ -67,6 +67,16 @@ $routes->post('pkl/buka', 'Pkl::buka');
 $routes->post('pkl/kirim', 'Pkl::kirim');
 $routes->get('pkl/selesai', 'Pkl::selesai');
 // Lapor diterima PKL (siswa, tanpa login) → bahan Surat Balasan. Di bawah awalan pkl/ agar terbuka di subdomain PKL. docs/DESAIN-HAK-AKSES.md
+// Layanan Siswa (publik, satu link): siswa meminta surat sekolah sendiri — NISN / tanggal lahir (Controllers\Layanan).
+$routes->get('layanan', 'Layanan::index');
+$routes->get('layanan/masuk', 'Layanan::masuk');
+$routes->post('layanan/masuk', 'Layanan::prosesMasuk', ['filter' => 'csrf']);
+$routes->get('layanan/siswa', 'Layanan::siswa');
+$routes->get('layanan/saya', 'Layanan::saya');
+$routes->get('layanan/surat/(:segment)', 'Layanan::surat/$1');
+$routes->post('layanan/surat/(:segment)', 'Layanan::ajukan/$1', ['filter' => 'csrf']);
+$routes->post('layanan/keluar', 'Layanan::keluar', ['filter' => 'csrf']);
+
 $routes->get('pkl/lapor', 'LaporPkl::index');
 $routes->get('pkl/lapor/siswa', 'LaporPkl::siswa');
 $routes->post('pkl/lapor/cek', 'LaporPkl::cek');
@@ -195,6 +205,13 @@ $routes->group('admin', static function ($routes) {
         $routes->post('surat/tka', 'Admin\SuratIzin::simpanTka', ['filter' => 'csrf']);
         $routes->get('surat/tka/(:num)/ubah', 'Admin\SuratIzin::ubahTka/$1', ['filter' => 'csrf']);
         $routes->post('surat/tka/(:num)/ubah', 'Admin\SuratIzin::simpanUbahTka/$1', ['filter' => 'csrf']);
+        // Jadwal ASTS & TKA yang dibuka untuk permintaan surat dari siswa (Layanan Siswa; hak Buat Izin ASTS / Izin TKA).
+        $routes->get('surat/jadwal', 'Admin\SuratJadwal::index', ['filter' => 'csrf']);
+        $routes->post('surat/jadwal', 'Admin\SuratJadwal::tambah', ['filter' => 'csrf']);
+        $routes->post('surat/jadwal/(:num)', 'Admin\SuratJadwal::ubah/$1', ['filter' => 'csrf']);
+        $routes->post('surat/jadwal/(:num)/buka', 'Admin\SuratJadwal::buka/$1', ['filter' => 'csrf']);
+        $routes->post('surat/jadwal/(:num)/tutup', 'Admin\SuratJadwal::tutup/$1', ['filter' => 'csrf']);
+        $routes->post('surat/jadwal/(:num)/hapus', 'Admin\SuratJadwal::hapus/$1', ['filter' => 'csrf']);
         $routes->get('surat/pernyataan-ortu', 'Admin\SuratPernyataan::index', ['filter' => 'csrf']);
         $routes->post('surat/pernyataan-ortu', 'Admin\SuratPernyataan::simpan', ['filter' => 'csrf']);
         // Kotak "Lapor Diterima PKL" (laporan siswa → Surat Balasan); hak = Buat ATAU ACC Surat Balasan. Sebelum pola surat/balasan/(:num).

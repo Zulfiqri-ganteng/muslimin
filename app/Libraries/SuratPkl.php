@@ -392,7 +392,7 @@ final class SuratPkl
      * @param list<int>                                                $siswaIds siswa yang ditarik (Penarikan)
      * @param array<string, mixed>                                     $konteks
      *
-     * @param array{terima?: array<int, list<int>>, alasan_tolak?: string} $opsi Balasan: per ajuan, siswa yang DITERIMA perusahaan
+     * @param array{terima?: array<int, list<int>>, alasan_tolak?: string, sumber?: string} $opsi sumber = asal surat (staf|siswa). Balasan: per ajuan, siswa yang DITERIMA perusahaan
      *        (ajuan yang tidak disebut = semua diterima); yang tidak dicentang dikeluarkan dulu sebagai "ditolak perusahaan" (pilahTerima)
      *
      * @return array{ok: bool, dibuat: list<int>, sama: list<string>, gagal: list<string>, pesan: string, lapor: int, dilepas: list<string>}
@@ -472,6 +472,7 @@ final class SuratPkl
                 'judul' => self::judul($jenis, $a['perusahaan'], array_column($siswa, 'nama')), 'tanggal_surat' => $h['tanggal_surat'], 'isi' => $isi,
                 'perusahaan_nama' => $a['perusahaan'], 'pengajuan_id' => $aid,
                 'siswa' => array_map(static fn (array $s) => ['siswa_id' => $s['siswa_id'], 'kelas_id' => $s['kelas_id'], 'hp' => $s['hp']], $siswa),
+                'sumber' => (string) ($opsi['sumber'] ?? 'staf'), // 'siswa' = dari Layanan Siswa (Penarikan diminta siswa)
             ], $konteks, $p);
             if (! $r['ok']) {
                 $gagal[] = $a['perusahaan'] . ' — ' . (string) ($r['pesan'] ?? 'gagal disimpan.');

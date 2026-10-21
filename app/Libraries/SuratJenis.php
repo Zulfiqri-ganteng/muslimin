@@ -28,9 +28,10 @@ final class SuratJenis
      */
     public const DATA = [
         self::ASTS => [
-            'label' => 'Surat Izin ASTS', 'singkat' => 'Izin ASTS', 'alamat' => 'admin/surat/asts', 'bernomor' => true, 'acc' => true,
+            // Kode tetap 'izin_asts' (data & hak lama); sejak 2026-10-21 juga untuk ASAS & ASAT (isian 'kegiatan', SuratAcara::UJIAN).
+            'label' => 'Surat Izin ASTS/ASAS/ASAT', 'singkat' => 'Izin Ujian', 'alamat' => 'admin/surat/asts', 'bernomor' => true, 'acc' => true,
             'template' => 'izin_asts.docx', 'varian' => ['perusahaan' => 'izin_asts_perusahaan.docx'], 'badge' => 'lencana-biru',
-            'ringkas' => 'Pemberitahuan pelaksanaan ASTS dan permohonan dispensasi bagi siswa yang sedang PKL.',
+            'ringkas' => 'Pemberitahuan pelaksanaan ujian (ASTS, ASAS, atau ASAT) dan permohonan dispensasi bagi siswa yang sedang PKL.',
         ],
         self::TKA => [
             'label' => 'Surat Izin TKA', 'singkat' => 'Izin TKA', 'alamat' => 'admin/surat/tka', 'bernomor' => true, 'acc' => true,

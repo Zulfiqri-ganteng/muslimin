@@ -105,6 +105,8 @@ class UjiSurat extends BaseCommand
             $this->ujiAcara();
             $this->ujiSuratPkl();
             $this->ujiBalasanTerima();
+            $this->ujiJadwal();
+            $this->ujiLayanan();
             $this->ujiSidikDanTabel(); // paling akhir: menghapus data uji (CASCADE / SET NULL)
         }
 
@@ -1069,6 +1071,220 @@ class UjiSurat extends BaseCommand
     private bool $jagaMasukan = false;
 
     /**
+     * Layanan Siswa T2 (2026-10-21): daftar nama per tingkat, masuk dengan NISN / tanggal lahir, kelayakan tiap surat (dengan
+     * alasan), status permintaan dari status suratnya.
+     */
+    private function ujiLayanan(): void
+    {
+        $this->bagian('Layanan Siswa T2: masuk NISN / tanggal lahir, kelayakan surat, status permintaan');
+        if (! \App\Libraries\LayananSiswa::tabelAda()) {
+            $this->cek('tabel Layanan Siswa ada (php spark migrate)', false, 'migrasi belum dijalankan — bagian dilewati');
+
+            return;
+        }
+        $L   = \App\Libraries\LayananSiswa::class;
+        $lib = new \App\Libraries\LayananSiswa();
+        $p   = (new PklPengaturanModel())->ambil();
+        $k   = fn (string $t): int => (int) ($this->db->table('kelas')->select('id')->where('tingkat', $t)->where('deleted_at', null)->orderBy('id')->get(1)->getRowArray()['id'] ?? 0);
+        [$kXI, $kXII] = [$k('XI'), $k('XII')];
+        $s12 = $this->buatSiswa(91);
+        $s11 = $this->buatSiswa(92);
+        $this->db->table('siswa')->where('id', $s12)->update(['kelas_id' => $kXII, 'nisn' => '0091919191', 'tanggal_lahir' => '2008-03-09']);
+        $this->db->table('siswa')->where('id', $s11)->update(['kelas_id' => $kXI]);
+
+        $this->cek('tujuan setelah masuk hanya kunci layanan surat / "status"; tingkat yang dilayani memuat XII', $L::tujuanSah('izin_tka') === 'izin_tka' && $L::tujuanSah('status') === 'status'
+            && $L::tujuanSah('../admin') === '' && in_array('XII', $L::tingkat($p), true));
+        $this->cek('daftar nama: kelas X (tidak dilayani) kosong; kelas XII memuat siswa uji (id + nama saja)', $lib->siswaKelas($this->kelasId, $p) === []
+            && in_array($s12, array_column($lib->siswaKelas($kXII, $p), 'id'), true) && array_keys($lib->siswaKelas($kXII, $p)[0] ?? []) === ['id', 'nama']);
+
+        $ip = self::IP;
+        $r1 = $lib->masuk($s12, '', '', $ip, $p);
+        $r2 = $lib->masuk($s12, '1111111111', '', $ip, $p);
+        $r3 = $lib->masuk($this->buatSiswa(93), '0091919191', '', $ip, $p); // siswa kelas X (tidak dilayani)
+        $this->cek('masuk: kosong → 422 "salah satu"; NISN salah → 422 tidak cocok; siswa kelas yang tidak dilayani → 404', ! $r1['ok'] && $r1['http'] === 422 && str_contains($r1['pesan'], 'salah satu')
+            && ! $r2['ok'] && str_contains($r2['pesan'], 'tidak cocok') && ! $r3['ok'] && $r3['http'] === 404);
+        $okN = $lib->masuk($s12, '0091-9191-91', '', $ip, $p);
+        $idN = $L::siswaMasuk();
+        $L::keluar();
+        $okT = $lib->masuk($s12, '', '2008-03-09', $ip, $p);
+        $this->cek('masuk dengan NISN (tanda baca diabaikan) ATAU tanggal lahir → berhasil, sesi berisi siswa; Keluar mengosongkan sesi', $okN['ok'] && $idN === $s12 && $okT['ok'] && $L::siswaMasuk() === $s12);
+        $L::keluar();
+        $this->cek('sesudah keluar tidak ada siswa yang masuk', $L::siswaMasuk() === null);
+        $this->db->table('login_attempts')->where('ip_address', $ip)->delete();
+
+        // Kelayakan
+        $pr12 = $lib->profil($s12);
+        $kl   = $lib->kelayakan($pr12, $p);
+        $kl11 = $lib->kelayakan($lib->profil($s11), $p);
+        $this->cek('kelayakan tanpa ajuan PKL: izin ujian/TKA/penarikan belum bisa (alasan menyebut ajuan PKL); TKA untuk kelas XI → "Khusus siswa kelas XII"; formulir Izin Ujian/TKA sudah ada (siap), Pernyataan & Penarikan belum',
+            ! $kl['izin_ujian']['boleh'] && str_contains($kl['izin_ujian']['alasan'], 'ajuan PKL') && ! $kl['penarikan']['boleh'] && ! $kl['izin_tka']['boleh']
+            && $kl11['izin_tka']['alasan'] === 'Khusus siswa kelas XII.' && $kl['izin_ujian']['siap'] && $kl['izin_tka']['siap'] && $kl['pernyataan']['siap'] && $kl['penarikan']['siap'], json_encode(array_column($kl, 'alasan')));
+        $s13 = $this->buatSiswa(94);
+        $this->db->table('siswa')->where('id', $s13)->update(['kelas_id' => $kXII]);
+        $aj = $this->buatAjuanDisetujui($s12, 'ZZUJISS Layanan', [$s13]);
+        $jd = new \App\Libraries\SuratJadwal();
+        $this->db->table('surat_jadwal')->like('sesi', self::NIS)->update(['buka' => 0]); // jadwal dari bagian uji sebelumnya
+        $kl2 = $lib->kelayakan($lib->profil($s12), $p);
+        $this->cek('ajuan disetujui tetapi belum ada jadwal TKA → alasan "Belum ada jadwal TKA"; penarikan boleh', ! $kl2['izin_tka']['boleh'] && str_contains($kl2['izin_tka']['alasan'], 'jadwal TKA') && $kl2['penarikan']['boleh']);
+        $rj = $jd->simpan(SuratJenis::TKA, ['sesi' => 'Gelombang ' . self::NIS . ' L', 'tgl_mulai' => date('Y-m-d', strtotime('+5 days')), 'tgl_selesai' => date('Y-m-d', strtotime('+6 days')), 'buka' => '1', 'tempat' => ''], null, $this->konteks());
+        $kl3 = $lib->kelayakan($lib->profil($s12), $p);
+        $this->cek('jadwal TKA dibuka → siswa XII yang sedang PKL boleh mengajukan Izin TKA (jadwal ikut terbawa)', $rj['ok'] && $kl3['izin_tka']['boleh'] && in_array((int) $rj['id'], array_column($kl3['izin_tka']['jadwal'], 'id'), true));
+
+        // Status permintaan
+        $st = static fn (?array $s): string => $L::status($s)['status'];
+        $this->cek('status permintaan: menunggu / dikembalikan → diperiksa / disetujui belum dicetak / sudah dicetak → siap diambil / dibatalkan & surat hilang → dibatalkan', $st(['status' => 'menunggu']) === 'menunggu'
+            && $st(['status' => 'dikembalikan']) === 'diperiksa' && $st(['status' => 'disetujui', 'cetak_ke' => 0]) === 'disetujui' && $st(['status' => 'disetujui', 'cetak_ke' => 2]) === 'ambil'
+            && $st(['status' => 'dibatalkan', 'catatan_staf' => 'Ganda']) === 'batal' && str_contains($L::status(['status' => 'dibatalkan', 'catatan_staf' => 'Ganda'])['status_ket'], 'Ganda') && $st(null) === 'batal');
+        // T3 — siswa meminta Surat Izin TKA: satu surat per perusahaan per jadwal.
+        $jid = (int) $rj['id'];
+        $a1  = $lib->ajukanIzin($s12, 'izin_tka', $jid, $ip, $p);
+        $sid = (int) ($a1['surat_id'] ?? 0);
+        $sr  = $this->surat($sid);
+        $sis = array_map('intval', array_column($this->db->table('surat_sekolah_siswa')->select('siswa_id')->where('surat_id', $sid)->get()->getResultArray(), 'siswa_id'));
+        $isiS = SuratSekolah::dekodeIsi((string) ($sr['isi'] ?? ''));
+        $this->cek('permintaan pertama → surat BARU per perusahaan: menunggu ACC, sumber "siswa", dibuat "Siswa: …", memuat KEDUA siswa XII perusahaan itu, isian = jadwal (mode perusahaan, sesi), tercatat 1 permintaan',
+            $a1['ok'] && $a1['kode'] === 'baru' && ($sr['status'] ?? '') === 'menunggu' && ($sr['sumber'] ?? '') === 'siswa' && str_starts_with((string) ($sr['dibuat_nama'] ?? ''), 'Siswa: ')
+            && count(array_intersect([$s12, $s13], $sis)) === 2 && ($isiS['mode'] ?? '') === 'perusahaan' && ($isiS['sesi'] ?? '') === 'Gelombang ' . self::NIS . ' L'
+            && $this->jumlah('surat_permintaan', ['siswa_id' => $s12]) === 1, json_encode($a1));
+        $a2 = $lib->ajukanIzin($s12, 'izin_tka', $jid, $ip, $p);
+        $a3 = $lib->ajukanIzin($s13, 'izin_tka', $jid, $ip, $p);
+        $this->cek('minta lagi jadwal yang sama → "sudah" (tanpa surat baru); teman satu perusahaan → "ikut" surat yang SAMA (tetap 1 surat, riwayat "minta")', $a2['kode'] === 'sudah' && $a2['surat_id'] === $sid
+            && $a3['ok'] && $a3['kode'] === 'ikut' && $a3['surat_id'] === $sid && (int) $this->db->table('surat_sekolah')->where('perusahaan_nama', 'ZZUJISS Layanan')->where('status !=', 'dibatalkan')->countAllResults() === 1
+            && $this->jumlah('surat_sekolah_riwayat', ['surat_id' => $sid, 'aksi' => 'minta']) === 1);
+        $a4 = $lib->ajukanIzin($s11, 'izin_tka', $jid, $ip, $p);
+        $a5 = $lib->ajukanIzin($s12, 'izin_tka', 999999999, $ip, $p);
+        $this->cek('ditolak: siswa kelas XI minta Izin TKA ("Khusus siswa kelas XII."); jadwal tak dikenal ("Pilih salah satu jadwal")', ! $a4['ok'] && $a4['pesan'] === 'Khusus siswa kelas XII.' && ! $a5['ok'] && str_contains($a5['pesan'], 'Pilih salah satu jadwal'));
+        $form = $lib->formIzin($lib->profil($s13), 'izin_tka', $lib->kelayakan($lib->profil($s13), $p));
+        $baris = array_values(array_filter($form['jadwal'], static fn (array $x): bool => (int) $x['id'] === $jid));
+        $this->cek('formulir: jadwal yang sudah diminta ditandai (kode surat), perusahaan tujuan & teman satu surat tampil', ($baris[0]['sudah']['surat_id'] ?? 0) === $sid
+            && ($form['perusahaan']['nama'] ?? '') === 'ZZUJISS Layanan' && $form['teman'] === ['ZZUJI SS 91']);
+
+        $pm = $lib->permintaan($s12);
+        $this->cek('daftar permintaan siswa: judul jenis + jadwal ("Surat Izin TKA — TKA Gelombang …"), perusahaan, status Menunggu ACC', count($pm) === 1 && str_contains($pm[0]['judul'], 'Surat Izin TKA — TKA Gelombang ' . self::NIS)
+            && $pm[0]['perusahaan'] === 'ZZUJISS Layanan' && $pm[0]['status'] === 'menunggu', json_encode($pm));
+        (new \App\Libraries\SuratKeputusan())->putuskan($sid, 'batal', ['catatan' => 'Uji batal permintaan'], ['oleh' => self::OLEH . ' operator', 'admin_id' => 3, 'peran' => 'operator', 'ip' => $ip], $p);
+        $a6 = $lib->ajukanIzin($s12, 'izin_tka', $jid, $ip, $p);
+        $this->cek('surat dibatalkan → status "Dibatalkan" + alasan; siswa boleh meminta lagi → surat BARU', $lib->permintaan($s12)[1]['status'] === 'batal' && str_contains($lib->permintaan($s12)[1]['status_ket'], 'Uji batal permintaan')
+            && $a6['kode'] === 'baru' && $a6['surat_id'] !== $sid, json_encode($a6));
+        // Pemegang ACC di lingkungan uji = bawaan (netralkanPengaturan); di sekolah = Operator (migrasi Layanan Siswa).
+        $penyetuju = PklHak::boleh('operator', PklHak::kunciSurat('acc', SuratJenis::TKA)) ? ['peran' => 'operator', 'admin_id' => 3] : ['peran' => 'hubin', 'admin_id' => 2];
+        $opK = ['oleh' => self::OLEH . ' ' . $penyetuju['peran'], 'ip' => $ip] + $penyetuju;
+        $acc = (new \App\Libraries\SuratKeputusan())->putuskan((int) $a6['surat_id'], 'acc', ['paham' => '1'], $opK, $p);
+        $bk  = (new SuratBerkas())->bangun([(int) $a6['surat_id']], $opK);
+        $tks = $bk['ok'] ? preg_replace('/\s+/u', ' ', $this->isiDocx($bk['biner'])) : '';
+        $this->cek('surat dari permintaan siswa: Operator meng-ACC, berkas Word per perusahaan terbentuk (nama perusahaan + kedua siswa + "Gelombang …"), status siswa → "Siap diambil"', $acc['ok'] && $bk['ok']
+            && str_contains($tks, 'ZZUJISS Layanan') && str_contains($tks, 'ZZUJI SS 91') && str_contains($tks, 'ZZUJI SS 94') && str_contains($tks, 'Gelombang ' . self::NIS . ' L')
+            && $lib->permintaan($s12)[0]['status'] === 'ambil', json_encode([$acc, $bk['ok'] ?? null]));
+
+        // T4 — Pernyataan Orang Tua (tanpa nomor & ACC) dan Penarikan PKL (diri sendiri, menunggu ACC).
+        if ($lib->kelayakan($lib->profil($s12), $p)['pernyataan']['boleh']) {
+            $ortu = ['nama' => 'Bapak ' . self::NIS, 'pekerjaan' => 'Wiraswasta', 'alamat' => 'Jl. Uji No. 1, Bekasi', 'hp' => '0812-1111-2222', 'hp_anak' => '081233334444'];
+            $g1 = $lib->ajukanPernyataan($s12, ['nama' => ''] + $ortu, $ip, $p);
+            $b1 = $lib->ajukanPernyataan($s12, $ortu, $ip, $p);
+            $sP = $this->surat((int) ($b1['surat_id'] ?? 0));
+            $iP = SuratSekolah::dekodeIsi((string) ($sP['isi'] ?? ''));
+            $this->cek('Pernyataan: nama orang tua kosong → galat kolom; terkirim → surat langsung siap (disetujui, tanpa ACC & nomor), sumber siswa, data orang tua isian siswa tersimpan (HP dirapikan)', ! $g1['ok'] && isset($g1['galat']['nama'])
+                && $b1['ok'] && $b1['kode'] === 'baru' && ($sP['status'] ?? '') === 'disetujui' && ($sP['sumber'] ?? '') === 'siswa' && ($iP['ortu_isian'][(string) $s12]['hp'] ?? '') === '081211112222'
+                && $lib->permintaan($s12)[0]['status_teks'] === 'Siap dicetak sekolah', json_encode([$g1, $b1]));
+            $b2 = $lib->ajukanPernyataan($s12, ['nama' => 'Ibu ' . self::NIS] + $ortu, $ip, $p);
+            $iP2 = SuratSekolah::dekodeIsi((string) ($this->surat((int) $b1['surat_id'])['isi'] ?? ''));
+            $bkP = (new SuratBerkas())->bangun([(int) $b1['surat_id']], $opK);
+            $tkP = $bkP['ok'] ? preg_replace('/\s+/u', ' ', $this->isiDocx($bkP['biner'])) : '';
+            $this->cek('Pernyataan: kirim lagi sebelum dicetak → data DIPERBARUI pada surat yang sama (tanpa surat baru); berkas Word mencetak nama & alamat isian siswa', $b2['kode'] === 'ubah' && $b2['surat_id'] === $b1['surat_id']
+                && ($iP2['ortu_isian'][(string) $s12]['nama'] ?? '') === 'Ibu ' . self::NIS && $this->jumlah('surat_permintaan', ['siswa_id' => $s12, 'jenis' => SuratJenis::PERNYATAAN]) === 1
+                && str_contains($tkP, 'Ibu ' . self::NIS) && str_contains($tkP, 'Jl. Uji No. 1, Bekasi'), mb_substr($tkP, 0, 200));
+            $this->db->table('surat_sekolah')->where('id', (int) $b1['surat_id'])->update(['cetak_ke' => 1]);
+            $b3 = $lib->ajukanPernyataan($s12, $ortu, $ip, $p);
+            $this->cek('Pernyataan sudah dicetak → perubahan ditolak (arahkan ke operator); status "Siap diambil" + pesan tanda tangan di atas materai', ! $b3['ok'] && str_contains($b3['pesan'], 'sudah dicetak')
+                && $lib->permintaan($s12)[0]['status'] === 'ambil' && str_contains($lib->permintaan($s12)[0]['status_ket'], 'materai'));
+        } else {
+            $this->cek('Pernyataan: kelas XII tidak termasuk tingkat PKL di pengaturan lokal — alur dilewati', true);
+        }
+
+        $t1 = $lib->ajukanPenarikan($s13, ['alasan_pilih' => 'lain', 'alasan_lain' => '', 'tgl_efektif' => date('Y-m-d')], $ip, $p);
+        $t2 = $lib->ajukanPenarikan($s13, ['alasan_pilih' => '4', 'tgl_efektif' => date('Y-m-d')], $ip, $p);
+        $sT = $this->surat((int) ($t2['surat_id'] ?? 0));
+        $iT = SuratSekolah::dekodeIsi((string) ($sT['isi'] ?? ''));
+        $sisT = array_map('intval', array_column($this->db->table('surat_sekolah_siswa')->select('siswa_id')->where('surat_id', (int) ($t2['surat_id'] ?? 0))->get()->getResultArray(), 'siswa_id'));
+        $this->cek('Penarikan: "alasan lain" kosong → galat; terkirim → surat menunggu ACC, sumber siswa, HANYA siswa peminta (bukan teman), alasan = kalimat baku "sakit", tanggal efektif', ! $t1['ok'] && isset($t1['galat']['alasan_lain'])
+            && $t2['ok'] && ($sT['status'] ?? '') === 'menunggu' && ($sT['sumber'] ?? '') === 'siswa' && $sisT === [$s13] && str_contains((string) ($iT['alasan'] ?? ''), 'sakit') && ($iT['tgl_efektif'] ?? '') === date('Y-m-d'), json_encode([$t1, $t2]));
+        $t3 = $lib->ajukanPenarikan($s13, ['alasan_pilih' => '0', 'tgl_efektif' => date('Y-m-d')], $ip, $p);
+        $t4 = $lib->ajukanPenarikan($s11, ['alasan_pilih' => '0', 'tgl_efektif' => date('Y-m-d')], $ip, $p);
+        $this->cek('Penarikan: minta lagi → "sudah" (surat sama); siswa tanpa ajuan PKL disetujui → ditolak dengan alasan', $t3['kode'] === 'sudah' && $t3['surat_id'] === $t2['surat_id'] && ! $t4['ok'] && str_contains($t4['pesan'], 'sedang PKL'));
+    }
+
+    /**
+     * Jadwal ASTS & TKA untuk permintaan surat dari siswa (Layanan Siswa T1, 2026-10-21): aturan isian, kembar, buka/tutup/selesai,
+     * terkunci setelah dipakai permintaan, hak alamat, dan halaman staf.
+     */
+    private function ujiJadwal(): void
+    {
+        $this->bagian('Jadwal ASTS & TKA untuk permintaan siswa (Layanan Siswa T1)');
+        if (! \App\Libraries\SuratJadwal::tabelAda()) {
+            $this->cek('tabel surat_jadwal ada (php spark migrate)', false, 'migrasi 2026-10-26-000001 belum dijalankan — bagian dilewati');
+
+            return;
+        }
+        $J   = \App\Libraries\SuratJadwal::class;
+        $lib = new \App\Libraries\SuratJadwal();
+        $op  = ['oleh' => self::OLEH . ' operator', 'admin_id' => 3, 'peran' => 'operator', 'ip' => self::IP];
+        $hr  = static fn (int $n): string => date('Y-m-d', strtotime(($n >= 0 ? '+' : '') . $n . ' days'));
+        $tka = ['sesi' => 'Gelombang ' . self::NIS, 'tgl_mulai' => $hr(10), 'tgl_selesai' => $hr(12), 'tempat' => '', 'buka' => '1'];
+
+        $p1 = $lib->periksa(SuratJenis::TKA, ['sesi' => ''] + $tka);
+        $p2 = $lib->periksa(SuratJenis::ASTS, ['semester' => 'Ganjil', 'tahun_pelajaran' => '2026/2028', 'tgl_mulai' => $hr(12), 'tgl_selesai' => $hr(10)]);
+        $p3 = $lib->periksa('pernyataan_ortu', $tka);
+        $this->cek('isian salah ditolak per kolom: TKA tanpa gelombang; ASTS tahun pelajaran 2026/2028 + tanggal terbalik; jenis bukan ASTS/TKA', ! $p1['ok'] && isset($p1['galat']['sesi'])
+            && ! $p2['ok'] && isset($p2['galat']['tahun_pelajaran'], $p2['galat']['tgl_selesai']) && ! $p3['ok'], json_encode([$p1['galat'], $p2['galat']]));
+
+        $r  = $lib->simpan(SuratJenis::TKA, $tka, null, $op);
+        $id = (int) ($r['id'] ?? 0);
+        $j  = $lib->muat($id);
+        $this->cek('simpan TKA → tersimpan, tempat kosong = "' . SuratAcara::TEMPAT_BAWAAN . '", label "TKA Gelombang …", dibuka untuk siswa, tampil di terbuka()', $r['ok'] && $j !== null && $j['tempat'] === SuratAcara::TEMPAT_BAWAAN
+            && $j['label'] === 'TKA Gelombang ' . self::NIS && $j['keadaan'] === 'buka' && in_array($id, array_column($lib->terbuka(SuratJenis::TKA), 'id'), true), json_encode($r));
+        $isi = $J::isiSurat($j ?? []);
+        $this->cek('isiSurat: isian surat acara per perusahaan (kegiatan TKA, sesi, tanggal, tempat, mode perusahaan)', $isi['kegiatan'] === 'TKA' && $isi['sesi'] === 'Gelombang ' . self::NIS && $isi['mode'] === 'perusahaan' && $isi['tgl_mulai'] === $hr(10));
+        $r2 = $lib->simpan(SuratJenis::TKA, $tka, null, $op);
+        $this->cek('jadwal yang sama dua kali → ditolak "sudah ada"', ! $r2['ok'] && str_contains($r2['pesan'], 'sudah ada'));
+
+        $t = $lib->aturBuka($id, false, $op);
+        $this->cek('Tutup → keadaan "tutup", hilang dari terbuka(); Buka lagi → kembali tampil', $t['ok'] && $lib->muat($id)['keadaan'] === 'tutup' && ! in_array($id, array_column($lib->terbuka(SuratJenis::TKA), 'id'), true)
+            && $lib->aturBuka($id, true, $op)['ok'] && in_array($id, array_column($lib->terbuka(SuratJenis::TKA), 'id'), true));
+
+        $rLewat = $lib->simpan(SuratJenis::ASTS, ['semester' => 'Genap', 'tahun_pelajaran' => '2026/2027', 'tgl_mulai' => $hr(-20), 'tgl_selesai' => $hr(-18), 'tempat' => 'Aula ' . self::NIS, 'buka' => '1'], null, $op);
+        $idLewat = (int) ($rLewat['id'] ?? 0);
+        $this->cek('jadwal yang kegiatannya sudah lewat → keadaan "selesai", tidak tampil bagi siswa, tidak bisa dibuka lagi', $rLewat['ok'] && $lib->muat($idLewat)['keadaan'] === 'selesai'
+            && ! in_array($idLewat, array_column($lib->terbuka(SuratJenis::ASTS), 'id'), true) && ! $lib->aturBuka($idLewat, true, $op)['ok']);
+
+        // Dipakai permintaan siswa → isi terkunci, tidak bisa dihapus (cukup ditutup).
+        $s = $this->buatSiswa(81);
+        $this->db->table('surat_permintaan')->insert(['jenis' => SuratJenis::TKA, 'siswa_id' => $s, 'kelas_id' => $this->kelasId, 'jadwal_id' => $id, 'created_at' => date('Y-m-d H:i:s')]);
+        $u = $lib->simpan(SuratJenis::TKA, ['tempat' => 'Lab ' . self::NIS] + $tka, $id, $op);
+        $h = $lib->hapus($id, $op);
+        $this->cek('jadwal yang sudah dipakai permintaan siswa → ubah & hapus DITOLAK (pesan menyarankan tutup), jumlah permintaan terbaca', ! $u['ok'] && str_contains($u['pesan'], 'Tutup') && ! $h['ok'] && $lib->muat($id)['jml_permintaan'] === 1);
+        $this->cek('jadwal yang belum dipakai → bisa dihapus', $lib->hapus($idLewat, $op)['ok'] && $lib->muat($idLewat) === null);
+        $rAsat = $lib->simpan(SuratJenis::ASTS, ['kegiatan' => 'ASAT', 'semester' => 'Ganjil', 'tahun_pelajaran' => '2026/2027', 'tgl_mulai' => $hr(30), 'tgl_selesai' => $hr(34), 'tempat' => 'Aula ' . self::NIS, 'buka' => '1'], null, $op);
+        $jAsat = $lib->muat((int) ($rAsat['id'] ?? 0));
+        $this->cek('jadwal ujian ASAT: tersimpan sebagai ASAT semester Genap, label "ASAT 2026/2027", isiSurat membawa kegiatan ASAT', $rAsat['ok'] && $jAsat !== null && $jAsat['kegiatan'] === 'ASAT'
+            && $jAsat['semester'] === 'Genap' && $jAsat['label'] === 'ASAT 2026/2027' && $J::isiSurat($jAsat)['kegiatan'] === 'ASAT', json_encode($rAsat));
+
+        // Hak alamat: pembuat Izin ASTS/TKA (bawaan Operator) — Waka Hubin dan Guru Piket tidak.
+        $this->cek('hak alamat admin/surat/jadwal: Operator boleh (lihat & POST), Waka Hubin tidak', HakAkses::boleh('operator', 'admin/surat/jadwal') && HakAkses::boleh('operator', 'admin/surat/jadwal/' . $id . '/tutup', 'POST')
+            && ! HakAkses::boleh('hubin', 'admin/surat/jadwal'));
+
+        // Halaman staf.
+        $C    = \App\Controllers\Admin\SuratJadwal::class;
+        $hal  = html_entity_decode((string) $this->panggil($C, 'operator', 'index'));
+        $hub  = $this->panggil($C, 'hubin', 'index');
+        $this->cek('halaman Jadwal (Operator): bagian Ujian (ASTS/ASAS/ASAT) & TKA, pilihan ujian, tombol tambah, jadwal uji + lencana keadaan + jumlah permintaan; Hubin → dialihkan', str_contains($hal, 'Jadwal Ujian (ASTS, ASAS, ASAT)') && str_contains($hal, 'Jadwal TKA')
+            && str_contains($hal, 'name="kegiatan"') && str_contains($hal, 'ASAT — Asesmen Sumatif Akhir Tahun')
+            && str_contains($hal, 'Tambah jadwal TKA') && str_contains($hal, 'TKA Gelombang ' . self::NIS) && str_contains($hal, 'Dibuka untuk siswa') && str_contains($hal, '1 permintaan siswa')
+            && $hub instanceof \CodeIgniter\HTTP\RedirectResponse);
+        $res = $this->panggil($C, 'operator', 'tambah', [], ['jenis' => SuratJenis::TKA, 'sesi' => '', 'tgl_mulai' => $hr(10), 'tgl_selesai' => $hr(12)]);
+        $this->cek('POST tambah dengan isian salah → kembali ke formulir yang sama (#tambah-izin_tka), tidak tersimpan', $res instanceof \CodeIgniter\HTTP\RedirectResponse && str_ends_with($res->getHeaderLine('Location'), '#tambah-izin_tka'));
+    }
+
+    /**
      * Surat Balasan: staf mencentang siswa yang DITERIMA perusahaan saat membuat/mengubah surat; yang tidak dicentang dikeluarkan dari
      * ajuan sebagai "ditolak perusahaan" (permintaan klien 2026-10-21 — operator memperbaiki sendiri, bukan lewat lapor ulang siswa).
      */
@@ -1324,6 +1540,19 @@ class UjiSurat extends BaseCommand
     private function ujiAcara(): void
     {
         $this->bagian('Surat Izin ASTS & TKA: tanggal otomatis, validasi, pencegah ganda, per perusahaan, template asli');
+
+        // Ujian ASAS & ASAT pada jenis izin_asts (2026-10-21).
+        $dasarU = ['tanggal_surat' => '2026-11-30', 'tgl_mulai' => '2026-12-07', 'tgl_selesai' => '2026-12-11', 'tahun_pelajaran' => '2026/2027', 'mode' => 'umum', 'tempat' => ''];
+        $hAsts  = SuratAcara::periksa(SuratJenis::ASTS, $dasarU + ['semester' => 'Ganjil']);
+        $hAsas  = SuratAcara::periksa(SuratJenis::ASTS, $dasarU + ['semester' => 'Ganjil', 'kegiatan' => 'asas']);
+        $hAsat  = SuratAcara::periksa(SuratJenis::ASTS, $dasarU + ['semester' => 'Ganjil', 'kegiatan' => 'ASAT']);
+        $hSalah = SuratAcara::periksa(SuratJenis::ASTS, $dasarU + ['semester' => 'Ganjil', 'kegiatan' => 'UTS']);
+        $this->cek('ujian: tanpa isian = ASTS (formulir lama); "asas" → ASAS; ASAT memaksa semester Genap; ujian tak dikenal → galat', $hAsts['ok'] && $hAsts['isi']['kegiatan'] === 'ASTS'
+            && $hAsas['ok'] && $hAsas['isi']['kegiatan'] === 'ASAS' && $hAsat['ok'] && $hAsat['isi']['semester'] === 'Genap' && ! $hSalah['ok'] && str_contains(implode(' ', $hSalah['galat']), 'ASAS'));
+        $this->cek('judul: "ASAS Ganjil 2026/2027 - surat umum", "ASAT 2026/2027 - surat umum" (ASAT tanpa semester)', SuratAcara::judul(SuratJenis::ASTS, $hAsas['isi']) === 'ASAS Ganjil 2026/2027 - surat umum'
+            && SuratAcara::judul(SuratJenis::ASTS, $hAsat['isi']) === 'ASAT 2026/2027 - surat umum', SuratAcara::judul(SuratJenis::ASTS, $hAsat['isi']));
+        $this->cek('sidik pencegah ganda: ASAS ≠ ASTS di tanggal yang sama; sidik ASTS sama dengan surat lama tanpa isian ujian', SuratAcara::kunci(SuratJenis::ASTS, $hAsas['isi']) !== SuratAcara::kunci(SuratJenis::ASTS, $hAsts['isi'])
+            && SuratAcara::kunci(SuratJenis::ASTS, $hAsts['isi']) === SuratAcara::kunci(SuratJenis::ASTS, array_diff_key($hAsts['isi'], ['kegiatan' => 1])));
         $this->netralkanPengaturan();
         $this->atur(['kepsek_nama' => 'Kepsek Uji, S.T.', 'waka_hubin_nama' => 'Hubin Uji, S.Pd.', 'kontak_surat_nama' => 'Kontak Uji', 'kontak_surat_hp' => '0812000']);
         $svc  = new SuratSekolah();
@@ -1528,11 +1757,18 @@ class UjiSurat extends BaseCommand
             $res = $this->panggil($I, 'hubin', 'simpanAsts', [], ['tgl_mulai' => "$y-10-14", 'tgl_selesai' => "$y-10-18"] + $post);
             $this->cek('POST simpan oleh Hubin (tanpa hak) → dialihkan; tidak ada surat dibuat', $res instanceof \CodeIgniter\HTTP\RedirectResponse && (int) $this->db->table('surat_sekolah')->where('dibuat_nama', self::OLEH . ' operator')->where('jenis', 'izin_asts')->countAllResults() === 1);
 
-            // simpan per perusahaan (TKA)
+            // simpan per perusahaan (TKA) — TKA khusus kelas XII (2026-10-21): siswa fixture dipindah sementara ke kelas XII.
+            $kXII     = (int) ($this->db->table('kelas')->select('id')->where('tingkat', 'XII')->where('deleted_at', null)->orderBy('id')->get(1)->getRowArray()['id'] ?? 0);
+            $idsAcara = array_map('intval', array_column($this->db->table('siswa')->select('id')->whereIn('nis', [self::NIS . 4, self::NIS . 5])->get()->getResultArray(), 'id'));
+            $adaAcara = static fn (array $daftar): bool => in_array('ZZUJISS Acara Satu', array_column($daftar, 'nama'), true);
+            $this->cek('TKA khusus kelas XII: perusahaan yang siswanya bukan kelas XII tidak ditawarkan untuk TKA (ASTS tetap)', $kXII > 0
+                && ! $adaAcara((new \App\Libraries\SuratAcara())->perusahaan(null, null, SuratJenis::TKA)) && $adaAcara((new \App\Libraries\SuratAcara())->perusahaan(null, null, SuratJenis::ASTS)));
+            $this->db->table('siswa')->whereIn('id', $idsAcara)->update(['kelas_id' => $kXII]);
             $postP = ['tanggal_surat' => "$y-05-02", 'mode' => 'perusahaan', 'sesi' => 'Gelombang 1', 'tgl_mulai' => "$y-10-05", 'tgl_selesai' => "$y-10-08", 'tempat' => '', 'perusahaan' => [$kunciG]];
             $res   = $this->panggil($I, 'operator', 'simpanTka', [], $postP);
+            $this->db->table('siswa')->whereIn('id', $idsAcara)->update(['kelas_id' => $this->kelasId]);
             $rowt  = $this->db->table('surat_sekolah')->where('jenis', 'izin_tka')->where('perusahaan_nama', 'ZZUJISS Acara Satu')->orderBy('id', 'DESC')->get(1)->getRowArray();
-            $this->cek('POST simpan TKA per perusahaan → 1 surat untuk perusahaan itu, dialihkan ke detailnya', $res instanceof \CodeIgniter\HTTP\RedirectResponse && $rowt !== null && str_contains($res->getHeaderLine('Location'), '/admin/surat/' . $rowt['id']) && $this->jumlah('surat_sekolah_siswa', ['surat_id' => $rowt['id']]) === 2);
+            $this->cek('POST simpan TKA per perusahaan (siswa kelas XII) → 1 surat untuk perusahaan itu, dialihkan ke detailnya', $res instanceof \CodeIgniter\HTTP\RedirectResponse && $rowt !== null && str_contains($res->getHeaderLine('Location'), '/admin/surat/' . $rowt['id']) && $this->jumlah('surat_sekolah_siswa', ['surat_id' => $rowt['id']]) === 2);
             $res = $this->panggil($I, 'operator', 'simpanTka', [], ['perusahaan' => ['m:2000000000']] + $postP);
             $this->cek('perusahaan pilihan tak ada → kembali ke formulir dengan pesan, tidak ada surat baru', $res instanceof \CodeIgniter\HTTP\RedirectResponse && str_ends_with($res->getHeaderLine('Location'), '/admin/surat/tka'));
 
@@ -1625,6 +1861,19 @@ class UjiSurat extends BaseCommand
             $badanContoh = $this->badanSurat($this->teksDocxBerkas($sumber));
             $badanHasil  = $this->badanSurat($teks);
             $this->cek('berkas ' . $jenis . ': BADAN SURAT sama persis dengan contoh sekolah (dari "Kepada Yth." sampai "terima kasih.")', $badanContoh !== '' && $badanContoh === $badanHasil, $badanContoh === $badanHasil ? '' : "\n   contoh: " . mb_substr($badanContoh, 0, 400) . "\n   hasil : " . mb_substr($badanHasil, 0, 400));
+        }
+
+        // --- Surat izin ASAS & ASAT (template Izin ASTS yang sama, 2026-10-21): nama ujian & singkatan menggantikan "ASTS".
+        foreach ([['ASAS', 'Ganjil', 'Asesmen Sumatif Akhir Semester (ASAS) Ganjil'], ['ASAT', 'Ganjil', 'Asesmen Sumatif Akhir Tahun (ASAT)']] as [$kodeU, $smt, $namaU]) {
+            $isiU = ['kegiatan' => $kodeU, 'semester' => $smt] + $this->isiAcara(SuratJenis::ASTS, '2026-12-07', '2026-12-11');
+            $r    = $svc->buat(SuratJenis::ASTS, ['judul' => self::OLEH . ' Berkas ' . $kodeU, 'tanggal_surat' => '2026-11-30', 'isi' => $isiU], $this->konteks(), $p);
+            $sid  = (int) ($r['id'] ?? 0);
+            $kep->putuskan($sid, 'acc', [], $hu, $p);
+            $h    = $bk->bangun([$sid], $op);
+            $teks = $h['ok'] ? preg_replace('/\s+/u', ' ', $this->isiDocx($h['biner'])) : '';
+            $this->cek('berkas izin ' . $kodeU . ': perihal & kegiatan "' . $namaU . '", "pelaksanaan ' . $kodeU . ' di sekolah", "rangkaian ' . $kodeU . ' selesai", tanpa kata ASTS, tanpa penanda tersisa', $h['ok']
+                && str_contains($teks, 'Pemberitahuan Pelaksanaan ' . $namaU) && str_contains($teks, 'pelaksanaan ' . $kodeU . ' di sekolah') && str_contains($teks, 'rangkaian ' . $kodeU . ' selesai')
+                && ! str_contains($teks, 'ASTS') && ! str_contains($teks, '${'), mb_substr($teks, 0, 300));
         }
 
         // --- Berkas per perusahaan (template yang sama)
@@ -2075,6 +2324,7 @@ class UjiSurat extends BaseCommand
         }
         SuratJenis::$templateTimpa = [];
         $this->db->table('surat_sekolah')->like('dibuat_nama', self::OLEH, 'after')->delete(); // CASCADE: siswa & riwayat (juga yang dibuat lewat controller: "ZZUJI SS operator")
+        $this->db->table('surat_sekolah')->like('dibuat_nama', 'Siswa: ' . self::OLEH, 'after')->delete(); // dibuat dari permintaan siswa uji (Layanan Siswa)
         $ids = array_map('intval', array_column($this->db->table('siswa')->select('id')->like('nis', self::NIS, 'after')->get()->getResultArray(), 'id'));
         if ($ids !== []) {
             $aj = array_map('intval', array_column($this->db->table('pkl_anggota')->select('pengajuan_id')->whereIn('siswa_id', $ids)->get()->getResultArray(), 'pengajuan_id'));
@@ -2086,6 +2336,10 @@ class UjiSurat extends BaseCommand
         $this->db->table('pkl_pengajuan')->where('ip_address', self::IP)->delete();
         $this->db->table('pkl_perusahaan')->like('nama_norm', 'zzujiss', 'after')->delete();
         $this->db->table('audit_log')->like('deskripsi', 'ZZUJI SS')->delete();
+        if ($this->db->tableExists('surat_jadwal')) { // jadwal uji: sesi/tempat bertanda ZZUJISS (permintaan ikut terhapus bersama siswanya)
+            $this->db->table('surat_jadwal')->groupStart()->like('sesi', self::NIS)->orLike('tempat', self::NIS)->groupEnd()->delete();
+            $this->db->table('audit_log')->where('tabel', 'surat_jadwal')->like('deskripsi', self::NIS)->delete();
+        }
 
         if ($this->pengaturanAsli !== null) {
             $this->db->table('pkl_pengaturan')->where('id', 1)->update($this->pengaturanAsli);

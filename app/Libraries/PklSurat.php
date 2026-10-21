@@ -228,7 +228,7 @@ final class PklSurat
     public static function simpanTtdKepsek(string $pathSementara, int $ukuran): array
     {
         return self::simpanGambar('ttd_kepsek', $pathSementara, $ukuran, self::MAKS_TTD_KEPSEK, 100,
-            'Tanda tangan + stempel Kepala Sekolah disimpan. Gambar ini menggantikan tanda tangan Kepala Sekolah bawaan di semua surat bernomor (Surat Izin PKL, Izin ASTS/TKA, Balasan, Penarikan).');
+            'Tanda tangan + stempel Kepala Sekolah disimpan. Gambar ini menggantikan tanda tangan Kepala Sekolah bawaan di semua surat bernomor (Surat Izin PKL, Izin Ujian/TKA, Balasan, Penarikan).');
     }
 
     public static function hapusTtdKepsek(): void

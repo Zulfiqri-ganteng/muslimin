@@ -34,7 +34,7 @@ $pratinjau = static fn (string $src, string $alt, string $tinggi): string => '<d
 <?= view('admin/partials/help', [
     'helpKey'   => 'pkl_ttd_v2',
     'helpTitle' => 'Tanda Tangan di Surat',
-    'helpBody'  => '<p>Dua gambar yang <b>otomatis tercetak di surat</b> (Surat Izin PKL, Izin ASTS/TKA, Surat Balasan, Penarikan) &mdash; <b>siapa pun yang meng-ACC</b>. Kaki surat tetap mencatat siapa yang menyetujui.</p>'
+    'helpBody'  => '<p>Dua gambar yang <b>otomatis tercetak di surat</b> (Surat Izin PKL, Izin Ujian/TKA, Surat Balasan, Penarikan) &mdash; <b>siapa pun yang meng-ACC</b>. Kaki surat tetap mencatat siapa yang menyetujui.</p>'
         . '<ul class="mt-2 list-disc pl-5 space-y-1">'
         . '<li><b>Tanda tangan Waka Hubin</b>: dipasang di atas nama Waka Hubin. Tanpa gambar, ruangnya dikosongkan untuk tanda tangan basah.</li>'
         . '<li><b>Tanda tangan + stempel Kepala Sekolah</b>: SATU gambar berisi tanda tangan dan stempel, menggantikan tanda tangan Kepala Sekolah bawaan template (yang tanpa stempel). Ukuran dan letaknya mengikuti rapian sekolah pada contoh surat, jadi tidak perlu ditempel manual di Word lagi.</li>'

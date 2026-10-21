@@ -357,6 +357,10 @@ final class PklHak
         if (preg_match('~^(wa|\d+/wa(/\d+/tandai)?)$~', $sisa) === 1) {
             return 'surat_unduh:*';
         }
+        // Jadwal ASTS & TKA untuk permintaan siswa (Admin\SuratJadwal) = pembuat salah satu surat itu; jenis persisnya di controller.
+        if (preg_match('~^jadwal(/|$)~', $sisa) === 1) {
+            return self::kunciSurat('buat', SuratJenis::ASTS) . '|' . self::kunciSurat('buat', SuratJenis::TKA);
+        }
         foreach (SuratJenis::kode() as $j) {
             $seg = substr(SuratJenis::alamat($j), strlen('admin/surat/'));
             if ($sisa === $seg || str_starts_with($sisa, $seg . '/')) {

@@ -127,3 +127,75 @@ Semua surat bernomor: pola `{urut}/SMK-BN/PKL/{bln_romawi}/{thn}` (sama dengan S
 - Mengubah `PklSurat::terbitkan` menyentuh fitur yang sudah LIVE → wajib regresi `dev:uji-pkl` + `dev:uji-pkl-biaya` sebelum lapor.
 - Tampilan visual Word tidak bisa dirender otomatis di mesin ini (PDF via COM macet; tak ada LibreOffice) → uji struktur otomatis + user membuka satu contoh tiap jenis di Word (seperti PKL).
 - Migrasi baru perlu `phpm spark migrate` di hosting; cadangkan DB seperti biasa. Claude tidak commit/push.
+
+## 10. Layanan Siswa — siswa mengajukan surat sendiri lewat satu link (permintaan klien 2026-10-21)
+**Permintaan:** siswa cukup membuka SATU link lalu memilih: Biodata · Pengajuan PKL · Lapor hasil PKL (Surat Balasan) · Izin ASTS ·
+Izin TKA (KHUSUS kelas XII) · Pernyataan Orang Tua · Penarikan PKL. Surat diserahkan siswa ke perusahaan. **Operator yang ACC**
+(tanda tangan Waka Hubin tetap tercetak — sudah begitu sejak 2026-10-13). Layar staf menampilkan kotak per jenis surat yang diajukan siswa.
+
+**Keputusan user (semua saran diterima):** (1) siswa membuktikan diri dengan NISN ATAU tanggal lahir (HP siswa di data sekolah hampir
+kosong; NISN 100%, tanggal lahir 99%) · (2) ACC Izin ASTS, Izin TKA, Penarikan pindah ke Operator · (3) staf membuka JADWAL
+kegiatan dulu (ASTS dari menu Ujian, TKA per gelombang) — siswa memilih jadwal · (4) Izin ASTS/TKA hanya untuk siswa yang ajuan
+PKL-nya disetujui di sistem (perusahaan dari sistem) · (5) Pernyataan Orang Tua: siswa mengisi data orang tua, surat langsung siap,
+Operator mencetak · (6) Penarikan boleh diajukan siswa, Operator memeriksa + ACC, status PKL tidak berubah · (7) link baru, link lama
+tetap jalan · (8) kabar WhatsApp "siap diambil" sekali klik. Satu surat izin per perusahaan per jadwal: siswa kedua dari perusahaan
+yang sama ikut surat yang sama (tidak dobel).
+
+**Tahap:** T1 fondasi ✅ · T2 halaman satu link + verifikasi + status permintaan · T3 form Izin ASTS/TKA · T4 form Pernyataan Orang
+Tua + Penarikan · T5 layar staf (kotak per jenis, lencana "Diajukan siswa", lonceng, WhatsApp) · T6 API Android + kontrak Flutter.
+
+**T1 (2026-10-21) — dibangun:** migrasi `2026-10-26-000001_SuratPermintaanSiswa` (tabel `surat_jadwal`, `surat_permintaan`
+[satu baris per permintaan, tertaut ke surat; isian khusus JSON], kolom `surat_sekolah.sumber` staf|siswa, hak ACC
+`surat_acc:izin_asts|izin_tka|penarikan_pkl` dipindah Hubin → Operator bila isian hak peran sah, tercatat di Audit Log) ·
+`Libraries\SuratJadwal` (periksa/simpan/buka-tutup/hapus, keadaan buka|tutup|selesai, `terbuka()` untuk siswa, `isiSurat()` →
+isian surat acara per perusahaan; jadwal yang sudah dipakai permintaan terkunci) · halaman `admin/surat/jadwal` (`Admin\SuratJadwal`,
+menu "Jadwal ASTS & TKA" di akhir grup SURAT SEKOLAH; hak = Buat Izin ASTS ATAU Buat Izin TKA; tanpa Alpine) · **perbaikan:**
+`SuratAcara::TINGKAT` — surat TKA per perusahaan hanya memuat siswa yang SEKARANG kelas XII (dulu ikut kelas XI; dipakai form web,
+API, dan pembuatan surat). Uji: `dev:uji-surat` 336 (+11 jadwal, +1 TKA XII), `dev:uji-hak` 69, `dev:uji-api-android` 19, cek-ui 0;
+salinan hosting: migrasi jalan, TKA 14 siswa XII dari 11 perusahaan (ASTS 115 siswa / 46 perusahaan).
+
+**Tambahan sebelum T2 (2026-10-21, permintaan user): Izin ASTS → Surat Izin ASTS/ASAS/ASAT.** Kode jenis tetap `izin_asts` (data &
+hak lama). Template `izin_asts.docx` + `izin_asts_perusahaan.docx`: tiga kata "ASTS" yang tertulis mati diganti `${singkatan}`
+(selain itu berkas sama; badan surat ASTS tetap = contoh sekolah, diuji). `SuratAcara::UJIAN` (ASTS, ASAS, ASAT) + isian `kegiatan`
+(bawaan ASTS; ASAT selalu Genap & tercetak tanpa semester), judul/`namaPendek`, sidik pencegah ganda ikut kode ujian (ASTS tidak →
+sidik surat lama sama), `periodeUjian()` membaca ASTS 1/ASAS/ASTS 2/ASAT. Form staf: pilihan Ujian (Alpine, semester tersembunyi
+untuk ASAT). Jadwal: kolom `surat_jadwal.kegiatan`, bagian "Jadwal Ujian (ASTS, ASAS, ASAT)", menu "Jadwal Ujian & TKA". API
+`surat/form/asts` + `ujian`. Uji: `dev:uji-surat` 342 (+3 murni, +2 berkas ASAS/ASAT, +1 jadwal ASAT), `dev:uji-hak` 69.
+
+**T2 (2026-10-21) — halaman satu link `/layanan` (publik, tanpa akun):** `Controllers\Layanan` + `Libraries\LayananSiswa` + views
+`layanan/{index,masuk,saya,_kartu_surat}` + `assets/js/layanan.js` (Alpine CSP `layananMasuk`). Beranda: 4 kartu surat (Izin Ujian,
+Izin TKA, Pernyataan Orang Tua, Penarikan — "Segera" sampai formulirnya dibangun di T3/T4 lewat `LayananSiswa::SIAP`) + "Cek status
+suratku" + kartu Biodata/Pengajuan PKL/Lapor dari `LayananPublik`. Masuk: kelas (tingkat PKL + XII) → nama (GET `layanan/siswa`) →
+NISN ATAU tanggal lahir (POST `layanan/masuk`, CSRF, LoginThrottle `layanan:{id}`, sesi 30 menit sejak aktivitas terakhir, id sesi
+diperbarui). Halaman siswa `layanan/saya`: identitas + Keluar, status PKL, kelayakan tiap surat dengan alasan (tanpa ajuan PKL /
+ajuan belum disetujui / khusus XII / belum ada jadwal dibuka / khusus kelas PKL), daftar permintaan dengan status dari suratnya
+(Menunggu ACC · Sedang diperiksa sekolah · Disetujui, sedang disiapkan · Siap diambil (sudah dicetak) · Dibatalkan + alasan).
+`LayananPublik` + entri `layanan_siswa` ("Minta surat sekolah") → tampil di /siswa & /cari. Di subdomain PKL/Biodata alamat
+`/layanan` dialihkan ke domain utama. Uji: `dev:uji-surat` 352 (+10 Layanan), uji-hak 69, uji-lapor 114, uji-api-android 19, HTTP
+alur masuk salah/benar/keluar/CSRF.
+
+**T3 (2026-10-21) — siswa meminta Surat Izin Ujian / Izin TKA:** `GET|POST layanan/surat/{izin_ujian|izin_tka}` (view
+`layanan/surat_izin`, tanpa JS: kartu radio jadwal). `LayananSiswa::ajukanIzin`: syarat = kelayakan (ajuan PKL disetujui, TKA kelas
+XII, jadwal dibuka) → kelompok perusahaan siswa (`SuratAcara::perusahaan` + saringan tingkat) → sidik `SuratAcara::kunci` (sama
+dengan surat per perusahaan buatan staf) → surat yang sudah ada (diminta teman / dibuat operator): permintaan DITAUTKAN, nama siswa
+ditambahkan bila surat masih bisa diubah (`SuratSekolah::ubah`), riwayat aksi baru `minta`; belum ada: `SuratSekolah::buat` dengan
+`sumber = 'siswa'`, dibuat "Siswa: {nama}", isian jadwal + `jadwal_id`, semua siswa perusahaan itu, menunggu ACC. Satu baris
+`surat_permintaan` per siswa; minta ulang jadwal yang sama → "sudah"; surat dibatalkan → boleh minta lagi. Setelah masuk dengan
+tujuan surat, siswa langsung dibawa ke formulirnya. Uji: `dev:uji-surat` 358 (+6 alur permintaan + ACC + berkas Word).
+
+**T4 (2026-10-21) — Pernyataan Orang Tua & Penarikan PKL dari siswa:** `layanan/surat/pernyataan` (view `surat_pernyataan`) —
+data orang tua terisi dari data sekolah (`SuratPernyataan::ortu`, atau isian terakhir), siswa membetulkan → `ajukanPernyataan`: surat
+cakupan "siswa" (sidik sama dengan pilihan operator → bila ada, ditautkan), `isi.ortu_isian[siswa_id]` menimpa data sekolah saat
+dicetak (`SuratPernyataan::halaman`), tanpa nomor & ACC (langsung "Siap dicetak sekolah"); kirim ulang sebelum dicetak = data
+diperbarui (surat sama), sesudah dicetak = ditolak (arahkan ke operator). `layanan/surat/penarikan` (view `surat_penarikan`) —
+alasan pilihan ramah siswa (`LayananSiswa::ALASAN_PENARIKAN` → kalimat baku `SuratPkl::ALASAN_SARAN`) atau tulis sendiri + tanggal
+mulai berlaku → `SuratPkl::buat(PENARIKAN, …, [siswa sendiri], opsi sumber=siswa)` menunggu ACC; satu permintaan aktif per siswa;
+status PKL tidak berubah (disebut jelas di formulir). Status permintaan membedakan surat tanpa ACC + pesan materai untuk Pernyataan.
+Uji: `dev:uji-surat` 363 (+5), uji-pkl 339, uji-hak 69, uji-api-android 19; HTTP di server pratinjau DB salinan hosting (masuk →
+langsung ke formulir, data orang tua terisi, Penarikan menampilkan perusahaan, Izin Ujian tanpa jadwal → kembali dengan alasan).
+
+**Revisi user (2026-10-21): satu ikon per surat, langsung ke formulirnya** (seperti "Ajukan tempat PKL"). `LayananPublik`: entri
+`surat_ujian`, `surat_tka`, `surat_ortu`, `surat_penarikan` (ilustrasi `surat-{ujian,tka,ortu,penarikan}.svg`, bagian "Surat dari
+sekolah" di /siswa) → `layanan/surat/{kunci}`; kisi "Daftar layanan" (`public/partials/kepala.php`) memuat keempatnya; kartu
+"Layanan unggulan" beranda TIDAK diubah. Belum masuk → `layanan/masuk?tujuan={kunci}` berjudul "Minta {nama surat}" (langkah 1
+dari 2), lalu langsung ke formulir. Halaman `/layanan` tetap ada (status permintaan ada di `/layanan/saya`).

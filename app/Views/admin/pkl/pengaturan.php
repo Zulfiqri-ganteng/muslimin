@@ -217,7 +217,7 @@ $kotakTautan = static fn (string $judul, string $url, string $pesan, string $ket
                 <div>
                     <label class="lbl" for="f_nomor_awal">Nomor berikutnya (tahun ini)</label>
                     <input id="f_nomor_awal" type="number" min="1" max="99999" name="nomor_awal" value="<?= esc($nilai('nomor_awal', '1'), 'attr') ?>" class="inp <?= $cls('nomor_awal') ?>">
-                    <p class="hint">Isi bila sekolah sudah memakai nomor berjalan (mis. sudah sampai 44 → isi 45). Nomor tak pernah mundur atau ganda. <b>Satu urutan untuk Surat Izin PKL dan semua Surat Sekolah</b> (Izin ASTS/TKA, Balasan, Penarikan), jadi tidak ada dua surat bernomor sama.</p>
+                    <p class="hint">Isi bila sekolah sudah memakai nomor berjalan (mis. sudah sampai 44 → isi 45). Nomor tak pernah mundur atau ganda. <b>Satu urutan untuk Surat Izin PKL dan semua Surat Sekolah</b> (Izin Ujian/TKA, Balasan, Penarikan), jadi tidak ada dua surat bernomor sama.</p>
                     <?= $err('nomor_awal') ?>
                 </div>
             </div>

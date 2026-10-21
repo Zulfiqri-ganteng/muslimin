@@ -100,6 +100,13 @@ Slug: `asts`, `tka`, `pernyataan-ortu`, `balasan`, `penarikan` (= ujung alamat m
 (rinci per slug: `BLUEPRINT-SURAT.md` §5). Boolean JSON (`true/false`) disamakan jadi `'1'/'0'` sebelum dibaca library
 (mis. `isi_ortu: false` tetap berarti "tidak").
 
+### Surat Izin ASTS/ASAS/ASAT (2026-10-21)
+Jenis `izin_asts` kini melayani tiga ujian. Isian baru `kegiatan` = `ASTS` | `ASAS` | `ASAT` pada buat/ubah (tanpa isian = `ASTS`,
+jadi aplikasi lama tetap jalan; nilai lain → 422). `ASAT` selalu semester Genap (isian `semester` diabaikan). Formulir
+(`GET surat/form/asts`) menambah `ujian: [{kode, nama}]`; tiap butir `periode_ujian` kini juga memuat `kegiatan` dan daftar
+periode mencakup ASTS 1, ASAS, ASTS 2, ASAT dari menu Ujian. Judul surat: "ASAS Ganjil 2026/2027 - …", "ASAT 2026/2027 - …". Label jenis
+= "Surat Izin ASTS/ASAS/ASAT". Surat Izin TKA per perusahaan kini hanya memuat siswa yang SEKARANG kelas XII.
+
 ## Galat
 - **422 isian** (buat/ubah): `data.errors.galat` = LIST kalimat dari library (`periksa()`); `message` = kalimat pertama.
 - **422 keputusan**: `data.errors.{catatan|bahaya|ids}` (`wakil` tidak dipakai lagi sejak 2026-10-13).

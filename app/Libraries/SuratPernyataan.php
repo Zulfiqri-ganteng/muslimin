@@ -148,9 +148,18 @@ final class SuratPernyataan
         $kosong  = self::titik();
         $atau    = static fn (string $s): string => trim($s) !== '' ? trim($s) : $kosong;
 
+        // Data orang tua yang diisi SISWA sendiri lewat Layanan Siswa (isi.ortu_isian[siswa_id]) menimpa data sekolah per kolom.
+        $isian = is_array($isi['ortu_isian'] ?? null) ? $isi['ortu_isian'] : [];
+
         $out = [];
         foreach (array_values($siswa) as $a) {
             $o    = $isiOrtu ? self::ortu($a) : ['nama' => '', 'pekerjaan' => '', 'alamat' => '', 'hp' => ''];
+            $man  = $isian[(string) (int) ($a['siswa_id'] ?? 0)] ?? null;
+            if (is_array($man)) {
+                foreach (['nama', 'pekerjaan', 'alamat', 'hp'] as $k) {
+                    $o[$k] = trim((string) ($man[$k] ?? '')) !== '' ? IsianBantu::rapikan((string) $man[$k]) : $o[$k];
+                }
+            }
             $hp   = trim((string) ($a['hp'] ?? '')) !== '' ? (string) $a['hp'] : (string) ($a['hp_master'] ?? '');
             $nama = IsianBantu::rapikan((string) ($a['nama'] ?? ''));
 

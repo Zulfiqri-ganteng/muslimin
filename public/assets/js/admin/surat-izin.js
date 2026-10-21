@@ -25,12 +25,13 @@ document.addEventListener('alpine:init', function () {
 
     Alpine.data('suratIzinForm', function () {
         return {
-            mode: 'umum', semester: 'Ganjil', tp: '', mulai: '', selesai: '', tanggalSurat: '',
+            mode: 'umum', kegiatan: 'ASTS', semester: 'Ganjil', tp: '', mulai: '', selesai: '', tanggalSurat: '',
             periode: [], perusahaan: [], dipilih: [], pilihPeriode: '', cari: '',
 
             init: function () {
                 var c = JSON.parse(this.$el.getAttribute('data-config') || '{}');
                 this.mode = c.mode || 'umum';
+                this.kegiatan = c.kegiatan || 'ASTS';
                 this.semester = c.semester || 'Ganjil';
                 this.tp = c.tp || '';
                 this.mulai = c.mulai || '';
@@ -71,10 +72,11 @@ document.addEventListener('alpine:init', function () {
                 return '';
             },
 
-            /* Isi semester, tahun pelajaran, dan tanggal dari periode di menu Ujian. */
+            /* Isi ujian (ASTS/ASAS/ASAT), semester, tahun pelajaran, dan tanggal dari periode di menu Ujian. */
             ambilPeriode: function () {
                 var p = this.periode[this.pilihPeriode];
                 if (!p) { return; }
+                this.kegiatan = p.kegiatan || 'ASTS';
                 this.semester = p.semester;
                 this.tp = p.tahun;
                 this.mulai = p.mulai || '';

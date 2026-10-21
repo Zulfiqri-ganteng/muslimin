@@ -72,7 +72,7 @@ class SuratIzin extends SuratDasar
             'ubah'       => false,
             'nilai'      => $this->nilaiForm($awal),
             'periode'    => $periode,
-            'perusahaan' => $acara->perusahaan(),
+            'perusahaan' => $acara->perusahaan(null, null, $jenis), // TKA: hanya siswa kelas XII
         ]);
     }
 
@@ -112,6 +112,7 @@ class SuratIzin extends SuratDasar
         $isi   = $m['surat']['isi_arr'];
         $awal  = ['tanggal_surat' => (string) $m['surat']['tanggal_surat'], 'mode' => (string) ($isi['mode'] ?? 'umum'), 'tempat' => (string) ($isi['tempat'] ?? Acara::TEMPAT_BAWAAN),
             'tgl_mulai' => (string) ($isi['tgl_mulai'] ?? ''), 'tgl_selesai' => (string) ($isi['tgl_selesai'] ?? ''), 'semester' => (string) ($isi['semester'] ?? 'Ganjil'),
+            'kegiatan' => $jenis === SuratJenis::ASTS ? Acara::kodeUjian($isi['kegiatan'] ?? '') : 'TKA',
             'tahun_pelajaran' => (string) ($isi['tahun_pelajaran'] ?? ''), 'sesi' => (string) ($isi['sesi'] ?? '')];
 
         return view('admin/surat/izin_form', $this->dasarForm($jenis) + [

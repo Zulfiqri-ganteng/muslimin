@@ -55,7 +55,7 @@ $bilah = 'flex flex-col gap-3 border-b border-gray-200 bg-gray-50 px-4 py-3 sm:f
 <?= view('admin/partials/help', [
     'helpKey'   => 'surat_daftar_v3',
     'helpTitle' => 'Daftar Surat Sekolah',
-    'helpBody'  => '<p>Di sini tercatat <b>semua surat sekolah</b> (Izin ASTS, Izin TKA, Pernyataan Orang Tua PKL, Surat Balasan PKL, Penarikan Izin PKL) &mdash; siapa yang membuat, statusnya, dan nomornya. Pilih tab status di atas, atau saring menurut jenis, tahun, dan kata kunci (nomor, judul, atau nama perusahaan).</p>'
+    'helpBody'  => '<p>Di sini tercatat <b>semua surat sekolah</b> (Izin Ujian ASTS/ASAS/ASAT, Izin TKA, Pernyataan Orang Tua PKL, Surat Balasan PKL, Penarikan Izin PKL) &mdash; siapa yang membuat, statusnya, dan nomornya. Pilih tab status di atas, atau saring menurut jenis, tahun, dan kata kunci (nomor, judul, atau nama perusahaan).</p>'
         . '<ul class="mt-2 list-disc space-y-1 pl-5">'
         . '<li><b>Menunggu ACC</b>: surat sudah disiapkan dan menunggu persetujuan. <b>Siap unduh</b>: boleh diunduh. <b>Dikembalikan</b>: perlu diperbaiki dulu.</li>'
         . '<li>Nomor surat <b>diterbitkan sekali</b>, saat surat pertama diunduh, dan satu urutan dengan Surat Izin PKL, jadi tidak ada dua surat bernomor sama. Unduh ulang memakai nomor yang sama.</li>'

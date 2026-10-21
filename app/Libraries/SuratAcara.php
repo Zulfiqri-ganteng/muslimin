@@ -28,6 +28,38 @@ final class SuratAcara
     public const MAKS_HARI     = 31;
     public const MAKS_PERUSAHAAN = 300;
 
+    /**
+     * Tingkat kelas peserta kegiatan (kelas siswa SAAT INI): TKA khusus kelas XII (keputusan sekolah 2026-10-21) — surat TKA per
+     * perusahaan hanya memuat siswa XII, dan perusahaan tanpa siswa XII tidak ikut. Jenis yang tidak tertulis = semua tingkat.
+     */
+    public const TINGKAT = [SuratJenis::TKA => ['XII']];
+
+    /**
+     * Ujian yang memakai jenis surat izin_asts ("Surat Izin ASTS/ASAS/ASAT", sejak 2026-10-21): kode => [nama resmi, jenis di menu
+     * Ujian]. ASAT selalu semester Genap dan namanya tercetak tanpa semester ("… Akhir Tahun (ASAT) Tahun Pelajaran 2026/2027").
+     */
+    public const UJIAN = [
+        'ASTS' => ['Asesmen Sumatif Tengah Semester', ['ASTS1', 'ASTS2']],
+        'ASAS' => ['Asesmen Sumatif Akhir Semester', ['ASAS']],
+        'ASAT' => ['Asesmen Sumatif Akhir Tahun', ['ASAT']],
+    ];
+
+    /** Kode ujian yang sah dari isian ('' / tak dikenal → ASTS, bawaan surat lama). */
+    public static function kodeUjian(?string $kode): string
+    {
+        $kode = strtoupper(trim((string) $kode));
+
+        return isset(self::UJIAN[$kode]) ? $kode : 'ASTS';
+    }
+
+    /** "Asesmen Sumatif Tengah Semester (ASTS) Ganjil" / "Asesmen Sumatif Akhir Tahun (ASAT)". */
+    public static function namaUjian(string $kode, string $semester = ''): string
+    {
+        $kode = self::kodeUjian($kode);
+
+        return trim(self::UJIAN[$kode][0] . ' (' . $kode . ')' . ($kode !== 'ASAT' ? ' ' . trim($semester) : ''));
+    }
+
     /** jenis => [singkatan, nama resmi] */
     private const KEGIATAN = [
         SuratJenis::ASTS => ['ASTS', 'Asesmen Sumatif Tengah Semester (ASTS)'],
@@ -168,7 +200,13 @@ final class SuratAcara
 
         $isi = ['kegiatan' => self::KEGIATAN[$jenis][0] ?? '', 'tgl_mulai' => (string) $mulai, 'tgl_selesai' => (string) $akhir, 'tempat' => $tempat, 'mode' => $mode];
         if ($jenis === SuratJenis::ASTS) {
-            $semester = (string) ($in['semester'] ?? '');
+            // Ujian: ASTS (bawaan — juga untuk formulir/API lama tanpa isian ini), ASAS, ASAT. ASAT selalu semester Genap.
+            $mentah   = strtoupper(trim((string) ($in['kegiatan'] ?? '')));
+            $kegiatan = self::kodeUjian($mentah);
+            if ($mentah !== '' && $mentah !== $kegiatan) {
+                $galat[] = 'Pilih ujiannya: ASTS, ASAS, atau ASAT.';
+            }
+            $semester = $kegiatan === 'ASAT' ? 'Genap' : (string) ($in['semester'] ?? '');
             $tp       = IsianBantu::rapikan((string) ($in['tahun_pelajaran'] ?? ''));
             if (! in_array($semester, ['Ganjil', 'Genap'], true)) {
                 $galat[] = 'Semester wajib dipilih (Ganjil atau Genap).';
@@ -176,7 +214,7 @@ final class SuratAcara
             if (preg_match('~^(\d{4})/(\d{4})$~', $tp, $m) !== 1 || (int) $m[2] !== (int) $m[1] + 1) {
                 $galat[] = 'Tahun pelajaran harus berbentuk 2026/2027 (tahun kedua = tahun pertama + 1).';
             }
-            $isi = ['kegiatan' => 'ASTS', 'semester' => $semester, 'tahun_pelajaran' => $tp] + $isi;
+            $isi = ['kegiatan' => $kegiatan, 'semester' => $semester, 'tahun_pelajaran' => $tp] + $isi;
         } else {
             $sesi = IsianBantu::rapikan((string) ($in['sesi'] ?? ''));
             if ($sesi === '' || mb_strlen($sesi) > 40) {
@@ -201,18 +239,33 @@ final class SuratAcara
     /** Sidik pencegah surat ganda: kegiatan + semester/tahun + sesi + tanggal + cakupan (+ perusahaan). */
     public static function kunci(string $jenis, array $isi, string $perusahaan = ''): string
     {
-        return sha1(implode('|', [
+        $bagian = [
             $jenis, (string) ($isi['mode'] ?? 'umum'), (string) ($isi['tgl_mulai'] ?? ''), (string) ($isi['tgl_selesai'] ?? ''),
             mb_strtolower((string) ($isi['sesi'] ?? '')), (string) ($isi['semester'] ?? ''), (string) ($isi['tahun_pelajaran'] ?? ''), $perusahaan,
-        ]));
+        ];
+        // ASAS/ASAT ikut sidik (ASTS tidak, supaya sidik surat ASTS lama tetap sama).
+        if ($jenis === SuratJenis::ASTS && self::kodeUjian($isi['kegiatan'] ?? '') !== 'ASTS') {
+            $bagian[] = self::kodeUjian($isi['kegiatan'] ?? '');
+        }
+
+        return sha1(implode('|', $bagian));
+    }
+
+    /** "ASTS Ganjil 2026/2027" / "ASAT 2026/2027" / "TKA Gelombang 1". */
+    public static function namaPendek(string $jenis, array $isi): string
+    {
+        if ($jenis !== SuratJenis::ASTS) {
+            return trim('TKA ' . ($isi['sesi'] ?? ''));
+        }
+        $kode = self::kodeUjian($isi['kegiatan'] ?? '');
+
+        return trim(preg_replace('/\s+/u', ' ', $kode . ' ' . ($kode !== 'ASAT' ? ($isi['semester'] ?? '') : '') . ' ' . ($isi['tahun_pelajaran'] ?? '')) ?? $kode);
     }
 
     /** Judul ringkas untuk Daftar Surat. */
     public static function judul(string $jenis, array $isi, string $perusahaan = '', int $jmlSiswa = 0): string
     {
-        $dasar = $jenis === SuratJenis::ASTS
-            ? 'ASTS ' . ($isi['semester'] ?? '') . ' ' . ($isi['tahun_pelajaran'] ?? '')
-            : 'TKA ' . ($isi['sesi'] ?? '');
+        $dasar = self::namaPendek($jenis, $isi);
         $akhir = ($isi['mode'] ?? 'umum') === 'perusahaan' && $perusahaan !== ''
             ? $perusahaan . ($jmlSiswa > 0 ? ' (' . $jmlSiswa . ' siswa)' : '')
             : 'surat umum';
@@ -252,16 +305,17 @@ final class SuratAcara
             'tujuan_surat'   => $mode === 'perusahaan' && $nama !== '' ? 'Bapak/Ibu Pimpinan ' . $nama : 'Bapak/Ibu Pimpinan / Pembimbing PKL',
         ];
         if ($jenis === SuratJenis::ASTS) {
-            $semester = trim((string) ($isi['semester'] ?? ''));
-            $kegiatan = trim('Asesmen Sumatif Tengah Semester (ASTS) ' . $semester);
+            $kode     = self::kodeUjian($isi['kegiatan'] ?? '');
+            $kegiatan = self::namaUjian($kode, (string) ($isi['semester'] ?? ''));
             $tp       = trim((string) ($isi['tahun_pelajaran'] ?? ''));
             $v += [
                 'perihal'          => 'Pemberitahuan Pelaksanaan ' . $kegiatan,
                 'kegiatan'         => $kegiatan,
                 'kegiatan_lengkap' => $kegiatan . ($tp !== '' ? ' Tahun Pelajaran ' . $tp : ''),
+                'singkatan'        => $kode, // "…mengikuti pelaksanaan ASAS di sekolah…" (dulu "ASTS" tertulis mati di template)
             ];
         } else {
-            $v += ['sesi' => (string) ($isi['sesi'] ?? '')];
+            $v += ['sesi' => (string) ($isi['sesi'] ?? ''), 'singkatan' => 'TKA'];
         }
 
         return $v;
@@ -275,20 +329,24 @@ final class SuratAcara
      * Perusahaan yang punya siswa PKL (ajuan DISETUJUI, siswa aktif), digabung per perusahaan. Kunci grup: "m:{id master}"
      * bila ada, selain itu "n:{nama ternormalisasi}". Bila $mulai/$selesai diberikan dan periode PKL perusahaan itu sudah
      * tercatat, `luar_periode` = true bila periodenya tidak menjangkau tanggal kegiatan (periode kosong = tidak diketahui).
+     * $jenis memberi saringan tingkat kelas (self::TINGKAT): TKA = hanya siswa yang SEKARANG kelas XII.
      *
      * @return list<array{kunci: string, nama: string, alamat: string, kota: string, ajuan_ids: list<int>, siswa: list<array{siswa_id: int, kelas_id: ?int, hp: ?string, nama: string, kelas: string}>, mulai: ?string, selesai: ?string, luar_periode: bool}>
      */
-    public function perusahaan(?string $mulai = null, ?string $selesai = null): array
+    public function perusahaan(?string $mulai = null, ?string $selesai = null, ?string $jenis = null): array
     {
-        $rows = $this->db->table('pkl_pengajuan p')
+        $b = $this->db->table('pkl_pengajuan p')
             ->select('p.id AS ajuan_id, p.perusahaan_id, p.perusahaan_norm, p.perusahaan_nama, p.perusahaan_alamat, p.perusahaan_kota, p.tanggal_mulai, p.tanggal_selesai, m.nama AS master_nama')
             ->select('a.siswa_id, a.kelas_id, a.hp, a.peran, s.nama AS siswa_nama, k.nama_kelas')
             ->join('pkl_anggota a', 'a.pengajuan_id = p.id')
             ->join('siswa s', "s.id = a.siswa_id AND s.status = 'aktif'")
             ->join('kelas k', 'k.id = a.kelas_id', 'left')
             ->join('pkl_perusahaan m', 'm.id = p.perusahaan_id', 'left')
-            ->where('p.status', 'disetujui')
-            ->orderBy('p.perusahaan_nama', 'ASC')->orderBy('p.id', 'ASC')->orderBy('a.peran', 'ASC')->orderBy('a.id', 'ASC') // ENUM urut menurut indeks: pengaju sebelum teman
+            ->where('p.status', 'disetujui');
+        if (isset(self::TINGKAT[(string) $jenis])) {
+            $b->join('kelas ks', 'ks.id = s.kelas_id')->whereIn('ks.tingkat', self::TINGKAT[(string) $jenis]);
+        }
+        $rows = $b->orderBy('p.perusahaan_nama', 'ASC')->orderBy('p.id', 'ASC')->orderBy('a.peran', 'ASC')->orderBy('a.id', 'ASC') // ENUM urut menurut indeks: pengaju sebelum teman
             ->get()->getResultArray();
 
         $grup = [];
@@ -349,18 +407,29 @@ final class SuratAcara
     }
 
     /**
-     * Periode ASTS di menu Ujian (ASTS 1 / ASTS 2) untuk mengisi otomatis tanggal, terbaru dulu.
+     * Periode ujian di menu Ujian (ASTS 1, ASAS, ASTS 2, ASAT) untuk mengisi otomatis ujian, semester, tahun, dan tanggal; tahun
+     * terbaru dulu, dalam satu tahun menurut urutan pelaksanaan.
      *
-     * @return list<array{label: string, semester: string, tahun: string, mulai: ?string, selesai: ?string}>
+     * @return list<array{label: string, kegiatan: string, semester: string, tahun: string, mulai: ?string, selesai: ?string}>
      */
     public function periodeUjian(): array
     {
-        $out = [];
-        foreach ($this->db->table('ujian_periode')->whereIn('jenis', ['ASTS1', 'ASTS2'])->where('deleted_at', null)->orderBy('tahun_ajaran', 'DESC')->orderBy('jenis', 'ASC')->get()->getResultArray() as $r) {
-            $tgl   = ! empty($r['tanggal_mulai']) && ! empty($r['tanggal_selesai']) ? self::hariTanggal((string) $r['tanggal_mulai'], (string) $r['tanggal_selesai']) : 'tanggal belum diisi di menu Ujian';
+        $peta = [];
+        foreach (self::UJIAN as $kode => [, $jenisUjian]) {
+            foreach ($jenisUjian as $j) {
+                $peta[$j] = $kode;
+            }
+        }
+        $nama = ['ASTS1' => 'ASTS 1', 'ASTS2' => 'ASTS 2', 'ASAS' => 'ASAS', 'ASAT' => 'ASAT'];
+        $out  = [];
+        foreach ($this->db->table('ujian_periode')->whereIn('jenis', array_keys($peta))->where('deleted_at', null)
+            ->orderBy('tahun_ajaran', 'DESC')->orderBy("FIELD(jenis, 'ASTS1', 'ASAS', 'ASTS2', 'ASAT')", '', false)->get()->getResultArray() as $r) {
+            $tgl      = ! empty($r['tanggal_mulai']) && ! empty($r['tanggal_selesai']) ? self::hariTanggal((string) $r['tanggal_mulai'], (string) $r['tanggal_selesai']) : 'tanggal belum diisi di menu Ujian';
+            $kode     = $peta[(string) $r['jenis']];
+            $semester = $kode === 'ASAT' ? 'Genap' : (string) $r['semester'];
             $out[] = [
-                'label'    => ($r['jenis'] === 'ASTS1' ? 'ASTS 1' : 'ASTS 2') . ' · ' . $r['tahun_ajaran'] . ' · ' . $r['semester'] . ' (' . $tgl . ')',
-                'semester' => (string) $r['semester'], 'tahun' => (string) $r['tahun_ajaran'],
+                'label'    => ($nama[(string) $r['jenis']] ?? (string) $r['jenis']) . ' · ' . $r['tahun_ajaran'] . ($kode !== 'ASAT' ? ' · ' . $semester : '') . ' (' . $tgl . ')',
+                'kegiatan' => $kode, 'semester' => $semester, 'tahun' => (string) $r['tahun_ajaran'],
                 'mulai' => $r['tanggal_mulai'] ?: null, 'selesai' => $r['tanggal_selesai'] ?: null,
             ];
         }
@@ -379,14 +448,19 @@ final class SuratAcara
     public static function nilaiAwal(string $jenis, array $periode, string $tahunPelajaran): array
     {
         $awal = ['tanggal_surat' => date('Y-m-d'), 'mode' => 'umum', 'tempat' => self::TEMPAT_BAWAAN, 'tgl_mulai' => '', 'tgl_selesai' => '',
+            'kegiatan' => $jenis === SuratJenis::ASTS ? 'ASTS' : 'TKA',
             'semester' => 'Ganjil', 'tahun_pelajaran' => $tahunPelajaran, 'sesi' => $jenis === SuratJenis::TKA ? self::SESI_SARAN[0] : ''];
         if ($jenis !== SuratJenis::ASTS || $periode === []) {
             return $awal;
         }
-        foreach (array_reverse($periode) as $x) { // dari yang tertua: ambil yang pertama belum lewat
-            if ($x['selesai'] !== null && $x['selesai'] >= date('Y-m-d')) {
-                return ['semester' => $x['semester'], 'tahun_pelajaran' => $x['tahun'], 'tgl_mulai' => (string) $x['mulai'], 'tgl_selesai' => (string) $x['selesai']] + $awal;
+        $terdekat = null; // periode bertanggal yang belum lewat, paling awal
+        foreach ($periode as $x) {
+            if ($x['selesai'] !== null && $x['selesai'] >= date('Y-m-d') && ($terdekat === null || (string) $x['mulai'] < (string) $terdekat['mulai'])) {
+                $terdekat = $x;
             }
+        }
+        if ($terdekat !== null) {
+            return ['kegiatan' => $terdekat['kegiatan'], 'semester' => $terdekat['semester'], 'tahun_pelajaran' => $terdekat['tahun'], 'tgl_mulai' => (string) $terdekat['mulai'], 'tgl_selesai' => (string) $terdekat['selesai']] + $awal;
         }
 
         return ['semester' => $periode[0]['semester'], 'tahun_pelajaran' => $periode[0]['tahun']] + $awal;
@@ -426,7 +500,7 @@ final class SuratAcara
             }
         } else {
             $peta = [];
-            foreach ($this->perusahaan($h['isi']['tgl_mulai'], $h['isi']['tgl_selesai']) as $g) {
+            foreach ($this->perusahaan($h['isi']['tgl_mulai'], $h['isi']['tgl_selesai'], $jenis) as $g) {
                 $peta[$g['kunci']] = $g;
             }
             foreach ($h['pilihan'] as $kunci) {

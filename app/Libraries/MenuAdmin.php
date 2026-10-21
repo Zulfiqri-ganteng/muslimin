@@ -53,6 +53,8 @@ final class MenuAdmin
                 $jenisSurat[] = [SuratJenis::alamat($k) . '/laporan', 'Lapor Diterima PKL', 'inbox-full', false, ! SuratJenis::siap($k)];
             }
         }
+        // Pengaturan di akhir grup: jadwal ASTS & TKA yang dibuka untuk permintaan surat dari siswa (Layanan Siswa).
+        $jenisSurat[] = ['admin/surat/jadwal', 'Jadwal Ujian & TKA', 'calendar-month', false, false];
 
         return [
             ['judul' => null, 'entri' => [

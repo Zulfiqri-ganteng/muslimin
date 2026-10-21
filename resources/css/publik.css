@@ -18,6 +18,8 @@
 @source "../../public/assets/js/pkl-lapor.js";
 @source "../../app/Views/biodata";
 @source "../../public/assets/js/biodata.js";
+@source "../../app/Views/layanan";
+@source "../../public/assets/js/layanan.js";
 
 @theme {
   --font-sans: 'Plus Jakarta Sans', 'Segoe UI', system-ui, sans-serif;
@@ -159,36 +161,41 @@
   .tombol-ikon { @apply grid h-10 w-10 shrink-0 place-items-center rounded-lg text-teks-2 transition-colors hover:bg-permukaan hover:text-teks; }
   .tombol-ikon[aria-expanded="true"] { @apply bg-brand-50 text-brand-800; }
 
-  /* Laci samping "Daftar layanan" (acuan: sheet daftar ruang) — tombol kisi di layar lebar, tombol menu di HP */
-  /* Laci: latar memudar + panel bergeser dari kanan (buka & tutup). display ditunda sampai animasi tutup selesai (allow-discrete),
-     awal animasi buka lewat @starting-style. Kurangi gerak (prefers-reduced-motion) → tanpa animasi. */
-  .laci-portal { @apply fixed inset-0 z-50; transition: display 0.32s allow-discrete; }
-  .laci-portal:not([data-buka]) { display: none; pointer-events: none; }
-  .laci-latar { @apply absolute inset-0 bg-black/40; opacity: 1; transition: opacity 0.28s ease; }
-  .laci-panel { @apply absolute inset-y-0 right-0 flex w-[min(21rem,88vw)] flex-col overflow-y-auto bg-white shadow-melayang outline-none;
-    transform: translateX(0); transition: transform 0.32s cubic-bezier(0.32, 0.72, 0, 1); will-change: transform; }
-  .laci-portal:not([data-buka]) .laci-latar { opacity: 0; }
-  .laci-portal:not([data-buka]) .laci-panel { transform: translateX(100%); }
+  /* Panel "Daftar layanan" (acuan rumah.pendidikan.go.id "Jelajahi Ruang", 2026-10-21): kartu putih melayang TEPAT DI BAWAH tombol
+     kisi — rata kanan dengan tombolnya di layar lebar, selebar layar bertepi 16px di HP — tanpa latar gelap (klik di luar, Esc, atau ×
+     menutup). Muncul memudar + turun sedikit (0,16 dtk, @starting-style); tutup memudar (display ditunda, allow-discrete). Letak =
+     variabel --daftar-atas / --daftar-kanan dari tombol yang diklik (portal.js kepalaPortal). Kurangi gerak → tanpa animasi. */
+  .daftar-portal { @apply fixed inset-0 z-50; transition: display 0.16s allow-discrete; }
+  .daftar-portal:not([data-buka]) { display: none; pointer-events: none; }
+  .daftar-luar { @apply absolute inset-0; }
+  .daftar-panel { @apply absolute inset-x-4 flex flex-col overflow-hidden rounded-xl border border-garis bg-white shadow-melayang outline-none md:left-auto md:w-[38rem];
+    top: var(--daftar-atas, 4.5rem); max-height: calc(100dvh - var(--daftar-atas, 4.5rem) - 1rem);
+    opacity: 1; transform: translateY(0); transition: opacity 0.16s ease, transform 0.16s ease; }
+  @media (width >= 48rem) {
+    .daftar-panel { right: var(--daftar-kanan, 2rem); }
+  }
+  .daftar-portal:not([data-buka]) .daftar-panel { opacity: 0; transform: translateY(-6px); }
   @starting-style {
-    .laci-portal[data-buka] .laci-latar { opacity: 0; }
-    .laci-portal[data-buka] .laci-panel { transform: translateX(100%); }
+    .daftar-portal[data-buka] .daftar-panel { opacity: 0; transform: translateY(-6px); }
   }
   @media (prefers-reduced-motion: reduce) {
-    .laci-portal, .laci-latar, .laci-panel { transition: none; }
+    .daftar-portal, .daftar-panel { transition: none; }
   }
-  .laci-kepala { @apply flex h-16 shrink-0 items-center justify-between border-b border-garis px-4; }
-  .laci-judul { @apply text-heading-sm text-teks; }
-  .laci-isi { @apply flex-1 px-3 py-3; }
-  .laci-label { @apply px-3 pt-4 pb-1.5 text-xs font-semibold tracking-wide text-teks-2 uppercase; }
+  .daftar-kepala { @apply flex shrink-0 items-center justify-between gap-4 px-5 pt-5 pb-3 sm:px-7 sm:pt-6; }
+  .daftar-judul { @apply text-heading-sm text-teks; }
+  .daftar-isi { @apply min-h-0 flex-1 overflow-y-auto px-3 pb-5 sm:px-5 sm:pb-6; }
+  .daftar-kisi { @apply grid grid-cols-3 gap-x-2 gap-y-3 sm:grid-cols-4; }
+  .daftar-kisi a { @apply flex h-full flex-col items-center gap-1.5 rounded-lg p-1.5 text-center text-sm leading-snug text-teks transition-colors hover:text-brand-800; }
+  .daftar-ikon { @apply grid h-16 w-16 place-items-center rounded-xl bg-permukaan transition-colors sm:h-20 sm:w-20; }
+  .daftar-kisi a:hover .daftar-ikon { @apply bg-brand-50; }
+  .daftar-kisi a[aria-current="page"] .daftar-ikon { @apply bg-brand-50 ring-2 ring-brand-200; }
+  .daftar-ikon img { @apply h-10 w-10 object-contain sm:h-11 sm:w-11; }
+  .daftar-kaki { @apply border-t border-garis p-4 md:hidden; }
+
+  /* Tautan daftar bergaya laci (halaman Bantuan). */
   .laci-tautan { @apply flex items-center gap-3 rounded-lg px-3 py-2.5 text-base font-medium text-teks transition-colors hover:bg-permukaan; }
   .laci-tautan[aria-current="page"] { @apply bg-brand-50 text-brand-800; }
   .laci-tautan svg { @apply h-5 w-5 shrink-0 text-brand-700; }
-  .laci-kaki { @apply border-t border-garis p-4; }
-  .laci-lebar { @apply w-[min(28rem,92vw)]; }
-  .laci-kisi { @apply grid grid-cols-3 gap-1; }
-  .laci-kisi a { @apply flex h-full flex-col items-center gap-2 rounded-lg px-2 py-3 text-center text-sm leading-tight font-medium text-teks transition-colors hover:bg-permukaan; }
-  .laci-kisi a[aria-current="page"] { @apply bg-brand-50 text-brand-800; }
-  .laci-kisi img { @apply h-14 w-14 object-contain; }
 
   /* Kaki portal (acuan: gelap #1E1F1F — identitas lembaga, navigasi, unduh aplikasi) */
   .kaki-portal { @apply mt-auto bg-kaki text-sm text-kaki-teks; }
@@ -607,10 +614,10 @@
   .pembuka-foto { @apply aspect-[16/9] w-full rounded-lg border border-garis bg-permukaan object-cover sm:aspect-[16/6]; }
 
   /* ===================================================== Aksesibilitas ===================================================== */
-  .aks { @apply fixed right-4 bottom-4 z-40 print:hidden; }
+  .aks { @apply fixed bottom-4 left-4 z-40 print:hidden; } /* kiri bawah, seperti acuan (2026-10-21) */
   .aks-tombol { @apply inline-flex h-12 items-center gap-2 rounded-full bg-brand-800 px-4 text-sm font-semibold text-white shadow-melayang transition-colors hover:bg-brand-900; }
   .aks-tombol svg { @apply h-5 w-5; }
-  .aks-panel { @apply absolute right-0 bottom-14 w-[min(19rem,calc(100vw-2rem))] rounded-lg border border-garis bg-white p-4 shadow-melayang; }
+  .aks-panel { @apply absolute bottom-14 left-0 w-[min(19rem,calc(100vw-2rem))] rounded-lg border border-garis bg-white p-4 shadow-melayang; }
   .aks-panel:not([data-buka]) { display: none; }
   .aks-judul { @apply text-heading-sm text-teks; }
   .aks-label { @apply mt-4 mb-2 text-sm font-semibold text-teks; }

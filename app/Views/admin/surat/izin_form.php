@@ -23,9 +23,9 @@ $alamat = SuratJenis::alamat($jenis);
 $aksi   = $ubah ? site_url($alamat . '/' . (int) $surat['id'] . '/ubah') : site_url($alamat);
 $kembali = $ubah ? site_url('admin/surat/' . (int) $surat['id']) : site_url('admin/surat');
 $cfg    = [
-    'mode' => $nilai['mode'], 'semester' => $nilai['semester'], 'tp' => $nilai['tahun_pelajaran'], 'mulai' => $nilai['tgl_mulai'], 'selesai' => $nilai['tgl_selesai'],
+    'mode' => $nilai['mode'], 'kegiatan' => $nilai['kegiatan'] ?? 'ASTS', 'semester' => $nilai['semester'], 'tp' => $nilai['tahun_pelajaran'], 'mulai' => $nilai['tgl_mulai'], 'selesai' => $nilai['tgl_selesai'],
     'tanggalSurat' => $nilai['tanggal_surat'], 'dipilih' => $nilai['perusahaan'],
-    'periode' => array_map(static fn (array $p) => ['semester' => $p['semester'], 'tahun' => $p['tahun'], 'mulai' => $p['mulai'], 'selesai' => $p['selesai']], $periode),
+    'periode' => array_map(static fn (array $p) => ['kegiatan' => $p['kegiatan'], 'semester' => $p['semester'], 'tahun' => $p['tahun'], 'mulai' => $p['mulai'], 'selesai' => $p['selesai']], $periode),
     'perusahaan' => array_map(static fn (array $g) => [
         'kunci' => $g['kunci'], 'nama' => $g['nama'], 'kota' => $g['kota'], 'jml' => count($g['siswa']), 'mulai' => $g['mulai'], 'selesai' => $g['selesai'],
         'siswa' => implode(', ', array_slice(array_column($g['siswa'], 'nama'), 0, 4)) . (count($g['siswa']) > 4 ? ', …' : ''),
@@ -45,7 +45,7 @@ $pilihanBingkai = 'flex cursor-pointer items-start gap-3 rounded-lg border borde
 <?= view('admin/partials/help', [
     'helpKey'   => 'surat_izin_form_v1',
     'helpTitle' => $label,
-    'helpBody'  => '<p>Surat ini <b>memberi tahu perusahaan tempat siswa PKL</b> bahwa siswa harus mengikuti ' . ($asts ? 'ASTS' : 'TKA') . ' di sekolah, dan memohon dispensasi. Isi tanggalnya, lalu periksa <b>pratinjau</b> &mdash; nama hari dihitung otomatis dari tanggal.</p>'
+    'helpBody'  => '<p>Surat ini <b>memberi tahu perusahaan tempat siswa PKL</b> bahwa siswa harus mengikuti ' . ($asts ? 'ujian (ASTS, ASAS, atau ASAT)' : 'TKA') . ' di sekolah, dan memohon dispensasi. Isi tanggalnya, lalu periksa <b>pratinjau</b> &mdash; nama hari dihitung otomatis dari tanggal.</p>'
         . '<ul class="mt-2 list-disc space-y-1 pl-5">'
         . '<li><b>Surat umum</b>: SATU surat (satu nomor) untuk semua perusahaan, persis contoh sekolah &mdash; difotokopi untuk tiap tempat PKL.</li>'
         . '<li><b>Per perusahaan</b>: satu surat untuk tiap perusahaan yang dicentang, memuat nama perusahaan dan daftar siswanya, masing-masing bernomor sendiri. Perusahaan yang periode PKL-nya sudah tercatat tetapi tidak menjangkau tanggal kegiatan diberi tanda.</li>'
@@ -66,23 +66,32 @@ $pilihanBingkai = 'flex cursor-pointer items-start gap-3 rounded-lg border borde
                 <div class="sm:col-span-2">
                     <label class="lbl" for="pilihPeriode">Isi otomatis dari menu Ujian <span class="font-normal text-gray-500 dark:text-gray-400">(opsional)</span></label>
                     <select id="pilihPeriode" x-model="pilihPeriode" @change="ambilPeriode()" class="inp">
-                        <option value="">— pilih periode ASTS —</option>
+                        <option value="">— pilih periode ujian —</option>
                         <?php foreach ($periode as $i => $p): ?>
                             <option value="<?= (int) $i ?>"><?= esc($p['label']) ?></option>
                         <?php endforeach; ?>
                     </select>
-                    <p class="hint">Mengisi semester, tahun pelajaran, dan tanggal di bawah. Tanggalnya tetap bisa Anda ubah.</p>
+                    <p class="hint">Mengisi ujian, semester, tahun pelajaran, dan tanggal di bawah. Tanggalnya tetap bisa Anda ubah.</p>
                 </div>
             <?php endif; ?>
 
             <?php if ($asts): ?>
-                <div>
+                <div class="sm:col-span-2">
+                    <label class="lbl" for="kegiatan">Ujian <span class="text-red-600 dark:text-red-400">*</span></label>
+                    <select id="kegiatan" name="kegiatan" x-model="kegiatan" required class="inp">
+                        <?php foreach (\App\Libraries\SuratAcara::UJIAN as $kodeUjian => [$namaUjian]): ?>
+                            <option value="<?= esc($kodeUjian, 'attr') ?>"><?= esc($kodeUjian . ' — ' . $namaUjian) ?></option>
+                        <?php endforeach; ?>
+                    </select>
+                </div>
+                <div x-show="kegiatan !== 'ASAT'">
                     <label class="lbl" for="semester">Semester <span class="text-red-600 dark:text-red-400">*</span></label>
                     <select id="semester" name="semester" x-model="semester" required class="inp">
                         <option value="Ganjil">Ganjil</option>
                         <option value="Genap">Genap</option>
                     </select>
                 </div>
+                <p x-show="kegiatan === 'ASAT'" x-cloak class="self-end pb-2 text-sm text-gray-600 dark:text-gray-400">ASAT selalu semester Genap.</p>
                 <div>
                     <label class="lbl" for="tahun_pelajaran">Tahun pelajaran <span class="text-red-600 dark:text-red-400">*</span></label>
                     <input id="tahun_pelajaran" name="tahun_pelajaran" type="text" x-model="tp" required maxlength="9" placeholder="2026/2027" class="inp">

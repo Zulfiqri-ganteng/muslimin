@@ -35,7 +35,27 @@ final class SuratSekolah
         'buat' => 'Surat dibuat', 'ubah' => 'Data surat diubah', 'ajukan_ulang' => 'Diajukan ulang untuk ACC', 'acc' => 'Disetujui (ACC)',
         'kembalikan' => 'Dikembalikan untuk diperbaiki', 'batal_acc' => 'Persetujuan dibatalkan', 'batal' => 'Surat dibatalkan',
         'nomor' => 'Nomor surat diterbitkan', 'cetak' => 'Berkas diunduh', 'kabari' => 'Siswa dikabari lewat WhatsApp',
+        'minta' => 'Diminta siswa (Layanan Siswa)',
     ];
+
+    /** Asal surat (kolom surat_sekolah.sumber, migrasi Layanan Siswa): staf = dibuat di panel admin, siswa = dari permintaan siswa. */
+    public const SUMBER = ['staf', 'siswa'];
+
+    private static ?bool $kolomSumber = null;
+
+    /** Kolom surat_sekolah.sumber sudah ada (server yang belum migrasi tetap bisa membuat surat). */
+    public static function kolomSumber(): bool
+    {
+        if (self::$kolomSumber === null) {
+            try {
+                self::$kolomSumber = db_connect()->fieldExists('sumber', 'surat_sekolah');
+            } catch (\Throwable $e) {
+                self::$kolomSumber = false;
+            }
+        }
+
+        return self::$kolomSumber;
+    }
 
     private BaseConnection $db;
 
@@ -92,15 +112,20 @@ final class SuratSekolah
         $now      = date('Y-m-d H:i:s');
         $oleh     = mb_substr((string) ($konteks['oleh'] ?? 'Staf'), 0, 150);
 
+        $baris = [
+            'jenis' => $jenis, 'status' => $status, 'perlu_acc' => $perluAcc ? 1 : 0, 'judul' => $judul, 'tanggal_surat' => $tanggal,
+            'pengajuan_id' => $pengajuan, 'perusahaan_nama' => $perusahaan !== '' ? mb_substr($perusahaan, 0, 150) : null,
+            'isi' => $json, 'diajukan_at' => $perluAcc ? $now : null,
+            'dibuat_oleh' => ($konteks['admin_id'] ?? null) ?: null, 'dibuat_nama' => $oleh,
+            'created_at' => $now, 'updated_at' => $now,
+        ];
+        if (self::kolomSumber()) {
+            $baris['sumber'] = in_array($data['sumber'] ?? 'staf', self::SUMBER, true) ? (string) ($data['sumber'] ?? 'staf') : 'staf';
+        }
+
         $this->db->transBegin();
         try {
-            $ok = $this->db->table('surat_sekolah')->insert([
-                'jenis' => $jenis, 'status' => $status, 'perlu_acc' => $perluAcc ? 1 : 0, 'judul' => $judul, 'tanggal_surat' => $tanggal,
-                'pengajuan_id' => $pengajuan, 'perusahaan_nama' => $perusahaan !== '' ? mb_substr($perusahaan, 0, 150) : null,
-                'isi' => $json, 'diajukan_at' => $perluAcc ? $now : null,
-                'dibuat_oleh' => ($konteks['admin_id'] ?? null) ?: null, 'dibuat_nama' => $oleh,
-                'created_at' => $now, 'updated_at' => $now,
-            ]);
+            $ok = $this->db->table('surat_sekolah')->insert($baris);
             $id = (int) $this->db->insertID();
             if (! $ok || $id < 1) {
                 throw new \RuntimeException('surat tidak tersimpan');

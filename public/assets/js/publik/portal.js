@@ -3,7 +3,7 @@
  * Rancangan: docs/RENCANA-TAMPILAN-PUBLIK.md. Jebakan versi CSP: di dalam metode, this.$el = elemen PEMICU — elemen akar
  * komponen disimpan di init().
  *
- *   kepalaPortal  : panel "Daftar layanan" (Esc, Tab berputar, fokus kembali; laci menu HP dihapus 2026-10-20) (tombol kisi, acuan rumah.pendidikan.go.id)
+ *   kepalaPortal  : panel "Daftar layanan" melayang di bawah tombol kisi (Esc, klik di luar, Tab berputar, fokus kembali) — acuan rumah.pendidikan.go.id
  *   cariPortal    : kotak cari dengan saran (data dari <script type="application/json" id="data-saran-portal">), panah atas/bawah, Enter
  *   bannerGeser   : banner foto geser (scroll-snap) + tombol kiri/kanan, titik, jeda; berhenti saat "kurangi gerakan"
  *   aksesibilitas : ukuran huruf, kontras tinggi, garis bawah tautan — disimpan di cookie, dibaca server (tanpa kedipan)
@@ -45,26 +45,35 @@ document.addEventListener('alpine:init', function () {
 
     Alpine.data('kepalaPortal', function () {
         var akar = null;
-        var asal = null; // elemen yang difokus sebelum laci dibuka → dikembalikan saat ditutup
+        var asal = null;   // elemen yang difokus sebelum panel dibuka → dikembalikan saat ditutup
+        var tombol = null; // tombol kisi yang membuka panel (penentu letak panel)
+        // Panel tepat di bawah tombol kisi, rata kanan dengan tombolnya (acuan rumah.pendidikan.go.id). CSS membaca variabelnya;
+        // di HP panel selebar layar (hanya --daftar-atas yang dipakai). Diatur lewat CSSOM (aman CSP).
+        var aturLetak = function () {
+            var portal = akar ? akar.querySelector('#daftar-layanan') : null;
+            if (!portal || !tombol) { return; }
+            var r = tombol.getBoundingClientRect();
+            portal.style.setProperty('--daftar-atas', Math.round(r.bottom + 8) + 'px');
+            portal.style.setProperty('--daftar-kanan', Math.max(16, Math.round(document.documentElement.clientWidth - r.right)) + 'px');
+        };
         return {
-            laci: false,   // laci menu navigasi (HP)
-            daftar: false, // laci "Daftar layanan" (tombol kisi, acuan: sheet daftar ruang)
-            init: function () { akar = this.$el; },
-            buka: function (nama) {
+            daftar: false, // panel "Daftar layanan" (tombol kisi)
+            init: function () {
                 var self = this;
+                akar = this.$el;
+                window.addEventListener('resize', function () { if (self.daftar) { aturLetak(); } });
+            },
+            bukaDaftar: function () {
+                tombol = this.$el; // Alpine versi CSP: $el di dalam metode = elemen pemicu (tombol kisi yang diklik)
                 asal = document.activeElement;
-                this.laci = nama === 'laci';
-                this.daftar = nama === 'daftar';
-                document.documentElement.classList.add('kunci-gulir');
+                aturLetak();
+                this.daftar = true;
                 this.$nextTick(function () {
-                    var p = akar.querySelector((self.daftar ? '#daftar-layanan' : '#laci-portal') + ' .laci-panel');
-                    if (p) { p.focus({ preventScroll: true }); } // tanpa gulir: panel masih di luar layar saat animasi mulai
+                    var p = akar.querySelector('#daftar-layanan .daftar-panel');
+                    if (p) { p.focus({ preventScroll: true }); }
                 });
             },
-            bukaLaci: function () { this.buka('laci'); },
-            bukaDaftar: function () { this.buka('daftar'); },
-            tutupLaci: function () { this.tutupSemua(); },
-            // Tab / Shift+Tab berputar di dalam laci selama terbuka.
+            // Tab / Shift+Tab berputar di dalam panel selama terbuka.
             kunciTab: function (e) {
                 var p = e.currentTarget;
                 if (!p) { return; }
@@ -84,10 +93,8 @@ document.addEventListener('alpine:init', function () {
                 }
             },
             tutupSemua: function () {
-                if (!this.laci && !this.daftar) { return; }
-                this.laci = false;
+                if (!this.daftar) { return; }
                 this.daftar = false;
-                document.documentElement.classList.remove('kunci-gulir');
                 if (asal && asal.focus) { asal.focus({ preventScroll: true }); }
                 asal = null;
             },

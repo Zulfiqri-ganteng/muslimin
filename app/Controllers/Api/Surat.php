@@ -277,13 +277,15 @@ class Surat extends BaseApiController
             return $this->ok($dasar + [
                 'nilai_awal'    => SuratAcara::nilaiAwal($jenis, $periode, (string) ((new SettingModel())->get()['academic_year'] ?? '')),
                 'periode_ujian' => $periode,
+                // Jenis izin_asts melayani ujian ASTS / ASAS / ASAT (isian `kegiatan`, bawaan ASTS; ASAT selalu semester Genap).
+                'ujian'         => $jenis === SuratJenis::ASTS ? array_map(static fn (string $k, array $u): array => ['kode' => $k, 'nama' => $u[0]], array_keys(SuratAcara::UJIAN), SuratAcara::UJIAN) : [],
                 'sesi_saran'    => SuratAcara::SESI_SARAN,
                 'tempat_bawaan' => SuratAcara::TEMPAT_BAWAAN,
                 'perusahaan'    => array_map(static fn (array $g): array => [
                     'kunci' => $g['kunci'], 'nama' => $g['nama'], 'alamat' => $g['alamat'], 'kota' => $g['kota'], 'mulai' => $g['mulai'], 'selesai' => $g['selesai'],
                     'luar_periode' => $g['luar_periode'], 'jml_siswa' => count($g['siswa']),
                     'siswa' => array_map(static fn (array $x): array => ['siswa_id' => $x['siswa_id'], 'nama' => $x['nama'], 'kelas' => $x['kelas']], $g['siswa']),
-                ], $acara->perusahaan($mulai, $selesai)),
+                ], $acara->perusahaan($mulai, $selesai, $jenis)), // TKA: hanya siswa kelas XII
             ], 'Formulir ' . SuratJenis::label($jenis) . '.');
         }
 

@@ -306,7 +306,7 @@ class UjiHak extends BaseCommand
         $this->cek('simpan format lama tanpa mengubah saklar: hak per jenis (Balasan → Operator) tetap', $r2['ok'] && PklHak::bolehSurat('operator', 'acc', 'balasan_pkl') && ! PklHak::bolehSurat('hubin', 'acc', 'balasan_pkl'));
         $r3 = PklHak::simpan(['hubin' => ['ubah', 'ttd'], 'operator' => ['surat', 'surat_sekolah', 'laporan', 'ubah', 'pengaturan']], $adm);
         $this->cek('format lama: saklar "acc" Hubin dimatikan → ACC ajuan & SEMUA ACC surat Hubin hilang', $r3['ok'] && ! PklHak::boleh('hubin', 'acc') && PklHak::jenisBoleh('hubin', 'acc') === []);
-        $this->cek('peringatan: tak ada peran selain Admin yang ACC ajuan PKL / Surat Izin ASTS', $this->ada($r3['peringatan'], 'Tidak ada peran selain Admin yang bisa ACC ajuan PKL') && $this->ada($r3['peringatan'], 'Surat Izin ASTS: hanya Admin yang bisa acc'), json_encode($r3['peringatan']));
+        $this->cek('peringatan: tak ada peran selain Admin yang ACC ajuan PKL / Surat Izin ASTS', $this->ada($r3['peringatan'], 'Tidak ada peran selain Admin yang bisa ACC ajuan PKL') && $this->ada($r3['peringatan'], \App\Libraries\SuratJenis::label(\App\Libraries\SuratJenis::ASTS) . ': hanya Admin yang bisa acc'), json_encode($r3['peringatan']));
         $r4 = PklHak::simpan(['hubin' => ['acc', 'ubah', 'ttd'], 'operator' => ['surat', 'laporan', 'ubah', 'pengaturan']], $adm);
         $this->cek('format lama: saklar "acc" Hubin dinyalakan lagi → ACC semua jenis kembali; "surat_sekolah" Operator dimatikan → buat/unduh semua jenis hilang',
             $r4['ok'] && PklHak::jenisBoleh('hubin', 'acc') === ['izin_asts', 'izin_tka', 'balasan_pkl', 'penarikan_pkl'] && PklHak::jenisBoleh('operator', 'buat') === [] && PklHak::jenisBoleh('operator', 'unduh') === []

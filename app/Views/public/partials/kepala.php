@@ -2,7 +2,8 @@
 /**
  * Kepala portal publik — struktur sama dengan rumah.pendidikan.go.id: bayangan (bukan garis), wadah selebar layar; kiri logo
  * (+ di HP: tombol kisi "Daftar layanan"); tengah kotak cari (layar ≥ md); kanan ikon Bantuan · tombol kisi · Masuk.
- * Tombol kisi membuka LACI SAMPING berisi kisi ilustrasi HD (acuan: sheet "Daftar ruang"); di HP laci itu juga memuat tombol Masuk.
+ * Tombol kisi membuka PANEL MELAYANG tepat di bawahnya berisi kisi ilustrasi HD (acuan: "Jelajahi Ruang" rumah.pendidikan.go.id,
+ * 2026-10-21 — dulu laci samping); di HP panel selebar layar dan juga memuat tombol Masuk.
  * (2026-10-20: laci "Menu" HP + tombol garis tiga dihapus atas permintaan user — isinya sama dengan Daftar layanan.)
  * Komponen: kepalaPortal (publik/portal.js).
  *
@@ -23,7 +24,7 @@ $kisi = [];
 foreach ($kelompok as $g) {
     $kisi[] = [$g['url'], $g['label'], $g['ilu'], false];
 }
-foreach (['jadwal_kelas', 'jadwal_guru', 'absensi', 'pengumuman', 'pkl', 'lapor_pkl', 'biodata', 'dokumen', 'kesediaan', 'aplikasi', 'bantuan'] as $k) {
+foreach (['jadwal_kelas', 'jadwal_guru', 'absensi', 'pengumuman', 'pkl', 'lapor_pkl', 'surat_ujian', 'surat_tka', 'surat_ortu', 'surat_penarikan', 'biodata', 'dokumen', 'kesediaan', 'aplikasi', 'bantuan'] as $k) {
     if (isset($layanan[$k])) {
         $kisi[] = [$layanan[$k]['url'], $layanan[$k]['judul'], $layanan[$k]['ilu'], ! empty($layanan[$k]['luar'])];
     }
@@ -66,20 +67,21 @@ foreach (['jadwal_kelas', 'jadwal_guru', 'absensi', 'pengumuman', 'pkl', 'lapor_
         </div>
     </nav>
 
-    <!-- Laci "Daftar layanan" (acuan: sheet daftar ruang berisi kisi ikon HD) -->
-    <div id="daftar-layanan" class="laci-portal" :data-buka="daftar">
-        <div class="laci-latar" @click="tutupSemua" aria-hidden="true"></div>
-        <div class="laci-panel laci-lebar" role="dialog" aria-modal="true" aria-labelledby="daftar-judul" tabindex="-1" @keydown.tab="kunciTab($event)">
-            <div class="laci-kepala">
-                <p id="daftar-judul" class="laci-judul">Daftar layanan <?= esc($schoolName) ?></p>
+    <!-- Panel "Daftar layanan" (acuan rumah.pendidikan.go.id "Jelajahi Ruang"): kartu melayang di bawah tombol kisi, tanpa latar gelap.
+         Lapisan .daftar-luar transparan menangkap klik di luar panel (= tutup). -->
+    <div id="daftar-layanan" class="daftar-portal" :data-buka="daftar">
+        <div class="daftar-luar" @click="tutupSemua" aria-hidden="true"></div>
+        <div class="daftar-panel" role="dialog" aria-labelledby="daftar-judul" tabindex="-1" @keydown.tab="kunciTab($event)">
+            <div class="daftar-kepala">
+                <p id="daftar-judul" class="daftar-judul">Jelajahi Layanan di <?= esc($schoolName) ?></p>
                 <button type="button" class="tombol-ikon" @click="tutupSemua" aria-label="Tutup daftar layanan"><?= ikon('close', 'h-6 w-6') ?></button>
             </div>
-            <nav class="laci-isi" aria-label="Daftar layanan">
-                <ul class="laci-kisi">
+            <nav class="daftar-isi" aria-label="Daftar layanan">
+                <ul class="daftar-kisi">
                     <?php foreach ($kisi as [$url, $label, $ilu, $luar]): ?>
                         <li>
                             <a href="<?= esc($url, 'attr') ?>"<?= $luar ? ' target="_blank" rel="noopener"' : $aktif($url) ?>>
-                                <img src="<?= LayananPublik::ilustrasi($ilu) ?>" alt="" width="56" height="56" decoding="async"><?php /* tanpa lazy: diunduh sejak awal agar tidak muncul mendadak saat laci bergeser */ ?>
+                                <span class="daftar-ikon"><img src="<?= LayananPublik::ilustrasi($ilu) ?>" alt="" width="56" height="56" decoding="async"></span><?php /* tanpa lazy: diunduh sejak awal agar tidak muncul mendadak saat panel dibuka */ ?>
                                 <span><?= esc($label) ?></span>
                             </a>
                         </li>
@@ -87,7 +89,7 @@ foreach (['jadwal_kelas', 'jadwal_guru', 'absensi', 'pengumuman', 'pkl', 'lapor_
                 </ul>
             </nav>
             <!-- Di HP tombol Masuk di kepala tersembunyi (kepala-kanan) → disediakan di sini. -->
-            <div class="laci-kaki md:hidden">
+            <div class="daftar-kaki">
                 <a href="<?= site_url('admin/login') ?>" class="tombol tombol-utama tombol-blok tombol-besar">Masuk</a>
             </div>
         </div>
