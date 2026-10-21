@@ -477,6 +477,21 @@ final class PklKeluar
         return $t['perusahaan'] . ' (' . $t['kode'] . ', ' . ($t['waktu'] !== '' ? date('d-m-Y', strtotime($t['waktu'])) : '?') . ', ' . mb_strtolower($t['keterangan']) . ')';
     }
 
+    /**
+     * Satu riwayat penolakan LENGKAP dengan alasannya (Excel Status Siswa): "15-10-2026 · PKL-00031 PT X — ditolak sekolah: alasan".
+     *
+     * @param array{perusahaan: string, kode: string, waktu: string, keterangan: string, alasan?: string} $t baris tolakSiswa()
+     */
+    public static function teksTolakLengkap(array $t): string
+    {
+        // "Ajuan ditolak sekolah" → "ditolak sekolah"; "Dikeluarkan: Ditolak perusahaan" → "dikeluarkan (ditolak perusahaan)".
+        $ket   = mb_strtolower((string) preg_replace(['/^Ajuan /u', '/^(Dikeluarkan): (.+)$/u'], ['', '$1 ($2)'], (string) $t['keterangan']));
+        $sebab = IsianBantu::rapikan((string) ($t['alasan'] ?? ''));
+
+        return ($t['waktu'] !== '' ? date('d-m-Y', strtotime($t['waktu'])) : '?') . ' · ' . $t['kode'] . ' ' . IsianBantu::rapikan($t['perusahaan'])
+            . ' — ' . $ket . ($sebab !== '' ? ': ' . $sebab : '');
+    }
+
     /** @return array{ok: false, http: int, kode: string, pesan: string} */
     private function gagal(int $http, string $kode, string $pesan): array
     {

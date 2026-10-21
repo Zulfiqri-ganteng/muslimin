@@ -10,6 +10,7 @@ use App\Libraries\PklDocx;
 use App\Libraries\PklHak;
 use App\Libraries\PklImpor;
 use App\Libraries\PklPrakerin;
+use App\Libraries\PklStatusExcel;
 use App\Libraries\PklSurat;
 use App\Libraries\PklUnduh;
 use App\Models\AuditModel;
@@ -17,8 +18,6 @@ use App\Models\PklPengajuanModel;
 use App\Models\PklPengaturanModel;
 use App\Models\SettingModel;
 use CodeIgniter\HTTP\RedirectResponse;
-use PhpOffice\PhpSpreadsheet\Spreadsheet;
-use PhpOffice\PhpSpreadsheet\Style\Alignment;
 use PhpOffice\PhpSpreadsheet\Writer\Xlsx;
 
 /**
@@ -346,47 +345,19 @@ class PklBerkas extends BaseController
 
         [$rows] = $this->model->statusSiswa($tingkat, $kelas, $q, $fase, 100000, 1);
         $r      = $this->model->ringkasanSiswa($tingkat, $kelas);
-        $label  = [
-            'belum' => 'Belum mengisi', 'ditolak' => 'Ditolak (perlu ajukan ulang)', 'menunggu' => 'Menunggu keputusan Hubin', 'perbaikan' => 'Perlu perbaikan',
-            'belum_mulai' => 'Disetujui, belum mulai', 'sedang' => 'Sedang PKL', 'selesai' => 'Selesai PKL', 'disetujui' => 'Disetujui',
-        ];
-        $setting = (new SettingModel())->get();
-
-        $x  = new Spreadsheet();
-        $x->getDefaultStyle()->getFont()->setName('Times New Roman'); // semua keluaran PKL Times New Roman
-        $ws = $x->getActiveSheet()->setTitle('Status PKL Siswa');
-        $ws->setCellValue('A1', 'STATUS PKL SISWA — ' . mb_strtoupper((string) ($setting['school_name'] ?? '')));
-        $ws->setCellValue('A2', 'Tahun Pelajaran ' . ($setting['academic_year'] ?? '') . ' · tingkat ' . implode('/', $tingkat) . ' · dicetak ' . date('d-m-Y H:i'));
-        $ws->setCellValue('A3', sprintf('Sudah mengisi: %d dari %d (%d%%)   |   Belum mengisi: %d   |   Sudah PKL (disetujui): %d (%d%%)   |   Belum PKL: %d',
-            $r['sudah_isi'], $r['total'], $r['persen_isi'], $r['belum_isi'], $r['sudah_pkl'], $r['persen_pkl'], $r['belum_pkl']));
-        $ws->getStyle('A1')->getFont()->setBold(true)->setSize(14);
-        $ws->getStyle('A3')->getFont()->setBold(true);
-
         // Kolom K (revisi 2026-10-20): riwayat ditolak / dikeluarkan dari kelompok, tetap tampil walau siswa sudah mengajukan lagi.
-        $judul = ['No', 'Nama', 'Kelas', 'Status', 'Perusahaan', 'Kota', 'Disetujui oleh', 'Waktu ACC', 'No. Bukti', 'Nomor Surat', 'Riwayat Ditolak / Dikeluarkan'];
-        $ws->fromArray($judul, null, 'A5');
-        $ws->getStyle('A5:K5')->getFont()->setBold(true);
-        $ws->getStyle('A5:K5')->getFill()->setFillType('solid')->getStartColor()->setRGB('D9E2F3');
-        $ws->getStyle('A5:K5')->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER);
         $tolak = (new \App\Libraries\PklKeluar())->tolakSiswa(array_map('intval', array_column(array_filter($rows, static fn (array $x): bool => (int) ($x['jml_tolak'] ?? 0) > 0), 'id')));
-
-        $no = 6;
-        foreach ($rows as $i => $s) {
-            $ws->fromArray([
-                $i + 1, $s['nama'], $s['nama_kelas'], $label[$s['fase']] ?? $s['fase'], $s['perusahaan_nama'] ?? '', $s['perusahaan_kota'] ?? '',
-                $s['acc_nama'] ?? '', ! empty($s['acc_at']) ? date('d-m-Y H:i', strtotime((string) $s['acc_at'])) : '',
-                ! empty($s['ajuan_id']) ? PklPengajuanModel::kode((int) $s['ajuan_id']) : '', $s['nomor_surat'] ?? '',
-                implode('; ', array_map([\App\Libraries\PklKeluar::class, 'teksTolak'], $tolak[(int) $s['id']] ?? [])),
-            ], null, 'A' . $no++);
+        $saring = [];
+        if ($kelas > 0) {
+            $saring[] = 'kelas ' . (string) (db_connect()->table('kelas')->select('nama_kelas')->where('id', $kelas)->get()->getRowArray()['nama_kelas'] ?? '#' . $kelas);
         }
-        foreach (range('A', 'J') as $c) {
-            $ws->getColumnDimension($c)->setAutoSize(true);
+        if ($fase !== '') {
+            $saring[] = 'status ' . mb_strtolower($fase === 'pernah_ditolak' ? 'Pernah ditolak / dikeluarkan' : (PklStatusExcel::LABEL[$fase] ?? $fase));
         }
-        $ws->getColumnDimension('K')->setWidth(60);
-        $ws->getStyle('K6:K' . max(6, $no))->getAlignment()->setWrapText(true);
-        $ws->freezePane('A6');
-        $ws->getPageSetup()->setOrientation('landscape')->setPaperSize(9)->setFitToWidth(1)->setFitToHeight(0);
-        $ws->getSheetView()->setZoomScale(100);
+        if ($q !== '') {
+            $saring[] = 'cari "' . $q . '"';
+        }
+        $x = PklStatusExcel::buat($rows, $r, $tolak, (new SettingModel())->get(), $tingkat, $saring);
 
         $tmp = tempnam(sys_get_temp_dir(), 'pkx');
         (new Xlsx($x))->save($tmp);

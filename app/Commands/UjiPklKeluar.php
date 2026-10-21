@@ -406,6 +406,24 @@ class UjiPklKeluar extends BaseCommand
             }
         }
         $this->cek('Data Prakerin: keterangan siswa 6 = dikeluarkan dari ajuan ke B', str_contains($ket, 'Dikeluarkan dari ajuan ke ' . self::PT . 'B'), $ket);
+
+        // Excel Status PKL Siswa (dirapikan 2026-10-21): lebar tetap, garis, filter, judul diulang, riwayat + alasan per baris.
+        [$semua] = $model->statusSiswa($tingkat, $this->kelasId, self::OLEH, '', 100, 1);
+        $tolak   = (new PklKeluar())->tolakSiswa(array_map('intval', array_column(array_filter($semua, static fn (array $x): bool => (int) ($x['jml_tolak'] ?? 0) > 0), 'id')));
+        $ws      = \App\Libraries\PklStatusExcel::buat($semua, $model->ringkasanSiswa($tingkat, $this->kelasId), $tolak, ['school_name' => 'Sekolah Uji', 'academic_year' => '2026/2027'], $tingkat, ['cari "' . self::OLEH . '"'])->getActiveSheet();
+        $kBaris  = [];
+        for ($b = 11; $b <= $ws->getHighestRow(); $b++) {
+            $kBaris[(string) $ws->getCell('B' . $b)->getValue()] = [(string) $ws->getCell('K' . $b)->getValue(), $ws->getRowDimension($b)->getRowHeight()];
+        }
+        [$k6, $t6] = $kBaris[self::OLEH . ' 6'] ?? ['', 0];
+        $nBaris    = \App\Libraries\PklStatusExcel::jumlahBaris($k6, 62);
+        $this->cek('Excel Status Siswa: kolom No selebar 5 (bukan ikut judul), judul digabung A:K, saringan tertulis, kepala tabel baris 10 + filter + diulang saat cetak',
+            $ws->getColumnDimension('A')->getWidth() == 5 && isset($ws->getMergeCells()['A1:K1']) && str_contains((string) $ws->getCell('A3')->getValue(), 'cari "' . self::OLEH . '"')
+            && $ws->getCell('K10')->getValue() === 'Riwayat Ditolak / Dikeluarkan' && $ws->getAutoFilter()->getRange() === 'A10:K' . $ws->getHighestRow()
+            && $ws->getPageSetup()->getRowsToRepeatAtTop() === [10, 10] && $ws->getStyle('E11')->getBorders()->getTop()->getBorderStyle() === 'thin');
+        $this->cek('Excel riwayat: siswa 6 "tanggal · kode perusahaan — dikeluarkan (…): alasan"; siswa 3 (pindah) kosong; tinggi baris ikut panjang teks; 2 riwayat = 2 baris',
+            preg_match('/^\d{2}-\d{2}-\d{4} · PKL-\d{5} .+ — dikeluarkan \(.+\): .{5,}/u', $k6) === 1 && ($kBaris[self::OLEH . ' 3'][0] ?? 'x') === ''
+            && ($nBaris > 1 ? $t6 == 15 * $nBaris : $t6 == -1) && \App\Libraries\PklStatusExcel::jumlahBaris("a\nb", 62) === 2, $k6 . ' | tinggi ' . $t6 . ' / baris ' . $nBaris);
     }
 
     private function statusLapor(int $n): string
