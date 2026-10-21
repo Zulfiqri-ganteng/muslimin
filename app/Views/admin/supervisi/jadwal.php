@@ -61,7 +61,9 @@ $wajib = '<span class="text-red-600 dark:text-red-400">*</span>';
 
 // Saringan (kiri bilah alat): partial bersama halaman Jadwal & Penilaian.
 $saringanHtml = view('admin/supervisi/saringan', ['base' => $base, 'saring' => $saring, 'pilihanTa' => $pilihanTa, 'guru' => $guru], ['saveData' => false]);
-$massalTombol = $kelola ? '<button type="button" class="btn btn-netral" @click="bukaMassal()">' . ikon('users-group', 'h-4 w-4') . 'Buat massal</button>' : '';
+$massalTombol = ($kelola ? '<button type="button" class="btn btn-netral" @click="bukaMassal()">' . ikon('users-group', 'h-4 w-4') . 'Buat massal</button>' : '')
+    . '<a href="' . site_url('admin/supervisi/program') . ($qsKini !== '' ? '?' . esc($qsKini, 'attr') : '') . '" class="btn btn-netral" title="Program supervisi periode ini (ikut saringan) ke Excel">'
+    . ikon('download', 'h-4 w-4') . 'Unduh Program (Excel)</a>';
 ?>
 <?= $this->extend('layouts/admin') ?>
 <?= $this->section('tata') ?>crud<?= $this->endSection() ?>

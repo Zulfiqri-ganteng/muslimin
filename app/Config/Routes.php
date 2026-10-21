@@ -735,6 +735,11 @@ $routes->group('admin', static function ($routes) {
         $routes->get('supervisi/penilaian', 'Admin\SupervisiPenilaian::index');
         $routes->get('supervisi/penilaian/(:num)', 'Admin\SupervisiPenilaian::lembar/$1');
         $routes->post('supervisi/penilaian/(:num)', 'Admin\SupervisiPenilaian::simpan/$1');
+        $routes->get('supervisi/penilaian/(:num)/pdf', 'Admin\SupervisiCetak::lembar/$1');
+        $routes->get('supervisi/lembar', 'Admin\SupervisiCetak::gabungan');
+        $routes->get('supervisi/program', 'Admin\SupervisiCetak::program');
+        $routes->get('supervisi/rekap', 'Admin\SupervisiRekap::index');
+        $routes->get('supervisi/rekap/excel', 'Admin\SupervisiRekap::excel');
 
         // ===== PENGUMUMAN =====
         $routes->get('pengumuman', 'Admin\Pengumuman::index');
@@ -1245,6 +1250,24 @@ $routes->group('api/v1', ['namespace' => 'App\Controllers\Api', 'filter' => 'cor
         $routes->post('keterlambatan/(:num)/kabari', 'Keterlambatan::kabari/$1');
         $routes->post('keterlambatan/(:num)/hp', 'Keterlambatan::isiHp/$1');
         $routes->post('keterlambatan/(:num)/tautkan', 'Keterlambatan::tautkan/$1');
+
+        // ---------- SUPERVISI GURU (Admin; peran lain lewat Hak Akses) — docs/API-SUPERVISI.md ----------
+        // Gerbang peran: katalog menu 'api' (awalan "supervisi"); hak per aksi dijaga controller dengan aturan web yang sama.
+        // Rute statis SEBELUM pola (:num).
+        $routes->get('supervisi/meta', 'Supervisi::meta');
+        $routes->get('supervisi/jadwal/saran', 'Supervisi::saran');
+        $routes->post('supervisi/jadwal/massal', 'Supervisi::massal');
+        $routes->get('supervisi/jadwal', 'Supervisi::daftar');
+        $routes->post('supervisi/jadwal', 'Supervisi::tambah');
+        $routes->get('supervisi/jadwal/(:num)', 'Supervisi::detail/$1');
+        $routes->post('supervisi/jadwal/(:num)/ubah', 'Supervisi::ubah/$1');
+        $routes->delete('supervisi/jadwal/(:num)', 'Supervisi::hapus/$1');
+        $routes->post('supervisi/jadwal/(:num)/nilai', 'Supervisi::nilai/$1');
+        $routes->get('supervisi/jadwal/(:num)/pdf', 'Supervisi::pdf/$1');
+        $routes->get('supervisi/rekap', 'Supervisi::rekap');
+        $routes->get('supervisi/rekap/excel', 'Supervisi::rekapExcel');
+        $routes->get('supervisi/program', 'Supervisi::program');
+        $routes->get('supervisi/lembar', 'Supervisi::gabungan');
 
         // ---------- PROFIL & PENGATURAN ----------
         $routes->get('admin/profile', 'Admin\Profile::show');

@@ -44,7 +44,10 @@ $warnaPredikat = ['Amat Baik' => 'lencana-hijau', 'Baik' => 'lencana-biru', 'Cuk
         'kiriHtml' => view('admin/supervisi/saringan', ['base' => $base, 'saring' => $saring, 'pilihanTa' => $pilihanTa, 'guru' => $guru], ['saveData' => false]),
         'tambah'   => false,
         'impor'    => false,
-        'tambahanHtml' => '<a href="' . site_url('admin/supervisi/jadwal') . ($qsKini !== '' ? '?' . esc($qsKini, 'attr') : '') . '" class="btn btn-netral">' . ikon('calendar-week', 'h-4 w-4') . 'Jadwal Supervisi</a>',
+        'tambahanHtml' => '<a href="' . site_url('admin/supervisi/jadwal') . ($qsKini !== '' ? '?' . esc($qsKini, 'attr') : '') . '" class="btn btn-netral">' . ikon('calendar-week', 'h-4 w-4') . 'Jadwal Supervisi</a>'
+            . ($ringkas['selesai'] > 0 ? '<a href="' . site_url('admin/supervisi/lembar') . '?' . esc(http_build_query(array_filter(['ta' => $saring['ta'], 'semester' => $saring['semester'], 'guru_id' => $saring['guru_id'] ?: null])), 'attr')
+                . '" target="_blank" rel="noopener" class="btn btn-netral" title="Semua lembar hasil kunjungan yang selesai (ikut saringan guru), satu PDF">' . ikon('printer', 'h-4 w-4') . 'Lembar Hasil (PDF)</a>' : '')
+            . '<a href="' . site_url('admin/supervisi/rekap') . '?' . esc(http_build_query(['ta' => $saring['ta'], 'semester' => $saring['semester']]), 'attr') . '" class="btn btn-netral">' . ikon('chart-mixed', 'h-4 w-4') . 'Rekap</a>',
     ]) ?>
 
     <div class="flex flex-wrap items-center gap-x-4 gap-y-2 border-b border-gray-200 px-4 py-3 text-sm text-gray-600 dark:border-gray-700 dark:text-gray-300">
@@ -116,7 +119,12 @@ $warnaPredikat = ['Amat Baik' => 'lencana-hijau', 'Baik' => 'lencana-biru', 'Cuk
                         </td>
                         <td class="kolom-aksi">
                             <?php if ($r['status'] !== 'batal'): ?>
-                                <a href="<?= esc($lembar, 'attr') ?>" class="btn <?= $r['status'] === 'selesai' ? 'btn-netral' : 'btn-sukses' ?> btn-sm"><?= ikon($r['status'] === 'selesai' ? 'eye' : 'file-pen', 'h-4 w-4') ?><?= $r['status'] === 'selesai' ? 'Lihat hasil' : ($r['ada_nilai'] ? 'Lanjutkan' : 'Nilai') ?></a>
+                                <div class="flex flex-wrap justify-end gap-1.5">
+                                    <a href="<?= esc($lembar, 'attr') ?>" class="btn <?= $r['status'] === 'selesai' ? 'btn-netral' : 'btn-sukses' ?> btn-sm"><?= ikon($r['status'] === 'selesai' ? 'eye' : 'file-pen', 'h-4 w-4') ?><?= $r['status'] === 'selesai' ? 'Lihat hasil' : ($r['ada_nilai'] ? 'Lanjutkan' : 'Nilai') ?></a>
+                                    <a href="<?= $base . '/' . (int) $r['id'] . '/pdf' ?>" target="_blank" rel="noopener" class="btn btn-netral btn-sm"
+                                       title="<?= $r['status'] === 'selesai' ? 'Lembar hasil (PDF)' : 'Lembar penilaian (PDF) — bisa dicetak kosong untuk diisi tangan' ?>"
+                                       aria-label="PDF lembar <?= esc($r['nama_guru'], 'attr') ?>"><?= ikon('printer', 'h-4 w-4') ?>PDF</a>
+                                </div>
                             <?php endif; ?>
                         </td>
                     </tr>

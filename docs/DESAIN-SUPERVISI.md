@@ -1,6 +1,7 @@
 # DESAIN — Supervisi Guru (menu KURIKULUM → Supervisi Guru)
 
-Ditulis 2026-10-19 malam. **Status 2026-10-20: S1 + S2 SELESAI (lokal, belum commit) — berikutnya S3 Laporan.** User: "pakai saran lu untuk konsep fitur & output
+Ditulis 2026-10-19 malam. **Status 2026-10-21: S1–S5 SELESAI** (S1+S2 di-push `3feaad2`; S3–S5 lokal, belum commit). Sisa = layar
+Android (repo flutter-muslimin, `BLUEPRINT-SUPERVISI.md`, tahap SG0–SG5). Deploy: `docs/PANDUAN-DEPLOY-SUPERVISI.md`. User: "pakai saran lu untuk konsep fitur & output
 laporannya" (klien belum punya format lembar supervisi). Kerjakan per fase S1–S5, satu fase lalu BERHENTI & lapor; JANGAN commit/push
 sebelum diminta. Setiap fase = web + (bila ada) API + kontrak; uji secukupnya (perintah `php spark dev:uji-supervisi`).
 
@@ -126,10 +127,21 @@ TIDAK di aplikasi (web saja).
   dikosongkan (status dijadwalkan/batal). Tombol PDF lembar hasil menyusul di S3.
 - **S3** — `SupervisiCetak`: Excel Program, PDF Lembar Hasil (satuan & gabungan), Excel Rekap · halaman **Rekap** · hapus tanda
   `segera` · uji isi berkas (baca ulang .xlsx, PDF berawalan `%PDF`).
+  **✅ S3 SELESAI 2026-10-21.** `SupervisiPenilaian::rekap()` (satu baris per guru dengan kunjungan selesai: nilai per instrumen dirata,
+  rata-rata nilai akhir, tindak lanjut digabung — "tidak perlu" gugur bila ada pembinaan; `belum` = terjadwal / belum dijadwalkan;
+  saringan predikat hanya menyaring baris) + `lembarPeriode()` · `Libraries\SupervisiCetak` (Excel Program, PDF view `pdf/supervisi_lembar`
+  — belum selesai bertanda DRAF/BELUM DINILAI, kolom TTD kepala sekolah hilang bila supervisornya kepala sekolah —, Excel Rekap) ·
+  `Admin\SupervisiCetak` (`program`, `penilaian/{id}/pdf`, `lembar` gabungan maks 120) · `Admin\SupervisiRekap` + view `rekap.php` ·
+  tombol unduh di Jadwal/Penilaian/Lembar · item Rekap tidak segera. Program tanpa saringan status = tanpa jadwal batal.
 - **S4** — `Api\Supervisi` + rute + `'api' => ['supervisi']` + `docs/API-SUPERVISI.md` · uji API di `dev:uji-supervisi`.
+  **✅ S4 SELESAI 2026-10-21.** 14 rute `api/v1/supervisi…`; `ubah` menerima sebagian kunci (tak dikirim = tetap); `nilai` 422 membawa
+  `data.instrumen_id`. `dev:uji-supervisi` 102 cek (+ `--simpan`), uji-hak 69, uji-api-android 19.
 - **S5** — kontrak Flutter `C:\flutter-muslimin\BLUEPRINT-SUPERVISI.md` + fixture HTTP nyata (pola `tangkap_manual.php`: data fiktif
   lalu dihapus; fixture di folder sendiri `test/fixtures/supervisi/`) · `docs/PANDUAN-DEPLOY-SUPERVISI.md` (git pull + `phpm spark
   migrate` + Ctrl+F5) · uji akhir (uji-hak, cek-ui, build:admin) · catat di memori.
+  **✅ S5 SELESAI 2026-10-21.** `BLUEPRINT-SUPERVISI.md` (tahap SG0–SG5) + 25 fixture HTTP nyata di `test/fixtures/supervisi/`
+  (+ `_CATATAN.txt`) + bagian 11 di `PROGRES-KERJA.md` + butir 4 di `CLAUDE.md` (repo flutter, tidak di-commit) ·
+  `docs/PANDUAN-DEPLOY-SUPERVISI.md`.
 
 ## 9. Keputusan bawaan (tanya klien hanya bila mereka membawa format sendiri)
 Skala 1–4 & ambang predikat di atas · supervisor tidak wajib punya akun (dipilih dari daftar guru; yang mengisi di aplikasi = akun

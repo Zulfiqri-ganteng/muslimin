@@ -69,6 +69,10 @@ $pilihan = Penilaian::SKOR + [0 => 'Tidak dinilai'];
             </div>
             <div class="flex flex-wrap items-center gap-2">
                 <span class="lencana <?= $warnaStatus[$j['status']] ?? 'lencana-abu' ?>"><?= esc(Supervisi::STATUS[$j['status']] ?? $j['status']) ?></span>
+                <?php if (! $batal && $lembar['instrumen'] !== []): ?>
+                    <a href="<?= site_url('admin/supervisi/penilaian/' . (int) $j['id'] . '/pdf') ?>" target="_blank" rel="noopener" class="btn btn-netral btn-sm"
+                       title="<?= $selesai ? 'Lembar hasil siap tanda tangan' : 'Belum selesai: PDF bertanda draf (bisa dicetak untuk diisi tangan)' ?>"><?= ikon('printer', 'h-4 w-4') ?>Cetak Lembar Hasil (PDF)</a>
+                <?php endif; ?>
                 <a href="<?= esc($daftar, 'attr') ?>" class="btn btn-netral btn-sm"><?= ikon('chevron-left', 'h-4 w-4') ?>Kembali ke daftar</a>
             </div>
         </div>

@@ -3,7 +3,10 @@
 namespace App\Commands;
 
 use App\Libraries\HakAkses;
+use App\Libraries\HonorCetak;
+use App\Libraries\MenuAdmin;
 use App\Libraries\Supervisi;
+use App\Libraries\SupervisiCetak as Cetak;
 use App\Libraries\SupervisiPenilaian as Penilaian;
 use CodeIgniter\CLI\BaseCommand;
 use CodeIgniter\CLI\CLI;
@@ -16,6 +19,7 @@ use CodeIgniter\HTTP\RedirectResponse;
  * Memakai guru nyata di DB lokal; semua data uji (instrumen ZZUJI*, jadwal yang dibuat uji, Audit Log-nya) dihapus di akhir.
  *
  *   php spark dev:uji-supervisi
+ *   php spark dev:uji-supervisi --simpan C:/folder   (+ simpan contoh lembar-hasil.pdf, program.xlsx, rekap.xlsx untuk dibuka manual)
  */
 class UjiSupervisi extends BaseCommand
 {
@@ -63,6 +67,8 @@ class UjiSupervisi extends BaseCommand
             $this->ujiHalaman();
             $this->ujiHitung();
             $this->ujiPenilaian();
+            $this->ujiRekapCetak();
+            $this->ujiApi();
         } catch (\Throwable $e) {
             $this->cek('tanpa galat fatal', false, get_class($e) . ': ' . $e->getMessage() . ' @ ' . $e->getFile() . ':' . $e->getLine());
         } finally {
@@ -465,6 +471,355 @@ class UjiSupervisi extends BaseCommand
         }
         $this->cek('dibatalkan → nilai akhir kosong & tidak bisa dinilai (409)', $sup->simpanJadwal(['batal' => '1'] + $ubah, $this->pencatat, $id)['ok']
             && $sup->cariJadwal($id)['nilai_akhir'] === null && ($pen->simpan($id, $lengkap, true, $this->pencatat)['kode'] ?? 0) === 409);
+    }
+
+    // =================================================================
+    // S3 — Rekap & berkas cetak
+    // =================================================================
+
+    /**
+     * Siapkan kunjungan uji: guru A dua kunjungan selesai (87,50 & 50,00 → rata-rata 68,75 Cukup), guru B satu kunjungan terjadwal.
+     *
+     * @return array{a: array, b: array, j1: int, j2: int, j3: int, i1: int, i2: int, i3: int, sup: int}|null
+     */
+    private function siapkanRekap(): ?array
+    {
+        $sup   = new Supervisi();
+        $pen   = new Penilaian();
+        $kini  = Supervisi::periodeSekarang();
+        $spv   = $sup->pilihanSupervisor();
+        $supId = (int) ($spv['saran'][0]['id'] ?? $spv['lain'][0]['id'] ?? 0);
+        $calon = array_values(array_filter($sup->ringkasan($kini['tahun_ajaran'], $kini['semester'])['guru_belum'], static fn (array $g): bool => $g['id'] !== $supId));
+        $ins   = array_column($sup->daftarInstrumen(true), null, 'kode');
+        if (count($calon) < 4 || ! isset($ins['PERENCANAAN'], $ins['PENILAIAN'], $ins['PELAKSANAAN'])) {
+            return null;
+        }
+        [$i1, $i2, $i3] = [(int) $ins['PERENCANAAN']['id'], (int) $ins['PENILAIAN']['id'], (int) $ins['PELAKSANAAN']['id']];
+        $hari  = date('Y-m-d');
+        $lain  = Supervisi::periode(date('Y-m-d', strtotime('+1 day'))) === $kini ? date('Y-m-d', strtotime('+1 day')) : date('Y-m-d', strtotime('-1 day'));
+        $buat  = fn (int $guru, string $tgl, array $insIds): int => (int) ($this->ingat('supervisi_jadwal', $sup->simpanJadwal(['guru_id' => $guru, 'supervisor_id' => $supId,
+            'tanggal' => $tgl, 'jam' => '08:00', 'instrumen' => array_map('strval', $insIds), 'catatan' => 'ZZUJI rekap'], $this->pencatat))['id'] ?? 0);
+        $isi   = static function (array $lembar, array $skorPerIns, array $tl) : array {
+            $out = [];
+            foreach ($lembar['instrumen'] as $x) {
+                $out[$x['id']] = ['skor' => array_fill_keys(array_column($x['butir'], 'kunci'), (string) $skorPerIns[$x['id']]), 'tindak_lanjut' => $tl[$x['id']] ?? [],
+                    'kekuatan' => 'ZZUJI kekuatan', 'rekomendasi' => 'ZZUJI rekomendasi'];
+            }
+
+            return $out;
+        };
+        $j1 = $buat($calon[0]['id'], $hari, [$i1, $i2]);
+        $j2 = $buat($calon[0]['id'], $lain, [$i1]);
+        $j3 = $buat($calon[1]['id'], $hari, [$i3]);
+        if ($j1 === 0 || $j2 === 0 || $j3 === 0) {
+            return null;
+        }
+        $r1 = $pen->simpan($j1, $isi($pen->lembar($j1), [$i1 => 4, $i2 => 3], [$i1 => ['model'], $i2 => ['individual']]), true, $this->pencatat);
+        $r2 = $pen->simpan($j2, $isi($pen->lembar($j2), [$i1 => 2], [$i1 => ['tidak_perlu']]), true, $this->pencatat);
+        if (! $r1['ok'] || ! $r2['ok']) {
+            $this->cek('kunjungan uji rekap dinilai', false, $r1['pesan'] . ' | ' . $r2['pesan']);
+
+            return null;
+        }
+
+        return ['a' => $calon[0], 'b' => $calon[1], 'c' => $calon[2], 'd' => $calon[3], 'j1' => $j1, 'j2' => $j2, 'j3' => $j3, 'i1' => $i1, 'i2' => $i2, 'i3' => $i3, 'sup' => $supId] + $kini;
+    }
+
+    private function ujiRekapCetak(): void
+    {
+        $this->bagian('S3 — Rekap, Excel Program, PDF Lembar Hasil, Excel Rekap');
+        $d = $this->siapkanRekap();
+        if ($d === null) {
+            $this->cek('data uji rekap tersedia (≥ 4 guru belum terjadwal, 3 instrumen bawaan)', false);
+
+            return;
+        }
+        $this->rekapUji = $d;
+        $pen   = new Penilaian();
+        [$ta, $sem] = [$d['tahun_ajaran'], $d['semester']];
+        $rekap = $pen->rekap($ta, $sem);
+        $baris = array_values(array_filter($rekap['baris'], static fn (array $b): bool => $b['guru_id'] === $d['a']['id']))[0] ?? null;
+        $kunci = array_column($rekap['instrumen'], 'kunci', 'id');
+        $this->cek('rekap: guru dengan 2 kunjungan → nilai per instrumen dirata (Perencanaan 75, Penilaian 75), rata-rata 68,75 Cukup', $baris !== null
+            && count($baris['kunjungan']) === 2 && $baris['nilai'][$kunci[$d['i1']]] === 75.0 && $baris['nilai'][$kunci[$d['i2']]] === 75.0
+            && $baris['rata_rata'] === 68.75 && $baris['predikat'] === 'Cukup', json_encode($baris));
+        $this->cek('rekap: tindak lanjut digabung urut katalog, "tidak perlu" gugur bila ada pembinaan', ($baris['tindak_lanjut'] ?? null) === ['individual', 'model'], json_encode($baris['tindak_lanjut'] ?? null));
+        $idKolom = array_column($rekap['instrumen'], 'id');
+        $this->cek('rekap: kolom instrumen urut daftar instrumen (Perencanaan sebelum Penilaian)', in_array($d['i1'], $idKolom, true)
+            && array_search($d['i1'], $idKolom, true) < array_search($d['i2'], $idKolom, true));
+        $belum = array_column($rekap['belum'], null, 'id');
+        $this->cek('rekap: guru B terjadwal (tanggal + id jadwal), guru C belum dijadwalkan, guru A tidak di daftar belum', ($belum[$d['b']['id']]['status'] ?? '') === 'terjadwal'
+            && ($belum[$d['b']['id']]['jadwal_id'] ?? 0) === $d['j3'] && ($belum[$d['c']['id']]['status'] ?? '') === 'belum_dijadwalkan' && ! isset($belum[$d['a']['id']]));
+        $this->cek('rekap: ringkasan menghitung Cukup ≥ 1, kunjungan selesai ≥ 2; saringan predikat menyaring baris saja', $rekap['ringkas']['per_predikat']['Cukup'] >= 1
+            && $rekap['ringkas']['kunjungan_selesai'] >= 2 && in_array($d['a']['id'], array_column($pen->rekap($ta, $sem, 'Cukup')['baris'], 'guru_id'), true)
+            && ! in_array($d['a']['id'], array_column(($x = $pen->rekap($ta, $sem, 'Amat Baik'))['baris'], 'guru_id'), true) && $x['ringkas'] === $rekap['ringkas']
+            && $pen->rekap($ta, $sem, 'ngawur')['predikat'] === '');
+
+        // Excel Program.
+        $rows = (new Supervisi())->daftarJadwal(['ta' => $ta, 'semester' => $sem, 'guru_id' => $d['a']['id']]);
+        $ws   = $this->bacaXlsx(HonorCetak::xlsx(Cetak::program($rows, $ta, $sem)))?->getSheet(0);
+        $this->cek('Excel Program: judul, kepala NO…KET di baris 5, nama guru & instrumen, A4 mendatar, Times New Roman', $ws !== null
+            && $ws->getCell('A1')->getValue() === 'PROGRAM SUPERVISI AKADEMIK' && $ws->getCell('A3')->getValue() === 'SEMESTER ' . mb_strtoupper(Supervisi::SEMESTER[$sem]) . ' TAHUN PELAJARAN ' . str_replace('/', '-', $ta)
+            && $ws->getCell('B5')->getValue() === 'HARI/TANGGAL' && $ws->getCell('I5')->getValue() === 'KET' && str_starts_with((string) $ws->getCell('D6')->getValue(), $d['a']['nama'])
+            && str_contains((string) $ws->getCell('H6')->getValue(), 'Perencanaan Pembelajaran') && str_starts_with((string) $ws->getCell('I6')->getValue(), 'Selesai')
+            && $ws->getPageSetup()->getOrientation() === 'landscape' && $ws->getStyle('D6')->getFont()->getName() === 'Times New Roman'
+            && str_contains($this->teksLembar($ws), 'Kepala Sekolah'), $ws !== null ? (string) $ws->getCell('D6')->getValue() . ' | ' . $ws->getCell('I6')->getValue() : 'tak terbaca');
+
+        // PDF lembar hasil.
+        $l1   = $pen->lembar($d['j1']);
+        $html = Cetak::lembarHtml([$l1, $pen->lembar($d['j3'])]);
+        $this->cek('HTML lembar: judul, centang skor, TD/catatan, temuan, TTD 3 pihak; kunjungan belum dinilai bertanda BELUM DINILAI', str_contains($html, 'LEMBAR HASIL SUPERVISI AKADEMIK')
+            && substr_count($html, '&#10003;') === count($l1['instrumen'][0]['butir']) + count($l1['instrumen'][1]['butir']) && str_contains($html, 'ZZUJI kekuatan')
+            && str_contains($html, 'Guru yang disupervisi') && str_contains($html, 'Supervisor') && str_contains($html, 'BELUM DINILAI') && str_contains($html, '87,50')
+            && substr_count($html, 'class="halaman') === 2);
+        $pdf = Cetak::pdf(Cetak::lembarHtml([$l1]));
+        $this->cek('PDF lembar hasil berawalan %PDF', str_starts_with($pdf, '%PDF'), substr($pdf, 0, 20));
+        if (is_string($folder = CLI::getOption('simpan')) && is_dir($folder)) {
+            // Contoh berkas untuk dibuka manual (data uji dihapus sesudahnya, berkasnya tetap).
+            $folder = rtrim($folder, '/\\');
+            file_put_contents($folder . '/lembar-hasil.pdf', Cetak::pdf($html));
+            file_put_contents($folder . '/lembar-hasil.html', '<!doctype html><meta charset="utf-8"><body style="width:727px;margin:26px 34px">' . $html);
+            file_put_contents($folder . '/program.xlsx', HonorCetak::xlsx(Cetak::program($rows, $ta, $sem)));
+            file_put_contents($folder . '/rekap.xlsx', HonorCetak::xlsx(Cetak::rekap($rekap)));
+            CLI::write('  contoh berkas disimpan di ' . $folder, 'cyan');
+        }
+
+        // Excel Rekap.
+        $ss = $this->bacaXlsx(HonorCetak::xlsx(Cetak::rekap($rekap)));
+        $ws = $ss?->getSheetByName('Rekap');
+        $baru = null;
+        if ($ws !== null) {
+            for ($b = 6; $b <= $ws->getHighestRow(); $b++) {
+                if ($ws->getCell('B' . $b)->getValue() === $d['a']['nama']) {
+                    $baru = $b;
+                }
+            }
+        }
+        $kolRata = \PhpOffice\PhpSpreadsheet\Cell\Coordinate::stringFromColumnIndex(6 + count($rekap['instrumen']));
+        $this->cek('Excel Rekap: lembar Rekap (kepala RATA-RATA, baris guru A rata-rata 68,75 Cukup) + lembar Ringkasan (predikat & belum disupervisi)', $ws !== null && $baru !== null
+            && $ws->getCell($kolRata . '5')->getValue() === 'RATA-RATA' && (float) $ws->getCell($kolRata . $baru)->getValue() === 68.75
+            && $ws->getCell(\PhpOffice\PhpSpreadsheet\Cell\Coordinate::stringFromColumnIndex(7 + count($rekap['instrumen'])) . $baru)->getValue() === 'Cukup'
+            && ($rs = $ss->getSheetByName('Ringkasan')) !== null && str_contains($this->teksLembar($rs), 'GURU YANG BELUM DISUPERVISI') && str_contains($this->teksLembar($rs), $d['b']['nama'])
+            && str_contains($this->teksLembar($rs), 'Cukup (61–75,99)'), $ws !== null ? 'baris ' . $baru : 'tak terbaca');
+
+        // Halaman & unduhan web.
+        $qs   = ['ta' => $ta, 'semester' => $sem];
+        $html = (string) $this->panggil(\App\Controllers\Admin\SupervisiRekap::class, 'admin/supervisi/rekap', 'GET', 'index', [], $qs);
+        $this->cek('halaman Rekap: guru A + 68,75 + tautan PDF kunjungan + bagian Belum disupervisi + tombol unduh', str_contains($html, esc($d['a']['nama'])) && str_contains($html, '68,75')
+            && str_contains($html, 'penilaian/' . $d['j1'] . '/pdf') && str_contains($html, 'id="belum-disupervisi"') && str_contains($html, 'rekap/excel') && str_contains($html, 'supervisi/lembar?'));
+        $res = $this->panggil(\App\Controllers\Admin\SupervisiRekap::class, 'admin/supervisi/rekap/excel', 'GET', 'excel', [], $qs);
+        $this->cek('GET rekap/excel → .xlsx', str_contains($res->getHeaderLine('Content-Type'), 'spreadsheetml') && str_starts_with((string) $res->getBody(), 'PK'));
+        $res = $this->panggil(\App\Controllers\Admin\SupervisiCetak::class, 'admin/supervisi/program', 'GET', 'program', [], $qs);
+        $this->cek('GET program → .xlsx (nama berkas Program Supervisi …)', str_starts_with((string) $res->getBody(), 'PK') && str_contains($res->getHeaderLine('Content-Disposition'), 'Program Supervisi'));
+        $res = $this->panggil(\App\Controllers\Admin\SupervisiCetak::class, 'admin/supervisi/penilaian/' . $d['j1'] . '/pdf', 'GET', 'lembar', [], [], $d['j1']);
+        $this->cek('GET penilaian/{id}/pdf → PDF inline', $res->getHeaderLine('Content-Type') === 'application/pdf' && str_starts_with((string) $res->getBody(), '%PDF'));
+        $res = $this->panggil(\App\Controllers\Admin\SupervisiCetak::class, 'admin/supervisi/lembar', 'GET', 'gabungan', [], $qs + ['guru_id' => $d['a']['id']]);
+        $this->cek('GET lembar (gabungan guru A) → PDF', str_starts_with((string) $res->getBody(), '%PDF'));
+        $res = $this->panggil(\App\Controllers\Admin\SupervisiCetak::class, 'admin/supervisi/lembar', 'GET', 'gabungan', [], $qs + ['guru_id' => $d['b']['id'], 'dari' => 'rekap']);
+        $this->cek('GET lembar tanpa kunjungan selesai → kembali ke Rekap + pesan galat', $res instanceof RedirectResponse && str_contains($res->getHeaderLine('Location'), 'supervisi/rekap')
+            && str_contains((string) session('error'), 'Belum ada kunjungan'));
+        $html = (string) $this->panggil(\App\Controllers\Admin\SupervisiPenilaian::class, 'admin/supervisi/penilaian', 'GET', 'index', [], $qs);
+        $this->cek('Penilaian: tombol PDF per kunjungan + Lembar Hasil gabungan + Rekap; Jadwal: Unduh Program; Lembar: Cetak Lembar Hasil', str_contains($html, 'penilaian/' . $d['j3'] . '/pdf')
+            && str_contains($html, 'supervisi/lembar?') && str_contains($html, 'supervisi/rekap?')
+            && str_contains((string) $this->panggil(\App\Controllers\Admin\SupervisiJadwal::class, 'admin/supervisi/jadwal', 'GET', 'index', [], $qs), 'supervisi/program?')
+            && str_contains((string) $this->panggil(\App\Controllers\Admin\SupervisiPenilaian::class, 'admin/supervisi/penilaian/' . $d['j1'], 'GET', 'lembar', [], [], $d['j1']), 'Cetak Lembar Hasil (PDF)'));
+
+        $item = array_values(array_filter(array_merge(...array_column(MenuAdmin::sidebar(), 'items')), static fn (array $it): bool => $it[0] === 'admin/supervisi/rekap'))[0] ?? null;
+        $this->cek('menu: Rekap Supervisi tidak lagi Segera; entri supervisi punya api "supervisi"', $item !== null && empty($item[4])
+            && (MenuAdmin::katalog()['supervisi']['api'] ?? null) === ['supervisi'], json_encode($item));
+    }
+
+    /** @var array<string, mixed> data uji rekap (dipakai ujiApi) */
+    private array $rekapUji = [];
+
+    private function bacaXlsx(string $isi): ?\PhpOffice\PhpSpreadsheet\Spreadsheet
+    {
+        $f = WRITEPATH . 'uji-supervisi-' . getmypid() . '.xlsx';
+        file_put_contents($f, $isi);
+        try {
+            return \PhpOffice\PhpSpreadsheet\IOFactory::load($f);
+        } catch (\Throwable) {
+            return null;
+        } finally {
+            @unlink($f);
+        }
+    }
+
+    private function teksLembar(\PhpOffice\PhpSpreadsheet\Worksheet\Worksheet $ws): string
+    {
+        $t = '';
+        foreach ($ws->toArray(null, false, false, false) as $baris) {
+            $t .= implode(' | ', array_map('strval', $baris)) . "\n";
+        }
+
+        return $t;
+    }
+
+    // =================================================================
+    // S4 — API Android
+    // =================================================================
+
+    private function ujiApi(): void
+    {
+        $this->bagian('S4 — API Android (api/v1/supervisi…)');
+        $d = $this->rekapUji;
+        if ($d === []) {
+            $this->cek('data uji API tersedia', false);
+
+            return;
+        }
+        [$k, $j] = $this->api('admin', 'meta');
+        $insMeta = array_column($j['data']['instrumen'] ?? [], null, 'id');
+        $this->cek('meta (Admin): periode, instrumen aktif + butir, skor 1–4 + TD, predikat, tindak lanjut, hak semua true', $k === 200
+            && ($j['data']['periode']['tahun_ajaran'] ?? '') === $d['tahun_ajaran'] && count($insMeta[$d['i1']]['butir'] ?? []) === $insMeta[$d['i1']]['jumlah_butir']
+            && count($j['data']['skor']) === 5 && count($j['data']['predikat']) === 4 && count($j['data']['tindak_lanjut']) === 5
+            && ! in_array(false, $j['data']['hak'], true) && isset($j['data']['supervisor']['saran'], $j['data']['guru'][0]['nip']), json_encode(array_keys($j['data'] ?? [])));
+        [$k1] = $this->api('operator', 'meta');
+        [$k2] = $this->api('guru_piket', 'daftar');
+        $this->cek('peran tanpa hak Supervisi (Operator, Guru Piket) → 403', $k1 === 403 && $k2 === 403);
+        $this->cek('gerbang: awalan api "supervisi" milik menu Supervisi Guru', HakAkses::bolehApiAlamat('admin', 'supervisi/jadwal') && ! HakAkses::bolehApiAlamat('guru_piket', 'supervisi/jadwal'));
+
+        [$k, $j] = $this->api('admin', 'daftar', ['ta' => $d['tahun_ajaran'], 'semester' => $d['semester'], 'guru_id' => $d['a']['id'], 'status' => 'selesai']);
+        $b = array_column($j['data']['baris'] ?? [], null, 'id');
+        $this->cek('GET jadwal (saring guru A + selesai): 2 baris, kemajuan/nilai/instrumen{dinilai}/bisa_hapus false, ringkas', $k === 200 && count($b) === 2
+            && ($b[$d['j1']]['kemajuan'] ?? '') === 'selesai' && $b[$d['j1']]['nilai_akhir'] === 87.5 && $b[$d['j1']]['instrumen'][0]['dinilai'] === true
+            && $b[$d['j1']]['bisa_hapus'] === false && $b[$d['j1']]['jam'] === '08:00' && isset($j['data']['ringkas']['guru_belum']), json_encode([count($b), $b[$d['j1']]['kemajuan'] ?? null, $b[$d['j1']]['nilai_akhir'] ?? null, $b[$d['j1']]['instrumen'] ?? null]));
+        [$k, $j] = $this->api('admin', 'saran', ['guru_id' => $d['a']['id']]);
+        $this->cek('GET jadwal/saran → 200 daftar', $k === 200 && is_array($j['data']));
+
+        // Tambah, ganda, galat isian.
+        $tgl = $this->tanggalSemester(3);
+        [$k, $j] = $this->api('admin', 'tambah', [], ['guru_id' => $d['c']['id'], 'supervisor_id' => $d['sup'], 'tanggal' => $tgl, 'jam' => '9:30',
+            'instrumen' => [$d['i3'], $d['i1']], 'catatan' => 'ZZUJI api']);
+        $id = (int) ($j['data']['id'] ?? 0);
+        if ($id > 0) {
+            $this->dibuat['supervisi_jadwal'][] = $id;
+        }
+        $lembar = $j['data']['lembar']['instrumen'] ?? [];
+        $this->cek('POST jadwal → 201 detail: jam 09:30, instrumen urut daftar (Perencanaan dulu), lembar butir berkunci "b…", kemajuan belum', $k === 201 && $id > 0
+            && $j['data']['jam'] === '09:30' && array_column($lembar, 'id') === [$d['i1'], $d['i3']] && str_starts_with($lembar[0]['butir'][0]['kunci'] ?? '', 'b')
+            && $j['data']['kemajuan'] === 'belum' && $j['data']['bisa_hapus'] === true, json_encode($j['message'] ?? ''));
+        [$k] = $this->api('admin', 'tambah', [], ['guru_id' => $d['c']['id'], 'supervisor_id' => $d['sup'], 'tanggal' => $tgl, 'instrumen' => [$d['i1']]]);
+        [$k2, $j2] = $this->api('admin', 'tambah', [], ['supervisor_id' => $d['sup'], 'tanggal' => $tgl, 'instrumen' => [$d['i1']]]);
+        $this->cek('POST jadwal ganda (guru & tanggal sama) → 409; tanpa guru → 422', $k === 409 && $k2 === 422 && str_contains($j2['message'] ?? '', 'guru'));
+        if ($id === 0) {
+            return;
+        }
+
+        // Penilaian lewat aplikasi.
+        $kunci1 = array_column($lembar[0]['butir'], 'kunci');
+        $kunci3 = array_column($lembar[1]['butir'], 'kunci');
+        [$k, $j] = $this->api('admin', 'nilai', [], ['selesai' => false, 'nilai' => [$d['i1'] => ['skor' => [$kunci1[0] => 4, $kunci1[1] => 0], 'catatan' => [$kunci1[0] => 'via HP']]]], $id);
+        $l = $j['data']['lembar']['instrumen'] ?? [];
+        $this->cek('POST nilai draf → 200 kemajuan draf, skor 4 & 0 (TD) tersimpan, kunci kini "n…", instrumen kedua belum tersimpan', $k === 200 && $j['data']['kemajuan'] === 'draf'
+            && ($l[0]['butir'][0]['skor'] ?? null) === 4 && ($l[0]['butir'][1]['skor'] ?? null) === 0 && str_starts_with($l[0]['butir'][0]['kunci'], 'n')
+            && $l[0]['butir'][0]['catatan'] === 'via HP' && $l[1]['tersimpan'] === false, json_encode($j['message'] ?? ''));
+        $kunci1 = array_column($l[0]['butir'], 'kunci');
+        [$k, $j] = $this->api('admin', 'nilai', [], ['selesai' => true, 'nilai' => [$d['i1'] => ['skor' => array_fill_keys($kunci1, 3)]]], $id);
+        $this->cek('POST nilai selesai belum lengkap → 422 + data.instrumen_id (tab yang bermasalah)', $k === 422 && ($j['data']['instrumen_id'] ?? 0) === $d['i3'], json_encode($j));
+        [$k, $j] = $this->api('admin', 'nilai', [], ['selesai' => true, 'nilai' => [
+            $d['i1'] => ['skor' => array_fill_keys($kunci1, 3), 'tindak_lanjut' => ['kelompok'], 'kekuatan' => 'Rapi'],
+            $d['i3'] => ['skor' => array_fill_keys($kunci3, 4)],                   // kunci "b…" lama tetap diterima
+        ]], $id);
+        $this->cek('POST nilai selesai lengkap → 200 status selesai, nilai akhir (75 + 100) / 2 = 87,50 Baik', $k === 200 && $j['data']['status'] === 'selesai'
+            && $j['data']['nilai_akhir'] === 87.5 && $j['data']['predikat'] === 'Baik' && $j['data']['lembar']['ringkas']['lengkap'] === true, json_encode($j['message'] ?? ''));
+        [$k, $j] = $this->api('admin', 'nilai', [], ['selesai' => false, 'nilai' => []], $id);
+        $this->cek('POST nilai draf pada yang sudah selesai → 409', $k === 409);
+        [$k, $j] = $this->api('admin', 'ubah', [], ['catatan' => 'ZZUJI api diubah'], $id);
+        $this->cek('POST ubah hanya catatan → 200, kunci lain tetap (guru, jam, instrumen), tetap selesai', $k === 200 && $j['data']['catatan'] === 'ZZUJI api diubah'
+            && $j['data']['guru_id'] === $d['c']['id'] && $j['data']['jam'] === '09:30' && $j['data']['status'] === 'selesai' && count($j['data']['instrumen']) === 2, json_encode($j['message'] ?? ''));
+        [$k] = $this->api('admin', 'hapus', [], [], $id);
+        [$k2] = $this->api('admin', 'detail', [], [], 99999999);
+        $this->cek('DELETE jadwal yang sudah dinilai → 409; detail id tak ada → 404', $k === 409 && $k2 === 404);
+
+        // Massal, batal, hapus.
+        [$m1, $m2] = [min($this->tanggalSemester(5), $this->tanggalSemester(9)), max($this->tanggalSemester(5), $this->tanggalSemester(9))];
+        [$k, $j] = $this->api('admin', 'massal', [], ['guru_ids' => [$d['b']['id'], $d['d']['id']], 'supervisor_id' => $d['sup'], 'mulai' => $m1,
+            'selesai' => $m2, 'per_hari' => 2, 'instrumen' => [$d['i3']]]);
+        $mid = (int) ($j['data']['ids'][0] ?? 0);
+        foreach ($j['data']['ids'] ?? [] as $x) {
+            $this->dibuat['supervisi_jadwal'][] = (int) $x;
+        }
+        $this->cek('POST jadwal/massal → 201: 1 dibuat (guru D), guru B (sudah terjadwal) dilewati', $k === 201 && ($j['data']['jumlah'] ?? 0) === 1 && $mid > 0
+            && ($j['data']['dilewati'] ?? []) === [$d['b']['nama']], $k . ' ' . ($j['message'] ?? ''));
+        [$k, $j] = $this->api('admin', 'massal', [], ['guru_ids' => [$d['b']['id']], 'supervisor_id' => $d['sup'], 'mulai' => $m1, 'selesai' => $m2, 'instrumen' => [$d['i3']]]);
+        $this->cek('POST jadwal/massal untuk guru yang semuanya sudah terjadwal → 409', $k === 409, (string) $k);
+        if ($mid > 0) {
+            [$k] = $this->api('admin', 'hapus', [], [], $mid);
+            $this->cek('DELETE jadwal hasil massal → 200', $k === 200);
+        }
+        [$k, $j] = $this->api('admin', 'ubah', [], ['batal' => true], $d['j3']);
+        $this->cek('POST ubah {batal: true} → status batal, kemajuan batal', $k === 200 && $j['data']['status'] === 'batal' && $j['data']['kemajuan'] === 'batal');
+        [$k] = $this->api('admin', 'pdf', [], [], $d['j3']);
+        $this->cek('GET jadwal/{id}/pdf kunjungan batal → 409', $k === 409);
+        [$k, $j] = $this->api('admin', 'hapus', [], [], $d['j3']);
+        $this->cek('DELETE jadwal belum dinilai → 200', $k === 200 && $this->db->table('supervisi_jadwal')->where('id', $d['j3'])->countAllResults() === 0);
+
+        // Rekap & unduhan.
+        $qs = ['ta' => $d['tahun_ajaran'], 'semester' => $d['semester']];
+        [$k, $j] = $this->api('admin', 'rekap', $qs);
+        $ra = array_values(array_filter($j['data']['baris'] ?? [], static fn (array $r): bool => $r['guru_id'] === $d['a']['id']))[0] ?? null;
+        $this->cek('GET rekap → 200: guru A 68,75 Cukup + tindak_lanjut_label, kolom instrumen berkunci, ringkas, belum', $k === 200 && $ra !== null && $ra['rata_rata'] === 68.75
+            && $ra['tindak_lanjut_label'] === ['Pembinaan individual', 'Contoh praktik baik (model)'] && isset($j['data']['instrumen'][0]['kunci'], $j['data']['ringkas']['per_predikat'], $j['data']['belum']));
+        $unduh = [
+            'program'    => [$qs, [], 'PK'],
+            'rekapExcel' => [$qs, [], 'PK'],
+            'pdf'        => [[], [$d['j1']], '%PDF'],
+            'gabungan'   => [$qs + ['guru_id' => $d['a']['id']], [], '%PDF'],
+        ];
+        $hasil = [];
+        foreach ($unduh as $m => [$get, $arg, $awal]) {
+            $res = $this->api('admin', $m, $get, [], false, ...$arg);
+            $hasil[$m] = str_starts_with($this->isiUnduhan($res), $awal);
+        }
+        $this->cek('unduhan API: program & rekap/excel (.xlsx), jadwal/{id}/pdf & lembar gabungan (PDF)', ! in_array(false, $hasil, true), json_encode($hasil));
+        [$k] = $this->api('admin', 'gabungan', $qs + ['guru_id' => $d['b']['id']]);
+        $this->cek('GET lembar tanpa kunjungan selesai → 404', $k === 404);
+    }
+
+    /** Tanggal hari sekolah ke-N dari sekarang yang masih dalam semester berjalan (mundur bila menyeberang semester). */
+    private function tanggalSemester(int $n): string
+    {
+        $kini = Supervisi::periodeSekarang();
+        $t    = date('Y-m-d', strtotime('+' . $n . ' day'));
+
+        return Supervisi::periode($t) === $kini ? $t : date('Y-m-d', strtotime('-' . $n . ' day'));
+    }
+
+    /**
+     * Panggil Api\Supervisi sebagai peran tertentu (token sudah lolos ApiAuthFilter). $arg[0] === false → respons mentah.
+     *
+     * @return array{0: int, 1: array}|\CodeIgniter\HTTP\ResponseInterface
+     */
+    private function api(string $peran, string $metode, array $get = [], array $post = [], mixed ...$arg): mixed
+    {
+        $json = true;
+        if ($arg !== [] && $arg[0] === false) {
+            $json = false;
+            array_shift($arg);
+        }
+        \App\Libraries\ApiAuth::set(['id' => null, 'full_name' => 'ZZUJI Aplikasi ' . $peran, 'role' => $peran]);
+        $request = (new \CodeIgniter\HTTP\IncomingRequest(config('App'), new \CodeIgniter\HTTP\SiteURI(config('App'), 'api/v1/supervisi'), null, new \CodeIgniter\HTTP\UserAgent()))
+            ->withMethod($post === [] ? 'GET' : 'POST');
+        \Config\Services::injectMock('request', $request);
+        $request->setGlobal('get', $get);
+        $request->setGlobal('post', $post);
+        $c = new \App\Controllers\Api\Supervisi();
+        $c->initController($request, service('response'), service('logger'));
+        $r = $c->{$metode}(...$arg);
+
+        return $json ? [$r->getStatusCode(), json_decode((string) $r->getBody(), true) ?: []] : $r;
+    }
+
+    private function isiUnduhan(mixed $res): string
+    {
+        if (! $res instanceof \CodeIgniter\HTTP\DownloadResponse) {
+            return '';
+        }
+        ob_start();
+        $res->sendBody();
+
+        return (string) ob_get_clean();
     }
 
     private function panggil(string $kelas, string $alamat, string $http, string $metode, array $post = [], array $get = [], mixed ...$arg): mixed

@@ -351,6 +351,156 @@ final class SupervisiPenilaian
             'lewati' => ! $selesai && ! $disentuh && ! $ins['tersimpan']] + $teks;
     }
 
+    // =================================================================
+    // Rekap periode (halaman Rekap, Excel Rekap, API)
+    // =================================================================
+
+    /** Predikat yang sah untuk saringan rekap ('' = semua). */
+    public static function predikatSah(?string $p): string
+    {
+        $p = trim((string) $p);
+
+        return in_array($p, self::PREDIKAT, true) ? $p : '';
+    }
+
+    /**
+     * Rekap hasil supervisi satu periode. SATU baris per guru yang punya kunjungan SELESAI di periode itu (satu guru boleh beberapa
+     * kunjungan): nilai per instrumen = rata-rata nilai instrumen itu dari kunjungan-kunjungannya, rata-rata = rata-rata nilai akhir
+     * kunjungannya, predikat dari rata-rata itu, tindak lanjut = gabungan semua tindak lanjut. 'belum' = guru (tanpa data ganda &
+     * "bukan pengajar") yang belum punya kunjungan selesai: masih terjadwal (tanggal terdekat) atau belum dijadwalkan sama sekali.
+     * $predikat menyaring 'baris' saja; 'ringkas' selalu menghitung semua.
+     *
+     * @return array{ta: string, semester: string, predikat: string, instrumen: list<array{id: ?int, kunci: string, nama: string}>,
+     *               baris: list<array<string, mixed>>, belum: list<array{id: int, nama: string, status: string, tanggal: ?string, jadwal_id: ?int}>,
+     *               ringkas: array<string, mixed>}
+     */
+    public function rekap(string $ta, string $semester, string $predikat = ''): array
+    {
+        $sup      = new Supervisi();
+        $predikat = self::predikatSah($predikat);
+        $jadwal   = $sup->daftarJadwal(['ta' => $ta, 'semester' => $semester]);
+        $selesai  = array_values(array_filter($jadwal, static fn (array $j): bool => $j['status'] === 'selesai'));
+        $nilai    = $selesai === [] ? [] : $this->nilai->whereIn('jadwal_id', array_column($selesai, 'id'))->findAll();
+
+        // Kolom instrumen: yang dinilai di periode ini, urut seperti daftar instrumen (instrumen terhapus di akhir, nama salinan).
+        $urutIns = array_flip(array_map('intval', array_column($sup->daftarInstrumen(), 'id')));
+        $namaIns = array_column($sup->daftarInstrumen(), 'nama', 'id');
+        $kolom   = [];
+        $perJadwal = [];
+        foreach ($nilai as $n) {
+            $insId = $n['instrumen_id'] !== null ? (int) $n['instrumen_id'] : null;
+            $kunci = $insId !== null ? 'i' . $insId : 'n' . md5((string) $n['nama_instrumen']);
+            $kolom[$kunci] ??= ['id' => $insId, 'kunci' => $kunci, 'nama' => (string) ($insId !== null ? ($namaIns[$insId] ?? $n['nama_instrumen']) : $n['nama_instrumen']),
+                'urut' => $insId !== null && isset($urutIns[$insId]) ? $urutIns[$insId] : PHP_INT_MAX];
+            $perJadwal[(int) $n['jadwal_id']][] = ['kunci' => $kunci, 'nilai' => $n['nilai'] !== null ? (float) $n['nilai'] : null, 'tl' => self::kodeTindakLanjut($n['tindak_lanjut'])];
+        }
+        uasort($kolom, static fn (array $a, array $b): int => $a['urut'] <=> $b['urut'] ?: strcasecmp($a['nama'], $b['nama']));
+        $kolom = array_values(array_map(static fn (array $k): array => ['id' => $k['id'], 'kunci' => $k['kunci'], 'nama' => $k['nama']], $kolom));
+
+        // Kelompokkan kunjungan selesai per guru.
+        $guru = [];
+        foreach ($selesai as $j) {
+            $g = $j['guru_id'] !== null ? 'g' . $j['guru_id'] : 'n' . mb_strtolower((string) $j['nama_guru']);
+            $guru[$g] ??= ['guru_id' => $j['guru_id'] !== null ? (int) $j['guru_id'] : null, 'nama_guru' => (string) $j['nama_guru'], 'nip_guru' => $j['nip_guru'] ?? null,
+                'mapel' => [], 'kunjungan' => [], 'nilai_ins' => [], 'tl' => []];
+            if (($j['nama_mapel'] ?? '') !== '' && ! in_array($j['nama_mapel'], $guru[$g]['mapel'], true)) {
+                $guru[$g]['mapel'][] = (string) $j['nama_mapel'];
+            }
+            $guru[$g]['kunjungan'][] = ['id' => (int) $j['id'], 'tanggal' => (string) $j['tanggal'], 'nama_supervisor' => (string) $j['nama_supervisor'],
+                'nama_kelas' => $j['nama_kelas'] ?? null, 'nilai_akhir' => $j['nilai_akhir'] !== null ? (float) $j['nilai_akhir'] : null, 'predikat' => $j['predikat'] ?? null];
+            foreach ($perJadwal[(int) $j['id']] ?? [] as $n) {
+                $guru[$g]['nilai_ins'][$n['kunci']][] = $n['nilai'];
+                $guru[$g]['tl'] = array_merge($guru[$g]['tl'], $n['tl']);
+            }
+        }
+        $baris = [];
+        foreach ($guru as $g) {
+            $rata = self::rataRata(array_column($g['kunjungan'], 'nilai_akhir'));
+            $tl   = self::kodeTindakLanjut(array_values(array_unique($g['tl']))); // urut katalog
+            if (count($tl) > 1) {
+                $tl = array_values(array_diff($tl, ['tidak_perlu'])); // ada pembinaan di kunjungan lain → "tidak perlu" tidak berlaku
+            }
+            $perIns = [];
+            foreach ($kolom as $k) {
+                $perIns[$k['kunci']] = isset($g['nilai_ins'][$k['kunci']]) ? self::rataRata($g['nilai_ins'][$k['kunci']]) : null;
+            }
+            $baris[] = [
+                'guru_id'       => $g['guru_id'],
+                'nama_guru'     => $g['nama_guru'],
+                'nip_guru'      => $g['nip_guru'],
+                'mapel'         => $g['mapel'],
+                'kunjungan'     => $g['kunjungan'],
+                'nilai'         => $perIns,
+                'rata_rata'     => $rata,
+                'predikat'      => self::predikat($rata),
+                'tindak_lanjut' => $tl,
+            ];
+        }
+        usort($baris, static fn (array $a, array $b): int => strcasecmp($a['nama_guru'], $b['nama_guru']));
+
+        // Guru yang belum punya kunjungan selesai.
+        $sudah = array_fill_keys(array_filter(array_column($baris, 'guru_id')), true);
+        $terjadwal = [];
+        foreach ($jadwal as $j) {
+            if ($j['status'] === 'dijadwalkan' && $j['guru_id'] !== null && ! isset($terjadwal[(int) $j['guru_id']])) {
+                $terjadwal[(int) $j['guru_id']] = $j; // daftar urut tanggal → yang terdekat
+            }
+        }
+        $belum = [];
+        foreach ($sup->pilihanGuru() as $g) {
+            if (isset($sudah[$g['id']])) {
+                continue;
+            }
+            $t = $terjadwal[$g['id']] ?? null;
+            $belum[] = ['id' => $g['id'], 'nama' => $g['nama'], 'status' => $t !== null ? 'terjadwal' : 'belum_dijadwalkan',
+                'tanggal' => $t['tanggal'] ?? null, 'jadwal_id' => $t !== null ? (int) $t['id'] : null];
+        }
+
+        $perPredikat = array_fill_keys(array_values(self::PREDIKAT), 0);
+        foreach ($baris as $b) {
+            if ($b['predikat'] !== null) {
+                $perPredikat[$b['predikat']]++;
+            }
+        }
+        $ringkas = [
+            'guru_dinilai'      => count($baris),
+            'kunjungan_selesai' => count($selesai),
+            'rata_rata'         => self::rataRata(array_column($baris, 'rata_rata')),
+            'per_predikat'      => $perPredikat,
+            'terjadwal'         => count(array_filter($belum, static fn (array $b): bool => $b['status'] === 'terjadwal')),
+            'belum_dijadwalkan' => count(array_filter($belum, static fn (array $b): bool => $b['status'] === 'belum_dijadwalkan')),
+        ];
+        $ringkas['rata_predikat'] = self::predikat($ringkas['rata_rata']);
+
+        return [
+            'ta'        => $ta,
+            'semester'  => $semester,
+            'predikat'  => $predikat,
+            'instrumen' => $kolom,
+            'baris'     => $predikat === '' ? $baris : array_values(array_filter($baris, static fn (array $b): bool => $b['predikat'] === $predikat)),
+            'belum'     => $belum,
+            'ringkas'   => $ringkas,
+        ];
+    }
+
+    /**
+     * Lembar beberapa kunjungan sekaligus (PDF gabungan): kunjungan SELESAI periode itu (+ saringan guru), urut tanggal.
+     *
+     * @return list<array<string, mixed>> hasil lembar() per kunjungan
+     */
+    public function lembarPeriode(string $ta, string $semester, int $guruId = 0): array
+    {
+        $out = [];
+        foreach ((new Supervisi())->daftarJadwal(['ta' => $ta, 'semester' => $semester, 'status' => 'selesai', 'guru_id' => $guruId]) as $j) {
+            $l = $this->lembar((int) $j['id']);
+            if ($l !== null) {
+                $out[] = $l;
+            }
+        }
+
+        return $out;
+    }
+
     /** Skor dari isian: '' / null → null (belum diisi); '0' / 'td' → 0 (tidak dinilai); '1'–'4' → angka; selain itu false. */
     public static function skorSah(mixed $v): int|false|null
     {

@@ -67,14 +67,15 @@ final class MenuAdmin
                 'master_pengampu'     => ['Penugasan', self::MENU, [['admin/master/pengampu', 'Penugasan', 'clipboard-check']]],
                 'skbm'                => ['SKBM', self::MENU, [['admin/skbm', 'SKBM', 'file-lines']], ['ket' => 'Sumber ceklis Koreksi honor (data beban mengajar).']],
             ]],
-            // Supervisi akademik guru (docs/DESAIN-SUPERVISI.md): Instrumen, Jadwal, Penilaian sudah jadi (2026-10-20); Rekap = Segera (S3).
+            // Supervisi akademik guru (docs/DESAIN-SUPERVISI.md): Instrumen, Jadwal, Penilaian, Rekap + unduhan (S1–S3) + API Android (S4).
             ['judul' => 'SUPERVISI GURU', 'bagian' => 'KURIKULUM', 'ikon' => 'clipboard-check', 'entri' => [
                 'supervisi' => ['Supervisi Guru', self::MENU, [
                     ['admin/supervisi/instrumen', 'Instrumen Supervisi', 'list'],
                     ['admin/supervisi/jadwal', 'Jadwal Supervisi', 'calendar-week'],
                     ['admin/supervisi/penilaian', 'Penilaian Supervisi', 'file-pen'],
-                    ['admin/supervisi/rekap', 'Rekap Supervisi', 'chart-mixed', false, true],
-                ], ['awalan' => ['admin/supervisi'], 'ket' => 'Instrumen, jadwal, dan penilaian supervisi akademik guru (Lihat = hanya melihat).']],
+                    ['admin/supervisi/rekap', 'Rekap Supervisi', 'chart-mixed'],
+                ], ['awalan' => ['admin/supervisi'], 'api' => ['supervisi'],
+                    'ket' => 'Instrumen, jadwal, penilaian, rekap & unduhan supervisi akademik guru (Lihat = hanya melihat & mengunduh). Juga di aplikasi Android (tanpa kelola instrumen).']],
             ]],
             ['judul' => 'JADWAL & ABSENSI', 'bagian' => 'KURIKULUM', 'ikon' => 'calendar-month', 'entri' => [
                 'master_mapel'  => ['Mata Pelajaran', self::MENU, [['admin/master/mapel', 'Mata Pelajaran', 'book']]],
