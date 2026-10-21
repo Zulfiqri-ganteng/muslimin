@@ -73,7 +73,7 @@ if (! function_exists('ui_partial')) {
         return ui_partial('peringatan', ['jenis' => $jenis, 'pesan' => $pesan] + $opsi);
     }
 
-    /** @param array{nama: string, judul: string, ukuran?: 'sm'|'lg'|'xl', awalBuka?: bool} $opsi */
+    /** @param array{nama: string, judul: string, ukuran?: 'sm'|'lg'|'xl'|'penuh', awalBuka?: bool} $opsi */
     function ui_dialog_buka(array $opsi): string
     {
         return ui_partial('dialog_buka', $opsi);

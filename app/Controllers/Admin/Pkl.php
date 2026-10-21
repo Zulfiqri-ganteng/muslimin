@@ -7,6 +7,7 @@ use App\Libraries\HakAkses;
 use App\Libraries\IsianBantu;
 use App\Libraries\PklAjuan;
 use App\Libraries\PklAlasan;
+use App\Libraries\PklBeranda;
 use App\Libraries\PklForm;
 use App\Libraries\PklHak;
 use App\Libraries\PklKeluar;
@@ -19,7 +20,6 @@ use App\Libraries\PklStaf;
 use App\Libraries\PklSurat;
 use App\Libraries\PklWaKeputusan;
 use App\Libraries\SuratJenis;
-use App\Libraries\SuratSekolah;
 use App\Models\AuditModel;
 use App\Models\PklPengajuanModel;
 use App\Models\PklPengaturanModel;
@@ -73,23 +73,9 @@ class Pkl extends BaseController
         [$antrean] = $this->model->daftar('menunggu', '', 0, 8, 1);
 
         $peranIni = $this->peranSaya();
-        $suratRingkas = null;
-        if (HakAkses::bolehPkl($peranIni, 'surat') || HakAkses::bolehPkl($peranIni, 'laporan')) {
-            $db = db_connect();
-            $suratRingkas = [
-                'belum_bernomor' => (int) $db->query("SELECT COUNT(*) n FROM pkl_pengajuan p WHERE p.status = 'disetujui' AND NOT EXISTS (SELECT 1 FROM pkl_surat s WHERE s.pengajuan_id = p.id)")->getRowArray()['n'],
-                'belum_dikabari' => (int) $db->query("SELECT COUNT(*) n FROM pkl_anggota a JOIN pkl_pengajuan p ON p.id = a.pengajuan_id AND p.status = 'disetujui' JOIN pkl_surat s ON s.pengajuan_id = p.id WHERE a.dikabari_at IS NULL")->getRowArray()['n'],
-                'uang_bulan_ini' => (int) ($db->query('SELECT COALESCE(SUM(nominal), 0) n FROM pkl_pembayaran WHERE created_at >= ?', [date('Y-m-01 00:00:00')])->getRowArray()['n'] ?? 0),
-            ];
-        }
-
-        // Kartu Surat Sekolah (L7): bagi yang boleh membuka modul Surat DAN memegang hak surat sekolah apa pun (buat/ACC/unduh).
-        $suratSekolah = null;
-        if (HakAkses::boleh($peranIni, 'admin/surat') && PklHak::boleh($peranIni, 'surat_acc:*|surat_buat:*|surat_unduh:*') && db_connect()->tableExists('surat_sekolah')) {
-            $suratSekolah = (new SuratSekolah())->hitungStatus() + [
-                'belum_unduh' => (int) db_connect()->query("SELECT COUNT(*) n FROM surat_sekolah WHERE status = 'disetujui' AND cetak_ke = 0")->getRowArray()['n'],
-            ];
-        }
+        // Kotak Surat Izin & biaya + kartu Surat Sekolah (L7) — satu sumber dengan API pkl/ringkasan (Libraries\PklBeranda).
+        $suratRingkas = PklBeranda::suratRingkas($peranIni);
+        $suratSekolah = PklBeranda::suratSekolah($peranIni);
 
         // Laporan "sudah diterima perusahaan" dari siswa yang menunggu dibuatkan Surat Balasan (bagi yang boleh membuka kotaknya).
         $laporBaru = HakAkses::boleh($peranIni, 'admin/surat/balasan/laporan') ? (new PklLapor())->hitung()['baru'] : 0;

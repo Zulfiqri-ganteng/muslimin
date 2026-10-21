@@ -139,6 +139,8 @@ document.addEventListener('alpine:init', function () {
                     disetujui: { teks: 'Disetujui', kelas: 'label-buka' },
                     perbaikan: { teks: 'Perlu perbaikan', kelas: 'label-kuning' },
                     ditolak: { teks: 'Ditolak — boleh ajukan lagi', kelas: 'label-merah' },
+                    // Dilaporkan tidak diterima perusahaan; laporannya belum diproses sekolah (masih tercatat di ajuan lama).
+                    lepas: { teks: 'Tidak diterima — tunggu diproses sekolah', kelas: 'label-kuning' },
                 }[status] || { teks: '', kelas: '' };
             },
 

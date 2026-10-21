@@ -119,13 +119,14 @@ class PklPengajuanModel extends Model
      *
      * Hanya status yang dikembalikan — TIDAK ada data perusahaan/ajuan, supaya
      * tak membuka rahasia siswa lain lewat daftar nama yang bisa dilihat siapa saja.
+     * (`pengajuan_id` hanya dipakai server untuk memeriksa laporan hasil perusahaan; tidak dikirim ke peramban.)
      *
      * @return list<array<string, mixed>>
      */
     public function daftarSiswaKelas(int $kelasId): array
     {
         return $this->db->table('siswa s')
-            ->select("s.id, s.nama, s.jenis_kelamin, a.peran, p.status AS aktif, p.diajukan_at, (" . self::sqlPernahTolak() . ") AS pernah_ditolak", false)
+            ->select("s.id, s.nama, s.jenis_kelamin, a.peran, a.pengajuan_id, p.status AS aktif, p.diajukan_at, (" . self::sqlPernahTolak() . ") AS pernah_ditolak", false)
             ->join('pkl_anggota a', 'a.siswa_aktif = s.id', 'left')
             ->join('pkl_pengajuan p', 'p.id = a.pengajuan_id', 'left')
             ->where('s.kelas_id', $kelasId)

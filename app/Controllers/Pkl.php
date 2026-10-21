@@ -6,6 +6,7 @@ use App\Libraries\IsianBantu;
 use App\Libraries\LoginThrottle;
 use App\Libraries\PklAjuan;
 use App\Libraries\PklForm;
+use App\Libraries\PklLapor;
 use App\Models\PklPengajuanModel;
 use App\Models\PklPengaturanModel;
 use App\Models\PklPerusahaanModel;
@@ -89,16 +90,22 @@ class Pkl extends BaseController
             return $this->json(['ok' => false, 'message' => 'Kelas ini belum termasuk yang boleh mengajukan PKL.'], 422);
         }
 
-        $hari = PklPengaturanModel::batasHari($this->p);
-        $data = array_map(static fn (array $r) => [
+        $hari  = PklPengaturanModel::batasHari($this->p);
+        $baris = (new PklPengajuanModel())->daftarSiswaKelas($kelasId);
+        // Laporan "sebagian/semua ditolak perusahaan" yang belum diproses staf: siswa yang ditolak masih tercatat di ajuan disetujui,
+        // jadi statusnya 'lepas' (bukan "Disetujui — tidak perlu mengisi lagi").
+        $tolak = (new PklLapor())->tolakMenunggu(array_column(array_filter($baris, static fn (array $r): bool => $r['aktif'] === 'disetujui'), 'pengajuan_id'));
+        $data  = array_map(static fn (array $r) => [
             'id'     => (int) $r['id'],
             'nama'   => $r['nama'],
             'jk'     => $r['jenis_kelamin'],
-            'status' => $r['aktif'] ?? ((int) $r['pernah_ditolak'] === 1 ? 'ditolak' : 'belum'),
+            'status' => $r['aktif'] === 'disetujui' && PklLapor::dilaporkanTolak($tolak, (int) $r['pengajuan_id'], (int) $r['id'])
+                ? 'lepas'
+                : ($r['aktif'] ?? ((int) $r['pernah_ditolak'] === 1 ? 'ditolak' : 'belum')),
             'peran'  => $r['aktif'] !== null ? $r['peran'] : null,
             // Hanya tanggal (bukan data ajuan): kapan keputusan sekolah paling lambat keluar.
             'batas'  => $r['aktif'] === 'menunggu' ? substr((string) PklPengajuanModel::batasKeputusan($r['diajukan_at'] ?? null, $hari), 0, 10) : null,
-        ], (new PklPengajuanModel())->daftarSiswaKelas($kelasId));
+        ], $baris);
 
         return $this->json(['ok' => true, 'data' => $data]);
     }
@@ -238,7 +245,7 @@ class Pkl extends BaseController
                 return $this->json(['ok' => false, 'message' => 'Buka ajuanmu dulu dengan nomor HP.'], 403);
             }
         } elseif ($milik !== null) {
-            return $this->json(['ok' => false, 'message' => $this->pesanTerkunci($milik)], 409);
+            return $this->json(['ok' => false, 'message' => $this->pesanTerkunci($milik, $id)], 409);
         }
 
         [$data, $galat] = PklForm::proses($this->request->getPost(), $this->p);
@@ -416,7 +423,7 @@ class Pkl extends BaseController
                 if (in_array($pengajuId, $ids, true)) {
                     $milik = $model->aktifMilik($pengajuId);
 
-                    return $this->json(['ok' => false, 'message' => $this->pesanTerkunci($milik ?? ['status' => 'menunggu'])], 409);
+                    return $this->json(['ok' => false, 'message' => $this->pesanTerkunci($milik ?? ['status' => 'menunggu'], $pengajuId)], 409);
                 }
 
                 return $this->json([
@@ -448,9 +455,22 @@ class Pkl extends BaseController
      *
      * @param array<string, mixed> $milik baris ajuan aktif (PklPengajuanModel::aktifMilik)
      */
-    private function pesanTerkunci(array $milik): string
+    private function pesanTerkunci(array $milik, int $siswaId = 0): string
     {
         $kode = isset($milik['id']) ? PklPengajuanModel::kode((int) $milik['id']) : 'ajuanmu';
+
+        // Dilaporkan TIDAK diterima perusahaan, tetapi laporannya belum diproses staf: masih tercatat di ajuan (belum bebas).
+        // Jangan menulis "sudah disetujui, tidak perlu mengisi lagi" kepadanya.
+        if (($milik['status'] ?? '') === 'disetujui' && $siswaId > 0 && isset($milik['id'])
+            && PklLapor::dilaporkanTolak((new PklLapor())->tolakMenunggu([(int) $milik['id']]), (int) $milik['id'], $siswaId)) {
+            return 'Kelompokmu sudah melaporkan bahwa kamu TIDAK diterima perusahaan, tetapi laporan itu belum diproses sekolah. '
+                . 'Sampai diproses, namamu masih tercatat di ajuan ' . $kode . ' sehingga kamu belum bisa mengajukan tempat PKL lain. '
+                . 'Minta operator sekolah memproses laporan PKL kelompokmu; setelah itu kamu langsung bisa mengajukan tempat baru di form ini.';
+        }
+        // Ajuan disetujui tetapi perusahaan ternyata menolak (belum dilaporkan): jalan keluarnya lapor dulu, bukan menunggu.
+        $tidakDiterima = PklLapor::terbuka($this->p)
+            ? ' Tidak diterima perusahaan? Laporkan lewat form Lapor hasil PKL (' . config('Pkl')->tautanLapor() . '); setelah sekolah memprosesnya, kamu bisa mengajukan tempat PKL lain.'
+            : ' Tidak diterima perusahaan? Hubungi operator sekolah agar namamu dikeluarkan dari ajuan itu, lalu kamu bisa mengajukan tempat PKL lain.';
 
         // Didaftarkan TEMAN (bukan mengisi sendiri) — mis. keduanya mengisi bersamaan dan temannya mengirim
         // lebih dulu. Jangan menulis "kamu sudah mengajukan": ia merasa tidak pernah mengirim apa pun.
@@ -461,7 +481,7 @@ class Pkl extends BaseController
                     . 'Hanya temanmu yang mengajukan yang bisa memperbaikinya — kamu tidak perlu mengisi lagi.' . $tidakIkut;
             }
             if (($milik['status'] ?? '') === 'disetujui') {
-                return 'Namamu sudah didaftarkan temanmu di ajuan PKL ' . $kode . ' dan ajuan itu sudah DISETUJUI sekolah. Kamu tidak perlu mengisi lagi.' . $tidakIkut;
+                return 'Namamu sudah didaftarkan temanmu di ajuan PKL ' . $kode . ' dan ajuan itu sudah DISETUJUI sekolah. Kamu tidak perlu mengisi lagi.' . $tidakDiterima . $tidakIkut;
             }
 
             return 'Namamu sudah didaftarkan temanmu di ajuan PKL ' . $kode . ' yang sedang menunggu keputusan sekolah. '
@@ -469,7 +489,7 @@ class Pkl extends BaseController
         }
 
         if (($milik['status'] ?? '') === 'disetujui') {
-            return 'Ajuan PKL-mu (' . $kode . ') sudah DISETUJUI sekolah. Jika ada perubahan, hubungi operator sekolah atau Waka Hubin.';
+            return 'Ajuan PKL-mu (' . $kode . ') sudah DISETUJUI sekolah.' . $tidakDiterima . ' Perubahan lain: hubungi operator sekolah atau Waka Hubin.';
         }
         if (($milik['status'] ?? '') === 'perbaikan') {
             return 'Ajuan PKL-mu (' . $kode . ') sedang dikembalikan untuk diperbaiki. Pilih namamu di langkah 1 lalu buka ajuanmu — jangan membuat ajuan baru.';

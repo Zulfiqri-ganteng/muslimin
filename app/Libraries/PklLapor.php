@@ -134,6 +134,37 @@ final class PklLapor
         return is_array($j) ? array_values(array_unique(array_map('intval', array_filter($j, 'is_scalar')))) : [];
     }
 
+    /**
+     * Laporan "sebagian diterima" / "semua ditolak" yang MASIH MENUNGGU diproses staf: ajuan_id => id siswa yang DITERIMA (kosong =
+     * semua ditolak). Anggota ajuan itu yang tidak ada di daftar = dilaporkan tidak diterima perusahaan; ia tetap tercatat (terkunci)
+     * di ajuan sampai staf memproses laporannya. Dipakai form pengajuan siswa supaya tidak menulis "ajuan sudah disetujui, tidak perlu
+     * mengisi lagi" kepada siswa yang sebenarnya ditolak perusahaan.
+     *
+     * @param list<int> $ajuanIds
+     *
+     * @return array<int, list<int>>
+     */
+    public function tolakMenunggu(array $ajuanIds): array
+    {
+        $ajuanIds = array_values(array_unique(array_filter(array_map('intval', $ajuanIds))));
+        if ($ajuanIds === [] || ! self::kolomHasil()) {
+            return [];
+        }
+        $out = [];
+        foreach ($this->db->table('pkl_lapor')->select('pengajuan_id, hasil, diterima')->whereIn('pengajuan_id', $ajuanIds)
+            ->where('status', 'baru')->whereIn('hasil', ['sebagian', 'ditolak'])->get()->getResultArray() as $l) {
+            $out[(int) $l['pengajuan_id']] = $l['hasil'] === 'ditolak' ? [] : self::idDiterima($l);
+        }
+
+        return $out;
+    }
+
+    /** Siswa $siswaId dilaporkan TIDAK diterima perusahaan pada laporan ajuan $ajuanId yang masih menunggu ($peta = tolakMenunggu()). */
+    public static function dilaporkanTolak(array $peta, int $ajuanId, int $siswaId): bool
+    {
+        return isset($peta[$ajuanId]) && ! in_array($siswaId, $peta[$ajuanId], true);
+    }
+
     /** Form lapor terbuka? (migrasi sudah jalan + saklar Pengaturan PKL menyala — bawaan menyala) */
     public static function terbuka(array $p): bool
     {

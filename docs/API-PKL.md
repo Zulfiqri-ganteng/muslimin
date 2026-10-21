@@ -217,6 +217,35 @@ Butuh migrasi `2026-10-25-000001_PklKeluarAlasan` (server tanpa migrasi menjawab
 - `POST pkl/biaya`: kunci baru `wa_pesan_keluar` (templat WhatsApp siswa dikeluarkan / ditolak perusahaan).
 - Kotak Lapor Diterima (API Surat) membawa `hasil` + `siswa_diterima`/`siswa_ditolak` — lihat `docs/API-SURAT.md`.
 
+## Pembaruan 2026-10-21 — peringatan layar penuh (pekerjaan lewat batas keputusan)
+Keluhan klien: Waka Hubin jarang membuka sistem sehingga ajuan lama tidak di-ACC. Web menampilkan dialog LAYAR PENUH di setiap halaman
+panel admin (`Libraries\PklPengingat`, partial `admin/pkl/_pengingat`); aplikasi memakai endpoint ini untuk hal yang sama.
+
+`GET pkl/pengingat` (Bearer) →
+```json
+{ "hari": 5, "total": 2,
+  "ajuan": { "n": 1, "siswa": 1, "baris": [ { "id": 77, "kode": "PKL-00077", "perusahaan": "ANTARESTAR Store Harapan indah", "siswa": "Romdoni",
+             "kelas": "XI TKJ 9", "jumlah_siswa": 1, "dikirim": "2026-10-13 21:27:43", "menunggu_hari": 8 } ] },
+  "lapor": { "n": 1, "tertahan": 2, "baris": [ { "id": 12, "ajuan_id": 4, "kode": "PKL-00004", "perusahaan": "Universitas Bhayangkara Jakarta Raya",
+             "pelapor": "Dafa Rizki Ismail", "hasil": "sebagian", "hasil_teks": "Sebagian diterima", "tertahan": 2,
+             "dikirim": "2026-10-12 21:27:43", "menunggu_hari": 9 } ] },
+  "layar_penuh": true, "tunda_detik": 3600 }
+```
+- Batas `hari` = Pengaturan PKL → "Batas keputusan" (bawaan 5), rumus SAMA dengan `terlambat` di `pkl/ringkasan`: lewat bila tanggal
+  kirim + `hari` < hari ini. Untuk laporan dihitung dari kiriman terakhir siswa.
+- `ajuan` hanya bagi pemegang hak **ACC ajuan PKL** (bawaan Waka Hubin); `lapor` hanya bagi pemroses kotak Lapor Diterima (hak Buat/ACC
+  Surat Balasan; di sekolah = Operator). Bagian yang tidak berlaku atau kosong = `null`. `baris` paling banyak 10; `n` = jumlah semua.
+- `lapor.tertahan` = siswa yang dilaporkan TIDAK diterima perusahaan dan masih tercatat (terkunci) di ajuannya sampai laporan diproses.
+- `layar_penuh` = `total > 0` dan akun bukan Admin (Admin cukup lonceng/tanda merah, sama dengan web).
+
+`GET pkl/ringkasan` — tiga kunci baru (kotak Beranda PKL web yang sama, satu sumber `Libraries\PklBeranda`):
+- `surat_ringkas` `{belum_bernomor, belum_dikabari, uang_bulan_ini}` — hanya bagi hak `surat` atau `laporan`, selain itu `null`.
+  Kotak web: "Surat belum diunduh", "Siswa belum dikabari WhatsApp", "Uang tercatat bulan ini".
+- `surat_sekolah` `{semua, menunggu, dikembalikan, disetujui, dibatalkan, belum_unduh}` — bagi yang boleh membuka modul Surat DAN
+  memegang hak surat sekolah apa pun (buat/ACC/unduh), selain itu `null`. Kotak web: "menunggu ACC", "belum diunduh", "dikembalikan".
+- `pemegang_acc` (teks, mis. "Waka Hubin") — untuk judul "Antrean ajuan — menunggu keputusan ACC (…)" bila akun ini tidak memegang
+  hak ACC; bila memegang (`hak.acc`), judul web = "Menunggu keputusan Anda".
+
 ## Catatan untuk pembuat aplikasi
 1. Setelah login, baca `admin.akses_api`: bila `["pkl"]`, tampilkan HANYA menu PKL (jangan panggil API lain → 403).
 2. Tombol per ajuan dibaca dari `data.hak` pada detail; jangan menebak dari peran.

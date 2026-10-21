@@ -62,7 +62,7 @@ $kotakTautan = static fn (string $judul, string $url, string $pesan, string $ket
         . '<ul class="mt-2 list-disc pl-5 space-y-1">'
         . '<li>Form <b>tertutup</b> secara bawaan. Buka hanya saat tautan siap dibagikan; bisa diberi <b>batas waktu</b> agar menutup sendiri.</li>'
         . '<li><b>Maksimal siswa per perusahaan</b> paling banyak 5 (aturan sekolah).</li>'
-        . '<li>Siswa yang sudah mengajukan <b>tidak bisa mengajukan lagi</b> selama ajuannya menunggu keputusan (ACC). <b>Batas keputusan</b> (bawaan 5 hari sejak dikirim) memberi tanda merah pada yang terlambat.</li>'
+        . '<li>Siswa yang sudah mengajukan <b>tidak bisa mengajukan lagi</b> selama ajuannya menunggu keputusan (ACC). <b>Batas keputusan</b> (bawaan 5 hari sejak dikirim) memberi tanda merah pada yang terlambat dan memunculkan <b>peringatan layar penuh</b> bagi pemegang hak ACC ajuan (ajuan belum di-ACC) dan pemroses laporan siswa (laporan hasil perusahaan belum diproses).</li>'
         . '<li><b>Surat permohonan:</b> isi nama/NIP/jabatan Waka Hubin, nama Kepala Sekolah, kontak "NB" di bawah surat, format nomor surat, dan pola nama berkas. Format surat sudah <u>persis surat resmi sekolah</u>; hanya isi data yang berubah. Tanda tangan digital Waka Hubin (dan tanda tangan + stempel Kepala Sekolah) diunggah di tab <b>Tanda Tangan</b> oleh peran yang diberi hak itu.</li>'
         . '<li><b>Format nomor surat</b>: pilih salah satu tombol siap pakai (mis. <i>Tiga angka: 001, 002</i>). Nol di depan hanya lewat <code>{urut3}</code>; menulis &quot;{urut}00&quot; menghasilkan 100, 200, 600 sehingga ditolak.</li>'
         . '<li><b>Biaya &amp; pesan WhatsApp</b> (bagian bawah): nominal tiap jenis biaya yang dicatat saat surat diunduh (catatan lama tidak berubah) dan templat pesan yang dikirim manual ke siswa.</li>'
@@ -149,7 +149,7 @@ $kotakTautan = static fn (string $judul, string $url, string $pesan, string $ket
                 <input id="f_batas_hari" type="number" min="1" max="30" name="batas_keputusan_hari" value="<?= esc($nilai('batas_keputusan_hari', '5'), 'attr') ?>" class="inp <?= $cls('batas_keputusan_hari') ?>">
                 <?= $err('batas_keputusan_hari') ?>
             </div>
-            <p class="text-sm text-gray-500 dark:text-gray-400">Dihitung sejak siswa menekan Kirim. Siswa diberi tahu tanggal batasnya dan diminta <b>tidak mengajukan ulang</b> selama menunggu. Ajuan yang lewat batas ditandai merah di Kotak Masuk dan Beranda PKL.</p>
+            <p class="text-sm text-gray-500 dark:text-gray-400">Dihitung sejak ajuan dikirim. Siswa diberi tahu tanggal batasnya dan diminta <b>tidak mengajukan ulang</b> selama menunggu. Ajuan yang lewat batas ditandai merah di Kotak Masuk dan Beranda PKL, dan setiap kali pemegang hak ACC ajuan (Waka Hubin) membuka panel admin muncul <b>peringatan layar penuh</b> sampai ajuannya diputuskan. Batas yang sama dipakai untuk laporan hasil perusahaan dari siswa yang belum diproses (peringatan bagi pemroses laporan, mis. Operator). Admin tidak mendapat peringatan layar penuh.</p>
         </div>
     </section>
 

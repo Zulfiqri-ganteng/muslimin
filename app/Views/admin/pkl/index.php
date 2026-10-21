@@ -144,7 +144,7 @@ $kartuAngka = static fn (string $url, string $label, string $angka, string $warn
     <?= ui_peringatan($terbuka ? 'sukses' : 'awas', '', ['judul' => 'Form siswa: ' . ($terbuka ? 'TERBUKA' : 'TERTUTUP'), 'html' => $isiForm]) ?>
 
     <?php if (($terlambat ?? 0) > 0): ?>
-        <?= ui_peringatan('galat', '', ['html' => '<b>' . (int) $terlambat . ' ajuan</b> sudah melewati batas keputusan ACC (' . (int) $batasHari . ' hari sejak dikirim siswa). Segera diputuskan. <a href="' . site_url('admin/pkl/daftar/menunggu') . '" class="font-semibold underline">Lihat ajuan</a>']) ?>
+        <?= ui_peringatan('galat', '', ['html' => '<b>' . (int) $terlambat . ' ajuan</b> sudah melewati batas keputusan ACC (' . (int) $batasHari . ' hari sejak dikirim). Segera diputuskan. <a href="' . site_url('admin/pkl/daftar/menunggu') . '" class="font-semibold underline">Lihat ajuan</a>']) ?>
     <?php endif; ?>
 
     <!-- Angka status ajuan -->

@@ -417,6 +417,14 @@
   .dialog-panel-sm { @apply max-w-md; }
   .dialog-panel-lg { @apply max-w-2xl; }
   .dialog-panel-xl { @apply max-w-4xl; }
+  /* Layar penuh (pengingat PKL lewat batas, admin/pkl/_pengingat — 2026-10-21): panel setinggi layar, isi mengisi sisa ruang. */
+  .dialog-panel-penuh { @apply flex min-h-[calc(100dvh-2rem)] max-w-none flex-col; }
+  .dialog-panel-penuh .dialog-isi { @apply flex-1; }
+  .pengingat-bagian { @apply space-y-3 rounded-lg border border-red-200 bg-red-50 p-4 md:p-5; }
+  .pengingat-judul  { @apply flex items-start gap-2 text-xl font-bold text-red-800 md:text-2xl; }
+  .pengingat-teks   { @apply text-base text-gray-800; }
+  .pengingat-tabel  { @apply rounded-lg border border-gray-200 bg-white; }
+  .pengingat-tabel a { @apply font-semibold text-brand-700 hover:underline; }
   .dialog-kepala { @apply flex items-center justify-between gap-4 rounded-t-lg border-b border-gray-200 p-4 md:p-5; }
   .dialog-judul  { @apply text-lg font-semibold text-gray-900; }
   .dialog-isi    { @apply space-y-4 p-4 md:p-5; }
@@ -771,6 +779,11 @@
   .dialog-panel  { @apply dark:bg-gray-700; }
   .dialog-kepala, .dialog-kaki { @apply dark:border-gray-600; }
   .dialog-judul  { @apply dark:text-white; }
+  .pengingat-bagian { @apply dark:border-red-800 dark:bg-red-950/40; }
+  .pengingat-judul  { @apply dark:text-red-300; }
+  .pengingat-teks   { @apply dark:text-gray-200; }
+  .pengingat-tabel  { @apply dark:border-gray-600 dark:bg-gray-800; }
+  .pengingat-tabel a { @apply dark:text-brand-400; }
   .tombol-tutup  { @apply dark:hover:bg-gray-600 dark:hover:text-white; }
   .laci-panel    { @apply dark:bg-gray-800; }
   .laci-kepala, .laci-kaki { @apply dark:border-gray-700; }
@@ -837,6 +850,9 @@
   .navbar-akun   { @apply sekolah:ring-brand-200; }
   .lonceng-angka { @apply sekolah:bg-plum-600; }
   .lonceng-n     { @apply sekolah:bg-plum-100 sekolah:text-plum-800; }
+  .pengingat-bagian { @apply sekolah:border-plum-200 sekolah:bg-plum-50; }
+  .pengingat-judul  { @apply sekolah:text-plum-800; }
+  .pengingat-tabel  { @apply sekolah:border-brand-100; }
   .kartu-tautan { @apply sekolah:hover:border-brand-200 sekolah:hover:bg-brand-50; }
 
   /* Tabel & daftar data */

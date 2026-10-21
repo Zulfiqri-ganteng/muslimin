@@ -5,11 +5,11 @@
  * Dibuka lewat <button type="button" data-buka-dialog="nama">, $dispatch('buka-dialog', { nama: 'nama' }) atau Ui.bukaDialog('nama').
  * Esc, klik latar, atau tombol tutup menutupnya; fokus berputar di dalam panel dan kembali ke tombol pembuka saat ditutup.
  *
- * @var array{nama: string, judul: string, ukuran?: 'sm'|'lg'|'xl', awalBuka?: bool} $ui
+ * @var array{nama: string, judul: string, ukuran?: 'sm'|'lg'|'xl'|'penuh', awalBuka?: bool} $ui
  */
 $nama    = (string) ($ui['nama'] ?? '');
 $idJudul = 'dialog-' . preg_replace('/[^A-Za-z0-9_-]/', '-', $nama) . '-judul';
-$ukuran  = ['sm' => ' dialog-panel-sm', 'lg' => ' dialog-panel-lg', 'xl' => ' dialog-panel-xl'][$ui['ukuran'] ?? ''] ?? '';
+$ukuran  = ['sm' => ' dialog-panel-sm', 'lg' => ' dialog-panel-lg', 'xl' => ' dialog-panel-xl', 'penuh' => ' dialog-panel-penuh'][$ui['ukuran'] ?? ''] ?? '';
 ?>
 <div x-data="dialog" data-nama="<?= esc($nama, 'attr') ?>"<?= ! empty($ui['awalBuka']) ? ' data-awal-buka="1"' : '' ?>
      :data-buka="buka" @buka-dialog.window="dariAcara($event)" @tutup-dialog.window="dariAcara($event)" @keydown.escape.stop="tutup()"

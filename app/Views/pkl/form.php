@@ -221,9 +221,24 @@ $tautanLapor = '<a href="' . site_url('pkl/lapor') . '" class="peringatan pering
                                 Keputusan sekolah paling lambat <span x-text="tglIndo(pilih.batas)"></span>. Lewat tanggal itu belum ada kabar? Hubungi operator sekolah atau Waka Hubin.
                             </p>
                             <?php if (! empty($laporTerbuka)): ?>
-                                <p x-show="pilih.status === 'disetujui'" class="mt-2 rounded-md border border-emerald-200 bg-white px-3 py-2 text-sm text-emerald-900">Sudah diterima perusahaan? <a href="<?= site_url('pkl/lapor') ?>" class="font-semibold underline">Lapor diterima di sini</a> supaya sekolah membuatkan Surat Balasan.</p>
+                                <p x-show="pilih.status === 'disetujui'" class="mt-2 rounded-md border border-emerald-200 bg-white px-3 py-2 text-sm text-emerald-900">Sudah ada jawaban dari perusahaan — diterima atau tidak? <a href="<?= site_url('pkl/lapor') ?>" class="font-semibold underline">Laporkan hasilnya di sini</a>. Yang diterima dibuatkan Surat Balasan; yang tidak diterima bisa mengajukan tempat PKL lain setelah sekolah memproses laporannya.</p>
+                            <?php else: ?>
+                                <p x-show="pilih.status === 'disetujui'" class="mt-2 rounded-md border border-emerald-200 bg-white px-3 py-2 text-sm text-emerald-900">Tidak diterima perusahaan? Hubungi operator sekolah agar namamu dikeluarkan dari ajuan itu, lalu kamu bisa mengajukan tempat PKL lain.</p>
                             <?php endif; ?>
                             <p class="mt-2 text-sm text-teks-2">Jika ada data yang salah, hubungi operator sekolah atau Waka Hubin.</p>
+                        </div>
+                    </template>
+
+                    <!-- Dilaporkan TIDAK diterima perusahaan, laporannya belum diproses sekolah: masih tercatat di ajuan, belum bisa mengajukan -->
+                    <template x-if="pilih && pilih.status === 'lepas'">
+                        <div class="space-y-2 rounded-lg border-2 border-amber-300 bg-amber-50 p-4">
+                            <p class="flex items-center gap-2 font-semibold text-amber-900"><?= ikon('clock') ?><span>Menunggu sekolah memproses laporan</span></p>
+                            <p class="text-heading-md text-amber-900" x-text="pilih.nama"></p>
+                            <p class="text-sm text-teks">
+                                Kelompokmu sudah melaporkan bahwa kamu <b>tidak diterima perusahaan</b>. Sekolah belum memproses laporan itu,
+                                jadi namamu masih tercatat di ajuan lama dan kamu <b>belum bisa mengajukan tempat PKL lain</b>.
+                            </p>
+                            <p class="text-sm text-teks">Minta <b>operator sekolah</b> memproses laporan PKL kelompokmu. Setelah diproses, kamu langsung bisa mengajukan tempat baru di form ini.</p>
                         </div>
                     </template>
 

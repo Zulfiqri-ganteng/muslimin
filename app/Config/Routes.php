@@ -779,6 +779,8 @@ $routes->group('admin', static function ($routes) {
 
         // Ikon lonceng bilah atas — pekerjaan yang masih menunggu (Libraries\Pemberitahuan), terbuka bagi semua peran (Config\Peran::$umum).
         $routes->get('pemberitahuan', 'Admin\Pemberitahuan::index');
+        // Dialog layar penuh PKL lewat batas (Libraries\PklPengingat): "Ingatkan lagi 1 jam lagi" — awalan umum yang sama.
+        $routes->post('pemberitahuan/tunda-pengingat', 'Admin\Pemberitahuan::tundaPengingat');
     });
 });
 
@@ -1157,6 +1159,7 @@ $routes->group('api/v1', ['namespace' => 'App\Controllers\Api', 'filter' => 'cor
         // diatur Admin di Sistem → Hak Akses) dijaga di Libraries\PklKeputusan — sama persis dengan web. Dokumentasi: docs/API-PKL.md.
         $routes->get('pkl/meta', 'Pkl::meta');
         $routes->get('pkl/ringkasan', 'Pkl::ringkasan');
+        $routes->get('pkl/pengingat', 'Pkl::pengingat'); // peringatan layar penuh: pekerjaan lewat batas keputusan (2026-10-21)
         $routes->get('pkl/ajuan', 'Pkl::daftar');
         $routes->post('pkl/ajuan', 'Pkl::buat');
         $routes->get('pkl/ajuan/(:num)', 'Pkl::detail/$1');

@@ -60,6 +60,9 @@ $grupBuka   = \App\Libraries\Tampilan::grupTerbuka();
 $namaAkun   = (string) ($admin['full_name'] ?? 'Admin');
 // Ikon lonceng: pekerjaan yang masih menunggu, disaring hak peran ini (dirender server, lalu diperbarui berkala oleh app.js).
 $lonceng    = \App\Libraries\Pemberitahuan::untuk($peranKini);
+// Pengingat LAYAR PENUH pekerjaan PKL yang lewat batas keputusan (Libraries\PklPengingat, 2026-10-21): pemegang hak ACC ajuan
+// (Waka Hubin) = ajuan belum di-ACC; pemroses kotak laporan (Operator) = laporan siswa belum diproses. Bukan untuk Admin.
+$pengingat  = \App\Libraries\PklPengingat::untukLayout($peranKini, $cur);
 
 // Item menu menyala bila alamat sekarang sama persis, atau (kecuali $it[3] = persis) berada di bawahnya.
 // Dicocokkan sebagai prefiks SEGMEN agar 'admin/jadwal' tidak ikut menyala saat membuka 'admin/jadwal-guru'.
@@ -420,6 +423,9 @@ if ($galatFlash !== '') {
 ?>
 <?= ui_toast($toastAwal) ?>
 <?= ui_konfirmasi() ?>
+<?php if ($pengingat !== null): ?>
+<?= view('admin/pkl/_pengingat', ['pengingat' => $pengingat, 'kembali' => $cur], ['saveData' => false]) ?>
+<?php endif; ?>
 
 <?php // Urutan defer: kit (ui.js) → skrip halaman → app.js → plugin collapse → Alpine (komponen terdaftar sebelum Alpine berjalan).
       // Alpine versi CSP (tanpa eval) di seluruh panel admin; Alpine biasa (alpine.min.js) kini hanya dipakai halaman publik. ?>

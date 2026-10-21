@@ -6,6 +6,7 @@ use App\Libraries\HakAkses;
 use App\Libraries\IsianBantu;
 use App\Libraries\PklAjuan;
 use App\Libraries\PklAlasan;
+use App\Libraries\PklBeranda;
 use App\Libraries\PklBiaya;
 use App\Libraries\PklForm;
 use App\Libraries\HakPeran;
@@ -14,6 +15,7 @@ use App\Libraries\PklKeluar;
 use App\Libraries\PklKeputusan;
 use App\Libraries\PklLapor;
 use App\Libraries\PklLaporanBiaya;
+use App\Libraries\PklPengingat;
 use App\Libraries\PklPeringatan;
 use App\Libraries\PklStaf;
 use App\Libraries\PklSurat;
@@ -39,6 +41,7 @@ use CodeIgniter\HTTP\ResponseInterface;
  * Rute (/api/v1, Bearer):
  *   GET    pkl/meta                          label status/fase, aturan, daftar kelas, hak peran ini
  *   GET    pkl/ringkasan                     form, hitungan, terlambat, persiapan, antrean
+ *   GET    pkl/pengingat                     pekerjaan lewat batas keputusan (ajuan belum ACC / laporan belum diproses) → layar penuh
  *   GET    pkl/ajuan?status=&q=&kelas_id=&page=&per=
  *   GET    pkl/ajuan/{id}                    detail lengkap + hak + peringatan + riwayat
  *   POST   pkl/ajuan                         isi atas nama
@@ -178,6 +181,11 @@ class Pkl extends BaseApiController
             'hitung'     => $this->model->hitungStatus(),
             'terlambat'  => $this->model->hitungTerlambat($hari),
             'batas_hari' => $hari,
+            // Kotak Beranda PKL web yang sama (Libraries\PklBeranda; null = peran ini tidak berhak) + pemegang hak ACC ajuan
+            // untuk judul antrean "Antrean ajuan — menunggu keputusan ACC (…)". (Permintaan sisi Flutter 2026-10-21.)
+            'surat_ringkas' => PklBeranda::suratRingkas($this->peran()),
+            'surat_sekolah' => PklBeranda::suratSekolah($this->peran()),
+            'pemegang_acc'  => PklHak::teksPemegang('acc'),
             'siswa'      => $this->model->ringkasanSiswa($tingkat),
             'persiapan'  => $hak['pengaturan'] ? $persiapan : [],
             'antrean'    => array_map(fn (array $r) => $this->ringkasBaris($r, $hari), $antrean),
@@ -189,6 +197,21 @@ class Pkl extends BaseApiController
             ],
             'hak' => $hak,
         ], 'Ringkasan PKL.');
+    }
+
+    /**
+     * GET pkl/pengingat — pekerjaan PKL yang LEWAT batas keputusan bagi akun ini (Libraries\PklPengingat, sama dengan dialog
+     * layar penuh di web): ajuan belum di-ACC (pemegang hak ACC ajuan) + laporan siswa belum diproses (pemroses kotak laporan).
+     * Aplikasi menampilkan peringatan layar penuh sesudah login / saat dibuka bila layar_penuh = true (Admin: false).
+     */
+    public function pengingat(): ResponseInterface
+    {
+        $d = PklPengingat::untuk($this->peran(), $this->p);
+
+        return $this->ok($d + [
+            'layar_penuh' => $d['total'] > 0 && $this->peran() !== HakPeran::ADMIN,
+            'tunda_detik' => PklPengingat::TUNDA_DETIK,
+        ], $d['total'] > 0 ? 'Ada pekerjaan PKL yang lewat batas ' . $d['hari'] . ' hari.' : 'Tidak ada pekerjaan PKL yang lewat batas.');
     }
 
     // ================================================================= daftar & detail
