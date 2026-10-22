@@ -144,6 +144,18 @@ final class LayananPublik
                 'bagian'   => ['siswa' => 'Surat dari sekolah'],
                 'kata'     => 'surat penarikan pkl berhenti pindah tempat pkl minta surat',
             ],
+            // Cek status surat (2026-10-22): belum masuk → langkah masuk; sudah masuk → Controllers\Layanan::masuk langsung ke
+            // daftar "Permintaan suratku" (layanan/saya#status).
+            'surat_status' => [
+                'judul'    => 'Cek status surat saya',
+                'ket'      => 'Lihat surat yang sudah kamu minta: menunggu ACC, disetujui, atau siap diambil.',
+                'ikon'     => 'file-search',
+                'ilu'      => 'surat-status',
+                'url'      => site_url('layanan/masuk') . '?tujuan=status',
+                'kelompok' => ['siswa'],
+                'bagian'   => ['siswa' => 'Surat dari sekolah'],
+                'kata'     => 'cek status surat saya permintaan surat sudah jadi siap diambil acc lacak',
+            ],
             'biodata' => [
                 'judul'    => 'Isi biodata siswa',
                 'ket'      => 'Lengkapi data diri siswa untuk administrasi sekolah. Dibuka sesuai pengumuman sekolah.',

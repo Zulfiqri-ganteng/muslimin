@@ -72,17 +72,28 @@ final class LayananSiswa
     }
 
     /**
-     * Kelas (yang punya siswa aktif) pada tingkat yang dilayani, per tingkat, urut alami.
+     * Tingkat yang ditawarkan di langkah masuk untuk tujuan $tujuan: Surat Izin TKA hanya kelas XII (klien 2026-10-22),
+     * tujuan lain = semua tingkat yang dilayani.
+     *
+     * @return list<string>
+     */
+    public static function tingkatTujuan(string $tujuan, ?array $p = null): array
+    {
+        return $tujuan === 'izin_tka' ? ['XII'] : self::tingkat($p);
+    }
+
+    /**
+     * Kelas (yang punya siswa aktif) pada tingkat yang dilayani — atau hanya tingkat untuk $tujuan — per tingkat, urut alami.
      *
      * @return array<string, list<array{id: int, nama: string}>>
      */
-    public function kelas(?array $p = null): array
+    public function kelas(?array $p = null, string $tujuan = ''): array
     {
         $rows = $this->db->table('kelas k')
             ->select('k.id, k.nama_kelas, k.tingkat')
             ->join('siswa s', 's.kelas_id = k.id')
             ->where('k.deleted_at', null)->where('s.deleted_at', null)->where('s.status', 'aktif')
-            ->whereIn('k.tingkat', self::tingkat($p))
+            ->whereIn('k.tingkat', self::tingkatTujuan($tujuan, $p))
             ->groupBy('k.id')
             ->get()->getResultArray();
         $urut = ['X' => 0, 'XI' => 1, 'XII' => 2];

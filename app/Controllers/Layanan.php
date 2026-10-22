@@ -57,7 +57,7 @@ class Layanan extends BaseController
         return view('layanan/masuk', [
             'setting' => $this->setting,
             'title'   => 'Masuk Layanan Siswa',
-            'kelas'   => $this->lib->kelas($this->p),
+            'kelas'   => $this->lib->kelas($this->p, $tujuan),
             'tujuan'  => $tujuan,
             'pesan'   => (string) (session()->getFlashdata('layanan_galat') ?? ''),
         ]);

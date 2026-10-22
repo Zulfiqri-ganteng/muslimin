@@ -15,8 +15,11 @@ $config = [
 ];
 // Datang dari ikon surat di beranda (tujuan = kunci surat): judul menyebut suratnya, setelah masuk langsung ke formulirnya.
 $suratTujuan = \App\Libraries\LayananSiswa::SURAT[$tujuan][0] ?? null;
-$judulMasuk  = $suratTujuan !== null ? 'Minta ' . $suratTujuan : 'Masuk Layanan Siswa';
-$ketMasuk    = $suratTujuan !== null ? 'Langkah 1 dari 2: pilih kelas dan namamu, lalu isi NISN atau tanggal lahir. Setelah itu formulir suratnya terbuka.' : 'Pilih kelas dan namamu, lalu isi NISN atau tanggal lahir.';
+// Ikon "Cek status surat saya" (tujuan = status): setelah masuk langsung ke daftar "Permintaan suratku".
+$judulMasuk  = $suratTujuan !== null ? 'Minta ' . $suratTujuan : ($tujuan === 'status' ? 'Cek status surat saya' : 'Masuk Layanan Siswa');
+$ketMasuk    = $suratTujuan !== null
+    ? ($tujuan === 'izin_tka' ? 'Khusus siswa kelas XII. ' : '') . 'Langkah 1 dari 2: pilih kelas dan namamu, lalu isi NISN atau tanggal lahir. Setelah itu formulir suratnya terbuka.'
+    : 'Pilih kelas dan namamu, lalu isi NISN atau tanggal lahir.' . ($tujuan === 'status' ? ' Setelah itu daftar surat yang pernah kamu minta tampil beserta statusnya.' : '');
 ?>
 <?= $this->extend('layouts/formulir') ?>
 <?= $this->section('content') ?>

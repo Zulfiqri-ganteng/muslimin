@@ -1094,6 +1094,10 @@ class UjiSurat extends BaseCommand
 
         $this->cek('tujuan setelah masuk hanya kunci layanan surat / "status"; tingkat yang dilayani memuat XII', $L::tujuanSah('izin_tka') === 'izin_tka' && $L::tujuanSah('status') === 'status'
             && $L::tujuanSah('../admin') === '' && in_array('XII', $L::tingkat($p), true));
+        $kTka = $lib->kelas($p, 'izin_tka');
+        $this->cek('langkah masuk Surat Izin TKA: pilihan kelas HANYA kelas XII; tujuan lain tetap memuat XI', array_keys($kTka) === ['XII']
+            && in_array($kXII, array_column($kTka['XII'], 'id'), true) && $L::tingkatTujuan('izin_ujian', $p) === $L::tingkat($p)
+            && in_array('XI', $L::tingkatTujuan('', $p), true), json_encode(array_keys($kTka)));
         $this->cek('daftar nama: kelas X (tidak dilayani) kosong; kelas XII memuat siswa uji (id + nama saja)', $lib->siswaKelas($this->kelasId, $p) === []
             && in_array($s12, array_column($lib->siswaKelas($kXII, $p), 'id'), true) && array_keys($lib->siswaKelas($kXII, $p)[0] ?? []) === ['id', 'nama']);
 

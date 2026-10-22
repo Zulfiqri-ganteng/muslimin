@@ -246,6 +246,15 @@ panel admin (`Libraries\PklPengingat`, partial `admin/pkl/_pengingat`); aplikasi
 - `pemegang_acc` (teks, mis. "Waka Hubin") — untuk judul "Antrean ajuan — menunggu keputusan ACC (…)" bila akun ini tidak memegang
   hak ACC; bila memegang (`hak.acc`), judul web = "Menunggu keputusan Anda".
 
+## Pembaruan 2026-10-22 — tiga kunci tambahan untuk aplikasi (hanya MENAMBAH; web tidak berubah)
+- `GET pkl/ringkasan` → **`pemegang_surat`** (teks, mis. "Operator Sekolah") — pemegang hak unduh surat (`PklHak::teksPemegang('surat')`),
+  untuk kalimat Kotak Masuk tab Disetujui "Surat diunduh oleh peran yang diberi hak itu oleh Admin (…)".
+- `GET pkl/ajuan/{id}` → `riwayat[].peran_label` (`HakAkses::label(peran)`, sama dengan web; `null` bila tanpa peran) — peran baru
+  buatan Admin tampil dengan namanya, bukan kodenya.
+- `GET pkl/ajuan/{id}` → **`waka_hubin_nama`** (teks/null) — kartu Surat permohonan memperingatkan "Nama Waka Hubin belum diisi…" bila kosong.
+- **`GET pkl/siswa/excel?kelas_id=&fase=&q=`** (baru) → BERKAS `.xlsx` Status Siswa sesuai saringan — isi & nama berkas sama dengan
+  tombol web "Unduh Excel (sesuai saringan)" (`Status PKL Siswa YYYY-MM-DD.xlsx`). Gerbang = modul `pkl` (sama dengan `pkl/siswa`).
+
 ## Catatan untuk pembuat aplikasi
 1. Setelah login, baca `admin.akses_api`: bila `["pkl"]`, tampilkan HANYA menu PKL (jangan panggil API lain → 403).
 2. Tombol per ajuan dibaca dari `data.hak` pada detail; jangan menebak dari peran.

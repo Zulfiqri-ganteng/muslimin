@@ -18,6 +18,7 @@ use App\Libraries\PklLaporanBiaya;
 use App\Libraries\PklPengingat;
 use App\Libraries\PklPeringatan;
 use App\Libraries\PklStaf;
+use App\Libraries\PklStatusExcel;
 use App\Libraries\PklSurat;
 use App\Libraries\PklUnduh;
 use App\Libraries\PklWa;
@@ -27,6 +28,7 @@ use App\Models\PklPengajuanModel;
 use App\Models\PklPengaturanModel;
 use App\Models\SettingModel;
 use CodeIgniter\HTTP\ResponseInterface;
+use PhpOffice\PhpSpreadsheet\Writer\Xlsx;
 
 /**
  * PKL / Prakerin untuk aplikasi Android (staf: Operator, Waka Hubin, Admin) — cermin App\Controllers\Admin\Pkl
@@ -186,6 +188,8 @@ class Pkl extends BaseApiController
             'surat_ringkas' => PklBeranda::suratRingkas($this->peran()),
             'surat_sekolah' => PklBeranda::suratSekolah($this->peran()),
             'pemegang_acc'  => PklHak::teksPemegang('acc'),
+            // Pemegang hak unduh surat — kalimat Kotak Masuk tab Disetujui "(Operator Sekolah)". (Permintaan Flutter 2026-10-22.)
+            'pemegang_surat' => PklHak::teksPemegang('surat'),
             'siswa'      => $this->model->ringkasanSiswa($tingkat),
             'persiapan'  => $hak['pengaturan'] ? $persiapan : [],
             'antrean'    => array_map(fn (array $r) => $this->ringkasBaris($r, $hari), $antrean),
@@ -292,9 +296,13 @@ class Pkl extends BaseApiController
             ],
             'pembayaran'    => ($a['status'] === 'disetujui' && (HakAkses::bolehPkl($this->peran(), 'surat') || HakAkses::bolehPkl($this->peran(), 'laporan')))
                 ? (new PklBiaya())->untukAjuan($id) : null,
+            // peran_label = HakAkses::label() seperti web (juga peran baru buatan Admin). (Permintaan Flutter 2026-10-22.)
             'riwayat'       => array_map(static fn (array $r) => [
-                'aksi' => $r['aksi'], 'label' => self::LABEL_AKSI[$r['aksi']] ?? $r['aksi'], 'oleh' => $r['oleh'], 'peran' => $r['peran'], 'catatan' => $r['catatan'], 'waktu' => $r['created_at'],
+                'aksi' => $r['aksi'], 'label' => self::LABEL_AKSI[$r['aksi']] ?? $r['aksi'], 'oleh' => $r['oleh'], 'peran' => $r['peran'],
+                'peran_label' => $r['peran'] ? HakAkses::label((string) $r['peran']) : null, 'catatan' => $r['catatan'], 'waktu' => $r['created_at'],
             ], $this->model->riwayat($id)),
+            // Penanda tangan surat — kartu Surat permohonan memperingatkan bila kosong, seperti web. (Permintaan Flutter 2026-10-22.)
+            'waka_hubin_nama' => $this->p['waka_hubin_nama'] ?? null,
             'hak'           => $this->hakAjuan((string) $a['status']) + [
                 'keluarkan'          => PklKeluar::bolehKeluarkan($this->peran(), (string) $a['status']) && count($anggota) > 1,
                 'ditolak_perusahaan' => PklKeluar::bolehDitolakPerusahaan($this->peran(), (string) $a['status']),
@@ -982,6 +990,41 @@ class Pkl extends BaseApiController
         ], $this->model->daftarSiswaKelas($kelasId));
 
         return $this->ok($data, 'Siswa kelas ini.');
+    }
+
+    /**
+     * GET pkl/siswa/excel?kelas_id=&fase=&q= — BERKAS .xlsx Status Siswa sesuai saringan; isi & nama berkas sama dengan tombol
+     * "Unduh Excel (sesuai saringan)" web (Admin\PklBerkas::siswaExcel). Ditambahkan untuk aplikasi Android 2026-10-22.
+     */
+    public function siswaExcel()
+    {
+        $tingkat = PklPengaturanModel::tingkatBoleh($this->p);
+        $q       = IsianBantu::rapikan((string) $this->request->getGet('q'));
+        $kelas   = (int) $this->request->getGet('kelas_id');
+        $fase    = (string) $this->request->getGet('fase');
+
+        [$rows] = $this->model->statusSiswa($tingkat, $kelas, $q, $fase, 100000, 1);
+        $r      = $this->model->ringkasanSiswa($tingkat, $kelas);
+        $tolak  = (new PklKeluar())->tolakSiswa(array_map('intval', array_column(array_filter($rows, static fn (array $x): bool => (int) ($x['jml_tolak'] ?? 0) > 0), 'id')));
+        $saring = [];
+        if ($kelas > 0) {
+            $saring[] = 'kelas ' . (string) (db_connect()->table('kelas')->select('nama_kelas')->where('id', $kelas)->get()->getRowArray()['nama_kelas'] ?? '#' . $kelas);
+        }
+        if ($fase !== '') {
+            $saring[] = 'status ' . mb_strtolower($fase === 'pernah_ditolak' ? 'Pernah ditolak / dikeluarkan' : (PklStatusExcel::LABEL[$fase] ?? $fase));
+        }
+        if ($q !== '') {
+            $saring[] = 'cari "' . $q . '"';
+        }
+        $x = PklStatusExcel::buat($rows, $r, $tolak, (new SettingModel())->get(), $tingkat, $saring);
+
+        $tmp = tempnam(sys_get_temp_dir(), 'pkx');
+        (new Xlsx($x))->save($tmp);
+        $biner = (string) file_get_contents($tmp);
+        @unlink($tmp);
+        $nama = 'Status PKL Siswa ' . date('Y-m-d') . '.xlsx';
+
+        return $this->response->download($nama, $biner)->setFileName($nama);
     }
 
     public function siswaRingkas(): ResponseInterface

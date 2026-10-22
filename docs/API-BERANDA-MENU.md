@@ -36,6 +36,10 @@ tautan aplikasi diisi (layanan yang saklarnya mati tidak ikut). Yang sudah punya
 `absensi`, form kesediaan `form/*`, `masuk` = layar login, `profil` = layar Profil dari data B1, `pengumuman` = daftar dari B1) dibuka di
 aplikasi; sisanya (`pkl`, `lapor_pkl`, `biodata`, `dokumen`, `bantuan`, …) dibuka di peramban dalam aplikasi memakai `url`. API lama
 `GET home` tetap ada (tidak diubah).
+**Pembaruan 2026-10-22 (hanya menambah):** kunci layanan siswa bagian "Surat dari sekolah": `surat_ujian`, `surat_tka`, `surat_ortu`,
+`surat_penarikan`, dan BARU **`surat_status`** ("Cek status surat saya", ikon `file-search`, ilustrasi `surat-status.svg`, `url` =
+`layanan/masuk?tujuan=status` → siswa masuk dengan NISN/tanggal lahir lalu melihat daftar "Permintaan suratku"). Semuanya dibuka di
+peramban dalam aplikasi memakai `url` (belum ada layar aplikasi).
 
 ## B2 — `GET auth/menu` (token; terbuka untuk semua peran yang boleh aplikasi)
 `App\Controllers\Api\Auth::menu`. Menu panel admin akun ini = **menu samping web** (`MenuAdmin::sidebar()`), disaring aturan hak yang
