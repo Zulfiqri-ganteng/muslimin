@@ -252,6 +252,14 @@ panel admin (`Libraries\PklPengingat`, partial `admin/pkl/_pengingat`); aplikasi
 - `GET pkl/ajuan/{id}` → `riwayat[].peran_label` (`HakAkses::label(peran)`, sama dengan web; `null` bila tanpa peran) — peran baru
   buatan Admin tampil dengan namanya, bukan kodenya.
 - `GET pkl/ajuan/{id}` → **`waka_hubin_nama`** (teks/null) — kartu Surat permohonan memperingatkan "Nama Waka Hubin belum diisi…" bila kosong.
+- `POST …/wa/{siswa_id}/tandai`, `…/kabar-keputusan/{siswa_id}/tandai`, `…/kabar-keluar/{id}/tandai` → kini juga `oleh` (nama staf),
+  sama dengan web — aplikasi menulis "Sudah dikabari … oleh …".
+- `GET pkl/ajuan/{id}` → `hak.kabar_keputusan` (bool): tombol "Kabari siswa via WhatsApp" untuk ajuan dikembalikan/ditolak
+  (`PklWaKeputusan::boleh` + status perbaikan/ditolak), sama dengan kotak Keputusan web.
+- **Catatan klien `POST pkl/hak-akses`** (ditemukan sisi Flutter): kirim daftar LENGKAP per peran — hak PKL + kunci
+  `surat_<aksi>:<jenis>` yang berlaku (dari `matriks_surat`). Kiriman hak PKL saja memakai format lama (`PklHak::simpan`) yang bisa
+  mencabut hak buat/unduh surat sekolah peran yang tak dikirimi `surat_sekolah`. "ACC tanpa pemegang" kini DISIMPAN + `peringatan`
+  (bukan 422 seperti fixture 2026-10-09).
 - **`GET pkl/siswa/excel?kelas_id=&fase=&q=`** (baru) → BERKAS `.xlsx` Status Siswa sesuai saringan — isi & nama berkas sama dengan
   tombol web "Unduh Excel (sesuai saringan)" (`Status PKL Siswa YYYY-MM-DD.xlsx`). Gerbang = modul `pkl` (sama dengan `pkl/siswa`).
 

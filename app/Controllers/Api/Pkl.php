@@ -308,6 +308,8 @@ class Pkl extends BaseApiController
                 'ditolak_perusahaan' => PklKeluar::bolehDitolakPerusahaan($this->peran(), (string) $a['status']),
                 'kabar_keluar'       => PklWaKeputusan::bolehKeluar($this->peran()),
                 'gabungkan'          => PklKeluar::bolehKeluarkan($this->peran(), (string) $a['status']),
+                // Kabar WhatsApp keputusan (ajuan dikembalikan/ditolak) — sama dengan kotak web _kabar_keputusan. (Flutter 2026-10-22.)
+                'kabar_keputusan'    => PklWaKeputusan::boleh($this->peran()) && in_array((string) $a['status'], PklWaKeputusan::STATUS, true),
             ],
             'dikirim_pada'  => $kirim,
         ];
@@ -686,7 +688,7 @@ class Pkl extends BaseApiController
             return $this->missing('Siswa tidak ditemukan pada ajuan yang disetujui.');
         }
 
-        return $this->ok(['waktu' => date('Y-m-d H:i:s')], 'Siswa ditandai sudah dikabari.');
+        return $this->ok(['waktu' => date('Y-m-d H:i:s'), 'oleh' => $this->konteks()['oleh']], 'Siswa ditandai sudah dikabari.');
     }
 
     /**
@@ -719,7 +721,7 @@ class Pkl extends BaseApiController
             return $this->missing('Siswa tidak ditemukan pada ajuan yang dikembalikan/ditolak.');
         }
 
-        return $this->ok(['waktu' => date('Y-m-d H:i:s')], 'Siswa ditandai sudah dikabari.');
+        return $this->ok(['waktu' => date('Y-m-d H:i:s'), 'oleh' => $this->konteks()['oleh']], 'Siswa ditandai sudah dikabari.');
     }
 
     // ================================================================= revisi klien 2026-10-20: keluarkan siswa, ditolak perusahaan,
@@ -778,7 +780,7 @@ class Pkl extends BaseApiController
             return $this->missing('Catatan siswa yang dikeluarkan tidak ditemukan pada ajuan ini.');
         }
 
-        return $this->ok(['waktu' => date('Y-m-d H:i:s')], 'Siswa ditandai sudah dikabari.');
+        return $this->ok(['waktu' => date('Y-m-d H:i:s'), 'oleh' => $this->konteks()['oleh']], 'Siswa ditandai sudah dikabari.');
     }
 
     /** GET pkl/siswa/{id}/riwayat — riwayat PKL lengkap satu siswa (semua ajuan + pernah dikeluarkan/ditolak). */
