@@ -72,7 +72,8 @@ class SuratIzin extends SuratDasar
             'ubah'       => false,
             'nilai'      => $this->nilaiForm($awal),
             'periode'    => $periode,
-            'perusahaan' => $acara->perusahaan(null, null, $jenis), // TKA: hanya siswa kelas XII
+            // TKA: hanya siswa kelas XII + penempatan gelombang tiap siswa (siswa yang sudah punya surat TKA tidak bisa dicentang).
+            'perusahaan' => $jenis === SuratJenis::TKA ? $acara->perusahaanTka() : $acara->perusahaan(null, null, $jenis),
         ]);
     }
 

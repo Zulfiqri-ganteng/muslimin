@@ -139,6 +139,7 @@ class Layanan extends BaseController
         return match ($kunci) {
             'pernyataan' => view('layanan/surat_pernyataan', $dasar + ['form' => $this->lib->formPernyataan($s)]),
             'penarikan'  => view('layanan/surat_penarikan', $dasar + ['form' => $this->lib->formPenarikan($s)]),
+            'izin_tka'   => view('layanan/surat_tka', $dasar + ['form' => $this->lib->formTka($s, $this->lib->kelayakan($s, $this->p))]),
             default      => view('layanan/surat_izin', $dasar + ['form' => $this->lib->formIzin($s, $kunci, $this->lib->kelayakan($s, $this->p))]),
         };
     }
@@ -155,6 +156,7 @@ class Layanan extends BaseController
         $r  = match ($kunci) {
             'pernyataan' => $this->lib->ajukanPernyataan($s['id'], $in, $ip, $this->p),
             'penarikan'  => $this->lib->ajukanPenarikan($s['id'], $in, $ip, $this->p),
+            'izin_tka'   => $this->lib->ajukanTka($s['id'], $in, $ip, $this->p),
             default      => $this->lib->ajukanIzin($s['id'], $kunci, (int) ($in['jadwal_id'] ?? 0), $ip, $this->p),
         };
         if (! $r['ok']) {

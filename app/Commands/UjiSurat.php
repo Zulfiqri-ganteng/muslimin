@@ -1124,8 +1124,10 @@ class UjiSurat extends BaseCommand
             ! $kl['izin_ujian']['boleh'] && str_contains($kl['izin_ujian']['alasan'], 'ajuan PKL') && ! $kl['penarikan']['boleh'] && ! $kl['izin_tka']['boleh']
             && $kl11['izin_tka']['alasan'] === 'Khusus siswa kelas XII.' && $kl['izin_ujian']['siap'] && $kl['izin_tka']['siap'] && $kl['pernyataan']['siap'] && $kl['penarikan']['siap'], json_encode(array_column($kl, 'alasan')));
         $s13 = $this->buatSiswa(94);
-        $this->db->table('siswa')->where('id', $s13)->update(['kelas_id' => $kXII]);
-        $aj = $this->buatAjuanDisetujui($s12, 'ZZUJISS Layanan', [$s13]);
+        $s14 = $this->buatSiswa(95);
+        $s15 = $this->buatSiswa(96);
+        $this->db->table('siswa')->whereIn('id', [$s13, $s14, $s15])->update(['kelas_id' => $kXII]);
+        $aj = $this->buatAjuanDisetujui($s12, 'ZZUJISS Layanan', [$s13, $s14, $s15]);
         $jd = new \App\Libraries\SuratJadwal();
         $this->db->table('surat_jadwal')->like('sesi', self::NIS)->update(['buka' => 0]); // jadwal dari bagian uji sebelumnya
         $kl2 = $lib->kelayakan($lib->profil($s12), $p);
@@ -1139,41 +1141,90 @@ class UjiSurat extends BaseCommand
         $this->cek('status permintaan: menunggu / dikembalikan → diperiksa / disetujui belum dicetak / sudah dicetak → siap diambil / dibatalkan & surat hilang → dibatalkan', $st(['status' => 'menunggu']) === 'menunggu'
             && $st(['status' => 'dikembalikan']) === 'diperiksa' && $st(['status' => 'disetujui', 'cetak_ke' => 0]) === 'disetujui' && $st(['status' => 'disetujui', 'cetak_ke' => 2]) === 'ambil'
             && $st(['status' => 'dibatalkan', 'catatan_staf' => 'Ganda']) === 'batal' && str_contains($L::status(['status' => 'dibatalkan', 'catatan_staf' => 'Ganda'])['status_ket'], 'Ganda') && $st(null) === 'batal');
-        // T3 — siswa meminta Surat Izin TKA: satu surat per perusahaan per jadwal.
-        $jid = (int) $rj['id'];
-        $a1  = $lib->ajukanIzin($s12, 'izin_tka', $jid, $ip, $p);
+        // T3 (aturan 2026-10-25, kasus PT Inti Pantja) — Surat Izin TKA dengan gelombang PER SISWA: satu surat per perusahaan per
+        // gelombang yang hanya memuat siswa gelombang itu; teman diisikan bila dipilih; pilihan sendiri terkunci; pindah; penyusul.
+        $jid  = (int) $rj['id'];
+        $rj2  = $jd->simpan(SuratJenis::TKA, ['sesi' => 'Gelombang ' . self::NIS . ' M', 'tgl_mulai' => date('Y-m-d', strtotime('+8 days')), 'tgl_selesai' => date('Y-m-d', strtotime('+9 days')), 'buka' => '1', 'tempat' => ''], null, $this->konteks());
+        $jid2 = (int) ($rj2['id'] ?? 0);
+        $isiSiswa = fn (int $suratId): array => array_map('intval', array_column($this->db->table('surat_sekolah_siswa')->select('siswa_id')->where('surat_id', $suratId)->orderBy('urut', 'ASC')->get()->getResultArray(), 'siswa_id'));
+        $tka      = static fn (int $siswa, int $j, array $teman = []): array => $lib->ajukanTka($siswa, ['jadwal_id' => (string) $j, 'teman' => array_map('strval', $teman)], $ip, $p);
+        $a1  = $tka($s12, $jid, [$s13 => '']);
         $sid = (int) ($a1['surat_id'] ?? 0);
         $sr  = $this->surat($sid);
-        $sis = array_map('intval', array_column($this->db->table('surat_sekolah_siswa')->select('siswa_id')->where('surat_id', $sid)->get()->getResultArray(), 'siswa_id'));
         $isiS = SuratSekolah::dekodeIsi((string) ($sr['isi'] ?? ''));
-        $this->cek('permintaan pertama → surat BARU per perusahaan: menunggu ACC, sumber "siswa", dibuat "Siswa: …", memuat KEDUA siswa XII perusahaan itu, isian = jadwal (mode perusahaan, sesi), tercatat 1 permintaan',
-            $a1['ok'] && $a1['kode'] === 'baru' && ($sr['status'] ?? '') === 'menunggu' && ($sr['sumber'] ?? '') === 'siswa' && str_starts_with((string) ($sr['dibuat_nama'] ?? ''), 'Siswa: ')
-            && count(array_intersect([$s12, $s13], $sis)) === 2 && ($isiS['mode'] ?? '') === 'perusahaan' && ($isiS['sesi'] ?? '') === 'Gelombang ' . self::NIS . ' L'
+        $this->cek('TKA permintaan pertama (teman "biar pilih sendiri") → surat BARU per perusahaan per gelombang: menunggu ACC, sumber "siswa", dibuat "Siswa: …", HANYA siswa peminta (teman tidak otomatis ikut), isian = jadwal, 1 permintaan',
+            $a1['ok'] && $a1['kode'] === 'baru' && $jid2 > 0 && ($sr['status'] ?? '') === 'menunggu' && ($sr['sumber'] ?? '') === 'siswa' && str_starts_with((string) ($sr['dibuat_nama'] ?? ''), 'Siswa: ')
+            && $isiSiswa($sid) === [$s12] && ($isiS['mode'] ?? '') === 'perusahaan' && ($isiS['sesi'] ?? '') === 'Gelombang ' . self::NIS . ' L' && str_contains((string) ($sr['judul'] ?? ''), '(1 siswa)')
             && $this->jumlah('surat_permintaan', ['siswa_id' => $s12]) === 1, json_encode($a1));
-        $a2 = $lib->ajukanIzin($s12, 'izin_tka', $jid, $ip, $p);
-        $a3 = $lib->ajukanIzin($s13, 'izin_tka', $jid, $ip, $p);
-        $this->cek('minta lagi jadwal yang sama → "sudah" (tanpa surat baru); teman satu perusahaan → "ikut" surat yang SAMA (tetap 1 surat, riwayat "minta")', $a2['kode'] === 'sudah' && $a2['surat_id'] === $sid
-            && $a3['ok'] && $a3['kode'] === 'ikut' && $a3['surat_id'] === $sid && (int) $this->db->table('surat_sekolah')->where('perusahaan_nama', 'ZZUJISS Layanan')->where('status !=', 'dibatalkan')->countAllResults() === 1
-            && $this->jumlah('surat_sekolah_riwayat', ['surat_id' => $sid, 'aksi' => 'minta']) === 1);
-        $a4 = $lib->ajukanIzin($s11, 'izin_tka', $jid, $ip, $p);
-        $a5 = $lib->ajukanIzin($s12, 'izin_tka', 999999999, $ip, $p);
-        $this->cek('ditolak: siswa kelas XI minta Izin TKA ("Khusus siswa kelas XII."); jadwal tak dikenal ("Pilih salah satu jadwal")', ! $a4['ok'] && $a4['pesan'] === 'Khusus siswa kelas XII.' && ! $a5['ok'] && str_contains($a5['pesan'], 'Pilih salah satu jadwal'));
-        $form = $lib->formIzin($lib->profil($s13), 'izin_tka', $lib->kelayakan($lib->profil($s13), $p));
-        $baris = array_values(array_filter($form['jadwal'], static fn (array $x): bool => (int) $x['id'] === $jid));
-        $this->cek('formulir: jadwal yang sudah diminta ditandai (kode surat), perusahaan tujuan & teman satu surat tampil', ($baris[0]['sudah']['surat_id'] ?? 0) === $sid
-            && ($form['perusahaan']['nama'] ?? '') === 'ZZUJISS Layanan' && $form['teman'] === ['ZZUJI SS 91']);
+        $a2 = $tka($s12, $jid);
+        $a3 = $tka($s13, $jid);
+        $this->cek('minta lagi gelombang yang sama → "sudah"; teman memilih gelombang yang SAMA → "ikut" surat yang sama (2 siswa, judul dihitung ulang, riwayat "minta")', $a2['kode'] === 'sudah' && $a2['surat_id'] === $sid
+            && $a3['ok'] && $a3['kode'] === 'ikut' && $a3['surat_id'] === $sid && $isiSiswa($sid) === [$s12, $s13] && str_contains((string) $this->surat($sid)['judul'], '(2 siswa)')
+            && $this->jumlah('surat_sekolah_riwayat', ['surat_id' => $sid, 'aksi' => 'minta']) === 1, json_encode([$a2, $a3]));
+        $a4  = $lib->ajukanIzin($s11, 'izin_tka', $jid, $ip, $p);
+        $a5  = $tka($s12, 999999999);
+        $a5b = $tka($s12, $jid, [$s14 => '999999999']);
+        $this->cek('ditolak: kelas XI ("Khusus siswa kelas XII."); gelombang tak dikenal ("Pilih gelombang TKA-mu"); gelombang teman tak dikenal → menyebut nama temannya, tanpa perubahan', ! $a4['ok'] && $a4['pesan'] === 'Khusus siswa kelas XII.'
+            && ! $a5['ok'] && str_contains($a5['pesan'], 'Pilih gelombang TKA-mu') && ! $a5b['ok'] && str_contains($a5b['pesan'], 'ZZUJI SS 95') && $isiSiswa($sid) === [$s12, $s13], json_encode([$a4['pesan'], $a5['pesan'], $a5b['pesan']]));
+
+        // Teman beda gelombang: s13 mengisikan s14 ke Gelombang M → surat TERPISAH; s12 (memilih sendiri) tidak bisa diubah s13.
+        $a7   = $tka($s13, $jid, [$s14 => (string) $jid2, $s12 => (string) $jid2]);
+        $sid2 = (int) (($lib->penempatanTka([$s14])[$s14][0]['surat_id']) ?? 0);
+        $pm14 = $lib->permintaan($s14);
+        $this->cek('teman beda gelombang: s13 mengisikan s14 ke Gelombang M → surat BARU terpisah berisi s14 saja (surat L tetap 2 siswa); s12 yang memilih sendiri TIDAK dipindah (disebut di pesan); permintaan s14 bercatatan "diisikan oleh temanmu"; staf melihat "diisikan oleh"',
+            $a7['ok'] && $a7['kode'] === 'baru' && $sid2 > 0 && $sid2 !== $sid && $isiSiswa($sid2) === [$s14] && $isiSiswa($sid) === [$s12, $s13]
+            && (SuratSekolah::dekodeIsi((string) $this->surat($sid2)['isi'])['sesi'] ?? '') === 'Gelombang ' . self::NIS . ' M' && str_contains($a7['pesan'], 'ZZUJI SS 91 sudah memilih sendiri')
+            && count($pm14) === 1 && str_contains($pm14[0]['catatan'], 'diisikan oleh temanmu, ZZUJI SS 94') && $this->jumlah('surat_sekolah_riwayat', ['surat_id' => $sid2, 'aksi' => 'minta']) === 1
+            && ((new SuratSekolah())->peminta($sid2)[0]['diisikan_oleh'] ?? '') === 'ZZUJI SS 94', json_encode([$a7, $pm14]));
+        $f14 = $lib->formTka($lib->profil($s14), $lib->kelayakan($lib->profil($s14), $p));
+        $tm  = array_column($f14['teman'], null, 'id');
+        $this->cek('formulir TKA (s14): gelombangnya sekarang M (belum terkunci); teman s12 & s13 TERKUNCI (memilih sendiri); s15 (belum ada surat) bebas; kedua gelombang dibuka; perusahaan tampil',
+            $f14['saya']['jadwal_id'] === $jid2 && ! $f14['saya']['terkunci'] && ($tm[$s12]['terkunci'] ?? false) && ($tm[$s13]['terkunci'] ?? false) && isset($tm[$s15]) && ! $tm[$s15]['terkunci']
+            && $tm[$s15]['penempatan'] === [] && count(array_intersect([$jid, $jid2], array_map('intval', array_column($f14['jadwal'], 'id')))) === 2 && ($f14['perusahaan']['nama'] ?? '') === 'ZZUJISS Layanan');
+
+        // Pindah gelombang: s14 memilih sendiri L → surat M yang jadi kosong dibatalkan otomatis; lalu kembali ke M (surat L tetap ada).
+        $a8 = $tka($s14, $jid);
+        $s2 = $this->surat($sid2);
+        $this->cek('pindah: s14 memilih sendiri L → surat M yang jadi KOSONG dibatalkan otomatis (riwayat "pindah" + "batal"), s14 masuk surat L (3 siswa), permintaannya ikut pindah (1 baris, kini pilihan sendiri)',
+            $a8['ok'] && $a8['kode'] === 'ikut' && $a8['surat_id'] === $sid && ($s2['status'] ?? '') === 'dibatalkan' && str_contains((string) ($s2['catatan_staf'] ?? ''), 'pindah')
+            && $this->jumlah('surat_sekolah_riwayat', ['surat_id' => $sid2, 'aksi' => 'pindah']) === 1 && $this->jumlah('surat_sekolah_riwayat', ['surat_id' => $sid2, 'aksi' => 'batal']) === 1
+            && $isiSiswa($sid) === [$s12, $s13, $s14] && $this->jumlah('surat_permintaan', ['siswa_id' => $s14]) === 1 && ($lib->permintaan($s14)[0]['catatan'] ?? 'x') === '', json_encode($a8));
+        $a9   = $tka($s14, $jid2);
+        $sid3 = (int) ($a9['surat_id'] ?? 0);
+        $this->cek('pindah lagi ke M: s14 keluar dari surat L yang masih berisi teman (tetap menunggu, 2 siswa, judul dihitung ulang) → surat M BARU (yang lama sudah batal)', $a9['ok'] && $a9['kode'] === 'baru'
+            && $sid3 !== $sid2 && $isiSiswa($sid3) === [$s14] && $isiSiswa($sid) === [$s12, $s13] && ($this->surat($sid)['status'] ?? '') === 'menunggu' && str_contains((string) $this->surat($sid)['judul'], '(2 siswa)')
+            && $this->jumlah('surat_permintaan', ['siswa_id' => $s14]) === 1, json_encode($a9));
+
+        // Surat M disetujui → s14 terkunci; s13 tidak bisa memindahkannya; s15 menyusul ke M → surat BARU (surat pertama sudah disetujui).
+        // Pemegang ACC di lingkungan uji = bawaan (netralkanPengaturan); di sekolah = Operator (migrasi Layanan Siswa).
+        $penyetuju = PklHak::boleh('operator', PklHak::kunciSurat('acc', SuratJenis::TKA)) ? ['peran' => 'operator', 'admin_id' => 3] : ['peran' => 'hubin', 'admin_id' => 2];
+        $opK = ['oleh' => self::OLEH . ' ' . $penyetuju['peran'], 'ip' => $ip] + $penyetuju;
+        $accM = (new \App\Libraries\SuratKeputusan())->putuskan($sid3, 'acc', ['paham' => '1'], $opK, $p);
+        $tkaKunci   = $tka($s14, $jid);
+        $tkaLewat   = $tka($s13, $jid, [$s14 => (string) $jid]);
+        $tkaSusul   = $tka($s15, $jid2);
+        $sid4 = (int) ($tkaSusul['surat_id'] ?? 0);
+        $k3   = (string) (SuratSekolah::dekodeIsi((string) $this->surat($sid3)['isi'])['kunci'] ?? '');
+        $k4   = (string) (SuratSekolah::dekodeIsi((string) ($this->surat($sid4)['isi'] ?? ''))['kunci'] ?? '');
+        $this->cek('surat M disetujui: s14 tidak bisa pindah sendiri ("minta operator"); s13 tidak bisa memindahkan s14 (disebut di pesan); s15 menyusul ke M → surat BARU menunggu ACC berisi s15 saja (kunci berbeda, surat lama tetap)',
+            $accM['ok'] && ! $tkaKunci['ok'] && str_contains($tkaKunci['pesan'], 'minta operator') && $tkaLewat['kode'] === 'sudah' && str_contains($tkaLewat['pesan'], 'ZZUJI SS 95 sudah')
+            && $tkaSusul['ok'] && $tkaSusul['kode'] === 'baru' && $sid4 !== $sid3 && $isiSiswa($sid4) === [$s15] && $isiSiswa($sid3) === [$s14] && ($this->surat($sid4)['status'] ?? '') === 'menunggu'
+            && $k3 !== '' && $k4 !== '' && $k3 !== $k4, json_encode([$accM['pesan'] ?? '', $tkaKunci, $tkaLewat, $tkaSusul]));
+        $this->db->table('surat_permintaan')->where('siswa_id', $s15)->delete(); // tiru data lama: nama tercantum tanpa permintaan
+        $pm15 = $lib->permintaan($s15);
+        $this->cek('halaman status: surat yang memuat nama siswa TANPA permintaannya tetap tampil + catatan "dicantumkan … teman PKL-mu"', count($pm15) === 1
+            && str_contains($pm15[0]['catatan'], 'dicantumkan') && str_contains($pm15[0]['catatan'], 'teman PKL-mu') && $pm15[0]['status'] === 'menunggu', json_encode($pm15));
+        $hasilCari = array_map('intval', array_column((new SuratSekolah())->daftar(['q' => 'ZZUJI SS 95'], 1, 200)['rows'], 'id'));
+        $this->cek('Daftar Surat: kotak cari menemukan surat lewat NAMA SISWA (s14 → surat M yang memuat namanya, bukan surat L)', in_array($sid3, $hasilCari, true) && ! in_array($sid, $hasilCari, true), json_encode($hasilCari));
 
         $pm = $lib->permintaan($s12);
         $this->cek('daftar permintaan siswa: judul jenis + jadwal ("Surat Izin TKA — TKA Gelombang …"), perusahaan, status Menunggu ACC', count($pm) === 1 && str_contains($pm[0]['judul'], 'Surat Izin TKA — TKA Gelombang ' . self::NIS)
             && $pm[0]['perusahaan'] === 'ZZUJISS Layanan' && $pm[0]['status'] === 'menunggu', json_encode($pm));
         (new \App\Libraries\SuratKeputusan())->putuskan($sid, 'batal', ['catatan' => 'Uji batal permintaan'], ['oleh' => self::OLEH . ' operator', 'admin_id' => 3, 'peran' => 'operator', 'ip' => $ip], $p);
-        $a6 = $lib->ajukanIzin($s12, 'izin_tka', $jid, $ip, $p);
-        $this->cek('surat dibatalkan → status "Dibatalkan" + alasan; siswa boleh meminta lagi → surat BARU', $lib->permintaan($s12)[1]['status'] === 'batal' && str_contains($lib->permintaan($s12)[1]['status_ket'], 'Uji batal permintaan')
-            && $a6['kode'] === 'baru' && $a6['surat_id'] !== $sid, json_encode($a6));
-        // Pemegang ACC di lingkungan uji = bawaan (netralkanPengaturan); di sekolah = Operator (migrasi Layanan Siswa).
-        $penyetuju = PklHak::boleh('operator', PklHak::kunciSurat('acc', SuratJenis::TKA)) ? ['peran' => 'operator', 'admin_id' => 3] : ['peran' => 'hubin', 'admin_id' => 2];
-        $opK = ['oleh' => self::OLEH . ' ' . $penyetuju['peran'], 'ip' => $ip] + $penyetuju;
-        $acc = (new \App\Libraries\SuratKeputusan())->putuskan((int) $a6['surat_id'], 'acc', ['paham' => '1'], $opK, $p);
+        $a6 = $tka($s12, $jid, [$s13 => (string) $jid]);
+        $this->cek('surat dibatalkan → status "Dibatalkan" + alasan; siswa boleh meminta lagi (sekaligus mengisikan teman ke gelombang yang sama) → surat BARU berisi keduanya', $lib->permintaan($s12)[1]['status'] === 'batal' && str_contains($lib->permintaan($s12)[1]['status_ket'], 'Uji batal permintaan')
+            && $a6['kode'] === 'baru' && $a6['surat_id'] !== $sid && $isiSiswa((int) $a6['surat_id']) === [$s12, $s13], json_encode($a6));
+        $acc =(new \App\Libraries\SuratKeputusan())->putuskan((int) $a6['surat_id'], 'acc', ['paham' => '1'], $opK, $p);
         $bk  = (new SuratBerkas())->bangun([(int) $a6['surat_id']], $opK);
         $tks = $bk['ok'] ? preg_replace('/\s+/u', ' ', $this->isiDocx($bk['biner'])) : '';
         $this->cek('surat dari permintaan siswa: Operator meng-ACC, berkas Word per perusahaan terbentuk (nama perusahaan + kedua siswa + "Gelombang …"), status siswa → "Siap diambil"', $acc['ok'] && $bk['ok']
@@ -1222,7 +1273,7 @@ class UjiSurat extends BaseCommand
         $idSt = array_map('intval', array_column($svc->daftar(['asal' => 'staf', 'jenis' => SuratJenis::TKA], 1, 200)['rows'], 'id'));
         $rowA6 = array_values(array_filter($svc->daftar(['asal' => 'siswa'], 1, 200)['rows'], static fn (array $x): bool => (int) $x['id'] === (int) $a6['surat_id']));
         $this->cek('Daftar Surat saringan asal: surat permintaan siswa ada di "Diajukan siswa", tidak di "Dibuat staf"; baris membawa jml_minta', in_array((int) $a6['surat_id'], $idSw, true)
-            && ! in_array((int) $a6['surat_id'], $idSt, true) && (int) ($rowA6[0]['jml_minta'] ?? 0) === 1);
+            && ! in_array((int) $a6['surat_id'], $idSt, true) && (int) ($rowA6[0]['jml_minta'] ?? 0) === 2);
         $rk = $svc->ringkasPermintaan();
         $this->cek('kotak per jenis: Penarikan (diminta siswa) menunggu ACC ≥ 1; jenis tanpa permintaan = 0', $rk[SuratJenis::PENARIKAN]['menunggu'] >= 1 && isset($rk[SuratJenis::BALASAN]) && is_int($rk[SuratJenis::ASTS]['siap']));
         $pm2 = $svc->peminta($sid);
@@ -1246,7 +1297,7 @@ class UjiSurat extends BaseCommand
         $baris = array_values(array_filter((array) ($j1['data'] ?? []), static fn (array $x): bool => (int) $x['id'] === (int) $a6['surat_id']));
         [$k2] = $this->apiSurat('operator', 'daftar', ['asal' => 'guru'], []);
         $this->cek('API surat?asal=siswa: surat permintaan siswa ada + diajukan_siswa/jml_minta; meta.permintaan_siswa per jenis; asal tak dikenal → 422', $k1 === 200
-            && ($baris[0]['diajukan_siswa'] ?? false) === true && (int) ($baris[0]['jml_minta'] ?? 0) === 1 && isset($j1['meta']['permintaan_siswa'][SuratJenis::TKA]['menunggu']) && $k2 === 422, json_encode($j1['meta'] ?? null));
+            && ($baris[0]['diajukan_siswa'] ?? false) === true && (int) ($baris[0]['jml_minta'] ?? 0) === 2 && isset($j1['meta']['permintaan_siswa'][SuratJenis::TKA]['menunggu']) && $k2 === 422, json_encode($j1['meta'] ?? null));
         [$k3, $j3] = $this->apiSurat('operator', 'detail', [], [], $sid);
         $okOrtu = true;
         if (isset($b1['surat_id'])) {
@@ -1268,6 +1319,163 @@ class UjiSurat extends BaseCommand
         [$k10] = $this->apiSurat('operator', 'jadwalHapus', [], [], $jid7);
         $this->cek('API jadwal: tambah → 201 (buka=true dibaca), tutup → keadaan "tutup", isian salah → 422, hapus → 200', $k7 === 201 && ($j7['data']['buka'] ?? null) === true
             && $k8 === 200 && ($j8['data']['keadaan'] ?? '') === 'tutup' && $k9 === 422 && $k10 === 200 && (new \App\Libraries\SuratJadwal())->muat($jid7) === null, json_encode([$k7, $j7['message'] ?? '', $k8, $k9, $k10]));
+
+        // Izin Ujian (ASTS) TIDAK ikut aturan gelombang TKA: surat per perusahaan tetap memuat semua siswa PKL di perusahaan itu.
+        $rjA = $jd->simpan(SuratJenis::ASTS, ['kegiatan' => 'ASTS', 'semester' => 'Ganjil', 'tahun_pelajaran' => '2031/2032', 'tgl_mulai' => date('Y-m-d', strtotime('+50 days')),
+            'tgl_selesai' => date('Y-m-d', strtotime('+51 days')), 'buka' => '1', 'tempat' => 'Aula ' . self::NIS], null, $this->konteks());
+        $aU = $lib->ajukanIzin($s13, 'izin_ujian', (int) ($rjA['id'] ?? 0), $ip, $p);
+        $this->cek('Izin Ujian (ASTS) tidak berubah: satu surat per perusahaan memuat SEMUA siswa PKL di perusahaan itu', $rjA['ok'] && $aU['ok'] && $aU['kode'] === 'baru'
+            && count(array_intersect([$s12, $s13, $s14, $s15], $isiSiswa((int) ($aU['surat_id'] ?? 0)))) === 4, json_encode([$rjA['pesan'] ?? '', $aU]));
+
+        // F2 — alat staf "Pindahkan siswa ke gelombang lain" (SuratTkaPindah). Keadaan sekarang: a6 = L [s12, s13] disetujui & sudah
+        // diunduh; sid3 = M [s14] disetujui; sid4 = M [s15] menunggu.
+        $this->bagian('Surat Izin TKA F2: staf memindahkan siswa ke gelombang lain');
+        $L6    = (int) $a6['surat_id'];
+        $alat  = new \App\Libraries\SuratTkaPindah();
+        $svc   = new SuratSekolah();
+        $C     = \App\Controllers\Admin\Surat::class;
+        $lain  = $penyetuju['peran'] === 'operator' ? 'hubin' : 'operator';
+        $this->cek('hak alamat: POST admin/surat/{id}/pindah-siswa = pemegang ACC surat', PklHak::hakUntukAlamat('admin/surat/12/pindah-siswa', 'POST') === 'surat_acc:*');
+        if (! PklHak::bolehSurat($lain, 'acc', SuratJenis::TKA)) {
+            $this->panggil($C, $lain, 'pindahSiswa', [], ['tujuan' => (string) $jid2, 'siswa_id' => (string) $s13], $L6);
+            $this->cek('peran TANPA hak ACC Izin TKA (' . $lain . ') → ditolak, surat tidak berubah', $isiSiswa($L6) === [$s12, $s13]);
+        }
+        $this->panggil($C, $penyetuju['peran'], 'pindahSiswa', [], ['tujuan' => '', 'siswa_id' => (string) $s13], $L6);
+        $this->cek('tujuan belum dipilih → ditolak (tidak dianggap "keluarkan"), surat tidak berubah', $isiSiswa($L6) === [$s12, $s13]);
+
+        $this->db->table('surat_sekolah_siswa')->where('surat_id', $L6)->where('siswa_id', $s12)->update(['dikabari_at' => date('Y-m-d H:i:s'), 'dikabari_oleh' => 'uji']);
+        $pmL6 = $svc->muat($L6);
+        $p1   = $alat->pindahkan($L6, $s13, $jid2, 'sesuai kartu peserta', $opK, $p);
+        $mL6  = $svc->muat($L6);
+        $this->cek('PINDAH dari surat yang sudah disetujui & diunduh: s13 keluar dari surat L (nomor tetap, "perlu cetak ulang"), masuk surat M yang MASIH MENUNGGU (sid4, bukan yang sudah disetujui); tanda WhatsApp s12 tetap; riwayat "pindah" di kedua surat; permintaan s13 ikut pindah',
+            $p1['ok'] && $p1['tujuan_id'] === $sid4 && $isiSiswa($L6) === [$s12] && $isiSiswa($sid4) === [$s15, $s13] && ($mL6['surat']['nomor'] ?? '') === ($pmL6['surat']['nomor'] ?? 'x')
+            && SuratSekolah::perluCetakUlang($mL6['surat'], $mL6['siswa'], $p) && str_contains($p1['pesan'], 'Unduh ulang') && str_contains((string) $mL6['surat']['judul'], '(1 siswa)')
+            && $this->db->table('surat_sekolah_siswa')->where('surat_id', $L6)->where('siswa_id', $s12)->where('dikabari_at IS NOT NULL', null, false)->countAllResults() === 1
+            && $this->jumlah('surat_sekolah_riwayat', ['surat_id' => $L6, 'aksi' => 'pindah']) === 1 && $this->jumlah('surat_sekolah_riwayat', ['surat_id' => $sid4, 'aksi' => 'pindah']) === 1
+            && $this->jumlah('surat_permintaan', ['siswa_id' => $s13, 'surat_id' => $sid4]) === 1 && $this->jumlah('surat_permintaan', ['siswa_id' => $s13, 'surat_id' => $L6]) === 0, json_encode($p1));
+
+        // Data ganda (seperti 15 siswa di hosting): s14 ada di sid3 (M) dan ditambahkan ke L → ditandai, lalu "keluarkan saja".
+        $svc->aturSiswa($L6, null, ['siswa_id' => $s14, 'kelas_id' => null, 'hp' => null], 'uji ganda');
+        $hDet = html_entity_decode((string) $this->panggil($C, $penyetuju['peran'], 'detail', [], [], $L6));
+        $hDt2 = $lain !== '' && ! PklHak::bolehSurat($lain, 'acc', SuratJenis::TKA) ? html_entity_decode((string) $this->panggil($C, $lain, 'detail', [], [], $L6)) : '';
+        $this->cek('detail surat: siswa yang juga ada di surat TKA lain ditandai "Juga di … SRT-…"; pemegang ACC melihat tombol + dialog Pindah (gelombang M + "Keluarkan saja"); peran tanpa hak ACC hanya melihat tanda',
+            str_contains($hDet, 'Juga di TKA Gelombang ' . self::NIS . ' M') && str_contains($hDet, 'data-buka-dialog="surat-pindah-' . $s14 . '"') && str_contains($hDet, 'Keluarkan saja dari surat ini')
+            && ($hDt2 === '' || (str_contains($hDt2, 'Juga di') && ! str_contains($hDt2, 'surat-pindah-'))));
+        $p2 = $this->panggil($C, $penyetuju['peran'], 'pindahSiswa', [], ['tujuan' => 'keluar', 'siswa_id' => (string) $s14], $L6);
+        $this->cek('KELUARKAN saja (lewat halaman): s14 keluar dari surat L, tetap di surat M (sid3); surat L tetap aktif', $p2 instanceof \CodeIgniter\HTTP\RedirectResponse
+            && $isiSiswa($L6) === [$s12] && $isiSiswa($sid3) === [$s14] && ($this->surat($L6)['status'] ?? '') === 'disetujui');
+
+        // Siswa terakhir dipindah → surat dibatalkan (nomor tetap tercatat); gelombang tanpa surat → surat baru langsung di-ACC.
+        $p3 = $alat->pindahkan($L6, $s12, $jid2, '', $opK, $p);
+        $sL = $this->surat($L6);
+        $this->cek('siswa TERAKHIR dipindah: surat L (sudah disetujui) dibatalkan otomatis, nomor tetap tercatat; s12 masuk surat M yang menunggu; permintaannya ikut', $p3['ok'] && ($sL['status'] ?? '') === 'dibatalkan'
+            && (string) ($sL['nomor'] ?? '') !== '' && str_contains($p3['pesan'], 'dibatalkan') && $isiSiswa($sid4) === [$s15, $s13, $s12] && $this->jumlah('surat_permintaan', ['siswa_id' => $s12, 'surat_id' => $sid4]) === 1, json_encode($p3));
+        $rj3  = $jd->simpan(SuratJenis::TKA, ['sesi' => 'Gelombang ' . self::NIS . ' N', 'tgl_mulai' => date('Y-m-d', strtotime('+12 days')), 'tgl_selesai' => date('Y-m-d', strtotime('+13 days')), 'buka' => '0', 'tempat' => ''], null, $this->konteks());
+        $p4   = $alat->pindahkan($sid3, $s14, (int) ($rj3['id'] ?? 0), '', $opK, $p);
+        $sN   = $this->surat((int) ($p4['tujuan_id'] ?? 0));
+        $iN   = SuratSekolah::dekodeIsi((string) ($sN['isi'] ?? ''));
+        $p5   = $alat->pindahkan($sid4, $s15, 999999999, '', $opK, $p);
+        $this->cek('gelombang yang BELUM punya surat (jadwal ditutup untuk siswa pun boleh): surat BARU per perusahaan, langsung di-ACC karena surat asal sudah disetujui; surat asal yang kosong dibatalkan; gelombang tak dikenal → ditolak',
+            $rj3['ok'] && $p4['ok'] && ($sN['status'] ?? '') === 'disetujui' && ($iN['sesi'] ?? '') === 'Gelombang ' . self::NIS . ' N' && ($iN['pkey'] ?? '') !== '' && $isiSiswa((int) $p4['tujuan_id']) === [$s14]
+            && ($this->surat($sid3)['status'] ?? '') === 'dibatalkan' && ! $p5['ok'] && $p5['kode'] === 'galat' && $isiSiswa($sid4) === [$s15, $s13, $s12], json_encode([$p4, $p5]));
+
+        // F3 — formulir staf "Surat Izin TKA per perusahaan": centang siswa per perusahaan (satu siswa = satu gelombang).
+        $this->bagian('Surat Izin TKA F3: staf memilih siswa per perusahaan');
+        [$s16, $s17, $s18, $s19] = [$this->buatSiswa(97), $this->buatSiswa(98), $this->buatSiswa(99), $this->buatSiswa(89)];
+        $this->db->table('siswa')->whereIn('id', [$s16, $s17, $s18, $s19])->update(['kelas_id' => $kXII]);
+        $this->buatAjuanDisetujui($s16, 'ZZUJISS Staf', [$s17, $s18]);
+        $this->buatAjuanDisetujui($s19, 'ZZUJISS Api', []);
+        $acaraF3 = new \App\Libraries\SuratAcara();
+        $grupF3  = static fn (string $nama): ?array => array_values(array_filter($acaraF3->perusahaanTka(), static fn (array $g): bool => $g['nama'] === $nama))[0] ?? null;
+        $gF3     = $grupF3('ZZUJISS Staf');
+        $kF3     = (string) ($gF3['kunci'] ?? '');
+        $this->cek('data formulir TKA: perusahaan memuat siswa XII + tka (null = belum punya surat TKA) + jml_bebas', $gF3 !== null && $gF3['jml_bebas'] === 3
+            && array_column($gF3['siswa'], 'tka') === [null, null, null], json_encode($gF3));
+        $f3s16   = $lib->ajukanTka($s16, ['jadwal_id' => (string) $jid], $ip, $p); // s16 meminta sendiri gelombang L lebih dulu
+        $suratL  = (int) ($f3s16['surat_id'] ?? 0);
+        $isiL    = SuratSekolah::dekodeIsi((string) ($this->surat($suratL)['isi'] ?? ''));
+        $isiM    = SuratSekolah::dekodeIsi((string) ($this->surat($sid4)['isi'] ?? ''));
+        $masukan = static fn (string $k, array $isi, ?array $siswa): array => ['tanggal_surat' => date('Y-m-d'), 'tgl_mulai' => (string) ($isi['tgl_mulai'] ?? ''), 'tgl_selesai' => (string) ($isi['tgl_selesai'] ?? ''),
+            'sesi' => (string) ($isi['sesi'] ?? ''), 'tempat' => '', 'mode' => 'perusahaan', 'perusahaan' => [$k]] + ($siswa === null ? [] : ['siswa_form' => '1', 'siswa' => [$k => array_map('strval', $siswa)]]);
+        $hL = SuratAcara::periksa(SuratJenis::TKA, $masukan($kF3, $isiL, [$s16, $s17]));
+        $bL = $acaraF3->buat(SuratJenis::TKA, $hL, $opK, $p);
+        $this->cek('staf mencentang s16 + s17 untuk gelombang L: s16 (sudah minta sendiri) disebut "sudah punya surat TKA", s17 DITAMBAHKAN ke surat L yang sudah ada (tanpa surat dobel), s18 yang tidak dicentang tidak ikut',
+            $hL['ok'] && $bL['ok'] && $bL['dibuat'] === [] && $bL['ditambah'] === [$suratL] && $isiSiswa($suratL) === [$s16, $s17] && str_contains(implode(' ', $bL['sama']), 'ZZUJI SS 97'), json_encode($bL));
+        $hM  = SuratAcara::periksa(SuratJenis::TKA, $masukan($kF3, $isiM, [$s17, $s18]));
+        $bM  = $acaraF3->buat(SuratJenis::TKA, $hM, $opK, $p);
+        $idM = (int) ($bM['dibuat'][0] ?? 0);
+        $this->cek('staf mencentang s17 + s18 untuk gelombang M: s17 (sudah di L) TIDAK dimasukkan dan disebut; surat M BARU hanya berisi s18', $bM['ok'] && count($bM['dibuat']) === 1
+            && $isiSiswa($idM) === [$s18] && str_contains(implode(' ', $bM['sama']), 'ZZUJI SS 98') && str_contains((string) ($this->surat($idM)['judul'] ?? ''), '(1 siswa)'), json_encode($bM));
+        $hLama   = SuratAcara::periksa(SuratJenis::TKA, $masukan($kF3, $isiL, null));
+        $bLama   = $acaraF3->buat(SuratJenis::TKA, $hLama, $opK, $p);
+        $bKosong = $acaraF3->buat(SuratJenis::TKA, SuratAcara::periksa(SuratJenis::TKA, $masukan($kF3, $isiL, [])), $opK, $p);
+        $this->cek('aplikasi lama (tanpa pilihan siswa) = semua siswa yang belum punya surat — di sini semuanya sudah → tidak ada surat dobel; centang kosong → "tidak ada siswa yang dicentang"',
+            $hLama['siswa_pilih'] === null && ! $bLama['ok'] && $bLama['dibuat'] === [] && str_contains(implode(' ', $bLama['sama']), 'sudah punya surat TKA')
+            && ! $bKosong['ok'] && str_contains(implode(' ', $bKosong['sama']), 'tidak ada siswa yang dicentang') && $isiSiswa($suratL) === [$s16, $s17], json_encode([$bLama, $bKosong]));
+        [$kf, $jf] = $this->apiSurat('admin', 'form', ['tgl_mulai' => (string) $isiL['tgl_mulai'], 'tgl_selesai' => (string) $isiL['tgl_selesai']], [], 'tka');
+        $pf = array_values(array_filter((array) ($jf['data']['perusahaan'] ?? []), static fn (array $g): bool => $g['nama'] === 'ZZUJISS Staf'))[0] ?? [];
+        $this->cek('API GET surat/form/tka: perusahaan[].jml_bebas + siswa[].tka (surat yang sudah memuat siswa: kode, label, status_teks)', $kf === 200 && ($pf['jml_bebas'] ?? -1) === 0
+            && ($pf['siswa'][0]['tka']['kode'] ?? '') === \App\Models\SuratSekolahModel::kode($suratL) && isset($pf['siswa'][2]['tka']['label']), json_encode($pf));
+        $kApi = (string) ($grupF3('ZZUJISS Api')['kunci'] ?? '');
+        [$kb, $jb] = $this->apiSurat('admin', 'buat', [], $masukan($kApi, $isiM, [$s19]) + ['siswa' => [$kApi => [(string) $s19]]], 'tka');
+        [$kb2, $jb2] = $this->apiSurat('admin', 'buat', [], $masukan($kApi, $isiL, null), 'tka');
+        $this->cek('API POST surat/tka + siswa {kunci: [id]} → 201 surat hanya siswa itu, data.ditambah ada; kirim lagi tanpa siswa (aplikasi lama) → 409, tidak dobel',
+            $kb === 201 && count((array) ($jb['data']['dibuat'] ?? [])) === 1 && array_key_exists('ditambah', (array) ($jb['data'] ?? [])) && $isiSiswa((int) ($jb['data']['dibuat'][0]['id'] ?? 0)) === [$s19]
+            && $kb2 === 409, json_encode([$kb, $jb['message'] ?? '', $kb2, $jb2['message'] ?? '']));
+        $hF = html_entity_decode((string) $this->panggil(\App\Controllers\Admin\SuratIzin::class, 'admin', 'tka'));
+        $this->cek('halaman formulir TKA (web): penanda siswa_form + daftar siswa per perusahaan dengan surat yang sudah memuatnya', str_contains($hF, 'name="siswa_form"')
+            && str_contains($hF, '"daftar":[') && str_contains($hF, '"tempat":"TKA Gelombang ' . self::NIS . ' L') && str_contains($hF, 'Siswa yang ikut gelombang ini'));
+
+        // F4 — peringatan data ganda di Daftar Surat (satu siswa di dua surat TKA aktif) + saringan ganda=1.
+        $this->bagian('Surat Izin TKA F4–F5: peringatan siswa ganda + API Android');
+        $svc->aturSiswa($idM, null, ['siswa_id' => $s16, 'kelas_id' => null, 'hp' => null], 'uji ganda F4'); // s16 kini di L dan M
+        $gandaF4 = array_values(array_filter($svc->tkaGanda(), static fn (array $g): bool => $g['siswa_id'] === $s16));
+        $idGanda = array_map('intval', array_column($svc->daftar(['ganda' => true], 1, 200)['rows'], 'id'));
+        $this->cek('tkaGanda: s16 tercantum di 2 surat TKA aktif (L & M, kode + label + status); saringan ganda=1 hanya surat TKA yang memuat siswa ganda', count($gandaF4) === 1
+            && array_column($gandaF4[0]['surat'], 'id') === [$suratL, $idM] && str_contains($gandaF4[0]['surat'][1]['label'], 'Gelombang ' . self::NIS . ' M')
+            && in_array($suratL, $idGanda, true) && in_array($idM, $idGanda, true) && ! in_array($sid4, $idGanda, true), json_encode([$gandaF4, $idGanda]));
+        $hG  = html_entity_decode((string) $this->panggil($C, $penyetuju['peran'], 'index'));
+        $hG1 = html_entity_decode((string) $this->panggil($C, $penyetuju['peran'], 'index', ['ganda' => '1']));
+        $this->cek('halaman Daftar Surat: kotak peringatan "siswa tercantum di lebih dari satu Surat Izin TKA" + daftar siswa (tautan surat) + tombol saring; ganda=1 → lencana saringan',
+            str_contains($hG, 'tercantum di lebih dari satu Surat Izin TKA') && str_contains($hG, 'ZZUJI SS 97') && str_contains($hG, 'Tampilkan suratnya saja')
+            && str_contains($hG1, 'Hanya surat TKA dengan siswa ganda') && str_contains($hG1, 'name="ganda" value="1"'));
+
+        // F5 — API Android.
+        [$ka, $ja] = $this->apiSurat($penyetuju['peran'], 'daftar', ['ganda' => '1', 'per' => '100'], []);
+        $this->cek('API GET surat?ganda=1: surat TKA bersiswa ganda + meta.tka_ganda (siswa + surat-suratnya)', $ka === 200
+            && in_array($idM, array_map('intval', array_column((array) ($ja['data'] ?? []), 'id')), true)
+            && in_array($s16, array_column((array) ($ja['meta']['tka_ganda'] ?? []), 'siswa_id'), true), json_encode($ja['meta']['tka_ganda'] ?? null));
+        [$kd, $jdt] = $this->apiSurat($penyetuju['peran'], 'detail', [], [], $suratL);
+        $s16d = array_values(array_filter((array) ($jdt['data']['siswa'] ?? []), static fn (array $x): bool => $x['siswa_id'] === $s16))[0] ?? [];
+        [, $jAsts] = $this->apiSurat($penyetuju['peran'], 'detail', [], [], (int) ($aU['surat_id'] ?? 0));
+        $this->cek('API GET surat/{id} (Izin TKA): siswa[].tka_lain (surat lain yang memuatnya), pindah_tka {boleh, tujuan[jadwal_id, label, hari_tanggal, keadaan]} tanpa gelombang surat ini; surat ASTS → pindah_tka null',
+            $kd === 200 && ($s16d['tka_lain'][0]['kode'] ?? '') === \App\Models\SuratSekolahModel::kode($idM) && ($jdt['data']['pindah_tka']['boleh'] ?? false) === true
+            && in_array($jid2, array_column((array) ($jdt['data']['pindah_tka']['tujuan'] ?? []), 'jadwal_id'), true) && ! in_array($jid, array_column((array) ($jdt['data']['pindah_tka']['tujuan'] ?? []), 'jadwal_id'), true)
+            && array_key_exists('pindah_tka', (array) ($jAsts['data'] ?? [])) && $jAsts['data']['pindah_tka'] === null, json_encode($jdt['data']['pindah_tka'] ?? null));
+        [$k422, $j422] = $this->apiSurat($penyetuju['peran'], 'pindahSiswa', [], ['siswa_id' => (string) $s16, 'tujuan' => ''], $idM);
+        $k403   = 0;
+        $jTolak = null;
+        if (! PklHak::bolehSurat($lain, 'acc', SuratJenis::TKA)) {
+            [$k403, $j403] = $this->apiSurat($lain, 'detail', [], [], $suratL);
+            $k403 = ($j403['data']['pindah_tka']['boleh'] ?? true) === false ? 403 : -1;
+            [$kTolak, $jTolak] = $this->apiSurat($lain, 'pindahSiswa', [], ['siswa_id' => (string) $s16, 'tujuan' => 'keluar'], $idM);
+            $k403 = $k403 === 403 && $kTolak === 403 ? 403 : -1;
+        }
+        [$kp, $jp] = $this->apiSurat($penyetuju['peran'], 'pindahSiswa', [], ['siswa_id' => (string) $s16, 'tujuan' => 'keluar', 'catatan' => 'uji API'], $idM);
+        $this->cek('API POST surat/{id}/pindah-siswa: tujuan kosong → 422; peran tanpa hak ACC → pindah_tka.boleh false & 403; "keluar" → 200, s16 keluar dari surat M, data ganda hilang, riwayat "(via aplikasi)"',
+            $k422 === 422 && ($k403 === 403 || PklHak::bolehSurat($lain, 'acc', SuratJenis::TKA)) && $kp === 200 && $isiSiswa($idM) === [$s18]
+            && array_filter($svc->tkaGanda(), static fn (array $g): bool => $g['siswa_id'] === $s16) === [] && $this->auditAda('pindah gelombang: ZZUJI SS 97 dikeluarkan dari surat ini') , json_encode([$k422, $k403, $kp, $jp['message'] ?? '']));
+
+        // UJI_FIXTURE=<folder>: simpan respons API di atas (data fiktif ZZUJI) sebagai fixture kontrak Flutter (test/fixtures/surat).
+        $dirFx = (string) getenv('UJI_FIXTURE');
+        if ($dirFx !== '' && is_dir($dirFx)) {
+            $fx = ['form_tka' => $jf, 'buat_tka_perusahaan' => $jb, 'daftar_tka_ganda' => $ja, 'detail_tka_pindah' => $jdt, 'galat_422_pindah' => $j422, 'pindah_siswa' => $jp]
+                + ($jTolak !== null ? ['galat_403_pindah' => $jTolak] : []);
+            foreach ($fx as $nama => $isiFx) {
+                file_put_contents(rtrim($dirFx, '/\\') . DIRECTORY_SEPARATOR . $nama . '.json', json_encode($isiFx, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) . "\n");
+            }
+            $this->cek('fixture Flutter ditulis ke ' . $dirFx . ' (' . count($fx) . ' berkas)', true);
+        }
     }
 
     /**

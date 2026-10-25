@@ -95,6 +95,30 @@ $bilah = 'flex flex-col gap-3 border-b border-gray-200 bg-gray-50 px-4 py-3 sm:f
     </section>
 <?php endif; ?>
 
+<?php if (! empty($tkaGanda)): // F4: satu siswa hanya boleh SATU gelombang TKA — data ganda (dua surat TKA aktif) ?>
+    <section class="peringatan peringatan-awas mb-5" aria-labelledby="judul-tka-ganda">
+        <?= ikon('exclamation-circle', 'mt-0.5 h-5 w-5 shrink-0') ?>
+        <div class="min-w-0 flex-1 space-y-2">
+            <p id="judul-tka-ganda" class="font-semibold"><?= count($tkaGanda) ?> siswa tercantum di lebih dari satu Surat Izin TKA (satu siswa hanya ikut satu gelombang).</p>
+            <p class="text-sm"><?= ! empty($bolehPindahTka)
+                ? 'Buka surat yang <b>salah</b>, lalu di tabel siswa tekan <b>Pindah</b> → <b>Keluarkan saja dari surat ini</b>. Nomor surat tetap; surat yang sudah diunduh tinggal diunduh ulang.'
+                : 'Pemegang hak ACC Surat Izin TKA bisa membereskannya lewat tombol <b>Pindah</b> di halaman surat.' ?></p>
+            <details class="text-sm">
+                <summary class="cursor-pointer font-semibold">Lihat daftar siswanya</summary>
+                <ul class="mt-2 space-y-1">
+                    <?php foreach ($tkaGanda as $g): ?>
+                        <li><b><?= esc($g['nama']) ?></b><?= $g['kelas'] !== '' ? ' (' . esc($g['kelas']) . ')' : '' ?>:
+                            <?= implode(' · ', array_map(static fn (array $s): string => '<a href="' . esc(site_url('admin/surat/' . $s['id']), 'attr') . '" class="font-semibold underline">' . esc($s['kode']) . '</a> ' . esc($s['label'] . ', ' . $s['status_teks']), $g['surat'])) ?></li>
+                    <?php endforeach; ?>
+                </ul>
+            </details>
+            <?php if (! $f['ganda']): ?>
+                <a href="<?= site_url('admin/surat') . '?ganda=1' ?>" class="btn btn-netral btn-sm"><?= ikon('adjustments-horizontal', 'h-4 w-4') ?>Tampilkan suratnya saja</a>
+            <?php endif; ?>
+        </div>
+    </section>
+<?php endif; ?>
+
 <?= view('admin/surat/_nav', ['hitung' => $hitung, 'f' => $f]) ?>
 
 <section class="kartu overflow-hidden" aria-labelledby="judul-daftar-surat">
@@ -108,10 +132,11 @@ $bilah = 'flex flex-col gap-3 border-b border-gray-200 bg-gray-50 px-4 py-3 sm:f
     <div class="alat-crud">
         <form method="get" class="alat-crud-cari" role="search">
             <?php if ($f['status'] !== ''): ?><input type="hidden" name="status" value="<?= esc($f['status'], 'attr') ?>"><?php endif; ?>
+            <?php if (! empty($f['ganda'])): ?><input type="hidden" name="ganda" value="1"><?php endif; ?>
             <label class="alat-crud-kotak">
                 <span class="sr-only">Cari</span>
                 <?= ikon('search', '') ?>
-                <input type="search" name="q" value="<?= esc($f['q'], 'attr') ?>" placeholder="Cari nomor, judul, atau perusahaan…" class="inp">
+                <input type="search" name="q" value="<?= esc($f['q'], 'attr') ?>" placeholder="Cari nomor, judul, perusahaan, atau nama siswa…" class="inp">
             </label>
             <select name="jenis" data-autosubmit class="inp alat-crud-pilih" aria-label="Jenis surat">
                 <option value="">Semua jenis</option>
@@ -133,7 +158,8 @@ $bilah = 'flex flex-col gap-3 border-b border-gray-200 bg-gray-50 px-4 py-3 sm:f
                 </select>
             <?php endif; ?>
             <button type="submit" class="btn btn-netral"><?= ikon('search', 'h-4 w-4') ?>Cari</button>
-            <?php if ($f['jenis'] !== '' || $f['tahun'] > 0 || $f['q'] !== '' || $f['asal'] !== ''): ?>
+            <?php if (! empty($f['ganda'])): ?><span class="lencana lencana-kuning self-center">Hanya surat TKA dengan siswa ganda</span><?php endif; ?>
+            <?php if ($f['jenis'] !== '' || $f['tahun'] > 0 || $f['q'] !== '' || $f['asal'] !== '' || ! empty($f['ganda'])): ?>
                 <a href="<?= site_url('admin/surat') . ($f['status'] !== '' ? '?status=' . urlencode($f['status']) : '') ?>" class="btn btn-teks"><?= ikon('close', 'h-4 w-4') ?>Reset</a>
             <?php endif; ?>
         </form>

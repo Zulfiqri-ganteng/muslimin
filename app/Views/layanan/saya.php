@@ -94,6 +94,7 @@ $ajuan = $siswa['ajuan'];
                                 <?php if ($r['perusahaan'] !== ''): ?><p class="baris-ket">Untuk <?= esc($r['perusahaan']) ?></p><?php endif; ?>
                                 <p class="baris-info">Diajukan <?= esc(IsianBantu::tanggalIndo(substr($r['dibuat'], 0, 10))) ?><?= $r['nomor'] !== '' ? ' · Nomor ' . esc($r['nomor']) : '' ?></p>
                                 <p class="mt-1 text-sm text-teks"><?= esc($r['status_ket']) ?></p>
+                                <?php if (($r['catatan'] ?? '') !== ''): ?><p class="mt-1 text-sm text-teks-2"><?= esc($r['catatan']) ?></p><?php endif; ?>
                             </div>
                             <div class="baris-aksi"><span class="label <?= esc($r['status_kelas'], 'attr') ?>"><?= esc($r['status_teks']) ?></span></div>
                         </li>

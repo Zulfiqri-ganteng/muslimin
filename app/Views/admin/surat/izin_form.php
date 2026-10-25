@@ -29,6 +29,10 @@ $cfg    = [
     'perusahaan' => array_map(static fn (array $g) => [
         'kunci' => $g['kunci'], 'nama' => $g['nama'], 'kota' => $g['kota'], 'jml' => count($g['siswa']), 'mulai' => $g['mulai'], 'selesai' => $g['selesai'],
         'siswa' => implode(', ', array_slice(array_column($g['siswa'], 'nama'), 0, 4)) . (count($g['siswa']) > 4 ? ', …' : ''),
+        // TKA (gelombang per siswa): daftar siswa bercentang; `tempat` = surat TKA yang sudah memuatnya (tidak bisa dicentang).
+        'sudah'  => $asts ? 0 : count($g['siswa']) - (int) ($g['jml_bebas'] ?? count($g['siswa'])),
+        'daftar' => $asts ? [] : array_map(static fn (array $x) => ['id' => $x['siswa_id'], 'nama' => $x['nama'], 'kelas' => $x['kelas'],
+            'tempat' => ($x['tka'] ?? null) !== null ? $x['tka']['label'] . ' · ' . $x['tka']['kode'] : ''], $g['siswa']),
     ], $perusahaan),
 ];
 $kepala = static fn (string $judul): string => '<div class="kartu-kepala"><h3 class="kartu-judul text-base">' . esc($judul) . '</h3></div>';
@@ -49,6 +53,7 @@ $pilihanBingkai = 'flex cursor-pointer items-start gap-3 rounded-lg border borde
         . '<ul class="mt-2 list-disc space-y-1 pl-5">'
         . '<li><b>Surat umum</b>: SATU surat (satu nomor) untuk semua perusahaan, persis contoh sekolah &mdash; difotokopi untuk tiap tempat PKL.</li>'
         . '<li><b>Per perusahaan</b>: satu surat untuk tiap perusahaan yang dicentang, memuat nama perusahaan dan daftar siswanya, masing-masing bernomor sendiri. Perusahaan yang periode PKL-nya sudah tercatat tetapi tidak menjangkau tanggal kegiatan diberi tanda.</li>'
+        . ($asts ? '' : '<li><b>TKA: satu siswa = satu gelombang.</b> Setelah perusahaan dicentang, centang <b>siswa yang ikut gelombang ini</b>. Siswa yang sudah tercantum di surat TKA lain tidak bisa dicentang &mdash; bila gelombangnya salah, buka surat itu lalu pakai tombol <b>Pindah</b>.</li>')
         . '<li>Kegiatan, tanggal, dan cakupan yang sama <b>tidak bisa dibuat dua kali</b> (kecuali suratnya sudah dibatalkan).</li>'
         . '<li>' . ($perluAcc ? 'Surat menunggu <b>ACC</b> (' . esc($pemegangAcc ?? 'peran yang berhak') . ', diatur Admin di Sistem → Hak Akses). Setelah disetujui, surat diunduh dalam bentuk Word.' . (! empty($bisaLangsungAcc) ? ' Anda juga memegang hak ACC jenis ini, jadi bisa langsung memakai tombol <b>Simpan &amp; setujui</b>.' : '') : 'Jenis ini saat ini <b>tanpa ACC</b>: surat langsung siap diunduh.') . '</li>'
         . '</ul>',
@@ -175,7 +180,11 @@ $pilihanBingkai = 'flex cursor-pointer items-start gap-3 rounded-lg border borde
                             <button type="button" class="btn btn-teks" @click="dipilih = []"><?= ikon('close', 'h-4 w-4') ?>Kosongkan</button>
                         </div>
                         <p class="text-sm text-gray-500 dark:text-gray-400"><b class="text-gray-900 dark:text-white" x-text="dipilih.length"></b> dari <?= count($perusahaan) ?> perusahaan dipilih.</p>
-                        <ul class="max-h-96 divide-y divide-gray-200 overflow-y-auto rounded-lg border border-gray-200 dark:divide-gray-700 dark:border-gray-700">
+                        <?php if (! $asts): ?>
+                            <input type="hidden" name="siswa_form" value="1">
+                            <p class="hint">Setelah perusahaan dicentang, centang siswa yang ikut <b>gelombang ini</b>. Siswa yang sudah punya surat TKA tidak bisa dicentang (pindahkan lewat tombol Pindah di surat itu).</p>
+                        <?php endif; ?>
+                        <ul class="max-h-[32rem] divide-y divide-gray-200 overflow-y-auto rounded-lg border border-gray-200 dark:divide-gray-700 dark:border-gray-700">
                             <template x-for="p in perusahaan" :key="p.kunci">
                                 <li x-show="tampil(p)">
                                     <label class="flex cursor-pointer items-start gap-3 px-4 py-3 transition-colors hover:bg-gray-50 dark:hover:bg-gray-700/60">
@@ -184,8 +193,30 @@ $pilihanBingkai = 'flex cursor-pointer items-start gap-3 rounded-lg border borde
                                             <span class="block text-sm font-semibold text-gray-900 dark:text-white" x-text="p.nama"></span>
                                             <span class="block text-xs text-gray-500 dark:text-gray-400"><span x-text="p.jml"></span> siswa<span x-show="p.kota" x-text="' · ' + p.kota"></span> — <span x-text="p.siswa"></span></span>
                                             <span x-show="luarPeriode(p)" class="lencana lencana-kuning mt-1">PKL <span x-text="p.mulai + ' s.d. ' + p.selesai"></span> — di luar tanggal kegiatan</span>
+                                            <span x-show="adaSudah(p)" class="lencana lencana-abu mt-1"><span x-text="p.sudah"></span> siswa sudah punya surat TKA</span>
                                         </span>
                                     </label>
+                                    <?php if (! $asts): ?>
+                                        <template x-if="terpilih(p)">
+                                            <div class="border-t border-gray-100 bg-gray-50 px-4 py-2 pl-11 dark:border-gray-700 dark:bg-gray-800">
+                                                <p class="mb-1 text-xs font-semibold text-gray-600 dark:text-gray-300">Siswa yang ikut gelombang ini:</p>
+                                                <ul class="space-y-1">
+                                                    <template x-for="s in p.daftar" :key="s.id">
+                                                        <li>
+                                                            <label class="flex items-start gap-2 text-sm">
+                                                                <input type="checkbox" :name="namaSiswa(p)" :value="s.id" :checked="bebas(s)" :disabled="terkunci(s)" class="cek mt-0.5">
+                                                                <span class="min-w-0">
+                                                                    <span class="text-gray-900 dark:text-white" x-text="s.nama"></span>
+                                                                    <span class="text-xs text-gray-500 dark:text-gray-400" x-text="s.kelas"></span>
+                                                                    <span x-show="terkunci(s)" class="lencana lencana-kuning ml-1" x-text="teksTempat(s)"></span>
+                                                                </span>
+                                                            </label>
+                                                        </li>
+                                                    </template>
+                                                </ul>
+                                            </div>
+                                        </template>
+                                    <?php endif; ?>
                                 </li>
                             </template>
                         </ul>

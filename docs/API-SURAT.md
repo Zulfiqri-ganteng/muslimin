@@ -130,6 +130,40 @@ masuk NISN atau tanggal lahir). Surat dari siswa masuk Daftar Surat seperti bias
   Balasan = templat Pengaturan PKL; jenis lain = kalimat bawaan dengan nama surat ("Surat Izin ASAS", "Surat Izin TKA", …;
   Pernyataan + pengingat materai).
 
+### Pembaruan 2026-10-26 — Surat Izin TKA: gelombang PER SISWA (hanya menambah; aplikasi lama tetap jalan)
+Kasus klien: teman satu tempat PKL ternyata beda gelombang TKA, tetapi surat dulu otomatis memuat semua siswa perusahaan di satu
+gelombang. Aturan baru: **satu siswa = satu gelombang**; surat per perusahaan per gelombang hanya memuat siswa gelombang itu. Rancangan:
+`docs/DESAIN-SURAT-SEKOLAH.md` bagian 11. Contoh respons: repo Flutter `test/fixtures/surat/{form_tka, buat_tka_perusahaan,
+daftar_tka_ganda, detail_tka_pindah, pindah_siswa, galat_422_pindah, galat_403_pindah}.json` (dibuat oleh
+`UJI_FIXTURE=<folder> php spark dev:uji-surat`).
+- `GET surat?q=` kini juga mencari **nama siswa** yang tercantum di surat (selain nomor, judul, perusahaan).
+- `GET surat?ganda=1` — hanya Surat Izin TKA aktif yang memuat siswa yang juga tercantum di surat TKA lain. `meta.tka_ganda` (selalu
+  ada, `[]` bila bersih) = `[{siswa_id, nama, kelas, surat: [{id, kode, label, status, status_teks, perusahaan}]}]` → kotak peringatan
+  "N siswa tercantum di lebih dari satu Surat Izin TKA".
+- `GET surat/form/tka` — `perusahaan[].jml_bebas` (siswa yang belum punya surat TKA) dan `perusahaan[].siswa[].tka` = surat TKA yang
+  sudah memuatnya `{surat_id, kode, label, status_teks}` atau `null`. Siswa dengan `tka` ≠ null **tidak bisa dimasukkan** (pindahkan
+  lewat `pindah-siswa` di surat itu). Jenis `asts` tidak berubah.
+- `POST surat/tka` (cakupan `perusahaan`) — kirim **`siswa`: `{"<kunci perusahaan>": [siswa_id, …]}`** = siswa yang ikut gelombang ini
+  per perusahaan (perusahaan tanpa daftar = tidak ada siswa). **Tanpa `siswa`** (aplikasi lama) = semua siswa perusahaan yang belum
+  punya surat TKA. Surat gelombang itu untuk perusahaan yang sama dan masih menunggu ACC → siswa DITAMBAHKAN ke surat itu (`data.ditambah`
+  = `[{id, kode}]`); sudah disetujui / belum ada → surat baru (`data.dibuat`). `data.sama` = catatan per perusahaan (siswa yang sudah
+  punya surat TKA, atau tidak ada yang dicentang). Tak ada yang dibuat/ditambah → 409.
+- `GET surat/{id}` (Surat Izin TKA per perusahaan yang belum dibatalkan) — tiap `siswa[]` + **`tka_lain`** `[{surat_id, kode, label,
+  status_teks}]` (surat TKA LAIN yang juga memuat siswa itu = data ganda). **`pindah_tka`**: `null` untuk surat lain, atau
+  `{boleh, tujuan: [{jadwal_id, label, hari_tanggal, keadaan}]}` — `boleh` = pemegang hak ACC Izin TKA; `tujuan` = jadwal TKA yang
+  belum lewat selain gelombang surat ini (urut tanggal; `[]` bila tidak boleh).
+- **`POST surat/{id}/pindah-siswa`** `{siswa_id, tujuan: jadwal_id | "keluar", catatan?}` (hak ACC Izin TKA) → 200
+  `{tujuan_id, tujuan_kode}` (null bila "keluar"); `message` menyebut surat yang perlu **diunduh ulang** (nomor tetap). Pindah = siswa
+  keluar dari surat ini lalu masuk surat perusahaan yang sama untuk gelombang tujuan (yang masih menunggu dulu, lalu yang sudah
+  disetujui; belum ada → surat baru, langsung di-ACC bila surat asal sudah disetujui). "keluar" = keluarkan saja (data ganda). Surat
+  yang jadi kosong dibatalkan (nomor tetap tercatat). Galat: 403 tanpa hak · 404 surat tak ada · 422 `errors.siswa_id|tujuan` ·
+  409 surat baru saja berubah.
+- `GET surat/{id}` `peminta[].diisikan_oleh` = nama teman yang mengisikan gelombang siswa itu (`""` = diminta sendiri). Riwayat: aksi
+  baru **`pindah`** ("Siswa pindah gelombang", ikut `meta.aksi_riwayat`). `jml_minta` ikut menghitung siswa yang diisikan temannya.
+- Web publik `layanan/surat/izin_tka` (dibuka di peramban dalam aplikasi — tanpa API): siswa memilih gelombangnya sendiri + boleh
+  mengisi gelombang teman satu tempat PKL; halaman status menampilkan "diisikan oleh temanmu" dan surat yang memuat namanya.
+- Uji: `dev:uji-surat` 402 (TKA siswa, Pindah, form staf, ganda, API), `dev:uji-hak` 69, `dev:uji-api-android` 19.
+
 ## Galat
 - **422 isian** (buat/ubah): `data.errors.galat` = LIST kalimat dari library (`periksa()`); `message` = kalimat pertama.
 - **422 keputusan**: `data.errors.{catatan|bahaya|ids}` (`wakil` tidak dipakai lagi sejak 2026-10-13).

@@ -239,6 +239,7 @@ $routes->group('admin', static function ($routes) {
         $routes->post('surat/(:num)/batal-acc', 'Admin\Surat::batalAcc/$1', ['filter' => 'csrf']);
         $routes->post('surat/(:num)/ajukan-ulang', 'Admin\Surat::ajukanUlang/$1', ['filter' => 'csrf']);
         $routes->post('surat/(:num)/batal', 'Admin\Surat::batal/$1', ['filter' => 'csrf']);
+        $routes->post('surat/(:num)/pindah-siswa', 'Admin\Surat::pindahSiswa/$1', ['filter' => 'csrf']); // Izin TKA: pindah gelombang
         $routes->post('surat/(:num)/unduh', 'Admin\Surat::unduh/$1', ['filter' => 'csrf']);
 
         // ===== Kelola Akun Staf (khusus peran admin — dijaga Config\Peran) =====
@@ -1258,6 +1259,7 @@ $routes->group('api/v1', ['namespace' => 'App\Controllers\Api', 'filter' => 'cor
         $routes->post('surat/(:num)/batal', 'Surat::batal/$1');
         $routes->post('surat/(:num)/unduh', 'Surat::unduh/$1');
         $routes->post('surat/(:num)/ubah', 'Surat::ubah/$1');
+        $routes->post('surat/(:num)/pindah-siswa', 'Surat::pindahSiswa/$1'); // Izin TKA: pindah gelombang (hak ACC Izin TKA)
         $routes->post('surat/(:segment)', 'Surat::buat/$1'); // asts | tka | pernyataan-ortu | balasan | penarikan
 
         // ---------- KETERLAMBATAN SISWA (Guru Piket, Admin) — docs/API-KETERLAMBATAN.md ----------

@@ -154,7 +154,9 @@ final class SuratAcara
      *
      * @param array<string, mixed> $in
      *
-     * @return array{ok: bool, galat: list<string>, tanggal_surat: string, isi: array<string, mixed>, mode: string, pilihan: list<string>}
+     * siswa_pilih (hanya TKA per perusahaan): kunci perusahaan => siswa yang dicentang, atau null bila tidak dikirim (aplikasi lama).
+     *
+     * @return array{ok: bool, galat: list<string>, tanggal_surat: string, isi: array<string, mixed>, mode: string, pilihan: list<string>, siswa_pilih: array<string, list<int>>|null}
      */
     public static function periksa(string $jenis, array $in, ?string $modeTetap = null): array
     {
@@ -223,7 +225,8 @@ final class SuratAcara
             $isi = ['kegiatan' => 'TKA', 'sesi' => $sesi] + $isi;
         }
 
-        $pilihan = [];
+        $pilihan    = [];
+        $siswaPilih = null;
         if ($mode === 'perusahaan' && $modeTetap === null) {
             $pilihan = array_values(array_unique(array_filter(array_map('strval', (array) ($in['perusahaan'] ?? [])), static fn (string $k) => preg_match('~^[mn]:[\p{L}\p{N} _.\-]{1,160}$~u', $k) === 1)));
             if ($pilihan === []) {
@@ -231,9 +234,19 @@ final class SuratAcara
             } elseif (count($pilihan) > self::MAKS_PERUSAHAAN) {
                 $galat[] = 'Terlalu banyak perusahaan sekaligus (maksimal ' . self::MAKS_PERUSAHAAN . ').';
             }
+            // TKA (gelombang per siswa, 2026-10-26): siswa yang dicentang per perusahaan, `siswa[kunci] = [siswa_id…]`. Formulir web
+            // selalu mengirim `siswa_form` (perusahaan tanpa centang = tidak ada siswa); tanpa keduanya (aplikasi lama) = null →
+            // semua siswa perusahaan yang belum tercantum di surat TKA lain.
+            if ($jenis === SuratJenis::TKA && (! empty($in['siswa_form']) || is_array($in['siswa'] ?? null))) {
+                $siswaPilih = [];
+                foreach ($pilihan as $k) {
+                    $ids              = $in['siswa'][$k] ?? [];
+                    $siswaPilih[$k]   = array_values(array_unique(array_filter(array_map('intval', is_array($ids) ? $ids : []), static fn (int $i): bool => $i > 0)));
+                }
+            }
         }
 
-        return ['ok' => $galat === [], 'galat' => $galat, 'tanggal_surat' => (string) $surat, 'isi' => $isi, 'mode' => $mode, 'pilihan' => $pilihan];
+        return ['ok' => $galat === [], 'galat' => $galat, 'tanggal_surat' => (string) $surat, 'isi' => $isi, 'mode' => $mode, 'pilihan' => $pilihan, 'siswa_pilih' => $siswaPilih];
     }
 
     /** Sidik pencegah surat ganda: kegiatan + semester/tahun + sesi + tanggal + cakupan (+ perusahaan). */
@@ -331,7 +344,7 @@ final class SuratAcara
      * tercatat, `luar_periode` = true bila periodenya tidak menjangkau tanggal kegiatan (periode kosong = tidak diketahui).
      * $jenis memberi saringan tingkat kelas (self::TINGKAT): TKA = hanya siswa yang SEKARANG kelas XII.
      *
-     * @return list<array{kunci: string, nama: string, alamat: string, kota: string, ajuan_ids: list<int>, siswa: list<array{siswa_id: int, kelas_id: ?int, hp: ?string, nama: string, kelas: string}>, mulai: ?string, selesai: ?string, luar_periode: bool}>
+     * @return list<array{kunci: string, nama: string, alamat: string, kota: string, ajuan_ids: list<int>, siswa: list<array{siswa_id: int, kelas_id: ?int, hp: ?string, nama: string, kelas: string, ajuan_id: int}>, mulai: ?string, selesai: ?string, luar_periode: bool}>
      */
     public function perusahaan(?string $mulai = null, ?string $selesai = null, ?string $jenis = null): array
     {
@@ -374,7 +387,7 @@ final class SuratAcara
                 $ada = $ada || $x['siswa_id'] === (int) $r['siswa_id'];
             }
             if (! $ada) {
-                $g['siswa'][] = ['siswa_id' => (int) $r['siswa_id'], 'kelas_id' => ((int) $r['kelas_id']) ?: null, 'hp' => trim((string) ($r['hp'] ?? '')) !== '' ? (string) $r['hp'] : null, 'nama' => (string) $r['siswa_nama'], 'kelas' => (string) ($r['nama_kelas'] ?? '')];
+                $g['siswa'][] = ['siswa_id' => (int) $r['siswa_id'], 'kelas_id' => ((int) $r['kelas_id']) ?: null, 'hp' => trim((string) ($r['hp'] ?? '')) !== '' ? (string) $r['hp'] : null, 'nama' => (string) $r['siswa_nama'], 'kelas' => (string) ($r['nama_kelas'] ?? ''), 'ajuan_id' => (int) $r['ajuan_id']];
             }
             unset($g);
         }
@@ -394,6 +407,32 @@ final class SuratAcara
         }
 
         return $out;
+    }
+
+    /**
+     * perusahaan() untuk Surat Izin TKA + penempatan gelombang tiap siswa (formulir staf web & API, 2026-10-26): siswa[].tka =
+     * surat TKA (belum dibatalkan) yang sudah memuat namanya {surat_id, kode, label, status_teks} atau null; jml_bebas = siswa yang
+     * belum tercantum di surat TKA mana pun (hanya mereka yang bisa dimasukkan; yang lain dipindah lewat tombol "Pindah").
+     *
+     * @return list<array<string, mixed>>
+     */
+    public function perusahaanTka(?string $mulai = null, ?string $selesai = null): array
+    {
+        $grup   = $this->perusahaan($mulai, $selesai, SuratJenis::TKA);
+        $tempat = (new LayananSiswa($this->db))->penempatanTka(array_merge([], ...array_map(static fn (array $g): array => array_column($g['siswa'], 'siswa_id'), $grup)));
+        foreach ($grup as &$g) {
+            $bebas = 0;
+            foreach ($g['siswa'] as &$x) {
+                $t       = $tempat[$x['siswa_id']][0] ?? null;
+                $x['tka'] = $t === null ? null : ['surat_id' => $t['surat_id'], 'kode' => $t['kode'], 'label' => $t['label'], 'status_teks' => $t['status_teks']];
+                $bebas  += $t === null ? 1 : 0;
+            }
+            unset($x);
+            $g['jml_bebas'] = $bebas;
+        }
+        unset($g);
+
+        return $grup;
     }
 
     /**
@@ -472,21 +511,25 @@ final class SuratAcara
 
     /**
      * Buat surat dari masukan yang SUDAH lolos periksa(). Cakupan umum → 1 surat; cakupan perusahaan → 1 surat per perusahaan
-     * terpilih (yang kembar dilewati dan dilaporkan).
+     * terpilih (yang kembar dilewati dan dilaporkan). Surat Izin TKA per perusahaan memakai aturan gelombang per siswa →
+     * buatTkaPerusahaan() (`ditambah` = surat gelombang itu yang sudah ada dan ditambah siswanya).
      *
-     * @param array{tanggal_surat: string, isi: array<string, mixed>, mode: string, pilihan: list<string>} $h hasil periksa()
+     * @param array{tanggal_surat: string, isi: array<string, mixed>, mode: string, pilihan: list<string>, siswa_pilih?: array<string, list<int>>|null} $h hasil periksa()
      * @param array<string, mixed> $konteks
      *
-     * @return array{ok: bool, dibuat: list<int>, sama: list<string>, gagal: list<string>, pesan: string}
+     * @return array{ok: bool, dibuat: list<int>, ditambah: list<int>, sama: list<string>, gagal: list<string>, pesan: string}
      */
     public function buat(string $jenis, array $h, array $konteks, ?array $p = null): array
     {
-        $svc    = new SuratSekolah($this->db);
-        $dibuat = [];
-        $sama   = [];
-        $gagal  = [];
+        $svc      = new SuratSekolah($this->db);
+        $dibuat   = [];
+        $ditambah = [];
+        $sama     = [];
+        $gagal    = [];
 
-        if ($h['mode'] === 'umum') {
+        if ($h['mode'] === 'perusahaan' && $jenis === SuratJenis::TKA) {
+            [$dibuat, $ditambah, $sama, $gagal] = $this->buatTkaPerusahaan($h, $konteks, $p);
+        } elseif ($h['mode'] === 'umum') {
             $isi = $h['isi'] + ['kunci' => self::kunci($jenis, $h['isi'])];
             if (($ada = $this->adaSama($isi['kunci'])) !== null) {
                 $sama[] = 'Surat umum ini sudah ada (' . SuratSekolahModel::kode($ada['id']) . ($ada['nomor'] ? ', nomor ' . $ada['nomor'] : '') . ').';
@@ -531,14 +574,111 @@ final class SuratAcara
         if ($dibuat !== []) {
             $pesan[] = count($dibuat) . ' surat dibuat.';
         }
+        if ($ditambah !== []) {
+            $pesan[] = count($ditambah) . ' surat yang sudah ada ditambah siswanya.';
+        }
         if ($sama !== []) {
-            $pesan[] = count($sama) . ' dilewati karena sudah ada.';
+            $pesan[] = count($sama) . ($jenis === SuratJenis::TKA && $h['mode'] === 'perusahaan' ? ' catatan (lihat di bawah).' : ' dilewati karena sudah ada.');
         }
         if ($gagal !== []) {
             $pesan[] = count($gagal) . ' gagal.';
         }
 
-        return ['ok' => $dibuat !== [], 'dibuat' => $dibuat, 'sama' => $sama, 'gagal' => $gagal, 'pesan' => implode(' ', $pesan)];
+        return ['ok' => $dibuat !== [] || $ditambah !== [], 'dibuat' => $dibuat, 'ditambah' => $ditambah, 'sama' => $sama, 'gagal' => $gagal, 'pesan' => implode(' ', $pesan)];
+    }
+
+    /**
+     * Surat Izin TKA per perusahaan dari staf (gelombang PER SISWA, 2026-10-26; aturan sama dengan permintaan siswa
+     * LayananSiswa::ajukanTka): tiap perusahaan hanya memuat siswa yang DICENTANG (siswa_pilih; null = semua siswa perusahaan) dan
+     * BELUM tercantum di surat TKA lain — siswa yang sudah tercantum dilaporkan (pindahkan lewat tombol "Pindah" di surat itu).
+     * Surat perusahaan untuk gelombang ini yang masih bisa diubah → siswa ditambahkan; tidak ada / sudah disetujui → surat baru.
+     *
+     * @return array{0: list<int>, 1: list<int>, 2: list<string>, 3: list<string>} [dibuat, ditambah, catatan, gagal]
+     */
+    private function buatTkaPerusahaan(array $h, array $konteks, ?array $p): array
+    {
+        $svc    = new SuratSekolah($this->db);
+        $ls     = new LayananSiswa($this->db);
+        $j      = ['tgl_mulai' => (string) $h['isi']['tgl_mulai'], 'tgl_selesai' => (string) $h['isi']['tgl_selesai'], 'sesi' => (string) $h['isi']['sesi']];
+        $peta   = [];
+        foreach ($this->perusahaan($j['tgl_mulai'], $j['tgl_selesai'], SuratJenis::TKA) as $g) {
+            $peta[$g['kunci']] = $g;
+        }
+        $dibuat = $ditambah = $catatan = $gagal = [];
+        foreach ($h['pilihan'] as $kunci) {
+            $g = $peta[$kunci] ?? null;
+            if ($g === null) {
+                $gagal[] = 'Perusahaan pilihan tidak ditemukan lagi (mungkin persetujuannya dibatalkan).';
+
+                continue;
+            }
+            $anggota = array_column($g['siswa'], null, 'siswa_id');
+            $pilih   = ($h['siswa_pilih'] ?? null) === null ? array_keys($anggota) : array_values(array_intersect(array_keys($anggota), $h['siswa_pilih'][$kunci] ?? []));
+            $tempat  = $ls->penempatanTka($pilih);
+            $sudah   = [];
+            $bebas   = [];
+            foreach ($pilih as $sid) {
+                if (! empty($tempat[$sid])) {
+                    $sudah[] = $anggota[$sid]['nama'] . ' (' . $tempat[$sid][0]['label'] . ', ' . $tempat[$sid][0]['kode'] . ')';
+                } else {
+                    $bebas[] = $sid;
+                }
+            }
+            if ($sudah !== []) {
+                $catatan[] = $g['nama'] . ' — sudah punya surat TKA, tidak dimasukkan lagi: ' . implode(', ', $sudah) . '. Bila gelombangnya salah, pakai tombol "Pindah" di surat itu.';
+            }
+            if ($bebas === []) {
+                if ($sudah === []) {
+                    $catatan[] = $g['nama'] . ' — tidak ada siswa yang dicentang.';
+                }
+
+                continue;
+            }
+            $rows   = array_map(static fn (int $sid): array => ['siswa_id' => $sid, 'kelas_id' => $anggota[$sid]['kelas_id'], 'hp' => $anggota[$sid]['hp']], $bebas);
+            $target = null;
+            foreach ($ls->suratGelombang($kunci, $j) as $d) {
+                $target ??= $d['bisa_ubah'] ? $d['id'] : null;
+            }
+            if ($target !== null) {
+                $m    = $svc->muat($target);
+                $baru = array_merge(array_map(static fn (array $x): array => ['siswa_id' => (int) $x['siswa_id'], 'kelas_id' => $x['kelas_id'] ?? null, 'hp' => $x['hp'] ?? null], $m['siswa']), $rows);
+                $u    = $svc->ubah($target, ['judul' => self::judul(SuratJenis::TKA, $m['surat']['isi_arr'], (string) $m['surat']['perusahaan_nama'], count($baru)),
+                    'tanggal_surat' => (string) $m['surat']['tanggal_surat'], 'isi' => $m['surat']['isi_arr'], 'siswa' => $baru], $konteks);
+                if (! $u['ok']) {
+                    $gagal[] = $g['nama'] . ' — ' . (string) ($u['pesan'] ?? 'gagal disimpan.');
+
+                    continue;
+                }
+                $svc->catat($target, 'minta', $konteks, 'Ditambahkan staf: ' . implode(', ', array_map(static fn (int $sid): string => $anggota[$sid]['nama'], $bebas)));
+                $ditambah[] = $target;
+                $catatan[]  = $g['nama'] . ' — ' . count($bebas) . ' siswa ditambahkan ke ' . SuratSekolahModel::kode($target) . ' (surat gelombang ini sudah ada, masih menunggu ACC).';
+
+                continue;
+            }
+            $dasar = self::kunci(SuratJenis::TKA, $h['isi'], $kunci);
+            $sidik = $dasar;
+            for ($n = 1; $svc->adaKunci($sidik) !== null && $n <= 50; $n++) { // surat gelombang ini sudah disetujui → surat tambahan
+                $sidik = sha1($dasar . '|' . $n);
+            }
+            if ($svc->adaKunci($sidik) !== null) {
+                $gagal[] = $g['nama'] . ' — surat untuk gelombang ini sudah terlalu banyak.';
+
+                continue;
+            }
+            $ajuan = array_values(array_unique(array_map(static fn (int $sid): int => (int) ($anggota[$sid]['ajuan_id'] ?? 0), $bebas)));
+            $r     = $svc->buat(SuratJenis::TKA, [
+                'judul' => self::judul(SuratJenis::TKA, $h['isi'], $g['nama'], count($bebas)), 'tanggal_surat' => $h['tanggal_surat'],
+                'isi' => $h['isi'] + ['pkey' => $kunci, 'kunci' => $sidik], 'perusahaan_nama' => $g['nama'],
+                'pengajuan_id' => count($ajuan) === 1 && $ajuan[0] > 0 ? $ajuan[0] : null, 'siswa' => $rows,
+            ], $konteks, $p);
+            if ($r['ok']) {
+                $dibuat[] = (int) $r['id'];
+            } else {
+                $gagal[] = $g['nama'] . ' — ' . (string) ($r['pesan'] ?? 'gagal disimpan.');
+            }
+        }
+
+        return [$dibuat, $ditambah, $catatan, $gagal];
     }
 
     /**

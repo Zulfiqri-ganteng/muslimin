@@ -1,8 +1,8 @@
 <?php
 /**
- * LAYANAN SISWA — formulir Surat Izin Ujian / Surat Izin TKA (T3). Siswa memilih jadwal yang dibuka sekolah; surat ditujukan ke
- * perusahaan tempat PKL-nya dan memuat semua siswa PKL di perusahaan itu (TKA: kelas XII saja). Tanpa JavaScript: pilihan radio
- * + kirim (POST layanan/surat/{kunci}). Aturan: LayananSiswa::ajukanIzin.
+ * LAYANAN SISWA — formulir Surat Izin Ujian (T3). Siswa memilih jadwal yang dibuka sekolah; surat ditujukan ke perusahaan tempat
+ * PKL-nya dan memuat semua siswa PKL di perusahaan itu. Tanpa JavaScript: pilihan radio + kirim (POST layanan/surat/{kunci}).
+ * Aturan: LayananSiswa::ajukanIzin. Surat Izin TKA (gelombang per siswa) memakai layanan/surat_tka.php.
  *
  * @var array                                   $setting
  * @var string                                  $kunci  izin_ujian | izin_tka

@@ -209,3 +209,55 @@ diunduh" sudah menghitung surat dari siswa (Operator kini pemegang ACC).
 **T6 (2026-10-22) — API + kontrak Flutter:** `GET surat?asal=` + `jml_minta`/`diajukan_siswa` + `meta.permintaan_siswa`; detail +
 `peminta`/`ortu_isian`; `surat/jadwal` (GET/POST/ubah/buka/tutup/DELETE). docs/API-SURAT.md "Pembaruan 2026-10-22";
 `C:\flutter-muslimin\BLUEPRINT-SURAT.md` blok PEMBARUAN 2026-10-22 (S6–S8). Uji `dev:uji-surat` 373 (+6 T5, +4 API).
+
+## 11. Surat Izin TKA — gelombang PER SISWA (keluhan klien 2026-10-25)
+**Kejadian:** 4 siswa XII PKL di PT Inti Pantja Press Industri ternyata beda gelombang TKA (G1: Bilqis, Kayla · G2: Septiani, Devi),
+tetapi surat dari permintaan siswa otomatis memuat SEMUA siswa XII perusahaan itu di satu gelombang. Dump hosting 25-10: 15 siswa
+tercantum di surat G1 DAN G2 yang sudah dicetak; dari 98 nama di surat TKA aktif hanya 35 yang memilih sendiri. Data PT Inti Pantja
+dibetulkan lewat SQL (surat G1 baru + G2 dikurangi). Rencana: F1 sisi siswa · F2 alat operator pindah gelombang · F3 form staf pilih
+siswa per perusahaan · F4 peringatan siswa ganda · F5 API + kontrak Flutter; lalu SQL 15 siswa ganda dari data asli sekolah.
+
+**Pencarian Daftar Surat (2026-10-26):** kotak cari kini juga mencari NAMA SISWA yang tercantum di surat (`SuratSekolah::terapkan`,
+EXISTS surat_sekolah_siswa ⨝ siswa, LIKE aman) — dipakai web, Excel, dan API `surat?q=`.
+
+**F1 (2026-10-26) — sisi siswa:** aturan **satu siswa = satu gelombang**; surat per perusahaan per gelombang hanya memuat siswa
+gelombang itu (Izin Ujian/ASTS TIDAK berubah). Formulir baru `layanan/surat_tka.php` (tanpa JS): (1) gelombangmu, (2) gelombang tiap
+teman XII satu tempat PKL — bawaan "Biar dia pilih sendiri / Tetap seperti sekarang" (= tidak diubah), (3) tujuan surat.
+`LayananSiswa::ajukanTka` (satu transaksi; gagal → tidak ada yang berubah): teman yang **memilih sendiri** atau yang suratnya **sudah
+disetujui** tidak diubah (disebut di pesan); pindah gelombang = keluar dari surat lama yang masih bisa diubah (surat yang jadi kosong
+→ `SuratSekolah::batalOtomatis`, riwayat aksi baru `pindah`), siswa sendiri di surat yang sudah disetujui → ditolak "minta operator";
+surat gelombang itu masih bisa diubah → nama ditambahkan, sudah disetujui/tidak ada → surat BARU (kunci varian `sha1(kunci|n)`) untuk
+yang menyusul. Baris `surat_permintaan` satu per siswa per gelombang; teman yang diisikan: `isian = {diisikan_oleh, diisikan_nama}`.
+`penempatanTka()` = surat TKA aktif yang memuat nama siswa. Halaman status (`permintaan()`) menampilkan catatan "diisikan oleh temanmu"
+dan surat Izin Ujian/TKA yang memuat nama siswa tanpa permintaannya. Detail surat staf: peminta "· diisikan oleh X"
+(`peminta[].diisikan_oleh`). Uji: `dev:uji-surat` 381 (+7 kasus TKA, +1 cari nama, ASTS tetap), uji-hak 69, uji-api-android 19,
+uji-pkl 339; formulir dirender dengan data salinan hosting (Bilqis/Septiani terkunci benar, Riski ganda terdeteksi).
+
+**F2 (2026-10-26) — alat staf "Pindahkan siswa ke gelombang lain":** `Libraries\SuratTkaPindah` (dipakai web; API menyusul di F5).
+Detail Surat Izin TKA per perusahaan (belum dibatalkan): kolom "Gelombang TKA" — tanda **"Juga di TKA Gelombang … · SRT-…"** bila siswa
+tercantum di surat TKA lain (tampil untuk semua peran) + tombol **Pindah** (hanya pemegang hak ACC Izin TKA; rute
+`POST admin/surat/{id}/pindah-siswa` → `surat_acc:*`, jenis diperiksa controller). Dialog: pilih gelombang tujuan (jadwal TKA yang
+belum lewat, dibuka/ditutup sama saja) ATAU "Keluarkan saja dari surat ini" (untuk data ganda), catatan boleh kosong; tujuan kosong
+ditolak (tidak dianggap keluarkan). Aturan: surat tujuan perusahaan yang sama → yang masih menunggu dulu, lalu yang sudah disetujui
+(nama ditambahkan); belum ada → surat BARU, langsung di-ACC atas nama staf bila surat asal sudah disetujui. Surat yang sudah
+disetujui/bernomor BOLEH diubah lewat alat ini: nomor tetap, yang pernah diunduh bertanda "perlu cetak ulang"; surat yang jadi kosong
+dibatalkan (`batalOtomatis(..., termasukDisetujui: true)`, nomor tetap tercatat). `SuratSekolah::aturSiswa` hanya menghapus/menambah
+SATU baris (tanda WhatsApp siswa lain tetap, urut dirapikan). Permintaan siswa ikut pindah. Riwayat `pindah` di kedua surat + Audit Log.
+Uji: `dev:uji-surat` 389 (+8 F2), uji-hak 69 (rute baru masuk daftar "sengaja berbeda"), api-android 19, pkl 339; coba di salinan
+hosting: detail #44 menandai 5 siswa "Juga di Gelombang 2 · SRT-00032", Alisha dikeluarkan → #44 5 siswa, Word nomor tetap 202.
+
+**F3 (2026-10-26) — formulir staf Surat Izin TKA per perusahaan:** setelah perusahaan dicentang, muncul daftar siswanya dengan kotak
+centang (`siswa[kunci][]`, penanda `siswa_form`; Alpine `surat-izin.js`: terpilih/namaSiswa/bebas/terkunci). Siswa yang sudah punya
+surat TKA (`SuratAcara::perusahaanTka()` → `siswa[].tka`, `jml_bebas`) tidak tercentang & nonaktif. `SuratAcara::periksa` →
+`siswa_pilih` (null = aplikasi lama → semua siswa yang belum punya surat TKA). `SuratAcara::buatTkaPerusahaan`: siswa yang sudah punya
+surat TKA dilaporkan; surat perusahaan untuk gelombang itu yang masih bisa diubah → siswa ditambahkan (`ditambah`); tidak ada / sudah
+disetujui → surat baru (kunci varian). Formulir ASTS tidak berubah.
+**F4 (2026-10-26) — peringatan data ganda:** `SuratSekolah::tkaGanda()` (siswa di >1 Surat Izin TKA aktif + surat-suratnya) → kotak
+kuning di Daftar Surat (daftar siswa bertautan surat, cara membereskan) + saringan `?ganda=1` (`terapkan`: EXISTS siswa ganda).
+**F5 (2026-10-26) — API Android + kontrak Flutter:** `surat?ganda=1` + `meta.tka_ganda`; `surat/form/tka` → `siswa[].tka`, `jml_bebas`;
+`POST surat/tka` + `siswa {kunci: [id]}` → `data.ditambah`; `surat/{id}` → `siswa[].tka_lain`, `pindah_tka {boleh, tujuan}`;
+`POST surat/{id}/pindah-siswa`. docs/API-SURAT.md "Pembaruan 2026-10-26"; repo Flutter `BLUEPRINT-SURAT.md` blok PEMBARUAN 2026-10-26
+(S10–S12) + 7 fixture nyata (`UJI_FIXTURE=<folder> php spark dev:uji-surat`). Tujuan pindah diurutkan menurut tanggal.
+Uji akhir: `dev:uji-surat` 402, uji-hak 69, api-android 19, pkl 339, lapor 114, pkl-keluar 132, pkl-biaya 130, cek-ui 0; peramban
+(Chrome tanpa layar, salinan hosting): daftar siswa per perusahaan muncul/hilang benar, dialog Pindah terbuka, kotak "14 siswa" tampil,
+saringan ganda=1 = 8 surat.

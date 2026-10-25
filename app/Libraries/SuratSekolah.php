@@ -35,7 +35,7 @@ final class SuratSekolah
         'buat' => 'Surat dibuat', 'ubah' => 'Data surat diubah', 'ajukan_ulang' => 'Diajukan ulang untuk ACC', 'acc' => 'Disetujui (ACC)',
         'kembalikan' => 'Dikembalikan untuk diperbaiki', 'batal_acc' => 'Persetujuan dibatalkan', 'batal' => 'Surat dibatalkan',
         'nomor' => 'Nomor surat diterbitkan', 'cetak' => 'Berkas diunduh', 'kabari' => 'Siswa dikabari lewat WhatsApp',
-        'minta' => 'Diminta siswa (Layanan Siswa)',
+        'minta' => 'Diminta siswa (Layanan Siswa)', 'pindah' => 'Siswa pindah gelombang',
     ];
 
     /** Asal surat (kolom surat_sekolah.sumber, migrasi Layanan Siswa): staf = dibuat di panel admin, siswa = dari permintaan siswa. */
@@ -239,6 +239,72 @@ final class SuratSekolah
         (new AuditModel())->record('update', 'surat_sekolah', $id, SuratSekolahModel::kode($id) . ' diubah: ' . $judul . ' — oleh ' . mb_substr((string) ($konteks['oleh'] ?? 'tak dikenal'), 0, 60));
 
         return ['ok' => true];
+    }
+
+    /**
+     * Batalkan surat yang menjadi KOSONG karena semua siswanya pindah gelombang (Surat Izin TKA per gelombang 2026-10-25). Bawaan
+     * (permintaan siswa): hanya surat yang belum bernomor dan masih menunggu/dikembalikan. $termasukDisetujui (alat staf "Pindahkan
+     * siswa", pemegang hak ACC): juga surat yang sudah disetujui/bernomor — nomornya tetap tercatat, seperti pembatalan staf. Jejak
+     * sama dengan pembatalan staf (status + alasan, riwayat "batal", Audit Log). false = surat sudah berubah dan tidak dibatalkan.
+     *
+     * @param array<string, mixed> $konteks
+     */
+    public function batalOtomatis(int $id, string $catatan, array $konteks, bool $termasukDisetujui = false): bool
+    {
+        $catatan = mb_substr($catatan, 0, 255);
+        $b       = $this->db->table('surat_sekolah')->where('id', $id);
+        if ($termasukDisetujui) {
+            $b->where('status !=', 'dibatalkan');
+        } else {
+            $b->whereIn('status', ['menunggu', 'dikembalikan'])->groupStart()->where('nomor', null)->orWhere('nomor', '')->groupEnd();
+        }
+        $b->update(['status' => 'dibatalkan', 'catatan_staf' => $catatan, 'updated_at' => date('Y-m-d H:i:s')]);
+        if ($this->db->affectedRows() < 1) {
+            return false;
+        }
+        $this->catat($id, 'batal', $konteks, $catatan);
+        (new AuditModel())->record('update', 'surat_sekolah', $id, SuratSekolahModel::kode($id) . ' dibatalkan otomatis (' . mb_substr($catatan, 0, 80) . ') — oleh ' . mb_substr((string) ($konteks['oleh'] ?? 'Sistem'), 0, 60));
+
+        return true;
+    }
+
+    /**
+     * Keluarkan dan/atau tambahkan SATU siswa pada surat yang belum dibatalkan, apa pun statusnya (alat staf "Pindahkan siswa ke
+     * gelombang lain", Surat Izin TKA). Baris siswa lain tidak ditulis ulang (urutan & tanda "dikabari WhatsApp" tetap; urut dirapikan
+     * 1..n). Surat yang pernah diunduh otomatis bertanda "perlu cetak ulang" (sidik berubah), nomornya tetap. Riwayat dicatat pemanggil.
+     *
+     * @param array{siswa_id: int, kelas_id: ?int, hp: ?string}|null $tambah
+     */
+    public function aturSiswa(int $id, ?int $keluarkan, ?array $tambah, string $judul): bool
+    {
+        $this->db->transBegin();
+        try {
+            $s = $this->db->query('SELECT status FROM surat_sekolah WHERE id = ? FOR UPDATE', [$id])->getRowArray();
+            if ($s === null || $s['status'] === 'dibatalkan') {
+                $this->db->transRollback();
+
+                return false;
+            }
+            if ($keluarkan !== null) {
+                $this->db->table('surat_sekolah_siswa')->where('surat_id', $id)->where('siswa_id', $keluarkan)->delete();
+            }
+            if ($tambah !== null && $this->db->table('surat_sekolah_siswa')->where('surat_id', $id)->where('siswa_id', (int) $tambah['siswa_id'])->countAllResults() === 0) {
+                $this->db->table('surat_sekolah_siswa')->insert(['surat_id' => $id, 'siswa_id' => (int) $tambah['siswa_id'], 'kelas_id' => $tambah['kelas_id'] ?? null,
+                    'hp' => $tambah['hp'] ?? null, 'urut' => 9999, 'created_at' => date('Y-m-d H:i:s')]);
+            }
+            foreach ($this->db->table('surat_sekolah_siswa')->select('id')->where('surat_id', $id)->orderBy('urut', 'ASC')->orderBy('id', 'ASC')->get()->getResultArray() as $i => $r) {
+                $this->db->table('surat_sekolah_siswa')->where('id', (int) $r['id'])->update(['urut' => $i + 1]);
+            }
+            $this->db->table('surat_sekolah')->where('id', $id)->update(['judul' => mb_substr($judul, 0, 190), 'updated_at' => date('Y-m-d H:i:s')]);
+            $this->db->transCommit();
+        } catch (\Throwable $e) {
+            $this->db->transRollback();
+            log_message('error', '[Surat] aturSiswa #' . $id . ' gagal: ' . $e->getMessage());
+
+            return false;
+        }
+
+        return true;
     }
 
     // =================================================================
@@ -627,7 +693,16 @@ final class SuratSekolah
         }
         $q = trim((string) ($f['q'] ?? ''));
         if ($q !== '') {
-            $b->groupStart()->like('s.nomor', $q)->orLike('s.judul', $q)->orLike('s.perusahaan_nama', $q)->groupEnd();
+            // Juga nama siswa yang tercantum di surat (permintaan klien 2026-10-25: cari "Bilqis" → semua surat yang memuat namanya).
+            $cocokSiswa = 'EXISTS (SELECT 1 FROM ' . $this->db->prefixTable('surat_sekolah_siswa') . ' xs JOIN ' . $this->db->prefixTable('siswa')
+                . ' sw ON sw.id = xs.siswa_id WHERE xs.surat_id = s.id AND sw.nama LIKE '
+                . $this->db->escape('%' . $this->db->escapeLikeString($q) . '%') . " ESCAPE '" . $this->db->likeEscapeChar . "')";
+            $b->groupStart()->like('s.nomor', $q)->orLike('s.judul', $q)->orLike('s.perusahaan_nama', $q)->orWhere($cocokSiswa, null, false)->groupEnd();
+        }
+        // Data ganda TKA (F4, 2026-10-26): Surat Izin TKA aktif yang memuat siswa yang juga tercantum di surat TKA lain.
+        if (! empty($f['ganda'])) {
+            $b->where('s.jenis', SuratJenis::TKA)->where('s.status !=', 'dibatalkan')
+                ->where('EXISTS (SELECT 1 FROM ' . $this->db->prefixTable('surat_sekolah_siswa') . ' xg2 WHERE xg2.surat_id = s.id AND xg2.siswa_id IN (' . $this->subTkaGanda() . '))', null, false);
         }
         // Asal: 'siswa' = ada permintaan siswa (Layanan Siswa) yang tertaut ke surat ini; 'staf' = tidak ada.
         $asal = (string) ($f['asal'] ?? '');
@@ -636,6 +711,39 @@ final class SuratSekolah
         }
 
         return $b;
+    }
+
+    /** Subkueri: siswa yang tercantum di LEBIH DARI SATU Surat Izin TKA yang belum dibatalkan (satu siswa dua gelombang). */
+    private function subTkaGanda(): string
+    {
+        return 'SELECT xg.siswa_id FROM ' . $this->db->prefixTable('surat_sekolah_siswa') . ' xg JOIN ' . $this->db->prefixTable('surat_sekolah')
+            . " sg ON sg.id = xg.surat_id AND sg.jenis = 'izin_tka' AND sg.status <> 'dibatalkan' GROUP BY xg.siswa_id HAVING COUNT(DISTINCT xg.surat_id) > 1";
+    }
+
+    /**
+     * Peringatan Daftar Surat (F4): siswa yang tercantum di lebih dari satu Surat Izin TKA yang belum dibatalkan, beserta surat-suratnya
+     * — padahal satu siswa hanya ikut satu gelombang. Dibereskan dengan tombol "Pindah" → "Keluarkan saja" di surat yang salah.
+     *
+     * @return list<array{siswa_id: int, nama: string, kelas: string, surat: list<array{id: int, kode: string, label: string, status: string, status_teks: string, perusahaan: string}>}>
+     */
+    public function tkaGanda(): array
+    {
+        $rows = $this->db->query('SELECT x.siswa_id, sw.nama, k.nama_kelas, ss.id, ss.status, ss.isi, ss.perusahaan_nama FROM ' . $this->db->prefixTable('surat_sekolah_siswa') . ' x'
+            . ' JOIN ' . $this->db->prefixTable('surat_sekolah') . " ss ON ss.id = x.surat_id AND ss.jenis = 'izin_tka' AND ss.status <> 'dibatalkan'"
+            . ' JOIN ' . $this->db->prefixTable('siswa') . ' sw ON sw.id = x.siswa_id LEFT JOIN ' . $this->db->prefixTable('kelas') . ' k ON k.id = sw.kelas_id'
+            . ' WHERE x.siswa_id IN (' . $this->subTkaGanda() . ') ORDER BY sw.nama ASC, ss.id ASC')->getResultArray();
+        $out = [];
+        foreach ($rows as $r) {
+            $sid         = (int) $r['siswa_id'];
+            $out[$sid] ??= ['siswa_id' => $sid, 'nama' => (string) $r['nama'], 'kelas' => (string) ($r['nama_kelas'] ?? ''), 'surat' => []];
+            $out[$sid]['surat'][] = [
+                'id' => (int) $r['id'], 'kode' => SuratSekolahModel::kode((int) $r['id']), 'label' => SuratAcara::namaPendek(SuratJenis::TKA, self::dekodeIsi((string) ($r['isi'] ?? ''))),
+                'status' => (string) $r['status'], 'status_teks' => SuratSekolahModel::TAMPIL_STATUS[(string) $r['status']][0] ?? (string) $r['status'],
+                'perusahaan' => (string) ($r['perusahaan_nama'] ?? ''),
+            ];
+        }
+
+        return array_values($out);
     }
 
     /** Tabel surat_permintaan (Layanan Siswa) sudah ada. */
@@ -700,8 +808,10 @@ final class SuratSekolah
             return [];
         }
 
-        return array_map(static fn (array $r): array => ['nama' => (string) $r['nama'], 'kelas' => (string) ($r['nama_kelas'] ?? ''), 'waktu' => (string) $r['created_at']],
-            $this->db->table('surat_permintaan sp')->select('s.nama, k.nama_kelas, sp.created_at')
+        // diisikan_oleh: nama teman yang mengisikan gelombang TKA siswa ini (Layanan Siswa, 2026-10-25); '' = diminta sendiri.
+        return array_map(static fn (array $r): array => ['nama' => (string) $r['nama'], 'kelas' => (string) ($r['nama_kelas'] ?? ''), 'waktu' => (string) $r['created_at'],
+            'diisikan_oleh' => (string) (self::dekodeIsi((string) ($r['isian'] ?? ''))['diisikan_nama'] ?? '')],
+            $this->db->table('surat_permintaan sp')->select('s.nama, k.nama_kelas, sp.created_at, sp.isian')
                 ->join('siswa s', 's.id = sp.siswa_id')->join('kelas k', 'k.id = sp.kelas_id', 'left')
                 ->where('sp.surat_id', $suratId)->orderBy('sp.id', 'ASC')->get()->getResultArray());
     }

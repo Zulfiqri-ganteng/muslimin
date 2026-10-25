@@ -347,7 +347,8 @@ final class PklHak
         if ($sisa === '' || $sisa === 'excel' || preg_match('~^\d+$~', $sisa) === 1) {
             return null;
         }
-        if (preg_match('~^(acc-massal|\d+/(acc|batal-acc|kembalikan))$~', $sisa) === 1) {
+        // pindah-siswa: Surat Izin TKA pindah gelombang (mengubah surat yang sudah disetujui) = pemegang ACC; jenis persisnya di controller.
+        if (preg_match('~^(acc-massal|\d+/(acc|batal-acc|kembalikan|pindah-siswa))$~', $sisa) === 1) {
             return 'surat_acc:*';
         }
         if (preg_match('~^(unduh-massal|\d+/unduh)$~', $sisa) === 1) {

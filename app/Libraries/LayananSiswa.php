@@ -306,9 +306,9 @@ final class LayananSiswa
     }
 
     /**
-     * Siswa meminta Surat Izin Ujian / Izin TKA untuk jadwal $jadwalId. Satu surat per perusahaan per jadwal: bila surat untuk
-     * perusahaannya sudah ada (diminta teman atau dibuat operator), permintaan ditautkan ke surat itu — namanya ditambahkan bila
-     * suratnya masih bisa diubah. Surat baru masuk antrean ACC (sumber 'siswa').
+     * Siswa meminta Surat Izin Ujian untuk jadwal $jadwalId. Satu surat per perusahaan per jadwal: bila surat untuk perusahaannya
+     * sudah ada (diminta teman atau dibuat operator), permintaan ditautkan ke surat itu — namanya ditambahkan bila suratnya masih
+     * bisa diubah. Surat baru masuk antrean ACC (sumber 'siswa'). Surat Izin TKA memakai aturan gelombang per siswa → ajukanTka().
      *
      * kode: baru | ikut | sudah (sudah pernah minta) | tolak (tidak memenuhi syarat) | gagal
      *
@@ -316,6 +316,9 @@ final class LayananSiswa
      */
     public function ajukanIzin(int $siswaId, string $kunci, int $jadwalId, string $ip, ?array $p = null): array
     {
+        if ($kunci === 'izin_tka') {
+            return $this->ajukanTka($siswaId, ['jadwal_id' => $jadwalId], $ip, $p);
+        }
         if (! isset(self::SURAT[$kunci]) || ! in_array(self::SURAT[$kunci][3], SuratJadwal::JENIS, true)) {
             return ['ok' => false, 'kode' => 'tolak', 'pesan' => 'Jenis surat tidak dikenal.'];
         }
@@ -391,6 +394,357 @@ final class LayananSiswa
         return ['ok' => true, 'kode' => $kode, 'surat_id' => $suratId, 'pesan' => $kode === 'baru'
             ? 'Permintaan terkirim. ' . SuratJenis::label($jenis) . ' untuk ' . $g['nama'] . ' (' . SuratJadwal::label($j) . ') sedang menunggu ACC operator. Pantau statusnya di bawah.'
             : 'Permintaan terkirim. Surat untuk ' . $g['nama'] . ' (' . SuratJadwal::label($j) . ') sudah diajukan sebelumnya, dan namamu ' . (count($g['siswa']) > 1 ? 'ikut tercantum di surat itu' : 'tercantum') . '. Pantau statusnya di bawah.'];
+    }
+
+    // =================================================================
+    // Surat Izin TKA — gelombang PER SISWA (2026-10-25, kasus PT Inti Pantja: teman satu tempat PKL beda gelombang TKA)
+    // =================================================================
+
+    /**
+     * Penempatan gelombang TKA tiap siswa = surat Izin TKA (belum dibatalkan) yang memuat namanya. Aturan: SATU siswa = SATU
+     * gelombang; lebih dari satu = data lama sebelum aturan ini (dibereskan operator).
+     *   sendiri  = siswa itu sendiri yang memilih gelombang ini (bukan diisikan teman / dicantumkan otomatis / dibuat staf)
+     *   diisikan = nama teman yang mengisikan gelombang ini ('' bila tidak)
+     *
+     * @param list<int> $ids
+     *
+     * @return array<int, list<array{surat_id: int, kode: string, status: string, isi: array<string, mixed>, label: string, hari_tanggal: string, status_teks: string, bisa_ubah: bool, sendiri: bool, diisikan: string}>>
+     */
+    public function penempatanTka(array $ids): array
+    {
+        $ids = array_values(array_unique(array_filter(array_map('intval', $ids), static fn (int $i): bool => $i > 0)));
+        if ($ids === []) {
+            return [];
+        }
+        $rows = $this->db->table('surat_sekolah_siswa x')
+            ->select('x.siswa_id, ss.id, ss.status, ss.nomor, ss.perlu_acc, ss.cetak_ke, ss.isi')
+            ->join('surat_sekolah ss', 'ss.id = x.surat_id')
+            ->where('ss.jenis', SuratJenis::TKA)->where('ss.status !=', 'dibatalkan')->whereIn('x.siswa_id', $ids)
+            ->orderBy('ss.id', 'ASC')->get()->getResultArray();
+        $minta = []; // "siswa:surat" => isian permintaan terbaru
+        if ($rows !== [] && self::tabelAda()) {
+            foreach ($this->db->table('surat_permintaan')->select('siswa_id, surat_id, isian')->where('jenis', SuratJenis::TKA)->whereIn('siswa_id', $ids)
+                ->whereIn('surat_id', array_values(array_unique(array_map('intval', array_column($rows, 'id')))))->orderBy('id', 'ASC')->get()->getResultArray() as $r) {
+                $minta[(int) $r['siswa_id'] . ':' . (int) $r['surat_id']] = SuratSekolah::dekodeIsi((string) ($r['isian'] ?? ''));
+            }
+        }
+        $out = [];
+        foreach ($rows as $r) {
+            $isi = SuratSekolah::dekodeIsi((string) ($r['isi'] ?? ''));
+            $mi  = $minta[(int) $r['siswa_id'] . ':' . (int) $r['id']] ?? null;
+            $out[(int) $r['siswa_id']][] = [
+                'surat_id' => (int) $r['id'], 'kode' => \App\Models\SuratSekolahModel::kode((int) $r['id']), 'status' => (string) $r['status'], 'isi' => $isi,
+                'label' => SuratAcara::namaPendek(SuratJenis::TKA, $isi), 'hari_tanggal' => SuratAcara::hariTanggal((string) ($isi['tgl_mulai'] ?? ''), (string) ($isi['tgl_selesai'] ?? '')),
+                'status_teks' => self::status($r, SuratJenis::TKA)['status_teks'], 'bisa_ubah' => SuratSekolah::alasanTakBisaUbah($r) === null,
+                'sendiri' => $mi !== null && empty($mi['diisikan_oleh']), 'diisikan' => $mi !== null ? (string) ($mi['diisikan_nama'] ?? '') : '',
+            ];
+        }
+
+        return $out;
+    }
+
+    /** Surat (isian) ini untuk gelombang $j? Unsurnya sama dengan sidik SuratAcara::kunci: tanggal mulai, tanggal selesai, sesi. */
+    public static function cocokJadwal(array $isi, array $j): bool
+    {
+        return (string) ($isi['tgl_mulai'] ?? '') === (string) $j['tgl_mulai'] && (string) ($isi['tgl_selesai'] ?? '') === (string) $j['tgl_selesai']
+            && mb_strtolower(trim((string) ($isi['sesi'] ?? ''))) === mb_strtolower(trim((string) ($j['sesi'] ?? '')));
+    }
+
+    /**
+     * Surat Izin TKA per perusahaan (belum dibatalkan, termasuk buatan staf) untuk perusahaan $pkey pada gelombang $j, terlama dulu.
+     * Dipakai juga alat staf SuratTkaPindah.
+     *
+     * @return list<array{id: int, status: string, bisa_ubah: bool}>
+     */
+    public function suratGelombang(string $pkey, array $j): array
+    {
+        $out  = [];
+        $rows = $this->db->table('surat_sekolah')->select('id, status, nomor, isi')->where('jenis', SuratJenis::TKA)->where('status !=', 'dibatalkan')
+            ->like('isi', '"pkey":' . json_encode($pkey, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES))->orderBy('id', 'ASC')->get()->getResultArray();
+        foreach ($rows as $r) {
+            $isi = SuratSekolah::dekodeIsi((string) $r['isi']);
+            if (($isi['pkey'] ?? '') === $pkey && ($isi['mode'] ?? '') === 'perusahaan' && self::cocokJadwal($isi, $j)) {
+                $out[] = ['id' => (int) $r['id'], 'status' => (string) $r['status'], 'bisa_ubah' => SuratSekolah::alasanTakBisaUbah($r) === null];
+            }
+        }
+
+        return $out;
+    }
+
+    /**
+     * Data formulir Surat Izin TKA: gelombang yang dibuka (+ di luar periode PKL?), perusahaan, penempatan siswa ini sekarang, dan
+     * teman satu tempat PKL (kelas XII) beserta gelombangnya. Teman TERKUNCI bila sudah memilih sendiri atau suratnya sudah
+     * disetujui; siswa sendiri terkunci (tidak bisa pindah gelombang) bila suratnya sudah disetujui.
+     *
+     * @param array<string, mixed> $s         profil()
+     * @param array<string, mixed> $kelayakan kelayakan()
+     *
+     * @return array{jadwal: list<array<string, mixed>>, perusahaan: array{nama: string, alamat: string}|null, saya: array<string, mixed>, teman: list<array<string, mixed>>}
+     */
+    public function formTka(array $s, array $kelayakan): array
+    {
+        $sid    = (int) $s['id'];
+        $g      = $this->grupPerusahaan($sid, SuratJenis::TKA);
+        $jadwal = array_map(static fn (array $j): array => $j + ['luar_periode' => $g !== null && $g['mulai'] !== null && $g['selesai'] !== null
+            && ($g['selesai'] < $j['tgl_mulai'] || $g['mulai'] > $j['tgl_selesai'])], $kelayakan['izin_tka']['jadwal'] ?? []);
+        $tempat  = $this->penempatanTka($g === null ? [$sid] : array_column($g['siswa'], 'siswa_id'));
+        $ringkas = static function (array $ada) use ($jadwal): array {
+            $jid = 0; // gelombang (yang dibuka) tempat namanya tercantum sekarang
+            foreach ($ada as $t) {
+                foreach ($jadwal as $j) {
+                    $jid = self::cocokJadwal($t['isi'], $j) ? (int) $j['id'] : $jid;
+                }
+            }
+
+            return ['penempatan' => $ada, 'jadwal_id' => $jid, 'disetujui' => in_array(false, array_column($ada, 'bisa_ubah'), true),
+                'sendiri' => in_array(true, array_column($ada, 'sendiri'), true)];
+        };
+        $teman = [];
+        foreach ($g['siswa'] ?? [] as $x) {
+            if ($x['siswa_id'] !== $sid) {
+                $r       = $ringkas($tempat[$x['siswa_id']] ?? []);
+                $teman[] = ['id' => $x['siswa_id'], 'nama' => $x['nama'], 'kelas' => $x['kelas'], 'terkunci' => $r['sendiri'] || $r['disetujui']] + $r;
+            }
+        }
+        $saya = $ringkas($tempat[$sid] ?? []);
+
+        return [
+            'jadwal'     => $jadwal,
+            'perusahaan' => $g === null ? null : ['nama' => $g['nama'], 'alamat' => trim($g['alamat'] . ($g['kota'] !== '' && ! str_contains(mb_strtolower($g['alamat']), mb_strtolower($g['kota'])) ? ', ' . $g['kota'] : ''))],
+            'saya'       => $saya + ['terkunci' => $saya['disetujui']],
+            'teman'      => $teman,
+        ];
+    }
+
+    /**
+     * Siswa meminta Surat Izin TKA dengan gelombang PER SISWA:
+     *   - SATU siswa = SATU gelombang; surat per perusahaan per gelombang hanya memuat siswa gelombang itu.
+     *   - $in['jadwal_id'] = gelombang siswa ini (wajib); $in['teman'][siswa_id] = gelombang teman satu tempat PKL ('' = tidak diubah,
+     *     biar teman memilih sendiri). Teman yang memilih SENDIRI, atau yang suratnya sudah disetujui, tidak diubah (disebut di pesan).
+     *   - Pindah gelombang: nama dikeluarkan dari surat lama yang masih bisa diubah (surat yang jadi kosong dibatalkan otomatis);
+     *     surat lama siswa ini sudah disetujui → ditolak, minta operator.
+     *   - Surat perusahaan untuk gelombang itu masih bisa diubah → nama ditambahkan; tidak ada / sudah disetujui → surat BARU (menunggu
+     *     ACC) untuk nama yang menyusul.
+     * Semua perubahan dalam SATU transaksi: satu langkah gagal → tidak ada yang berubah.
+     *
+     * kode: baru | ikut | sudah | tolak | gagal
+     *
+     * @param array<string, mixed> $in
+     *
+     * @return array{ok: bool, kode: string, pesan: string, surat_id?: int}
+     */
+    public function ajukanTka(int $siswaId, array $in, string $ip, ?array $p = null): array
+    {
+        $p ??= (new PklPengaturanModel())->ambil();
+        $s   = $this->profil($siswaId);
+        if ($s === null) {
+            return ['ok' => false, 'kode' => 'tolak', 'pesan' => 'Data siswa tidak ditemukan. Masuk lagi.'];
+        }
+        $k = $this->kelayakan($s, $p)['izin_tka'];
+        if (! $k['boleh']) {
+            return ['ok' => false, 'kode' => 'tolak', 'pesan' => $k['alasan']];
+        }
+        $jadwal = [];
+        foreach ($k['jadwal'] as $j) {
+            $jadwal[(int) $j['id']] = $j;
+        }
+        $jSaya = $jadwal[is_scalar($in['jadwal_id'] ?? null) ? (int) $in['jadwal_id'] : 0] ?? null;
+        if ($jSaya === null) {
+            return ['ok' => false, 'kode' => 'tolak', 'pesan' => 'Pilih gelombang TKA-mu.'];
+        }
+        $g = $this->grupPerusahaan($siswaId, SuratJenis::TKA);
+        if ($g === null) {
+            return ['ok' => false, 'kode' => 'tolak', 'pesan' => 'Data PKL-mu belum lengkap untuk surat ini. Hubungi operator sekolah.'];
+        }
+        $anggota = [];
+        foreach ($g['siswa'] as $x) {
+            $anggota[$x['siswa_id']] = $x;
+        }
+
+        // Rencana: siswa => gelombang. Teman yang tidak diisi tidak diubah.
+        $rencana = [$siswaId => (int) $jSaya['id']];
+        $pilih   = is_array($in['teman'] ?? null) ? $in['teman'] : [];
+        foreach ($anggota as $id => $x) {
+            $v = is_scalar($pilih[$id] ?? null) ? trim((string) $pilih[$id]) : '';
+            if ($id === $siswaId || $v === '') {
+                continue;
+            }
+            if (! isset($jadwal[(int) $v])) {
+                return ['ok' => false, 'kode' => 'tolak', 'pesan' => 'Pilihan gelombang untuk ' . $x['nama'] . ' tidak dikenal. Muat ulang halaman.'];
+            }
+            $rencana[$id] = (int) $v;
+        }
+
+        $tempat = $this->penempatanTka(array_keys($rencana));
+        $keluar = []; // surat lama => siswa yang dikeluarkan
+        $masuk  = []; // gelombang => siswa yang ditambahkan ke surat gelombang itu
+        $proses = []; // siswa => [jadwal_id, ke (surat yang sudah memuatnya), dari (surat yang ditinggalkan)]
+        $lewati = []; // teman yang tidak diubah + alasannya
+        foreach ($rencana as $id => $jid) {
+            $ada  = $tempat[$id] ?? [];
+            $sama = array_values(array_filter($ada, static fn (array $t): bool => self::cocokJadwal($t['isi'], $jadwal[$jid])));
+            $lain = array_values(array_filter($ada, static fn (array $t): bool => ! self::cocokJadwal($t['isi'], $jadwal[$jid])));
+            if ($id === $siswaId) {
+                foreach ($lain as $t) {
+                    if (! $t['bisa_ubah']) {
+                        return ['ok' => false, 'kode' => 'tolak', 'pesan' => 'Namamu sudah tercantum di surat ' . $t['label'] . ' (' . $t['kode'] . ', ' . $t['status_teks']
+                            . '). Surat itu sudah disetujui sekolah, jadi gelombangmu tidak bisa diganti dari sini. Kalau gelombangmu salah, minta operator sekolah memindahkanmu.'];
+                    }
+                }
+            } else {
+                if ($sama !== [] && $lain === []) {
+                    continue; // sudah di gelombang itu
+                }
+                $sendiri = array_values(array_filter($ada, static fn (array $t): bool => $t['sendiri']));
+                $kunci   = array_values(array_filter($lain, static fn (array $t): bool => ! $t['bisa_ubah']));
+                if ($sendiri !== [] || $kunci !== []) {
+                    $lewati[] = $anggota[$id]['nama'] . ($sendiri !== [] ? ' sudah memilih sendiri (' . $sendiri[0]['label'] . ')' : ' sudah tercantum di surat ' . $kunci[0]['label'] . ' yang sudah disetujui');
+
+                    continue;
+                }
+            }
+            foreach ($lain as $t) {
+                $keluar[$t['surat_id']][] = $id;
+            }
+            if ($sama === []) {
+                $masuk[$jid][] = $id;
+            }
+            $proses[$id] = ['jadwal_id' => $jid, 'ke' => $sama[0]['surat_id'] ?? null, 'dari' => array_column($lain, 'surat_id')];
+        }
+        $catatLewati = $lewati === [] ? '' : ' Tidak diubah: ' . implode('; ', $lewati) . ' — kalau salah, minta operator sekolah.';
+        $sayaSama    = array_values(array_filter($tempat[$siswaId] ?? [], static fn (array $t): bool => self::cocokJadwal($t['isi'], $jSaya)));
+        if ($masuk === [] && $keluar === [] && in_array(true, array_column($sayaSama, 'sendiri'), true)) {
+            return ['ok' => true, 'kode' => 'sudah', 'surat_id' => $sayaSama[0]['surat_id'],
+                'pesan' => 'Kamu sudah meminta surat ' . $sayaSama[0]['label'] . ' (' . $sayaSama[0]['kode'] . ') sebelumnya.' . $catatLewati . ' Statusnya ada di bawah.'];
+        }
+
+        $konteks = ['oleh' => 'Siswa: ' . $s['nama'], 'admin_id' => null, 'peran' => null, 'ip' => $ip, 'saluran' => 'layanan'];
+        $svc     = new SuratSekolah($this->db);
+        $pengisi = $s['nama'] . ' (' . ($s['nama_kelas'] ?? '-') . ')';
+        $namaDari = static fn (array $ids): string => implode(', ', array_map(static fn (int $id): string => $anggota[$id]['nama'], $ids));
+        $baris   = static fn (array $rows): array => array_map(static fn (array $x): array => ['siswa_id' => (int) $x['siswa_id'], 'kelas_id' => $x['kelas_id'] ?? null, 'hp' => $x['hp'] ?? null], $rows);
+        $suratJadwal = []; // gelombang => surat tujuan
+        $baru        = false;
+        $this->db->transBegin();
+        try {
+            // 1) Keluarkan dari surat gelombang lain; surat yang jadi kosong dibatalkan.
+            foreach ($keluar as $suratId => $ids) {
+                $m = $svc->muat($suratId);
+                if ($m === null || SuratSekolah::alasanTakBisaUbah($m['surat']) !== null) {
+                    throw new \DomainException('Surat ' . \App\Models\SuratSekolahModel::kode($suratId) . ' baru saja diputuskan sekolah. Muat ulang halaman lalu coba lagi.');
+                }
+                $svc->catat($suratId, 'pindah', $konteks, 'Pindah gelombang (diisi ' . $pengisi . '): '
+                    . implode(', ', array_map(static fn (int $id): string => $anggota[$id]['nama'] . ' → ' . SuratJadwal::label($jadwal[$rencana[$id]]), $ids)));
+                $sisa = array_values(array_filter($m['siswa'], static fn (array $x): bool => ! in_array((int) $x['siswa_id'], $ids, true)));
+                if ($sisa === []) {
+                    if (! $svc->batalOtomatis($suratId, 'Semua siswa di surat ini pindah ke gelombang TKA lain.', $konteks)) {
+                        throw new \DomainException('Surat ' . \App\Models\SuratSekolahModel::kode($suratId) . ' baru saja diputuskan sekolah. Muat ulang halaman lalu coba lagi.');
+                    }
+                } else {
+                    $u = $svc->ubah($suratId, ['judul' => SuratAcara::judul(SuratJenis::TKA, $m['surat']['isi_arr'], (string) $m['surat']['perusahaan_nama'], count($sisa)),
+                        'tanggal_surat' => (string) $m['surat']['tanggal_surat'], 'isi' => $m['surat']['isi_arr'], 'siswa' => $baris($sisa)], $konteks);
+                    if (! $u['ok']) {
+                        throw new \RuntimeException('keluarkan dari ' . $suratId . ': ' . ($u['pesan'] ?? ''));
+                    }
+                }
+            }
+
+            // 2) Masukkan ke surat gelombang tujuan: surat yang masih bisa diubah → tambah nama; tidak ada / sudah disetujui → surat baru.
+            foreach ($masuk as $jid => $ids) {
+                $teman  = array_values(array_filter($ids, static fn (int $id): bool => $id !== $siswaId));
+                $target = null;
+                foreach ($this->suratGelombang($g['kunci'], $jadwal[$jid]) as $d) {
+                    $target ??= $d['bisa_ubah'] ? $d['id'] : null;
+                }
+                if ($target !== null) {
+                    $m = $svc->muat($target);
+                    if ($m === null || SuratSekolah::alasanTakBisaUbah($m['surat']) !== null) {
+                        throw new \DomainException('Surat ' . \App\Models\SuratSekolahModel::kode($target) . ' baru saja diputuskan sekolah. Muat ulang halaman lalu coba lagi.');
+                    }
+                    $rows  = $baris($m['siswa']);
+                    $punya = array_column($rows, 'siswa_id');
+                    foreach ($ids as $id) {
+                        if (! in_array($id, $punya, true)) {
+                            $rows[] = ['siswa_id' => $id, 'kelas_id' => $anggota[$id]['kelas_id'], 'hp' => $anggota[$id]['hp']];
+                        }
+                    }
+                    $u = $svc->ubah($target, ['judul' => SuratAcara::judul(SuratJenis::TKA, $m['surat']['isi_arr'], (string) $m['surat']['perusahaan_nama'], count($rows)),
+                        'tanggal_surat' => (string) $m['surat']['tanggal_surat'], 'isi' => $m['surat']['isi_arr'], 'siswa' => $rows], $konteks);
+                    if (! $u['ok']) {
+                        throw new \RuntimeException('tambah ke ' . $target . ': ' . ($u['pesan'] ?? ''));
+                    }
+                    $svc->catat($target, 'minta', $konteks, in_array($siswaId, $ids, true)
+                        ? 'Diminta juga oleh ' . $pengisi . ($teman !== [] ? '; ikut diisikan: ' . $namaDari($teman) : '')
+                        : 'Diisikan oleh ' . $pengisi . ' untuk temannya: ' . $namaDari($teman));
+                    $suratJadwal[$jid] = $target;
+                } else {
+                    $isi   = SuratJadwal::isiSurat($jadwal[$jid]);
+                    $dasar = SuratAcara::kunci(SuratJenis::TKA, $isi, $g['kunci']);
+                    $kunci = $dasar;
+                    for ($n = 1; $svc->adaKunci($kunci) !== null; $n++) { // surat pertama sudah disetujui → surat tambahan untuk nama yang menyusul
+                        if ($n > 50) {
+                            throw new \DomainException('Surat untuk gelombang ini sudah terlalu banyak. Hubungi operator sekolah.');
+                        }
+                        $kunci = sha1($dasar . '|' . $n);
+                    }
+                    $ajuan = array_values(array_unique(array_map(static fn (int $id): int => (int) $anggota[$id]['ajuan_id'], $ids)));
+                    $r     = $svc->buat(SuratJenis::TKA, [
+                        'judul' => SuratAcara::judul(SuratJenis::TKA, $isi, $g['nama'], count($ids)), 'tanggal_surat' => date('Y-m-d'),
+                        'isi' => $isi + ['pkey' => $g['kunci'], 'kunci' => $kunci, 'jadwal_id' => $jid],
+                        'perusahaan_nama' => $g['nama'], 'pengajuan_id' => count($ajuan) === 1 && $ajuan[0] > 0 ? $ajuan[0] : null,
+                        'siswa' => array_map(static fn (int $id): array => ['siswa_id' => $id, 'kelas_id' => $anggota[$id]['kelas_id'], 'hp' => $anggota[$id]['hp']], $ids),
+                        'sumber' => 'siswa',
+                    ], $konteks, $p);
+                    if (! $r['ok']) {
+                        throw new \RuntimeException('surat baru: ' . ($r['pesan'] ?? ''));
+                    }
+                    $suratJadwal[$jid] = (int) $r['id'];
+                    $baru              = true;
+                    if ($teman !== []) {
+                        $svc->catat((int) $r['id'], 'minta', $konteks, 'Diisikan oleh ' . $pengisi . ' untuk temannya: ' . $namaDari($teman));
+                    }
+                }
+            }
+
+            // 3) Catatan permintaan: satu baris per siswa untuk gelombang TKA-nya; baris lama ikut pindah ke surat tujuan.
+            foreach ($proses as $id => $x) {
+                $ke    = $x['ke'] ?? $suratJadwal[$x['jadwal_id']];
+                $isian = $id === $siswaId ? null : json_encode(['diisikan_oleh' => $siswaId, 'diisikan_nama' => (string) $s['nama']], JSON_UNESCAPED_UNICODE);
+                if ($x['dari'] !== []) {
+                    $this->db->table('surat_permintaan')->where('jenis', SuratJenis::TKA)->where('siswa_id', $id)->whereIn('surat_id', $x['dari'])
+                        ->update(['surat_id' => $ke, 'jadwal_id' => $x['jadwal_id']]);
+                }
+                $ada = array_map('intval', array_column($this->db->table('surat_permintaan')->select('id')->where('jenis', SuratJenis::TKA)
+                    ->where('siswa_id', $id)->where('surat_id', $ke)->orderBy('id', 'DESC')->get()->getResultArray(), 'id'));
+                if ($ada === []) {
+                    $this->db->table('surat_permintaan')->insert([
+                        'jenis' => SuratJenis::TKA, 'siswa_id' => $id, 'kelas_id' => $id === $siswaId ? (((int) ($s['kelas_id'] ?? 0)) ?: null) : $anggota[$id]['kelas_id'],
+                        'surat_id' => $ke, 'jadwal_id' => $x['jadwal_id'], 'pengajuan_id' => ((int) $anggota[$id]['ajuan_id']) ?: null,
+                        'isian' => $isian, 'ip_address' => $ip, 'created_at' => date('Y-m-d H:i:s'),
+                    ]);
+                } else {
+                    if (count($ada) > 1) { // baris lama yang ikut pindah → satu baris saja
+                        $this->db->table('surat_permintaan')->whereIn('id', array_slice($ada, 1))->delete();
+                    }
+                    $this->db->table('surat_permintaan')->where('id', $ada[0])->update(['jadwal_id' => $x['jadwal_id'], 'isian' => $isian]);
+                }
+            }
+            $this->db->transCommit();
+        } catch (\Throwable $e) {
+            $this->db->transRollback();
+            log_message('error', '[Layanan] ajukanTka siswa #' . $siswaId . ' gagal: ' . $e->getMessage());
+
+            return ['ok' => false, 'kode' => 'gagal', 'pesan' => $e instanceof \DomainException ? $e->getMessage() : 'Permintaan gagal disimpan. Tidak ada yang berubah — coba lagi sebentar.'];
+        }
+
+        $perGelombang = [];
+        foreach ($proses as $id => $x) {
+            $perGelombang[SuratJadwal::label($jadwal[$x['jadwal_id']])][] = $id === $siswaId ? 'kamu' : $anggota[$id]['nama'];
+        }
+        $ringkas = implode('; ', array_map(static fn (string $lbl, array $nama): string => $lbl . ': ' . implode(', ', $nama), array_keys($perGelombang), $perGelombang));
+
+        return ['ok' => true, 'kode' => $baru ? 'baru' : 'ikut', 'surat_id' => $proses[$siswaId]['ke'] ?? $suratJadwal[$rencana[$siswaId]] ?? 0,
+            'pesan' => 'Permintaan terkirim untuk ' . $g['nama'] . ' — ' . $ringkas . '. Satu surat untuk tiap gelombang, menunggu ACC operator.' . $catatLewati . ' Pantau statusnya di bawah.'];
     }
 
     // =================================================================
@@ -632,7 +986,9 @@ final class LayananSiswa
     }
 
     /**
-     * Permintaan surat siswa ini (terbaru dulu) + status yang dibaca dari suratnya.
+     * Permintaan surat siswa ini (terbaru dulu) + status yang dibaca dari suratnya. Ikut tampil: surat Izin Ujian / Izin TKA yang
+     * memuat namanya TANPA permintaan darinya (dicantumkan teman, atau dibuat sekolah). `catatan` = keterangan tambahan untuk siswa
+     * (gelombang TKA diisikan teman / namanya dicantumkan).
      *
      * @return list<array<string, mixed>>
      */
@@ -642,22 +998,45 @@ final class LayananSiswa
             return [];
         }
         $rows = $this->db->table('surat_permintaan sp')
-            ->select('sp.id, sp.jenis, sp.created_at, sp.surat_id, ss.status, ss.perlu_acc, ss.cetak_ke, ss.nomor, ss.judul, ss.perusahaan_nama, ss.catatan_staf, j.semester, j.tahun_pelajaran, j.sesi, j.kegiatan, j.jenis AS jadwal_jenis')
+            ->select('sp.id, sp.jenis, sp.created_at, sp.surat_id, sp.isian, ss.status, ss.perlu_acc, ss.cetak_ke, ss.nomor, ss.judul, ss.perusahaan_nama, ss.catatan_staf, j.semester, j.tahun_pelajaran, j.sesi, j.kegiatan, j.jenis AS jadwal_jenis')
             ->join('surat_sekolah ss', 'ss.id = sp.surat_id', 'left')
             ->join('surat_jadwal j', 'j.id = sp.jadwal_id', 'left')
             ->where('sp.siswa_id', $siswaId)->orderBy('sp.id', 'DESC')->get()->getResultArray();
 
-        return array_map(static function (array $r): array {
+        $out = array_map(static function (array $r): array {
             $judul = SuratJenis::label((string) $r['jenis']);
             if ($r['jadwal_jenis'] !== null) {
                 $judul .= ' — ' . SuratJadwal::label(['jenis' => $r['jadwal_jenis']] + $r);
             }
+            $pengisi = (string) (SuratSekolah::dekodeIsi((string) ($r['isian'] ?? ''))['diisikan_nama'] ?? '');
 
             return [
                 'id' => (int) $r['id'], 'jenis' => (string) $r['jenis'], 'judul' => $judul, 'dibuat' => (string) $r['created_at'],
                 'perusahaan' => (string) ($r['perusahaan_nama'] ?? ''), 'nomor' => (string) ($r['nomor'] ?? ''),
+                'catatan' => $pengisi !== '' ? 'Gelombang ini diisikan oleh temanmu, ' . $pengisi . '. Kalau salah, pilih gelombangmu sendiri di formulir Surat Izin TKA.' : '',
             ] + self::status($r['surat_id'] === null ? null : $r, (string) $r['jenis']);
         }, $rows);
+
+        // Surat Izin Ujian / TKA yang memuat namanya tanpa permintaan darinya.
+        $punya = array_values(array_filter(array_map('intval', array_column($rows, 'surat_id'))));
+        $b     = $this->db->table('surat_sekolah_siswa x')
+            ->select('ss.id AS surat_id, ss.jenis, ss.status, ss.perlu_acc, ss.cetak_ke, ss.nomor, ss.perusahaan_nama, ss.catatan_staf, ss.isi, ss.created_at' . (SuratSekolah::kolomSumber() ? ', ss.sumber' : ''))
+            ->join('surat_sekolah ss', 'ss.id = x.surat_id')
+            ->where('x.siswa_id', $siswaId)->whereIn('ss.jenis', [SuratJenis::ASTS, SuratJenis::TKA])->where('ss.status !=', 'dibatalkan');
+        if ($punya !== []) {
+            $b->whereNotIn('ss.id', $punya);
+        }
+        foreach ($b->get()->getResultArray() as $r) {
+            $out[] = [
+                'id' => 0, 'jenis' => (string) $r['jenis'], 'dibuat' => (string) $r['created_at'],
+                'judul' => SuratJenis::label((string) $r['jenis']) . ' — ' . SuratAcara::namaPendek((string) $r['jenis'], SuratSekolah::dekodeIsi((string) ($r['isi'] ?? ''))),
+                'perusahaan' => (string) ($r['perusahaan_nama'] ?? ''), 'nomor' => (string) ($r['nomor'] ?? ''),
+                'catatan' => 'Namamu dicantumkan di surat ini oleh ' . (($r['sumber'] ?? '') === 'siswa' ? 'teman PKL-mu' : 'sekolah') . '.',
+            ] + self::status($r, (string) $r['jenis']);
+        }
+        usort($out, static fn (array $a, array $b): int => strcmp($b['dibuat'], $a['dibuat']) ?: $b['id'] <=> $a['id']);
+
+        return $out;
     }
 
     /**

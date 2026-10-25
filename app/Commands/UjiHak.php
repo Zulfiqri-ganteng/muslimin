@@ -174,7 +174,7 @@ class UjiHak extends BaseCommand
             $contoh[$c] = true;
         }
         // Rute BARU yang sengaja berbeda dari aturan lama (diuji terpisah).
-        $baru = static fn (string $a): bool => (bool) preg_match('~^admin/(hak-akses|pkl/ttd-kepsek|surat/balasan/laporan|pkl/alasan|pkl/riwayat|pkl/\d+/(ditolak-perusahaan|keluarkan|kabar-keluar))(/|$)~', strtolower(trim($a, '/'))); // + revisi PKL 2026-10-20 (dev:uji-pkl-keluar)
+        $baru = static fn (string $a): bool => (bool) preg_match('~^admin/(hak-akses|pkl/ttd-kepsek|surat/balasan/laporan|pkl/alasan|pkl/riwayat|pkl/\d+/(ditolak-perusahaan|keluarkan|kabar-keluar)|surat/\d+/pindah-siswa)(/|$)~', strtolower(trim($a, '/'))); // + revisi PKL 2026-10-20 (dev:uji-pkl-keluar); + Izin TKA pindah gelombang 2026-10-26 = pemegang ACC (dev:uji-surat)
 
         $beda = [];
         $n    = 0;

@@ -15,6 +15,7 @@ use App\Libraries\SuratPeriksa;
 use App\Libraries\SuratPernyataan;
 use App\Libraries\SuratPkl;
 use App\Libraries\SuratSekolah;
+use App\Libraries\SuratTkaPindah;
 use App\Libraries\SuratWa;
 use App\Models\PklPengaturanModel;
 use App\Models\SettingModel;
@@ -105,6 +106,7 @@ class Surat extends BaseApiController
             'tahun'  => (int) $this->request->getGet('tahun'),
             'q'      => mb_substr(IsianBantu::rapikan((string) $this->request->getGet('q')), 0, 80),
             'asal'   => (string) $this->request->getGet('asal'), // siswa | staf | '' (Layanan Siswa, 2026-10-22)
+            'ganda'  => (string) $this->request->getGet('ganda') === '1', // Surat Izin TKA dengan siswa di dua gelombang (2026-10-26)
         ];
         $galat = [];
         if ($f['asal'] !== '' && ! in_array($f['asal'], ['siswa', 'staf'], true)) {
@@ -132,6 +134,8 @@ class Surat extends BaseApiController
             'hitung'     => $this->svc->hitungStatus(),
             // Kotak "Permintaan dari siswa" per jenis (sama dengan web): {jenis: {menunggu, siap, perlu_acc}}; {} = tak ada / tak berhak.
             'permintaan_siswa' => (object) $this->svc->ringkasPermintaanUntuk($this->peran(), $this->p),
+            // Peringatan data ganda Surat Izin TKA (sama dengan web): siswa di lebih dari satu surat TKA aktif + surat-suratnya.
+            'tka_ganda'        => $this->svc->tkaGanda(),
         ]);
     }
 
@@ -146,6 +150,10 @@ class Surat extends BaseApiController
         $status = (string) $s['status'];
         $ulang  = $status === 'disetujui' && SuratSekolah::perluCetakUlang($s, $m['siswa'], $this->p);
         $peminta = $this->svc->peminta((int) $s['id']);
+        // Surat Izin TKA per perusahaan (2026-10-26): siswa yang juga ada di surat TKA lain (data ganda) + alat "Pindahkan siswa".
+        $alatTka  = SuratTkaPindah::berlaku($s) ? new SuratTkaPindah() : null;
+        $lainTka  = $alatTka !== null ? $alatTka->lainnya((int) $s['id'], array_map('intval', array_column($m['siswa'], 'siswa_id'))) : [];
+        $bolehTka = $alatTka !== null && PklHak::bolehSurat($this->peran(), 'acc', SuratJenis::TKA);
 
         $data = $this->ringkas($s + ['jml_siswa' => count($m['siswa']), 'jml_minta' => count($peminta)], $ulang ? [(int) $s['id'] => true] : []);
         $data += [
@@ -155,7 +163,12 @@ class Surat extends BaseApiController
             'siswa'        => array_map(static fn (array $x): array => [
                 'siswa_id' => (int) $x['siswa_id'], 'nama' => $x['nama'], 'nis' => $x['nis'], 'nisn' => $x['nisn'],
                 'kelas' => $x['nama_kelas'], 'jurusan' => $x['jurusan_nama'], 'hp' => ($x['hp'] ?? '') !== '' ? $x['hp'] : ($x['hp_master'] ?: null),
-            ], $m['siswa']),
+            ] + ($alatTka !== null ? ['tka_lain' => array_map(static fn (array $t): array => ['surat_id' => $t['surat_id'], 'kode' => $t['kode'], 'label' => $t['label'],
+                'status_teks' => $t['status_teks']], $lainTka[(int) $x['siswa_id']] ?? [])] : []), $m['siswa']),
+            // null = bukan Surat Izin TKA per perusahaan yang aktif. boleh = pemegang hak ACC Izin TKA → tombol "Pindah" per siswa;
+            // tujuan = gelombang (jadwal TKA yang belum lewat, selain gelombang surat ini) → POST surat/{id}/pindah-siswa.
+            'pindah_tka'   => $alatTka === null ? null : ['boleh' => $bolehTka, 'tujuan' => $bolehTka ? array_map(static fn (array $j): array => [
+                'jadwal_id' => (int) $j['id'], 'label' => $j['label'], 'hari_tanggal' => $j['hari_tanggal'], 'keadaan' => $j['keadaan']], $alatTka->tujuan($s)) : []],
             // Layanan Siswa: siswa yang meminta surat ini + data orang tua yang diisi siswa (Pernyataan Orang Tua).
             'peminta'      => $peminta,
             'ortu_isian'   => array_values(array_map(static fn ($sid, $o): array => ['siswa_id' => (int) $sid, 'nama' => (string) ($o['nama'] ?? ''),
@@ -172,6 +185,39 @@ class Surat extends BaseApiController
         $data['ada_bahaya'] = in_array('bahaya', array_column($data['peringatan'], 'tingkat'), true);
 
         return $this->ok($data, 'Detail surat ' . SuratSekolahModel::kode((int) $s['id']) . '.');
+    }
+
+    /**
+     * POST surat/{id}/pindah-siswa — Surat Izin TKA per perusahaan: pindahkan satu siswa ke gelombang lain (`tujuan` = jadwal_id dari
+     * detail `pindah_tka.tujuan`) atau keluarkan saja dari surat ini (`tujuan` = "keluar"); `catatan` opsional (maks 200). Hanya
+     * pemegang hak ACC Izin TKA. 200 {tujuan_id, tujuan_kode} · 403 · 404 · 422 · 409. Aturan sama dengan web: SuratTkaPindah.
+     */
+    public function pindahSiswa($id): ResponseInterface
+    {
+        if (! PklHak::bolehSurat($this->peran(), 'acc', SuratJenis::TKA)) {
+            return $this->forbidden('Pindah gelombang hanya untuk pemegang hak ACC Surat Izin TKA (sekarang: ' . PklHak::teksPemegang(PklHak::kunciSurat('acc', SuratJenis::TKA)) . ').');
+        }
+        $in     = $this->body();
+        $siswa  = is_scalar($in['siswa_id'] ?? null) ? (int) $in['siswa_id'] : 0;
+        $tujuan = is_scalar($in['tujuan'] ?? null) ? trim((string) $in['tujuan']) : '';
+        $galat  = [];
+        if ($siswa <= 0) {
+            $galat['siswa_id'] = 'Pilih siswanya (siswa_id dari daftar siswa surat).';
+        }
+        if ($tujuan !== 'keluar' && preg_match('/^[1-9]\d*$/', $tujuan) !== 1) {
+            $galat['tujuan'] = 'Isi tujuan: jadwal_id gelombang (dari pindah_tka.tujuan) atau "keluar".';
+        }
+        if ($galat !== []) {
+            return $this->invalid($galat, (string) reset($galat));
+        }
+        $r = (new SuratTkaPindah())->pindahkan((int) $id, $siswa, $tujuan === 'keluar' ? 0 : (int) $tujuan, is_scalar($in['catatan'] ?? null) ? (string) $in['catatan'] : '', $this->konteks(), $this->p);
+
+        return match ($r['kode']) {
+            'ok'        => $this->ok(['tujuan_id' => $r['tujuan_id'] ?? null, 'tujuan_kode' => ($r['tujuan_id'] ?? null) !== null ? SuratSekolahModel::kode((int) $r['tujuan_id']) : null], $r['pesan']),
+            'tidak_ada' => $this->missing($r['pesan']),
+            'galat'     => $this->invalid(['tujuan' => $r['pesan']], $r['pesan']),
+            default     => $this->failure($r['pesan'], 409),
+        };
     }
 
     // ================================================================= keputusan
@@ -298,11 +344,14 @@ class Surat extends BaseApiController
                 'ujian'         => $jenis === SuratJenis::ASTS ? array_map(static fn (string $k, array $u): array => ['kode' => $k, 'nama' => $u[0]], array_keys(SuratAcara::UJIAN), SuratAcara::UJIAN) : [],
                 'sesi_saran'    => SuratAcara::SESI_SARAN,
                 'tempat_bawaan' => SuratAcara::TEMPAT_BAWAAN,
+                // TKA: hanya siswa kelas XII + gelombang per siswa (2026-10-26): siswa[].tka = surat TKA yang sudah memuatnya (atau
+                // null), jml_bebas = siswa yang belum punya surat TKA. Kirim balik `siswa` {kunci: [siswa_id…]} saat membuat.
                 'perusahaan'    => array_map(static fn (array $g): array => [
                     'kunci' => $g['kunci'], 'nama' => $g['nama'], 'alamat' => $g['alamat'], 'kota' => $g['kota'], 'mulai' => $g['mulai'], 'selesai' => $g['selesai'],
                     'luar_periode' => $g['luar_periode'], 'jml_siswa' => count($g['siswa']),
-                    'siswa' => array_map(static fn (array $x): array => ['siswa_id' => $x['siswa_id'], 'nama' => $x['nama'], 'kelas' => $x['kelas']], $g['siswa']),
-                ], $acara->perusahaan($mulai, $selesai, $jenis)), // TKA: hanya siswa kelas XII
+                    'siswa' => array_map(static fn (array $x): array => ['siswa_id' => $x['siswa_id'], 'nama' => $x['nama'], 'kelas' => $x['kelas']]
+                        + ($jenis === SuratJenis::TKA ? ['tka' => $x['tka']] : []), $g['siswa']),
+                ] + ($jenis === SuratJenis::TKA ? ['jml_bebas' => $g['jml_bebas']] : []), $jenis === SuratJenis::TKA ? $acara->perusahaanTka($mulai, $selesai) : $acara->perusahaan($mulai, $selesai, $jenis)),
             ], 'Formulir ' . SuratJenis::label($jenis) . '.');
         }
 
@@ -389,6 +438,8 @@ class Surat extends BaseApiController
         $perluAcc = SuratJenis::perluAcc($jenis, $this->p);
         $data     = [
             'dibuat'    => array_map(static fn (int $id): array => ['id' => $id, 'kode' => SuratSekolahModel::kode($id)], array_map('intval', $hasil['dibuat'])),
+            // TKA per perusahaan: surat gelombang itu yang sudah ada (masih menunggu) dan ditambah siswanya (2026-10-26).
+            'ditambah'  => array_map(static fn (int $id): array => ['id' => $id, 'kode' => SuratSekolahModel::kode($id)], array_map('intval', $hasil['ditambah'] ?? [])),
             'sama'      => $hasil['sama'],
             'gagal'     => $hasil['gagal'],
             'dilepas'   => $hasil['dilepas'] ?? [],

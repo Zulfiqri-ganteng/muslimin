@@ -7,6 +7,8 @@
  *
  * Data dari server lewat atribut data-config (JSON) pada elemen akar:
  *   mode, semester, tp, mulai, selesai, tanggalSurat, periode[], perusahaan[], dipilih[].
+ * TKA (gelombang per siswa, 2026-10-26): perusahaan[].daftar = siswa {id, nama, kelas, tempat} — centang `siswa[kunci][]`
+ * dirender di bawah perusahaan yang dipilih; siswa dengan `tempat` (sudah punya surat TKA) tidak bisa dicentang.
  */
 document.addEventListener('alpine:init', function () {
     'use strict';
@@ -92,6 +94,14 @@ document.addEventListener('alpine:init', function () {
                 var q = this.cari.trim().toLowerCase();
                 return q === '' || (p.nama + ' ' + (p.kota || '') + ' ' + (p.siswa || '')).toLowerCase().indexOf(q) !== -1;
             },
+
+            /* TKA (gelombang per siswa): daftar siswa bercentang di bawah perusahaan yang dipilih. */
+            terpilih: function (p) { return this.dipilih.indexOf(p.kunci) !== -1; },
+            adaSudah: function (p) { return (p.sudah || 0) > 0; },
+            namaSiswa: function (p) { return 'siswa[' + p.kunci + '][]'; },
+            bebas: function (s) { return !s.tempat; },
+            terkunci: function (s) { return !!s.tempat; },
+            teksTempat: function (s) { return 'sudah di ' + s.tempat; },
 
             pilihSemua: function (hanyaSesuai) {
                 var self = this;

@@ -11,6 +11,7 @@ use App\Libraries\SuratJenis;
 use App\Libraries\SuratKeputusan;
 use App\Libraries\SuratPeriksa;
 use App\Libraries\SuratSekolah;
+use App\Libraries\SuratTkaPindah;
 use App\Libraries\SuratWa;
 use App\Models\SettingModel;
 use App\Models\SuratSekolahModel;
@@ -38,6 +39,7 @@ class Surat extends SuratDasar
             'tahun'  => (int) $this->request->getGet('tahun'),
             'q'      => mb_substr(IsianBantu::rapikan((string) $this->request->getGet('q')), 0, 80),
             'asal'   => (string) $this->request->getGet('asal'), // siswa (diminta lewat Layanan Siswa) | staf | '' semua
+            'ganda'  => (string) $this->request->getGet('ganda') === '1', // Surat Izin TKA yang memuat siswa ganda (dua gelombang)
         ];
         if (! in_array($f['asal'], ['siswa', 'staf'], true)) {
             $f['asal'] = '';
@@ -64,6 +66,7 @@ class Surat extends SuratDasar
             $f['jenis'] !== '' ? 'Jenis: ' . SuratJenis::label($f['jenis']) : '',
             $f['tahun'] > 0 ? 'Tahun: ' . $f['tahun'] : '',
             $f['q'] !== '' ? 'Cari: "' . $f['q'] . '"' : '',
+            $f['ganda'] ? 'Surat Izin TKA dengan siswa di dua gelombang' : '',
         ]));
         $biner = (new SuratAgenda())->excel($this->surat->daftar($f, 1, 5000)['rows'], $teks, (new SettingModel())->get());
         $nama  = 'Buku Agenda Surat Keluar ' . date('Y-m-d') . '.xlsx';
@@ -89,6 +92,9 @@ class Surat extends SuratDasar
             'perluUlang' => $this->surat->perluUlangBanyak($hasil['rows'], $this->p),
             // Kotak "Permintaan dari siswa" per jenis (Layanan Siswa) — hanya jenis yang boleh ditangani peran ini (Buat/ACC/Unduh).
             'permintaanSiswa' => $this->surat->ringkasPermintaanUntuk($peran, $this->p),
+            // Peringatan data ganda Surat Izin TKA: siswa yang tercantum di lebih dari satu gelombang (F4).
+            'tkaGanda'   => $this->surat->tkaGanda(),
+            'bolehPindahTka' => PklHak::bolehSurat($peran, 'acc', SuratJenis::TKA),
             // Unduhan massal: hanya bagi yang berhak mengunduh jenis itu, pada tab "Siap unduh" yang sudah disaring ke SATU jenis
             // yang templatenya ada.
             'bisaUnduhMassal' => $f['status'] === 'disetujui' && $f['jenis'] !== '' && PklHak::bolehSurat($peran, 'unduh', $f['jenis']) && SuratJenis::templateLengkap($f['jenis']),
@@ -136,7 +142,51 @@ class Surat extends SuratDasar
             // Kabar WhatsApp "siap diambil" (semua jenis surat): tombol bagi pemegang hak Unduh; aktif setelah surat diunduh.
             'kabarWa'    => SuratWa::berlaku($jenis) && SuratWa::kolomAda() && PklHak::bolehSurat($peran, 'unduh', $jenis) && $status === 'disetujui',
             'hitungWa'   => SuratWa::berlaku($jenis) ? (new SuratWa())->hitung((int) $surat['id']) : ['total' => 0, 'dikabari' => 0],
-        ]);
+        ] + $this->dataPindahTka($m));
+    }
+
+    /**
+     * Surat Izin TKA per perusahaan: siswa yang juga tercantum di surat TKA lain (data ganda, tampil untuk semua) + gelombang tujuan
+     * alat "Pindahkan siswa" (hanya pemegang hak ACC Izin TKA).
+     *
+     * @param array{surat: array<string, mixed>, siswa: list<array<string, mixed>>} $m
+     *
+     * @return array{tkaLain: array<int, list<array<string, mixed>>>, tkaTujuan: list<array<string, mixed>>|null}
+     */
+    private function dataPindahTka(array $m): array
+    {
+        if (! SuratTkaPindah::berlaku($m['surat'])) {
+            return ['tkaLain' => [], 'tkaTujuan' => null];
+        }
+        $alat = new SuratTkaPindah();
+
+        return [
+            'tkaLain'   => $alat->lainnya((int) $m['surat']['id'], array_map('intval', array_column($m['siswa'], 'siswa_id'))),
+            'tkaTujuan' => PklHak::bolehSurat($this->peranSaya(), 'acc', SuratJenis::TKA) ? $alat->tujuan($m['surat']) : null,
+        ];
+    }
+
+    /**
+     * POST admin/surat/(:num)/pindah-siswa — Surat Izin TKA per perusahaan: pindahkan satu siswa ke gelombang lain (tujuan = id
+     * jadwal TKA) atau keluarkan saja dari surat ini (tujuan = 'keluar'). Hanya pemegang hak ACC Izin TKA. Aturan: SuratTkaPindah.
+     */
+    public function pindahSiswa($id): RedirectResponse
+    {
+        $id = (int) $id;
+        if (! PklHak::bolehSurat($this->peranSaya(), 'acc', SuratJenis::TKA)) {
+            return $this->ke('admin/surat/' . $id, 'error', 'Pindah gelombang hanya untuk pemegang hak ACC Surat Izin TKA (sekarang: ' . PklHak::teksPemegang(PklHak::kunciSurat('acc', SuratJenis::TKA)) . ').');
+        }
+        $tujuan = trim((string) $this->request->getPost('tujuan'));
+        if ($tujuan !== 'keluar' && preg_match('/^[1-9]\d*$/', $tujuan) !== 1) {
+            return $this->ke('admin/surat/' . $id, 'error', 'Pilih dulu gelombang tujuan, atau "Keluarkan saja dari surat ini".');
+        }
+        $r = (new SuratTkaPindah())->pindahkan($id, (int) $this->request->getPost('siswa_id'), $tujuan === 'keluar' ? 0 : (int) $tujuan,
+            (string) $this->request->getPost('catatan'), $this->konteks(['saluran' => 'web']), $this->p);
+        if ($r['kode'] === 'tidak_ada') {
+            return $this->ke('admin/surat', 'error', $r['pesan']);
+        }
+
+        return $this->ke('admin/surat/' . $id, $r['ok'] ? 'success' : 'error', $r['pesan']);
     }
 
     // =================================================================

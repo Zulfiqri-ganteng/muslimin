@@ -42,6 +42,10 @@ $status   = (string) $surat['status'];
 $wajibAcc = (int) $surat['perlu_acc'] === 1;
 $bernomor = (string) $surat['nomor'] !== '';
 $adaBahaya = SuratPeriksa::adaBahaya($periksa);
+// Surat Izin TKA per perusahaan: tanda siswa yang juga ada di surat TKA lain + tombol "Pindah" (pemegang hak ACC Izin TKA).
+$tkaLain   = $tkaLain ?? [];
+$tkaTujuan = $tkaTujuan ?? null;
+$kolomTka  = $tkaLain !== [] || $tkaTujuan !== null;
 $kepalaKartu = static fn (string $judul, string $idJudul, string $tambahan = ''): string => '<div class="kartu-kepala"><h3 id="' . $idJudul . '" class="kartu-judul text-base">' . $judul . '</h3>' . $tambahan . '</div>';
 $catatanKunci = static fn (string $html): string => '<div class="peringatan peringatan-netral">' . ikon('lock', 'mt-0.5 h-4 w-4 shrink-0') . '<p>' . $html . '</p></div>';
 $dt = 'text-xs text-gray-500 dark:text-gray-400';
@@ -114,7 +118,7 @@ $dd = 'font-semibold text-gray-900 dark:text-white';
                             <dd class="<?= $dd ?>">
                                 <ul class="mt-1 space-y-0.5">
                                     <?php foreach ($peminta as $pm): ?>
-                                        <li><?= esc($pm['nama']) ?><?= $pm['kelas'] !== '' ? ' <span class="text-gray-500 dark:text-gray-400">(' . esc($pm['kelas']) . ')</span>' : '' ?> <span class="text-xs text-gray-500 dark:text-gray-400">· <?= esc(date('d-m-Y H:i', strtotime($pm['waktu']))) ?></span></li>
+                                        <li><?= esc($pm['nama']) ?><?= $pm['kelas'] !== '' ? ' <span class="text-gray-500 dark:text-gray-400">(' . esc($pm['kelas']) . ')</span>' : '' ?><?= ($pm['diisikan_oleh'] ?? '') !== '' ? ' <span class="text-xs text-gray-500 dark:text-gray-400">· diisikan oleh ' . esc($pm['diisikan_oleh']) . '</span>' : '' ?> <span class="text-xs text-gray-500 dark:text-gray-400">· <?= esc(date('d-m-Y H:i', strtotime($pm['waktu']))) ?></span></li>
                                     <?php endforeach; ?>
                                 </ul>
                             </dd>
@@ -147,11 +151,13 @@ $dd = 'font-semibold text-gray-900 dark:text-white';
                                     <th scope="col">Kelas</th>
                                     <th scope="col">Konsentrasi keahlian</th>
                                     <th scope="col">HP</th>
+                                    <?php if ($kolomTka): ?><th scope="col">Gelombang TKA</th><?php endif; ?>
                                 </tr>
                             </thead>
                             <tbody>
                                 <?php foreach ($siswa as $i => $a):
                                     $hp = trim((string) ($a['hp'] ?? '')) !== '' ? (string) $a['hp'] : (string) ($a['hp_master'] ?? '');
+                                    $lainTka = $tkaLain[(int) $a['siswa_id']] ?? [];
                                 ?>
                                     <tr>
                                         <td class="tabular-nums text-gray-500 dark:text-gray-400"><?= $i + 1 ?></td>
@@ -160,6 +166,18 @@ $dd = 'font-semibold text-gray-900 dark:text-white';
                                         <td class="whitespace-nowrap"><?= esc((string) ($a['nama_kelas'] ?? '') !== '' ? $a['nama_kelas'] : '—') ?></td>
                                         <td><?= esc((string) ($a['jurusan_nama'] ?? '') !== '' ? $a['jurusan_nama'] : '—') ?></td>
                                         <td class="font-mono text-xs whitespace-nowrap"><?= $hp !== '' ? esc($hp) : '<span class="text-gray-500 dark:text-gray-400">—</span>' ?></td>
+                                        <?php if ($kolomTka): ?>
+                                            <td class="min-w-[11rem]">
+                                                <?php foreach ($lainTka as $t): ?>
+                                                    <a href="<?= site_url('admin/surat/' . $t['surat_id']) ?>" class="lencana lencana-kuning mb-1 whitespace-nowrap" title="Siswa ini juga tercantum di surat TKA lain">Juga di <?= esc($t['label']) ?> · <?= esc($t['kode']) ?></a>
+                                                <?php endforeach; ?>
+                                                <?php if ($tkaTujuan !== null): ?>
+                                                    <button type="button" class="btn btn-netral btn-sm" data-buka-dialog="surat-pindah-<?= (int) $a['siswa_id'] ?>"><?= ikon('arrow-right-to-bracket', 'h-4 w-4') ?>Pindah</button>
+                                                <?php elseif ($lainTka === []): ?>
+                                                    <span class="text-gray-500 dark:text-gray-400">—</span>
+                                                <?php endif; ?>
+                                            </td>
+                                        <?php endif; ?>
                                     </tr>
                                 <?php endforeach; ?>
                             </tbody>
@@ -312,6 +330,28 @@ if ($bolehBuat && in_array($status, ['menunggu', 'dikembalikan', 'disetujui'], t
     echo $dialog('batal', 'Batalkan surat ' . $kode . '?', 'batal',
         '<p>Surat ini <b>tidak jadi dipakai</b> dan tidak bisa diunduh lagi.' . ($bernomor ? ' Nomor <b>' . esc($surat['nomor']) . '</b> tetap tercatat dan tidak dipakai lagi.' : '') . ' Jejaknya tetap ada di riwayat dan Daftar Surat.</p>' . $kotakAlasan('Contoh: Dibuat dua kali, dipakai surat yang satunya.', 'batal'),
         ikon('trash-bin', 'h-4 w-4') . 'Ya, batalkan surat', 'btn-bahaya');
+}
+if ($tkaTujuan !== null) { // Surat Izin TKA: pindahkan / keluarkan satu siswa (SuratTkaPindah)
+    $pilihan = static fn (string $nilai, string $judul, string $ket): string => '<label class="flex cursor-pointer items-start gap-2 rounded-lg border border-gray-200 p-3 hover:bg-gray-50 dark:border-gray-600 dark:hover:bg-gray-700">'
+        . '<input type="radio" name="tujuan" value="' . esc($nilai, 'attr') . '" required class="cek mt-0.5"><span><span class="block font-semibold text-gray-900 dark:text-white">' . esc($judul) . '</span>'
+        . '<span class="block text-xs text-gray-500 dark:text-gray-400">' . esc($ket) . '</span></span></label>';
+    foreach ($siswa as $a) {
+        $sid  = (int) $a['siswa_id'];
+        $isiP = '<p>Pindahkan <b>' . esc($a['nama']) . '</b> dari surat ini (' . esc(\App\Libraries\SuratAcara::namaPendek($jenis, $surat['isi_arr'])) . ') ke:</p>';
+        if (isset($tkaLain[$sid])) {
+            $isiP .= ui_peringatan('awas', '', ['html' => 'Siswa ini <b>juga tercantum</b> di ' . esc(implode('; ', array_map(static fn (array $t): string => $t['label'] . ' (' . $t['kode'] . ', ' . $t['status_teks'] . ')', $tkaLain[$sid])))
+                . '. Bila surat itu yang benar, pilih <b>Keluarkan saja dari surat ini</b>.']);
+        }
+        $isiP .= '<fieldset class="space-y-2"><legend class="sr-only">Gelombang tujuan</legend>';
+        foreach ($tkaTujuan as $j) {
+            $isiP .= $pilihan((string) (int) $j['id'], $j['label'], $j['hari_tanggal'] . ' · namanya masuk surat ' . $j['label'] . ' untuk perusahaan ini (dibuatkan bila belum ada)');
+        }
+        $isiP .= $pilihan('keluar', 'Keluarkan saja dari surat ini', 'Tanpa dipindah — misalnya siswa sudah tercantum di surat gelombang yang benar.') . '</fieldset>'
+            . '<input type="hidden" name="siswa_id" value="' . $sid . '">'
+            . '<div><label class="lbl" for="catatan_pindah_' . $sid . '">Catatan (boleh kosong)</label><input id="catatan_pindah_' . $sid . '" name="catatan" type="text" maxlength="200" class="inp" placeholder="Contoh: sesuai kartu peserta TKA"></div>'
+            . ui_peringatan('netral', '', ['html' => 'Nomor surat tetap. Surat yang sudah pernah diunduh perlu <b>diunduh ulang</b> (muncul tanda "perlu cetak ulang"). Bila siswa ini satu-satunya di surat, surat ini otomatis dibatalkan.']);
+        echo $dialog('pindah-' . $sid, 'Pindah gelombang: ' . $a['nama'], 'pindah-siswa', '<div class="space-y-3">' . $isiP . '</div>', ikon('check', 'h-4 w-4') . 'Simpan', 'btn-utama');
+    }
 }
 ?>
 
