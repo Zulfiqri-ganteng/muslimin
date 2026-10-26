@@ -279,7 +279,7 @@ $js = static fn (string $berkas): string => '<script defer src="' . base_url($be
                             <li><a href="<?= site_url('admin/settings') ?>" class="dropdown-item"><?= ikon('cog', 'h-4 w-4') ?>Pengaturan sekolah</a></li>
                         <?php endif; ?>
                         <?php if ($adminUtama): ?>
-                            <li><a href="<?= site_url('admin/settings') ?>#tampilan" class="dropdown-item"><?= ikon('adjustments-horizontal', 'h-4 w-4') ?>Tampilan &amp; tema</a></li>
+                            <li><a href="<?= site_url('admin/settings') ?>#tampilan" class="dropdown-item"><?= ikon('adjustments-horizontal', 'h-4 w-4') ?>Tema bawaan sekolah</a></li>
                         <?php endif; ?>
                     </ul>
                     <ul class="py-1">
@@ -362,9 +362,12 @@ $js = static fn (string $berkas): string => '<script defer src="' . base_url($be
             <?php if ($bolehPengaturan): ?>
                 <a href="<?= site_url('admin/settings') ?>" class="sb-bawah-tombol" title="Pengaturan sekolah" aria-label="Pengaturan sekolah"<?= $cur === 'admin/settings' ? ' aria-current="page"' : '' ?>><?= $ikonSb('cog', 'h-6 w-6') ?></a>
             <?php endif; ?>
-            <?php if ($adminUtama): ?>
-                <a href="<?= site_url('admin/settings') ?>#tampilan" class="sb-bawah-tombol" title="Tampilan &amp; tema" aria-label="Tampilan dan tema"><?= $ikonSb('adjustments-horizontal', 'h-6 w-6') ?></a>
-            <?php endif; ?>
+            <?php // Ganti tema langsung (semua akun; pilihan per peramban — bawaan sekolah tetap di Pengaturan → Tampilan). ?>
+            <button type="button" class="sb-bawah-tombol" @click="gantiTema()" title="Ganti tema: Terang → Gelap → Warna Sekolah" aria-label="Ganti tema tampilan">
+                <span class="ikon-tema ikon-tema-terang"><?= ikon('sun', 'h-6 w-6') ?></span>
+                <span class="ikon-tema ikon-tema-gelap"><?= ikon('moon', 'h-6 w-6') ?></span>
+                <span class="ikon-tema ikon-tema-sekolah"><?= ikon('palette', 'h-6 w-6') ?></span>
+            </button>
         </div>
     </div>
 </aside>

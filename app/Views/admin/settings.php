@@ -200,7 +200,7 @@ $saklar = static fn (string $nama, bool $nyala, string $judul, string $ket): str
         <div class="kartu-kepala">
             <div>
                 <h2 class="kartu-judul">Tampilan panel admin</h2>
-                <p class="kartu-ket">Klik salah satu mode — tampilan <b>langsung berubah dan tersimpan</b> untuk <b>semua akun</b> panel admin (termasuk halaman masuk).</p>
+                <p class="kartu-ket">Klik salah satu mode — menjadi <b>tema bawaan</b> untuk <b>semua akun</b> panel admin (termasuk halaman masuk). Tiap pengguna tetap bisa memilih tema sendiri lewat tombol <b>matahari / bulan / palet</b> di kaki menu samping (berlaku di perambannya saja).</p>
             </div>
         </div>
         <form method="post" action="<?= site_url('admin/settings/tampilan') ?>" class="kartu-isi space-y-5" x-ref="formTema">

@@ -587,6 +587,9 @@
   .sb-bawah-tombol { @apply inline-flex h-10 w-10 cursor-pointer items-center justify-center rounded-lg transition focus:outline-hidden focus-visible:ring-2 focus-visible:ring-brand-400; color: var(--sb-ikon); }
   .sb-bawah-tombol:hover { background-color: var(--sb-hover-bg); color: var(--sb-hover-teks); }
   .sb-bawah-tombol[aria-current='page'] { background-color: var(--sb-aktif-bg); color: var(--sb-aktif-ikon); }
+  /* Tombol ganti tema (adminLayout.gantiTema): ikon mengikuti <html data-mode> — matahari, bulan, palet. */
+  .ikon-tema { display: none; }
+  [data-mode="terang"] .ikon-tema-terang, [data-mode="gelap"] .ikon-tema-gelap, [data-mode="sekolah"] .ikon-tema-sekolah { display: inline-flex; }
   /* Menu menciut (desktop): nama menu / isi grup melayang di samping ikon saat disorot (app.js pasangMenuMelayang). Satu panel di
      <body> bertoken --sb-* — jadi warnanya selalu menyambung dengan gaya menu samping yang dipilih. Posisi top/left lewat CSSOM. */
   .sb-melayang { @apply fixed z-50 max-w-72 min-w-max rounded-lg border px-3 py-2 text-sm font-semibold shadow-lg;

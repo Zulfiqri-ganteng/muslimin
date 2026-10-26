@@ -55,15 +55,30 @@ final class Tampilan
     }
 
     /**
-     * Tema yang berlaku dari baris pengaturan sekolah — selalu salah satu dari tiga mode (pasangan warna & menu samping baku).
+     * Tema pilihan pengguna sendiri (tombol ganti tema di menu samping; cookie tema_mode ditulis app.js gantiTema) atau '' = ikut
+     * bawaan sekolah. Berlaku per peramban; dibaca server supaya halaman langsung tergambar dengan tema itu (tanpa kedipan).
+     */
+    public static function temaPengguna(): string
+    {
+        $mode = self::cookie('tema_mode');
+
+        return isset(self::MODE[$mode]) ? $mode : '';
+    }
+
+    /**
+     * Tema yang berlaku — selalu salah satu dari tiga mode (pasangan warna & menu samping baku): pilihan pengguna sendiri bila ada
+     * ($ikutPengguna), selain itu bawaan sekolah dari baris pengaturan.
      *
      * @param array<string, mixed>|null $setting
      *
      * @return array{mode: string, warna: string, sidebar: string}
      */
-    public static function tema(?array $setting): array
+    public static function tema(?array $setting, bool $ikutPengguna = true): array
     {
-        $mode = self::modeDari((string) ($setting['tema_warna'] ?? ''), (string) ($setting['tema_sidebar'] ?? ''));
+        $mode = $ikutPengguna ? self::temaPengguna() : '';
+        if ($mode === '') {
+            $mode = self::modeDari((string) ($setting['tema_warna'] ?? ''), (string) ($setting['tema_sidebar'] ?? ''));
+        }
 
         return ['mode' => $mode, 'warna' => self::MODE[$mode]['warna'], 'sidebar' => self::MODE[$mode]['sidebar']];
     }

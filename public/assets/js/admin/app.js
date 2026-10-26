@@ -159,6 +159,9 @@
         document.cookie = nama + '=' + encodeURIComponent(nilai) + '; Path=/; Max-Age=' + (nilai === '' ? 0 : 31536000) + '; SameSite=Lax';
     };
     var DESKTOP = window.matchMedia ? window.matchMedia('(min-width: 1024px)') : null;
+    // Tiga mode tema = Libraries\Tampilan::MODE (mode → [data-warna, data-sidebar, nama]); urutan tombol ganti tema.
+    var URUT_TEMA = ['terang', 'gelap', 'sekolah'];
+    var PASANG_TEMA = { terang: ['biru', 'terang', 'Terang'], gelap: ['biru', 'gelap', 'Gelap'], sekolah: ['lilac', 'warna', 'Warna Sekolah'] };
 
     /* ---------------------------------------------------------------
      * (2026-10-18) Menu samping MENCIUT (desktop, <html data-ciut>): sorot / fokus sebuah ikon → nama menunya melayang di samping;
@@ -539,6 +542,19 @@
                         document.documentElement.removeAttribute('data-ciut');
                     }
                     tulisKue('sb_ciut', this.collapsed ? '1' : '');
+                },
+                /* Tombol tema di kaki menu samping: Terang → Gelap → Warna Sekolah, langsung tanpa memuat ulang. Pilihan disimpan per
+                 * peramban (cookie tema_mode, dibaca server → halaman berikutnya tergambar dengan tema itu, tanpa kedipan); bawaan
+                 * sekolah tetap diatur Admin di Pengaturan Sekolah → Tampilan. Ikon mengikuti <html data-mode> lewat CSS. */
+                gantiTema: function () {
+                    var html = document.documentElement;
+                    var i = URUT_TEMA.indexOf(html.getAttribute('data-mode'));
+                    var baru = URUT_TEMA[(i + 1) % URUT_TEMA.length];
+                    html.setAttribute('data-mode', baru);
+                    html.setAttribute('data-warna', PASANG_TEMA[baru][0]);
+                    html.setAttribute('data-sidebar', PASANG_TEMA[baru][1]);
+                    tulisKue('tema_mode', baru);
+                    if (window.Ui && Ui.toast) { Ui.toast('Tema: ' + PASANG_TEMA[baru][2], 'info'); }
                 },
                 /* Menu samping sedang tampil sebagai deret ikon (desktop + diciutkan): isi grup disembunyikan, hanya ikonnya. */
                 sempit: function () { return this.collapsed && this.desktop; },

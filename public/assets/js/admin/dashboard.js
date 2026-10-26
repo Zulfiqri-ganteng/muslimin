@@ -313,9 +313,21 @@
     function gambar(item) {
         if (item.chart) { item.chart.destroy(); item.chart = null; }
         if (item.tampil && !item.tampil()) { return; }
+        // Grafik di panel tab yang sedang tersembunyi (kartu Ringkasan bertab): ditunda sampai panelnya tampil (lihat amatiPanel).
+        if (item.diPanel && item.el.clientWidth === 0) { return; }
         item.chart = new window.ApexCharts(item.el, item.buat(palet()));
         item.chart.render();
     }
+    // (upgrade 2026-10-26) Panel tab tersembunyi = lebar 0 → saat tab dibuka lebarnya berubah → gambar sekali itu.
+    var amatiPanel = window.ResizeObserver ? new ResizeObserver(function (entri) {
+        entri.forEach(function (en) {
+            var it = en.target.__grafik;
+            if (!it) { return; }
+            var lebar = en.contentRect.width;
+            if (lebar > 0 && !it.lebarTadi) { gambar(it); }
+            it.lebarTadi = lebar;
+        });
+    }) : null;
 
     Array.prototype.forEach.call(document.querySelectorAll('.grafik[data-grafik]'), function (el) {
         var jenis = el.getAttribute('data-grafik');
@@ -328,6 +340,12 @@
         var data = jenis === 'radial' ? null : isi(el);
         if (jenis !== 'radial' && !data) { return; }
         var item = { el: el, chart: null, buat: function (p) { return PEMBUAT[jenis](el, data, p); } };
+        if (amatiPanel && el.closest('[role="tabpanel"]')) {
+            item.diPanel = true;
+            item.lebarTadi = el.clientWidth;
+            el.__grafik = item;
+            amatiPanel.observe(el);
+        }
         daftar.push(item);
         gambar(item);
     });

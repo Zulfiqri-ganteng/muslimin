@@ -23,7 +23,7 @@ class Settings extends BaseController
         return view('admin/settings', [
             'title'     => 'Pengaturan Sekolah',
             'setting'   => $setting,
-            'tema'      => Tampilan::tema($setting),
+            'tema'      => Tampilan::tema($setting, false), // bawaan sekolah (bukan pilihan pribadi tombol tema)
             'temaSiap'  => Tampilan::temaSiap(),
             'bolehTema' => (string) (session('admin')['role'] ?? '') === HakPeran::ADMIN,
         ]);
@@ -51,7 +51,9 @@ class Settings extends BaseController
         $this->model->store(['tema_warna' => Tampilan::MODE[$pilihan]['warna'], 'tema_sidebar' => Tampilan::MODE[$pilihan]['sidebar']]);
         $nama = Tampilan::namaTema($pilihan);
 
-        return redirect()->to(site_url('admin/settings') . '#tampilan')->with('success', 'Tema tampilan disimpan: ' . $nama . '. Berlaku untuk semua akun.');
+        // Pilihan pribadi Admin (cookie tombol ganti tema) dilepas supaya bawaan yang baru langsung terlihat.
+        return redirect()->to(site_url('admin/settings') . '#tampilan')->deleteCookie('tema_mode', '', '/', '')
+            ->with('success', 'Tema bawaan disimpan: ' . $nama . '. Berlaku untuk semua akun yang belum memilih tema sendiri lewat tombol tema di menu samping.');
     }
 
     public function save()
