@@ -583,7 +583,7 @@
      template; tanpa teks (.sb-bagian-garis) = garis pemisah. Saat menu menciut, judul berubah menjadi garis. */
   .sb-bagian { @apply px-2 pt-4 pb-1 text-xs font-semibold tracking-wider uppercase select-none; color: var(--sb-redup); }
   .sb-bagian-garis { @apply mx-2 my-3 p-0; border-top: 1px solid var(--sb-garis); }
-  .sb-bawah { @apply hidden shrink-0 items-center justify-center gap-3 border-t px-3 py-3 lg:flex; background-color: var(--sb-bg); border-color: var(--sb-garis); }
+  .sb-bawah { @apply flex shrink-0 items-center justify-center gap-3 border-t px-3 py-3; background-color: var(--sb-bg); border-color: var(--sb-garis); } /* HP (laci) & desktop: profil · pengaturan · ganti tema */
   .sb-bawah-tombol { @apply inline-flex h-10 w-10 cursor-pointer items-center justify-center rounded-lg transition focus:outline-hidden focus-visible:ring-2 focus-visible:ring-brand-400; color: var(--sb-ikon); }
   .sb-bawah-tombol:hover { background-color: var(--sb-hover-bg); color: var(--sb-hover-teks); }
   .sb-bawah-tombol[aria-current='page'] { background-color: var(--sb-aktif-bg); color: var(--sb-aktif-ikon); }

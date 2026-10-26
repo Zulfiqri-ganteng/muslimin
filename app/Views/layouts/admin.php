@@ -230,7 +230,7 @@ $js = static fn (string $berkas): string => '<script defer src="' . base_url($be
                     <input type="search" id="cari-menu-atas" class="navbar-cari" placeholder="Cari menu…" autocomplete="off" x-model="cari" @keydown.enter.prevent="bukaHasilPertama()">
                 </div>
             </div>
-            <button type="button" class="tombol-navbar lg:hidden" @click="alihLaci()" aria-label="Cari menu" title="Cari menu"><?= ikon('search', 'h-6 w-6', 'solid') ?></button>
+            <?php // (2026-10-26) Tombol kaca pembesar khusus HP dibuang atas permintaan user: di HP kotak cari menu ada di dalam laci menu samping (tombol menu). ?>
 
             <!-- Lonceng: pekerjaan yang masih menunggu (Libraries\Pemberitahuan), diperbarui berkala (komponen lonceng di app.js) -->
             <div class="relative" x-data="dropdown" @click.outside="tutup()" @keydown.escape="tutup(true)" @keydown.down.prevent="gerak(1)" @keydown.up.prevent="gerak(-1)">
@@ -355,7 +355,7 @@ $js = static fn (string $berkas): string => '<script defer src="' . base_url($be
                 </ul>
             </div>
         </nav>
-        <!-- Deret ikon bawah (template: sidebar-bottom-menu; desktop) — kaki tetap bergaris atas; saat menciut tersusun ke bawah,
+        <!-- Deret ikon bawah (template: sidebar-bottom-menu; desktop & laci HP) — kaki tetap bergaris atas; saat menciut tersusun ke bawah,
              sejajar dengan ikon menu, dan namanya melayang saat disorot (app.js pasangMenuMelayang). -->
         <div class="sb-bawah">
             <a href="<?= site_url('admin/profile') ?>" class="sb-bawah-tombol" title="Profil saya" aria-label="Profil saya"<?= $cur === 'admin/profile' ? ' aria-current="page"' : '' ?>><?= $ikonSb('user-circle', 'h-6 w-6') ?></a>
