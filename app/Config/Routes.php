@@ -223,6 +223,11 @@ $routes->group('admin', static function ($routes) {
         $routes->post('surat/balasan', 'Admin\SuratPkl::simpanBalasan', ['filter' => 'csrf']);
         $routes->get('surat/balasan/(:num)/ubah', 'Admin\SuratPkl::ubahBalasan/$1', ['filter' => 'csrf']);
         $routes->post('surat/balasan/(:num)/ubah', 'Admin\SuratPkl::simpanUbahBalasan/$1', ['filter' => 'csrf']);
+        // Surat Permohonan Perpanjangan PKL (docs/DESAIN-PERPANJANGAN-PKL.md; hak Buat jenis ini) — Admin\SuratPerpanjangan.
+        $routes->get('surat/perpanjangan', 'Admin\SuratPerpanjangan::index', ['filter' => 'csrf']);
+        $routes->post('surat/perpanjangan', 'Admin\SuratPerpanjangan::simpan', ['filter' => 'csrf']);
+        $routes->get('surat/perpanjangan/(:num)/ubah', 'Admin\SuratPerpanjangan::ubah/$1', ['filter' => 'csrf']);
+        $routes->post('surat/perpanjangan/(:num)/ubah', 'Admin\SuratPerpanjangan::simpanUbah/$1', ['filter' => 'csrf']);
         $routes->get('surat/penarikan', 'Admin\SuratPkl::penarikan', ['filter' => 'csrf']);
         $routes->post('surat/penarikan', 'Admin\SuratPkl::simpanPenarikan', ['filter' => 'csrf']);
         $routes->get('surat/penarikan/(:num)/ubah', 'Admin\SuratPkl::ubahPenarikan/$1', ['filter' => 'csrf']);
@@ -839,6 +844,14 @@ $routes->group('api/v1', ['namespace' => 'App\Controllers\Api', 'filter' => 'cor
     $routes->get('form/revisi/(:segment)', 'Form::revisi/$1');
     $routes->post('form/revisi/(:segment)', 'Form::updateRevisi/$1');
 
+    // Layanan Siswa (publik, tanpa akun) — token X-Layanan-Token sesudah masuk NISN / tanggal lahir (Api\Layanan, docs/API-LAYANAN-SISWA.md).
+    $routes->get('publik/layanan/kelas', 'Layanan::kelas');
+    $routes->get('publik/layanan/siswa', 'Layanan::siswa');
+    $routes->post('publik/layanan/masuk', 'Layanan::masuk');
+    $routes->get('publik/layanan/saya', 'Layanan::saya');
+    $routes->get('publik/layanan/perpanjangan', 'Layanan::perpanjangan');
+    $routes->post('publik/layanan/perpanjangan', 'Layanan::ajukanPerpanjangan');
+
     // ---------- ADMIN (butuh token) ----------
     $routes->group('', ['filter' => 'apiauth'], static function ($routes) {
         $routes->get('auth/me', 'Auth::me');
@@ -1194,6 +1207,7 @@ $routes->group('api/v1', ['namespace' => 'App\Controllers\Api', 'filter' => 'cor
         $routes->get('pkl/siswa/ringkasan', 'Pkl::siswaRingkas');
         $routes->get('pkl/siswa/excel', 'Pkl::siswaExcel'); // BERKAS .xlsx, sama dengan "Unduh Excel" web (2026-10-22)
         $routes->get('pkl/siswa-kelas', 'Pkl::siswaKelas');
+        $routes->get('pkl/berakhir', 'Pkl::berakhir'); // PKL berakhir ≤ N hari & belum diperpanjang (hak Buat Surat Perpanjangan, 2026-10-26)
         $routes->get('pkl/ttd', 'Pkl::ttd');
         $routes->get('pkl/ttd/gambar', 'Pkl::ttdGambar');
         $routes->post('pkl/ttd', 'Pkl::ttdUnggah');

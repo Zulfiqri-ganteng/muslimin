@@ -48,15 +48,15 @@ $dt = 'text-xs text-gray-500 dark:text-gray-400';
 <?= $this->section('content') ?>
 
 <?= view('admin/partials/help', [
-    'helpKey'   => 'surat_lapor_v2',
+    'helpKey'   => 'surat_lapor_v3',
     'helpTitle' => 'Lapor Diterima PKL',
     'helpBody'  => '<p>Siswa yang ajuan PKL-nya sudah <b>disetujui</b> melapor lewat tautan form lapor bahwa <b>perusahaan sudah menerimanya</b>, beserta tanggal mulai &amp; selesai PKL (dan alamat perusahaan bila berubah). Dari laporan itu sekolah membuat <b>Surat Balasan PKL</b>.</p>'
         . '<ul class="mt-2 list-disc space-y-1 pl-5">'
         . '<li><b>' . esc($tombolSetujui) . '</b>: surat dibuat dari isian laporan (tanggal surat hari ini)' . ($hak['perlu_acc'] ? ' dan langsung disetujui atas nama Anda, lalu siap diunduh' : '') . '. Tombol ini hanya untuk peran yang diberi hak ' . ($hak['perlu_acc'] ? '<b>ACC Surat Balasan</b> (sekarang: ' . esc($pemegangAcc) . ')' : '<b>Buat Surat Balasan</b>') . '.</li>'
-        . ($hak['perlu_acc'] ? '<li><b>Buat &amp; ajukan untuk ACC</b>: surat dibuat lalu menunggu ACC (' . esc($pemegangAcc) . ').</li>' : '')
-        . '<li><b>Periksa &amp; ubah dulu</b>: membuka formulir Surat Balasan yang sudah terisi dari laporan; ubah bila perlu, lalu simpan. Laporan otomatis ditandai selesai.</li>'
+        . ($hak['perlu_acc'] ? '<li><b>Buat &amp; ajukan untuk ACC</b> (di menu <b>Lainnya</b> bila Anda juga boleh menyetujui): surat dibuat lalu menunggu ACC (' . esc($pemegangAcc) . ').</li>' : '')
+        . '<li><b>Periksa &amp; ubah dulu</b> (menu <b>Lainnya</b>): membuka formulir Surat Balasan yang sudah terisi dari laporan; ubah bila perlu, lalu simpan. Laporan otomatis ditandai selesai.</li>'
         . '<li><b>Hasil perusahaan</b>: siswa memilih <b>semua diterima</b>, <b>sebagian diterima</b> (mencentang siapa yang diterima), atau <b>semua ditolak</b>. Laporan <b>sebagian</b>: saat Anda memproses, siswa yang tidak diterima otomatis <b>dikeluarkan</b> dari ajuan (bebas mengajukan tempat lain, tetap tercatat) lalu Surat Balasan hanya memuat siswa yang diterima. Laporan <b>semua ditolak</b>: tekan <b>Konfirmasi ditolak perusahaan</b> — ajuan menjadi Ditolak perusahaan, tanpa surat.</li>'
-        . '<li><b>Kembalikan</b>: bila isian siswa keliru. Tulis alasannya &mdash; siswa membacanya saat membuka form lapor lagi, lalu bisa mengirim ulang.</li>'
+        . '<li><b>Kembalikan ke siswa</b> (menu <b>Lainnya</b>): bila isian siswa keliru. Tulis alasannya di jendela yang terbuka &mdash; siswa membacanya saat membuka form lapor lagi, lalu bisa mengirim ulang.</li>'
         . '<li>Siapa yang boleh memproses diatur Admin di <b>Sistem → Hak Akses</b> (hak Buat / ACC Surat Balasan). Tanda tangan Waka Hubin dan Kepala Sekolah tetap tercetak, siapa pun yang meng-ACC.</li>'
         . '</ul>',
 ]) ?>
@@ -125,7 +125,7 @@ $dt = 'text-xs text-gray-500 dark:text-gray-400';
             $sebagian   = $hasil === 'sebagian';
             $dikeluarkan = $sebagian ? $r['siswa_ditolak'] : [];
         ?>
-            <article class="kartu overflow-hidden<?= $status === 'baru' && ! $r['ajuan_sah'] ? ' border-red-300 dark:border-red-800' : '' ?>" aria-labelledby="judul-lapor-<?= $id ?>">
+            <article class="kartu<?= $status === 'baru' && ! $r['ajuan_sah'] ? ' border-red-300 dark:border-red-800' : '' ?>" aria-labelledby="judul-lapor-<?= $id ?>">
                 <div class="kartu-kepala">
                     <div class="min-w-0">
                         <h2 id="judul-lapor-<?= $id ?>" class="kartu-judul truncate text-base"><?= esc($r['perusahaan']) ?></h2>
@@ -225,7 +225,21 @@ $dt = 'text-xs text-gray-500 dark:text-gray-400';
                         <p class="mt-0.5 text-xs text-gray-500 dark:text-gray-400">Dikembalikan <?= esc($oleh($r)) ?> · <?= esc($waktu($r['diproses_at'])) ?>. Menunggu siswa mengirim ulang.</p>
                     </div>
                 <?php else: ?>
-                    <div class="kartu-kaki flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-start">
+<?php
+                    // U4 rapi tampilan: SATU tombol utama per laporan; "Buat & ajukan untuk ACC" (bila juga boleh Setujui), "Periksa & ubah
+                    // dulu", dan "Kembalikan ke siswa" (sekarang dialog) di menu "Lainnya". Formulir & isiannya tetap sama.
+                    $pesanBuat = ($dikeluarkan !== [] ? implode(', ', array_column($dikeluarkan, 'nama')) . ' akan DIKELUARKAN dari ajuan (ditolak perusahaan). ' : '')
+                        . ($balasan !== null ? 'Tandai laporan ' . $r['kode'] . ' selesai (Surat Balasan sudah ada)?' : 'Buat Surat Balasan untuk ' . $r['kode'] . ' dan ajukan untuk ACC?');
+                    $buatDiMenu = $bisaBuat && $hak['buat'] && ! $ditolakSemua && $hak['setujui'];
+                    $lainLapor  = [
+                        $buatDiMenu ? ['label' => $balasan !== null ? 'Tandai selesai (tanpa ACC)' : 'Buat & ajukan untuk ACC', 'ikon' => 'envelope', 'kirim' => ['form' => 'lapor-buat-' . $id],
+                            'atr' => 'data-confirm-judul="Proses laporan?" data-confirm-ya="Ya, lanjutkan" data-confirm="' . esc($pesanBuat, 'attr') . '"'] : null,
+                        $bisaBuat && $bolehForm && $balasan === null && $hasil === 'semua' // laporan sebagian/ditolak hanya lewat tombol di sini
+                            ? ['label' => 'Periksa & ubah dulu', 'ikon' => 'edit', 'href' => site_url('admin/surat/balasan') . '?lapor=' . $id] : null,
+                        $hak['kembalikan'] ? ['label' => 'Kembalikan ke siswa…', 'ikon' => 'close-circle', 'dialog' => 'lapor-kembalikan-' . $id, 'bahaya' => true] : null,
+                    ];
+                    ?>
+                    <div class="kartu-kaki flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center">
                         <?php if ($status === 'baru' && $ditolakSemua && $hak['lihat']): // semua ditolak: konfirmasi, tanpa surat (juga bila ajuan sudah ditolak lebih dulu) ?>
                             <form method="post" action="<?= site_url('admin/surat/balasan/laporan/' . $id . '/setujui') ?>">
                                 <?= csrf_field() ?>
@@ -242,33 +256,37 @@ $dt = 'text-xs text-gray-500 dark:text-gray-400';
                             </form>
                         <?php endif; ?>
                         <?php if ($bisaBuat && $hak['buat'] && ! $ditolakSemua): ?>
-                            <form method="post" action="<?= site_url('admin/surat/balasan/laporan/' . $id . '/buat') ?>">
+                            <form id="lapor-buat-<?= $id ?>" method="post" action="<?= site_url('admin/surat/balasan/laporan/' . $id . '/buat') ?>"<?= $buatDiMenu ? ' class="hidden"' : '' ?>>
                                 <?= csrf_field() ?>
-                                <button type="submit" class="btn <?= $hak['setujui'] ? 'btn-netral' : 'btn-utama' ?> w-full sm:w-auto" data-confirm-judul="Proses laporan?" data-confirm-ya="Ya, lanjutkan"
-                                        data-confirm="<?= esc(($dikeluarkan !== [] ? implode(', ', array_column($dikeluarkan, 'nama')) . ' akan DIKELUARKAN dari ajuan (ditolak perusahaan). ' : '') . ($balasan !== null ? 'Tandai laporan ' . $r['kode'] . ' selesai (Surat Balasan sudah ada)?' : 'Buat Surat Balasan untuk ' . $r['kode'] . ' dan ajukan untuk ACC?'), 'attr') ?>"><?= ikon('envelope', 'h-4 w-4') ?><?= $balasan !== null ? ($hak['setujui'] ? 'Tandai selesai (tanpa ACC)' : 'Tandai selesai') : 'Buat &amp; ajukan untuk ACC' ?></button>
+                                <?php if (! $buatDiMenu): ?>
+                                    <button type="submit" class="btn btn-utama w-full sm:w-auto" data-confirm-judul="Proses laporan?" data-confirm-ya="Ya, lanjutkan"
+                                            data-confirm="<?= esc($pesanBuat, 'attr') ?>"><?= ikon('envelope', 'h-4 w-4') ?><?= $balasan !== null ? 'Tandai selesai' : 'Buat &amp; ajukan untuk ACC' ?></button>
+                                <?php endif; ?>
                             </form>
-                        <?php endif; ?>
-                        <?php if ($bisaBuat && $bolehForm && $balasan === null && $hasil === 'semua'): // laporan sebagian/ditolak hanya lewat tombol di sini ?>
-                            <a href="<?= site_url('admin/surat/balasan') . '?lapor=' . $id ?>" class="btn btn-netral"><?= ikon('edit', 'h-4 w-4') ?>Periksa &amp; ubah dulu</a>
-                        <?php endif; ?>
-                        <?php if ($hak['kembalikan']): ?>
-                            <details class="sm:ms-auto sm:min-w-[18rem]">
-                                <summary class="btn btn-netral w-full cursor-pointer list-none text-red-700 dark:text-red-400"><?= ikon('close-circle', 'h-4 w-4') ?>Kembalikan ke siswa…</summary>
-                                <form method="post" action="<?= site_url('admin/surat/balasan/laporan/' . $id . '/kembalikan') ?>" class="mt-2 space-y-2">
-                                    <?= csrf_field() ?>
-                                    <?= view('admin/pkl/_alasan_cepat', ['grup' => $alasanLapor ?? [], 'target' => 'alasan-' . $id, 'kelola' => ! empty($kelolaAlasan)]) ?>
-                                    <label class="lbl" for="alasan-<?= $id ?>">Alasan (dibaca siswa) <span class="text-red-600 dark:text-red-400">*</span></label>
-                                    <textarea id="alasan-<?= $id ?>" name="alasan" rows="3" minlength="5" maxlength="<?= (int) ($maksAlasan ?? 255) ?>" required class="inp" placeholder="contoh: tanggal selesai PKL keliru, periksa lagi surat dari perusahaan"></textarea>
-                                    <button type="submit" class="btn btn-bahaya w-full">Kembalikan laporan</button>
-                                </form>
-                            </details>
                         <?php endif; ?>
                         <?php if ($bisaBuat && ! $ditolakSemua && ! $hak['setujui'] && ! $hak['buat']): ?>
                             <p class="text-sm text-gray-500 dark:text-gray-400">Membuat surat butuh hak <b>Buat Surat Balasan</b> (Sistem → Hak Akses).</p>
                         <?php endif; ?>
+                        <div class="sm:ms-auto"><?= ui_menu_lain($lainLapor) ?></div>
                     </div>
                 <?php endif; ?>
             </article>
+            <?php if (! in_array($status, ['diproses', 'dikembalikan'], true) && $hak['kembalikan']): // dialog "Kembalikan ke siswa" (dulu lipatan di kaki kartu) ?>
+                <?= ui_dialog_buka(['nama' => 'lapor-kembalikan-' . $id, 'judul' => 'Kembalikan laporan ' . $r['kode'] . ' ke siswa?']) ?>
+                    <form method="post" action="<?= site_url('admin/surat/balasan/laporan/' . $id . '/kembalikan') ?>">
+                        <?= csrf_field() ?>
+                        <div class="dialog-isi space-y-2">
+                            <?= view('admin/pkl/_alasan_cepat', ['grup' => $alasanLapor ?? [], 'target' => 'alasan-' . $id, 'kelola' => ! empty($kelolaAlasan)]) ?>
+                            <label class="lbl" for="alasan-<?= $id ?>">Alasan (dibaca siswa) <span class="text-red-600 dark:text-red-400">*</span></label>
+                            <textarea id="alasan-<?= $id ?>" name="alasan" rows="3" minlength="5" maxlength="<?= (int) ($maksAlasan ?? 255) ?>" required class="inp" placeholder="contoh: tanggal selesai PKL keliru, periksa lagi surat dari perusahaan"></textarea>
+                        </div>
+                        <div class="dialog-kaki">
+                            <button type="button" class="btn btn-netral" @click="tutup()">Batal</button>
+                            <button type="submit" class="btn btn-bahaya">Kembalikan laporan</button>
+                        </div>
+                    </form>
+                <?= ui_dialog_tutup() ?>
+            <?php endif; ?>
         <?php endforeach; ?>
         <?php if (count($rows) >= 200): ?>
             <p class="text-center text-sm text-gray-500 dark:text-gray-400">Menampilkan 200 laporan pertama.</p>

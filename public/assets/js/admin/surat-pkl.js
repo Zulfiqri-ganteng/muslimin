@@ -107,7 +107,7 @@ document.addEventListener('alpine:init', function () {
     // ================================================================= Balasan & Penarikan
     Alpine.data('suratPklForm', function () {
         return {
-            jenis: 'balasan', ubah: false, tempat: '', ajuan: [], dipilih: [], ajuanTunggal: '', siswaDipilih: [], cari: '',
+            jenis: 'balasan', ubah: false, tempat: '', ajuan: [], dipilih: [], ajuanTunggal: '', siswaDipilih: [], cari: '', semua: false,
             mulai: '', selesai: '', tglEfektif: '', alasanPilih: '0', alasanLain: '', alasanSaran: [], batas: {},
             // Balasan: siswa yang TIDAK diterima perusahaan ("ajuan:siswa" => true) + alasannya (dibaca siswa).
             tolak: {}, alasanTolak: '', alasanTolakSaran: [],
@@ -151,6 +151,14 @@ document.addEventListener('alpine:init', function () {
                 var q = this.cari.trim().toLowerCase();
                 return cocok(a.perusahaan + ' ' + a.kode + ' ' + a.alamat + ' ' + a.siswa.map(function (s) { return s.nama; }).join(' '), q);
             },
+            // (U5 rapi tampilan) cari-lalu-pilih: daftar ajuan baru tampil setelah mengetik (≥ 2 huruf) atau "Lihat semua";
+            // ajuan yang sudah dipilih selalu tampil. Isian & nilai yang terkirim tidak berubah.
+            dipilihDaftar: function (a) { return this.jenis === 'balasan' ? this.dipilih.indexOf(String(a.id)) !== -1 : this.ajuanTunggal === String(a.id); },
+            mencari: function () { return this.semua || this.cari.trim().length >= 2; },
+            tampilDaftar: function (a) { return this.dipilihDaftar(a) || (this.mencari() && this.tampil(a)); },
+            adaPilihan: function () { return this.dipilih.length > 0 || this.ajuanTunggal !== ''; },
+            jumlahCocok: function () { var self = this; return this.ajuan.filter(function (a) { return self.tampil(a); }).length; },
+            lihatSemua: function () { this.semua = !this.semua; },
             pilihSemua: function () {
                 var self = this;
                 this.dipilih = this.ajuan.filter(function (a) { return !a.balasan && self.tampil(a); }).map(function (a) { return String(a.id); });

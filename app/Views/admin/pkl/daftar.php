@@ -5,6 +5,10 @@
  * lencana sisa hari / pemeriksaan / cetak ulang, ui_kosong. Siap CSP: "Pilih semua" = komponen kit "daftarCentang" (dulu onclick
  * querySelectorAll), konfirmasi ACC = data-confirm kit (dulu onclick confirm), tombol unduh & WhatsApp = atribut data-pkl-*
  * (delegasi di pkl-unduh.js; dulu onclick window.dispatchEvent). Isi atas nama di kepala halaman.
+ * Rapi tampilan U3 (2026-10-26, docs/RENCANA-RAPI-TAMPILAN-PKL-SURAT.md): tombol massal yang bergantung centang (ACC terpilih, Unduh surat
+ * terpilih, Kabari WA terpilih) pindah ke BILAH yang baru muncul setelah ada yang dicentang (ui_bilah_pilih_*); yang tidak bergantung centang
+ * jadi SATU tombol di kepala kartu (ACC semua yang aman / Unduh SEMUA) + menu "Lainnya"; per baris SATU tombol (WA per baris → bilah & detail);
+ * kolom "Diperbarui" & paragraf petunjuk panjang dipindah (detail / panduan). Formulir (id, action, nama isian, tombol name=value) TETAP sama.
  *
  * @var string      $status   menunggu | perbaikan | disetujui | ditolak
  * @var list<array> $rows
@@ -58,6 +62,16 @@ $lencanaCek = static function (?array $c): string {
 };
 $lencanaUlang = '<span class="lencana lencana-kuning mt-1">' . ikon('exclamation-circle', 'h-3.5 w-3.5') . 'perlu cetak ulang</span>';
 $peranAcc = static fn (array $r): string => match ((string) ($r['acc_peran'] ?? '')) { 'impor' => 'Diimpor', '' => '', default => \App\Libraries\HakAkses::label((string) ($r['acc_peran'] ?? '')) };
+// Bilah aksi untuk yang dicentang (tampil hanya bila ada centang; di tabel & kartu HP masing-masing).
+$bilahPilih = static function () use ($status): string {
+    $isi = $status === 'menunggu'
+        ? '<button type="submit" form="formAcc" name="mode" value="terpilih" class="btn btn-sukses btn-sm" data-confirm="ACC semua ajuan yang dicentang? Yang punya peringatan akan dilewati." data-confirm-judul="ACC ajuan terpilih?" data-confirm-ya="Ya, ACC">'
+            . ikon('check', 'h-4 w-4') . 'ACC terpilih</button>'
+        : '<button type="button" class="btn btn-utama btn-sm" data-pkl-unduh="terpilih">' . ikon('download', 'h-4 w-4') . 'Unduh surat terpilih</button>'
+            . '<button type="button" class="btn btn-netral btn-sm" data-pkl-wa-terpilih>' . ikon('whatsapp', 'h-4 w-4', 'solid') . 'Kabari via WhatsApp</button>';
+
+    return '<div class="px-4 pb-3 sm:px-6">' . ui_bilah_pilih_buka(['label' => 'Aksi untuk ajuan yang dicentang']) . $isi . ui_bilah_pilih_tutup() . '</div>';
+};
 ?>
 <?= $this->extend('layouts/admin') ?>
 
@@ -68,11 +82,15 @@ $peranAcc = static fn (array $r): string => match ((string) ($r['acc_peran'] ?? 
 <?= $this->section('content') ?>
 
 <?= view('admin/partials/help', [
-    'helpKey'   => 'pkl_daftar_v4',
+    'helpKey'   => 'pkl_daftar_v5',
     'helpTitle' => 'Kotak Masuk PKL',
-    'helpBody'  => '<p>Pilih tab status di atas. Cari berdasarkan <b>nama perusahaan</b> atau <b>nama siswa</b>, atau saring per kelas. Klik baris untuk membuka detail dan mengambil keputusan.</p>'
+    'helpBody'  => '<p>Pilih tab status di atas. Cari berdasarkan <b>nama perusahaan</b> atau <b>nama siswa</b>, atau saring per kelas. Tekan <b>Periksa</b>/<b>Buka</b> untuk membuka detail dan mengambil keputusan.</p>'
         . '<p class="mt-2">Satu baris = satu <b>perusahaan</b> dengan rombongan siswanya (pengaju + teman satu tempat).</p>'
-        . '<p class="mt-2">Di tab <b>Menunggu ACC</b> kolom <b>Pemeriksaan</b> menandai ajuan <b>Aman</b> (hijau) atau <b>ada peringatan</b> (kuning/merah). Tombol <b>ACC massal</b> hanya menyetujui yang Aman; sisanya dilewati supaya diperiksa satu per satu. Di tab <b>Disetujui</b> yang berhak (diatur Admin) bisa mengunduh surat PKL banyak sekaligus: <b>Unduh surat terpilih</b> (yang dicentang), <b>Yang belum dicetak / perlu cetak ulang</b>, atau <b>Unduh SEMUA surat</b>. Sebelum berkas dibuat muncul kotak <b>Catat biaya</b> (Biaya PKL, SPP, Tabungan, OSIS, beasiswa) &mdash; wajib minimal satu centang per siswa. Setelah unduhan selesai muncul tombol <b>Kabari via WhatsApp</b> untuk memberi tahu siswa. Di HP, centang ada di kiri tiap kartu.</p>',
+        . '<ul class="mt-2 list-disc space-y-1 pl-5">'
+        . '<li><b>Centang dulu, tombolnya menyusul.</b> Setelah ada ajuan yang dicentang, muncul bilah di bawah: <b>ACC terpilih</b> (tab Menunggu ACC), atau <b>Unduh surat terpilih</b> &amp; <b>Kabari via WhatsApp</b> (tab Disetujui). <b>Batal pilih</b> melepas semua centang. Di HP, centang ada di kiri tiap kartu.</li>'
+        . '<li>Tab <b>Menunggu ACC</b>: kolom <b>Pemeriksaan</b> menandai ajuan <b>Aman</b> (hijau) atau <b>ada peringatan</b> (kuning/merah). <b>ACC semua yang aman</b> (kanan atas) hanya menyetujui yang Aman; sisanya dilewati supaya diperiksa satu per satu.</li>'
+        . '<li>Tab <b>Disetujui</b>: <b>Unduh SEMUA surat</b> (kanan atas); <b>Lainnya → Yang belum dicetak / perlu cetak ulang</b>. Sebelum berkas dibuat muncul kotak <b>Catat biaya</b> (Biaya PKL, SPP, Tabungan, OSIS, beasiswa) &mdash; wajib minimal satu centang per siswa; bila semua sudah tercatat, surat langsung terunduh. Yang belum bernomor otomatis diberi nomor sesuai urutan persetujuan. Kabar WhatsApp satu ajuan ada di halaman detailnya.</li>'
+        . '</ul>',
 ]) ?>
 
 <?= view('admin/pkl/_nav', ['tab' => $tab, 'hitungTab' => $hitungTab]) ?>
@@ -83,6 +101,17 @@ $peranAcc = static fn (array $r): string => match ((string) ($r['acc_peran'] ?? 
             <h2 id="judul-daftar-pkl" class="kartu-judul flex items-center gap-2"><?= esc($title) ?><span class="lencana lencana-abu"><?= (int) $total ?></span></h2>
             <p class="kartu-ket max-w-3xl"><?= esc($keterangan[$status] ?? '') ?></p>
         </div>
+        <?php if ($status === 'menunggu' && $rows !== [] && ! empty($bolehAcc)): ?>
+            <div class="flex shrink-0 flex-wrap gap-2">
+                <button type="submit" form="formAcc" name="mode" value="aman" class="btn btn-sukses btn-sm" title="Hanya ajuan berlabel Aman (tanpa peringatan) yang di-ACC; yang berperingatan dilewati."
+                        data-confirm="ACC SEMUA ajuan yang menunggu dan berlabel Aman (maks. 200)? Yang punya peringatan akan dilewati." data-confirm-judul="ACC semua yang aman?" data-confirm-ya="Ya, ACC semua"><?= ikon('check-circle', 'h-4 w-4') ?>ACC semua yang aman</button>
+            </div>
+        <?php elseif ($status === 'disetujui' && $rows !== [] && ! empty($bolehSurat)): ?>
+            <div class="flex shrink-0 flex-wrap gap-2">
+                <button type="button" class="btn btn-utama btn-sm" data-pkl-unduh="semua"><?= ikon('download', 'h-4 w-4') ?>Unduh SEMUA surat</button>
+                <?= ui_menu_lain([['label' => 'Yang belum dicetak / perlu cetak ulang', 'ikon' => 'download', 'atr' => 'data-pkl-unduh="belum"']]) ?>
+            </div>
+        <?php endif; ?>
     </div>
 
     <div class="alat-crud">
@@ -110,39 +139,23 @@ $peranAcc = static fn (array $r): string => match ((string) ($r['acc_peran'] ?? 
             <p class="flex items-start gap-2"><?= ikon('lock', 'mt-0.5 h-4 w-4 shrink-0') ?><span><b>ACC dilakukan peran yang diberi hak ACC ajuan PKL</b> (<?= esc(\App\Libraries\PklHak::teksPemegang('acc')) ?>). Sebagai <?= esc($peranLabel ?? 'staf') ?> Anda bisa memeriksa ajuan, mengembalikannya untuk diperbaiki, dan mengubah datanya.</span></p>
         </div>
     <?php endif; ?>
-    <?php if ($status === 'menunggu' && $rows !== [] && ! empty($bolehAcc)): ?>
-        <form id="formAcc" method="post" action="<?= site_url('admin/pkl/acc-massal') ?>" class="flex flex-col gap-3 border-b border-gray-200 bg-gray-50 px-4 py-3 sm:flex-row sm:flex-wrap sm:items-center sm:px-6 dark:border-gray-700 dark:bg-gray-700/40">
-            <?= csrf_field() ?>
-            <p class="text-sm text-gray-600 sm:me-auto dark:text-gray-300"><b class="text-green-700 dark:text-green-400">ACC massal:</b> hanya ajuan berlabel <b class="text-green-700 dark:text-green-400">Aman</b> (tanpa peringatan) yang di-ACC. Yang berperingatan dilewati agar Anda periksa satu per satu.</p>
-            <div class="flex flex-wrap gap-2">
-                <button type="submit" name="mode" value="terpilih" class="btn btn-netral btn-sm"
-                        data-confirm="ACC semua ajuan yang dicentang? Yang punya peringatan akan dilewati." data-confirm-judul="ACC ajuan terpilih?" data-confirm-ya="Ya, ACC"><?= ikon('check', 'h-4 w-4') ?>ACC terpilih</button>
-                <button type="submit" name="mode" value="aman" class="btn btn-sukses btn-sm"
-                        data-confirm="ACC SEMUA ajuan yang menunggu dan berlabel Aman (maks. 200)? Yang punya peringatan akan dilewati." data-confirm-judul="ACC semua yang aman?" data-confirm-ya="Ya, ACC semua"><?= ikon('check-circle', 'h-4 w-4') ?>ACC semua yang aman</button>
-            </div>
-        </form>
+    <?php if ($status === 'menunggu' && $rows !== [] && ! empty($bolehAcc)): // formulir ACC massal: tombolnya di kepala kartu & bilah pilih (atribut form=) ?>
+        <form id="formAcc" method="post" action="<?= site_url('admin/pkl/acc-massal') ?>" class="hidden"><?= csrf_field() ?></form>
     <?php endif; ?>
     <?php if ($status === 'disetujui' && $rows !== []): ?>
-        <div class="space-y-3 border-b border-gray-200 bg-gray-50 px-4 py-3 sm:px-6 dark:border-gray-700 dark:bg-gray-700/40">
-            <?php if (trim((string) ($p['waka_hubin_nama'] ?? '')) === ''): ?>
+        <?php if (trim((string) ($p['waka_hubin_nama'] ?? '')) === ''): ?>
+            <div class="border-b border-gray-200 px-4 py-3 sm:px-6 dark:border-gray-700">
                 <?= ui_peringatan('galat', '', ['html' => 'Nama Waka Hubin belum diisi, jadi di bawah tanda tangan surat hanya titik-titik. '
                     . ($bolehPengaturan ? '<a href="' . site_url('admin/pkl/pengaturan#surat') . '" class="font-semibold underline">Isi di Pengaturan PKL</a>, lalu unduh ulang.' : 'Minta yang berhak mengisinya di Pengaturan PKL.')]) ?>
-            <?php endif; ?>
-            <?php if (! empty($bolehSurat)): ?>
-                <form id="formMassal"></form>
-                <div class="flex flex-col gap-3 lg:flex-row lg:items-center">
-                    <p class="text-sm text-gray-600 lg:me-auto dark:text-gray-300">Surat PKL: centang ajuan lalu unduh. Bila ada siswa yang belum tercatat biayanya, kotak <b>Catat biaya</b> muncul dulu (bulan terpilih otomatis); bila semua sudah tercatat, surat langsung terunduh. Yang belum bernomor otomatis diberi nomor sesuai urutan persetujuan.</p>
-                    <div class="flex flex-wrap gap-2 lg:shrink-0 lg:justify-end">
-                        <button type="button" class="btn btn-netral btn-sm" data-pkl-unduh="terpilih"><?= ikon('download', 'h-4 w-4') ?>Unduh surat terpilih</button>
-                        <button type="button" class="btn btn-netral btn-sm" data-pkl-unduh="belum"><?= ikon('download', 'h-4 w-4') ?>Yang belum dicetak / perlu cetak ulang</button>
-                        <button type="button" class="btn btn-utama btn-sm" data-pkl-unduh="semua"><?= ikon('download', 'h-4 w-4') ?>Unduh SEMUA surat</button>
-                        <button type="button" class="btn btn-sukses btn-sm" data-pkl-wa-terpilih><?= ikon('whatsapp', 'h-4 w-4', 'solid') ?>Kabari via WhatsApp (terpilih)</button>
-                    </div>
-                </div>
-            <?php else: ?>
-                <p class="flex items-start gap-2 text-sm text-gray-600 dark:text-gray-300"><?= ikon('lock', 'mt-0.5 h-4 w-4 shrink-0') ?><span><b>Surat diunduh oleh peran yang diberi hak itu oleh Admin</b> (<?= esc(\App\Libraries\PklHak::teksPemegang('surat')) ?>), supaya jelas siapa yang menyetujui dan siapa yang mencetak. Anda tetap bisa melihat nomor dan status tiap surat di sini.</span></p>
-            <?php endif; ?>
-        </div>
+            </div>
+        <?php endif; ?>
+        <?php if (! empty($bolehSurat)): ?>
+            <form id="formMassal"></form>
+        <?php else: ?>
+            <div class="border-b border-gray-200 bg-gray-50 px-4 py-3 text-sm text-gray-600 sm:px-6 dark:border-gray-700 dark:bg-gray-700/40 dark:text-gray-300">
+                <p class="flex items-start gap-2"><?= ikon('lock', 'mt-0.5 h-4 w-4 shrink-0') ?><span>Surat diunduh oleh <b><?= esc(\App\Libraries\PklHak::teksPemegang('surat')) ?></b> (hak diatur Admin). Anda tetap bisa melihat nomor dan status tiap surat di sini.</span></p>
+            </div>
+        <?php endif; ?>
     <?php endif; ?>
 
     <?php if ($rows === []): ?>
@@ -150,7 +163,7 @@ $peranAcc = static fn (array $r): string => match ((string) ($r['acc_peran'] ?? 
             'teks' => $adaSaring ? 'Ubah pencarian/saringan, atau tekan Reset.' : '']) ?>
     <?php else: ?>
         <!-- Tabel (layar lebar) -->
-        <div class="hidden md:block"<?= $bisaPilih ? ' x-data="daftarCentang"' : '' ?>>
+        <div class="hidden md:block"<?= $bisaPilih ? ' x-data="daftarCentang" data-satuan="dipilih" @change="hitungCentang()"' : '' ?>>
             <div class="tabel-bungkus">
                 <table class="tabel">
                     <thead>
@@ -160,7 +173,6 @@ $peranAcc = static fn (array $r): string => match ((string) ($r['acc_peran'] ?? 
                             <th scope="col">Perusahaan</th>
                             <th scope="col">Pengaju</th>
                             <th scope="col">Dikirim siswa</th>
-                            <th scope="col">Diperbarui</th>
                             <?php if ($status === 'disetujui'): ?><th scope="col">Disetujui oleh</th><th scope="col">Surat</th><?php endif; ?>
                             <?php if ($status === 'menunggu'): ?><th scope="col">Pemeriksaan</th><?php endif; ?>
                             <th scope="col" class="text-right">Aksi</th>
@@ -189,7 +201,6 @@ $peranAcc = static fn (array $r): string => match ((string) ($r['acc_peran'] ?? 
                                     <span class="text-xs tabular-nums"><?= esc(date('d-m-Y H:i', strtotime($kirimAt))) ?></span>
                                     <?php if ($sisa !== null): ?><div class="mt-1"><?= $lencanaSisa($sisa) ?></div><?php endif; ?>
                                 </td>
-                                <td class="text-xs whitespace-nowrap tabular-nums text-gray-500 dark:text-gray-400"><?= esc(date('d-m-Y H:i', strtotime($r['updated_at']))) ?></td>
                                 <?php if ($status === 'disetujui'): ?>
                                     <td class="text-xs">
                                         <?php if (! empty($r['acc_nama'])): ?>
@@ -210,25 +221,21 @@ $peranAcc = static fn (array $r): string => match ((string) ($r['acc_peran'] ?? 
                                 <?php endif; ?>
                                 <?php if ($status === 'menunggu'): ?><td><?= $lencanaCek($cek[$id] ?? null) ?></td><?php endif; ?>
                                 <td class="text-right whitespace-nowrap">
-                                    <div class="inline-flex items-center justify-end gap-2">
-                                        <?php if ($status === 'disetujui' && ! empty($bolehSurat) && ! empty($statusSurat[$id])): ?>
-                                            <button type="button" class="btn btn-sukses btn-sm" data-pkl-wa-ajuan="<?= $id ?>" title="Kabari siswa lewat WhatsApp"><?= ikon('whatsapp', 'h-4 w-4', 'solid') ?>WA</button>
-                                        <?php endif; ?>
-                                        <a href="<?= site_url('admin/pkl/' . $id) ?>" class="btn btn-utama btn-sm"><?= $status === 'menunggu' ? 'Periksa' : 'Buka' ?></a>
-                                    </div>
+                                    <a href="<?= site_url('admin/pkl/' . $id) ?>" class="btn btn-utama btn-sm"><?= $status === 'menunggu' ? 'Periksa' : 'Buka' ?></a>
                                 </td>
                             </tr>
                             <?php if ($catatan): ?>
-                                <tr><td></td><td colspan="5" class="pt-0 text-xs text-gray-500 dark:text-gray-400"><span class="font-semibold text-gray-700 dark:text-gray-300">Catatan sekolah:</span> <?= esc($r['catatan_staf']) ?></td></tr>
+                                <tr><td></td><td colspan="4" class="pt-0 text-xs text-gray-500 dark:text-gray-400"><span class="font-semibold text-gray-700 dark:text-gray-300">Catatan sekolah:</span> <?= esc($r['catatan_staf']) ?></td></tr>
                             <?php endif; ?>
                         <?php endforeach; ?>
                     </tbody>
                 </table>
             </div>
+            <?= $bisaPilih ? $bilahPilih() : '' ?>
         </div>
 
         <!-- Kartu (HP): bisa dicentang agar ACC terpilih / unduh surat terpilih juga jalan di HP -->
-        <div class="md:hidden"<?= $bisaPilih ? ' x-data="daftarCentang"' : '' ?>>
+        <div class="md:hidden"<?= $bisaPilih ? ' x-data="daftarCentang" data-satuan="dipilih" @change="hitungCentang()"' : '' ?>>
             <?php if ($bisaPilih): ?>
                 <label class="flex cursor-pointer items-center gap-3 border-b border-gray-200 bg-gray-50 px-4 py-2.5 text-sm font-medium text-gray-700 dark:border-gray-700 dark:bg-gray-700/40 dark:text-gray-300"><input type="checkbox" class="cek" @change="pilihSemuaCentang($event)"> Pilih semua di halaman ini</label>
             <?php endif; ?>
@@ -260,6 +267,7 @@ $peranAcc = static fn (array $r): string => match ((string) ($r['acc_peran'] ?? 
                     </li>
                 <?php endforeach; ?>
             </ul>
+            <?= $bisaPilih ? $bilahPilih() : '' ?>
         </div>
 
         <?php if ($jmlHal > 1): ?>

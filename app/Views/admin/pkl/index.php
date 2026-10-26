@@ -1,9 +1,9 @@
 <?php
 /**
- * Beranda PKL (staf) — rombak tampilan F9: tab kit (_nav), kartu angka kit (kartu-tautan + stat-*), ui_peringatan untuk status
- * form siswa / laporan baru / ajuan terlambat, kartu Persiapan, bilah persen = <progress class="progres"> (dulu style= sebaris),
- * tombol Salin tautan = komponen kit "salinTeks" (dulu objek x-data bermetode + navigator.clipboard), ui_kosong. Isi atas nama di
- * kepala halaman. Tanpa hiasan animasi, gradien, atau emoji gaya lama.
+ * Beranda PKL (staf). Rapi tampilan U2 (2026-10-26, docs/RENCANA-RAPI-TAMPILAN-PKL-SURAT.md): menjadi **"Tugas hari ini"** — SATU daftar
+ * urut pekerjaan yang jumlahnya > 0 (tiap baris: jumlah + kalimat + satu tombol), lalu status form siswa, antrean ajuan, dan ringkasan
+ * angka di bawah (angka yang sudah tampil sebagai tugas tidak diulang). Data & hak SAMA dengan sebelumnya (controller tidak diubah).
+ * Sebelumnya (F9): kartu angka kit, ui_peringatan, kartu Persiapan, <progress class="progres">, tombol Salin = kit "salinTeks".
  *
  * @var array<string,int>        $hitung    jumlah ajuan per status
  * @var array<string,int|float>  $siswa     ringkasan siswa (sudah/belum mengisi, sudah/belum PKL)
@@ -13,6 +13,7 @@
  * @var list<string>             $tingkat
  * @var int                      $terlambat ajuan menunggu yang melewati batas keputusan ACC
  * @var int                      $laporBaru laporan "sudah diterima perusahaan" yang belum diproses
+ * @var int                      $berakhir7 siswa yang PKL-nya berakhir ≤ 7 hari & belum diperpanjang (0 = bukan pembuat Surat Perpanjangan)
  * @var array<string,int>|null   $suratRingkas belum_bernomor, belum_dikabari, uang_bulan_ini (hak surat/laporan)
  * @var array<string,int>|null   $suratSekolah hitungan surat sekolah per status + belum_unduh
  * Bersama dari PklDasar::dasar(): $tab, $hitungTab, $p (pengaturan PKL), $batasHari, $bolehPengaturan, $bolehAcc, $bolehSurat,
@@ -24,16 +25,50 @@ $pesanTutup = [
     'belum_siap'    => 'Pengaturan belum lengkap (tingkat atau pagar tanggal belum diisi), jadi form belum bisa dibuka.',
 ];
 $hubin = ! empty($bolehAcc); // peran ini bisa memutuskan (ACC) ajuan — diatur Admin di Sistem → Hak Akses
-$netral = 'text-gray-900 dark:text-white';
-$merek  = 'text-brand-700 dark:text-brand-400';
-$kuning = 'text-yellow-700 dark:text-yellow-400';
-$hijau  = 'text-green-700 dark:text-green-400';
-$merah  = 'text-red-700 dark:text-red-400';
-// Kartu angka yang bisa diklik (pola kit kartu-tautan): label, angka besar berwarna, keterangan.
-$kartuAngka = static fn (string $url, string $label, string $angka, string $warna, string $ket): string => '<a href="' . esc($url, 'attr') . '" class="kartu kartu-isi kartu-tautan">'
-    . '<p class="stat-label text-sm">' . esc($label) . '</p>'
-    . '<p class="stat-angka mt-2 tabular-nums ' . $warna . '">' . $angka . '</p>'
-    . '<p class="mt-1 text-xs text-gray-500 dark:text-gray-400">' . esc($ket) . '</p></a>';
+
+// ---- Tugas hari ini: [ikon, warna ikon, judul, keterangan, alamat, tombol] — hanya yang jumlahnya > 0, urut kepentingan.
+$warna = [
+    'kuning' => 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/60 dark:text-yellow-300',
+    'merah'  => 'bg-red-100 text-red-700 dark:bg-red-900/60 dark:text-red-300',
+    'hijau'  => 'bg-green-100 text-green-700 dark:bg-green-900/60 dark:text-green-300',
+    'merek'  => 'bg-brand-100 text-brand-700 dark:bg-gray-700 dark:text-brand-300',
+];
+$tugas = [];
+$nMenunggu = (int) ($hitung['menunggu'] ?? 0);
+if ($nMenunggu > 0) {
+    $tugas[] = ['inbox', ($terlambat ?? 0) > 0 ? 'merah' : 'kuning',
+        $nMenunggu . ' ajuan PKL ' . ($hubin ? 'menunggu keputusan Anda' : 'menunggu ACC'),
+        ($terlambat ?? 0) > 0 ? (int) $terlambat . ' ajuan sudah lewat batas ' . (int) $batasHari . ' hari — segera diputuskan.' : 'Yang paling lama menunggu ada di atas.',
+        site_url('admin/pkl/daftar/menunggu'), $hubin ? 'Putuskan' : 'Periksa'];
+}
+if (! empty($laporBaru)) {
+    $tugas[] = ['clipboard-check', 'kuning', (int) $laporBaru . ' laporan siswa "sudah diterima perusahaan"', 'Buatkan Surat Balasan PKL dari laporan itu.',
+        site_url('admin/surat/balasan/laporan'), 'Proses'];
+}
+if (! empty($suratSekolah) && (int) $suratSekolah['menunggu'] > 0) {
+    $tugas[] = ['envelope', 'kuning', (int) $suratSekolah['menunggu'] . ' surat sekolah menunggu ACC', ! empty($bolehAcc) ? 'Periksa lalu ACC.' : 'Menunggu keputusan pemegang hak ACC.',
+        site_url('admin/surat?status=menunggu'), ! empty($bolehAcc) ? 'Periksa' : 'Lihat'];
+}
+if (! empty($suratSekolah) && (int) $suratSekolah['dikembalikan'] > 0) {
+    $tugas[] = ['exclamation-circle', 'merah', (int) $suratSekolah['dikembalikan'] . ' surat sekolah dikembalikan', 'Perbaiki datanya lalu ajukan ulang untuk ACC.',
+        site_url('admin/surat?status=dikembalikan'), 'Perbaiki'];
+}
+if (! empty($suratSekolah) && (int) $suratSekolah['belum_unduh'] > 0) {
+    $tugas[] = ['download', 'hijau', (int) $suratSekolah['belum_unduh'] . ' surat sekolah siap diunduh', 'Sudah di-ACC; nomor surat terbit saat diunduh.',
+        site_url('admin/surat?status=disetujui'), 'Unduh'];
+}
+if (! empty($suratRingkas) && ! empty($bolehSurat) && (int) $suratRingkas['belum_bernomor'] > 0) {
+    $tugas[] = ['file-lines', 'hijau', (int) $suratRingkas['belum_bernomor'] . ' Surat Izin PKL belum diunduh', 'Ajuan sudah disetujui, suratnya belum terbit.',
+        site_url('admin/pkl/daftar/disetujui'), 'Unduh'];
+}
+if (! empty($suratRingkas) && ! empty($bolehSurat) && (int) $suratRingkas['belum_dikabari'] > 0) {
+    $tugas[] = ['whatsapp', 'hijau', (int) $suratRingkas['belum_dikabari'] . ' siswa belum dikabari WhatsApp', 'Surat sudah terbit, siswa belum diberi tahu.',
+        site_url('admin/pkl/daftar/disetujui'), 'Kabari'];
+}
+if (! empty($berakhir7)) {
+    $tugas[] = ['calendar-edit', 'merek', (int) $berakhir7 . ' siswa PKL-nya berakhir dalam 7 hari', 'Belum ada surat perpanjangan. Buatkan bila perusahaan memperpanjang PKL-nya.',
+        site_url('admin/surat/perpanjangan'), 'Lihat'];
+}
 ?>
 <?= $this->extend('layouts/admin') ?>
 
@@ -44,54 +79,21 @@ $kartuAngka = static fn (string $url, string $label, string $angka, string $warn
 <?= $this->section('content') ?>
 
 <?= view('admin/partials/help', [
-    'helpKey'   => 'pkl_beranda_v3',
+    'helpKey'   => 'pkl_beranda_v4',
     'helpTitle' => 'Beranda PKL',
     'helpBody'  => '<p>Siswa mengisi ajuan PKL sendiri lewat tautan di HP. Di sini ajuan <b>diperiksa</b> lalu diputuskan. <b>ACC dan tolak dilakukan peran yang diberi hak ACC ajuan PKL</b> oleh Admin (sekarang: ' . esc(\App\Libraries\PklHak::teksPemegang('acc')) . '; diatur di Sistem → Hak Akses); peran yang memegang hak periksa bisa <b>mengembalikan</b> ajuan agar siswa memperbaiki.</p>'
         . '<ul class="mt-2 list-disc pl-5 space-y-1">'
-        . '<li><b>Menunggu ACC</b> — antrean ajuan baru, yang paling lama di atas.</li>'
-        . '<li><b>Status Siswa</b> — melihat siapa yang <b>sudah/belum mengisi</b> dan siapa yang <b>sudah/belum PKL</b>.</li>'
-        . '<li><b>Isi atas Nama</b> — bila siswa tak bisa mengisi sendiri, atau untuk memasukkan data PKL lama.</li>'
-        . '<li><b>Persiapan</b> (kartu berlencana kuning, bagi pemegang hak Pengaturan PKL) — daftar yang harus siap sebelum tautan dibagikan: tanggal &amp; tingkat, nama Waka Hubin untuk surat, dan form dibuka. Hilang sendiri bila semuanya siap.</li>'
-        . '<li>Setiap keputusan tercatat (siapa, kapan) dan terlihat di riwayat tiap ajuan.</li>'
+        . '<li><b>Tugas hari ini</b> — daftar pekerjaan yang perlu dikerjakan sekarang (hanya yang ada). Tekan tombol di kanan untuk langsung mengerjakannya.</li>'
+        . '<li><b>Antrean</b> — ajuan yang menunggu keputusan, yang paling lama di atas.</li>'
+        . '<li><b>Ringkasan</b> (paling bawah) — jumlah ajuan per status dan kemajuan siswa (sudah/belum mengisi, sudah/belum PKL).</li>'
+        . '<li><b>Isi atas nama</b> (tombol di kanan atas) — bila siswa tak bisa mengisi sendiri, atau untuk memasukkan data PKL lama.</li>'
+        . '<li><b>Persiapan</b> (kartu berlencana kuning, bagi pemegang hak Pengaturan PKL) — daftar yang harus siap sebelum tautan dibagikan. Hilang sendiri bila semuanya siap.</li>'
         . '</ul>',
 ]) ?>
 
 <?= view('admin/pkl/_nav', ['tab' => $tab, 'hitungTab' => $hitungTab]) ?>
 
 <div class="space-y-4">
-    <?php if (! empty($suratRingkas)): // Surat & biaya: hanya bagi yang memegang hak unduh surat / laporan pembayaran ?>
-        <section class="grid gap-4 sm:grid-cols-3" aria-label="Surat dan biaya PKL">
-            <?php if (! empty($bolehSurat)): ?>
-                <?= $kartuAngka(site_url('admin/pkl/daftar/disetujui'), 'Surat belum diunduh', (string) (int) $suratRingkas['belum_bernomor'],
-                    $suratRingkas['belum_bernomor'] > 0 ? $kuning : $netral, 'Ajuan disetujui yang suratnya belum terbit') ?>
-                <?= $kartuAngka(site_url('admin/pkl/daftar/disetujui'), 'Siswa belum dikabari WhatsApp', (string) (int) $suratRingkas['belum_dikabari'],
-                    $suratRingkas['belum_dikabari'] > 0 ? $hijau : $netral, 'Surat sudah terbit, siswa belum diberi tahu') ?>
-            <?php endif; ?>
-            <?php if (! empty($bolehLaporan)): ?>
-                <?= $kartuAngka(site_url('admin/pkl/laporan'), 'Uang tercatat bulan ini', esc(\App\Libraries\PklBiaya::rupiah((int) $suratRingkas['uang_bulan_ini'])),
-                    $merek, 'Buka Laporan Pembayaran') ?>
-            <?php endif; ?>
-        </section>
-    <?php endif; ?>
-
-    <?php if (! empty($laporBaru)): // Laporan "sudah diterima perusahaan" dari siswa → Surat Balasan ?>
-        <?= ui_peringatan('awas', '', [
-            'judul' => (int) $laporBaru . ' laporan siswa "sudah diterima perusahaan"',
-            'html'  => 'Menunggu dibuatkan Surat Balasan PKL. <a href="' . site_url('admin/surat/balasan/laporan') . '" class="font-semibold underline">Proses sekarang</a>',
-        ]) ?>
-    <?php endif; ?>
-
-    <?php if (! empty($suratSekolah)): // Surat Sekolah (ASTS, TKA, Pernyataan, Balasan, Penarikan) — bagi pemegang hak ACC / pembuat surat ?>
-        <section class="grid gap-4 sm:grid-cols-3" aria-label="Surat sekolah">
-            <?= $kartuAngka(site_url('admin/surat?status=menunggu'), 'Surat sekolah menunggu ACC', (string) (int) $suratSekolah['menunggu'],
-                $suratSekolah['menunggu'] > 0 ? $kuning : $netral, ! empty($bolehAcc) ? 'Periksa lalu ACC' : 'Menunggu keputusan ACC') ?>
-            <?= $kartuAngka(site_url('admin/surat?status=disetujui'), 'Surat sekolah belum diunduh', (string) (int) $suratSekolah['belum_unduh'],
-                $suratSekolah['belum_unduh'] > 0 ? $hijau : $netral, 'Sudah di-ACC, nomor terbit saat diunduh') ?>
-            <?= $kartuAngka(site_url('admin/surat?status=dikembalikan'), 'Surat sekolah dikembalikan', (string) (int) $suratSekolah['dikembalikan'],
-                $suratSekolah['dikembalikan'] > 0 ? $merah : $netral, 'Perlu diperbaiki lalu diajukan ulang') ?>
-        </section>
-    <?php endif; ?>
-
     <?php
     // Daftar persiapan: hanya untuk yang boleh membuka Pengaturan, dan hanya selama ada yang belum siap.
     $wakaOk  = trim((string) ($p['waka_hubin_nama'] ?? '')) !== '';
@@ -127,6 +129,35 @@ $kartuAngka = static fn (string $url, string $label, string $angka, string $warn
         </section>
     <?php endif; ?>
 
+    <!-- Tugas hari ini -->
+    <section class="kartu overflow-hidden" aria-labelledby="judul-tugas">
+        <div class="kartu-kepala">
+            <div class="min-w-0">
+                <h2 id="judul-tugas" class="kartu-judul">Tugas hari ini</h2>
+                <p class="kartu-ket">Pekerjaan yang perlu dikerjakan sekarang. Tekan tombol di kanan untuk membukanya.</p>
+            </div>
+            <?php if ($tugas !== []): ?><span class="lencana lencana-kuning shrink-0"><?= count($tugas) ?> tugas</span><?php endif; ?>
+        </div>
+        <?php if ($tugas === []): ?>
+            <?= ui_kosong(['ikon' => 'check-circle', 'judul' => 'Tidak ada tugas saat ini', 'teks' => 'Semua pekerjaan PKL dan surat sudah beres.']) ?>
+        <?php else: ?>
+            <ul class="divide-y divide-gray-200 dark:divide-gray-700" data-tugas>
+                <?php foreach ($tugas as [$ikon, $w, $judul, $ket, $url, $tombol]): ?>
+                    <li>
+                        <a href="<?= esc($url, 'attr') ?>" class="flex items-center gap-3 px-4 py-3 transition-colors hover:bg-gray-50 sm:px-6 dark:hover:bg-gray-700/60">
+                            <span class="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg <?= $warna[$w] ?>"><?= ikon($ikon, 'h-5 w-5', $ikon === 'whatsapp' ? 'solid' : 'outline') ?></span>
+                            <span class="min-w-0 flex-1">
+                                <span class="block text-sm font-semibold text-gray-900 dark:text-white"><?= esc($judul) ?></span>
+                                <span class="block text-sm text-gray-500 dark:text-gray-400"><?= esc($ket) ?></span>
+                            </span>
+                            <span class="btn btn-netral btn-sm shrink-0"><?= esc($tombol) ?><?= ikon('chevron-right', 'h-3.5 w-3.5') ?></span>
+                        </a>
+                    </li>
+                <?php endforeach; ?>
+            </ul>
+        <?php endif; ?>
+    </section>
+
     <?php
     // Status form siswa: hijau = terbuka, kuning = tertutup (beserta alasannya).
     $terbuka = $alasan === null;
@@ -138,49 +169,10 @@ $kartuAngka = static fn (string $url, string $label, string $angka, string $warn
         . '<div class="mt-3 flex flex-wrap gap-2">'
         . '<button type="button" class="btn btn-netral btn-sm" x-data="salinTeks" data-teks="' . esc($tautan, 'attr') . '" data-pesan="Tautan form siswa tersalin." @click="salin()">'
         . ikon('file-copy', 'h-4 w-4') . '<span x-show="!tersalin">Salin tautan</span><span x-show="tersalin" x-cloak>Tautan disalin</span></button>'
-        . ($bolehPengaturan ? '<a href="' . site_url('admin/pkl/pengaturan') . '" class="btn btn-utama btn-sm">' . ikon('cog', 'h-4 w-4') . ($terbuka ? 'Atur / tutup form' : 'Buka lewat Pengaturan') . '</a>' : '')
+        . ($bolehPengaturan ? '<a href="' . site_url('admin/pkl/pengaturan') . '" class="btn btn-netral btn-sm">' . ikon('cog', 'h-4 w-4') . ($terbuka ? 'Atur / tutup form' : 'Buka lewat Pengaturan') . '</a>' : '')
         . '</div>';
     ?>
     <?= ui_peringatan($terbuka ? 'sukses' : 'awas', '', ['judul' => 'Form siswa: ' . ($terbuka ? 'TERBUKA' : 'TERTUTUP'), 'html' => $isiForm]) ?>
-
-    <?php if (($terlambat ?? 0) > 0): ?>
-        <?= ui_peringatan('galat', '', ['html' => '<b>' . (int) $terlambat . ' ajuan</b> sudah melewati batas keputusan ACC (' . (int) $batasHari . ' hari sejak dikirim). Segera diputuskan. <a href="' . site_url('admin/pkl/daftar/menunggu') . '" class="font-semibold underline">Lihat ajuan</a>']) ?>
-    <?php endif; ?>
-
-    <!-- Angka status ajuan -->
-    <section class="grid grid-cols-2 gap-4 lg:grid-cols-4" aria-label="Jumlah ajuan per status">
-        <?php foreach ([
-            ['menunggu', 'Menunggu ACC', $merek, $hubin ? 'Menunggu keputusan Anda' : 'Menunggu keputusan ACC'],
-            ['perbaikan', 'Perlu perbaikan', $kuning, 'Di tangan siswa'],
-            ['disetujui', 'Disetujui', $hijau, 'Siap dibuatkan surat'],
-            ['ditolak', 'Ditolak', $merah, 'Siswa boleh mengajukan lagi'],
-        ] as [$st, $label, $warna, $ket]): ?>
-            <?= $kartuAngka(site_url('admin/pkl/daftar/' . $st), $label, (string) (int) ($hitung[$st] ?? 0), $warna, $ket) ?>
-        <?php endforeach; ?>
-    </section>
-
-    <!-- Dua angka utama: sudah mengisi, sudah PKL -->
-    <section class="grid gap-4 lg:grid-cols-2" aria-label="Kemajuan siswa">
-        <?php foreach ([
-            ['Sudah mengisi', $siswa['sudah_isi'], $siswa['belum_isi'], $siswa['persen_isi'], 'belum mengisi', ''],
-            ['Sudah dapat tempat PKL (disetujui)', $siswa['sudah_pkl'], $siswa['belum_pkl'], $siswa['persen_pkl'], 'belum PKL', ' progres-hijau'],
-        ] as [$judul, $sudah, $belum, $persen, $labelBelum, $warnaBar]): ?>
-            <div class="kartu kartu-isi">
-                <div class="flex items-baseline justify-between gap-3">
-                    <p class="text-base font-semibold text-gray-900 dark:text-white"><?= esc($judul) ?></p>
-                    <p class="stat-angka tabular-nums"><?= (int) $persen ?>%</p>
-                </div>
-                <progress class="progres<?= $warnaBar ?> mt-3" value="<?= (int) $persen ?>" max="100" aria-label="<?= esc($judul, 'attr') ?>"><?= (int) $persen ?>%</progress>
-                <p class="mt-2 text-sm text-gray-500 dark:text-gray-400"><b class="font-semibold text-gray-900 dark:text-white"><?= (int) $sudah ?></b> siswa sudah · <b class="font-semibold text-gray-900 dark:text-white"><?= (int) $belum ?></b> <?= esc($labelBelum) ?> · dari <b class="font-semibold text-gray-900 dark:text-white"><?= (int) $siswa['total'] ?></b> siswa tingkat <?= esc(implode('/', $tingkat) ?: '—') ?></p>
-            </div>
-        <?php endforeach; ?>
-    </section>
-    <?php if ($siswa['sudah_pkl'] > 0): ?>
-        <p class="text-sm text-gray-500 dark:text-gray-400">
-            Dari yang disetujui: <b class="text-gray-900 dark:text-white"><?= (int) $siswa['belum_mulai'] ?></b> belum mulai · <b class="text-gray-900 dark:text-white"><?= (int) $siswa['sedang'] ?></b> sedang PKL · <b class="text-gray-900 dark:text-white"><?= (int) $siswa['selesai'] ?></b> selesai.
-            <a href="<?= site_url('admin/pkl/siswa') ?>" class="inline-flex items-center gap-1 font-medium text-brand-700 hover:underline dark:text-brand-400">Lihat per siswa<?= ikon('chevron-right', 'h-3.5 w-3.5') ?></a>
-        </p>
-    <?php endif; ?>
 
     <!-- Antrean -->
     <section class="kartu overflow-hidden" aria-labelledby="judul-antrean">
@@ -215,12 +207,54 @@ $kartuAngka = static fn (string $url, string $label, string $angka, string $warn
                     </li>
                 <?php endforeach; ?>
             </ul>
-            <?php if ((int) $hitung['menunggu'] > count($antrean)): ?>
+            <?php if ($nMenunggu > count($antrean)): ?>
                 <div class="kartu-kaki text-center">
-                    <a href="<?= site_url('admin/pkl/daftar/menunggu') ?>" class="inline-flex items-center gap-1 text-sm font-medium text-brand-700 hover:underline dark:text-brand-400">Lihat semua <?= (int) $hitung['menunggu'] ?> ajuan<?= ikon('chevron-right', 'h-3.5 w-3.5') ?></a>
+                    <a href="<?= site_url('admin/pkl/daftar/menunggu') ?>" class="inline-flex items-center gap-1 text-sm font-medium text-brand-700 hover:underline dark:text-brand-400">Lihat semua <?= $nMenunggu ?> ajuan<?= ikon('chevron-right', 'h-3.5 w-3.5') ?></a>
                 </div>
             <?php endif; ?>
         <?php endif; ?>
+    </section>
+
+    <!-- Ringkasan: angka yang bukan tugas (status lain, uang tercatat) + kemajuan siswa -->
+    <section class="kartu overflow-hidden" aria-labelledby="judul-ringkasan">
+        <div class="kartu-kepala"><h2 id="judul-ringkasan" class="kartu-judul text-base">Ringkasan PKL</h2></div>
+        <div class="kartu-isi space-y-5">
+            <ul class="flex flex-wrap gap-2 text-sm" aria-label="Jumlah ajuan per status">
+                <?php foreach ([
+                    ['perbaikan', 'Perlu perbaikan (di tangan siswa)', 'lencana-kuning'],
+                    ['disetujui', 'Disetujui', 'lencana-hijau'],
+                    ['ditolak', 'Ditolak', 'lencana-merah'],
+                ] as [$st, $label, $lencana]): ?>
+                    <li><a href="<?= site_url('admin/pkl/daftar/' . $st) ?>" class="inline-flex items-center gap-2 rounded-lg border border-gray-200 px-3 py-1.5 font-medium text-gray-700 hover:bg-gray-50 dark:border-gray-700 dark:text-gray-300 dark:hover:bg-gray-700/60">
+                        <?= esc($label) ?> <span class="lencana <?= $lencana ?> tabular-nums"><?= (int) ($hitung[$st] ?? 0) ?></span></a></li>
+                <?php endforeach; ?>
+                <?php if (! empty($suratRingkas) && ! empty($bolehLaporan)): ?>
+                    <li><a href="<?= site_url('admin/pkl/laporan') ?>" class="inline-flex items-center gap-2 rounded-lg border border-gray-200 px-3 py-1.5 font-medium text-gray-700 hover:bg-gray-50 dark:border-gray-700 dark:text-gray-300 dark:hover:bg-gray-700/60">
+                        Uang tercatat bulan ini <span class="font-semibold text-brand-700 tabular-nums dark:text-brand-400"><?= esc(\App\Libraries\PklBiaya::rupiah((int) $suratRingkas['uang_bulan_ini'])) ?></span></a></li>
+                <?php endif; ?>
+            </ul>
+            <div class="grid gap-4 lg:grid-cols-2" aria-label="Kemajuan siswa">
+                <?php foreach ([
+                    ['Sudah mengisi', $siswa['sudah_isi'], $siswa['belum_isi'], $siswa['persen_isi'], 'belum mengisi', ''],
+                    ['Sudah dapat tempat PKL (disetujui)', $siswa['sudah_pkl'], $siswa['belum_pkl'], $siswa['persen_pkl'], 'belum PKL', ' progres-hijau'],
+                ] as [$judul, $sudah, $belum, $persen, $labelBelum, $warnaBar]): ?>
+                    <div>
+                        <div class="flex items-baseline justify-between gap-3">
+                            <p class="text-sm font-semibold text-gray-900 dark:text-white"><?= esc($judul) ?></p>
+                            <p class="text-lg font-semibold tabular-nums text-gray-900 dark:text-white"><?= (int) $persen ?>%</p>
+                        </div>
+                        <progress class="progres<?= $warnaBar ?> mt-2" value="<?= (int) $persen ?>" max="100" aria-label="<?= esc($judul, 'attr') ?>"><?= (int) $persen ?>%</progress>
+                        <p class="mt-1.5 text-sm text-gray-500 dark:text-gray-400"><b class="font-semibold text-gray-900 dark:text-white"><?= (int) $sudah ?></b> siswa sudah · <b class="font-semibold text-gray-900 dark:text-white"><?= (int) $belum ?></b> <?= esc($labelBelum) ?> · dari <b class="font-semibold text-gray-900 dark:text-white"><?= (int) $siswa['total'] ?></b> siswa tingkat <?= esc(implode('/', $tingkat) ?: '—') ?></p>
+                    </div>
+                <?php endforeach; ?>
+            </div>
+            <?php if ($siswa['sudah_pkl'] > 0): ?>
+                <p class="text-sm text-gray-500 dark:text-gray-400">
+                    Dari yang disetujui: <b class="text-gray-900 dark:text-white"><?= (int) $siswa['belum_mulai'] ?></b> belum mulai · <b class="text-gray-900 dark:text-white"><?= (int) $siswa['sedang'] ?></b> sedang PKL · <b class="text-gray-900 dark:text-white"><?= (int) $siswa['selesai'] ?></b> selesai.
+                    <a href="<?= site_url('admin/pkl/siswa') ?>" class="inline-flex items-center gap-1 font-medium text-brand-700 hover:underline dark:text-brand-400">Lihat per siswa<?= ikon('chevron-right', 'h-3.5 w-3.5') ?></a>
+                </p>
+            <?php endif; ?>
+        </div>
     </section>
 </div>
 

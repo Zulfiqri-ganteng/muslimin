@@ -41,6 +41,8 @@ final class PklStatusExcel
         'I' => ['No. Bukti', 11, false, true],
         'J' => ['Nomor Surat', 23, true, false],
         'K' => ['Riwayat Ditolak / Dikeluarkan', 62, true, false],
+        // 2026-10-26: Surat Perpanjangan PKL yang sudah disetujui (kolom baru di akhir; kolom lama tidak bergeser).
+        'L' => ['Diperpanjang s.d.', 18, true, true],
     ];
 
     /** Warna lembut kolom Status per tahap. */
@@ -78,7 +80,7 @@ final class PklStatusExcel
             3 => ['Saringan: ' . ($saring !== [] ? implode(' · ', $saring) : 'semua siswa'), false, 11],
         ];
         foreach ($baris as $b => [$teks, $tebal, $ukuran]) {
-            $ws->mergeCells("A{$b}:K{$b}");
+            $ws->mergeCells("A{$b}:L{$b}");
             $ws->setCellValueExplicit("A{$b}", $teks, DataType::TYPE_STRING);
             $ws->getStyle("A{$b}")->getFont()->setBold($tebal)->setSize($ukuran);
             $ws->getStyle("A{$b}")->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER);
@@ -107,9 +109,9 @@ final class PklStatusExcel
         foreach (self::KOLOM as $k => [$judul]) {
             $ws->setCellValueExplicit("{$k}{$kepala}", $judul, DataType::TYPE_STRING);
         }
-        $ws->getStyle("A{$kepala}:K{$kepala}")->getFont()->setBold(true);
-        $ws->getStyle("A{$kepala}:K{$kepala}")->getFill()->setFillType(Fill::FILL_SOLID)->getStartColor()->setRGB(self::KEPALA);
-        $ws->getStyle("A{$kepala}:K{$kepala}")->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER)->setVertical(Alignment::VERTICAL_CENTER)->setWrapText(true);
+        $ws->getStyle("A{$kepala}:L{$kepala}")->getFont()->setBold(true);
+        $ws->getStyle("A{$kepala}:L{$kepala}")->getFill()->setFillType(Fill::FILL_SOLID)->getStartColor()->setRGB(self::KEPALA);
+        $ws->getStyle("A{$kepala}:L{$kepala}")->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER)->setVertical(Alignment::VERTICAL_CENTER)->setWrapText(true);
         $ws->getRowDimension($kepala)->setRowHeight(self::BARIS * 2);
 
         // Isi.
@@ -128,6 +130,7 @@ final class PklStatusExcel
                 'I' => ! empty($s['ajuan_id']) ? PklPengajuanModel::kode((int) $s['ajuan_id']) : '',
                 'J' => (string) ($s['nomor_surat'] ?? ''),
                 'K' => implode("\n", array_map([PklKeluar::class, 'teksTolakLengkap'], $tolak[(int) ($s['id'] ?? 0)] ?? [])),
+                'L' => ! empty($s['selesai_efektif']) && (string) $s['selesai_efektif'] !== (string) ($s['tanggal_selesai'] ?? '') ? IsianBantu::tanggalIndo((string) $s['selesai_efektif']) : '',
             ];
             $tinggi = 1;
             foreach ($isi as $k => $v) {
@@ -146,13 +149,13 @@ final class PklStatusExcel
         }
         $akhir = max($kepala + 1, $b - 1);
         if ($rows === []) {
-            $ws->mergeCells("A{$akhir}:K{$akhir}");
+            $ws->mergeCells("A{$akhir}:L{$akhir}");
             $ws->setCellValue("A{$akhir}", 'Tidak ada siswa yang cocok dengan saringan ini.');
             $ws->getStyle("A{$akhir}")->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER);
         }
-        $tabel = "A{$kepala}:K{$akhir}";
+        $tabel = "A{$kepala}:L{$akhir}";
         $ws->getStyle($tabel)->getBorders()->getAllBorders()->setBorderStyle(Border::BORDER_THIN);
-        $ws->getStyle('A' . ($kepala + 1) . ":K{$akhir}")->getAlignment()->setVertical(Alignment::VERTICAL_TOP);
+        $ws->getStyle('A' . ($kepala + 1) . ":L{$akhir}")->getAlignment()->setVertical(Alignment::VERTICAL_TOP);
         foreach (self::KOLOM as $k => [, , $lipat, $tengah]) {
             $gaya = $ws->getStyle("{$k}" . ($kepala + 1) . ":{$k}{$akhir}")->getAlignment();
             $gaya->setWrapText($lipat);

@@ -3,6 +3,8 @@
  * Laporan Pembayaran PKL — siapa, kelas, jurusan, sudah bayar berapa (rumus & status: Libraries\PklLaporanBiaya).
  * Rombak tampilan F9: tab kit (_nav), Unduh Excel ber-ikon di kepala halaman, kartu angka (stat-*), kartu saringan berlabel,
  * tabel kit (layar sangat lebar) + kartu (HP/laptop), lencana status kit, ikon pengganti emoji, ui_kosong, paginasi tombol kit.
+ * Rapi tampilan U6 (2026-10-26): tujuh kotak angka → satu kartu ringkasan; saringan Kelas/Jurusan/Tanggal/Beasiswa dilipat di
+ * "Saringan lain" (terbuka bila dipakai). Nama isian saringan, angka, paginasi, dan Excel TETAP sama.
  *
  * @var array       $f          saringan (kelas_id, jurusan, status, q, dari, sampai, beasiswa)
  * @var array       $ringkas    siswa, lunas, sebagian, belum, beasiswa, uang_masuk, total_kekurangan, per_jenis
@@ -30,8 +32,6 @@ $urlHal = static function (int $hal) use ($f): string {
 };
 $warnaStatus = ['lunas' => 'lencana-hijau', 'sebagian' => 'lencana-kuning', 'belum' => 'lencana-merah'];
 $adaSaringan = $f['kelas_id'] > 0 || $f['jurusan'] !== '' || $f['status'] !== '' || $f['q'] !== '' || $f['dari'] !== '' || $f['sampai'] !== '' || $f['beasiswa'];
-$tile = static fn (string $label, string $nilai, string $warna): string => '<div class="kartu kartu-isi"><p class="stat-label text-sm">' . esc($label) . '</p>'
-    . '<p class="stat-angka mt-2 tabular-nums ' . $warna . '">' . esc($nilai) . '</p></div>';
 $tandaBeasiswa = static fn (string $teks): string => '<span class="inline-flex items-center gap-1 font-semibold text-brand-700 dark:text-brand-400">' . ikon('award', 'h-3.5 w-3.5 shrink-0') . esc($teks) . '</span>';
 ?>
 <?= $this->extend('layouts/admin') ?>
@@ -43,12 +43,13 @@ $tandaBeasiswa = static fn (string $teks): string => '<span class="inline-flex i
 <?= $this->section('content') ?>
 
 <?= view('admin/partials/help', [
-    'helpKey'   => 'pkl_laporan_v1',
+    'helpKey'   => 'pkl_laporan_v2',
     'helpTitle' => 'Laporan Pembayaran PKL',
     'helpBody'  => '<p>Daftar siswa yang suratnya sudah diterbitkan beserta <b>biaya yang sudah dicatat</b> (dicatat saat surat diunduh &mdash; tidak ada input terpisah).</p>'
         . '<ul class="mt-2 list-disc pl-5 space-y-1">'
         . '<li><b>Lunas</b> = Biaya PKL (tahun ajaran ini) + semua biaya bulanan (SPP, Tabungan, OSIS) untuk <u>bulan surat</u> sudah tercatat. Siswa penerima beasiswa tidak diwajibkan SPP.</li>'
         . '<li><b>Sebagian</b> = ada yang tercatat tetapi belum semuanya &middot; <b>Belum</b> = belum ada biaya tercatat. <b>Kekurangan</b> = jumlah biaya yang seharusnya sudah ada.</li>'
+        . '<li>Angka ringkasan ada di satu kartu paling atas. Saringan <b>Kelas, Jurusan, Tanggal, Beasiswa</b> ada di <b>Saringan lain</b> (terbuka sendiri bila sedang dipakai).</li>'
         . '<li>Filter <b>tanggal</b> memilih siswa yang punya catatan pada rentang itu dan menghitung uang yang masuk di rentang itu; status tetap dihitung dari seluruh catatan siswa.</li>'
         . '<li>Tombol <b>Unduh Excel</b> membuat berkas dengan lembar Rincian, Rekap Kelas, dan Rekap Jurusan sesuai saringan yang sedang dipakai. Jurusan sejenis (TKJ/TJKT/TKJT) digabung.</li>'
         . '<li>Salah catat? Buka ajuannya &rarr; kartu <b>Pembayaran siswa</b> &rarr; hapus catatan (wajib beralasan).</li>'
@@ -58,17 +59,21 @@ $tandaBeasiswa = static fn (string $teks): string => '<span class="inline-flex i
 <?= view('admin/pkl/_nav', ['tab' => $tab, 'hitungTab' => $hitungTab]) ?>
 
 <div class="space-y-4">
-    <!-- Ringkasan: jumlah siswa per status, lalu uang -->
-    <section class="grid grid-cols-2 gap-4 sm:grid-cols-5" aria-label="Ringkasan siswa">
-        <?= $tile('Siswa', (string) (int) $ringkas['siswa'], 'text-gray-900 dark:text-white') ?>
-        <?= $tile('Lunas', (string) (int) $ringkas['lunas'], 'text-green-700 dark:text-green-400') ?>
-        <?= $tile('Sebagian', (string) (int) $ringkas['sebagian'], 'text-yellow-700 dark:text-yellow-400') ?>
-        <?= $tile('Belum', (string) (int) $ringkas['belum'], 'text-red-700 dark:text-red-400') ?>
-        <?= $tile('Penerima beasiswa', (string) (int) $ringkas['beasiswa'], 'text-brand-700 dark:text-brand-400') ?>
-    </section>
-    <section class="grid gap-4 sm:grid-cols-2" aria-label="Ringkasan uang">
-        <?= $tile('Uang tercatat' . (($f['dari'] !== '' || $f['sampai'] !== '') ? ' (pada rentang tanggal)' : ''), $rp((int) $ringkas['uang_masuk']), 'text-brand-700 dark:text-brand-400') ?>
-        <?= $tile('Kekurangan (yang seharusnya sudah ada)', $rp((int) $ringkas['total_kekurangan']), 'text-red-700 dark:text-red-400') ?>
+    <!-- Ringkasan (U6: satu kartu; angka sama dengan dulu tujuh kotak) -->
+    <section class="kartu kartu-isi" aria-label="Ringkasan pembayaran">
+        <dl class="grid grid-cols-2 gap-x-6 gap-y-4 sm:grid-cols-4 lg:grid-cols-7">
+            <?php foreach ([
+                ['Siswa', (string) (int) $ringkas['siswa'], 'text-gray-900 dark:text-white'],
+                ['Lunas', (string) (int) $ringkas['lunas'], 'text-green-700 dark:text-green-400'],
+                ['Sebagian', (string) (int) $ringkas['sebagian'], 'text-yellow-700 dark:text-yellow-400'],
+                ['Belum', (string) (int) $ringkas['belum'], 'text-red-700 dark:text-red-400'],
+                ['Penerima beasiswa', (string) (int) $ringkas['beasiswa'], 'text-brand-700 dark:text-brand-400'],
+                ['Uang tercatat' . (($f['dari'] !== '' || $f['sampai'] !== '') ? ' (rentang tanggal)' : ''), $rp((int) $ringkas['uang_masuk']), 'text-brand-700 dark:text-brand-400'],
+                ['Kekurangan', $rp((int) $ringkas['total_kekurangan']), 'text-red-700 dark:text-red-400'],
+            ] as [$lbl, $nilai, $warna]): ?>
+                <div class="min-w-0"><dt class="stat-label text-xs"><?= esc($lbl) ?></dt><dd class="mt-1 truncate text-xl font-bold tabular-nums <?= $warna ?>"><?= esc($nilai) ?></dd></div>
+            <?php endforeach; ?>
+        </dl>
     </section>
 
     <!-- Saringan -->
@@ -78,39 +83,44 @@ $tandaBeasiswa = static fn (string $teks): string => '<span class="inline-flex i
             <input type="search" id="lp-q" name="q" value="<?= esc($f['q'], 'attr') ?>" placeholder="Cari nama, NIS, perusahaan, no. surat…" class="inp">
         </div>
         <div>
-            <label class="lbl" for="lp-kelas">Kelas</label>
-            <select id="lp-kelas" name="kelas_id" class="inp">
-                <option value="">Semua kelas</option>
-                <?php foreach ($kelas as $k): ?><option value="<?= (int) $k['id'] ?>"<?= (int) $k['id'] === (int) $f['kelas_id'] ? ' selected' : '' ?>><?= esc($k['nama_kelas']) ?></option><?php endforeach; ?>
-            </select>
-        </div>
-        <div>
-            <label class="lbl" for="lp-jurusan">Jurusan</label>
-            <select id="lp-jurusan" name="jurusan" class="inp">
-                <option value="">Semua jurusan</option>
-                <?php foreach (['TKJ', 'AKL', 'MP'] as $j): ?><option value="<?= $j ?>"<?= $f['jurusan'] === $j ? ' selected' : '' ?>><?= esc(PklLaporanBiaya::JURUSAN[$j]) ?></option><?php endforeach; ?>
-            </select>
-        </div>
-        <div>
             <label class="lbl" for="lp-status">Status</label>
             <select id="lp-status" name="status" class="inp">
                 <option value="">Semua status</option>
                 <?php foreach (PklLaporanBiaya::STATUS as $kode => $label): ?><option value="<?= $kode ?>"<?= $f['status'] === $kode ? ' selected' : '' ?>><?= esc($label) ?></option><?php endforeach; ?>
             </select>
         </div>
-        <div>
-            <label class="lbl" for="lp-dari">Dari tanggal</label>
-            <input type="date" id="lp-dari" name="dari" value="<?= esc($f['dari'], 'attr') ?>" class="inp">
-        </div>
-        <div>
-            <label class="lbl" for="lp-sampai">Sampai tanggal</label>
-            <input type="date" id="lp-sampai" name="sampai" value="<?= esc($f['sampai'], 'attr') ?>" class="inp">
-        </div>
-        <label class="flex items-center gap-2 self-end pb-2.5 text-sm font-medium text-gray-900 dark:text-white"><input type="checkbox" name="beasiswa" value="1"<?= $f['beasiswa'] ? ' checked' : '' ?> class="cek"> Hanya penerima beasiswa</label>
-        <div class="flex flex-wrap gap-2 sm:col-span-2 lg:col-span-4">
+        <div class="flex flex-wrap items-end gap-2">
             <button type="submit" class="btn btn-utama"><?= ikon('search', 'h-4 w-4') ?>Terapkan</button>
             <?php if ($adaSaringan): ?><a href="<?= site_url('admin/pkl/laporan') ?>" class="btn btn-teks"><?= ikon('close', 'h-4 w-4') ?>Reset</a><?php endif; ?>
         </div>
+        <details class="sm:col-span-2 lg:col-span-4"<?= ($f['kelas_id'] > 0 || $f['jurusan'] !== '' || $f['dari'] !== '' || $f['sampai'] !== '' || $f['beasiswa']) ? ' open' : '' ?>>
+            <summary class="inline-flex cursor-pointer list-none items-center gap-1 text-sm font-medium text-brand-700 hover:underline dark:text-brand-400"><?= ikon('adjustments-horizontal', 'h-4 w-4') ?>Saringan lain (kelas, jurusan, tanggal, beasiswa)</summary>
+            <div class="mt-3 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+            <div>
+                <label class="lbl" for="lp-kelas">Kelas</label>
+                <select id="lp-kelas" name="kelas_id" class="inp">
+                    <option value="">Semua kelas</option>
+                    <?php foreach ($kelas as $k): ?><option value="<?= (int) $k['id'] ?>"<?= (int) $k['id'] === (int) $f['kelas_id'] ? ' selected' : '' ?>><?= esc($k['nama_kelas']) ?></option><?php endforeach; ?>
+                </select>
+            </div>
+            <div>
+                <label class="lbl" for="lp-jurusan">Jurusan</label>
+                <select id="lp-jurusan" name="jurusan" class="inp">
+                    <option value="">Semua jurusan</option>
+                    <?php foreach (['TKJ', 'AKL', 'MP'] as $j): ?><option value="<?= $j ?>"<?= $f['jurusan'] === $j ? ' selected' : '' ?>><?= esc(PklLaporanBiaya::JURUSAN[$j]) ?></option><?php endforeach; ?>
+                </select>
+            </div>
+            <div>
+                <label class="lbl" for="lp-dari">Dari tanggal</label>
+                <input type="date" id="lp-dari" name="dari" value="<?= esc($f['dari'], 'attr') ?>" class="inp">
+            </div>
+            <div>
+                <label class="lbl" for="lp-sampai">Sampai tanggal</label>
+                <input type="date" id="lp-sampai" name="sampai" value="<?= esc($f['sampai'], 'attr') ?>" class="inp">
+            </div>
+            <label class="flex items-center gap-2 self-end pb-2.5 text-sm font-medium text-gray-900 dark:text-white"><input type="checkbox" name="beasiswa" value="1"<?= $f['beasiswa'] ? ' checked' : '' ?> class="cek"> Hanya penerima beasiswa</label>
+            </div>
+        </details>
     </form>
 
     <section class="kartu overflow-hidden" aria-labelledby="judul-laporan-bayar">

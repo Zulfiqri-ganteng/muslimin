@@ -41,7 +41,7 @@ $kode = static fn (string $teks): string => '<code class="rounded-md bg-gray-100
 
     <nav aria-label="Daftar isi" class="flex flex-wrap gap-2 text-sm">
         <?php foreach (['kepala' => 'Kepala halaman', 'tombol' => 'Tombol', 'formulir' => 'Formulir', 'kartu' => 'Kartu & tabel', 'lencana' => 'Lencana',
-                        'tab' => 'Tab', 'dropdown' => 'Dropdown', 'dialog' => 'Dialog & laci', 'konfirmasi' => 'Konfirmasi', 'pesan' => 'Toast & peringatan',
+                        'tab' => 'Tab', 'dropdown' => 'Dropdown', 'rapi' => 'Pola rapi', 'dialog' => 'Dialog & laci', 'konfirmasi' => 'Konfirmasi', 'pesan' => 'Toast & peringatan',
                         'kosong' => 'Keadaan kosong', 'paginasi' => 'Paginasi', 'format' => 'Format & salin', 'ikon' => 'Ikon'] as $id => $label): ?>
             <a href="#<?= $id ?>" class="rounded-lg border border-gray-200 bg-white px-3 py-1.5 font-medium text-gray-700 hover:bg-gray-100 hover:text-brand-700 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700 dark:hover:text-white"><?= $label ?></a>
         <?php endforeach; ?>
@@ -250,6 +250,41 @@ $kode = static fn (string $teks): string => '<code class="rounded-md bg-gray-100
             </div>
         </div>
         <p class="hint"><?= $kode('<div class="relative inline-block" x-data="dropdown" @click.outside="tutup()" @keydown.escape="tutup(true)" @keydown.down.prevent="gerak(1)" @keydown.up.prevent="gerak(-1)">') ?> · pemicu <?= $kode('x-ref="pemicu" @click="alih()" :aria-expanded="buka"') ?> · menu <?= $kode('<div class="dropdown-menu" x-show="buka" x-cloak>') ?> (rata kanan: + <?= $kode('right-0') ?>) · butir <?= $kode('class="dropdown-item"') ?>.</p>
+    </section>
+
+    <!-- ================= Pola rapi (U1 2026-10-26, docs/RENCANA-RAPI-TAMPILAN-PKL-SURAT.md) ================= -->
+    <section id="rapi" class="kartu kartu-isi scroll-mt-24 space-y-5">
+        <div>
+            <h2 class="kartu-judul">Pola rapi: satu tombol utama</h2>
+            <p class="kartu-ket">Dipakai halaman PKL &amp; Surat Sekolah: satu tombol utama, aksi jarang di menu "Lainnya", tombol massal baru muncul setelah ada yang dicentang, bagian panjang dilipat.</p>
+        </div>
+        <div class="flex flex-wrap items-center gap-2">
+            <button type="button" class="btn btn-utama"><?= ikon('check', 'h-4 w-4') ?>Simpan &amp; setujui</button>
+            <?= ui_menu_lain([
+                ['label' => 'Ubah data', 'ikon' => 'edit', 'href' => '#rapi'],
+                ['label' => 'Buka dialog', 'ikon' => 'eye', 'dialog' => 'contoh-form'],
+                ['label' => 'Batalkan', 'ikon' => 'close', 'bahaya' => true, 'atr' => 'data-uji="menu-lain-bahaya"'],
+            ]) ?>
+        </div>
+        <p class="hint"><?= $kode("ui_menu_lain([['label' => 'Ubah', 'ikon' => 'edit', 'href' => \$url], ['label' => 'Batalkan', 'dialog' => 'batal', 'bahaya' => true]])") ?> — butir: label, ikon, href | dialog, bahaya, atr.</p>
+
+        <div x-data="daftarCentang" data-satuan="dipilih" class="rounded-lg border border-gray-200 p-4 dark:border-gray-700">
+            <p class="mb-2 text-sm font-semibold text-gray-900 dark:text-white">Bilah aksi saat dicentang</p>
+            <div class="space-y-1.5">
+                <?php foreach (['Siti Aminah', 'Rizky Pratama', 'Dewi Lestari'] as $nm): ?>
+                    <label class="flex items-center gap-2 text-sm text-gray-700 dark:text-gray-300"><input type="checkbox" class="cek" data-centang @change="hitungCentang()"><?= esc($nm) ?></label>
+                <?php endforeach; ?>
+            </div>
+            <?= ui_bilah_pilih_buka(['label' => 'Aksi contoh']) ?>
+                <button type="button" class="btn btn-utama btn-sm"><?= ikon('download', 'h-4 w-4') ?>Unduh</button>
+            <?= ui_bilah_pilih_tutup() ?>
+        </div>
+        <p class="hint">Di dalam <?= $kode('x-data="daftarCentang"') ?>: centang <?= $kode('data-centang @change="hitungCentang()"') ?>, tombol di antara <?= $kode('ui_bilah_pilih_buka()') ?> dan <?= $kode('ui_bilah_pilih_tutup()') ?> ("Batal pilih" ikut).</p>
+
+        <?= ui_lipat_buka(['judul' => 'Riwayat', 'ringkas' => '5 kejadian', 'ikon' => 'clock-arrow']) ?>
+            <p class="px-4 py-3 text-sm text-gray-600 sm:px-6 dark:text-gray-300">Isi panjang (riwayat, pembayaran, data lama) baru tampil setelah kepalanya ditekan — tanpa JavaScript.</p>
+        <?= ui_lipat_tutup() ?>
+        <p class="hint"><?= $kode("ui_lipat_buka(['judul' => 'Riwayat', 'ringkas' => '5 kejadian', 'buka' => false])") ?> … <?= $kode('ui_lipat_tutup()') ?>.</p>
     </section>
 
     <!-- ================= Dialog & laci ================= -->

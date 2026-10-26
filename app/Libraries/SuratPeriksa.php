@@ -12,10 +12,10 @@ namespace App\Libraries;
 final class SuratPeriksa
 {
     /** Jenis yang tidak masuk akal tanpa daftar siswa. */
-    private const BUTUH_SISWA = [SuratJenis::PERNYATAAN, SuratJenis::BALASAN, SuratJenis::PENARIKAN];
+    private const BUTUH_SISWA = [SuratJenis::PERNYATAAN, SuratJenis::BALASAN, SuratJenis::PERPANJANGAN, SuratJenis::PENARIKAN];
 
     /** Jenis yang selalu ditujukan ke satu perusahaan. */
-    private const BUTUH_PERUSAHAAN = [SuratJenis::BALASAN, SuratJenis::PENARIKAN];
+    private const BUTUH_PERUSAHAAN = [SuratJenis::BALASAN, SuratJenis::PERPANJANGAN, SuratJenis::PENARIKAN];
 
     /**
      * @param array<string, mixed>       $surat baris surat_sekolah (isian JSON boleh sudah didekode di 'isi_arr')
@@ -44,6 +44,13 @@ final class SuratPeriksa
             }
             if (array_key_exists('alamat', $isi) && trim((string) $isi['alamat']) === '') {
                 $out[] = ['tingkat' => 'awas', 'teks' => 'Alamat perusahaan kosong, jadi baris "Alamat" di surat tidak berisi. Lengkapi lewat "Ubah data surat".'];
+            }
+        }
+
+        // Surat Perpanjangan: tanggal semula yang diketik siswa + batas selesai sekolah (docs/DESAIN-PERPANJANGAN-PKL.md R3–R4).
+        if ($jenis === SuratJenis::PERPANJANGAN) {
+            foreach (SuratPerpanjangan::peringatanSurat($surat + ['isi_arr' => $isi], null, $p) as $teks) {
+                $out[] = ['tingkat' => 'awas', 'teks' => $teks];
             }
         }
 

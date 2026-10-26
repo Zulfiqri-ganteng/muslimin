@@ -417,9 +417,9 @@ class UjiPklKeluar extends BaseCommand
         }
         [$k6, $t6] = $kBaris[self::OLEH . ' 6'] ?? ['', 0];
         $nBaris    = \App\Libraries\PklStatusExcel::jumlahBaris($k6, 62);
-        $this->cek('Excel Status Siswa: kolom No selebar 5 (bukan ikut judul), judul digabung A:K, saringan tertulis, kepala tabel baris 10 + filter + diulang saat cetak',
-            $ws->getColumnDimension('A')->getWidth() == 5 && isset($ws->getMergeCells()['A1:K1']) && str_contains((string) $ws->getCell('A3')->getValue(), 'cari "' . self::OLEH . '"')
-            && $ws->getCell('K10')->getValue() === 'Riwayat Ditolak / Dikeluarkan' && $ws->getAutoFilter()->getRange() === 'A10:K' . $ws->getHighestRow()
+        $this->cek('Excel Status Siswa: kolom No selebar 5 (bukan ikut judul), judul digabung A:L (2026-10-26: + kolom L Diperpanjang s.d.), saringan tertulis, kepala tabel baris 10 + filter + diulang saat cetak',
+            $ws->getColumnDimension('A')->getWidth() == 5 && isset($ws->getMergeCells()['A1:L1']) && str_contains((string) $ws->getCell('A3')->getValue(), 'cari "' . self::OLEH . '"')
+            && $ws->getCell('K10')->getValue() === 'Riwayat Ditolak / Dikeluarkan' && $ws->getAutoFilter()->getRange() === 'A10:L' . $ws->getHighestRow()
             && $ws->getPageSetup()->getRowsToRepeatAtTop() === [10, 10] && $ws->getStyle('E11')->getBorders()->getTop()->getBorderStyle() === 'thin');
         $this->cek('Excel riwayat: siswa 6 "tanggal · kode perusahaan — dikeluarkan (…): alasan"; siswa 3 (pindah) kosong; tinggi baris ikut panjang teks; 2 riwayat = 2 baris',
             preg_match('/^\d{2}-\d{2}-\d{4} · PKL-\d{5} .+ — dikeluarkan \(.+\): .{5,}/u', $k6) === 1 && ($kBaris[self::OLEH . ' 3'][0] ?? 'x') === ''

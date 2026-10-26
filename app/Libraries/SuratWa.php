@@ -21,7 +21,7 @@ use CodeIgniter\Database\BaseConnection;
 final class SuratWa
 {
     /** Jenis surat yang punya kabar "siap diambil". */
-    public const JENIS = [SuratJenis::BALASAN, SuratJenis::ASTS, SuratJenis::TKA, SuratJenis::PERNYATAAN, SuratJenis::PENARIKAN];
+    public const JENIS = [SuratJenis::BALASAN, SuratJenis::ASTS, SuratJenis::TKA, SuratJenis::PERNYATAAN, SuratJenis::PERPANJANGAN, SuratJenis::PENARIKAN];
 
     public const PESAN_BAWAAN = 'Halo {nama}, Surat Balasan PKL untuk {perusahaan} (No. {nomor_surat}) sudah selesai dan siap diambil di Tata Usaha {sekolah}. Setelah diambil, serahkan ke perusahaan tempat PKL. Terima kasih.';
 
@@ -29,6 +29,7 @@ final class SuratWa
     public const PESAN_JENIS = [
         SuratJenis::ASTS       => 'Halo {nama}, {surat} untuk {perusahaan} (No. {nomor_surat}) sudah selesai dan siap diambil di Tata Usaha {sekolah}. Setelah diambil, serahkan ke perusahaan tempat PKL-mu. Terima kasih.',
         SuratJenis::TKA        => 'Halo {nama}, {surat} untuk {perusahaan} (No. {nomor_surat}) sudah selesai dan siap diambil di Tata Usaha {sekolah}. Setelah diambil, serahkan ke perusahaan tempat PKL-mu. Terima kasih.',
+        SuratJenis::PERPANJANGAN => 'Halo {nama}, {surat} untuk {perusahaan} (No. {nomor_surat}) sudah selesai dan siap diambil di Tata Usaha {sekolah}. Setelah diambil, serahkan ke perusahaan tempat PKL-mu. Terima kasih.',
         SuratJenis::PENARIKAN  => 'Halo {nama}, {surat} dari {perusahaan} (No. {nomor_surat}) sudah selesai dan siap diambil di Tata Usaha {sekolah}. Setelah diambil, serahkan ke perusahaan tempat PKL-mu. Terima kasih.',
         SuratJenis::PERNYATAAN => 'Halo {nama}, {surat} sudah dicetak dan siap diambil di Tata Usaha {sekolah}. Minta orang tua/wali menandatanganinya di atas materai Rp10.000. Terima kasih.',
     ];
@@ -84,6 +85,7 @@ final class SuratWa
             SuratJenis::TKA        => 'Surat Izin TKA',
             SuratJenis::PERNYATAAN => 'Surat Pernyataan Orang Tua PKL',
             SuratJenis::PENARIKAN  => 'Surat Penarikan PKL',
+            SuratJenis::PERPANJANGAN => 'Surat Perpanjangan PKL',
             default                => SuratJenis::label($jenis),
         };
     }

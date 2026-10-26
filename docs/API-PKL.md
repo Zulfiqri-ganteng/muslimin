@@ -263,6 +263,19 @@ panel admin (`Libraries\PklPengingat`, partial `admin/pkl/_pengingat`); aplikasi
 - **`GET pkl/siswa/excel?kelas_id=&fase=&q=`** (baru) → BERKAS `.xlsx` Status Siswa sesuai saringan — isi & nama berkas sama dengan
   tombol web "Unduh Excel (sesuai saringan)" (`Status PKL Siswa YYYY-MM-DD.xlsx`). Gerbang = modul `pkl` (sama dengan `pkl/siswa`).
 
+## Pembaruan 2026-10-26 — Surat Perpanjangan PKL (hanya MENAMBAH; docs/DESAIN-PERPANJANGAN-PKL.md)
+- `GET pkl/ringkasan` → **`perpanjangan`** `{berakhir_7, menunggu}` (angka) — kartu Beranda "N siswa PKL-nya berakhir dalam 7 hari" +
+  jumlah Surat Perpanjangan menunggu ACC. **`null`** = peran ini tidak boleh membuat Surat Perpanjangan (kartu disembunyikan, sama dengan web).
+- **`GET pkl/berakhir?hari=7`** (baru; 1–60, bawaan 7; hak Buat Surat Perpanjangan, selain itu 403) → `[{siswa_id, nama, kelas, ajuan_id, kode,
+  perusahaan, selesai, sisa}]` — siswa yang PKL-nya berakhir dalam N hari (tanggal di ajuan) dan BELUM punya Surat Perpanjangan / Penarikan.
+  Hanya ajuan yang tanggal selesainya tercatat. Ketuk → `surat/form/perpanjangan?ajuan_id=`.
+- `GET pkl/ajuan/{id}` → `anggota[].perpanjangan` `{surat_id, kode, status, selesai_baru, berlaku}` | null dan **`anggota[].selesai_efektif`**
+  (tanggal baru bila sudah disetujui, selain itu `tanggal_selesai` ajuan) + **`hak.buat_perpanjangan`** (tombol "Buat Surat Perpanjangan").
+- `GET pkl/siswa` → tiap baris + `tanggal_mulai, tanggal_selesai, selesai_efektif, diperpanjang (bool)`. Fase `selesai` kini mengikuti tanggal
+  EFEKTIF (siswa yang diperpanjang tetap `sedang` sampai tanggal baru). Excel `pkl/siswa/excel` + kolom terakhir **L "Diperpanjang s.d."**.
+- `pkl_pengaturan` + `perpanjang_buka, perpanjang_hari_sebelum (7), perpanjang_hari_sesudah (30)` — diatur di web (Pengaturan PKL), dibaca
+  `surat/form/perpanjangan.setelan`.
+
 ## Catatan untuk pembuat aplikasi
 1. Setelah login, baca `admin.akses_api`: bila `["pkl"]`, tampilkan HANYA menu PKL (jangan panggil API lain → 403).
 2. Tombol per ajuan dibaca dari `data.hak` pada detail; jangan menebak dari peran.

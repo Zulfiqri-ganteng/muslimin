@@ -6,6 +6,9 @@
  * Salin tautan = kit salinTeks (dulu objek x-data bermetode + navigator.clipboard); contoh nomor surat / nama berkas / pesan WA
  * = komponen pklPolaSurat & pklPesanWa (assets/js/admin/pkl-pengaturan.js; dulu metode + fungsi panah sebaris); unggah template
  * = kit pilihBerkas; hapus template = data-confirm (dulu onsubmit confirm).
+ * Rapi tampilan U6 (2026-10-26): tiga tab kit (x-data="tab", ikut alamat #siswa / #surat / #biaya): Form siswa · Surat & nomor ·
+ * Biaya & WhatsApp. Formulir, isian, dan tombol Simpan TETAP sama (formulir utama mencakup tab Form siswa + Surat & nomor).
+ * Tab awal = tab yang berisi galat; tab terakhir dipulihkan sesudah Simpan (pkl-pengaturan.js, sessionStorage).
  *
  * @var array   $galat   galat per kolom
  * @var array   $old     isian yang gagal disimpan
@@ -51,20 +54,29 @@ $kotakTautan = static fn (string $judul, string $url, string $pesan, string $ket
     . '<button type="button" class="btn btn-netral btn-sm" x-data="salinTeks" data-teks="' . esc($url, 'attr') . '" data-pesan="' . esc($pesan, 'attr') . '" @click="salin()">'
     . ikon('file-copy', 'h-4 w-4') . '<span x-show="!tersalin">Salin</span><span x-show="tersalin" x-cloak>Tersalin</span></button></div>'
     . ($ket !== '' ? '<p class="hint !mt-1.5 dark:text-gray-300">' . esc($ket) . '</p>' : '') . '</div>';
+// Tab (U6): galat isian → buka tab yang berisi galat; tanda "!" di tab yang bergalat.
+$kunciSurat = ['format_nomor', 'nomor_awal', 'format_nama_berkas', 'waka_hubin_nama', 'waka_hubin_nip', 'waka_hubin_jabatan', 'kepsek_nama', 'kontak_surat_nama', 'kontak_surat_hp'];
+$galatSurat = array_intersect(array_keys($galat), $kunciSurat) !== [];
+$galatSiswa = array_diff(array_keys($galat), $kunciSurat) !== [];
+$galatBiayaAda = (array) (session()->getFlashdata('galat_biaya') ?? []) !== [];
+$tabAwal = $galatSiswa ? 'siswa' : ($galatSurat ? 'surat' : ($galatBiayaAda ? 'biaya' : 'siswa'));
+$tombolTab = static fn (string $nama, string $label, bool $galatTab): string => '<button type="button" role="tab" class="tab" data-tab="' . $nama . '" :aria-selected="aktif === \'' . $nama . '\'" '
+    . ':tabindex="aktif === \'' . $nama . '\' ? \'0\' : \'-1\'" @click="pilih(\'' . $nama . '\')">' . $label . ($galatTab ? ' <span class="tab-jumlah bg-red-100 text-red-700 dark:bg-red-900 dark:text-red-300" title="Ada isian yang perlu diperbaiki">!</span>' : '') . '</button>';
 ?>
 <?= $this->extend('layouts/admin') ?>
 <?= $this->section('content') ?>
 
 <?= view('admin/partials/help', [
-    'helpKey'   => 'pkl_pengaturan_v4',
+    'helpKey'   => 'pkl_pengaturan_v6',
     'helpTitle' => 'Pengaturan PKL',
-    'helpBody'  => '<p>Atur <b>kapan</b> siswa boleh mengisi, <b>siapa</b> yang boleh (tingkat), dan data yang tercetak di surat resmi sekolah.</p>'
+    'helpBody'  => '<p>Atur <b>kapan</b> siswa boleh mengisi, <b>siapa</b> yang boleh (tingkat), dan data yang tercetak di surat resmi sekolah. Halaman ini dibagi tiga tab: <b>Form siswa</b>, <b>Surat &amp; nomor</b>, dan <b>Biaya &amp; WhatsApp</b>. Tombol <b>Simpan pengaturan</b> menyimpan dua tab pertama sekaligus.</p>'
         . '<ul class="mt-2 list-disc pl-5 space-y-1">'
         . '<li>Form <b>tertutup</b> secara bawaan. Buka hanya saat tautan siap dibagikan; bisa diberi <b>batas waktu</b> agar menutup sendiri.</li>'
         . '<li><b>Maksimal siswa per perusahaan</b> paling banyak 5 (aturan sekolah).</li>'
         . '<li>Siswa yang sudah mengajukan <b>tidak bisa mengajukan lagi</b> selama ajuannya menunggu keputusan (ACC). <b>Batas keputusan</b> (bawaan 5 hari sejak dikirim) memberi tanda merah pada yang terlambat dan memunculkan <b>peringatan layar penuh</b> bagi pemegang hak ACC ajuan (ajuan belum di-ACC) dan pemroses laporan siswa (laporan hasil perusahaan belum diproses).</li>'
         . '<li><b>Surat permohonan:</b> isi nama/NIP/jabatan Waka Hubin, nama Kepala Sekolah, kontak "NB" di bawah surat, format nomor surat, dan pola nama berkas. Format surat sudah <u>persis surat resmi sekolah</u>; hanya isi data yang berubah. Tanda tangan digital Waka Hubin (dan tanda tangan + stempel Kepala Sekolah) diunggah di tab <b>Tanda Tangan</b> oleh peran yang diberi hak itu.</li>'
         . '<li><b>Format nomor surat</b>: pilih salah satu tombol siap pakai (mis. <i>Tiga angka: 001, 002</i>). Nol di depan hanya lewat <code>{urut3}</code>; menulis &quot;{urut}00&quot; menghasilkan 100, 200, 600 sehingga ditolak.</li>'
+        . '<li><b>Surat Perpanjangan PKL</b>: kapan siswa boleh meminta suratnya sendiri (bawaan mulai 7 hari sebelum PKL selesai sampai 30 hari sesudahnya). Staf tetap bisa membuat kapan saja.</li>'
         . '<li><b>Biaya &amp; pesan WhatsApp</b> (bagian bawah): nominal tiap jenis biaya yang dicatat saat surat diunduh (catatan lama tidak berubah) dan templat pesan yang dikirim manual ke siswa.</li>'
         . '<li><b>Impor riwayat PKL lama</b> dari Excel ada di bagian bawah halaman ini.</li>'
         . '</ul>',
@@ -72,13 +84,21 @@ $kotakTautan = static fn (string $judul, string $url, string $pesan, string $ket
 
 <?= view('admin/pkl/_nav', ['tab' => $tab, 'hitungTab' => $hitungTab]) ?>
 
+<div x-data="tab" data-awal="<?= $tabAwal ?>" data-hash="1" data-tab-pengaturan<?= $galat !== [] || $galatBiayaAda ? ' data-galat="1"' : '' ?>>
+<div class="tab-daftar mx-auto mb-4 max-w-3xl" role="tablist" aria-label="Bagian pengaturan PKL" @keydown.right.prevent="pindah(1)" @keydown.left.prevent="pindah(-1)">
+    <?= $tombolTab('siswa', 'Form siswa', $galatSiswa) ?>
+    <?= $tombolTab('surat', 'Surat &amp; nomor', $galatSurat) ?>
+    <?php if (isset($jenisBiaya)): ?><?= $tombolTab('biaya', 'Biaya &amp; WhatsApp', $galatBiayaAda) ?><?php endif; ?>
+</div>
+
 <form method="post" action="<?= site_url('admin/pkl/pengaturan') ?>" class="mx-auto max-w-3xl space-y-4">
     <?= csrf_field() ?>
 
     <?php if ($galat !== []): ?>
-        <?= ui_peringatan('galat', 'Pengaturan belum disimpan. Periksa isian yang bertanda merah.') ?>
+        <?= ui_peringatan('galat', 'Pengaturan belum disimpan. Periksa isian yang bertanda merah' . ($galatSiswa && $galatSurat ? ' (di tab Form siswa dan Surat & nomor)' : '') . '.') ?>
     <?php endif; ?>
 
+    <div role="tabpanel" class="space-y-4" x-show="aktif === 'siswa'">
     <!-- Buka / tutup -->
     <section class="kartu">
         <?= $kepala('Form siswa') ?>
@@ -112,6 +132,34 @@ $kotakTautan = static fn (string $judul, string $url, string $pesan, string $ket
                     <?= $pilihan('lapor_buka', '0', ! $laporBuka, 'Tutup form lapor', 'Siswa melihat pemberitahuan "sedang ditutup".', $nyalaAbu) ?>
                 </div>
                 <?= $kotakTautan('Tautan lapor diterima untuk dibagikan ke siswa', $tautanLapor, 'Tautan lapor diterima tersalin.', 'Tautan ini juga muncul sebagai tombol "Lapor" di halaman form pengajuan PKL.') ?>
+            </div>
+        </section>
+    <?php endif; ?>
+
+    <?php if (\App\Libraries\SuratPerpanjangan::tabelAda()): $pjBuka = $nilai('perpanjang_buka', '1') === '1'; ?>
+        <!-- Surat Perpanjangan PKL: kapan siswa boleh meminta sendiri (docs/DESAIN-PERPANJANGAN-PKL.md R2) -->
+        <section class="kartu" id="perpanjangan">
+            <?= $kepala('Permintaan Surat Perpanjangan PKL dari siswa') ?>
+            <div class="kartu-isi space-y-4">
+                <p class="text-sm text-gray-600 dark:text-gray-300">Siswa yang PKL-nya diperpanjang perusahaan meminta suratnya sendiri. Perpanjangan hanya boleh <b>satu kali</b> per siswa. Staf tetap bisa membuat surat kapan saja lewat menu <b>Surat Perpanjangan PKL</b>.</p>
+                <div class="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                    <?= $pilihan('perpanjang_buka', '1', $pjBuka, 'Siswa boleh meminta', 'Bawaan. Mengikuti batas hari di bawah.', $nyalaHijau) ?>
+                    <?= $pilihan('perpanjang_buka', '0', ! $pjBuka, 'Tutup untuk siswa', 'Siswa melihat pemberitahuan "sedang ditutup".', $nyalaAbu) ?>
+                </div>
+                <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                    <div>
+                        <label class="lbl" for="f_pj_sebelum">Bisa diminta mulai … hari sebelum PKL selesai</label>
+                        <input id="f_pj_sebelum" type="number" min="0" max="60" name="perpanjang_hari_sebelum" value="<?= esc($nilai('perpanjang_hari_sebelum', '7'), 'attr') ?>" class="inp max-w-[8rem] <?= $cls('perpanjang_hari_sebelum') ?>">
+                        <p class="hint">Bawaan 7 (H-7). 0 = kapan saja sebelum selesai.</p>
+                        <?= $err('perpanjang_hari_sebelum') ?>
+                    </div>
+                    <div>
+                        <label class="lbl" for="f_pj_sesudah">Masih bisa diminta sampai … hari sesudah PKL selesai</label>
+                        <input id="f_pj_sesudah" type="number" min="0" max="365" name="perpanjang_hari_sesudah" value="<?= esc($nilai('perpanjang_hari_sesudah', '30'), 'attr') ?>" class="inp max-w-[8rem] <?= $cls('perpanjang_hari_sesudah') ?>">
+                        <p class="hint">Bawaan 30 (perusahaan sering memperpanjang mendadak). 0 = tanpa batas.</p>
+                        <?= $err('perpanjang_hari_sesudah') ?>
+                    </div>
+                </div>
             </div>
         </section>
     <?php endif; ?>
@@ -153,7 +201,11 @@ $kotakTautan = static fn (string $judul, string $url, string $pesan, string $ket
         </div>
     </section>
 
+    <?= ui_peringatan('info', '', ['html' => 'Dengan pengaturan tersimpan saat ini, <b>' . (int) $siswa['total'] . '</b> siswa dihitung (belum mengisi: <b>' . (int) $siswa['belum_isi'] . '</b>). Perubahan tingkat langsung mengubah daftar kelas dan nama yang dilihat siswa.']) ?>
+    </div>
+
     <!-- Surat -->
+    <div role="tabpanel" x-show="aktif === 'surat'" x-cloak>
     <section id="surat" class="kartu scroll-mt-24" x-data="pklPolaSurat"
              data-pola="<?= esc($nilai('format_nomor', \App\Libraries\PklNomorSurat::BAWAAN), 'attr') ?>"
              data-berkas="<?= esc($nilai('format_nama_berkas', \App\Libraries\PklNamaBerkas::BAWAAN), 'attr') ?>">
@@ -230,17 +282,17 @@ $kotakTautan = static fn (string $judul, string $url, string $pesan, string $ket
             </div>
         </div>
     </section>
+    </div>
 
-    <?= ui_peringatan('info', '', ['html' => 'Dengan pengaturan tersimpan saat ini, <b>' . (int) $siswa['total'] . '</b> siswa dihitung (belum mengisi: <b>' . (int) $siswa['belum_isi'] . '</b>). Perubahan tingkat langsung mengubah daftar kelas dan nama yang dilihat siswa.']) ?>
-
-    <div class="flex justify-end">
+    <div class="flex flex-wrap items-center justify-end gap-3" x-show="aktif === 'siswa' || aktif === 'surat'">
+        <p class="hint">Menyimpan isian di tab <b>Form siswa</b> dan <b>Surat &amp; nomor</b> sekaligus.</p>
         <button type="submit" class="btn btn-utama"><?= ikon('check', 'h-4 w-4') ?>Simpan pengaturan</button>
     </div>
 </form>
 
 <?php $templateAda = \App\Libraries\PklSurat::pathTemplate($p) !== null; ?>
 <div class="mx-auto mt-4 max-w-3xl space-y-4">
-    <section class="kartu">
+    <section class="kartu" role="tabpanel" x-show="aktif === 'surat'" x-cloak>
         <?= $kepala('Template surat Word milik sekolah') ?>
         <div class="kartu-isi space-y-3 text-sm text-gray-600 dark:text-gray-300">
             <p>
@@ -283,6 +335,7 @@ $kotakTautan = static fn (string $judul, string $url, string $pesan, string $ket
         $waKeputusanAda = \App\Libraries\PklWaKeputusan::kolomAda(); $waNilaiP = (string) (old('wa_pesan_perbaikan') ?? ($waPesanPerbaikan ?? ''));
         $waNilaiT = (string) (old('wa_pesan_tolak') ?? ($waPesanTolak ?? ''));
         $waKeluarAda = \App\Libraries\PklKeluar::tabelAda(); $waNilaiK = (string) (old('wa_pesan_keluar') ?? ($waPesanKeluar ?? '')); ?>
+        <div role="tabpanel" x-show="aktif === 'biaya'" x-cloak>
         <form id="biaya" method="post" action="<?= site_url('admin/pkl/pengaturan/biaya') ?>" class="scroll-mt-24 space-y-4" x-data="pklPesanWa"
               data-pesan="<?= esc($waNilai !== '' ? $waNilai : \App\Libraries\PklWa::PESAN_BAWAAN, 'attr') ?>"
               data-pesan-balasan="<?= esc($waNilaiB !== '' ? $waNilaiB : \App\Libraries\SuratWa::PESAN_BAWAAN, 'attr') ?>"
@@ -356,13 +409,15 @@ $kotakTautan = static fn (string $judul, string $url, string $pesan, string $ket
                 <button type="submit" class="btn btn-utama"><?= ikon('check', 'h-4 w-4') ?>Simpan biaya &amp; pesan WhatsApp</button>
             </div>
         </form>
+        </div>
     <?php endif; ?>
 
-    <section class="kartu kartu-isi">
+    <section class="kartu kartu-isi" x-show="aktif === 'siswa'">
         <h3 class="text-base font-semibold text-gray-900 dark:text-white">Data PKL lama</h3>
         <p class="mt-2 text-sm text-gray-600 dark:text-gray-300">Punya daftar siswa yang sudah PKL sebelum sistem ini (di Excel)? Impor supaya mereka tercatat sudah PKL dan tak bisa mengajukan lagi.</p>
         <a href="<?= site_url('admin/pkl/impor') ?>" class="btn btn-netral mt-3"><?= ikon('upload', 'h-4 w-4') ?>Impor riwayat PKL dari Excel</a>
     </section>
+</div>
 </div>
 <?= $this->endSection() ?>
 

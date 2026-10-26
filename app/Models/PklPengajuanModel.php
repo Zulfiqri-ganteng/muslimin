@@ -331,8 +331,14 @@ class PklPengajuanModel extends Model
     {
         $in   = implode(',', array_fill(0, count($tingkat), '?'));
         $bind = [$hariIni, $hariIni];
+        // Tanggal selesai EFEKTIF: tanggal baru Surat Perpanjangan PKL yang sudah disetujui, selain itu tanggal di ajuan
+        // (Libraries\SuratPerpanjangan::selesaiEfektif; docs/DESAIN-PERPANJANGAN-PKL.md R8).
+        $selesai = \App\Libraries\SuratPerpanjangan::tabelAda()
+            ? "COALESCE((SELECT pp.selesai_baru FROM pkl_perpanjangan pp JOIN surat_sekolah x ON x.id = pp.surat_id AND x.status = 'disetujui'"
+                . ' JOIN surat_sekolah_siswa xs ON xs.surat_id = x.id WHERE pp.pengajuan_id = p.id AND xs.siswa_id = s.id ORDER BY x.id DESC LIMIT 1), p.tanggal_selesai)'
+            : 'p.tanggal_selesai';
         $sql  = "SELECT s.id, s.nama, s.jenis_kelamin, k.id AS kelas_id, k.nama_kelas, k.tingkat,"
-            . " p.id AS ajuan_id, p.perusahaan_nama, p.perusahaan_kota, p.tanggal_mulai, p.tanggal_selesai, p.acc_nama, p.acc_at, a.peran, sr.nomor AS nomor_surat,"
+            . " p.id AS ajuan_id, p.perusahaan_nama, p.perusahaan_kota, p.tanggal_mulai, p.tanggal_selesai, {$selesai} AS selesai_efektif, p.acc_nama, p.acc_at, a.peran, sr.nomor AS nomor_surat,"
             . ' ' . self::sqlJumlahTolak() . ' AS jml_tolak,'
             . " CASE"
             . ' WHEN p.id IS NULL AND (' . self::sqlPernahTolak() . ") THEN 'ditolak'"
@@ -340,7 +346,7 @@ class PklPengajuanModel extends Model
             . " WHEN p.status = 'menunggu' THEN 'menunggu'"
             . " WHEN p.status = 'perbaikan' THEN 'perbaikan'"
             . " WHEN p.tanggal_mulai IS NOT NULL AND ? < p.tanggal_mulai THEN 'belum_mulai'"
-            . " WHEN p.tanggal_selesai IS NOT NULL AND ? > p.tanggal_selesai THEN 'selesai'"
+            . " WHEN {$selesai} IS NOT NULL AND ? > {$selesai} THEN 'selesai'"
             . " WHEN p.tanggal_mulai IS NOT NULL THEN 'sedang'"
             . " ELSE 'disetujui' END AS fase"
             . " FROM siswa s JOIN kelas k ON k.id = s.kelas_id AND k.deleted_at IS NULL"

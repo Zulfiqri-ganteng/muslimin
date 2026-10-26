@@ -85,6 +85,41 @@ if (! function_exists('ui_partial')) {
         return "</div>\n</div>\n";
     }
 
+    /**
+     * Menu "Lainnya" (U1 rapi tampilan): aksi jarang/berbahaya di balik satu tombol. Butir: label, ikon?, href? | dialog?, bahaya?, atr?.
+     *
+     * @param list<array<string, mixed>>                      $butir
+     * @param array{label?: string, kanan?: bool, kecil?: bool} $opsi
+     */
+    function ui_menu_lain(array $butir, array $opsi = []): string
+    {
+        return ui_partial('menu_lain', ['butir' => $butir] + $opsi);
+    }
+
+    /** Bagian yang bisa dilipat (<details>, tanpa JS). @param array{judul: string, ringkas?: string, buka?: bool, id?: string, ikon?: string} $opsi */
+    function ui_lipat_buka(array $opsi): string
+    {
+        return ui_partial('lipat_buka', $opsi);
+    }
+
+    /** Penutup ui_lipat_buka(). */
+    function ui_lipat_tutup(): string
+    {
+        return "</div>\n</details>\n";
+    }
+
+    /** Bilah aksi untuk yang dicentang (di dalam x-data="daftarCentang"). @param array{label?: string} $opsi */
+    function ui_bilah_pilih_buka(array $opsi = []): string
+    {
+        return ui_partial('bilah_pilih_buka', $opsi);
+    }
+
+    /** Penutup ui_bilah_pilih_buka(): + tombol "Batal pilih" (melepas semua centang). */
+    function ui_bilah_pilih_tutup(): string
+    {
+        return '<button type="button" class="btn btn-teks btn-sm" @click="pilihSemuaCentang()">' . ikon('close', 'h-4 w-4') . "Batal pilih</button>\n</div>\n";
+    }
+
     /** @param array{nama: string, judul: string, lebar?: 'lg'|'xl', awalBuka?: bool} $opsi */
     function ui_laci_buka(array $opsi): string
     {

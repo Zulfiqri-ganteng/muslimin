@@ -18,6 +18,7 @@ final class SuratJenis
     public const PERNYATAAN = 'pernyataan_ortu';
     public const BALASAN    = 'balasan_pkl';
     public const PENARIKAN  = 'penarikan_pkl';
+    public const PERPANJANGAN = 'perpanjangan_pkl';
 
     /** Folder template Word (relatif APPPATH). Berkas dibuat per jenis di langkah masing-masing. */
     public const FOLDER_TEMPLATE = 'Libraries/Surat/';
@@ -48,6 +49,12 @@ final class SuratJenis
             'template' => 'balasan_pkl.docx', 'badge' => 'lencana-hijau',
             'ringkas' => 'Penegasan bahwa perusahaan menerima siswa PKL, lengkap dengan periode dan lokasi penempatan.',
         ],
+        // 2026-10-26 (docs/DESAIN-PERPANJANGAN-PKL.md): urutan alur PKL — sesudah Balasan, sebelum Penarikan.
+        self::PERPANJANGAN => [
+            'label' => 'Surat Perpanjangan PKL', 'singkat' => 'Perpanjangan PKL', 'alamat' => 'admin/surat/perpanjangan', 'bernomor' => true, 'acc' => true,
+            'template' => 'perpanjangan_pkl.docx', 'badge' => 'lencana-kuning',
+            'ringkas' => 'Permohonan perpanjangan waktu PKL ke perusahaan, lengkap dengan tanggal selesai semula dan tanggal selesai baru (maksimal satu kali per siswa).',
+        ],
         self::PENARIKAN => [
             'label' => 'Penarikan Izin PKL', 'singkat' => 'Penarikan PKL', 'alamat' => 'admin/surat/penarikan', 'bernomor' => true, 'acc' => true,
             'template' => 'penarikan_pkl.docx', 'badge' => 'lencana-merah',
@@ -61,7 +68,7 @@ final class SuratJenis
      *
      * @var list<string>
      */
-    public const SIAP = [self::ASTS, self::TKA, self::PERNYATAAN, self::BALASAN, self::PENARIKAN];
+    public const SIAP = [self::ASTS, self::TKA, self::PERNYATAAN, self::BALASAN, self::PERPANJANGAN, self::PENARIKAN];
 
     /** Nama kunci isian JSON (surat_sekolah.isi) → label yang ramah dibaca di halaman detail. */
     public const LABEL_ISI = [
@@ -69,6 +76,8 @@ final class SuratJenis
         'tgl_mulai' => 'Mulai', 'tgl_selesai' => 'Selesai', 'tempat' => 'Tempat', 'mode' => 'Cakupan',
         'sapaan' => 'Ditujukan kepada (Bapak/Ibu …)', 'alamat' => 'Alamat perusahaan', 'periode_mulai' => 'PKL mulai', 'periode_selesai' => 'PKL selesai',
         'tgl_efektif' => 'Ditarik terhitung sejak', 'alasan' => 'Alasan penarikan', 'cakupan' => 'Cakupan', 'kelas' => 'Kelas', 'isi_ortu' => 'Data orang tua diisi dari data sekolah',
+        'selesai_lama' => 'PKL selesai semula', 'sumber_lama' => 'Tanggal selesai semula dari', 'selesai_baru' => 'Diperpanjang sampai',
+        'alasan_perpanjangan' => 'Alasan perpanjangan',
     ];
 
     /** Kunci isian yang untuk mesin saja (tidak ditampilkan di halaman detail). */
@@ -78,6 +87,7 @@ final class SuratJenis
     public const NILAI_ISI = [
         'mode'    => ['umum' => 'Surat umum (satu surat, satu nomor)', 'perusahaan' => 'Per perusahaan (nama perusahaan + daftar siswa)'],
         'cakupan' => ['kelas' => 'Satu kelas (semua siswa aktif)', 'ajuan' => 'Satu ajuan PKL (semua anggotanya)', 'siswa' => 'Siswa pilihan'],
+        'sumber_lama' => ['sekolah' => 'Data sekolah (Surat Balasan / laporan siswa)', 'siswa' => 'Diketik siswa — perlu dicek', 'staf' => 'Diketik staf'],
     ];
 
     /** @return list<string> */

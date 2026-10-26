@@ -127,11 +127,12 @@ class UjiSurat extends BaseCommand
         $this->bagian('Jenis surat, aturan ACC, pembantu murni');
         $J = SuratJenis::class;
 
-        $this->cek('5 jenis, urutan menu: ASTS, TKA, Pernyataan, Balasan, Penarikan', $J::kode() === ['izin_asts', 'izin_tka', 'pernyataan_ortu', 'balasan_pkl', 'penarikan_pkl']);
+        // 2026-10-26: + Surat Perpanjangan PKL (sesudah Balasan, sebelum Penarikan — docs/DESAIN-PERPANJANGAN-PKL.md).
+        $this->cek('6 jenis, urutan menu: ASTS, TKA, Pernyataan, Balasan, Perpanjangan, Penarikan', $J::kode() === ['izin_asts', 'izin_tka', 'pernyataan_ortu', 'balasan_pkl', 'perpanjangan_pkl', 'penarikan_pkl']);
         $alamat = array_map(static fn (string $k) => $J::alamat($k), $J::kode());
         $label  = array_map(static fn (string $k) => $J::label($k), $J::kode());
-        $this->cek('alamat & label unik, alamat di bawah admin/surat/', count(array_unique($alamat)) === 5 && count(array_unique($label)) === 5
-            && count(array_filter($alamat, static fn (string $a) => str_starts_with($a, 'admin/surat/'))) === 5);
+        $this->cek('alamat & label unik, alamat di bawah admin/surat/', count(array_unique($alamat)) === 6 && count(array_unique($label)) === 6
+            && count(array_filter($alamat, static fn (string $a) => str_starts_with($a, 'admin/surat/'))) === 6);
         $this->cek('hanya Pernyataan Orang Tua yang tanpa nomor', ! $J::bernomor('pernyataan_ortu') && $J::bernomor('izin_asts') && $J::bernomor('izin_tka') && $J::bernomor('balasan_pkl') && $J::bernomor('penarikan_pkl'));
         $this->cek('jenis tak dikenal: ada() false, label apa adanya', ! $J::ada('ngawur') && ! $J::ada(null) && ! $J::ada('') && $J::label('ngawur') === 'ngawur' && ! $J::bernomor('ngawur'));
 
@@ -193,9 +194,9 @@ class UjiSurat extends BaseCommand
         $this->setelPeranBawaan();
         $H = PklHak::class;
 
-        $this->cek('bawaan: Operator membuat & mengunduh kelima jenis, tanpa ACC; Hubin ACC 4 jenis bernomor, tanpa buat/unduh', $H::jenisBoleh('operator', 'buat') === SuratJenis::kode()
+        $this->cek('bawaan: Operator membuat & mengunduh keenam jenis, tanpa ACC; Hubin ACC 5 jenis bernomor, tanpa buat/unduh', $H::jenisBoleh('operator', 'buat') === SuratJenis::kode()
             && $H::jenisBoleh('operator', 'unduh') === SuratJenis::kode() && $H::jenisBoleh('operator', 'acc') === []
-            && $H::jenisBoleh('hubin', 'buat') === [] && $H::jenisBoleh('hubin', 'unduh') === [] && $H::jenisBoleh('hubin', 'acc') === ['izin_asts', 'izin_tka', 'balasan_pkl', 'penarikan_pkl']);
+            && $H::jenisBoleh('hubin', 'buat') === [] && $H::jenisBoleh('hubin', 'unduh') === [] && $H::jenisBoleh('hubin', 'acc') === ['izin_asts', 'izin_tka', 'balasan_pkl', 'perpanjangan_pkl', 'penarikan_pkl']);
         $this->cek('kunci lama surat_sekolah (aplikasi lama): Operator & Admin ya; Hubin & peran asing tidak', $H::boleh('operator', 'surat_sekolah') && $H::boleh('admin', 'surat_sekolah') && ! $H::boleh('hubin', 'surat_sekolah') && ! $H::boleh('guru', 'surat_sekolah') && ! $H::boleh('', 'surat_sekolah'));
 
         $uji = [
@@ -820,9 +821,10 @@ class UjiSurat extends BaseCommand
         $r   = SuratJenis::simpanAcc(['izin_asts', 'balasan_pkl', 'ngawur', 'pernyataan_ortu'], $adm);
         $peta = SuratJenis::petaAcc((new PklPengaturanModel())->ambil());
         $this->cek('Admin menyimpan aturan ACC: ASTS & Balasan wajib; TKA & Penarikan tanpa ACC; kode asing & Pernyataan diabaikan',
-            $r['ok'] === true && $peta['izin_asts'] === true && $peta['izin_tka'] === false && $peta['balasan_pkl'] === true && $peta['penarikan_pkl'] === false && $peta['pernyataan_ortu'] === false && count($r['ubah']) === 2, json_encode($r['ubah']));
+            $r['ok'] === true && $peta['izin_asts'] === true && $peta['izin_tka'] === false && $peta['balasan_pkl'] === true && $peta['perpanjangan_pkl'] === false && $peta['penarikan_pkl'] === false
+            && $peta['pernyataan_ortu'] === false && count($r['ubah']) === 3, json_encode($r['ubah']));
         $simpan = json_decode((string) $this->db->table('pkl_pengaturan')->select('surat_perlu_acc')->where('id', 1)->get()->getRowArray()['surat_perlu_acc'], true);
-        $this->cek('tersimpan sebagai JSON hanya untuk 4 jenis bernomor', is_array($simpan) && array_keys($simpan) === ['izin_asts', 'izin_tka', 'balasan_pkl', 'penarikan_pkl']);
+        $this->cek('tersimpan sebagai JSON hanya untuk 5 jenis bernomor', is_array($simpan) && array_keys($simpan) === ['izin_asts', 'izin_tka', 'balasan_pkl', 'perpanjangan_pkl', 'penarikan_pkl']);
         $tka = $this->baru('izin_tka', 'Kep TKA tanpa ACC (aturan baru)');
         $this->cek('surat TKA yang dibuat sesudahnya langsung siap unduh (tanpa ACC), perlu_acc=0', $this->surat($tka)['status'] === 'disetujui' && (int) $this->surat($tka)['perlu_acc'] === 0);
         $r2 = SuratJenis::simpanAcc(['izin_asts', 'balasan_pkl'], $adm);
@@ -1755,14 +1757,14 @@ class UjiSurat extends BaseCommand
             // --- Halaman Sistem → Hak Akses (bagian PKL & Surat): hak per jenis + aturan wajib ACC
             $H   = \App\Controllers\Admin\AturHak::class;
             $hak = (string) $this->panggil($H, 'admin', 'index', ['bagian' => 'pkl']);
-            $this->cek('Hak Akses (Admin, PKL & Surat): tabel per jenis surat, 4 kotak "Wajib ACC" (jenis bernomor), centang Buat/ACC/Unduh per peran', str_contains($hak, 'Surat Sekolah — per jenis surat') && substr_count($hak, 'name="acc[]"') === 4
+            $this->cek('Hak Akses (Admin, PKL & Surat): tabel per jenis surat, 5 kotak "Wajib ACC" (jenis bernomor), centang Buat/ACC/Unduh per peran', str_contains($hak, 'Surat Sekolah — per jenis surat') && substr_count($hak, 'name="acc[]"') === 5
                 && str_contains(html_entity_decode($hak), 'value="surat_acc:balasan_pkl"') && str_contains($hak, 'Simpan hak PKL &amp; Surat'));
             $res = $this->panggil($H, 'hubin', 'simpanPkl', [], ['acc' => ['izin_asts']]);
             $this->cek('simpan oleh Hubin → ditolak (khusus Admin); pengaturan tidak berubah', $res instanceof \CodeIgniter\HTTP\RedirectResponse && (string) (new PklPengaturanModel())->ambil()['surat_perlu_acc'] === '');
             $res = $this->panggil($H, 'admin', 'simpanPkl', [], ['acc' => ['izin_asts', 'balasan_pkl'], 'hak' => PklHak::bawaanLengkap()]);
             $peta = SuratJenis::petaAcc((new PklPengaturanModel())->ambil());
             $this->cek('simpan oleh Admin → aturan ACC tersimpan (ASTS & Balasan wajib, TKA & Penarikan tidak); hak bawaan utuh', $res instanceof \CodeIgniter\HTTP\RedirectResponse && $peta['izin_asts'] && ! $peta['izin_tka'] && $peta['balasan_pkl'] && ! $peta['penarikan_pkl']
-                && PklHak::jenisBoleh('hubin', 'acc') === ['izin_asts', 'izin_tka', 'balasan_pkl', 'penarikan_pkl'] && PklHak::jenisBoleh('operator', 'buat') === SuratJenis::kode());
+                && PklHak::jenisBoleh('hubin', 'acc') === ['izin_asts', 'izin_tka', 'balasan_pkl', 'perpanjangan_pkl', 'penarikan_pkl'] && PklHak::jenisBoleh('operator', 'buat') === SuratJenis::kode());
             $this->atur(['surat_perlu_acc' => null]);
             $this->setelPeranBawaan();
         } finally {
@@ -2549,7 +2551,8 @@ class UjiSurat extends BaseCommand
                 'tgl_efektif' => '2027-10-06', 'alasan_pilih' => '3'], $idBaru);
             $this->cek('ubah Penarikan lewat controller: siswa jadi 2, tanggal & alasan berganti', $res instanceof \CodeIgniter\HTTP\RedirectResponse && $this->jumlah('surat_sekolah_siswa', ['surat_id' => $idBaru]) === 2
                 && str_contains((string) $this->surat($idBaru)['isi'], '2027-10-06') && str_contains((string) $this->surat($idBaru)['isi'], 'permintaan orang tua'));
-            $dPkl = (string) $this->panggil(\App\Controllers\Admin\Pkl::class, 'operator', 'detail', [], [], $aid);
+            // (rapi tampilan U4) tombol Buat surat kini di menu "Lainnya" yang menulis href lewat esc(..., 'attr') → urai entitasnya dulu.
+            $dPkl = html_entity_decode((string) $this->panggil(\App\Controllers\Admin\Pkl::class, 'operator', 'detail', [], [], $aid), ENT_QUOTES | ENT_HTML5);
             $this->cek('detail ajuan PKL: kartu "Surat sekolah" memuat surat terkait + tombol Balasan / Penarikan / Pernyataan; periode PKL tampil', str_contains($dPkl, 'Surat sekolah') && str_contains($dPkl, 'Buat Surat Balasan')
                 && str_contains($dPkl, 'pernyataan-ortu?ajuan=' . $aid) && str_contains($dPkl, 'Balasan PKL') && str_contains($dPkl, '1 September 2027'));
             $this->cek('menu SURAT SEKOLAH: kelima jenis aktif (tak ada lagi yang "Segera")', array_filter(SuratJenis::kode(), static fn (string $k) => ! SuratJenis::siap($k)) === []);

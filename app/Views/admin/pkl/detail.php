@@ -5,6 +5,9 @@
  * batas keputusan & peringatan otomatis, lencana kit, tombol kit ber-ikon (pengganti emoji). Siap CSP: dialog keputusan = dialog
  * kit (ui_dialog_buka, dibuka data-buka-dialog; hapus catatan biaya & cabut beasiswa diisi data-dialog-isi) — dulu satu x-data
  * akar + x-show per dialog + @click berisi beberapa penugasan; tombol unduh/WhatsApp = atribut data-pkl-* (pkl-unduh.js).
+ * Rapi tampilan U4 (2026-10-26, docs/RENCANA-RAPI-TAMPILAN-PKL-SURAT.md): tanpa bilah tab (Kembali di kepala halaman); Periode ikut
+ * kartu Perusahaan; info ACC ikut kartu Keputusan; Keputusan = tombol utama menurut status + menu "Lainnya"; Surat permohonan + Surat
+ * sekolah = satu kartu "Surat" (Unduh + Lainnya, menu "Buat surat"); Pembayaran & Riwayat dilipat. Dialog & formulirnya TETAP sama.
  *
  * @var array       $a           ajuan (PklPengajuanModel::detail)
  * @var list<array> $anggota
@@ -93,9 +96,9 @@ $catatanKunci = static fn (string $html): string => '<div class="peringatan peri
 <?= $this->section('content') ?>
 
 <?= view('admin/partials/help', [
-    'helpKey'   => 'pkl_detail_v6',
+    'helpKey'   => 'pkl_detail_v7',
     'helpTitle' => 'Detail Ajuan PKL',
-    'helpBody'  => '<p>Periksa dulu <b>peringatan otomatis</b> (merah = bahaya, kuning = periksa, biru = info), lalu putuskan:</p>'
+    'helpBody'  => '<p>Periksa dulu <b>peringatan otomatis</b> (merah = bahaya, kuning = periksa, biru = info), lalu putuskan. Tombol utama ada di kartu <b>Keputusan</b>; aksi lain (Tolak, Ditolak perusahaan, Keluarkan siswa, Gabungkan, Ubah, Batalkan persetujuan, Hapus) ada di menu <b>Lainnya</b>, dan pembuatan surat sekolah di menu <b>Buat surat</b> pada kartu Surat.</p>'
         . '<ul class="mt-2 list-disc pl-5 space-y-1">'
         . '<li><b>ACC</b> — hanya peran yang diberi hak ACC ajuan PKL oleh Admin (sekarang: ' . esc(\App\Libraries\PklHak::teksPemegang('acc')) . '; Admin selalu bisa). Tercatat siapa (nama + peran), kapan, dan tercetak di kaki surat. Perusahaan otomatis didaftarkan ke master, jadi periksa ejaan namanya dulu.</li>'
         . '<li><b>Kembalikan</b> — siswa memperbaiki sendiri, tulis alasan yang jelas.</li>'
@@ -109,8 +112,6 @@ $catatanKunci = static fn (string $html): string => '<div class="peringatan peri
         . '<li><b>Surat permohonan</b> (setelah Disetujui) — hanya yang diberi hak <i>unduh surat</i> oleh Admin (sekarang: ' . esc(\App\Libraries\PklHak::teksPemegang('surat')) . '). Sebelum berkas dibuat <u>wajib mencatat biaya</u> yang diterima tiap siswa (Biaya PKL, SPP, Tabungan, OSIS; atau Beasiswa / Keringanan beralasan) — bulannya terpilih otomatis (bulan pertama yang belum lunas). Bila semua siswa sudah tercatat, <b>Unduh surat</b> langsung mengunduh tanpa kotak biaya; untuk mencatat biaya tambahan pakai <b>Catat biaya lain</b>. Nomor ditetapkan sekali; bila data berubah sesudahnya muncul tanda <b>Perlu cetak ulang</b> dan nomor tetap sama. Setelah unduhan selesai, kotak <b>Kabari via WhatsApp</b> muncul bila masih ada siswa yang belum dikabari. Salah catat biaya? Hapus catatannya di kartu <b>Pembayaran siswa</b> (wajib beralasan).</li>'
         . '</ul>',
 ]) ?>
-
-<?= view('admin/pkl/_nav', ['tab' => $tab, 'hitungTab' => $hitungTab]) ?>
 
 <div class="space-y-4">
     <!-- Kepala ajuan -->
@@ -147,8 +148,9 @@ $catatanKunci = static fn (string $html): string => '<div class="peringatan peri
     <div class="grid gap-4 lg:grid-cols-3">
         <!-- Kolom kiri: data -->
         <div class="space-y-4 lg:col-span-2">
+            <?php $adaPeriode = $a['tanggal_mulai'] || $a['tanggal_selesai']; // diisi lewat Surat Balasan (form siswa tak menanyakan tanggal) ?>
             <section class="kartu overflow-hidden" aria-labelledby="judul-perusahaan">
-                <?= $kepalaKartu('Perusahaan', 'judul-perusahaan') ?>
+                <?= $kepalaKartu($adaPeriode ? 'Perusahaan &amp; periode PKL' : 'Perusahaan', 'judul-perusahaan') ?>
                 <dl class="divide-y divide-gray-200 dark:divide-gray-700">
                     <?= $baris('Nama', $a['perusahaan_nama']) ?>
                     <?= $baris('Alamat', $a['perusahaan_alamat']) ?>
@@ -166,29 +168,18 @@ $catatanKunci = static fn (string $html): string => '<div class="peringatan peri
                             <?php endif; ?>
                         </dd>
                     </div>
+                    <?php if ($adaPeriode): ?>
+                        <?= $baris('PKL mulai', IsianBantu::tanggalIndo($a['tanggal_mulai'])) ?>
+                        <?= $baris('PKL selesai', IsianBantu::tanggalIndo($a['tanggal_selesai'])) ?>
+                        <?= $baris('Lama', $hari !== null ? $hari . ' hari (± ' . max(1, (int) round($hari / 30)) . ' bulan)' : '') ?>
+                    <?php endif; ?>
                 </dl>
             </section>
-
-            <?php if ($a['tanggal_mulai'] || $a['tanggal_selesai']): // diisi lewat Surat Balasan (form siswa tak menanyakan tanggal) ?>
-                <section class="kartu overflow-hidden" aria-labelledby="judul-periode">
-                    <?= $kepalaKartu('Periode PKL', 'judul-periode') ?>
-                    <dl class="divide-y divide-gray-200 dark:divide-gray-700">
-                        <?= $baris('Mulai', IsianBantu::tanggalIndo($a['tanggal_mulai'])) ?>
-                        <?= $baris('Selesai', IsianBantu::tanggalIndo($a['tanggal_selesai'])) ?>
-                        <?= $baris('Lama', $hari !== null ? $hari . ' hari (± ' . max(1, (int) round($hari / 30)) . ' bulan)' : '') ?>
-                    </dl>
-                </section>
-            <?php endif; ?>
 
             <section class="kartu overflow-hidden" aria-labelledby="judul-siswa">
                 <div class="kartu-kepala">
                     <h3 id="judul-siswa" class="kartu-judul text-base">Siswa</h3>
-                    <div class="flex flex-wrap items-center gap-2">
-                        <span class="lencana lencana-abu"><?= count($anggota) ?> siswa</span>
-                        <?php if (! empty($bolehKeluarkan)): ?>
-                            <button type="button" class="btn btn-netral btn-sm" data-buka-dialog="pkl-keluarkan"><?= ikon('users', 'h-4 w-4') ?>Keluarkan siswa</button>
-                        <?php endif; ?>
-                    </div>
+                    <span class="lencana lencana-abu"><?= count($anggota) ?> siswa</span>
                 </div>
                 <ul class="divide-y divide-gray-200 dark:divide-gray-700">
                     <?php foreach ($anggota as $s): $tolakS = $tolakAnggota[(int) $s['siswa_id']] ?? []; ?>
@@ -198,6 +189,8 @@ $catatanKunci = static fn (string $html): string => '<div class="peringatan peri
                                     <?= esc($s['nama']) ?>
                                     <span class="lencana <?= $s['peran'] === 'pengaju' ? 'lencana-merek' : 'lencana-abu' ?>"><?= $s['peran'] === 'pengaju' ? 'Pengaju' : 'Teman' ?></span>
                                     <?php if ($tolakS !== []): ?><span class="lencana lencana-kuning">Pernah ditolak <?= count($tolakS) ?>×</span><?php endif; ?>
+                                    <?php $pjS = ($perpanjangan ?? [])[(int) $s['siswa_id']] ?? null; // Surat Perpanjangan PKL (docs/DESAIN-PERPANJANGAN-PKL.md) ?>
+                                    <?php if ($pjS !== null): ?><a href="<?= site_url('admin/surat/' . (int) $pjS['surat_id']) ?>" class="lencana <?= $pjS['berlaku'] ? 'lencana-hijau' : 'lencana-kuning' ?> hover:underline"><?= $pjS['berlaku'] ? 'Diperpanjang s.d. ' : 'Perpanjangan menunggu ACC s.d. ' ?><?= esc(\App\Libraries\IsianBantu::tanggalIndo($pjS['selesai_baru'])) ?></a><?php endif; ?>
                                 </p>
                                 <p class="text-sm text-gray-500 dark:text-gray-400">Kelas <?= esc($s['nama_kelas'] ?? '—') ?> · NIS <?= esc($s['nis'] ?: '—') ?> · NISN <?= esc($s['nisn'] ?: '—') ?>
                                     · <a href="<?= site_url('admin/pkl/riwayat/' . (int) $s['siswa_id']) . '?dari=' . $id ?>" class="font-medium text-brand-700 hover:underline dark:text-brand-400">Riwayat</a></p>
@@ -236,29 +229,34 @@ $catatanKunci = static fn (string $html): string => '<div class="peringatan peri
             </section>
         </div>
 
-        <!-- Kolom kanan: aksi + riwayat -->
+        <!-- Kolom kanan: keputusan, surat, pembayaran, riwayat -->
         <div class="space-y-4">
-            <section class="kartu overflow-hidden" aria-labelledby="judul-keputusan">
-                <?= $kepalaKartu('Keputusan', 'judul-keputusan') ?>
+            <?php
+            // Keputusan (U4): tombol utama menurut status; yang jarang dipakai / berbahaya di menu "Lainnya". Dialognya tetap (data-buka-dialog).
+            $tombolUtama = [];
+            if ($bolehAcc && in_array($status, ['menunggu', 'perbaikan', 'ditolak'], true)) {
+                $tombolUtama[] = '<button type="button" class="btn btn-sukses w-full" data-buka-dialog="pkl-acc">' . ikon('check', 'h-4 w-4') . ($status === 'ditolak' ? 'ACC (hidupkan kembali)' : 'ACC') . '</button>';
+            }
+            if ($status === 'menunggu' && ! empty($bolehUbah)) {
+                $tombolUtama[] = '<button type="button" class="btn ' . ($tombolUtama === [] ? 'btn-utama' : 'btn-netral') . ' w-full" data-buka-dialog="pkl-kembalikan">' . ikon('file-pen', 'h-4 w-4') . 'Kembalikan untuk diperbaiki</button>';
+            }
+            $lainKeputusan = [
+                $bolehAcc && in_array($status, ['menunggu', 'perbaikan'], true) ? ['label' => 'Tolak', 'ikon' => 'close', 'dialog' => 'pkl-tolak', 'bahaya' => true] : null,
+                ! empty($bolehDitolakPt) ? ['label' => 'Ditolak perusahaan (semua siswa)', 'ikon' => 'briefcase', 'dialog' => 'pkl-ditolakpt', 'bahaya' => true] : null,
+                ! empty($bolehKeluarkan) ? ['label' => 'Keluarkan sebagian siswa', 'ikon' => 'users', 'dialog' => 'pkl-keluarkan'] : null,
+                $kandidatGabung !== [] ? ['label' => 'Gabungkan ke ajuan lain (' . count($kandidatGabung) . ')', 'ikon' => 'users-group', 'dialog' => 'pkl-gabung'] : null,
+                ! empty($bolehUbah) && ($status !== 'disetujui' || $bolehAcc) ? ['label' => 'Ubah data langsung', 'ikon' => 'edit', 'href' => site_url('admin/pkl/' . $id . '/ubah')] : null,
+                $bolehAcc && $status === 'disetujui' ? ['label' => 'Batalkan persetujuan', 'ikon' => 'close-circle', 'dialog' => 'pkl-batal', 'bahaya' => true] : null,
+                $bolehHapus && ($status !== 'disetujui' || \App\Libraries\PklHak::boleh($peran, 'hapus_disetujui')) ? ['label' => 'Hapus ajuan ini', 'ikon' => 'trash-bin', 'dialog' => 'pkl-hapus', 'bahaya' => true] : null,
+            ];
+            ?>
+            <section class="kartu" aria-labelledby="judul-keputusan">
+                <div class="kartu-kepala">
+                    <h3 id="judul-keputusan" class="kartu-judul text-base">Keputusan</h3>
+                    <?= ui_menu_lain($lainKeputusan) ?>
+                </div>
                 <div class="kartu-isi flex flex-col gap-2 !p-4">
-                    <?php if ($bolehAcc && in_array($status, ['menunggu', 'perbaikan', 'ditolak'], true)): ?>
-                        <button type="button" class="btn btn-sukses w-full" data-buka-dialog="pkl-acc"><?= ikon('check', 'h-4 w-4') ?><?= $status === 'ditolak' ? 'ACC (hidupkan kembali)' : 'ACC' ?></button>
-                    <?php endif; ?>
-                    <?php if ($status === 'menunggu' && ! empty($bolehUbah)): ?>
-                        <button type="button" class="btn btn-utama w-full" data-buka-dialog="pkl-kembalikan"><?= ikon('file-pen', 'h-4 w-4') ?>Kembalikan untuk diperbaiki</button>
-                    <?php endif; ?>
-                    <?php if ($bolehAcc && in_array($status, ['menunggu', 'perbaikan'], true)): ?>
-                        <button type="button" class="btn btn-bahaya w-full" data-buka-dialog="pkl-tolak"><?= ikon('close', 'h-4 w-4') ?>Tolak</button>
-                    <?php endif; ?>
-                    <?php if (! empty($bolehDitolakPt)): ?>
-                        <button type="button" class="btn btn-netral w-full text-red-700 dark:text-red-400" data-buka-dialog="pkl-ditolakpt"><?= ikon('briefcase', 'h-4 w-4') ?>Ditolak perusahaan (semua siswa)</button>
-                    <?php endif; ?>
-                    <?php if (! empty($bolehKeluarkan)): ?>
-                        <button type="button" class="btn btn-netral w-full" data-buka-dialog="pkl-keluarkan"><?= ikon('users', 'h-4 w-4') ?>Keluarkan sebagian siswa</button>
-                    <?php endif; ?>
-                    <?php if ($kandidatGabung !== []): ?>
-                        <button type="button" class="btn btn-netral w-full" data-buka-dialog="pkl-gabung"><?= ikon('users-group', 'h-4 w-4') ?>Gabungkan ke ajuan lain (<?= count($kandidatGabung) ?>)</button>
-                    <?php endif; ?>
+                    <?= implode('', $tombolUtama) ?>
                     <?php if ($kabarKeluar !== []):
                         $kabarKeluarBelum = count(array_filter($kabarKeluar, static fn (array $k): bool => $k['url'] !== null && $k['kabar_at'] === null)); ?>
                         <button type="button" class="btn btn-sukses w-full" data-buka-dialog="pkl-kabar-keluar"><?= ikon('whatsapp', 'h-4 w-4', 'solid') ?>Kabari siswa yang dikeluarkan</button>
@@ -269,168 +267,159 @@ $catatanKunci = static fn (string $html): string => '<div class="peringatan peri
                         <button type="button" class="btn btn-sukses w-full" data-buka-dialog="pkl-kabar"><?= ikon('whatsapp', 'h-4 w-4', 'solid') ?>Kabari siswa via WhatsApp</button>
                         <p class="-mt-1 text-center text-xs text-gray-500 dark:text-gray-400"><?= $kabarBelum > 0 ? 'Belum dikabari: ' . $kabarBelum . ' dari ' . count($kabar['siswa']) . ' siswa' : 'Semua siswa ber-nomor HP sudah dikabari' ?></p>
                     <?php endif; ?>
-                    <?php if ($bolehAcc && $status === 'disetujui'): ?>
-                        <button type="button" class="btn btn-netral w-full text-red-700 dark:text-red-400" data-buka-dialog="pkl-batal"><?= ikon('close-circle', 'h-4 w-4') ?>Batalkan persetujuan</button>
-                    <?php endif; ?>
-                    <?php if (! empty($bolehUbah) && ($status !== 'disetujui' || $bolehAcc)): ?>
-                        <a href="<?= site_url('admin/pkl/' . $id . '/ubah') ?>" class="btn btn-netral w-full"><?= ikon('edit', 'h-4 w-4') ?>Ubah data langsung</a>
+                    <?php if ($status === 'disetujui' && ! empty($a['acc_at'])): $peranAcc = (string) ($a['acc_peran'] ?? ''); // info ACC (dulu kartu sendiri) ?>
+                        <div class="rounded-lg border border-green-200 bg-green-50 px-3 py-2.5 text-xs text-gray-700 dark:border-green-900 dark:bg-gray-700 dark:text-gray-300">
+                            <p class="flex items-center gap-1.5 font-semibold text-green-800 dark:text-green-300"><?= ikon('check-circle', 'h-4 w-4 shrink-0') ?>Disetujui <?= esc(PklSurat::waktuIndo((string) $a['acc_at'])) ?></p>
+                            <p class="mt-0.5">oleh <b class="text-gray-900 dark:text-white"><?= esc($a['acc_nama'] ?: '—') ?></b> · <?= esc(match ($peranAcc) {
+                                'impor' => 'data riwayat (diimpor, bukan ACC sistem)', '' => 'peran tidak tercatat', default => \App\Libraries\HakAkses::label($peranAcc),
+                            }) ?></p>
+                            <?php if (! empty($a['acc_kode'])): ?><p class="mt-0.5">Kode verifikasi <span class="font-mono font-bold text-gray-900 dark:text-white"><?= esc($a['acc_kode']) ?></span></p><?php endif; ?>
+                        </div>
+                        <?php if ($peranAcc === 'impor'): ?>
+                            <?= ui_peringatan('awas', 'Data ini diimpor dari riwayat lama, bukan persetujuan lewat sistem.') ?>
+                        <?php endif; ?>
                     <?php endif; ?>
                     <?php if (! $bolehAcc): ?>
-                        <?= $catatanKunci('<b>ACC, tolak, dan batalkan persetujuan hanya untuk peran yang diberi hak ACC ajuan PKL oleh Admin</b> (sekarang: ' . esc(\App\Libraries\PklHak::teksPemegang('acc')) . ').'
-                            . (! empty($bolehUbah) ? ' Anda bisa memeriksa, mengembalikan ajuan untuk diperbaiki' . ($status === 'disetujui' ? '' : ', dan mengubah datanya') . '.' : '')
-                            . (! empty($bolehSurat) ? ' Surat diunduh dan biayanya dicatat oleh Anda setelah ajuan disetujui.' : '')) ?>
+                        <?= $catatanKunci('ACC, tolak, dan batalkan persetujuan hanya untuk pemegang hak ACC ajuan PKL (sekarang: ' . esc(\App\Libraries\PklHak::teksPemegang('acc')) . ').') ?>
                     <?php endif; ?>
-                    <?php if ($bolehHapus && ($status !== 'disetujui' || \App\Libraries\PklHak::boleh($peran, 'hapus_disetujui'))): ?>
-                        <button type="button" class="btn btn-teks btn-sm mt-1 w-full text-red-600 hover:bg-red-50 dark:text-red-400 dark:hover:bg-gray-700" data-buka-dialog="pkl-hapus"><?= ikon('trash-bin', 'h-4 w-4') ?>Hapus ajuan ini</button>
+                    <?php if ($tombolUtama === [] && $kabarKeluar === [] && empty($kabar['siswa']) && $bolehAcc && ! ($status === 'disetujui' && ! empty($a['acc_at']))): ?>
+                        <p class="text-sm text-gray-500 dark:text-gray-400">Tidak ada keputusan yang perlu diambil. Aksi lain ada di menu <b>Lainnya</b>.</p>
                     <?php endif; ?>
                 </div>
             </section>
 
-            <?php if ($status === 'disetujui' && ! empty($a['acc_at'])): $peranAcc = (string) ($a['acc_peran'] ?? ''); ?>
-                <section class="kartu overflow-hidden" aria-labelledby="judul-acc">
+            <?php
+            // Surat (U4): surat permohonan PKL (setelah Disetujui) + surat sekolah tertaut, satu kartu; pembuatan surat di menu "Buat surat".
+            $suratSekolah ??= []; $bolehSuratSekolah ??= false; $lapor ??= null; $bolehBuatSurat ??= [];
+            $bolehBuatDiSini = $bolehSuratSekolah && in_array($status, ['menunggu', 'perbaikan', 'disetujui'], true);
+            $buatSurat       = $bolehBuatDiSini ? [
+                $status === 'disetujui' && ! empty($bolehBuatSurat[\App\Libraries\SuratJenis::BALASAN])
+                    ? ['label' => 'Buat Surat Balasan', 'ikon' => 'envelope', 'href' => site_url('admin/surat/balasan') . ($lapor !== null && $lapor['status'] === 'baru' ? '?lapor=' . (int) $lapor['id'] : '?ajuan=' . $id)] : null,
+                $status === 'disetujui' && ! empty($bolehBuatSurat[\App\Libraries\SuratJenis::PERPANJANGAN])
+                    ? ['label' => 'Buat Surat Perpanjangan', 'ikon' => 'calendar-edit', 'href' => site_url('admin/surat/perpanjangan?ajuan=' . $id)] : null,
+                $status === 'disetujui' && ! empty($bolehBuatSurat[\App\Libraries\SuratJenis::PENARIKAN])
+                    ? ['label' => 'Buat Surat Penarikan', 'ikon' => 'arrow-right-to-bracket', 'href' => site_url('admin/surat/penarikan?ajuan=' . $id)] : null,
+                ! empty($bolehBuatSurat[\App\Libraries\SuratJenis::PERNYATAAN])
+                    ? ['label' => 'Cetak Pernyataan Orang Tua', 'ikon' => 'file-pen', 'href' => site_url('admin/surat/pernyataan-ortu?ajuan=' . $id)] : null,
+            ] : [];
+            ?>
+            <?php if ($status === 'disetujui' || $suratSekolah !== [] || $lapor !== null || $bolehBuatDiSini): ?>
+                <section class="kartu" aria-labelledby="judul-surat-pkl">
                     <div class="kartu-kepala">
-                        <h3 id="judul-acc" class="kartu-judul inline-flex items-center gap-2 text-base"><?= ikon('check-circle', 'h-5 w-5 text-green-600 dark:text-green-400') ?>Persetujuan (ACC)</h3>
+                        <h3 id="judul-surat-pkl" class="kartu-judul text-base">Surat</h3>
+                        <?= ui_menu_lain($buatSurat, ['label' => 'Buat surat']) ?>
                     </div>
-                    <dl class="kartu-isi space-y-2.5 !p-4 text-sm">
-                        <div><dt class="text-xs text-gray-500 dark:text-gray-400">Disetujui oleh</dt><dd class="font-semibold text-gray-900 dark:text-white"><?= esc($a['acc_nama'] ?: '—') ?></dd></div>
-                        <div><dt class="text-xs text-gray-500 dark:text-gray-400">Sebagai</dt><dd class="font-semibold text-gray-900 dark:text-white"><?= esc(match ($peranAcc) {
-                            'impor' => 'Data riwayat (diimpor, bukan ACC sistem)', '' => 'Tidak tercatat', default => \App\Libraries\HakAkses::label($peranAcc),
-                        }) ?></dd></div>
-                        <div><dt class="text-xs text-gray-500 dark:text-gray-400">Waktu</dt><dd class="font-semibold text-gray-900 dark:text-white"><?= esc(PklSurat::waktuIndo((string) $a['acc_at'])) ?></dd></div>
-                        <?php if (! empty($a['acc_kode'])): ?><div><dt class="text-xs text-gray-500 dark:text-gray-400">Kode verifikasi</dt><dd class="font-mono text-xs font-bold text-gray-700 dark:text-gray-300"><?= esc($a['acc_kode']) ?></dd></div><?php endif; ?>
-                        <?php if ($peranAcc === 'impor'): ?>
-                            <div class="pt-1"><?= ui_peringatan('awas', 'Data ini diimpor dari riwayat lama, bukan persetujuan lewat sistem.') ?></div>
-                        <?php endif; ?>
-                    </dl>
-                </section>
-            <?php endif; ?>
-
-            <?php if ($status === 'disetujui'): ?>
-                <section class="kartu overflow-hidden" aria-labelledby="judul-surat-pkl">
-                    <?= $kepalaKartu('Surat permohonan', 'judul-surat-pkl') ?>
-                    <div class="kartu-isi space-y-3 !p-4 text-sm">
-                        <?php if (trim((string) ($p['waka_hubin_nama'] ?? '')) === ''): ?>
-                            <?= ui_peringatan('galat', '', ['html' => 'Nama Waka Hubin belum diisi, jadi di bawah tanda tangan surat hanya titik-titik. '
-                                . ($bolehPengaturan ? '<a href="' . site_url('admin/pkl/pengaturan#surat') . '" class="font-semibold underline">Isi di Pengaturan PKL</a>, lalu unduh surat lagi (nomor tetap sama).' : 'Minta Operator mengisinya di Pengaturan PKL.')]) ?>
-                        <?php endif; ?>
-                        <?php if ($surat): ?>
-                            <div>
-                                <p class="text-xs text-gray-500 dark:text-gray-400">Nomor surat</p>
-                                <p class="font-mono font-bold text-gray-900 dark:text-white"><?= esc($surat['nomor']) ?></p>
-                                <p class="mt-0.5 text-xs text-gray-500 dark:text-gray-400">Tanggal <?= esc(IsianBantu::tanggalIndo($surat['tanggal_surat'])) ?> · diunduh <?= (int) $surat['cetak_ke'] ?> kali</p>
-                            </div>
-                            <?php if ($perluUlang): ?>
-                                <?= ui_peringatan('awas', '', ['html' => '<b>Perlu cetak ulang</b> — data ajuan berubah sejak surat terakhir diunduh. Nomor tetap sama.']) ?>
-                            <?php endif; ?>
-                        <?php else: ?>
-                            <p class="text-gray-500 dark:text-gray-400">Surat belum diterbitkan. Nomor ditetapkan sekali, saat surat pertama diunduh.</p>
-                        <?php endif; ?>
-                        <?php if (! empty($bolehSurat)): ?>
-                            <div class="flex flex-col gap-2">
-                                <button type="button" class="btn btn-utama w-full" data-pkl-unduh-ajuan="<?= $id ?>"><?= ikon('download', 'h-4 w-4') ?><?= $surat ? (! empty($perluUlang) ? 'Unduh surat terbaru' : 'Unduh surat') : 'Terbitkan nomor &amp; unduh surat' ?></button>
+                    <div class="kartu-isi space-y-4 !p-4 text-sm">
+                        <?php if ($status === 'disetujui'): ?>
+                            <div class="space-y-3">
+                                <p class="text-xs font-semibold tracking-wide text-gray-500 uppercase dark:text-gray-400">Surat permohonan PKL</p>
+                                <?php if (trim((string) ($p['waka_hubin_nama'] ?? '')) === ''): ?>
+                                    <?= ui_peringatan('galat', '', ['html' => 'Nama Waka Hubin belum diisi, jadi di bawah tanda tangan surat hanya titik-titik. '
+                                        . ($bolehPengaturan ? '<a href="' . site_url('admin/pkl/pengaturan#surat') . '" class="font-semibold underline">Isi di Pengaturan PKL</a>, lalu unduh surat lagi (nomor tetap sama).' : 'Minta Operator mengisinya di Pengaturan PKL.')]) ?>
+                                <?php endif; ?>
                                 <?php if ($surat): ?>
-                                    <button type="button" class="btn btn-netral btn-sm w-full" data-pkl-unduh-ajuan="<?= $id ?>" data-pkl-unduh-paksa><?= ikon('plus', 'h-4 w-4') ?>Catat biaya lain, lalu unduh</button>
-                                    <button type="button" class="btn btn-sukses w-full" data-pkl-wa-ajuan="<?= $id ?>"><?= ikon('whatsapp', 'h-4 w-4', 'solid') ?>Kabari siswa via WhatsApp</button>
+                                    <div>
+                                        <p class="font-mono font-bold text-gray-900 dark:text-white"><?= esc($surat['nomor']) ?></p>
+                                        <p class="mt-0.5 text-xs text-gray-500 dark:text-gray-400">Tanggal <?= esc(IsianBantu::tanggalIndo($surat['tanggal_surat'])) ?> · diunduh <?= (int) $surat['cetak_ke'] ?> kali</p>
+                                    </div>
+                                    <?php if ($perluUlang): ?>
+                                        <?= ui_peringatan('awas', '', ['html' => '<b>Perlu cetak ulang</b> — data ajuan berubah sejak surat terakhir diunduh. Nomor tetap sama.']) ?>
+                                    <?php endif; ?>
+                                <?php else: ?>
+                                    <p class="text-gray-500 dark:text-gray-400">Belum diterbitkan. Nomor ditetapkan sekali, saat surat pertama diunduh.</p>
+                                <?php endif; ?>
+                                <?php if (! empty($bolehSurat)): ?>
+                                    <div class="flex items-center gap-2">
+                                        <button type="button" class="btn btn-utama min-w-0 flex-1" data-pkl-unduh-ajuan="<?= $id ?>"><?= ikon('download', 'h-4 w-4') ?><?= $surat ? (! empty($perluUlang) ? 'Unduh surat terbaru' : 'Unduh surat') : 'Terbitkan nomor &amp; unduh surat' ?></button>
+                                        <?= $surat ? ui_menu_lain([
+                                            ['label' => 'Catat biaya lain, lalu unduh', 'ikon' => 'plus', 'atr' => 'data-pkl-unduh-ajuan="' . $id . '" data-pkl-unduh-paksa'],
+                                            ['label' => 'Kabari siswa via WhatsApp', 'ikon' => 'users', 'atr' => 'data-pkl-wa-ajuan="' . $id . '"'],
+                                        ], ['kecil' => false]) : '' ?>
+                                    </div>
+                                <?php else: ?>
+                                    <?= $catatanKunci('Surat diunduh pemegang hak unduh surat (' . esc(\App\Libraries\PklHak::teksPemegang('surat')) . ').') ?>
                                 <?php endif; ?>
                             </div>
-                        <?php else: ?>
-                            <?= $catatanKunci('Surat diunduh oleh peran yang diberi hak itu oleh Admin (' . esc(\App\Libraries\PklHak::teksPemegang('surat')) . '), supaya jelas siapa yang menyetujui dan siapa yang mencetak.') ?>
+                        <?php endif; ?>
+                        <?php if ($lapor !== null || $suratSekolah !== []): ?>
+                            <div class="space-y-2">
+                                <p class="text-xs font-semibold tracking-wide text-gray-500 uppercase dark:text-gray-400">Surat sekolah</p>
+                                <?php if ($lapor !== null): [$lpTeks, $lpWarna] = \App\Libraries\PklLapor::TAMPIL[$lapor['status']] ?? [$lapor['status'], 'lencana-abu']; ?>
+                                    <div class="rounded-lg border border-blue-200 bg-blue-50 px-3 py-2 text-xs text-gray-700 dark:border-blue-800 dark:bg-gray-700 dark:text-gray-300">
+                                        <p class="flex flex-wrap items-center gap-2"><b>Lapor diterima dari siswa</b><span class="lencana <?= $lpWarna ?>"><?= esc($lpTeks) ?></span></p>
+                                        <p class="mt-0.5">Periode <?= esc(\App\Libraries\SuratPkl::periodeTeks((string) $lapor['tanggal_mulai'], (string) $lapor['tanggal_selesai'])) ?> · oleh <?= esc((string) $lapor['pelapor_nama']) ?></p>
+                                        <?php if ($lapor['status'] === 'dikembalikan' && (string) ($lapor['alasan'] ?? '') !== ''): ?><p class="mt-0.5 text-red-700 dark:text-red-400">Alasan dikembalikan: <?= esc((string) $lapor['alasan']) ?></p><?php endif; ?>
+                                        <?php if ($lapor['status'] === 'baru' && ! empty($bolehKotakLapor)): ?><a href="<?= site_url('admin/surat/balasan/laporan') ?>" class="mt-1 inline-flex items-center gap-1 font-semibold text-brand-700 hover:underline dark:text-brand-400">Proses di kotak Lapor Diterima PKL<?= ikon('chevron-right', 'h-3.5 w-3.5') ?></a><?php endif; ?>
+                                    </div>
+                                <?php endif; ?>
+                                <?php if ($suratSekolah !== []): ?>
+                                    <ul class="space-y-2">
+                                        <?php foreach ($suratSekolah as $ss): [$stTeks, $stWarna] = \App\Models\SuratSekolahModel::TAMPIL_STATUS[$ss['status']] ?? [$ss['status'], 'lencana-abu']; ?>
+                                            <li>
+                                                <a href="<?= site_url('admin/surat/' . (int) $ss['id']) ?>" class="block rounded-lg border border-gray-200 px-3 py-2 text-xs transition-colors hover:bg-gray-50 dark:border-gray-600 dark:hover:bg-gray-700">
+                                                    <span class="flex flex-wrap items-center gap-2"><span class="font-semibold text-gray-900 dark:text-white"><?= esc(\App\Libraries\SuratJenis::singkat((string) $ss['jenis'])) ?></span><span class="lencana <?= $stWarna ?>"><?= esc($stTeks) ?></span></span>
+                                                    <span class="mt-0.5 block font-mono text-gray-500 dark:text-gray-400"><?= esc((string) ($ss['nomor'] ?? '') !== '' ? $ss['nomor'] : \App\Models\SuratSekolahModel::kode((int) $ss['id'])) ?></span>
+                                                </a>
+                                            </li>
+                                        <?php endforeach; ?>
+                                    </ul>
+                                <?php endif; ?>
+                            </div>
+                        <?php elseif ($status !== 'disetujui'): ?>
+                            <p class="text-gray-500 dark:text-gray-400">Belum ada surat sekolah untuk ajuan ini. Buat lewat menu <b>Buat surat</b>.</p>
                         <?php endif; ?>
                     </div>
                 </section>
-
-                <?php if (isset($pembayaran) && $pembayaran !== null): ?>
-                    <section class="kartu overflow-hidden" aria-labelledby="judul-bayar">
-                        <?= $kepalaKartu('Pembayaran siswa', 'judul-bayar') ?>
-                        <?php if (! array_filter($pembayaran, static fn (array $x) => $x['pembayaran'] !== [] || $x['beasiswa'] !== null || $x['keringanan'] !== [])): ?>
-                            <p class="px-4 py-5 text-center text-sm text-gray-500 dark:text-gray-400">Belum ada biaya yang dicatat. Dicatat saat surat diunduh.</p>
-                        <?php endif; ?>
-                        <ul class="divide-y divide-gray-200 dark:divide-gray-700">
-                            <?php foreach ($pembayaran as $x): if ($x['pembayaran'] === [] && $x['beasiswa'] === null && $x['keringanan'] === []) { continue; } ?>
-                                <li class="px-4 py-3.5 text-sm">
-                                    <p class="font-semibold text-gray-900 dark:text-white"><?= esc($x['nama']) ?> <span class="text-xs font-normal text-gray-500 dark:text-gray-400"><?= esc($x['kelas']) ?></span></p>
-                                    <?php if ($x['beasiswa'] !== null): ?>
-                                        <p class="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1 text-xs font-medium <?= $x['beasiswa']['berlaku'] ? 'text-brand-700 dark:text-brand-400' : 'text-gray-400 line-through dark:text-gray-500' ?>">
-                                            <?= ikon('award', 'h-4 w-4 shrink-0') ?>Beasiswa 3 tahun — <?= esc($x['beasiswa']['sumber_label']) ?><?= ! empty($x['beasiswa']['berakhir_at']) ? ' s.d. ' . esc(IsianBantu::tanggalIndo($x['beasiswa']['berakhir_at'])) : '' ?> (SPP dibebaskan)
-                                            <?php if (! empty($bolehSurat)): ?>
-                                                <button type="button" class="font-semibold text-red-600 no-underline hover:underline dark:text-red-400" data-buka-dialog="pkl-cabutbeasiswa"
-                                                        data-dialog-isi="<?= esc((string) json_encode(['siswa_id' => (int) $x['siswa_id'], 'teks' => $x['nama']]), 'attr') ?>">cabut</button>
-                                            <?php endif; ?>
-                                        </p>
-                                    <?php endif; ?>
-                                    <?php if ($x['pembayaran'] !== []): ?>
-                                        <ul class="mt-1.5 space-y-1">
-                                            <?php foreach ($x['pembayaran'] as $b): ?>
-                                                <li class="flex items-center justify-between gap-2 text-xs text-gray-600 dark:text-gray-300">
-                                                    <span><?= esc($b['nama']) ?> <span class="text-gray-500 dark:text-gray-400">· <?= esc($b['periode_label']) ?> · <?= esc($b['oleh']) ?>, <?= esc(date('d-m-Y H:i', strtotime($b['waktu']))) ?></span></span>
-                                                    <span class="flex shrink-0 items-center gap-1.5"><b class="text-gray-900 dark:text-white"><?= esc(\App\Libraries\PklBiaya::rupiah((int) $b['nominal'])) ?></b>
-                                                        <?php if (! empty($bolehSurat)): ?>
-                                                            <button type="button" class="tombol-tutup h-6 w-6 hover:bg-red-50 hover:text-red-600 dark:hover:bg-gray-700" title="Hapus catatan (salah centang)" aria-label="Hapus catatan <?= esc($b['nama'], 'attr') ?>"
-                                                                    data-buka-dialog="pkl-hapusbayar" data-dialog-isi="<?= esc((string) json_encode(['pembayaran_id' => (int) $b['id'], 'teks' => $x['nama'] . ' — ' . $b['nama'] . ' ' . $b['periode_label']]), 'attr') ?>"><?= ikon('close', 'h-3.5 w-3.5') ?></button>
-                                                        <?php endif; ?>
-                                                    </span>
-                                                </li>
-                                            <?php endforeach; ?>
-                                        </ul>
-                                        <p class="mt-1.5 border-t border-gray-200 pt-1.5 text-right text-xs text-gray-500 dark:border-gray-700 dark:text-gray-400">Total dibayar: <b class="text-gray-900 dark:text-white"><?= esc(\App\Libraries\PklBiaya::rupiah((int) $x['total'])) ?></b></p>
-                                    <?php endif; ?>
-                                    <?php foreach (array_slice($x['keringanan'], 0, 1) as $k): ?>
-                                        <p class="mt-1.5 rounded-lg bg-yellow-50 px-3 py-1.5 text-xs text-yellow-800 dark:bg-gray-700 dark:text-yellow-300"><b>Keringanan/ditunda:</b> <?= esc($k['alasan']) ?> — <?= esc($k['oleh']) ?>, <?= esc(date('d-m-Y', strtotime($k['waktu']))) ?></p>
-                                    <?php endforeach; ?>
-                                </li>
-                            <?php endforeach; ?>
-                        </ul>
-                        <?php if (! empty($bolehLaporan)): ?>
-                            <div class="kartu-kaki text-right"><a href="<?= site_url('admin/pkl/laporan') ?>" class="inline-flex items-center gap-1 text-sm font-medium text-brand-700 hover:underline dark:text-brand-400">Buka Laporan Pembayaran<?= ikon('chevron-right', 'h-3.5 w-3.5') ?></a></div>
-                        <?php endif; ?>
-                    </section>
-                <?php endif; ?>
             <?php endif; ?>
 
-            <?php $suratSekolah ??= []; $bolehSuratSekolah ??= false; $lapor ??= null; $bolehBuatSurat ??= []; ?>
-            <?php if ($suratSekolah !== [] || $lapor !== null || ($bolehSuratSekolah && in_array($status, ['menunggu', 'perbaikan', 'disetujui'], true))): ?>
-                <section class="kartu overflow-hidden" aria-labelledby="judul-surat-sekolah">
-                    <?= $kepalaKartu('Surat sekolah', 'judul-surat-sekolah') ?>
-                    <div class="kartu-isi space-y-3 !p-4 text-sm">
-                        <?php if ($lapor !== null): [$lpTeks, $lpWarna] = \App\Libraries\PklLapor::TAMPIL[$lapor['status']] ?? [$lapor['status'], 'lencana-abu']; ?>
-                            <div class="rounded-lg border border-blue-200 bg-blue-50 px-3 py-2 text-xs text-gray-700 dark:border-blue-800 dark:bg-gray-700 dark:text-gray-300">
-                                <p class="flex flex-wrap items-center gap-2"><b>Lapor diterima dari siswa</b><span class="lencana <?= $lpWarna ?>"><?= esc($lpTeks) ?></span></p>
-                                <p class="mt-0.5">Periode <?= esc(\App\Libraries\SuratPkl::periodeTeks((string) $lapor['tanggal_mulai'], (string) $lapor['tanggal_selesai'])) ?> · oleh <?= esc((string) $lapor['pelapor_nama']) ?></p>
-                                <?php if ($lapor['status'] === 'dikembalikan' && (string) ($lapor['alasan'] ?? '') !== ''): ?><p class="mt-0.5 text-red-700 dark:text-red-400">Alasan dikembalikan: <?= esc((string) $lapor['alasan']) ?></p><?php endif; ?>
-                                <?php if ($lapor['status'] === 'baru' && ! empty($bolehKotakLapor)): ?><a href="<?= site_url('admin/surat/balasan/laporan') ?>" class="mt-1 inline-flex items-center gap-1 font-semibold text-brand-700 hover:underline dark:text-brand-400">Proses di kotak Lapor Diterima PKL<?= ikon('chevron-right', 'h-3.5 w-3.5') ?></a><?php endif; ?>
-                            </div>
-                        <?php endif; ?>
-                        <?php if ($suratSekolah !== []): ?>
-                            <ul class="space-y-2">
-                                <?php foreach ($suratSekolah as $ss): [$stTeks, $stWarna] = \App\Models\SuratSekolahModel::TAMPIL_STATUS[$ss['status']] ?? [$ss['status'], 'lencana-abu']; ?>
-                                    <li>
-                                        <a href="<?= site_url('admin/surat/' . (int) $ss['id']) ?>" class="block rounded-lg border border-gray-200 px-3 py-2 text-xs transition-colors hover:bg-gray-50 dark:border-gray-600 dark:hover:bg-gray-700">
-                                            <span class="flex flex-wrap items-center gap-2"><span class="font-semibold text-gray-900 dark:text-white"><?= esc(\App\Libraries\SuratJenis::singkat((string) $ss['jenis'])) ?></span><span class="lencana <?= $stWarna ?>"><?= esc($stTeks) ?></span></span>
-                                            <span class="mt-0.5 block font-mono text-gray-500 dark:text-gray-400"><?= esc((string) ($ss['nomor'] ?? '') !== '' ? $ss['nomor'] : \App\Models\SuratSekolahModel::kode((int) $ss['id'])) ?></span>
-                                        </a>
-                                    </li>
+            <?php if ($status === 'disetujui' && isset($pembayaran) && $pembayaran !== null):
+                $adaBayar = array_filter($pembayaran, static fn (array $x) => $x['pembayaran'] !== [] || $x['beasiswa'] !== null || $x['keringanan'] !== []); ?>
+                <?= ui_lipat_buka(['judul' => 'Pembayaran siswa', 'ringkas' => $adaBayar === [] ? 'belum dicatat' : count($adaBayar) . ' siswa tercatat', 'id' => 'pembayaran']) ?>
+                    <?php if ($adaBayar === []): ?>
+                        <p class="px-4 py-5 text-center text-sm text-gray-500 dark:text-gray-400">Belum ada biaya yang dicatat. Dicatat saat surat diunduh.</p>
+                    <?php endif; ?>
+                    <ul class="divide-y divide-gray-200 dark:divide-gray-700">
+                        <?php foreach ($adaBayar as $x): ?>
+                            <li class="px-4 py-3.5 text-sm">
+                                <p class="font-semibold text-gray-900 dark:text-white"><?= esc($x['nama']) ?> <span class="text-xs font-normal text-gray-500 dark:text-gray-400"><?= esc($x['kelas']) ?></span></p>
+                                <?php if ($x['beasiswa'] !== null): ?>
+                                    <p class="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1 text-xs font-medium <?= $x['beasiswa']['berlaku'] ? 'text-brand-700 dark:text-brand-400' : 'text-gray-400 line-through dark:text-gray-500' ?>">
+                                        <?= ikon('award', 'h-4 w-4 shrink-0') ?>Beasiswa 3 tahun — <?= esc($x['beasiswa']['sumber_label']) ?><?= ! empty($x['beasiswa']['berakhir_at']) ? ' s.d. ' . esc(IsianBantu::tanggalIndo($x['beasiswa']['berakhir_at'])) : '' ?> (SPP dibebaskan)
+                                        <?php if (! empty($bolehSurat)): ?>
+                                            <button type="button" class="font-semibold text-red-600 no-underline hover:underline dark:text-red-400" data-buka-dialog="pkl-cabutbeasiswa"
+                                                    data-dialog-isi="<?= esc((string) json_encode(['siswa_id' => (int) $x['siswa_id'], 'teks' => $x['nama']]), 'attr') ?>">cabut</button>
+                                        <?php endif; ?>
+                                    </p>
+                                <?php endif; ?>
+                                <?php if ($x['pembayaran'] !== []): ?>
+                                    <ul class="mt-1.5 space-y-1">
+                                        <?php foreach ($x['pembayaran'] as $b): ?>
+                                            <li class="flex items-center justify-between gap-2 text-xs text-gray-600 dark:text-gray-300">
+                                                <span><?= esc($b['nama']) ?> <span class="text-gray-500 dark:text-gray-400">· <?= esc($b['periode_label']) ?> · <?= esc($b['oleh']) ?>, <?= esc(date('d-m-Y H:i', strtotime($b['waktu']))) ?></span></span>
+                                                <span class="flex shrink-0 items-center gap-1.5"><b class="text-gray-900 dark:text-white"><?= esc(\App\Libraries\PklBiaya::rupiah((int) $b['nominal'])) ?></b>
+                                                    <?php if (! empty($bolehSurat)): ?>
+                                                        <button type="button" class="tombol-tutup h-6 w-6 hover:bg-red-50 hover:text-red-600 dark:hover:bg-gray-700" title="Hapus catatan (salah centang)" aria-label="Hapus catatan <?= esc($b['nama'], 'attr') ?>"
+                                                                data-buka-dialog="pkl-hapusbayar" data-dialog-isi="<?= esc((string) json_encode(['pembayaran_id' => (int) $b['id'], 'teks' => $x['nama'] . ' — ' . $b['nama'] . ' ' . $b['periode_label']]), 'attr') ?>"><?= ikon('close', 'h-3.5 w-3.5') ?></button>
+                                                    <?php endif; ?>
+                                                </span>
+                                            </li>
+                                        <?php endforeach; ?>
+                                    </ul>
+                                    <p class="mt-1.5 border-t border-gray-200 pt-1.5 text-right text-xs text-gray-500 dark:border-gray-700 dark:text-gray-400">Total dibayar: <b class="text-gray-900 dark:text-white"><?= esc(\App\Libraries\PklBiaya::rupiah((int) $x['total'])) ?></b></p>
+                                <?php endif; ?>
+                                <?php foreach (array_slice($x['keringanan'], 0, 1) as $k): ?>
+                                    <p class="mt-1.5 rounded-lg bg-yellow-50 px-3 py-1.5 text-xs text-yellow-800 dark:bg-gray-700 dark:text-yellow-300"><b>Keringanan/ditunda:</b> <?= esc($k['alasan']) ?> — <?= esc($k['oleh']) ?>, <?= esc(date('d-m-Y', strtotime($k['waktu']))) ?></p>
                                 <?php endforeach; ?>
-                            </ul>
-                        <?php endif; ?>
-                        <?php if ($bolehSuratSekolah && in_array($status, ['menunggu', 'perbaikan', 'disetujui'], true)): ?>
-                            <div class="flex flex-col gap-2">
-                                <?php if ($status === 'disetujui' && ! empty($bolehBuatSurat[\App\Libraries\SuratJenis::BALASAN])): ?>
-                                    <a href="<?= site_url('admin/surat/balasan') . ($lapor !== null && $lapor['status'] === 'baru' ? '?lapor=' . (int) $lapor['id'] : '?ajuan=' . $id) ?>" class="btn btn-netral w-full"><?= ikon('envelope', 'h-4 w-4') ?>Buat Surat Balasan</a>
-                                <?php endif; ?>
-                                <?php if ($status === 'disetujui' && ! empty($bolehBuatSurat[\App\Libraries\SuratJenis::PENARIKAN])): ?>
-                                    <a href="<?= site_url('admin/surat/penarikan?ajuan=' . $id) ?>" class="btn btn-netral w-full"><?= ikon('arrow-right-to-bracket', 'h-4 w-4') ?>Buat Surat Penarikan</a>
-                                <?php endif; ?>
-                                <?php if (! empty($bolehBuatSurat[\App\Libraries\SuratJenis::PERNYATAAN])): ?>
-                                    <a href="<?= site_url('admin/surat/pernyataan-ortu?ajuan=' . $id) ?>" class="btn btn-netral w-full"><?= ikon('file-pen', 'h-4 w-4') ?>Cetak Pernyataan Orang Tua</a>
-                                <?php endif; ?>
-                            </div>
-                        <?php endif; ?>
-                    </div>
-                </section>
+                            </li>
+                        <?php endforeach; ?>
+                    </ul>
+                    <?php if (! empty($bolehLaporan)): ?>
+                        <div class="kartu-kaki text-right"><a href="<?= site_url('admin/pkl/laporan') ?>" class="inline-flex items-center gap-1 text-sm font-medium text-brand-700 hover:underline dark:text-brand-400">Buka Laporan Pembayaran<?= ikon('chevron-right', 'h-3.5 w-3.5') ?></a></div>
+                    <?php endif; ?>
+                <?= ui_lipat_tutup() ?>
             <?php endif; ?>
 
-            <section class="kartu overflow-hidden" aria-labelledby="judul-riwayat">
-                <?= $kepalaKartu('Riwayat', 'judul-riwayat') ?>
+            <?= ui_lipat_buka(['judul' => 'Riwayat', 'ringkas' => $riwayat === [] ? 'belum ada' : count($riwayat) . ' catatan', 'id' => 'riwayat']) ?>
                 <?php if ($riwayat === []): ?>
                     <p class="px-4 py-6 text-center text-sm text-gray-500 dark:text-gray-400">Belum ada catatan.</p>
                 <?php else: ?>
@@ -447,7 +436,7 @@ $catatanKunci = static fn (string $html): string => '<div class="peringatan peri
                         <?php endforeach; ?>
                     </ol>
                 <?php endif; ?>
-            </section>
+            <?= ui_lipat_tutup() ?>
         </div>
     </div>
 </div>

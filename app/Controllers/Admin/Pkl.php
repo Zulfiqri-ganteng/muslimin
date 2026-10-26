@@ -79,9 +79,13 @@ class Pkl extends BaseController
 
         // Laporan "sudah diterima perusahaan" dari siswa yang menunggu dibuatkan Surat Balasan (bagi yang boleh membuka kotaknya).
         $laporBaru = HakAkses::boleh($peranIni, 'admin/surat/balasan/laporan') ? (new PklLapor())->hitung()['baru'] : 0;
+        // PKL berakhir ≤ 7 hari & belum diperpanjang (bagi pembuat Surat Perpanjangan; docs/DESAIN-PERPANJANGAN-PKL.md).
+        $berakhir = HakAkses::boleh($peranIni, SuratJenis::alamat(SuratJenis::PERPANJANGAN)) && \App\Libraries\SuratPerpanjangan::tabelAda()
+            ? count((new \App\Libraries\SuratPerpanjangan())->berakhir(7)) : 0;
 
         return view('admin/pkl/index', $this->dasar('Beranda PKL', 'beranda') + [
             'laporBaru'    => $laporBaru,
+            'berakhir7'    => $berakhir,
             'suratRingkas' => $suratRingkas,
             'suratSekolah' => $suratSekolah,
             'hitung'  => $this->model->hitungStatus(),
@@ -169,10 +173,13 @@ class Pkl extends BaseController
             // Tombol pintas per jenis: tampil bila peran ini boleh membuka formulir jenis itu (modul Surat + hak Buat jenisnya).
             'bolehBuatSurat'    => $bolehBuat = [
                 SuratJenis::BALASAN    => HakAkses::boleh($peranIni, SuratJenis::alamat(SuratJenis::BALASAN)),
+                SuratJenis::PERPANJANGAN => HakAkses::boleh($peranIni, SuratJenis::alamat(SuratJenis::PERPANJANGAN)),
                 SuratJenis::PENARIKAN  => HakAkses::boleh($peranIni, SuratJenis::alamat(SuratJenis::PENARIKAN)),
                 SuratJenis::PERNYATAAN => HakAkses::boleh($peranIni, SuratJenis::alamat(SuratJenis::PERNYATAAN)),
             ],
             'bolehSuratSekolah' => in_array(true, $bolehBuat, true),
+            // Surat Perpanjangan PKL tiap anggota (belum dibatalkan): lencana "Diperpanjang s.d." / "menunggu ACC".
+            'perpanjangan'      => $ajuan['status'] === 'disetujui' ? (new \App\Libraries\SuratPerpanjangan())->aktif(array_map(static fn (array $s): int => (int) $s['siswa_id'], $anggota), (int) $id) : [],
             // Laporan "sudah diterima perusahaan" dari siswa (bila ada) + boleh membuka kotak laporannya.
             'lapor'             => (new PklLapor())->untukAjuan((int) $id),
             'bolehKotakLapor'   => HakAkses::boleh($peranIni, 'admin/surat/balasan/laporan'),
@@ -611,6 +618,7 @@ class Pkl extends BaseController
         $this->pengModel->update(1, $data);
         $this->audit->record('update', 'pkl_pengaturan', 1, 'Pengaturan PKL: form ' . ($data['form_buka'] ? 'DIBUKA' : 'ditutup')
             . (isset($data['lapor_buka']) ? ', form lapor ' . ($data['lapor_buka'] ? 'DIBUKA' : 'ditutup') : '')
+            . (isset($data['perpanjang_buka']) ? ', perpanjangan ' . ($data['perpanjang_buka'] ? 'DIBUKA' : 'ditutup') . ' H-' . $data['perpanjang_hari_sebelum'] . '/H+' . $data['perpanjang_hari_sesudah'] : '')
             . ', tingkat ' . $data['tingkat'] . ', maks ' . $data['maks_anggota'] . ' siswa, batas keputusan ' . $data['batas_keputusan_hari'] . ' hari'
             . ', Waka Hubin ' . ($data['waka_hubin_nama'] ?? '(kosong)') . ', format nomor ' . $data['format_nomor']);
 
@@ -721,6 +729,17 @@ class Pkl extends BaseController
         $lapor = [];
         if (\App\Libraries\PklLapor::tabelAda() && array_key_exists('lapor_buka', $post)) {
             $lapor['lapor_buka'] = ($post['lapor_buka'] ?? '0') === '1' ? 1 : 0;
+        }
+        // Form siswa Surat Perpanjangan PKL (migrasi 2026-10-27-000001): saklar + jendela H-sebelum / H-sesudah (0 = tanpa batas).
+        if (\App\Libraries\SuratPerpanjangan::tabelAda() && array_key_exists('perpanjang_buka', $post)) {
+            $lapor['perpanjang_buka'] = ($post['perpanjang_buka'] ?? '0') === '1' ? 1 : 0;
+            foreach (['perpanjang_hari_sebelum' => [60, 7], 'perpanjang_hari_sesudah' => [365, 30]] as $k => [$maks, $bawaan]) {
+                $v = $angka($k, 0, $maks);
+                if ($v === null) {
+                    $galat[$k] = 'Isi angka 0–' . $maks . ' (hari). 0 = tanpa batas.';
+                }
+                $lapor[$k] = $v ?? $bawaan;
+            }
         }
 
         // Kolom pagar tanggal & lama PKL lama TIDAK disentuh (tak dipakai lagi; nilainya dibiarkan).

@@ -400,6 +400,20 @@
   .dropdown-item   { @apply flex w-full items-center gap-2 px-4 py-2 text-left text-gray-700 transition-colors hover:bg-gray-100 hover:text-gray-900 focus:bg-gray-100 focus:outline-hidden; }
   .dropdown-item-bahaya { @apply text-red-600 hover:bg-red-50 hover:text-red-700 focus:bg-red-50; }
 
+  /* ---- Pola rapi tampilan (U1 2026-10-26, docs/RENCANA-RAPI-TAMPILAN-PKL-SURAT.md bagian 2) ----
+     .bilah-pilih = bilah aksi yang baru muncul setelah ada yang dicentang (helper ui_bilah_pilih_buka/tutup, di dalam x-data="daftarCentang");
+     .lipat = bagian yang bisa dilipat (<details>, tanpa JavaScript; helper ui_lipat_buka/tutup); menu "Lainnya" = dropdown kit (ui_menu_lain). */
+  .bilah-pilih       { @apply sticky bottom-3 z-20 mt-3 flex flex-wrap items-center gap-2 rounded-lg border border-brand-200 bg-white px-4 py-3 text-sm shadow-sm; }
+  .bilah-pilih-teks  { @apply me-auto font-semibold text-gray-900; }
+  .lipat             { @apply overflow-hidden rounded-lg border border-gray-200 bg-white shadow-xs; }
+  .lipat-kepala      { @apply flex cursor-pointer list-none items-center gap-3 px-4 py-3 select-none hover:bg-gray-50 focus:outline-hidden focus-visible:ring-2 focus-visible:ring-brand-300 sm:px-6; }
+  .lipat-kepala::-webkit-details-marker { display: none; }
+  .lipat-judul       { @apply min-w-0 text-base font-semibold text-gray-900; }
+  .lipat-ringkas     { @apply ms-auto shrink-0 text-sm text-gray-500; }
+  .lipat-panah       { @apply shrink-0 text-gray-500 transition-transform duration-200; }
+  .lipat[open] > .lipat-kepala .lipat-panah { @apply rotate-180; }
+  .lipat-isi         { @apply border-t border-gray-200; }
+
   /* ---- Dialog & laci (komponen Alpine "dialog" / "laci" / "konfirmasi" — pakai helper ui_dialog_buka() / ui_laci_buka()) ----
      Tampil/sembunyi lewat atribut data-buka (:data-buka="buka"); tertutup = display: none (tanpa x-cloak pun tidak berkedip).
      Temuan F2 (diuji di Chrome): (1) BUKAN x-show — x-show beranimasi di Alpine menyembunyikan elemen tertunda satu frame, sehingga
@@ -553,6 +567,13 @@
   .sb-anak[aria-current='page'] { box-shadow: none; }
   .sb-anak[aria-current='page']::before { content: ''; position: absolute; left: calc(1.25rem - 1px); top: .375rem; bottom: .375rem; width: 3px; border-radius: 9999px; background-color: var(--sb-penanda-anak); }
   .sb-panah { @apply ml-1 shrink-0 transition-transform duration-200; }
+  /* Sub-menu lipat di dalam grup (web saja — MenuAdmin::tampilWeb; mis. "Buat surat" berisi menu tiap jenis surat). <details> tanpa JS. */
+  .sb-sub > summary { list-style: none; }
+  .sb-sub > summary::-webkit-details-marker { display: none; }
+  .sb-sub-tombol { @apply cursor-pointer; }
+  .sb-sub[open] > .sb-sub-tombol .sb-panah { @apply rotate-180; }
+  .sb-sub-daftar { @apply space-y-0.5 pt-0.5; }
+  .sb-sub-daftar .sb-anak { @apply pl-14; }
   .sb-item-segera { @apply cursor-not-allowed select-none; color: var(--sb-nonaktif); }
   .sb-item-segera:hover { background-color: transparent; color: var(--sb-nonaktif); }
   .sb-item-segera .sb-ikon, .sb-item-segera:hover .sb-ikon { color: var(--sb-nonaktif); }
@@ -776,6 +797,13 @@
   .dropdown-kepala { @apply dark:text-white; }
   .dropdown-item   { @apply dark:text-gray-200 dark:hover:bg-gray-600 dark:hover:text-white dark:focus:bg-gray-600; }
   .dropdown-item-bahaya { @apply dark:text-red-400 dark:hover:bg-gray-600 dark:hover:text-red-300 dark:focus:bg-gray-600; }
+  .bilah-pilih      { @apply dark:border-gray-600 dark:bg-gray-800; }
+  .bilah-pilih-teks { @apply dark:text-white; }
+  .lipat            { @apply dark:border-gray-700 dark:bg-gray-800; }
+  .lipat-kepala     { @apply dark:hover:bg-gray-700/60; }
+  .lipat-judul      { @apply dark:text-white; }
+  .lipat-ringkas, .lipat-panah { @apply dark:text-gray-400; }
+  .lipat-isi        { @apply dark:border-gray-700; }
   .dialog-panel  { @apply dark:bg-gray-700; }
   .dialog-kepala, .dialog-kaki { @apply dark:border-gray-600; }
   .dialog-judul  { @apply dark:text-white; }

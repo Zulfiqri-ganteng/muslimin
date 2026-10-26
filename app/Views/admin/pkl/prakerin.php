@@ -4,6 +4,8 @@
  * (PklPrakerin::excel): satu tabel = satu lembar. Rombak tampilan F9: tab kit (_nav), Unduh Excel / Impor ber-ikon di kepala
  * halaman, kartu ringkasan + saringan Tingkat/Kelas/Isi = tautan .tombol-saring (aktif: aria-current), satu kartu + tabel kit
  * per kelas, ui_kosong.
+ * Rapi tampilan U6 (2026-10-26): tiap kelas = bagian dilipat (ui_lipat) berisi ringkasan; tabel tampil saat dibuka (satu kelas
+ * terpilih = langsung terbuka). Data, saringan, dan Unduh Excel TETAP sama.
  *
  * @var list<array{id: int, nama_kelas: string, tingkat: string, jumlah: int}> $semuaKelas
  * @var list<array>  $rekap         PklPrakerin::data()
@@ -54,13 +56,14 @@ $warnaKet = static fn (string $tahap): string => match ($tahap) {
 <?= $this->section('content') ?>
 
 <?= view('admin/partials/help', [
-    'helpKey'   => 'pkl_prakerin_v1',
+    'helpKey'   => 'pkl_prakerin_v2',
     'helpTitle' => 'Data Siswa Prakerin',
     'helpBody'  => '<p>Rekap tempat PKL siswa per kelas, <b>diambil otomatis dari sistem</b>. Tombol <b>Unduh Excel</b> menghasilkan berkas format sekolah "DATA SISWA PRAKERIN" (satu lembar per kelas) — isinya sama dengan tabel di halaman ini.</p>'
         . '<ul class="mt-2 list-disc pl-5 space-y-1">'
         . '<li><b>Mitra DI/DU</b> = perusahaan yang dituju siswa (ajuan aktif). Kolom <b>Keterangan</b> menjelaskan posisinya: <b>Sudah diterima</b> (sudah Lapor Diterima, ada Surat Balasan, atau hasil impor Excel sekolah), belum diterima perusahaan / belum lapor, belum di-ACC Hubin, perlu perbaikan, ditolak, atau belum mengajukan.</li>'
         . '<li>ACC Hubin saja <b>belum berarti diterima</b> perusahaan — siswa harus mengisi <b>Lapor Diterima</b>. Keterangan ikut tercetak di Excel.</li>'
         . '<li><b>Mulai &amp; Selesai</b> diambil dari periode di Surat Balasan / hasil impor, atau dari laporan "Lapor Diterima" siswa. <b>Lamanya PKL</b> dihitung dalam bulan.</li>'
+        . '<li>Tiap kelas tampil <b>terlipat</b>: klik nama kelas untuk membuka tabelnya.</li>'
         . '<li>Pilih <b>Hanya yang sudah diterima</b> bila Excel cukup berisi siswa yang sudah pasti (nomor urut menyesuaikan).</li>'
         . ($bolehPengaturan ? '<li>Punya data di Excel format ini? Pakai <b>Impor dari Excel</b> — pratinjau tampil dulu sebelum ada yang disimpan.</li>' : '')
         . '</ul>',
@@ -104,15 +107,11 @@ $warnaKet = static fn (string $tahap): string => match ($tahap) {
     <?php endif; ?>
 
     <?php foreach ($rekap as $r): $k = $r['kelas']; ?>
-        <section id="kelas-<?= (int) $k['id'] ?>" class="kartu overflow-hidden" aria-labelledby="judul-kelas-<?= (int) $k['id'] ?>">
-            <div class="kartu-kepala">
-                <div class="min-w-0">
-                    <h3 id="judul-kelas-<?= (int) $k['id'] ?>" class="kartu-judul text-base"><?= esc($k['nama_kelas']) ?></h3>
-                    <p class="kartu-ket"><?= (int) $r['ringkas']['siswa'] ?> siswa · <?= (int) $r['ringkas']['diterima'] ?> sudah diterima · <?= (int) $r['ringkas']['tunggu'] ?> belum diterima · <?= (int) $r['ringkas']['belum'] ?> belum mengajukan</p>
-                </div>
-                <?php if (count($rekap) > 1): ?>
-                    <a href="<?= esc($urlExcel(['kelas_id' => $k['id']]), 'attr') ?>" class="btn btn-netral btn-sm"><?= ikon('download', 'h-4 w-4') ?>Unduh kelas ini</a>
-                <?php endif; ?>
+        <?= ui_lipat_buka(['judul' => $k['nama_kelas'], 'id' => 'kelas-' . (int) $k['id'], 'buka' => count($rekap) === 1,
+            'ringkas' => (int) $r['ringkas']['siswa'] . ' siswa · ' . (int) $r['ringkas']['diterima'] . ' diterima']) ?>
+            <div class="flex flex-wrap items-center justify-between gap-2 border-b border-gray-200 px-4 py-2 text-sm text-gray-500 sm:px-6 dark:border-gray-700 dark:text-gray-400">
+                <span><?= (int) $r['ringkas']['siswa'] ?> siswa · <?= (int) $r['ringkas']['diterima'] ?> sudah diterima · <?= (int) $r['ringkas']['tunggu'] ?> belum diterima · <?= (int) $r['ringkas']['belum'] ?> belum mengajukan</span>
+                <?php if (count($rekap) > 1): ?><a href="<?= esc($urlExcel(['kelas_id' => $k['id']]), 'attr') ?>" class="btn btn-teks btn-sm"><?= ikon('download', 'h-4 w-4') ?>Unduh kelas ini</a><?php endif; ?>
             </div>
             <?php if ($r['siswa'] === []): ?>
                 <?= ui_kosong(['ikon' => 'users', 'judul' => $hanyaDiterima ? 'Belum ada siswa yang sudah diterima perusahaan di kelas ini' : 'Belum ada siswa aktif di kelas ini']) ?>
@@ -146,7 +145,7 @@ $warnaKet = static fn (string $tahap): string => match ($tahap) {
                     </table>
                 </div>
             <?php endif; ?>
-        </section>
+        <?= ui_lipat_tutup() ?>
     <?php endforeach; ?>
 </div>
 

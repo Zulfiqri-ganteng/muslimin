@@ -28,11 +28,12 @@ final class LayananSiswa
         'izin_ujian' => ['Surat Izin Ujian', 'Surat untuk perusahaan tempat PKL: izin mengikuti ASTS, ASAS, atau ASAT di sekolah.', 'calendar-month', SuratJenis::ASTS],
         'izin_tka'   => ['Surat Izin TKA', 'Khusus kelas XII: surat untuk perusahaan tempat PKL agar kamu bisa mengikuti TKA.', 'clipboard-list', SuratJenis::TKA],
         'pernyataan' => ['Surat Pernyataan Orang Tua', 'Formulir persetujuan orang tua untuk PKL. Data orang tuamu tercetak, tinggal ditandatangani.', 'users', SuratJenis::PERNYATAAN],
+        'perpanjangan' => ['Surat Perpanjangan PKL', 'Surat dari sekolah untuk perusahaan bila PKL-mu diperpanjang. Hanya boleh satu kali.', 'calendar-edit', SuratJenis::PERPANJANGAN],
         'penarikan'  => ['Surat Penarikan PKL', 'Surat dari sekolah untuk menarik kamu dari tempat PKL (misalnya PKL dihentikan).', 'arrow-right-to-bracket', SuratJenis::PENARIKAN],
     ];
 
-    /** Layanan surat yang formulirnya SUDAH dibangun (T3: izin_ujian, izin_tka · T4: pernyataan, penarikan). Sisanya "Segera". */
-    public const SIAP = ['izin_ujian', 'izin_tka', 'pernyataan', 'penarikan'];
+    /** Layanan surat yang formulirnya SUDAH dibangun (T3: izin_ujian, izin_tka · T4: pernyataan, penarikan · 2026-10-26: perpanjangan). Sisanya "Segera". */
+    public const SIAP = ['izin_ujian', 'izin_tka', 'pernyataan', 'perpanjangan', 'penarikan'];
 
     /** Tujuan setelah masuk yang sah (kunci SURAT + 'status'). */
     public static function tujuanSah(?string $t): string
@@ -134,6 +135,26 @@ final class LayananSiswa
      */
     public function masuk(int $siswaId, string $nisnIn, string $tglIn, string $ip, ?array $p = null): array
     {
+        $r = $this->cocokkan($siswaId, $nisnIn, $tglIn, $ip, $p);
+        if (! $r['ok']) {
+            return $r;
+        }
+        if (! is_cli()) {
+            session()->regenerate(); // id sesi baru setelah masuk (cegah fiksasi sesi)
+        }
+        session()->set(self::SESI, ['id' => $siswaId, 't' => time()]);
+
+        return $r;
+    }
+
+    /**
+     * Pemeriksaan bukti diri TANPA menyimpan sesi (dipakai masuk() web dan API publik Layanan Siswa yang memakai token —
+     * Api\Layanan, LayananToken): siswa aktif di tingkat yang dilayani, NISN ATAU tanggal lahir cocok, dibatasi LoginThrottle.
+     *
+     * @return array{ok: bool, http: int, pesan: string}
+     */
+    public function cocokkan(int $siswaId, string $nisnIn, string $tglIn, string $ip, ?array $p = null): array
+    {
         $s = $siswaId > 0 ? $this->db->table('siswa s')->select('s.id, s.nama, s.nisn, s.tanggal_lahir, k.tingkat')
             ->join('kelas k', 'k.id = s.kelas_id')->where('s.id', $siswaId)->where('s.status', 'aktif')->where('s.deleted_at', null)
             ->get()->getRowArray() : null;
@@ -165,10 +186,6 @@ final class LayananSiswa
             return ['ok' => false, 'http' => 422, 'pesan' => 'NISN atau tanggal lahir tidak cocok dengan data sekolah. Periksa lagi (tanggal lahir sesuai rapor/akta).'];
         }
         $throttle->clear($kunci, $ip);
-        if (! is_cli()) {
-            session()->regenerate(); // id sesi baru setelah masuk (cegah fiksasi sesi)
-        }
-        session()->set(self::SESI, ['id' => (int) $s['id'], 't' => time()]);
 
         return ['ok' => true, 'http' => 200, 'pesan' => 'Halo, ' . $s['nama'] . '!'];
     }
@@ -238,6 +255,10 @@ final class LayananSiswa
                 'izin_tka'   => $tingkat !== 'XII' ? 'Khusus siswa kelas XII.' : (! $disetujui ? $tanpaPkl : ($jd === [] ? 'Belum ada jadwal TKA yang dibuka sekolah. Tunggu pengumuman sekolah.' : '')),
                 'pernyataan' => ! in_array($tingkat, PklPengaturanModel::tingkatBoleh($p), true) ? 'Khusus kelas yang mengikuti PKL.' : '',
                 'penarikan'  => ! $disetujui ? 'Khusus siswa yang sedang PKL (ajuan PKL sudah disetujui sekolah).' : '',
+                // Perpanjangan: jendela H-7 / H+30 & "sudah pernah" ditampilkan di formulirnya sendiri (siswa tetap bisa melihat status).
+                'perpanjangan' => ! SuratPerpanjangan::tabelAda() ? 'Belum tersedia.'
+                    : (! $disetujui ? 'Khusus siswa yang sedang PKL (ajuan PKL sudah disetujui sekolah).'
+                    : (! SuratPerpanjangan::setelan($p)['buka'] ? 'Permintaan surat perpanjangan sedang ditutup sekolah. Hubungi operator sekolah.' : '')),
                 default      => '',
             };
             $out[$kunci] = ['boleh' => $alasan === '', 'siap' => in_array($kunci, self::SIAP, true), 'alasan' => $alasan, 'jadwal' => $jd];
@@ -975,6 +996,105 @@ final class LayananSiswa
             'pesan' => 'Permintaan terkirim. Surat Penarikan PKL dari ' . ($s['ajuan']['perusahaan_nama'] ?? 'tempat PKL-mu') . ' menunggu ACC operator. Pantau statusnya di bawah.'];
     }
 
+    // =================================================================
+    // Surat Perpanjangan PKL (2026-10-26; docs/DESAIN-PERPANJANGAN-PKL.md bagian 7) — aturan di SuratPerpanjangan
+    // =================================================================
+
+    /**
+     * Data formulir Surat Perpanjangan untuk siswa ini: ajuan + tanggal semula, jendela (buka/dini/lewat), perpanjangan yang sudah
+     * ada (dirinya), teman satu ajuan (bisa dicentang / terkunci + alasannya), dan pilihan cepat tanggal (+2 minggu, +1/2/3 bulan).
+     *
+     * @return array<string, mixed>
+     */
+    public function formPerpanjangan(array $s, ?array $p = null): array
+    {
+        $p   ??= (new PklPengaturanModel())->ambil();
+        $lib   = new SuratPerpanjangan($this->db);
+        $aid   = (int) ($s['ajuan']['id'] ?? 0);
+        $a     = $aid > 0 ? $lib->ajuanForm($aid) : null;
+        $saya  = null;
+        $teman = [];
+        foreach ($a['siswa'] ?? [] as $x) {
+            if ($x['siswa_id'] === (int) $s['id']) {
+                $saya = $x;
+            } else {
+                $teman[] = ['id' => $x['siswa_id'], 'nama' => $x['nama'], 'kelas' => $x['kelas'], 'bisa' => $x['bisa'],
+                    'ket' => $x['pj'] !== null ? 'Sudah punya surat perpanjangan' : ($x['ditarik'] !== null ? 'Sedang ditarik' : '')];
+            }
+        }
+        $lama   = $a['selesai_lama'] ?? null;
+        $cepat  = [];
+        if ($lama !== null) {
+            $tgl     = \DateTimeImmutable::createFromFormat('!Y-m-d', $lama);
+            $cepat[] = ['label' => '+2 minggu', 'tanggal' => SuratPerpanjangan::tambahHari($lama, 14)];
+            foreach ([1, 2, 3] as $n) { // tanggal sama n bulan kemudian; 31 → akhir bulan (sama dengan formulir staf)
+                $awal  = $tgl->modify('first day of +' . $n . ' month');
+                $hari  = min((int) $tgl->format('j'), (int) $awal->format('t'));
+                $cepat[] = ['label' => '+' . $n . ' bulan', 'tanggal' => $awal->setDate((int) $awal->format('Y'), (int) $awal->format('n'), $hari)->format('Y-m-d')];
+            }
+        }
+
+        return [
+            'ajuan' => $a, 'perusahaan' => (string) ($a['perusahaan'] ?? ($s['ajuan']['perusahaan_nama'] ?? '')),
+            'lama' => $lama, 'jendela' => $lama !== null ? SuratPerpanjangan::jendela($lama, $p) : null, 'setelan' => SuratPerpanjangan::setelan($p),
+            'saya' => $saya, 'sudah' => $saya['pj'] ?? null, 'ditarik' => $saya['ditarik'] ?? null, 'teman' => $teman, 'cepat' => $cepat,
+        ];
+    }
+
+    /**
+     * Siswa meminta Surat Perpanjangan PKL untuk DIRINYA (+ teman satu ajuan yang dicentang) → menunggu ACC operator. Jendela H-x / H+y
+     * berlaku (R2); maksimal satu kali (R5). Teman yang dicentang mendapat baris permintaan "diisikan oleh" supaya statusnya tampil
+     * di halamannya sendiri.
+     *
+     * @param array<string, mixed> $in pilih_tanggal (Y-m-d | 'lain'), selesai_baru, selesai_lama (bila belum tercatat), alasan_pilih,
+     *                                 alasan_lain, teman[] (id)
+     *
+     * @return array{ok: bool, kode: string, pesan: string, galat?: array<string, string>, surat_id?: int}
+     */
+    public function ajukanPerpanjangan(int $siswaId, array $in, string $ip, ?array $p = null): array
+    {
+        $p ??= (new PklPengaturanModel())->ambil();
+        $s   = $this->profil($siswaId);
+        if ($s === null) {
+            return ['ok' => false, 'kode' => 'tolak', 'pesan' => 'Data siswa tidak ditemukan. Masuk lagi.'];
+        }
+        $k = $this->kelayakan($s, $p)['perpanjangan'];
+        if (! $k['boleh']) {
+            return ['ok' => false, 'kode' => 'tolak', 'pesan' => $k['alasan']];
+        }
+        $pilih = (string) ($in['pilih_tanggal'] ?? '');
+        $baru  = $pilih !== '' && $pilih !== 'lain' ? $pilih : (string) ($in['selesai_baru'] ?? '');
+        $teman = array_values(array_unique(array_filter(array_map('intval', array_filter((array) ($in['teman'] ?? []), 'is_scalar')), static fn (int $x) => $x > 0 && $x !== $siswaId)));
+        $r     = (new SuratPerpanjangan($this->db))->buat([
+            'ajuan_id' => (int) $s['ajuan']['id'], 'siswa' => array_merge([$siswaId], $teman), 'tanggal_surat' => date('Y-m-d'), 'sapaan' => '',
+            'selesai_lama' => (string) ($in['selesai_lama'] ?? ''), 'selesai_baru' => $baru,
+            'alasan_pilih' => (string) ($in['alasan_pilih'] ?? ''), 'alasan_lain' => (string) ($in['alasan_lain'] ?? ''),
+        ], ['oleh' => 'Siswa: ' . $s['nama'], 'admin_id' => null, 'peran' => null, 'ip' => $ip, 'saluran' => 'layanan'], $p, ['sumber' => 'siswa', 'jendela' => true]);
+        if (! $r['ok']) {
+            $galat = $r['galat'] ?? [];
+            if (isset($galat['selesai_baru']) && $pilih !== 'lain' && $pilih !== '') {
+                $galat['pilih_tanggal'] = $galat['selesai_baru'];
+            }
+
+            return ['ok' => false, 'kode' => $r['kode'], 'pesan' => $r['pesan'], 'galat' => $galat];
+        }
+        $suratId = (int) $r['surat_id'];
+        $isi     = ['selesai_baru' => $baru];
+        $this->simpanPermintaan(SuratJenis::PERPANJANGAN, $s, $suratId, null, $isi, $ip);
+        foreach ($teman as $t) {
+            $ts = $this->profil($t);
+            if ($ts !== null) {
+                $this->simpanPermintaan(SuratJenis::PERPANJANGAN, $ts, $suratId, null, $isi + ['diisikan_oleh' => $siswaId, 'diisikan_nama' => $s['nama']], $ip);
+            }
+        }
+        (new SuratSekolah($this->db))->catat($suratId, 'minta', ['oleh' => 'Siswa: ' . $s['nama'], 'admin_id' => null, 'peran' => null, 'ip' => $ip],
+            mb_substr('Diminta lewat Layanan Siswa' . ($teman !== [] ? ' (+' . count($teman) . ' teman)' : ''), 0, 255));
+
+        return ['ok' => true, 'kode' => $r['kode'], 'surat_id' => $suratId,
+            'pesan' => 'Permintaan terkirim. Surat Perpanjangan PKL untuk ' . ($s['ajuan']['perusahaan_nama'] ?? 'tempat PKL-mu') . ' menunggu ACC operator. Pantau statusnya di bawah.'
+                . ($teman !== [] ? ' Temanmu yang kamu centang ikut tercantum di surat yang sama.' : '')];
+    }
+
     /** @param array<string, mixed>|null $isian */
     private function simpanPermintaan(string $jenis, array $s, int $suratId, ?int $jadwalId, ?array $isian, string $ip): void
     {
@@ -1013,7 +1133,9 @@ final class LayananSiswa
             return [
                 'id' => (int) $r['id'], 'jenis' => (string) $r['jenis'], 'judul' => $judul, 'dibuat' => (string) $r['created_at'],
                 'perusahaan' => (string) ($r['perusahaan_nama'] ?? ''), 'nomor' => (string) ($r['nomor'] ?? ''),
-                'catatan' => $pengisi !== '' ? 'Gelombang ini diisikan oleh temanmu, ' . $pengisi . '. Kalau salah, pilih gelombangmu sendiri di formulir Surat Izin TKA.' : '',
+                'catatan' => $pengisi === '' ? ''
+                    : ($r['jenis'] === SuratJenis::TKA ? 'Gelombang ini diisikan oleh temanmu, ' . $pengisi . '. Kalau salah, pilih gelombangmu sendiri di formulir Surat Izin TKA.'
+                    : 'Namamu dicantumkan oleh temanmu, ' . $pengisi . '. Kalau PKL-mu tidak diperpanjang, beri tahu operator sekolah.'),
             ] + self::status($r['surat_id'] === null ? null : $r, (string) $r['jenis']);
         }, $rows);
 

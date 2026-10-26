@@ -4,7 +4,26 @@
  *                  isian memakai x-model="pola" / x-model="berkas"; contoh: contohNomorSurat() / contohNamaBerkas().
  *   pklPesanWa   : contoh hasil templat pesan WhatsApp. Nilai awal dari data-pesan / data-pesan-balasan, nama sekolah dari
  *                  data-sekolah; isian x-model="pesan" / x-model="pesanB"; contoh: contohPesanWa(pesan).
+ * (U6 rapi tampilan) Tab halaman = kit "tab" (data-hash). Skrip ini hanya mengingat tab yang terbuka saat Simpan ditekan lalu
+ * membukanya lagi sesudah halaman dimuat ulang — kecuali ada galat isian (tab bergalat dipilih server lewat data-awal).
  */
+(function () {
+    'use strict';
+    var akar = document.querySelector('[data-tab-pengaturan]');
+    if (!akar) { return; }
+    var KUNCI = 'pkl-pengaturan-tab';
+    try {
+        var simpan = sessionStorage.getItem(KUNCI);
+        sessionStorage.removeItem(KUNCI);
+        if (simpan && !location.hash && !akar.hasAttribute('data-galat') && window.history && history.replaceState) {
+            history.replaceState(null, '', '#' + simpan);
+        }
+    } catch (e) { /* penyimpanan peramban tidak tersedia: tab awal saja */ }
+    akar.addEventListener('submit', function () {
+        try { sessionStorage.setItem(KUNCI, (location.hash || '').replace(/^#/, '')); } catch (e) { /* abaikan */ }
+    }, true);
+})();
+
 document.addEventListener('alpine:init', function () {
     'use strict';
 

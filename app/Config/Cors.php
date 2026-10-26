@@ -68,7 +68,7 @@ class Cors extends BaseConfig
          *
          * @see https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Access-Control-Allow-Headers
          */
-        'allowedHeaders' => ['Authorization', 'Content-Type', 'Accept', 'X-Requested-With'],
+        'allowedHeaders' => ['Authorization', 'Content-Type', 'Accept', 'X-Requested-With', 'X-Layanan-Token'], // X-Layanan-Token: API publik Layanan Siswa (2026-10-26)
 
         /**
          * Set headers to expose.

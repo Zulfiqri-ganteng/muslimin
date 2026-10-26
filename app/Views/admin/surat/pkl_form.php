@@ -4,6 +4,8 @@
  * Rombak tampilan F9: Kembali di kepala halaman, kartu kit per bagian, ui_peringatan, lencana kit, pratinjau = peringatan info
  * kit, tombol kit ber-ikon, skrip ber-nonce. Siap CSP: String(a.id) → a.id (nilai DOM selalu teks), metode periodeTeks/tglIndo →
  * teksPeriode/teksTglIndo, daftar nama siswa = metode daftarNamaSiswa(a) (dulu fungsi sebaris di x-text), emoji dibuang.
+ * Rapi tampilan U5 (2026-10-26): cari-lalu-pilih — daftar ajuan tampil setelah mengetik ≥ 2 huruf / "Lihat semua"; yang sudah dipilih
+ * selalu tampil (tampilDaftar di surat-pkl.js). Isian & nilai yang terkirim TETAP sama.
  *
  * @var string               $jenis       balasan_pkl | penarikan_pkl
  * @var string               $label
@@ -93,17 +95,18 @@ $bukaPratinjau = '<div class="peringatan peringatan-info sm:col-span-2">' . ikon
 <?= $this->section('content') ?>
 
 <?= view('admin/partials/help', [
-    'helpKey'   => $balasan ? 'surat_balasan_form_v1' : 'surat_penarikan_form_v1',
+    'helpKey'   => $balasan ? 'surat_balasan_form_v2' : 'surat_penarikan_form_v2',
     'helpTitle' => $label,
     'helpBody'  => $balasan
         ? '<p>Surat ini <b>menegaskan bahwa perusahaan menerima siswa PKL</b>, lengkap dengan periode dan lokasi penempatan — persis contoh sekolah. Hanya untuk ajuan PKL yang sudah <b>disetujui</b>.</p>'
             . '<ul class="mt-2 list-disc space-y-1 pl-5">'
+            . '<li><b>Cari dulu</b>: ketik minimal 2 huruf nama siswa, perusahaan, atau nomor ajuan; daftar ajuan muncul dan ajuan yang sudah dicentang tetap tampil. Tombol <b>Lihat semua</b> menampilkan seluruh ajuan.</li>'
             . '<li>Centang satu atau beberapa ajuan, isi <b>periode PKL</b> (sama untuk semua yang dicentang). Lama PKL "3 (tiga) bulan" dihitung otomatis dari tanggalnya.</li>'
             . '<li>Periode ikut <b>tersimpan di ajuan PKL</b> (tampil di detail ajuan dan Status Siswa) dan tercatat di riwayatnya.</li>'
             . '<li>Satu ajuan hanya punya satu Surat Balasan. Bila salah setelah bernomor, batalkan suratnya lalu buat lagi.</li>'
             . '<li>' . ($perluAcc ? 'Surat menunggu <b>ACC</b> (' . esc($pemegangAcc ?? 'peran yang berhak') . ', diatur Admin di Sistem → Hak Akses). Setelah disetujui, surat diunduh dalam bentuk Word.' . (! empty($bisaLangsungAcc) ? ' Anda juga memegang hak ACC jenis ini, jadi bisa langsung memakai tombol <b>Simpan &amp; setujui</b>.' : '') : 'Jenis ini saat ini <b>tanpa ACC</b>: surat langsung siap diunduh.') . '</li>'
             . '</ul>'
-        : '<p>Surat <b>pemberhentian dan penarikan siswa dari tempat PKL</b>, persis contoh sekolah. Pilih ajuan, centang siswa yang ditarik (boleh sebagian), isi tanggal berlakunya dan alasannya.</p>'
+        : '<p>Surat <b>pemberhentian dan penarikan siswa dari tempat PKL</b>, persis contoh sekolah. Cari ajuannya (ketik minimal 2 huruf nama siswa / perusahaan, atau <b>Lihat semua</b>), pilih, centang siswa yang ditarik (boleh sebagian), isi tanggal berlakunya dan alasannya.</p>'
             . '<ul class="mt-2 list-disc space-y-1 pl-5">'
             . '<li>Status PKL siswa <b>tidak berubah</b> otomatis; surat ini tercatat di riwayat ajuan.</li>'
             . '<li>Alasan masuk ke kalimat "Penarikan tersebut dilakukan karena …". Pilih alasan yang ada atau tulis sendiri — periksa pratinjaunya.</li>'
@@ -145,16 +148,19 @@ $bukaPratinjau = '<div class="peringatan peringatan-info sm:col-span-2">' . ikon
                     <?= ui_peringatan('awas', 'Belum ada ajuan PKL yang sudah disetujui, jadi belum ada tempat yang bisa dipilih.') ?>
                 <?php else: ?>
                     <div class="flex flex-col gap-2 sm:flex-row sm:items-center">
-                        <input type="search" x-model="cari" placeholder="Cari perusahaan, nomor ajuan, atau nama siswa…" class="inp sm:flex-1" aria-label="Cari ajuan">
+                        <input type="search" x-model="cari" placeholder="Ketik nama siswa, perusahaan, atau nomor ajuan…" class="inp sm:flex-1" aria-label="Cari ajuan">
+                        <button type="button" class="btn btn-teks" @click="lihatSemua()"><span x-text="semua ? 'Sembunyikan daftar' : 'Lihat semua (<?= count($ajuan) ?>)'">Lihat semua (<?= count($ajuan) ?>)</span></button>
                         <?php if ($balasan && $lapor === null): ?>
-                            <button type="button" class="btn btn-netral" @click="pilihSemua()"><?= ikon('check', 'h-4 w-4') ?>Pilih semua yang belum punya Balasan</button>
-                            <button type="button" class="btn btn-teks" @click="dipilih = []"><?= ikon('close', 'h-4 w-4') ?>Kosongkan</button>
+                            <button type="button" class="btn btn-netral" @click="pilihSemua()" title="Semua yang cocok dengan pencarian (atau semua bila kotak cari kosong)"><?= ikon('check', 'h-4 w-4') ?>Pilih semua yang belum punya Balasan</button>
+                            <button type="button" class="btn btn-teks" x-show="dipilih.length > 0" x-cloak @click="dipilih = []"><?= ikon('close', 'h-4 w-4') ?>Kosongkan</button>
                         <?php endif; ?>
                     </div>
-                    <?php if ($balasan): ?><p class="text-sm text-gray-500 dark:text-gray-400"><b class="text-gray-900 dark:text-white" x-text="dipilih.length"></b> dari <?= count($ajuan) ?> ajuan dipilih.</p><?php endif; ?>
-                    <ul class="max-h-96 divide-y divide-gray-200 overflow-y-auto rounded-lg border border-gray-200 dark:divide-gray-700 dark:border-gray-700">
+                    <p x-show="!mencari() && !adaPilihan()" class="hint">Ketik minimal 2 huruf untuk mencari di antara <?= count($ajuan) ?> ajuan yang sudah disetujui, lalu pilih ajuannya.</p>
+                    <p x-show="mencari() && jumlahCocok() === 0" x-cloak class="hint">Tidak ada ajuan yang cocok dengan pencarian ini.</p>
+                    <?php if ($balasan): ?><p x-show="adaPilihan()" x-cloak class="text-sm text-gray-500 dark:text-gray-400"><b class="text-gray-900 dark:text-white" x-text="dipilih.length"></b> dari <?= count($ajuan) ?> ajuan dipilih.</p><?php endif; ?>
+                    <ul x-show="mencari() || adaPilihan()" x-cloak class="max-h-96 divide-y divide-gray-200 overflow-y-auto rounded-lg border border-gray-200 dark:divide-gray-700 dark:border-gray-700">
                         <template x-for="a in ajuan" :key="a.id">
-                            <li x-show="tampil(a)">
+                            <li x-show="tampilDaftar(a)">
                                 <label class="flex cursor-pointer items-start gap-3 px-4 py-3 transition-colors hover:bg-gray-50 dark:hover:bg-gray-700/60" :class="jenis === 'balasan' && a.balasan && 'cursor-not-allowed opacity-60'">
                                     <?php if ($balasan): ?>
                                         <input type="checkbox" name="ajuan[]" :value="a.id" x-model="dipilih" :disabled="!!a.balasan" class="cek mt-0.5">

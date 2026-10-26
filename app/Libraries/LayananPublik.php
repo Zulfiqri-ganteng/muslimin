@@ -134,6 +134,18 @@ final class LayananPublik
                 'bagian'   => ['siswa' => 'Surat dari sekolah'],
                 'kata'     => 'surat pernyataan orang tua wali persetujuan pkl materai minta surat',
             ],
+            // Surat Perpanjangan PKL (2026-10-26; docs/DESAIN-PERPANJANGAN-PKL.md bagian 7): ikon sendiri seperti surat lain.
+            'surat_perpanjangan' => [
+                'judul'    => 'Minta surat perpanjangan PKL',
+                'ket'      => 'PKL-mu diperpanjang perusahaan? Minta surat perpanjangan dari sekolah. Hanya boleh satu kali.',
+                'ikon'     => 'calendar-edit',
+                'ilu'      => 'surat-perpanjangan',
+                'url'      => site_url('layanan/surat/perpanjangan'),
+                'kelompok' => ['siswa'],
+                'bagian'   => ['siswa' => 'Surat dari sekolah'],
+                'status'   => $status($pkl['perpanjangan'] ?? null),
+                'kata'     => 'surat perpanjangan pkl diperpanjang tambah waktu perusahaan minta surat',
+            ],
             'surat_penarikan' => [
                 'judul'    => 'Minta surat penarikan PKL',
                 'ket'      => 'Surat dari sekolah untuk menarik kamu dari tempat PKL.',
@@ -492,9 +504,10 @@ final class LayananPublik
         try {
             $p = (new PklPengaturanModel())->ambil();
 
-            return ['pkl' => PklPengaturanModel::formTerbuka($p), 'lapor' => PklLapor::terbuka($p)];
+            return ['pkl' => PklPengaturanModel::formTerbuka($p), 'lapor' => PklLapor::terbuka($p),
+                'perpanjangan' => SuratPerpanjangan::tabelAda() ? SuratPerpanjangan::setelan($p)['buka'] : false];
         } catch (\Throwable) {
-            return ['pkl' => false, 'lapor' => false];
+            return ['pkl' => false, 'lapor' => false, 'perpanjangan' => false];
         }
     }
 }

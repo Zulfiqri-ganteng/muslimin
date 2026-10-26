@@ -149,6 +149,9 @@ final class MenuAdmin
                     ['admin/pkl/alasan', 'Template Alasan', 'clipboard-list'],
                     ['admin/pkl/pengaturan', 'Pengaturan PKL', 'adjustments-horizontal'],
                 ], ['api' => ['pkl'], 'ket' => 'Ajuan PKL siswa, surat izin, biaya, tanda tangan. Aksi di dalamnya diatur di bagian "PKL & Surat".']],
+                // Sertifikat PKL — menunggu format sertifikat dari sekolah (2026-10-26; rencana: docs/DESAIN-PERPANJANGAN-PKL.md bagian 12).
+                // Entri "Segera" (seperti Beasiswa) = hanya Admin yang melihat; saat dibangun pindah ke daftar di atas, sesudah Data Prakerin.
+                'pkl_sertifikat' => ['Sertifikat PKL', self::MENU, [['admin/pkl/sertifikat', 'Sertifikat PKL', 'award']], ['segera' => true]],
             ]],
             ['judul' => 'LABORATORIUM', 'bagian' => 'LAYANAN SEKOLAH', 'ikon' => 'desktop-pc', 'entri' => [
                 'master_lab'       => ['Laboratorium', self::MENU, [['admin/master/lab', 'Laboratorium', 'desktop-pc']], ['awalan' => ['admin/master/lab', 'admin/lab-gambar/lab']]],
@@ -289,6 +292,63 @@ final class MenuAdmin
         }
 
         return $out;
+    }
+
+    /** Item yang TIDAK ditampilkan di menu samping WEB (tetap ada di katalog, hak, dan API auth/menu) — sudah ada tombolnya di halaman. */
+    public const SEMBUNYI_WEB = ['admin/pkl/baru']; // Isi atas Nama: tombol di kepala Beranda PKL & Kotak Masuk
+
+    /** Sub-menu lipat WEB: label => [ikon, daftar alamat anggotanya]. Diisi tampilWeb() dari SuratJenis (menu tiap jenis surat). */
+    private static function subWeb(): array
+    {
+        return ['Buat surat' => ['file-pen', array_map(static fn (string $k): string => SuratJenis::alamat($k), SuratJenis::kode())]];
+    }
+
+    /**
+     * Susunan menu samping KHUSUS TAMPILAN WEB (rapi tampilan U2, docs/RENCANA-RAPI-TAMPILAN-PKL-SURAT.md bagian 4) dari hasil sidebar() yang
+     * SUDAH disaring per peran: item SEMBUNYI_WEB dibuang, dan item anggota sub-menu (mis. menu tiap jenis surat) dikumpulkan menjadi satu
+     * butir lipat ['sub' => label, 'ikon', 'items' => [...]] di posisi anggota pertamanya. sidebar() — sumber hak & API auth/menu — TIDAK berubah.
+     *
+     * @param list<array{title: ?string, bagian: ?string, items: list<array>}> $groups
+     *
+     * @return list<array{title: ?string, bagian: ?string, items: list<array>}>
+     */
+    public static function tampilWeb(array $groups): array
+    {
+        $sub = self::subWeb();
+        foreach ($groups as &$g) {
+            $baru   = [];
+            $posSub = [];
+            foreach ($g['items'] as $it) {
+                if (in_array((string) $it[0], self::SEMBUNYI_WEB, true)) {
+                    continue;
+                }
+                $masuk = null;
+                foreach ($sub as $label => [, $alamat]) {
+                    if (in_array((string) $it[0], $alamat, true)) {
+                        $masuk = $label;
+                    }
+                }
+                if ($masuk === null) {
+                    $baru[] = $it;
+                    continue;
+                }
+                if (! isset($posSub[$masuk])) {
+                    $posSub[$masuk] = count($baru);
+                    $baru[]         = ['sub' => $masuk, 'ikon' => $sub[$masuk][0], 'items' => []];
+                }
+                $baru[$posSub[$masuk]]['items'][] = $it;
+            }
+            // Sub-menu berisi satu butir saja tidak perlu dilipat.
+            foreach ($posSub as $i) {
+                if (count($baru[$i]['items']) === 1) {
+                    $baru[$i] = $baru[$i]['items'][0];
+                }
+            }
+            $g['items'] = $baru;
+        }
+        unset($g);
+
+        return array_values(array_filter($groups, static fn (array $g): bool => $g['items'] !== []));
     }
 
     /**

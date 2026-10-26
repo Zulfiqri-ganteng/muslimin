@@ -5,6 +5,8 @@
  * Riwayat), ui_peringatan, lencana kit, tombol kit ber-ikon (pengganti emoji). Siap CSP: dialog keputusan = dialog kit
  * (ui_dialog_buka, dibuka data-buka-dialog) — dulu x-data akar { dlg } + x-show per dialog; Kabari WA = data-kabari-surat
  * (dulu @click window.dispatchEvent).
+ * Rapi tampilan U4 (2026-10-26, docs/RENCANA-RAPI-TAMPILAN-PKL-SURAT.md): Ubah / Batalkan persetujuan / Batalkan surat pindah ke menu
+ * "Lainnya" di kepala kartu Tindakan; tombol Pindah (TKA) jadi tombol teks; Riwayat dilipat. Dialog & formulirnya TETAP sama.
  *
  * @var array<string, mixed>           $surat       baris surat_sekolah + 'isi_arr'
  * @var list<array>                    $siswa
@@ -60,9 +62,9 @@ $dd = 'font-semibold text-gray-900 dark:text-white';
 <?= $this->section('content') ?>
 
 <?= view('admin/partials/help', [
-    'helpKey'   => 'surat_detail_v2',
+    'helpKey'   => 'surat_detail_v3',
     'helpTitle' => 'Detail Surat',
-    'helpBody'  => '<p>Halaman ini menampilkan <b>isi dan sejarah satu surat</b> dan tombol tindakannya.</p>'
+    'helpBody'  => '<p>Halaman ini menampilkan <b>isi dan sejarah satu surat</b> dan tombol tindakannya. Aksi yang jarang dipakai (ubah data, pembatalan) ada di menu <b>Lainnya</b> pada kartu Tindakan.</p>'
         . '<ul class="mt-2 list-disc space-y-1 pl-5">'
         . '<li><b>ACC / Kembalikan</b> (peran yang diberi hak ACC jenis surat ini oleh Admin di Sistem → Hak Akses): ACC mencatat nama, jam, dan kode verifikasi yang ikut tercetak di kaki surat. <i>Kembalikan</i> mengirim surat kembali ke pembuatnya beserta alasan.</li>'
         . '<li><b>Unduh surat</b> (peran yang diberi hak Unduh jenis surat ini): nomor surat diterbitkan <b>sekali</b>, saat surat pertama diunduh, satu urutan dengan Surat Izin PKL. Unduh ulang memakai nomor yang sama.</li>'
@@ -111,6 +113,13 @@ $dd = 'font-semibold text-gray-900 dark:text-white';
                     <?php foreach ($ringkasIsi as [$label, $nilai]): ?>
                         <div><dt class="<?= $dt ?>"><?= esc($label) ?></dt><dd class="<?= $dd ?>"><?= esc($nilai) ?></dd></div>
                     <?php endforeach; ?>
+                    <?php if ($jenis === SuratJenis::PERPANJANGAN): $pj = \App\Libraries\SuratPerpanjangan::ringkas($surat); // docs/DESAIN-PERPANJANGAN-PKL.md R8 ?>
+                        <div class="sm:col-span-2"><dt class="<?= $dt ?>">Perpanjangan</dt><dd class="<?= $dd ?>">
+                            <?= esc($pj['lama_teks']) ?>, <?= esc(\App\Libraries\SuratPkl::periodeTeks($pj['mulai'], $pj['selesai_baru'])) ?>
+                            <?php if ($pj['berlaku']): ?><span class="lencana lencana-hijau ms-1">Sudah berlaku</span>
+                            <?php elseif ($status !== 'dibatalkan'): ?><span class="lencana lencana-kuning ms-1">Berlaku setelah ACC</span><?php endif; ?>
+                        </dd></div>
+                    <?php endif; ?>
                     <div><dt class="<?= $dt ?>">Dibuat oleh</dt><dd class="<?= $dd ?>"><?= esc((string) $surat['dibuat_nama'] !== '' ? $surat['dibuat_nama'] : '—') ?></dd><dd class="<?= $dt ?>"><?= esc(date('d-m-Y H:i', strtotime((string) $surat['created_at']))) ?></dd></div>
                     <?php if (! empty($peminta)): // Layanan Siswa: siswa yang meminta surat ini sendiri ?>
                         <div class="sm:col-span-2">
@@ -172,7 +181,7 @@ $dd = 'font-semibold text-gray-900 dark:text-white';
                                                     <a href="<?= site_url('admin/surat/' . $t['surat_id']) ?>" class="lencana lencana-kuning mb-1 whitespace-nowrap" title="Siswa ini juga tercantum di surat TKA lain">Juga di <?= esc($t['label']) ?> · <?= esc($t['kode']) ?></a>
                                                 <?php endforeach; ?>
                                                 <?php if ($tkaTujuan !== null): ?>
-                                                    <button type="button" class="btn btn-netral btn-sm" data-buka-dialog="surat-pindah-<?= (int) $a['siswa_id'] ?>"><?= ikon('arrow-right-to-bracket', 'h-4 w-4') ?>Pindah</button>
+                                                    <button type="button" class="btn btn-teks btn-sm" data-buka-dialog="surat-pindah-<?= (int) $a['siswa_id'] ?>"><?= ikon('arrow-right-to-bracket', 'h-4 w-4') ?>Pindah</button>
                                                 <?php elseif ($lainTka === []): ?>
                                                     <span class="text-gray-500 dark:text-gray-400">—</span>
                                                 <?php endif; ?>
@@ -190,8 +199,12 @@ $dd = 'font-semibold text-gray-900 dark:text-white';
         <div class="space-y-4">
             <!-- Tindakan -->
             <?php if ($status !== 'dibatalkan'): ?>
-                <section class="kartu overflow-hidden" aria-labelledby="judul-tindakan">
-                    <?= $kepalaKartu('Tindakan', 'judul-tindakan') ?>
+                <section class="kartu" aria-labelledby="judul-tindakan">
+                    <?= $kepalaKartu('Tindakan', 'judul-tindakan', ui_menu_lain([
+                        $bolehBuat && $alamatUbah !== '' ? ['label' => 'Ubah data surat', 'ikon' => 'edit', 'href' => $alamatUbah] : null,
+                        $status === 'disetujui' && $bisaBatalAcc && $bolehAcc ? ['label' => 'Batalkan persetujuan', 'ikon' => 'close-circle', 'dialog' => 'surat-batalacc', 'bahaya' => true] : null,
+                        $bolehBuat ? ['label' => 'Batalkan surat', 'ikon' => 'trash-bin', 'dialog' => 'surat-batal', 'bahaya' => true] : null,
+                    ])) ?>
                     <div class="kartu-isi space-y-3 !p-4 text-sm">
                         <?php if ($status === 'menunggu'): ?>
                             <?php if ($bolehAcc): ?>
@@ -234,15 +247,6 @@ $dd = 'font-semibold text-gray-900 dark:text-white';
                             <?php else: ?>
                                 <?= $catatanKunci('Surat ini diunduh oleh ' . esc($pemegangUnduh ?? 'peran yang berhak') . ' (diatur Admin di Sistem → Hak Akses).') ?>
                             <?php endif; ?>
-                            <?php if ($bisaBatalAcc && $bolehAcc): ?>
-                                <button type="button" class="btn btn-netral btn-sm w-full text-red-700 dark:text-red-400" data-buka-dialog="surat-batalacc"><?= ikon('close-circle', 'h-4 w-4') ?>Batalkan persetujuan</button>
-                            <?php endif; ?>
-                        <?php endif; ?>
-                        <?php if ($bolehBuat && $alamatUbah !== ''): ?>
-                            <a href="<?= esc($alamatUbah, 'attr') ?>" class="btn btn-netral btn-sm w-full"><?= ikon('edit', 'h-4 w-4') ?>Ubah data surat</a>
-                        <?php endif; ?>
-                        <?php if ($bolehBuat): ?>
-                            <button type="button" class="btn btn-teks btn-sm w-full text-red-600 hover:bg-red-50 dark:text-red-400 dark:hover:bg-gray-700" data-buka-dialog="surat-batal"><?= ikon('trash-bin', 'h-4 w-4') ?>Batalkan surat</button>
                         <?php endif; ?>
                     </div>
                 </section>
@@ -275,8 +279,7 @@ $dd = 'font-semibold text-gray-900 dark:text-white';
             </section>
 
             <!-- Riwayat -->
-            <section class="kartu overflow-hidden" aria-labelledby="judul-riwayat-surat">
-                <?= $kepalaKartu('Riwayat', 'judul-riwayat-surat') ?>
+            <?= ui_lipat_buka(['judul' => 'Riwayat', 'ringkas' => $riwayat === [] ? 'belum ada' : count($riwayat) . ' catatan', 'id' => 'riwayat']) ?>
                 <?php if ($riwayat === []): ?>
                     <p class="px-4 py-5 text-center text-sm text-gray-500 dark:text-gray-400">Belum ada riwayat.</p>
                 <?php else: ?>
@@ -290,7 +293,7 @@ $dd = 'font-semibold text-gray-900 dark:text-white';
                         <?php endforeach; ?>
                     </ol>
                 <?php endif; ?>
-            </section>
+            <?= ui_lipat_tutup() ?>
         </div>
     </div>
 </div>

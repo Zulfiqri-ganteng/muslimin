@@ -278,7 +278,7 @@ final class SuratBerkas
             'acc_waktu'     => ! empty($surat['acc_at']) ? PklSurat::waktuIndo((string) $surat['acc_at']) : '', 'acc_kode' => (string) ($surat['acc_kode'] ?? ''),
         ];
         $v = array_merge($v, self::khusus((string) $surat['jenis'], $surat, $siswa, $ajuan, $setting, $p));
-        if (SuratPkl::untuk((string) $surat['jenis'])) {
+        if (SuratPkl::untuk((string) $surat['jenis']) || $surat['jenis'] === SuratJenis::PERPANJANGAN) {
             $v['acc_footer'] = SuratPkl::kakiDuaBaris($v['acc_footer']); // paragraf terakhir surat, sesudah kontak NB (lihat template)
         }
 
@@ -311,6 +311,7 @@ final class SuratBerkas
         return match ($jenis) {
             SuratJenis::ASTS, SuratJenis::TKA            => SuratAcara::token($jenis, $surat, SuratSekolah::dekodeIsi((string) ($surat['isi'] ?? ''))),
             SuratJenis::BALASAN, SuratJenis::PENARIKAN   => SuratPkl::token($jenis, $surat, SuratSekolah::dekodeIsi((string) ($surat['isi'] ?? ''))),
+            SuratJenis::PERPANJANGAN                     => SuratPerpanjangan::token($surat, SuratSekolah::dekodeIsi((string) ($surat['isi'] ?? ''))),
             default                                      => [], // Pernyataan Orang Tua: penanda per halaman di SuratPernyataan::halaman()
         };
     }

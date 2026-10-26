@@ -13,6 +13,7 @@ use App\Libraries\SuratJenis;
 use App\Libraries\SuratKeputusan;
 use App\Libraries\SuratPeriksa;
 use App\Libraries\SuratPernyataan;
+use App\Libraries\SuratPerpanjangan;
 use App\Libraries\SuratPkl;
 use App\Libraries\SuratSekolah;
 use App\Libraries\SuratTkaPindah;
@@ -175,6 +176,8 @@ class Surat extends BaseApiController
                 'pekerjaan' => (string) ($o['pekerjaan'] ?? ''), 'alamat' => (string) ($o['alamat'] ?? ''), 'hp' => (string) ($o['hp'] ?? '')],
                 array_keys((array) ($s['isi_arr']['ortu_isian'] ?? [])), array_values((array) ($s['isi_arr']['ortu_isian'] ?? [])))),
             'peringatan'   => in_array($status, ['menunggu', 'disetujui'], true) ? SuratPeriksa::untuk($s, $m['siswa'], $this->p) : [],
+            // Surat Perpanjangan PKL: tanggal semula (+ asal), mulai, tanggal baru, lama ("1 (satu) bulan"), berlaku (= sudah disetujui).
+            'perpanjangan' => $jenis === SuratJenis::PERPANJANGAN ? SuratPerpanjangan::ringkas($s) + ['periode_teks' => SuratPkl::periodeTeks(SuratPerpanjangan::mulai((string) ($s['isi_arr']['selesai_lama'] ?? '')), (string) ($s['isi_arr']['selesai_baru'] ?? ''))] : null,
             'template_ada' => is_file(SuratJenis::pathTemplate($jenis, SuratJenis::varian($jenis, (array) $s['isi_arr']))),
             'riwayat'      => array_map(static fn (array $r): array => [
                 'aksi' => $r['aksi'], 'label' => SuratSekolah::AKSI[$r['aksi']] ?? $r['aksi'], 'oleh' => $r['oleh'], 'peran' => $r['peran'],
@@ -321,7 +324,7 @@ class Surat extends BaseApiController
     {
         $jenis = self::jenisDariSlug($slug);
         if ($jenis === null) {
-            return $this->missing('Jenis surat tidak dikenal (asts, tka, pernyataan-ortu, balasan, penarikan).');
+            return $this->missing('Jenis surat tidak dikenal (asts, tka, pernyataan-ortu, balasan, perpanjangan, penarikan).');
         }
         if (($tolak = $this->tolakJenis('buat', $jenis)) !== null) {
             return $tolak;
@@ -352,6 +355,26 @@ class Surat extends BaseApiController
                     'siswa' => array_map(static fn (array $x): array => ['siswa_id' => $x['siswa_id'], 'nama' => $x['nama'], 'kelas' => $x['kelas']]
                         + ($jenis === SuratJenis::TKA ? ['tka' => $x['tka']] : []), $g['siswa']),
                 ] + ($jenis === SuratJenis::TKA ? ['jml_bebas' => $g['jml_bebas']] : []), $jenis === SuratJenis::TKA ? $acara->perusahaanTka($mulai, $selesai) : $acara->perusahaan($mulai, $selesai, $jenis)),
+            ], 'Formulir ' . SuratJenis::label($jenis) . '.');
+        }
+
+        // Surat Perpanjangan PKL (docs/DESAIN-PERPANJANGAN-PKL.md): ?ajuan_id= satu ajuan (siswa + status perpanjangan + tanggal semula),
+        // ?q= cari ajuan disetujui, tanpa keduanya = siswa yang PKL-nya berakhir ≤ 7 hari & belum diperpanjang.
+        if ($jenis === SuratJenis::PERPANJANGAN) {
+            $lib = new SuratPerpanjangan();
+            $aid = (int) $this->request->getGet('ajuan_id');
+            $q   = trim((string) $this->request->getGet('q'));
+
+            return $this->ok($dasar + [
+                'nilai_awal'   => ['tanggal_surat' => date('Y-m-d'), 'sapaan' => SuratPkl::SAPAAN_BAWAAN, 'selesai_lama' => '', 'selesai_baru' => '', 'alasan_pilih' => '0', 'alasan_lain' => ''],
+                'alasan_saran' => array_map(static fn (array $a, int $i): array => ['kode' => (string) $i, 'kalimat' => $a[0], 'label' => $a[1]], SuratPerpanjangan::ALASAN, array_keys(SuratPerpanjangan::ALASAN)),
+                'sapaan_saran' => SuratPkl::SAPAAN_SARAN,
+                'setelan'      => SuratPerpanjangan::setelan($this->p),
+                'maks_hari'    => SuratPerpanjangan::MAKS_HARI,
+                'batas_pkl'    => ['selesai_paling_akhir' => ($this->p['selesai_paling_akhir'] ?? '') ?: null, 'durasi_maks_hari' => (int) ($this->p['durasi_maks_hari'] ?? 0)],
+                'ajuan'        => $aid > 0 ? $lib->ajuanForm($aid) : null,
+                'hasil'        => $aid <= 0 && $q !== '' ? $lib->cari($q) : [],
+                'berakhir'     => $aid <= 0 && $q === '' ? $lib->berakhir(7) : [],
             ], 'Formulir ' . SuratJenis::label($jenis) . '.');
         }
 
@@ -401,7 +424,7 @@ class Surat extends BaseApiController
     {
         $jenis = self::jenisDariSlug($slug);
         if ($jenis === null) {
-            return $this->missing('Jenis surat tidak dikenal (asts, tka, pernyataan-ortu, balasan, penarikan).');
+            return $this->missing('Jenis surat tidak dikenal (asts, tka, pernyataan-ortu, balasan, perpanjangan, penarikan).');
         }
         if (($tolak = $this->tolakJenis('buat', $jenis)) !== null) {
             return $tolak;
@@ -420,6 +443,16 @@ class Surat extends BaseApiController
                 return $this->invalid(['galat' => $h['galat']], $h['galat'][0]);
             }
             $hasil = (new SuratPernyataan())->buat($h, $this->konteks(), $this->p);
+        } elseif ($jenis === SuratJenis::PERPANJANGAN) {
+            // {ajuan_id, siswa: [id…], tanggal_surat, sapaan, selesai_lama (bila belum tercatat), selesai_baru, alasan_pilih, alasan_lain, langsung_acc}
+            $r = (new SuratPerpanjangan())->buat($in, $this->konteks(), $this->p, ['sumber' => 'staf']);
+            if (! $r['ok']) {
+                return $r['kode'] === 'gagal'
+                    ? $this->failure($r['pesan'], 500)
+                    : ($r['kode'] === 'sudah' ? $this->failure($r['pesan'], 409, ['kode' => 'sudah', 'galat' => $r['galat']]) : $this->invalid($r['galat'], $r['pesan']));
+            }
+            $hasil = ['ok' => true, 'dibuat' => $r['kode'] === 'baru' ? [$r['surat_id']] : [], 'ditambah' => $r['kode'] === 'ikut' ? [$r['surat_id']] : [],
+                'sama' => [], 'gagal' => [], 'pesan' => $r['pesan'], 'peringatan' => $r['peringatan'] ?? []];
         } else {
             $h = SuratPkl::periksa($jenis, $in);
             if (! $h['ok']) {
@@ -451,7 +484,10 @@ class Surat extends BaseApiController
         // "Simpan & setujui" (langsung_acc): hanya bila peran ini memegang ACC jenis ini — diperiksa SuratKeputusan.
         $acc = ['acc' => 0, 'catatan' => []];
         if (filter_var($in['langsung_acc'] ?? false, FILTER_VALIDATE_BOOLEAN)) {
-            $acc = (new SuratKeputusan($this->svc))->accSetelahBuat(array_map('intval', $hasil['dibuat']), $jenis, $this->konteks(), $this->p);
+            $acc = (new SuratKeputusan($this->svc))->accSetelahBuat(array_map('intval', array_merge($hasil['dibuat'], $jenis === SuratJenis::PERPANJANGAN ? $hasil['ditambah'] : [])), $jenis, $this->konteks(), $this->p);
+        }
+        if (isset($hasil['peringatan'])) {
+            $data['peringatan'] = $hasil['peringatan'];
         }
         $data['langsung_disetujui'] = $acc['acc'];
         $data['catatan_acc']        = $acc['catatan'];
@@ -486,6 +522,11 @@ class Surat extends BaseApiController
             $r = (new SuratAcara())->ubahSurat($m, $in, $this->konteks());
             if ($r['kode'] === 'galat') {
                 return $this->invalid(['galat' => $r['galat']], $r['galat'][0]);
+            }
+        } elseif ($jenis === SuratJenis::PERPANJANGAN) {
+            $r = (new SuratPerpanjangan())->ubahSurat($m, $in, $this->konteks(), $this->p);
+            if (! $r['ok'] && ($r['galat'] ?? []) !== []) {
+                return $this->invalid($r['galat'], $r['pesan']);
             }
         } else {
             $h = SuratPkl::periksa($jenis, $in);
@@ -929,7 +970,7 @@ class Surat extends BaseApiController
         ];
     }
 
-    /** "asts" | "tka" | "pernyataan-ortu" | "balasan" | "penarikan" (= ujung alamat menu web). */
+    /** "asts" | "tka" | "pernyataan-ortu" | "balasan" | "perpanjangan" | "penarikan" (= ujung alamat menu web). */
     private static function slug(string $kode): string
     {
         return basename(SuratJenis::alamat($kode));

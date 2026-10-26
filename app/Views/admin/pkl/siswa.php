@@ -140,7 +140,8 @@ $urlExcel  = site_url('admin/pkl/siswa/excel') . '?' . http_build_query(array_fi
                                     <td class="whitespace-nowrap"><?= esc($r['nama_kelas']) ?></td>
                                     <td><?= view('admin/pkl/_lencana', ['kode' => $r['fase'], 'siswa' => true]) ?></td>
                                     <td><?= esc($r['perusahaan_nama'] ?? '') ?: '<span class="text-gray-500 dark:text-gray-400">—</span>' ?></td>
-                                    <td class="text-xs whitespace-nowrap"><?= ! empty($r['tanggal_mulai']) ? esc(IsianBantu::tanggalIndo($r['tanggal_mulai'])) . ' – ' . esc(IsianBantu::tanggalIndo($r['tanggal_selesai'])) : '—' ?></td>
+                                    <td class="text-xs whitespace-nowrap"><?= ! empty($r['tanggal_mulai']) ? esc(IsianBantu::tanggalIndo($r['tanggal_mulai'])) . ' – ' . esc(IsianBantu::tanggalIndo($r['tanggal_selesai'])) : '—' ?>
+                                        <?php if (! empty($r['selesai_efektif']) && (string) $r['selesai_efektif'] !== (string) ($r['tanggal_selesai'] ?? '')): ?><span class="lencana lencana-hijau mt-0.5 block w-fit">Diperpanjang s.d. <?= esc(IsianBantu::tanggalIndo((string) $r['selesai_efektif'])) ?></span><?php endif; ?></td>
                                     <td class="text-right"><?php if (! empty($r['ajuan_id'])): ?><a href="<?= site_url('admin/pkl/' . $r['ajuan_id']) ?>" class="font-mono text-xs font-semibold text-brand-700 hover:underline dark:text-brand-400"><?= esc(PklPengajuanModel::kode((int) $r['ajuan_id'])) ?></a><?php endif; ?></td>
                                 </tr>
                             <?php endforeach; ?>

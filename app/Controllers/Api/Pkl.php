@@ -23,6 +23,8 @@ use App\Libraries\PklSurat;
 use App\Libraries\PklUnduh;
 use App\Libraries\PklWa;
 use App\Libraries\PklWaKeputusan;
+use App\Libraries\SuratJenis;
+use App\Libraries\SuratPerpanjangan;
 use App\Models\AuditModel;
 use App\Models\PklPengajuanModel;
 use App\Models\PklPengaturanModel;
@@ -199,8 +201,28 @@ class Pkl extends BaseApiController
                 'ttd_kepsek_ada'  => PklSurat::infoTtdKepsek($this->p) !== null, // tanda tangan + stempel Kepala Sekolah (diunggah di web)
                 'template_unggahan' => PklSurat::pathTemplate($this->p) !== null,
             ],
+            // Surat Perpanjangan PKL (2026-10-26): kartu Beranda "PKL berakhir ≤ 7 hari & belum diperpanjang" + surat yang menunggu ACC.
+            // null = peran ini tidak boleh membuat Surat Perpanjangan (kartu tidak ditampilkan, sama dengan web).
+            'perpanjangan' => SuratPerpanjangan::tabelAda() && PklHak::bolehSurat($this->peran(), 'buat', SuratJenis::PERPANJANGAN) ? [
+                'berakhir_7' => count((new SuratPerpanjangan())->berakhir(7)),
+                'menunggu'   => (int) db_connect()->table('surat_sekolah')->where('jenis', SuratJenis::PERPANJANGAN)->where('status', 'menunggu')->countAllResults(),
+            ] : null,
             'hak' => $hak,
         ], 'Ringkasan PKL.');
+    }
+
+    /**
+     * GET pkl/berakhir?hari=7 — siswa yang PKL-nya berakhir dalam N hari (1–60, tanggal di ajuan) dan BELUM punya Surat Perpanjangan /
+     * Penarikan — daftar cepat formulir Surat Perpanjangan (web: admin/surat/perpanjangan). Hak = Buat Surat Perpanjangan.
+     */
+    public function berakhir(): ResponseInterface
+    {
+        if (! PklHak::bolehSurat($this->peran(), 'buat', SuratJenis::PERPANJANGAN)) {
+            return $this->forbidden('Akun ' . HakAkses::label($this->peran()) . ' tidak punya hak membuat Surat Perpanjangan PKL.');
+        }
+        $hari = max(1, min(60, (int) ($this->request->getGet('hari') ?: 7)));
+
+        return $this->ok(SuratPerpanjangan::tabelAda() ? (new SuratPerpanjangan())->berakhir($hari) : [], 'PKL berakhir dalam ' . $hari . ' hari dan belum diperpanjang.');
     }
 
     /**
@@ -269,6 +291,8 @@ class Pkl extends BaseApiController
         $hari       = PklPengaturanModel::batasHari($this->p);
         $kirim      = (string) ($a['diajukan_at'] ?? $a['created_at']);
         $tolak      = (new PklKeluar())->tolakSiswa(array_map(static fn (array $s): int => (int) $s['siswa_id'], $anggota), $id);
+        // Surat Perpanjangan PKL per anggota (belum dibatalkan) — lencana "Diperpanjang s.d." / "menunggu ACC" seperti web.
+        $pj         = $a['status'] === 'disetujui' && SuratPerpanjangan::tabelAda() ? (new SuratPerpanjangan())->aktif(array_map(static fn (array $s): int => (int) $s['siswa_id'], $anggota), $id) : [];
 
         $data = $this->ringkasBaris($a + ['pengaju' => $anggota[0]['nama'] ?? null, 'pengaju_kelas' => $anggota[0]['nama_kelas'] ?? null, 'jumlah' => count($anggota), 'jumlah_keluar' => count((new PklKeluar())->daftarAjuan($id))], $hari);
         $data += [
@@ -282,6 +306,10 @@ class Pkl extends BaseApiController
                 'nis' => $s['nis'], 'nisn' => $s['nisn'], 'hp' => $s['hp'], 'hp_master' => $s['hp_master'], 'status_siswa' => $s['status_siswa'],
                 // Riwayat penolakan siswa ini DI LUAR ajuan ini (ajuan ditolak sekolah/perusahaan + pernah dikeluarkan), terbaru dulu.
                 'riwayat_tolak' => $tolak[(int) $s['siswa_id']] ?? [],
+                // Surat Perpanjangan PKL siswa ini di ajuan ini: {surat_id, kode, status, selesai_baru, berlaku} | null; selesai_efektif =
+                // tanggal baru bila sudah disetujui, selain itu tanggal selesai ajuan.
+                'perpanjangan'    => isset($pj[(int) $s['siswa_id']]) ? array_intersect_key($pj[(int) $s['siswa_id']], array_flip(['surat_id', 'kode', 'status', 'selesai_baru', 'berlaku'])) : null,
+                'selesai_efektif' => isset($pj[(int) $s['siswa_id']]) && $pj[(int) $s['siswa_id']]['berlaku'] ? $pj[(int) $s['siswa_id']]['selesai_baru'] : $a['tanggal_selesai'],
             ], $anggota),
             // Siswa yang dikeluarkan dari ajuan ini (revisi 2026-10-20): jenis, alasan, oleh, waktu, kabar WhatsApp.
             'keluar'        => (new PklKeluar())->daftarAjuan($id),
@@ -310,6 +338,8 @@ class Pkl extends BaseApiController
                 'gabungkan'          => PklKeluar::bolehKeluarkan($this->peran(), (string) $a['status']),
                 // Kabar WhatsApp keputusan (ajuan dikembalikan/ditolak) — sama dengan kotak web _kabar_keputusan. (Flutter 2026-10-22.)
                 'kabar_keputusan'    => PklWaKeputusan::boleh($this->peran()) && in_array((string) $a['status'], PklWaKeputusan::STATUS, true),
+                // Tombol "Buat Surat Perpanjangan" (ajuan disetujui + hak Buat jenis itu) → surat/form/perpanjangan?ajuan_id=
+                'buat_perpanjangan'  => $a['status'] === 'disetujui' && PklHak::bolehSurat($this->peran(), 'buat', SuratJenis::PERPANJANGAN),
             ],
             'dikirim_pada'  => $kirim,
         ];
@@ -969,6 +999,9 @@ class Pkl extends BaseApiController
             'perusahaan' => $r['perusahaan_nama'], 'kota' => $r['perusahaan_kota'], 'nomor_surat' => $r['nomor_surat'],
             'acc_nama' => $r['acc_nama'], 'acc_waktu' => $r['acc_at'],
             'jumlah_ditolak' => (int) ($r['jml_tolak'] ?? 0), // ditolak/dikeluarkan (apa pun status sekarang); rincian: pkl/siswa/{id}/riwayat
+            // Periode + tanggal selesai EFEKTIF (Surat Perpanjangan PKL yang sudah disetujui) — fase "selesai" mengikuti tanggal efektif.
+            'tanggal_mulai' => $r['tanggal_mulai'] ?? null, 'tanggal_selesai' => $r['tanggal_selesai'] ?? null, 'selesai_efektif' => $r['selesai_efektif'] ?? null,
+            'diperpanjang'  => ! empty($r['selesai_efektif']) && (string) $r['selesai_efektif'] !== (string) ($r['tanggal_selesai'] ?? ''),
         ], $rows);
 
         return $this->collection($item, ['page' => $page, 'perPage' => $per, 'total' => $total], 'Status PKL siswa.');

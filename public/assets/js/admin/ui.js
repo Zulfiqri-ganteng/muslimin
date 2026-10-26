@@ -601,6 +601,8 @@
                 pilihSemuaCentang: function (e) {
                     var on = !!(e && e.target && e.target.checked);
                     Array.prototype.forEach.call(butir(), function (c) { if (!c.disabled) { c.checked = on; } });
+                    // Tanpa event = tombol "Batal pilih" di bilah: kotak "Pilih semua" ikut dikosongkan.
+                    if (!e && akar) { Array.prototype.forEach.call(akar.querySelectorAll('input[type="checkbox"]:not([data-centang])'), function (c) { c.checked = false; }); }
                     this.hitungCentang();
                 },
                 hitungCentang: function () {

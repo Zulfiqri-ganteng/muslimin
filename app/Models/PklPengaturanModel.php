@@ -22,6 +22,7 @@ class PklPengaturanModel extends Model
         'waka_hubin_nama', 'waka_hubin_nip', 'waka_hubin_jabatan', 'format_nomor', 'nomor_awal', 'nomor_awal_tahun', 'template_surat',
         'kepsek_nama', 'kontak_surat_nama', 'kontak_surat_hp', 'ttd_hubin', 'format_nama_berkas', 'batas_keputusan_hari',
         'surat_perlu_acc', 'lapor_buka', 'ttd_kepsek', 'wa_pesan_balasan',
+        'perpanjang_buka', 'perpanjang_hari_sebelum', 'perpanjang_hari_sesudah',
     ];
     protected $useTimestamps = true;
     protected $createdField  = '';

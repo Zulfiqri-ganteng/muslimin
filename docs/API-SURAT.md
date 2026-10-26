@@ -164,6 +164,29 @@ daftar_tka_ganda, detail_tka_pindah, pindah_siswa, galat_422_pindah, galat_403_p
   mengisi gelombang teman satu tempat PKL; halaman status menampilkan "diisikan oleh temanmu" dan surat yang memuat namanya.
 - Uji: `dev:uji-surat` 402 (TKA siswa, Pindah, form staf, ganda, API), `dev:uji-hak` 69, `dev:uji-api-android` 19.
 
+### PEMBARUAN 2026-10-26b — Surat Perpanjangan PKL (jenis ke-6 `perpanjangan_pkl`, slug `perpanjangan`; docs/DESAIN-PERPANJANGAN-PKL.md)
+Jenis baru bernomor + wajib ACC (bawaan), urutan sesudah Balasan sebelum Penarikan. Hak per jenis `surat_{buat|acc|unduh}:perpanjangan_pkl`
+(migrasi menyalin hak Surat Balasan). `surat/meta`, Daftar Surat, `permintaan_siswa`, ACC/kembalikan/batal ACC/batal/unduh/unduh massal/WA
+**generik — tanpa rute baru**. Isi surat (`isi`): `sapaan, selesai_lama, sumber_lama (sekolah|siswa|staf), selesai_baru, alasan_perpanjangan, alamat`.
+- **`GET surat/form/perpanjangan`** — `nilai_awal`, `alasan_saran[{kode, kalimat, label}]`, `sapaan_saran`, `setelan {buka, sebelum, sesudah}`,
+  `maks_hari` (183), `batas_pkl {selesai_paling_akhir, durasi_maks_hari}` + SALAH SATU: `?ajuan_id=` → `ajuan` (SuratPerpanjangan::ajuanForm:
+  `id, kode, perusahaan, alamat, mulai, selesai, selesai_lama, sumber_lama ("sekolah"|null), bisa, siswa[{siswa_id, nama, kelas, kelas_id, hp,
+  bisa, pj{kode, surat_id, status, selesai_baru, berlaku}|null, ditarik (kode)|null}]`) · `?q=` (≥2 huruf) → `hasil[]` (bentuk sama, maks 10) ·
+  tanpa keduanya → `berakhir[]` (lihat `GET pkl/berakhir`).
+- **`POST surat/perpanjangan`** `{ajuan_id, siswa: [id…], tanggal_surat, sapaan?, selesai_lama? (hanya bila ajuan belum punya tanggal
+  selesai), selesai_baru, alasan_pilih ("0".."3"|"lain"), alasan_lain?, langsung_acc?}` → **201** `{dibuat: [{id, kode}], ditambah: [{id, kode}],
+  peringatan[], langsung_disetujui, …}` — `ditambah` = siswa ikut surat yang sama (ajuan + tanggal baru sama, belum bernomor).
+  Galat: **422** `data.errors.{selesai_baru|selesai_lama|alasan|siswa|tanggal_surat|ajuan_id}` (kunci kolom, bukan list) · **409**
+  `data.kode="sudah"` (maksimal SATU kali per siswa per ajuan; surat dibatalkan = boleh lagi) · 403 tanpa hak Buat · 500 gagal simpan.
+- **`POST surat/{id}/ubah`** (perpanjangan, belum bernomor) — isian sama dengan buat (`siswa` = daftar lengkap) → 200; 422 per kolom seperti di atas.
+- **`GET surat/{id}`** → **`perpanjangan`** `{selesai_lama, sumber_lama, mulai, selesai_baru, lama_teks ("1 (satu) bulan"), periode_teks
+  ("31 Oktober s.d. 30 November 2026"), berlaku (= surat disetujui), alasan}` | null untuk jenis lain. `peringatan[]` memuat "awas" bila
+  tanggal semula diketik siswa / melewati batas sekolah (surat itu dilewati ACC massal).
+- Tanggal baru BERLAKU hanya bila surat disetujui; batal ACC / batal surat → tanggal lama berlaku lagi (dihitung, bukan disalin).
+- Permintaan dari siswa: Layanan Siswa web + API publik `publik/layanan/perpanjangan` (docs/API-LAYANAN-SISWA.md).
+- Uji: `php spark dev:uji-perpanjangan` (103 cek: aturan, alur, Word, halaman staf, Layanan Siswa, API staf & publik) — fixture ditulis
+  dengan `UJI_FIXTURE=<folder> php spark dev:uji-perpanjangan`.
+
 ## Galat
 - **422 isian** (buat/ubah): `data.errors.galat` = LIST kalimat dari library (`periksa()`); `message` = kalimat pertama.
 - **422 keputusan**: `data.errors.{catatan|bahaya|ids}` (`wakil` tidak dipakai lagi sejak 2026-10-13).

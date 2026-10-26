@@ -137,6 +137,32 @@ $renderItem = static function (array $it, bool $anak = false) use ($itemAktif, $
     echo '<li' . $atrCari($label) . '><a href="' . site_url($url) . '" class="' . $kelas . '" title="' . esc($label, 'attr') . '"'
         . ($itemAktif($it) ? ' aria-current="page"' : '') . '>' . $ikonEl . '<span class="sb-label">' . esc($label) . '</span></a></li>';
 };
+// Sub-menu lipat WEB (MenuAdmin::tampilWeb, mis. "Buat surat" berisi menu tiap jenis surat): <details> tanpa skrip — terbuka bila memuat
+// halaman sekarang atau saat mencari menu; tampil saat mencari bila salah satu anggotanya cocok.
+$renderSub = static function (array $s) use ($renderItem, $itemAktif): void {
+    $aktif = false;
+    foreach ($s['items'] as $it) {
+        $aktif = $aktif || (! ($it[4] ?? false) && $itemAktif($it));
+    }
+    $cocok = implode(' || ', array_map(static fn (array $it): string => 'sesuai(' . json_encode(mb_strtolower((string) $it[1])) . ')', $s['items']));
+    echo '<li x-show="' . esc($cocok, 'attr') . '"><details class="sb-sub"' . ($aktif ? ' open' : '') . ' :open="cari !== \'\' || ' . ($aktif ? 'true' : 'false') . '">'
+        . '<summary class="sb-item sb-anak sb-sub-tombol" title="' . esc((string) $s['sub'], 'attr') . '"><span class="sb-label">' . esc((string) $s['sub']) . '</span>'
+        . '<span class="sb-panah">' . ikon('chevron-down', 'h-4 w-4') . '</span></summary><ul class="sb-sub-daftar">';
+    foreach ($s['items'] as $it) {
+        $renderItem($it, true);
+    }
+    echo '</ul></details></li>';
+};
+// Susunan tampilan web (item tersembunyi + sub-menu lipat). $groups (datar) tetap dipakai untuk menu aktif, remah roti, dan pencarian.
+$groupsWeb = \App\Libraries\MenuAdmin::tampilWeb($groups);
+$datarkan  = static function (array $items): array {
+    $out = [];
+    foreach ($items as $it) {
+        array_push($out, ...(isset($it['sub']) ? $it['items'] : [$it]));
+    }
+
+    return $out;
+};
 // Tautan luar di daftar kedua (pola template: dipisah garis, di bawah menu utama).
 $tautanLuar = [[site_url('/'), 'Situs sekolah', 'globe']];
 if ($bolehFormPublik) {
@@ -278,7 +304,7 @@ $js = static fn (string $berkas): string => '<script defer src="' . base_url($be
                             <input type="search" id="cari-menu-samping" class="sb-cari" placeholder="Cari menu…" autocomplete="off" x-model="cari" @keydown.enter.prevent="bukaHasilPertama()">
                         </label>
                     </li>
-                    <?php $bagianKini = null; foreach ($groups as $g): ?>
+                    <?php $bagianKini = null; foreach ($groupsWeb as $g): ?>
                         <?php
                         // Judul bagian (KURIKULUM, LAYANAN SEKOLAH) sebelum grup pertama bagiannya; bagian '' = garis pemisah saja.
                         // Disembunyikan saat mencari; saat menu menciut tampil sebagai garis.
@@ -292,18 +318,18 @@ $js = static fn (string $berkas): string => '<script defer src="' . base_url($be
                                 <li class="sb-bagian" x-show="cari === ''"><span class="sb-bagian-teks"><?= esc($bagian) ?></span></li>
                             <?php endif; ?>
                         <?php endif; ?>
-                        <?php if ($g['title'] === null || count($g['items']) === 1): ?>
+                        <?php if ($g['title'] === null || (count($g['items']) === 1 && ! isset($g['items'][0]['sub']))): ?>
                             <?php foreach ($g['items'] as $it) { $renderItem($it); } ?>
                         <?php else:
                             // Grup lipat: grup berisi halaman sekarang selalu terbuka; grup lain mengikuti pilihan pengguna (cookie sb_grup, dibaca
                             // server → tidak berkedip). Menu menciut (desktop): hanya ikon grup; klik ikon = lebarkan menu + buka grupnya.
                             $grupAktif = false;
-                            foreach ($g['items'] as $it) {
+                            foreach ($datarkan($g['items']) as $it) {
                                 $grupAktif = $grupAktif || (! ($it[4] ?? false) && $itemAktif($it));
                             }
                             $kunciGrup = 'sb_g_' . substr(md5((string) $g['title']), 0, 8);
                             $bukaAwal  = $grupAktif || in_array($kunciGrup, $grupBuka, true);
-                            $labelGrup = array_map(static fn (array $it): string => mb_strtolower((string) $it[1]), $g['items']);
+                            $labelGrup = array_map(static fn (array $it): string => mb_strtolower((string) $it[1]), $datarkan($g['items']));
                             $judulGrup = $namaGrup((string) $g['title']);
                         ?>
                             <li class="sb-grup" x-data="sbGrup" data-kunci="<?= $kunciGrup ?>" data-buka="<?= $bukaAwal ? '1' : '0' ?>"
@@ -315,7 +341,7 @@ $js = static fn (string $berkas): string => '<script defer src="' . base_url($be
                                     <span class="sb-panah<?= $bukaAwal ? ' rotate-180' : '' ?>" :class="{ 'rotate-180': buka || cari !== '' }"><?= ikon('chevron-down', 'h-5 w-5') ?></span>
                                 </button>
                                 <ul id="<?= $kunciGrup ?>" class="sb-anak-daftar" x-show="(buka || cari !== '') && ! sempit()" x-collapse.duration.200ms<?= $bukaAwal && ! $ciut ? '' : ' x-cloak' ?>>
-                                    <?php foreach ($g['items'] as $it) { $renderItem($it, true); } ?>
+                                    <?php foreach ($g['items'] as $it) { isset($it['sub']) ? $renderSub($it) : $renderItem($it, true); } ?>
                                 </ul>
                             </li>
                         <?php endif; ?>
