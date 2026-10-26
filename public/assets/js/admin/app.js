@@ -523,16 +523,8 @@
                     window.addEventListener('pageshow', function () { self.loading = false; });
                     this.$nextTick(function () { self.aturGulirMenu(); });
                 },
-                alihLaci: function () {
-                    this.sidebar = !this.sidebar;
-                    if (this.sidebar) {
-                        // Fokus ke kotak cari menu supaya bisa langsung mengetik / Tab ke menu.
-                        this.$nextTick(function () {
-                            var cari = document.querySelector('#menu-samping .sb-cari');
-                            if (cari) { cari.focus({ preventScroll: true }); }
-                        });
-                    }
-                },
+                // Membuka laci TIDAK memindah fokus ke kotak cari menu (permintaan user 2026-10-26: di HP papan ketik langsung muncul).
+                alihLaci: function () { this.sidebar = !this.sidebar; },
                 tutupLaci: function () { this.sidebar = false; },
                 alihCiut: function () {
                     this.collapsed = !this.collapsed;

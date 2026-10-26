@@ -426,11 +426,7 @@ $js = static fn (string $berkas): string => '<script defer src="' . base_url($be
     <!-- Kaki (template: footer-dashboard) -->
     <footer class="kaki">
         <div class="kaki-kartu">
-            <ul class="kaki-tautan">
-                <li><a href="<?= site_url('/') ?>" target="_blank" rel="noopener">Situs sekolah</a></li>
-                <li><a href="<?= site_url('admin/profile') ?>">Profil saya</a></li>
-                <?php if ($bolehPengaturan): ?><li><a href="<?= site_url('admin/settings') ?>">Pengaturan sekolah</a></li><?php endif; ?>
-            </ul>
+            <?php // Deret tautan Situs sekolah / Profil saya / Pengaturan sekolah dibuang (permintaan user 2026-10-26) — semuanya sudah ada di menu samping & menu profil. ?>
             <?= view('partials/kredit', ['kreditKelas' => 'text-sm text-gray-500 dark:text-gray-400']) ?>
         </div>
         <p class="kaki-hak">&copy; <?= date('Y') ?> &middot; Sistem Informasi Akademik Sekolah</p>
