@@ -7,6 +7,20 @@
 (function () {
     'use strict';
 
+    // Pindah halaman beranimasi (@view-transition di admin.css): bila ukuran layar berubah di tengah animasi (jendela diubah, zoom,
+    // bilah gulir), peramban membatalkannya dan janji ViewTransition menolak → "Uncaught (in promise) InvalidStateError: Transition
+    // was aborted … Viewport size changed" di konsol. Halaman tetap tampil normal; tolakannya ditangkap di sini (harus dipasang
+    // sebelum halaman pertama kali digambar → di berkas sinkron ini).
+    var redam = function (e) {
+        var vt = e && e.viewTransition;
+        if (!vt) { return; }
+        ['ready', 'finished', 'updateCallbackDone'].forEach(function (k) {
+            if (vt[k] && typeof vt[k].catch === 'function') { vt[k].catch(function () {}); }
+        });
+    };
+    window.addEventListener('pagereveal', redam);
+    window.addEventListener('pageswap', redam);
+
     var nav = document.querySelector('#menu-samping nav.sb-gulir');
     if (!nav) { return; }
 

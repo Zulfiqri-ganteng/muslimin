@@ -727,6 +727,9 @@
    biasa). Pudar singkat 160 md; "kurangi gerakan" = tanpa transisi. Halaman masuk ikut (sama-sama memuat admin.css). */
 @view-transition { navigation: auto; }
 ::view-transition-old(root), ::view-transition-new(root) { animation-duration: 160ms; animation-timing-function: ease-out; }
+/* Ruang bilah gulir selalu disediakan: lebar layar sama di halaman pendek & panjang → transisi tidak dibatalkan peramban
+   ("Viewport size changed") dan isi tidak bergeser saat pindah halaman / dialog mengunci gulir. Sisa pembatalan ditangkap kerangka-awal.js. */
+html { scrollbar-gutter: stable; }
 /* (F5) Bilah atas & menu samping DIAM saat pindah menu (seperti aplikasi): diberi nama sendiri, tanpa animasi, dan cuplikan lama
    langsung diganti yang baru — hanya isi halaman yang memudar. Posisi gulir menu samping sudah dikembalikan kerangka-awal.js
    sebelum halaman digambar, jadi cuplikan lama & baru sama persis (tanpa loncatan). */

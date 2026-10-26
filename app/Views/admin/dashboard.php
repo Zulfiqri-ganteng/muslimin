@@ -208,7 +208,7 @@ $ariaDaftar = static fn (string $judul, array $daftar, string $satuan): string =
 
 <div class="mt-4">
 <!-- ===== Kartu angka utama (pola kartu statistik template) ===== -->
-<div class="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+<div class="grid gap-4 sm:grid-cols-2 min-[106rem]:grid-cols-4">
     <a href="<?= site_url('admin/master/siswa') ?>" class="kartu kartu-isi kartu-tautan flex items-center justify-between gap-4">
         <div class="min-w-0">
             <h2 class="stat-label">Siswa aktif</h2>
