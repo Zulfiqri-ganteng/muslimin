@@ -29,7 +29,7 @@ $sukses = (string) (session()->getFlashdata('layanan_sukses') ?? '');
     <?php endif; ?>
 
     <section class="mt-6" aria-labelledby="judul-surat">
-        <h2 id="judul-surat" class="text-heading-md text-teks">Minta surat dari sekolah</h2>
+        <h2 id="judul-surat" class="text-heading-md text-teks">Ajukan surat dari sekolah</h2>
         <p class="mt-1 text-sm text-teks-2">Pilih surat yang kamu perlukan. Kamu cukup memilih kelas dan namamu, lalu mengisi <b>NISN atau tanggal lahir</b>. Surat yang sudah jadi diambil di Tata Usaha sekolah.</p>
         <div class="mt-3 grid gap-3 sm:grid-cols-2">
             <?php foreach (array_keys(LayananSiswa::SURAT) as $kunci):

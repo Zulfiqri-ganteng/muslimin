@@ -24,7 +24,7 @@ $kisi = [];
 foreach ($kelompok as $g) {
     $kisi[] = [$g['url'], $g['label'], $g['ilu'], false];
 }
-foreach (['jadwal_kelas', 'jadwal_guru', 'absensi', 'pengumuman', 'pkl', 'lapor_pkl', 'surat_ujian', 'surat_tka', 'surat_ortu', 'surat_penarikan', 'surat_status', 'biodata', 'dokumen', 'kesediaan', 'aplikasi', 'bantuan'] as $k) {
+foreach (['jadwal_kelas', 'jadwal_guru', 'absensi', 'pengumuman', 'pkl', 'lapor_pkl', 'surat_ujian', 'surat_tka', 'surat_ortu', 'surat_perpanjangan', 'surat_penarikan', 'surat_status', 'biodata', 'dokumen', 'kesediaan', 'aplikasi', 'bantuan'] as $k) {
     if (isset($layanan[$k])) {
         $kisi[] = [$layanan[$k]['url'], $layanan[$k]['judul'], $layanan[$k]['ilu'], ! empty($layanan[$k]['luar'])];
     }

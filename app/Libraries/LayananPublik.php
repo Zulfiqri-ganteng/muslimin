@@ -105,7 +105,7 @@ final class LayananPublik
             // Layanan Siswa (2026-10-21): satu ikon per surat, langsung ke formulirnya (Controllers\Layanan::surat — belum masuk →
             // pilih kelas, nama, NISN/tanggal lahir, lalu kembali ke formulir yang sama).
             'surat_ujian' => [
-                'judul'    => 'Minta surat izin ujian',
+                'judul'    => 'Ajukan surat izin ujian',
                 'ket'      => 'Surat untuk perusahaan tempat PKL: izin mengikuti ASTS, ASAS, atau ASAT di sekolah.',
                 'ikon'     => 'calendar-month',
                 'ilu'      => 'surat-ujian',
@@ -115,7 +115,7 @@ final class LayananPublik
                 'kata'     => 'surat izin ujian asts asas asat dispensasi pkl perusahaan minta surat',
             ],
             'surat_tka' => [
-                'judul'    => 'Minta surat izin TKA',
+                'judul'    => 'Ajukan surat izin TKA',
                 'ket'      => 'Khusus kelas XII: surat untuk perusahaan tempat PKL agar bisa mengikuti TKA.',
                 'ikon'     => 'clipboard-list',
                 'ilu'      => 'surat-tka',
@@ -125,7 +125,7 @@ final class LayananPublik
                 'kata'     => 'surat izin tka tes kemampuan akademik kelas xii dispensasi pkl minta surat',
             ],
             'surat_ortu' => [
-                'judul'    => 'Minta surat pernyataan orang tua',
+                'judul'    => 'Ajukan surat pernyataan orang tua',
                 'ket'      => 'Formulir persetujuan orang tua untuk PKL, berisi data orang tuamu. Tinggal ditandatangani.',
                 'ikon'     => 'users',
                 'ilu'      => 'surat-ortu',
@@ -136,7 +136,7 @@ final class LayananPublik
             ],
             // Surat Perpanjangan PKL (2026-10-26; docs/DESAIN-PERPANJANGAN-PKL.md bagian 7): ikon sendiri seperti surat lain.
             'surat_perpanjangan' => [
-                'judul'    => 'Minta surat perpanjangan PKL',
+                'judul'    => 'Ajukan surat perpanjangan PKL',
                 'ket'      => 'PKL-mu diperpanjang perusahaan? Minta surat perpanjangan dari sekolah. Hanya boleh satu kali.',
                 'ikon'     => 'calendar-edit',
                 'ilu'      => 'surat-perpanjangan',
@@ -147,7 +147,7 @@ final class LayananPublik
                 'kata'     => 'surat perpanjangan pkl diperpanjang tambah waktu perusahaan minta surat',
             ],
             'surat_penarikan' => [
-                'judul'    => 'Minta surat penarikan PKL',
+                'judul'    => 'Ajukan surat penarikan PKL',
                 'ket'      => 'Surat dari sekolah untuk menarik kamu dari tempat PKL.',
                 'ikon'     => 'arrow-right-to-bracket',
                 'ilu'      => 'surat-penarikan',

@@ -953,3 +953,83 @@ html { scrollbar-gutter: stable; }
 /* (R2) Mode gelap: bilah gulir & kontrol bawaan peramban ikut gelap; pengaman kotak centang/radio tanpa .cek di isi halaman. */
 [data-mode="gelap"] { color-scheme: dark; }
 [data-mode="gelap"] .kerangka-isi :is([type="checkbox"], [type="radio"]):not(.cek):not(:checked) { @apply border-gray-600 bg-gray-700; }
+
+/* =====================================================================================================================
+   HALAMAN MASUK (2026-10-27, permintaan user: "animasi warna memutari kartu form", tanpa kesan buatan AI) — admin/login.php + login.js.
+   Kartu .masuk-kartu bergaris 2px yang digambar berlapis latar: isi kartu (padding-box) di atas dua gradasi kerucut dan garis diam
+   (border-box). Dua ekor cahaya berseberangan berputar searah jarum jam (permintaan user: "2 yang gerak, beda warna tapi matching"):
+   ekor 1 = warna merek, ekor 2 = warna pendamping yang sudah dipakai sistem — Terang/Gelap biru + toska (palet grafik dashboard),
+   Warna Sekolah lilac + mint (aksen menu samping). Tanpa glow, tanpa pelangi.
+     - diam: satu putaran 8 detik;
+     - [data-kirim] (formulir dikirim): putaran tambahan 1,2 detik → terasa "sedang memproses";
+     - [data-galat] (gagal masuk): kedua cahaya merah (Warna Sekolah: plum) sampai pengguna mengetik lagi (login.js hapusGalat).
+   Sudut = dua @property yang dijumlah: mempercepat cukup menjalankan putaran kedua, jadi cahaya tidak meloncat. Peramban tanpa
+   @property = cahaya diam. "Kurangi gerakan" (Windows) = garis polos warna ekor 1, tanpa putaran. */
+@property --masuk-sudut { syntax: '<angle>'; inherits: false; initial-value: 0deg; }
+@property --masuk-cepat { syntax: '<angle>'; inherits: false; initial-value: 0deg; }
+@keyframes masuk-sudut { to { --masuk-sudut: 360deg; } }
+@keyframes masuk-cepat { to { --masuk-cepat: 360deg; } }
+@layer components {
+  .masuk-latar { @apply flex min-h-screen flex-col bg-gray-50 text-gray-800 antialiased dark:bg-gray-900 dark:text-gray-200 sekolah:bg-brand-50/60; }
+  .masuk-atas  { @apply mx-auto flex w-full max-w-6xl items-center justify-between gap-3 px-4 pt-4 sm:px-6; }
+  /* Latar partikel (login-partikel.js): kanvas selebar layar di belakang; isi halaman di atasnya. */
+  .masuk-partikel { @apply pointer-events-none fixed inset-0 h-full w-full; }
+  .masuk-latar > :not(.masuk-partikel) { @apply relative z-10; }
+  .masuk-kartu {
+    --masuk-sudut: 0deg; --masuk-cepat: 0deg;
+    --masuk-isi: var(--color-white); --masuk-dasar: var(--color-gray-200);
+    --masuk-ekor: rgb(var(--brand-400)); --masuk-kepala: rgb(var(--brand-600));
+    --masuk-ekor-2: var(--color-cyan-300); --masuk-kepala-2: var(--color-cyan-500);
+    @apply w-full max-w-md overflow-hidden rounded-2xl shadow-xl shadow-gray-900/10 md:grid md:max-w-4xl md:grid-cols-[5fr_7fr];
+    border: 2px solid transparent;
+    background:
+      linear-gradient(var(--masuk-isi), var(--masuk-isi)) padding-box,
+      conic-gradient(from calc(var(--masuk-sudut) + var(--masuk-cepat)), transparent 0turn 0.66turn, var(--masuk-ekor) 0.86turn,
+        var(--masuk-kepala) 0.97turn, transparent 1turn) border-box,
+      conic-gradient(from calc(var(--masuk-sudut) + var(--masuk-cepat) + 180deg), transparent 0turn 0.66turn, var(--masuk-ekor-2) 0.86turn,
+        var(--masuk-kepala-2) 0.97turn, transparent 1turn) border-box,
+      linear-gradient(var(--masuk-dasar), var(--masuk-dasar)) border-box;
+    animation: masuk-sudut 8s linear infinite, masuk-cepat 1.2s linear infinite paused;
+  }
+  .masuk-kartu[data-kirim] { animation-play-state: running, running; }
+  [data-mode="gelap"] .masuk-kartu {
+    --masuk-isi: var(--color-gray-800); --masuk-dasar: var(--color-gray-700);
+    --masuk-ekor: rgb(var(--brand-500) / .55); --masuk-kepala: rgb(var(--brand-400));
+    --masuk-ekor-2: color-mix(in oklab, var(--color-cyan-400) 55%, transparent); --masuk-kepala-2: var(--color-cyan-400);
+  }
+  [data-mode="sekolah"] .masuk-kartu {
+    --masuk-dasar: rgb(var(--brand-100)); --masuk-ekor: rgb(var(--brand-300)); --masuk-kepala: rgb(var(--brand-700));
+    --masuk-ekor-2: var(--color-emerald-200); --masuk-kepala-2: var(--color-emerald-500);
+  }
+  .masuk-kartu[data-galat] {
+    --masuk-ekor: var(--color-red-300); --masuk-kepala: var(--color-red-600); --masuk-ekor-2: var(--color-red-200); --masuk-kepala-2: var(--color-red-400);
+  }
+  [data-mode="gelap"] .masuk-kartu[data-galat] {
+    --masuk-ekor: rgb(248 113 113 / .5); --masuk-kepala: var(--color-red-400); --masuk-ekor-2: rgb(252 165 165 / .4); --masuk-kepala-2: var(--color-red-300);
+  }
+  [data-mode="sekolah"] .masuk-kartu[data-galat] {
+    --masuk-ekor: var(--color-plum-200); --masuk-kepala: var(--color-plum-600); --masuk-ekor-2: var(--color-pink-200); --masuk-kepala-2: var(--color-pink-500);
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .masuk-kartu {
+      animation: none;
+      background: linear-gradient(var(--masuk-isi), var(--masuk-isi)) padding-box, linear-gradient(var(--masuk-ekor), var(--masuk-ekor)) border-box;
+    }
+  }
+  /* Kartu dua kolom (≥ md): panel identitas sekolah berwarna merek pekat (solid, tanpa gradasi) | formulir. Di HP panel = pita di atas
+     formulir (logo + nama; alamat & tahun ajaran disembunyikan). Logo di kotak putih supaya logo berwarna tetap jelas di atas panel. */
+  .masuk-panel { @apply flex items-center gap-4 bg-brand-700 px-6 py-5 text-white md:flex-col md:items-start md:gap-0 md:p-9 dark:bg-brand-800 sekolah:bg-brand-800; }
+  .masuk-panel-logo { @apply flex h-12 w-12 shrink-0 items-center justify-center overflow-hidden rounded-xl bg-white p-1.5 shadow-sm ring-1 ring-black/5 md:h-16 md:w-16; }
+  .masuk-panel-nama { @apply min-w-0 md:mt-auto md:pt-10; }
+  .masuk-panel-info { @apply mt-6 hidden space-y-2.5 border-t border-white/15 pt-6 text-sm text-white/80 md:block; }
+  .masuk-panel-info li { @apply flex gap-2.5; }
+  .masuk-panel-info svg { @apply mt-0.5 h-4 w-4 shrink-0 text-white/60; }
+  .masuk-isi { @apply space-y-6 p-6 sm:p-8 md:p-10; }
+  /* Isian lebih tegas: latar putih, lebih tinggi, cincin fokus warna merek 4px (pola fokus Flowbite). */
+  .masuk-isi .inp { @apply bg-white py-3 shadow-xs focus:border-brand-600 focus:ring-4 focus:ring-brand-500/15 dark:bg-gray-900/40 dark:focus:border-brand-500 dark:focus:ring-brand-500/25 sekolah:border-brand-200 sekolah:bg-white; }
+  /* Isian berikon di depan (akun, kata sandi): <div class="isian-ikon"><svg>…<input class="inp">. Ikon ikut warna merek saat fokus. */
+  .isian-ikon { @apply relative; }
+  .isian-ikon > svg { @apply pointer-events-none absolute start-3 top-1/2 h-5 w-5 -translate-y-1/2 text-gray-400 transition-colors dark:text-gray-500 sekolah:text-brand-400; }
+  .isian-ikon:focus-within > svg { @apply text-brand-600 dark:text-brand-400; }
+  .isian-ikon > input { @apply ps-10; }
+}

@@ -393,7 +393,7 @@ class UjiPerpanjangan extends BaseCommand
         $p   = (new PklPengaturanModel())->ambil();
         $hi  = date('Y-m-d');
         $pub = \App\Libraries\LayananPublik::semua((new \App\Models\SettingModel())->get());
-        $this->cek('ikon publik "Minta surat perpanjangan PKL": layanan/surat/perpanjangan, bagian Surat dari sekolah, status buka', isset($pub['surat_perpanjangan'])
+        $this->cek('ikon publik "Ajukan surat perpanjangan PKL": layanan/surat/perpanjangan, bagian Surat dari sekolah, status buka', isset($pub['surat_perpanjangan'])
             && str_ends_with($pub['surat_perpanjangan']['url'], 'layanan/surat/perpanjangan') && ($pub['surat_perpanjangan']['bagian']['siswa'] ?? '') === 'Surat dari sekolah'
             && $pub['surat_perpanjangan']['status'] === \App\Libraries\LayananPublik::BUKA && is_file(FCPATH . 'assets/img/ilustrasi/surat-perpanjangan.svg'));
         $this->cek('Layanan Siswa: kunci "perpanjangan" terdaftar & siap, tujuan masuk sah', isset(\App\Libraries\LayananSiswa::SURAT['perpanjangan']) && in_array('perpanjangan', \App\Libraries\LayananSiswa::SIAP, true)

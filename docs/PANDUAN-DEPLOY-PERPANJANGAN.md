@@ -31,7 +31,7 @@ git push
 1. Login **Operator** → menu **SURAT SEKOLAH → Surat Perpanjangan PKL** terbuka; ada kotak cari dan daftar *PKL berakhir dalam 7 hari*.
 2. **PKL → Beranda**: kartu biru *"N siswa PKL-nya berakhir dalam 7 hari"* tampil bila ada siswa yang tanggal selesainya tercatat.
 3. **PKL → Pengaturan PKL** → bagian *Permintaan Surat Perpanjangan PKL dari siswa*: bawaan *Siswa boleh meminta*, H-7, H+30.
-4. Buka situs publik → *Daftar layanan* → ikon **"Minta surat perpanjangan PKL"** ada di bagian *Surat dari sekolah*.
+4. Buka situs publik → *Daftar layanan* → ikon **"Ajukan surat perpanjangan PKL"** ada di bagian *Surat dari sekolah*.
 5. Login **Admin** → di grup PKL ada **Sertifikat PKL** redup bertanda *Segera* (Operator/Hubin tidak melihatnya — aturan menu Segera).
 6. Uji surat (boleh): buat satu Surat Perpanjangan untuk siswa sungguhan yang memang diperpanjang. Nomor surat baru terbit saat **unduh
    pertama** — jangan mengunduh surat uji. Surat yang belum diunduh boleh **Dibatalkan** dari detailnya tanpa membuang nomor.

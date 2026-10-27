@@ -60,9 +60,9 @@ $ajuan = $siswa['ajuan'];
         </div>
     </section>
 
-    <!-- Minta surat -->
+    <!-- Ajukan surat -->
     <section class="mt-6" aria-labelledby="judul-surat">
-        <h2 id="judul-surat" class="text-heading-md text-teks">Minta surat</h2>
+        <h2 id="judul-surat" class="text-heading-md text-teks">Ajukan surat</h2>
         <div class="mt-3 grid gap-3 sm:grid-cols-2">
             <?php foreach (LayananSiswa::SURAT as $kunci => $_):
                 $k = $kelayakan[$kunci];
