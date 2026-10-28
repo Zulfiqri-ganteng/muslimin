@@ -1,7 +1,8 @@
 <?php
 /**
  * LAYANAN SISWA — formulir Surat Perpanjangan PKL (2026-10-26; docs/DESAIN-PERPANJANGAN-PKL.md bagian 7): siswa yang PKL-nya diperpanjang
- * perusahaan meminta surat untuk dirinya (+ teman satu tempat PKL yang dicentang) → menunggu ACC operator. Bisa diminta mulai H-x sebelum
+ * perusahaan meminta surat untuk dirinya (+ teman yang PKL di perusahaan yang sama — satu ajuan maupun ajuan lain, 2026-10-28 — yang
+ * dicentang) → menunggu ACC operator. Bisa diminta mulai H-x sebelum
  * PKL selesai sampai H+y sesudahnya (Pengaturan PKL); hanya boleh satu kali. Tanpa JavaScript: tanggal cepat = pilihan radio yang langsung
  * menyebut tanggalnya (POST layanan/surat/perpanjangan). Aturan: LayananSiswa::ajukanPerpanjangan → SuratPerpanjangan::buat.
  *
@@ -119,7 +120,7 @@ $info = static fn (string $html): string => '<div class="peringatan peringatan-i
             <?php if ($form['teman'] !== []): ?>
                 <?= $langkah('Teman yang juga diperpanjang') ?>
                 <div class="kartu-langkah-isi space-y-2">
-                    <p class="text-sm text-teks-2">Centang teman satu tempat PKL yang PKL-nya <b>juga diperpanjang sampai tanggal yang sama</b>. Kalau tidak ada, biarkan kosong.</p>
+                    <p class="text-sm text-teks-2">Ini teman yang PKL di <b><?= esc($form['perusahaan']) ?></b> (<?= count($form['teman']) ?> siswa). Centang yang PKL-nya <b>juga diperpanjang sampai tanggal yang sama</b> — namanya ikut di suratmu, jadi temanmu <b>tidak perlu mengisi lagi</b>. Kalau tidak ada, biarkan kosong.</p>
                     <?php foreach ($form['teman'] as $t): ?>
                         <label class="<?= $t['bisa'] ? $kotak : 'flex items-start gap-3 rounded-lg border border-garis bg-white px-4 py-3 opacity-60' ?>">
                             <input type="checkbox" name="teman[]" value="<?= (int) $t['id'] ?>" class="mt-1 h-4 w-4 accent-brand-700"<?= in_array($t['id'], $temanL, true) ? ' checked' : '' ?><?= $t['bisa'] ? '' : ' disabled' ?>>

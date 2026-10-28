@@ -45,7 +45,8 @@ $pilihUrl = static fn (int $aid, int $sid = 0): string => site_url($alamat) . '?
     'helpTitle' => 'Surat Perpanjangan PKL',
     'helpBody'  => '<p>Surat permohonan ke perusahaan bahwa PKL siswa <b>diperpanjang</b> sampai tanggal tertentu. Format sama dengan Surat Balasan sekolah.</p>'
         . '<ul class="mt-2 list-disc space-y-1 pl-5">'
-        . '<li>Cari nama siswa atau tempat PKL, pilih, lalu centang siswa yang diperpanjang. Teman yang tidak diperpanjang tidak usah dicentang.</li>'
+        . '<li>Cari nama siswa atau tempat PKL, pilih, lalu centang siswa yang diperpanjang. <b>Semua siswa yang PKL di tempat itu</b> tampil, walau dulu mengajukan PKL terpisah. Teman yang tidak diperpanjang tidak usah dicentang.</li>'
+        . '<li>Satu surat = satu tanggal selesai semula. Siswa yang tanggal selesai PKL-nya tercatat beda tampil redup — buat surat terpisah lewat tautannya.</li>'
         . '<li>Perpanjangan <b>hanya boleh satu kali</b> per siswa. Siswa yang sudah punya surat perpanjangan tampil redup.</li>'
         . '<li>Tanggal selesai semula diambil dari Surat Balasan / laporan siswa. Bila belum tercatat, isi sendiri.</li>'
         . '<li>Tanggal baru <b>berlaku setelah surat di-ACC</b>' . ($perluAcc ? ' (' . esc($pemegangAcc) . ')' : '') . '. Data PKL lama (Surat Balasan) tidak berubah.</li>'
@@ -72,14 +73,15 @@ $pilihUrl = static fn (int $aid, int $sid = 0): string => site_url($alamat) . '?
                         <?php foreach ($hasil as $a): ?>
                             <li class="flex flex-col gap-2 px-4 py-3 sm:flex-row sm:items-center">
                                 <div class="min-w-0 flex-1">
-                                    <p class="text-sm font-semibold text-gray-900 dark:text-white"><?= esc($a['perusahaan']) ?> <span class="font-mono text-xs font-normal text-gray-500 dark:text-gray-400"><?= esc($a['kode']) ?></span></p>
+                                    <p class="text-sm font-semibold text-gray-900 dark:text-white"><?= esc($a['perusahaan']) ?> <span class="font-mono text-xs font-normal text-gray-500 dark:text-gray-400"><?= esc($a['kode']) ?></span>
+                                        <?php if ((int) $a['jml_ajuan'] > 1): ?><span class="text-xs font-normal text-gray-500 dark:text-gray-400">· <?= count($a['siswa']) ?> siswa dari <?= (int) $a['jml_ajuan'] ?> ajuan</span><?php endif; ?></p>
                                     <p class="text-xs text-gray-500 dark:text-gray-400"><?= esc(implode(', ', array_column($a['siswa'], 'nama'))) ?></p>
                                     <p class="text-xs text-gray-500 dark:text-gray-400">PKL selesai: <?= $a['selesai'] !== null ? esc($tglIndo($a['selesai'])) : '<span class="text-yellow-700 dark:text-yellow-300">belum tercatat</span>' ?></p>
                                 </div>
                                 <?php if ((int) $a['bisa'] > 0): ?>
                                     <a href="<?= esc($pilihUrl((int) $a['id']), 'attr') ?>" class="btn btn-netral btn-sm"><?= ikon('arrow-right', 'h-4 w-4') ?>Pilih</a>
                                 <?php else: ?>
-                                    <span class="lencana lencana-abu">Semua sudah diperpanjang / ditarik</span>
+                                    <span class="lencana lencana-abu">Tidak ada yang bisa diperpanjang</span>
                                 <?php endif; ?>
                             </li>
                         <?php endforeach; ?>
@@ -134,21 +136,29 @@ $pilihUrl = static fn (int $aid, int $sid = 0): string => site_url($alamat) . '?
                     </div>
                     <?php if (! $ubah): ?><a href="<?= site_url($alamat) ?>" class="btn btn-teks btn-sm"><?= ikon('edit', 'h-4 w-4') ?>Ganti</a><?php endif; ?>
                 </div>
+                <?php if ((int) $ajuan['jml_ajuan'] > 1): ?>
+                    <p class="hint">Semua siswa yang PKL di tempat ini ditampilkan (<?= count($ajuan['siswa']) ?> siswa dari <?= (int) $ajuan['jml_ajuan'] ?> ajuan). Centang yang diperpanjang sampai tanggal yang sama — mereka masuk satu surat.</p>
+                <?php endif; ?>
                 <div class="space-y-1.5">
                     <?php foreach ($ajuan['siswa'] as $s): $cek = in_array($s['siswa_id'], $nilai['siswa'], true); ?>
                         <label class="flex flex-wrap items-center gap-2 rounded-lg border border-gray-200 px-3 py-2 text-sm dark:border-gray-700 <?= $s['bisa'] ? 'cursor-pointer text-gray-900 hover:bg-gray-50 dark:text-white dark:hover:bg-gray-700/60' : 'cursor-not-allowed text-gray-500 opacity-70 dark:text-gray-400' ?>">
                             <input type="checkbox" name="siswa[]" value="<?= (int) $s['siswa_id'] ?>" class="cek"<?= $s['bisa'] ? ($cek ? ' checked' : '') : ' disabled' ?>>
                             <span class="font-semibold"><?= esc($s['nama']) ?></span> <span class="text-xs text-gray-500 dark:text-gray-400"><?= esc($s['kelas']) ?></span>
+                            <?php if (! $s['ajuan_ini']): ?><span class="font-mono text-xs text-gray-500 dark:text-gray-400" title="Ajuan PKL siswa ini"><?= esc($s['ajuan_kode']) ?></span><?php endif; ?>
                             <?php if ($s['pj'] !== null): ?>
                                 <a href="<?= site_url('admin/surat/' . (int) $s['pj']['surat_id']) ?>" class="lencana lencana-kuning ms-auto hover:underline">Sudah diperpanjang s.d. <?= esc($tglIndo($s['pj']['selesai_baru'])) ?> (<?= esc($s['pj']['kode']) ?>)</a>
                             <?php elseif ($s['ditarik'] !== null): ?>
                                 <span class="lencana lencana-merah ms-auto">Ditarik (<?= esc($s['ditarik']) ?>)</span>
+                            <?php elseif ($s['beda'] !== null && ! $ubah): ?>
+                                <a href="<?= esc($pilihUrl((int) $s['ajuan_id'], (int) $s['siswa_id']), 'attr') ?>" class="lencana lencana-abu ms-auto hover:underline" title="Satu surat hanya untuk satu tanggal selesai">Selesai <?= esc($tglIndo($s['beda'])) ?> · buat surat terpisah</a>
+                            <?php elseif ($s['beda'] !== null): ?>
+                                <span class="lencana lencana-abu ms-auto">Selesai <?= esc($tglIndo($s['beda'])) ?> (beda tanggal)</span>
                             <?php endif; ?>
                         </label>
                     <?php endforeach; ?>
                 </div>
                 <?php if ($bisa === 0): ?>
-                    <?= ui_peringatan('awas', 'Semua siswa ajuan ini sudah pernah diperpanjang atau sedang ditarik. Perpanjangan PKL hanya boleh satu kali.') ?>
+                    <?= ui_peringatan('awas', 'Semua siswa di tempat PKL ini sudah pernah diperpanjang, sedang ditarik, atau tanggal selesainya beda. Perpanjangan PKL hanya boleh satu kali.') ?>
                 <?php endif; ?>
             </div>
         </section>

@@ -12,16 +12,20 @@ use CodeIgniter\Database\BaseConnection;
  * 2026-10-26; rancangan + aturan R1–R12: docs/DESAIN-PERPANJANGAN-PKL.md). Satu-satunya tempat aturan perpanjangan, dipakai web
  * staf, Layanan Siswa, dan API.
  *
- *   - Syarat (R1): ajuan PKL disetujui, siswa anggota aktif ajuan itu, tidak punya Surat Penarikan yang belum dibatalkan.
+ *   - Syarat (R1): ajuan PKL disetujui, siswa anggota aktif ajuan disetujui di PERUSAHAAN yang sama (2026-10-28: teman boleh dari
+ *     ajuan lain, bagian 13), tidak punya Surat Penarikan yang belum dibatalkan.
  *   - Maksimal SATU KALI per siswa per ajuan (R5, keputusan user): ditolak bila sudah ada surat perpanjangan siswa itu yang belum
  *     dibatalkan. Dibatalkan = boleh minta lagi.
- *   - Tanggal selesai semula: dari ajuan (Surat Balasan / laporan siswa) bila tercatat; kosong → diketik siswa/staf (ditandai).
- *   - Satu surat per ajuan + tanggal selesai baru (R6): penyusul bertanggal sama ikut surat itu selama belum bernomor/disetujui.
+ *   - Tanggal selesai semula: dari ajuan yang dipilih (Surat Balasan / laporan siswa) bila tercatat; kosong → diketik siswa/staf
+ *     (ditandai). Satu surat = SATU tanggal semula: siswa yang ajuannya mencatat tanggal selesai lain tidak bisa ikut (R13).
+ *   - Satu surat per perusahaan + tanggal semula + tanggal baru (R6): penyusul bertanggal sama ikut surat itu selama belum
+ *     bernomor/disetujui (dicari langsung di pkl_perpanjangan, jadi surat buatan aturan lama ikut terbaca).
  *   - Tanggal baru BERLAKU hanya bila suratnya disetujui (R8) — dihitung lewat JOIN (selesaiEfektif), tanpa menyalin ke tabel lain,
  *     jadi ACC / batal ACC / batal surat otomatis benar. pkl_pengajuan.tanggal_selesai TIDAK ditimpa (R9).
  *
- * Isi surat dibekukan di surat_sekolah.isi (sapaan, selesai_lama, sumber_lama, selesai_baru, alasan_perpanjangan, kunci) + tabel
- * pkl_perpanjangan (satu baris per surat, tanggal bertipe DATE untuk dicari). Siswa surat = surat_sekolah_siswa.
+ * Isi surat dibekukan di surat_sekolah.isi (sapaan, selesai_lama, sumber_lama, selesai_baru, alasan_perpanjangan) + tabel
+ * pkl_perpanjangan (satu baris per surat; pengajuan_id = ajuan yang dipilih saat membuat; tanggal bertipe DATE untuk dicari).
+ * Siswa surat = surat_sekolah_siswa, dengan pengajuan_id = ajuan asal tiap siswa (migrasi 2026-10-28; kosong = ajuan surat).
  */
 final class SuratPerpanjangan
 {
@@ -165,12 +169,26 @@ final class SuratPerpanjangan
         return 'lain';
     }
 
-    /** Kunci pencegah ganda (R6): ajuan + tanggal selesai baru; $n > 1 = surat lanjutan bila surat pertama sudah bernomor/disetujui. */
-    public static function kunci(int $ajuanId, string $selesaiBaru, int $n = 1): string
+    /**
+     * SQL ajuan asal siswa di surat perpanjangan: kolom per siswa (migrasi 2026-10-28) bila ada, selain itu ajuan suratnya.
+     * $ss = alias surat_sekolah_siswa, $pp = alias pkl_perpanjangan.
+     */
+    public static function sqlAjuanSiswa(string $ss = 'ss', string $pp = 'pp'): string
     {
-        $dasar = sha1('perpanjangan|' . $ajuanId . '|' . $selesaiBaru);
+        return SuratSekolah::kolomAjuanSiswa() ? 'COALESCE(' . $ss . '.pengajuan_id, ' . $pp . '.pengajuan_id)' : $pp . '.pengajuan_id';
+    }
 
-        return $n > 1 ? sha1($dasar . '|' . $n) : $dasar;
+    /**
+     * Tanggal selesai yang tercatat di ajuan siswa ini bila BERBEDA dari tanggal semula surat $lama (R13: satu surat = satu tanggal
+     * semula), selain itu null. Ajuan yang belum mencatat tanggal selesai ikut tanggal surat.
+     *
+     * @param array<string, mixed> $siswa butir grup() (selesai_ajuan)
+     */
+    public static function bedaSelesai(array $siswa, ?string $lama): ?string
+    {
+        $t = (string) ($siswa['selesai_ajuan'] ?? '');
+
+        return $t !== '' && (string) $lama !== '' && $t !== $lama ? $t : null;
     }
 
     /** @param list<string> $nama */
@@ -293,27 +311,30 @@ final class SuratPerpanjangan
     // =================================================================
 
     /**
-     * Perpanjangan yang BELUM dibatalkan untuk siswa-siswa ini (opsional: hanya ajuan $ajuanId), satu per siswa per ajuan.
+     * Perpanjangan yang BELUM dibatalkan untuk siswa-siswa ini (opsional: hanya bila ajuan asal siswanya = $ajuan / salah satu
+     * $ajuan), satu per siswa per ajuan. ajuan_id = ajuan asal SISWA itu (bukan ajuan yang dipilih saat surat dibuat).
      *
-     * @param list<int> $siswaIds
+     * @param list<int>           $siswaIds
+     * @param int|list<int>|null  $ajuan
      *
      * @return array<int, array{surat_id: int, kode: string, status: string, nomor: ?string, ajuan_id: int, selesai_lama: string, sumber_lama: string, selesai_baru: string, berlaku: bool}>
      *         siswa_id => perpanjangan (bila siswa punya di beberapa ajuan, yang terbaru)
      */
-    public function aktif(array $siswaIds, ?int $ajuanId = null): array
+    public function aktif(array $siswaIds, int|array|null $ajuan = null): array
     {
         $siswaIds = array_values(array_unique(array_filter(array_map('intval', $siswaIds), static fn (int $x) => $x > 0)));
         if ($siswaIds === [] || ! self::tabelAda()) {
             return [];
         }
-        $b = $this->db->table('pkl_perpanjangan pp')
-            ->select('ss.siswa_id, s.id AS surat_id, s.status, s.nomor, pp.pengajuan_id, pp.selesai_lama, pp.sumber_lama, pp.selesai_baru')
+        $kol = self::sqlAjuanSiswa('ss', 'pp');
+        $b   = $this->db->table('pkl_perpanjangan pp')
+            ->select('ss.siswa_id, s.id AS surat_id, s.status, s.nomor, ' . $kol . ' AS pengajuan_id, pp.selesai_lama, pp.sumber_lama, pp.selesai_baru', false)
             ->join('surat_sekolah s', 's.id = pp.surat_id')
             ->join('surat_sekolah_siswa ss', 'ss.surat_id = s.id')
             ->where('s.jenis', SuratJenis::PERPANJANGAN)->where('s.status !=', 'dibatalkan')
             ->whereIn('ss.siswa_id', $siswaIds);
-        if ($ajuanId !== null) {
-            $b->where('pp.pengajuan_id', $ajuanId);
+        if ($ajuan !== null) {
+            $b->where($kol . ' IN (' . implode(', ', array_map('intval', (array) $ajuan ?: [0])) . ')', null, false);
         }
         $out = [];
         foreach ($b->orderBy('s.id', 'ASC')->get()->getResultArray() as $r) {
@@ -364,13 +385,14 @@ final class SuratPerpanjangan
     }
 
     /**
-     * Siswa dengan Surat Penarikan yang belum dibatalkan di ajuan ini (R1).
+     * Siswa dengan Surat Penarikan yang belum dibatalkan di ajuan ini / salah satu ajuan ini (R1).
      *
-     * @param list<int> $siswaIds
+     * @param int|list<int> $ajuan
+     * @param list<int>     $siswaIds
      *
      * @return array<int, string> siswa_id => kode surat penarikan
      */
-    public function ditarik(int $ajuanId, array $siswaIds): array
+    public function ditarik(int|array $ajuan, array $siswaIds): array
     {
         if ($siswaIds === []) {
             return [];
@@ -378,7 +400,7 @@ final class SuratPerpanjangan
         $out = [];
         foreach ($this->db->table('surat_sekolah s')->select('ss.siswa_id, s.id')
             ->join('surat_sekolah_siswa ss', 'ss.surat_id = s.id')
-            ->where('s.jenis', SuratJenis::PENARIKAN)->where('s.status !=', 'dibatalkan')->where('s.pengajuan_id', $ajuanId)
+            ->where('s.jenis', SuratJenis::PENARIKAN)->where('s.status !=', 'dibatalkan')->whereIn('s.pengajuan_id', array_map('intval', (array) $ajuan ?: [0]))
             ->whereIn('ss.siswa_id', $siswaIds)->get()->getResultArray() as $r) {
             $out[(int) $r['siswa_id']] = SuratSekolahModel::kode((int) $r['id']);
         }
@@ -387,39 +409,94 @@ final class SuratPerpanjangan
     }
 
     /**
-     * Satu ajuan disetujui untuk formulir: data ajuan (SuratPkl::ajuan) + tanggal selesai semula & asalnya + status tiap siswa
-     * (bisa dipilih? sudah diperpanjang / ditarik). null bila ajuan tidak disetujui / tanpa siswa aktif.
+     * Ajuan $ajuanId + ajuan DISETUJUI lain di perusahaan yang sama ($ajuanId lebih dulu, lalu urut id). Kunci perusahaan sama dengan
+     * Surat Izin Ujian/TKA (SuratAcara::perusahaan): master perusahaan, atau nama ternormalisasi bila belum tertaut. Server yang belum
+     * menjalankan migrasi 2026-10-28 → hanya [$ajuanId] (aturan lama: teman satu ajuan).
+     *
+     * @return list<int>
+     */
+    public function ajuanSeperusahaan(int $ajuanId): array
+    {
+        $r = $this->db->table('pkl_pengajuan')->select('perusahaan_id, perusahaan_norm')->where('id', $ajuanId)->get()->getRowArray();
+        if ($r === null || ! SuratSekolah::kolomAjuanSiswa() || (empty($r['perusahaan_id']) && (string) ($r['perusahaan_norm'] ?? '') === '')) {
+            return [$ajuanId];
+        }
+        $b = $this->db->table('pkl_pengajuan')->select('id')->where('status', 'disetujui')->where('id !=', $ajuanId);
+        if (! empty($r['perusahaan_id'])) {
+            $b->where('perusahaan_id', (int) $r['perusahaan_id']);
+        } else {
+            $b->where('perusahaan_id', null)->where('perusahaan_norm', (string) $r['perusahaan_norm']);
+        }
+
+        return array_merge([$ajuanId], array_map('intval', array_column($b->orderBy('id', 'ASC')->get()->getResultArray(), 'id')));
+    }
+
+    /**
+     * Ajuan disetujui $ajuanId (SuratPkl::ajuan) dengan siswa = SEMUA siswa aktif yang PKL di perusahaan yang sama: siswa ajuan ini
+     * dulu, lalu ajuan lain (urut id). Tiap siswa + ajuan_id, ajuan_kode, selesai_ajuan (tanggal selesai tercatat di ajuannya),
+     * ajuan_ini. ajuan_ids = ajuan yang ikut (ajuan ini pertama). null bila ajuan tidak disetujui / tanpa siswa aktif.
+     *
+     * @return array<string, mixed>|null
+     */
+    private function grup(int $ajuanId): ?array
+    {
+        $semua = array_column((new SuratPkl($this->db))->ajuan($this->ajuanSeperusahaan($ajuanId)), null, 'id');
+        $a     = $semua[$ajuanId] ?? null;
+        if ($a === null) {
+            return null;
+        }
+        unset($semua[$ajuanId]);
+        ksort($semua);
+        $siswa = [];
+        foreach (array_merge([$a], array_values($semua)) as $x) {
+            foreach ($x['siswa'] as $s) {
+                $siswa[$s['siswa_id']] ??= $s + ['ajuan_id' => $x['id'], 'ajuan_kode' => $x['kode'], 'selesai_ajuan' => $x['selesai'], 'ajuan_ini' => $x['id'] === $ajuanId];
+            }
+        }
+        $a['siswa']     = array_values($siswa);
+        $a['ajuan_ids'] = array_merge([$ajuanId], array_map('intval', array_keys($semua)));
+
+        return $a;
+    }
+
+    /**
+     * Satu ajuan disetujui untuk formulir: data ajuan (SuratPkl::ajuan) + tanggal selesai semula & asalnya + SEMUA siswa yang PKL di
+     * perusahaan yang sama (grup(); 2026-10-28) dengan status tiap siswa (bisa dipilih? sudah diperpanjang / ditarik / tanggal
+     * selesai tercatatnya beda). jml_ajuan = banyak ajuan yang ikut. null bila ajuan tidak disetujui / tanpa siswa aktif.
      *
      * @return array<string, mixed>|null
      */
     public function ajuanForm(int $ajuanId): ?array
     {
-        $a = (new SuratPkl($this->db))->ajuan([$ajuanId])[0] ?? null;
+        $a = $this->grup($ajuanId);
         if ($a === null) {
             return null;
         }
         $ids    = array_column($a['siswa'], 'siswa_id');
-        $pj     = $this->aktif($ids, $ajuanId);
-        $tarik  = $this->ditarik($ajuanId, $ids);
+        $pj     = $this->aktif($ids, $a['ajuan_ids']);
+        $tarik  = $this->ditarik($a['ajuan_ids'], $ids);
         $bisa   = 0;
         foreach ($a['siswa'] as &$s) {
             $x            = $pj[$s['siswa_id']] ?? null;
             $s['pj']      = $x !== null ? ['kode' => $x['kode'], 'surat_id' => $x['surat_id'], 'status' => $x['status'], 'selesai_baru' => $x['selesai_baru'], 'berlaku' => $x['berlaku']] : null;
             $s['ditarik'] = $tarik[$s['siswa_id']] ?? null;
-            $s['bisa']    = $x === null && $s['ditarik'] === null;
+            $s['beda']    = self::bedaSelesai($s, $a['selesai']);
+            $s['bisa']    = $x === null && $s['ditarik'] === null && $s['beda'] === null;
             $bisa        += $s['bisa'] ? 1 : 0;
         }
         unset($s);
         $a['selesai_lama'] = $a['selesai'];
         $a['sumber_lama']  = $a['selesai'] !== null ? 'sekolah' : null;
         $a['bisa']         = $bisa;
+        $a['jml_ajuan']    = count($a['ajuan_ids']);
 
         return $a;
     }
 
     /**
-     * Cari ajuan disetujui (perusahaan, kode PKL-xxxxx, atau nama siswa aktif) untuk kotak "cari lalu pilih". Maks $maks ajuan,
-     * terbaru dulu. Kata kunci < 2 huruf → [].
+     * Cari ajuan disetujui (perusahaan, kode PKL-xxxxx, atau nama siswa aktif) untuk kotak "cari lalu pilih". SATU hasil per
+     * perusahaan (formulirnya sudah memuat semua siswa di sana; ajuan = yang cocok paling baru). Maks $maks, terbaru dulu. Kata
+     * kunci < 2 huruf → [].
      *
      * @return list<array<string, mixed>> butir ajuanForm()
      */
@@ -429,7 +506,7 @@ final class SuratPerpanjangan
         if (mb_strlen($q) < 2) {
             return [];
         }
-        $b = $this->db->table('pkl_pengajuan p')->select('p.id')->distinct()
+        $b = $this->db->table('pkl_pengajuan p')->select('p.id, p.perusahaan_id, p.perusahaan_norm')->distinct()
             ->join('pkl_anggota a', 'a.pengajuan_id = p.id')
             ->join('siswa s', 's.id = a.siswa_id')
             ->join('pkl_perusahaan m', 'm.id = p.perusahaan_id', 'left')
@@ -438,9 +515,24 @@ final class SuratPerpanjangan
         if (preg_match('~^(pkl-?)?0*(\d{1,9})$~i', $q, $m) === 1) {
             $b->orWhere('p.id', (int) $m[2]);
         }
-        $ids = array_map('intval', array_column($b->groupEnd()->orderBy('p.id', 'DESC')->get($maks)->getResultArray(), 'id'));
+        $lintas = SuratSekolah::kolomAjuanSiswa();
+        $lihat  = [];
+        $out    = [];
+        foreach ($b->groupEnd()->orderBy('p.id', 'DESC')->get($maks * 5)->getResultArray() as $r) {
+            $k = ! $lintas ? 'a:' . $r['id'] : (! empty($r['perusahaan_id']) ? 'm:' . (int) $r['perusahaan_id'] : 'n:' . $r['perusahaan_norm']);
+            if (isset($lihat[$k])) {
+                continue;
+            }
+            $lihat[$k] = true;
+            if (($f = $this->ajuanForm((int) $r['id'])) !== null) {
+                $out[] = $f;
+            }
+            if (count($out) >= $maks) {
+                break;
+            }
+        }
 
-        return array_values(array_filter(array_map(fn (int $id) => $this->ajuanForm($id), $ids)));
+        return $out;
     }
 
     /**
@@ -455,7 +547,7 @@ final class SuratPerpanjangan
         $sampai   = self::tambahHari($hariIni, $hari);
         $pj       = self::tabelAda()
             ? 'NOT EXISTS (SELECT 1 FROM pkl_perpanjangan pp JOIN surat_sekolah x ON x.id = pp.surat_id AND x.status <> \'dibatalkan\''
-                . ' JOIN surat_sekolah_siswa xs ON xs.surat_id = x.id WHERE pp.pengajuan_id = a.pengajuan_id AND xs.siswa_id = a.siswa_id)'
+                . ' JOIN surat_sekolah_siswa xs ON xs.surat_id = x.id WHERE ' . self::sqlAjuanSiswa('xs', 'pp') . ' = a.pengajuan_id AND xs.siswa_id = a.siswa_id)'
             : '1 = 1';
         $tarik = 'NOT EXISTS (SELECT 1 FROM surat_sekolah t JOIN surat_sekolah_siswa ts ON ts.surat_id = t.id WHERE t.jenis = \'' . SuratJenis::PENARIKAN
             . '\' AND t.status <> \'dibatalkan\' AND t.pengajuan_id = a.pengajuan_id AND ts.siswa_id = a.siswa_id)';
@@ -483,11 +575,12 @@ final class SuratPerpanjangan
     // =================================================================
 
     /**
-     * Buat surat perpanjangan (atau ikut surat yang sama, R6) untuk siswa pilihan satu ajuan. Semua pemeriksaan & penulisan dalam
-     * SATU transaksi dengan kunci baris anggota (dua klik / dua teman bersamaan tidak menghasilkan perpanjangan ganda).
+     * Buat surat perpanjangan (atau ikut surat yang sama, R6) untuk siswa pilihan yang PKL di perusahaan ajuan $in['ajuan_id']
+     * (siswa ajuan itu dan/atau ajuan disetujui lain di perusahaan yang sama, 2026-10-28). Semua pemeriksaan & penulisan dalam SATU
+     * transaksi dengan kunci baris anggota seluruh perusahaan (dua klik / dua teman bersamaan tidak menghasilkan perpanjangan ganda).
      *
-     * @param array<string, mixed> $in      ajuan_id, siswa[] (id), tanggal_surat, sapaan, selesai_lama (bila belum tercatat), selesai_baru,
-     *                                      alasan_pilih, alasan_lain
+     * @param array<string, mixed> $in      ajuan_id (ajuan yang dipilih: sumber tanggal semula, alamat, mulai PKL), siswa[] (id),
+     *                                      tanggal_surat, sapaan, selesai_lama (bila belum tercatat), selesai_baru, alasan_pilih, alasan_lain
      * @param array<string, mixed> $konteks pelaku (SuratSekolah)
      * @param array{sumber?: string, jendela?: bool, hariIni?: string} $opsi sumber = staf|siswa (asal surat & asal tanggal semula yang
      *                                      diketik); jendela = terapkan jendela form siswa (R2)
@@ -503,7 +596,7 @@ final class SuratPerpanjangan
         $galat  = $h['galat'];
         $aid    = (int) ($in['ajuan_id'] ?? 0);
         $pilih  = array_values(array_unique(array_filter(array_map('intval', array_filter((array) ($in['siswa'] ?? []), 'is_scalar')), static fn (int $x) => $x > 0)));
-        $a      = $aid > 0 ? (new SuratPkl($this->db))->ajuan([$aid])[0] ?? null : null;
+        $a      = $aid > 0 ? $this->grup($aid) : null;
         if ($a === null) {
             return $this->tolak(['ajuan_id' => 'Ajuan PKL tidak ditemukan, belum disetujui, atau siswanya tidak aktif lagi.']);
         }
@@ -511,7 +604,7 @@ final class SuratPerpanjangan
         if ($pilih === []) {
             $galat['siswa'] = 'Pilih minimal satu siswa yang PKL-nya diperpanjang.';
         } elseif (count($siswa) !== count($pilih)) {
-            $galat['siswa'] = 'Ada siswa pilihan yang bukan anggota aktif ajuan ' . $a['kode'] . '. Muat ulang halaman lalu pilih lagi.';
+            $galat['siswa'] = 'Ada siswa pilihan yang tidak sedang PKL di ' . $a['perusahaan'] . ' (ajuan disetujui). Muat ulang halaman lalu pilih lagi.';
         }
 
         // Tanggal selesai semula: data sekolah menang; diketik hanya bila belum tercatat (R3).
@@ -524,6 +617,9 @@ final class SuratPerpanjangan
         if (! isset($galat['selesai_lama']) && ! isset($galat['selesai_baru'])) {
             $at    = self::aturanTanggal($a['mulai'] ?? null, (string) $lama, $sumber, (string) $h['isi']['selesai_baru'], $p);
             $galat += $at['galat'];
+        }
+        if (! isset($galat['siswa']) && ($beda = self::tolakBeda($siswa, (string) $lama)) !== '') {
+            $galat['siswa'] = $beda;
         }
         if (($opsi['jendela'] ?? false) && $lama !== '' && ! isset($galat['selesai_lama'])) {
             $j = self::jendela((string) $lama, $p, $opsi['hariIni'] ?? null);
@@ -542,14 +638,15 @@ final class SuratPerpanjangan
             'alasan_perpanjangan' => $h['isi']['alasan_perpanjangan'], 'alamat' => (string) $a['alamat']];
         $ids  = array_column($siswa, 'siswa_id');
         $nama = array_column($siswa, 'nama', 'siswa_id');
+        $grup = $a['ajuan_ids'];
         $svc  = new SuratSekolah($this->db);
 
         $this->db->transBegin();
         try {
-            // Kunci baris anggota (R5 dan R6 diperiksa sesudah ini, jadi permintaan bersamaan menunggu giliran).
-            $this->db->query('SELECT id FROM pkl_anggota WHERE pengajuan_id = ? AND siswa_id IN ? FOR UPDATE', [$aid, $ids]);
+            // Kunci baris anggota seluruh perusahaan (R5 dan R6 diperiksa sesudah ini, jadi permintaan bersamaan menunggu giliran).
+            $this->db->query('SELECT id FROM pkl_anggota WHERE pengajuan_id IN ? FOR UPDATE', [$grup]);
 
-            $ada = $this->aktif($ids, $aid);
+            $ada = $this->aktif($ids, $grup);
             if ($ada !== []) {
                 $this->db->transRollback();
                 $teks = [];
@@ -559,7 +656,7 @@ final class SuratPerpanjangan
 
                 return $this->tolak(['siswa' => 'Perpanjangan PKL hanya boleh satu kali. Sudah punya surat perpanjangan: ' . implode(', ', $teks) . '.'], 'sudah');
             }
-            if (($tarik = $this->ditarik($aid, $ids)) !== []) {
+            if (($tarik = $this->ditarik($grup, $ids)) !== []) {
                 $this->db->transRollback();
                 $teks = [];
                 foreach ($tarik as $sid => $kode) {
@@ -569,27 +666,14 @@ final class SuratPerpanjangan
                 return $this->tolak(['siswa' => 'Siswa sedang ditarik dari tempat PKL ini (Surat Penarikan): ' . implode(', ', $teks) . '.']);
             }
 
-            // R6: surat ajuan + tanggal baru yang sama dan masih bisa diubah → ikut; sudah bernomor/disetujui → surat lanjutan.
-            $ikut = null;
-            for ($n = 1; $n <= 20; $n++) {
-                $kunci = self::kunci($aid, $isi['selesai_baru'], $n);
-                $x     = $svc->adaKunci($kunci);
-                if ($x === null) {
-                    break;
-                }
-                $baris = $this->db->query('SELECT id, status, nomor FROM surat_sekolah WHERE id = ? FOR UPDATE', [$x['id']])->getRowArray();
-                if ($baris !== null && SuratSekolah::alasanTakBisaUbah($baris) === null) {
-                    $ikut = (int) $baris['id'];
-                    break;
-                }
-            }
-            $isi['kunci'] = $kunci;
+            // R6: surat perusahaan ini dengan tanggal semula & baru yang sama dan masih bisa diubah → ikut; selain itu surat baru.
+            $ikut = $this->suratTerbuka($grup, (string) $lama, $isi['selesai_baru']);
 
             if ($ikut !== null) {
                 $suratId = $ikut;
                 $lamaSiswa = $svc->siswa($suratId);
                 foreach ($siswa as $s) {
-                    if (! $svc->aturSiswa($suratId, null, ['siswa_id' => $s['siswa_id'], 'kelas_id' => $s['kelas_id'], 'hp' => $s['hp']], self::judul($a['perusahaan'], array_merge(array_column($lamaSiswa, 'nama'), array_values($nama))))) {
+                    if (! $svc->aturSiswa($suratId, null, self::barisSurat($s), self::judul($a['perusahaan'], array_merge(array_column($lamaSiswa, 'nama'), array_values($nama))))) {
                         throw new \RuntimeException('siswa tidak bisa ditambahkan ke surat #' . $suratId);
                     }
                 }
@@ -599,7 +683,7 @@ final class SuratPerpanjangan
                 $r = $svc->buat(SuratJenis::PERPANJANGAN, [
                     'judul' => self::judul($a['perusahaan'], array_values($nama)), 'tanggal_surat' => $h['tanggal_surat'], 'isi' => $isi,
                     'perusahaan_nama' => $a['perusahaan'], 'pengajuan_id' => $aid, 'sumber' => $asal,
-                    'siswa' => array_map(static fn (array $s) => ['siswa_id' => $s['siswa_id'], 'kelas_id' => $s['kelas_id'], 'hp' => $s['hp']], $siswa),
+                    'siswa' => array_map(self::barisSurat(...), $siswa),
                 ], $konteks, $p);
                 if (! $r['ok']) {
                     throw new \RuntimeException((string) ($r['pesan'] ?? 'surat gagal disimpan'));
@@ -612,8 +696,7 @@ final class SuratPerpanjangan
                 ]);
                 $kodeHasil = 'baru';
             }
-            (new PklAjuan($this->db))->catat($aid, 'surat_sekolah', $konteks, mb_substr('Surat Perpanjangan ' . SuratSekolahModel::kode($suratId) . ($kodeHasil === 'ikut' ? ' (ditambah)' : ' dibuat')
-                . ': ' . implode(', ', $nama) . ' diperpanjang sampai ' . IsianBantu::tanggalIndo($isi['selesai_baru']), 0, 255));
+            $this->catatAjuan($siswa, $konteks, 'Surat Perpanjangan ' . SuratSekolahModel::kode($suratId) . ($kodeHasil === 'ikut' ? ' (ditambah)' : ' dibuat'), $isi['selesai_baru']);
             $this->db->transCommit();
         } catch (\Throwable $e) {
             $this->db->transRollback();
@@ -632,7 +715,8 @@ final class SuratPerpanjangan
 
     /**
      * Ubah data surat perpanjangan yang belum bernomor (menunggu/dikembalikan): tanggal surat, sapaan, tanggal selesai semula
-     * (hanya bila bukan dari data sekolah), tanggal baru, alasan, dan siswa (dari ajuan yang sama; siswa baru tetap diperiksa R1/R5).
+     * (hanya bila bukan dari data sekolah), tanggal baru, alasan, dan siswa (yang PKL di perusahaan yang sama; siswa baru tetap
+     * diperiksa R1/R5/R13).
      *
      * @param array<string, mixed> $m  hasil SuratSekolah::muat()
      * @param array<string, mixed> $in seperti buat()
@@ -651,7 +735,7 @@ final class SuratPerpanjangan
         $lamaI = $surat['isi_arr'];
         $h     = self::periksa($in);
         $galat = $h['galat'];
-        $a     = $aid > 0 ? (new SuratPkl($this->db))->ajuan([$aid])[0] ?? null : null;
+        $a     = $aid > 0 ? $this->grup($aid) : null;
         if ($a === null) {
             return ['ok' => false, 'pesan' => 'Ajuan PKL surat ini sudah tidak berstatus disetujui, jadi surat tidak bisa diubah. Batalkan surat ini bila perlu.'];
         }
@@ -660,7 +744,7 @@ final class SuratPerpanjangan
         if ($pilih === []) {
             $galat['siswa'] = 'Pilih minimal satu siswa yang PKL-nya diperpanjang.';
         } elseif (count($siswa) !== count($pilih)) {
-            $galat['siswa'] = 'Ada siswa pilihan yang bukan anggota aktif ajuan ini. Muat ulang halaman lalu pilih lagi.';
+            $galat['siswa'] = 'Ada siswa pilihan yang tidak sedang PKL di ' . $a['perusahaan'] . ' (ajuan disetujui). Muat ulang halaman lalu pilih lagi.';
         }
         $sumber = (string) ($lamaI['sumber_lama'] ?? 'sekolah');
         $lama   = (string) ($lamaI['selesai_lama'] ?? '');
@@ -673,40 +757,35 @@ final class SuratPerpanjangan
             $at    = self::aturanTanggal($a['mulai'] ?? null, $lama, $sumber, (string) $h['isi']['selesai_baru'], $p);
             $galat += $at['galat'];
         }
+        if (! isset($galat['siswa']) && ($beda = self::tolakBeda($siswa, $lama)) !== '') {
+            $galat['siswa'] = $beda;
+        }
         if ($galat !== []) {
             return ['ok' => false, 'pesan' => 'Periksa lagi isiannya.', 'galat' => $galat];
         }
         $isi = ['sapaan' => $h['isi']['sapaan'], 'selesai_lama' => $lama, 'sumber_lama' => $sumber, 'selesai_baru' => $h['isi']['selesai_baru'],
             'alasan_perpanjangan' => $h['isi']['alasan_perpanjangan'], 'alamat' => (string) ($lamaI['alamat'] ?? $a['alamat'])];
-        $ids     = array_column($siswa, 'siswa_id');
-        $svc     = new SuratSekolah($this->db);
-        $isi['kunci'] = (string) ($lamaI['kunci'] ?? '');
-        if ($isi['selesai_baru'] !== (string) ($lamaI['selesai_baru'] ?? '')) {
-            for ($n = 1; $n <= 20; $n++) { // tanggal baru berubah → kunci baru yang belum dipakai surat lain
-                $isi['kunci'] = self::kunci($aid, $isi['selesai_baru'], $n);
-                if ($svc->adaKunci($isi['kunci'], $id) === null) {
-                    break;
-                }
-            }
-        }
+        $ids  = array_column($siswa, 'siswa_id');
+        $grup = $a['ajuan_ids'];
+        $svc  = new SuratSekolah($this->db);
 
         $this->db->transBegin();
         try {
-            $this->db->query('SELECT id FROM pkl_anggota WHERE pengajuan_id = ? AND siswa_id IN ? FOR UPDATE', [$aid, $ids]);
-            $lain = array_filter($this->aktif($ids, $aid), static fn (array $x) => $x['surat_id'] !== $id);
+            $this->db->query('SELECT id FROM pkl_anggota WHERE pengajuan_id IN ? FOR UPDATE', [$grup]);
+            $lain = array_filter($this->aktif($ids, $grup), static fn (array $x) => $x['surat_id'] !== $id);
             if ($lain !== []) {
                 $this->db->transRollback();
 
                 return ['ok' => false, 'pesan' => 'Perpanjangan PKL hanya boleh satu kali — sudah punya surat lain: ' . implode(', ', array_map(static fn (array $x) => $x['kode'], $lain)) . '.', 'galat' => ['siswa' => 'Siswa sudah punya surat perpanjangan lain.']];
             }
-            if (($tarik = $this->ditarik($aid, $ids)) !== []) {
+            if (($tarik = $this->ditarik($grup, $ids)) !== []) {
                 $this->db->transRollback();
 
                 return ['ok' => false, 'pesan' => 'Ada siswa yang sedang ditarik dari tempat PKL ini (' . implode(', ', $tarik) . ').', 'galat' => ['siswa' => 'Siswa sedang ditarik.']];
             }
             $r = $svc->ubah($id, [
                 'judul' => self::judul((string) $surat['perusahaan_nama'], array_column($siswa, 'nama')), 'tanggal_surat' => $h['tanggal_surat'], 'isi' => $isi,
-                'siswa' => array_map(static fn (array $x) => ['siswa_id' => $x['siswa_id'], 'kelas_id' => $x['kelas_id'], 'hp' => $x['hp']], $siswa),
+                'siswa' => array_map(self::barisSurat(...), $siswa),
             ], $konteks);
             if (! $r['ok']) {
                 $this->db->transRollback();
@@ -716,8 +795,7 @@ final class SuratPerpanjangan
             $this->db->table('pkl_perpanjangan')->where('surat_id', $id)->update([
                 'selesai_lama' => $lama, 'sumber_lama' => $sumber, 'selesai_baru' => $isi['selesai_baru'], 'updated_at' => date('Y-m-d H:i:s'),
             ]);
-            (new PklAjuan($this->db))->catat($aid, 'surat_sekolah', $konteks, mb_substr('Surat Perpanjangan ' . SuratSekolahModel::kode($id) . ' diubah: '
-                . implode(', ', array_column($siswa, 'nama')) . ' diperpanjang sampai ' . IsianBantu::tanggalIndo($isi['selesai_baru']), 0, 255));
+            $this->catatAjuan($siswa, $konteks, 'Surat Perpanjangan ' . SuratSekolahModel::kode($id) . ' diubah', $isi['selesai_baru']);
             $this->db->transCommit();
         } catch (\Throwable $e) {
             $this->db->transRollback();
@@ -770,6 +848,73 @@ final class SuratPerpanjangan
         }
 
         return self::$tabel;
+    }
+
+    /**
+     * Kalimat galat R13 bila ada siswa pilihan yang tanggal selesai tercatatnya beda dari tanggal semula surat ('' = semua cocok).
+     *
+     * @param list<array<string, mixed>> $siswa butir grup()
+     */
+    private static function tolakBeda(array $siswa, string $lama): string
+    {
+        $beda = [];
+        foreach ($siswa as $s) {
+            if (($t = self::bedaSelesai($s, $lama)) !== null) {
+                $beda[] = $s['nama'] . ' (selesai ' . IsianBantu::tanggalIndo($t) . ')';
+            }
+        }
+
+        return $beda === [] ? '' : 'Satu surat hanya untuk satu tanggal selesai PKL (' . IsianBantu::tanggalIndo($lama) . '). Tanggal selesai PKL berbeda: '
+            . implode(', ', $beda) . ' — buat surat terpisah untuk siswa itu.';
+    }
+
+    /**
+     * Baris siswa untuk SuratSekolah (+ ajuan asalnya).
+     *
+     * @param array<string, mixed> $s butir grup()
+     *
+     * @return array{siswa_id: int, kelas_id: ?int, hp: ?string, pengajuan_id: int}
+     */
+    private static function barisSurat(array $s): array
+    {
+        return ['siswa_id' => (int) $s['siswa_id'], 'kelas_id' => $s['kelas_id'], 'hp' => $s['hp'], 'pengajuan_id' => (int) $s['ajuan_id']];
+    }
+
+    /**
+     * Surat perpanjangan perusahaan ini (ajuan $ajuanIds) dengan tanggal semula & baru yang sama yang masih bisa ditambah siswa
+     * (belum bernomor, menunggu/dikembalikan = SuratSekolah::alasanTakBisaUbah null), dikunci FOR UPDATE; null bila tidak ada (R6).
+     *
+     * @param list<int> $ajuanIds
+     */
+    private function suratTerbuka(array $ajuanIds, string $lama, string $baru): ?int
+    {
+        $r = $this->db->query('SELECT s.id FROM pkl_perpanjangan pp JOIN surat_sekolah s ON s.id = pp.surat_id'
+            . ' WHERE pp.pengajuan_id IN ? AND pp.selesai_lama = ? AND pp.selesai_baru = ? AND s.jenis = ?'
+            . " AND s.status IN ('menunggu', 'dikembalikan') AND (s.nomor IS NULL OR s.nomor = '') ORDER BY s.id ASC LIMIT 1 FOR UPDATE",
+            [$ajuanIds, $lama, $baru, SuratJenis::PERPANJANGAN])->getRowArray();
+
+        return $r === null ? null : (int) $r['id'];
+    }
+
+    /**
+     * Riwayat tiap ajuan asal siswa surat ("Surat Perpanjangan X dibuat: A, B diperpanjang sampai …"), supaya detail ajuan teman
+     * dari ajuan lain juga mencatatnya.
+     *
+     * @param list<array<string, mixed>> $siswa butir grup()
+     * @param array<string, mixed>       $konteks
+     */
+    private function catatAjuan(array $siswa, array $konteks, string $awal, string $baru): void
+    {
+        $per = [];
+        foreach ($siswa as $s) {
+            $per[(int) $s['ajuan_id']][] = (string) $s['nama'];
+        }
+        $svc = new PklAjuan($this->db);
+        foreach ($per as $aid => $nama) {
+            $lain = count($siswa) - count($nama);
+            $svc->catat($aid, 'surat_sekolah', $konteks, mb_substr($awal . ': ' . implode(', ', $nama) . ' diperpanjang sampai ' . IsianBantu::tanggalIndo($baru)
+                . ($lain > 0 ? ' (satu surat dengan ' . $lain . ' siswa dari ajuan lain)' : ''), 0, 255));
+        }
     }
 
     /**

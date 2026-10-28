@@ -63,3 +63,35 @@ Tampilan halaman PKL & Surat dirapikan (tombol jarang dipakai pindah ke menu **L
 cari-lalu-pilih di form Balasan/Penarikan, Pengaturan PKL bertab). **Tanpa migrasi tambahan, tanpa perubahan API, hak akses, maupun
 isian formulir.** Sesudah `git pull` cukup minta staf menekan **Ctrl+F5**. Panduan untuk staf: `docs/PANDUAN-TAMPILAN-PKL-SURAT.md`.
 Rincian teknis & hasil uji: `docs/RENCANA-RAPI-TAMPILAN-PKL-SURAT.md`.
+
+## 8. Pembaruan 2026-10-28 — ajak teman satu PERUSAHAAN (lintas ajuan)
+Teman yang bisa dicentang di Surat Perpanjangan kini = **semua siswa yang PKL di perusahaan yang sama**, walau dulu mengajukan PKL
+terpisah; semuanya masuk **satu surat**. Rincian: `docs/DESAIN-PERPANJANGAN-PKL.md` bagian 13.
+
+**Di server (1 migrasi kecil, menambah satu kolom):**
+1. Cadangkan database (cPanel → Backup).
+2. ```
+   cd ~/kangmuslim
+   git pull
+   phpm spark migrate
+   ```
+   Harus muncul `Running: … 2026-10-28-000001 … PerpanjanganLintasAjuan` lalu `Migrations complete.` Surat perpanjangan yang SUDAH ada
+   diisi otomatis (tidak perlu ekspor/impor data).
+3. Ctrl+F5 di peramban staf.
+
+**Cek cepat:** Operator → Surat Perpanjangan PKL → cari nama perusahaan yang siswanya banyak (mis. Noree) → hanya **satu** baris hasil
+bertuliskan "· N siswa dari M ajuan" → Pilih → semua siswanya tampil; yang tercentang hanya siswa ajuan yang dipilih.
+
+**Surat yang sudah terlanjur diajukan (sebelum pembaruan):** tetap sah, tidak berubah. Bila temannya ikut diperpanjang:
+- teman meminta sendiri lewat Layanan Siswa dengan tanggal yang SAMA → otomatis **ikut surat itu** selama surat belum bernomor (belum diunduh); atau
+- Operator buka surat itu → **Lainnya → Ubah data** → centang teman (kini tampil semua siswa perusahaan itu) → Simpan perubahan.
+Surat yang sudah bernomor tidak bisa diubah: teman dibuatkan surat baru (menu Surat Perpanjangan → cari → centang teman).
+
+**Teks WA untuk siswa (pengganti kalimat terakhir di bagian 5):**
+> Di langkah *Teman yang juga diperpanjang* sekarang muncul **semua temanmu yang PKL di perusahaan yang sama**. Centang yang PKL-nya juga
+> diperpanjang sampai tanggal yang sama — cukup satu orang yang mengisi, temanmu tidak perlu mengisi lagi.
+
+| Gejala | Penyebab & langkah |
+|---|---|
+| Teman tampil redup "beda tanggal" | Tanggal selesai PKL teman itu tercatat beda. Satu surat = satu tanggal selesai; teman itu minta surat sendiri / Operator buat surat terpisah (tautan "buat surat terpisah"). |
+| Teman tidak muncul sama sekali | Ajuan PKL teman belum **disetujui**, siswa tidak aktif, atau tempat PKL-nya tercatat sebagai perusahaan lain (beda data master). |

@@ -48,7 +48,7 @@ aplikasi (sekarang hanya `perpanjangan`); selain itu buka `url_web` di peramban 
 | `ditarik` | kode Surat Penarikan \| null |
 | `cepat[]` | `{label: "+1 bulan", tanggal: "Y-m-d", teks: "27 November 2026"}` ×4 (+2 minggu, +1/2/3 bulan) |
 | `alasan_saran[]` | `{kode: "0".."3", kalimat, label}` (+ pilihan "lain" di layar) |
-| `teman[]` | `{id, nama, kelas, bisa, ket}` — teman satu ajuan; `bisa=false` → tampil redup dengan `ket` |
+| `teman[]` | `{id, nama, kelas, bisa, ket, satu_ajuan, ajuan_kode}` — **semua teman yang PKL di perusahaan yang sama** (2026-10-28; dulu hanya satu ajuan): `satu_ajuan=true` dulu, lalu ajuan lain urut nama. `bisa=false` → tampil redup dengan `ket` (sudah diperpanjang / ditarik / "PKL-nya selesai … (beda tanggal), minta surat sendiri"). `ket` bisa terisi walau `bisa=true` ("Tercatat selesai …" bila `selesai_lama` null) — tampilkan sebagai keterangan kecil. Daftar bisa panjang (belasan) → pakai daftar bergulir, bukan chip. |
 | `maks_hari` | 183 |
 
 ### `POST publik/layanan/perpanjangan`
@@ -57,7 +57,10 @@ aplikasi (sekarang hanya `perpanjangan`); selain itu buka `url_web` di peramban 
   "alasan_pilih": "0".."3" | "lain", "alasan_lain": "…", "teman": [123, 456] }
 ```
 - `201` → tampilkan `message`, lalu buka "Permintaan suratku" (`GET publik/layanan/saya`).
-- `422 data.errors.{selesai_baru|pilih_tanggal|selesai_lama|alasan|siswa|jendela}` — kalimat siap tampil.
+- `teman` boleh berisi id teman dari ajuan lain di perusahaan yang sama → semuanya masuk SATU surat (bila sudah ada surat perusahaan itu
+  dengan tanggal semula & baru yang sama dan belum bernomor, siswa ditambahkan ke surat itu).
+- `422 data.errors.{selesai_baru|pilih_tanggal|selesai_lama|alasan|siswa|jendela}` — kalimat siap tampil. `errors.siswa` juga untuk teman
+  yang tanggal selesai PKL-nya beda ("Satu surat hanya untuk satu tanggal selesai PKL …").
 - `409 data.kode="sudah"` (sudah pernah diperpanjang) · `409 data.kode="tidak_boleh"` · `401` token · `500` gagal simpan.
 
 ## Keamanan

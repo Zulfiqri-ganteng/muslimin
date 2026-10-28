@@ -1002,7 +1002,8 @@ final class LayananSiswa
 
     /**
      * Data formulir Surat Perpanjangan untuk siswa ini: ajuan + tanggal semula, jendela (buka/dini/lewat), perpanjangan yang sudah
-     * ada (dirinya), teman satu ajuan (bisa dicentang / terkunci + alasannya), dan pilihan cepat tanggal (+2 minggu, +1/2/3 bulan).
+     * ada (dirinya), teman yang PKL di PERUSAHAAN yang sama — satu ajuan maupun ajuan lain (2026-10-28; bisa dicentang / terkunci +
+     * alasannya), dan pilihan cepat tanggal (+2 minggu, +1/2/3 bulan). Teman satu ajuan dulu, lalu yang lain urut nama.
      *
      * @return array<string, mixed>
      */
@@ -1012,17 +1013,26 @@ final class LayananSiswa
         $lib   = new SuratPerpanjangan($this->db);
         $aid   = (int) ($s['ajuan']['id'] ?? 0);
         $a     = $aid > 0 ? $lib->ajuanForm($aid) : null;
+        $lama  = $a['selesai_lama'] ?? null;
         $saya  = null;
         $teman = [];
         foreach ($a['siswa'] ?? [] as $x) {
             if ($x['siswa_id'] === (int) $s['id']) {
                 $saya = $x;
-            } else {
-                $teman[] = ['id' => $x['siswa_id'], 'nama' => $x['nama'], 'kelas' => $x['kelas'], 'bisa' => $x['bisa'],
-                    'ket' => $x['pj'] !== null ? 'Sudah punya surat perpanjangan' : ($x['ditarik'] !== null ? 'Sedang ditarik' : '')];
+                continue;
             }
+            $ket = match (true) {
+                $x['pj'] !== null      => 'Sudah punya surat perpanjangan',
+                $x['ditarik'] !== null => 'Sedang ditarik',
+                $x['beda'] !== null    => 'PKL-nya selesai ' . IsianBantu::tanggalIndo($x['beda']) . ' (beda tanggal), minta surat sendiri',
+                // Tanggal semula diketik pengaju: beri tahu tanggal yang tercatat di ajuan teman (harus sama, R13).
+                $lama === null && $x['selesai_ajuan'] !== null => 'Tercatat selesai ' . IsianBantu::tanggalIndo($x['selesai_ajuan']),
+                default                => '',
+            };
+            $teman[] = ['id' => $x['siswa_id'], 'nama' => $x['nama'], 'kelas' => $x['kelas'], 'bisa' => $x['bisa'], 'ket' => $ket,
+                'satu_ajuan' => $x['ajuan_ini'], 'ajuan_kode' => $x['ajuan_kode']];
         }
-        $lama   = $a['selesai_lama'] ?? null;
+        usort($teman, static fn (array $x, array $y): int => [! $x['satu_ajuan'], $x['nama']] <=> [! $y['satu_ajuan'], $y['nama']]);
         $cepat  = [];
         if ($lama !== null) {
             $tgl     = \DateTimeImmutable::createFromFormat('!Y-m-d', $lama);
@@ -1042,7 +1052,7 @@ final class LayananSiswa
     }
 
     /**
-     * Siswa meminta Surat Perpanjangan PKL untuk DIRINYA (+ teman satu ajuan yang dicentang) → menunggu ACC operator. Jendela H-x / H+y
+     * Siswa meminta Surat Perpanjangan PKL untuk DIRINYA (+ teman satu perusahaan yang dicentang) → menunggu ACC operator. Jendela H-x / H+y
      * berlaku (R2); maksimal satu kali (R5). Teman yang dicentang mendapat baris permintaan "diisikan oleh" supaya statusnya tampil
      * di halamannya sendiri.
      *

@@ -91,6 +91,7 @@ class UjiPerpanjangan extends BaseCommand
                 $this->ujiHalaman();
                 $this->ujiApi();
                 $this->ujiLayanan();
+                $this->ujiLintasAjuan();
                 $this->ujiApiLengkap();
             }
         } catch (\Throwable $e) {
@@ -137,7 +138,8 @@ class UjiPerpanjangan extends BaseCommand
         $this->cek('aturan: tanggal baru = semula ditolak; > 183 hari ditolak; semula < mulai PKL ditolak', isset($a['galat']['selesai_baru'], $b['galat']['selesai_baru'], $c['galat']['selesai_lama']));
         $w = Lib::aturanTanggal('2026-08-01', '2026-10-30', 'siswa', '2026-12-31', ['selesai_paling_akhir' => '2026-12-15', 'durasi_maks_hari' => 120]);
         $this->cek('peringatan (tidak memblokir): diketik siswa, lewat batas sekolah, total PKL > maksimal', $w['galat'] === [] && count($w['peringatan']) === 3, implode(' | ', $w['peringatan']));
-        $this->cek('kunci: ajuan + tanggal baru; lanjutan beda; tanggal beda beda', Lib::kunci(5, '2026-11-30') === Lib::kunci(5, '2026-11-30') && Lib::kunci(5, '2026-11-30') !== Lib::kunci(5, '2026-11-30', 2) && Lib::kunci(5, '2026-11-30') !== Lib::kunci(5, '2026-12-01'));
+        $this->cek('R13 bedaSelesai: tanggal tercatat beda → tanggal itu; sama / belum tercatat / surat tanpa tanggal → null', Lib::bedaSelesai(['selesai_ajuan' => '2026-11-30'], '2026-11-15') === '2026-11-30'
+            && Lib::bedaSelesai(['selesai_ajuan' => '2026-11-15'], '2026-11-15') === null && Lib::bedaSelesai(['selesai_ajuan' => null], '2026-11-15') === null && Lib::bedaSelesai(['selesai_ajuan' => '2026-11-30'], null) === null);
         $t = Lib::token(['tanggal_surat' => '2026-10-26'], ['sapaan' => '', 'selesai_lama' => '2026-10-30', 'selesai_baru' => '2026-11-30', 'alasan_perpanjangan' => 'x', 'alamat' => 'Jl. A']);
         $this->cek('penanda surat: semula, mulai, baru, lama, periode, alamat, sapaan bawaan', $t['selesai_lama'] === '30 Oktober 2026' && $t['mulai_perpanjangan'] === '31 Oktober 2026'
             && $t['selesai_baru'] === '30 November 2026' && $t['lama_perpanjangan'] === '1 (satu) bulan' && $t['periode_perpanjangan'] === '31 Oktober s.d. 30 November 2026'
@@ -258,8 +260,8 @@ class UjiPerpanjangan extends BaseCommand
         $u  = $lib->ubahSurat($m, $in([$this->s[1]], Lib::tambahHari($baru, 7), ['ajuan_id' => $this->ajuan, 'alasan_pilih' => 'lain', 'alasan_lain' => 'Proyek perusahaan diperpanjang']), $this->ctx('operator'), $p);
         $pp = $this->db->table('pkl_perpanjangan')->where('surat_id', $this->idUlang)->get()->getRowArray();
         $isi = SuratSekolah::dekodeIsi((string) $this->db->table('surat_sekolah')->select('isi')->where('id', $this->idUlang)->get()->getRow('isi'));
-        $this->cek('ubah surat: tanggal baru & alasan berubah di surat DAN di pkl_perpanjangan; kunci ikut tanggal baru', $u['ok'] && ($pp['selesai_baru'] ?? '') === Lib::tambahHari($baru, 7)
-            && ($isi['alasan_perpanjangan'] ?? '') === 'proyek perusahaan diperpanjang' && ($isi['kunci'] ?? '') === Lib::kunci($this->ajuan, Lib::tambahHari($baru, 7)), json_encode($u, JSON_UNESCAPED_UNICODE));
+        $this->cek('ubah surat: tanggal baru & alasan berubah di surat DAN di pkl_perpanjangan', $u['ok'] && ($pp['selesai_baru'] ?? '') === Lib::tambahHari($baru, 7)
+            && ($isi['selesai_baru'] ?? '') === Lib::tambahHari($baru, 7) && ($isi['alasan_perpanjangan'] ?? '') === 'proyek perusahaan diperpanjang', json_encode($u, JSON_UNESCAPED_UNICODE));
         $this->cek('ubah surat: menambah siswa yang sudah punya surat perpanjangan lain → ditolak', ! $lib->ubahSurat((new SuratSekolah())->muat($this->idUlang), $in([$this->s[1], $this->s[3]], Lib::tambahHari($baru, 7), ['ajuan_id' => $this->ajuan]), $this->ctx('operator'), $p)['ok']);
         $periksa = SuratPeriksa::untuk($this->db->table('surat_sekolah')->where('id', $this->idUlang)->get()->getRowArray(), (new SuratSekolah())->siswa($this->idUlang), $p);
         $this->cek('SuratPeriksa: surat lengkap → tanpa peringatan bahaya', ! SuratPeriksa::adaBahaya($periksa), json_encode($periksa, JSON_UNESCAPED_UNICODE));
@@ -457,6 +459,114 @@ class UjiPerpanjangan extends BaseCommand
     }
 
     // =================================================================
+    // 8b. Teman satu PERUSAHAAN dari ajuan lain (2026-10-28, DESAIN-PERPANJANGAN-PKL.md bagian 13)
+    // =================================================================
+
+    private function ujiLintasAjuan(): void
+    {
+        $this->bagian('Teman satu perusahaan dari ajuan lain (lintas ajuan)');
+        if (! SuratSekolah::kolomAjuanSiswa()) {
+            $this->cek('kolom surat_sekolah_siswa.pengajuan_id ada (migrasi 2026-10-28)', false, 'jalankan php spark migrate');
+
+            return;
+        }
+        $lib = new Lib();
+        $L   = new \App\Libraries\LayananSiswa();
+        $p   = (new PklPengaturanModel())->ambil();
+        $hi  = date('Y-m-d');
+        $d   = Lib::tambahHari($hi, 3);
+        $pt  = 'ZZUJIPJ Perusahaan Sepuluh';
+        foreach ([16, 17, 18, 19, 20, 21] as $n) {
+            $this->s[$n] = $this->buatSiswa($n);
+        }
+        $aA = $this->buatAjuan($this->s[16], $pt, [$this->s[20]], Lib::tambahHari($hi, -60), $d);
+        $aB = $this->buatAjuan($this->s[17], $pt, [], Lib::tambahHari($hi, -60), $d);
+        $aC = $this->buatAjuan($this->s[18], $pt, [], Lib::tambahHari($hi, -60), Lib::tambahHari($d, 10));
+        $aE = $this->buatAjuan($this->s[19], $pt, [], null, null);
+        $aF = $this->buatAjuan($this->s[21], 'ZZUJIPJ Perusahaan Sebelas', [], Lib::tambahHari($hi, -60), $d);
+        $this->cek('bahan: 4 ajuan disetujui di perusahaan yang sama (1 master) + 1 di perusahaan lain', count(array_unique(array_column($this->db->table('pkl_pengajuan')
+            ->select('perusahaan_id')->whereIn('id', [$aA, $aB, $aC, $aE])->get()->getResultArray(), 'perusahaan_id'))) === 1);
+
+        $this->cek('ajuanSeperusahaan: ajuan dipilih dulu, lalu ajuan lain urut id; perusahaan lain tidak ikut', $lib->ajuanSeperusahaan($aA) === [$aA, $aB, $aC, $aE]
+            && $lib->ajuanSeperusahaan($aC) === [$aC, $aA, $aB, $aE] && ! in_array($aF, $lib->ajuanSeperusahaan($aA), true), json_encode($lib->ajuanSeperusahaan($aA)));
+        $f   = $lib->ajuanForm($aA);
+        $per = array_column($f['siswa'] ?? [], null, 'siswa_id');
+        $this->cek('ajuanForm: 5 siswa dari 4 ajuan (ajuan dipilih dulu), tanggal beda → terkunci, bisa = 4', $f !== null && $f['jml_ajuan'] === 4
+            && array_column($f['siswa'], 'siswa_id') === [$this->s[16], $this->s[20], $this->s[17], $this->s[18], $this->s[19]]
+            && $per[$this->s[18]]['beda'] === Lib::tambahHari($d, 10) && ! $per[$this->s[18]]['bisa'] && $per[$this->s[17]]['bisa'] && $per[$this->s[19]]['bisa']
+            && $per[$this->s[17]]['ajuan_kode'] === PklPengajuanModel::kode($aB) && ! $per[$this->s[17]]['ajuan_ini'] && $f['bisa'] === 4, json_encode(array_map(static fn ($x) => [$x['nama'], $x['beda'], $x['bisa']], $f['siswa'] ?? [])));
+        $c1 = $lib->cari($pt);
+        $c2 = $lib->cari(self::OLEH . ' 18');
+        $this->cek('cari: SATU hasil per perusahaan (5 siswa); cari nama siswa → ajuan siswa itu yang dipilih', count($c1) === 1 && count($c1[0]['siswa']) === 5 && ($c2[0]['id'] ?? 0) === $aC);
+        $this->cek('berakhir ≤ 7 hari (sebelum surat): siswa ajuan lain bertanggal sama ikut', in_array($this->s[17], array_column($lib->berakhir(7), 'siswa_id'), true));
+
+        $f16 = $L->formPerpanjangan($L->profil($this->s[16]), $p);
+        $tm  = array_column($f16['teman'], null, 'id');
+        $this->cek('form siswa: 4 teman (satu ajuan dulu, lalu urut nama); teman beda tanggal terkunci + keterangan; kode ajuan teman', array_column($f16['teman'], 'id') === [$this->s[20], $this->s[17], $this->s[18], $this->s[19]]
+            && $tm[$this->s[20]]['satu_ajuan'] && ! $tm[$this->s[17]]['satu_ajuan'] && $tm[$this->s[17]]['ajuan_kode'] === PklPengajuanModel::kode($aB)
+            && ! $tm[$this->s[18]]['bisa'] && str_contains($tm[$this->s[18]]['ket'], 'beda tanggal') && $tm[$this->s[17]]['bisa'], json_encode($f16['teman'], JSON_UNESCAPED_UNICODE));
+        session()->set(\App\Libraries\LayananSiswa::SESI, ['id' => $this->s[16], 't' => time()]);
+        $html = $this->teks($this->panggil(\App\Controllers\Layanan::class, 'operator', 'surat', [], [], 'perpanjangan'));
+        $this->cek('halaman publik: teman ajuan lain bisa dicentang, teman beda tanggal redup (disabled), kalimat "PKL di … (4 siswa)"', str_contains($html, 'name="teman[]" value="' . $this->s[17] . '" class="mt-1 h-4 w-4 accent-brand-700">')
+            && preg_match('~name="teman\[\]" value="' . $this->s[18] . '"[^>]*disabled~', $html) === 1 && str_contains($html, 'PKL di <b>' . $pt . '</b> (4 siswa)'), mb_substr(strip_tags($html), 0, 160));
+        session()->remove(\App\Libraries\LayananSiswa::SESI);
+
+        $baru = (string) $f16['cepat'][1]['tanggal'];
+        $rx   = $L->ajukanPerpanjangan($this->s[16], ['pilih_tanggal' => $baru, 'alasan_pilih' => '0', 'teman' => [$this->s[17], $this->s[18]]], self::IP, $p);
+        $this->cek('kirim dengan teman beda tanggal selesai → ditolak (R13), menyebut namanya', ! $rx['ok'] && str_contains((string) ($rx['galat']['siswa'] ?? ''), 'Tanggal selesai PKL berbeda')
+            && str_contains((string) ($rx['galat']['siswa'] ?? ''), self::OLEH . ' 18'), $rx['pesan']);
+        $r = $L->ajukanPerpanjangan($this->s[16], ['pilih_tanggal' => $baru, 'alasan_pilih' => '0', 'teman' => [$this->s[17]]], self::IP, $p);
+        $id  = (int) ($r['surat_id'] ?? 0);
+        $asl = array_column($this->db->table('surat_sekolah_siswa')->select('siswa_id, pengajuan_id')->where('surat_id', $id)->get()->getResultArray(), 'pengajuan_id', 'siswa_id');
+        $this->cek('kirim dengan teman ajuan lain → SATU surat 2 siswa; ajuan asal per siswa tersimpan; surat milik ajuan pengaju', $r['ok'] && count($asl) === 2
+            && (int) $asl[$this->s[16]] === $aA && (int) $asl[$this->s[17]] === $aB
+            && (int) $this->db->table('pkl_perpanjangan')->select('pengajuan_id')->where('surat_id', $id)->get()->getRow('pengajuan_id') === $aA, json_encode([$r, $asl], JSON_UNESCAPED_UNICODE));
+        $this->cek('permintaan teman tercatat di ajuannya sendiri + riwayat ajuan teman menyebut surat ini', $this->jumlah('surat_permintaan', ['surat_id' => $id, 'siswa_id' => $this->s[17], 'pengajuan_id' => $aB]) === 1
+            && (int) $this->db->table('pkl_riwayat')->where('pengajuan_id', $aB)->like('catatan', 'Surat Perpanjangan')->like('catatan', 'ajuan lain')->countAllResults() === 1);
+        $this->cek('aktif per ajuan asal siswa: teman tercatat di ajuan B, bukan ajuan A; berakhir ≤ 7 hari tidak memuatnya lagi', isset($lib->aktif([$this->s[17]], $aB)[$this->s[17]])
+            && $lib->aktif([$this->s[17]], $aA) === [] && ! in_array($this->s[17], array_column($lib->berakhir(7), 'siswa_id'), true));
+        $this->cek('teman (ajuan lain) membuka formulirnya → "sudah punya Surat Perpanjangan"', ($L->formPerpanjangan($L->profil($this->s[17]), $p)['sudah']['surat_id'] ?? 0) === $id);
+        $html = (string) $this->panggil(\App\Controllers\Admin\Pkl::class, 'operator', 'detail', [], [], $aB);
+        $this->cek('detail ajuan teman (B): lencana "Perpanjangan menunggu ACC s.d."', str_contains($html, 'Perpanjangan menunggu ACC s.d.'));
+
+        // Penyusul dari ajuan lagi (tanggal semula belum tercatat → diketik sama) → ikut surat yang sama (R6 lintas ajuan).
+        $r2 = $L->ajukanPerpanjangan($this->s[19], ['pilih_tanggal' => 'lain', 'selesai_lama' => $d, 'selesai_baru' => $baru, 'alasan_pilih' => '1'], self::IP, $p);
+        $this->cek('penyusul ajuan lain, tanggal semula & baru sama → ikut surat yang sama (3 siswa)', $r2['ok'] && $r2['kode'] === 'ikut' && (int) $r2['surat_id'] === $id
+            && $this->jumlah('surat_sekolah_siswa', ['surat_id' => $id, 'siswa_id' => $this->s[19], 'pengajuan_id' => $aE]) === 1 && $this->jumlah('surat_sekolah_siswa', ['surat_id' => $id]) === 3, json_encode($r2, JSON_UNESCAPED_UNICODE));
+        $r3 = $L->ajukanPerpanjangan($this->s[20], ['pilih_tanggal' => 'lain', 'selesai_baru' => Lib::tambahHari($baru, 3), 'alasan_pilih' => '1'], self::IP, $p);
+        $this->cek('teman tanggal baru beda → surat terpisah', $r3['ok'] && $r3['kode'] === 'baru' && (int) $r3['surat_id'] !== $id, json_encode($r3, JSON_UNESCAPED_UNICODE));
+        $this->db->table('surat_sekolah')->where('id', (int) $r3['surat_id'])->update(['status' => 'dibatalkan']); // bebaskan siswa 20 untuk uji ubah
+
+        // Halaman staf.
+        $html = $this->teks($this->panggil(\App\Controllers\Admin\SuratPerpanjangan::class, 'operator', 'index', ['ajuan' => $aC]));
+        $this->cek('halaman staf: semua siswa perusahaan tampil ("dari 4 ajuan"), siswa ajuan dipilih tercentang, siswa ajuan lain (beda tanggal) terkunci, kode ajuan lain tertulis', str_contains($html, 'dari 4 ajuan')
+            && str_contains($html, 'name="siswa[]" value="' . $this->s[18] . '" class="cek" checked') && str_contains($html, 'name="siswa[]" value="' . $this->s[20] . '" class="cek" disabled>')
+            && str_contains($html, PklPengajuanModel::kode($aA)), (str_contains($html, 'dari 4 ajuan') ? 'ada "dari 4 ajuan"' : 'TANPA "dari 4 ajuan"') . ' | ' . (preg_match('~value="' . $this->s[20] . '"[^>]*>~', $html, $m) ? $m[0] : 'siswa 20 tak ada'));
+        $this->cek('halaman staf (ajuan C, selesai beda): siswa ajuan lain beda tanggal redup + tautan "buat surat terpisah" ke ajuannya', str_contains($html, 'buat surat terpisah')
+            && str_contains($html, 'ajuan=' . $aA . '&amp;siswa=' . $this->s[20]) || str_contains($html, 'ajuan=' . $aA . '&siswa=' . $this->s[20]));
+        $u = $lib->ubahSurat((new SuratSekolah())->muat($id), ['ajuan_id' => $aA, 'siswa' => [$this->s[16], $this->s[17], $this->s[19], $this->s[20]], 'tanggal_surat' => $hi, 'sapaan' => 'HRD',
+            'selesai_baru' => $baru, 'alasan_pilih' => '0'], $this->ctx('operator'), $p);
+        $this->cek('ubah surat (staf): tambah teman dari ajuan mana pun di perusahaan → 4 siswa, ajuan asal tetap benar', $u['ok'] && $this->jumlah('surat_sekolah_siswa', ['surat_id' => $id]) === 4
+            && $this->jumlah('surat_sekolah_siswa', ['surat_id' => $id, 'siswa_id' => $this->s[17], 'pengajuan_id' => $aB]) === 1
+            && $this->jumlah('surat_sekolah_siswa', ['surat_id' => $id, 'siswa_id' => $this->s[20], 'pengajuan_id' => $aA]) === 1, json_encode($u, JSON_UNESCAPED_UNICODE));
+        $u2 = $lib->ubahSurat((new SuratSekolah())->muat($id), ['ajuan_id' => $aA, 'siswa' => [$this->s[16], $this->s[18]], 'tanggal_surat' => $hi, 'selesai_baru' => $baru, 'alasan_pilih' => '0'], $this->ctx('operator'), $p);
+        $this->cek('ubah surat: siswa beda tanggal selesai → ditolak; siswa perusahaan lain → ditolak', ! $u2['ok'] && str_contains((string) ($u2['galat']['siswa'] ?? ''), 'berbeda')
+            && ! $lib->ubahSurat((new SuratSekolah())->muat($id), ['ajuan_id' => $aA, 'siswa' => [$this->s[16], $this->s[21]], 'tanggal_surat' => $hi, 'selesai_baru' => $baru, 'alasan_pilih' => '0'], $this->ctx('operator'), $p)['ok']);
+
+        // ACC → tanggal efektif tiap siswa di ajuannya sendiri.
+        $acc = (new SuratKeputusan())->putuskan($id, 'acc', [], $this->ctx('hubin'), $p);
+        $ef  = $lib->selesaiEfektif([$this->s[16], $this->s[17], $this->s[19]]);
+        $this->cek('sesudah ACC: tanggal efektif = tanggal baru untuk siswa ajuan A, B, dan E', $acc['ok'] && ($ef[$this->s[16]]['selesai'] ?? '') === $baru && ($ef[$this->s[17]]['selesai'] ?? '') === $baru
+            && ($ef[$this->s[17]]['ajuan_id'] ?? 0) === $aB && ($ef[$this->s[19]]['selesai'] ?? '') === $baru && $ef[$this->s[17]]['diperpanjang'], json_encode($ef));
+        $this->cek('Status Siswa (Excel/daftar): selesai_efektif teman ajuan B = tanggal baru', (string) ((new PklPengajuanModel())->statusSiswa(['X', 'XI', 'XII'], 0, self::OLEH . ' 17', '', 10, 1)[0][0]['selesai_efektif'] ?? '') === $baru);
+
+        // Surat buatan aturan lama (kolom ajuan siswa kosong) tetap terbaca lewat ajuan suratnya.
+        $this->db->table('surat_sekolah_siswa')->where('surat_id', $id)->where('siswa_id', $this->s[16])->update(['pengajuan_id' => null]);
+        $this->cek('data lama (pengajuan_id siswa kosong) → tetap dihitung di ajuan surat', isset($lib->aktif([$this->s[16]], $aA)[$this->s[16]]) && ($lib->selesaiEfektif([$this->s[16]])[$this->s[16]]['selesai'] ?? '') === $baru);
+        $this->db->table('surat_sekolah_siswa')->where('surat_id', $id)->where('siswa_id', $this->s[16])->update(['pengajuan_id' => $aA]);
+    }
+
+    // =================================================================
     // 9. API lengkap (F4): staf + publik Layanan Siswa (token)
     // =================================================================
 
@@ -517,7 +627,9 @@ class UjiPerpanjangan extends BaseCommand
         // --- publik Layanan Siswa
         $s14 = $this->buatSiswa(14);
         $s15 = $this->buatSiswa(15);
+        $s22 = $this->buatSiswa(22);
         $this->buatAjuan($s14, 'ZZUJIPJ Perusahaan Sembilan', [$s15], Lib::tambahHari($hi, -60), Lib::tambahHari($hi, 2));
+        $this->buatAjuan($s22, 'ZZUJIPJ Perusahaan Sembilan', [], Lib::tambahHari($hi, -60), Lib::tambahHari($hi, 2)); // teman perusahaan sama, ajuan lain
         [$k, $j] = $this->apiLayanan('kelas', [], []);
         $this->cek('GET publik/layanan/kelas → daftar per tingkat', $k === 200 && is_array($j['data'][0]['kelas'] ?? null), (string) $k);
         [$k, $j] = $this->apiLayanan('masuk', [], ['siswa_id' => $s14, 'tanggal_lahir' => '2001-01-01']);
@@ -540,13 +652,15 @@ class UjiPerpanjangan extends BaseCommand
         [$k, $j] = $this->apiLayanan('perpanjangan', [], [], $token);
         $this->cek('GET publik/layanan/perpanjangan → status "isi", 4 pilihan cepat bertanggal, teman bisa dicentang, alasan 4', $k === 200 && ($j['data']['status'] ?? '') === 'isi'
             && count($j['data']['cepat'] ?? []) === 4 && ($j['data']['cepat'][1]['teks'] ?? '') !== '' && ($j['data']['teman'][0]['bisa'] ?? false) === true && count($j['data']['alasan_saran'] ?? []) === 4, (string) $k);
+        $this->cek('GET publik/layanan/perpanjangan → teman satu perusahaan dari ajuan lain ikut: satu_ajuan=false + ajuan_kode; satu ajuan dulu', array_column($j['data']['teman'] ?? [], 'id') === [$s15, $s22]
+            && ($j['data']['teman'][0]['satu_ajuan'] ?? null) === true && ($j['data']['teman'][1]['satu_ajuan'] ?? null) === false && str_starts_with((string) ($j['data']['teman'][1]['ajuan_kode'] ?? ''), 'PKL-'), json_encode($j['data']['teman'] ?? null));
         $this->fx['layanan_perpanjangan_form'] = $j;
         $cepat = (string) ($j['data']['cepat'][1]['tanggal'] ?? '');
         [$k, $j] = $this->apiLayanan('ajukanPerpanjangan', [], ['pilih_tanggal' => 'lain', 'alasan_pilih' => '0'], $token);
         $this->cek('POST publik/layanan/perpanjangan "tanggal lain" kosong → 422 galat selesai_baru', $k === 422 && isset($j['data']['errors']['selesai_baru']), (string) $k);
         $this->fx['layanan_galat_422_perpanjangan'] = $j;
-        [$k, $j] = $this->apiLayanan('ajukanPerpanjangan', [], ['pilih_tanggal' => $cepat, 'alasan_pilih' => '1', 'teman' => [$s15]], $token);
-        $this->cek('POST publik/layanan/perpanjangan → 201, surat menunggu ACC berisi diri + teman', $k === 201 && $this->jumlah('surat_sekolah_siswa', ['surat_id' => (int) ($j['data']['surat_id'] ?? 0)]) === 2, (string) $k . ' ' . ($j['message'] ?? ''));
+        [$k, $j] = $this->apiLayanan('ajukanPerpanjangan', [], ['pilih_tanggal' => $cepat, 'alasan_pilih' => '1', 'teman' => [$s15, $s22]], $token);
+        $this->cek('POST publik/layanan/perpanjangan → 201, SATU surat menunggu ACC berisi diri + teman satu ajuan + teman ajuan lain', $k === 201 && $this->jumlah('surat_sekolah_siswa', ['surat_id' => (int) ($j['data']['surat_id'] ?? 0)]) === 3, (string) $k . ' ' . ($j['message'] ?? ''));
         $this->fx['layanan_perpanjangan_kirim'] = $j;
         [$k, $j] = $this->apiLayanan('ajukanPerpanjangan', [], ['pilih_tanggal' => $cepat, 'alasan_pilih' => '1'], $token);
         $this->cek('POST kedua → 409 kode "sudah"', $k === 409 && ($j['data']['kode'] ?? '') === 'sudah', (string) $k);

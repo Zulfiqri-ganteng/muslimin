@@ -15,8 +15,8 @@ use CodeIgniter\HTTP\RedirectResponse;
  *
  * Alur halaman (pola tampilan baru: cari lalu pilih, satu tombol utama):
  *   GET  admin/surat/perpanjangan            daftar "PKL berakhir ≤ 7 hari" + kotak cari
- *   GET  admin/surat/perpanjangan?q=…        hasil cari ajuan disetujui (perusahaan / kode / nama siswa)
- *   GET  admin/surat/perpanjangan?ajuan=ID   formulir untuk ajuan itu
+ *   GET  admin/surat/perpanjangan?q=…        hasil cari ajuan disetujui (perusahaan / kode / nama siswa), satu baris per perusahaan
+ *   GET  admin/surat/perpanjangan?ajuan=ID   formulir untuk ajuan itu + semua siswa lain yang PKL di perusahaan yang sama (2026-10-28)
  *   POST admin/surat/perpanjangan            simpan (tombol "Simpan & setujui" bila memegang hak ACC)
  *   GET|POST admin/surat/perpanjangan/{id}/ubah
  */
@@ -37,7 +37,8 @@ class SuratPerpanjangan extends SuratDasar
                 return $this->ke(SuratJenis::alamat(SuratJenis::PERPANJANGAN), 'error', 'Ajuan ' . \App\Models\PklPengajuanModel::kode($aid) . ' tidak ditemukan, belum disetujui, atau siswanya tidak aktif lagi.');
             }
         }
-        $pilihAwal = array_values(array_filter(array_map(static fn (array $s) => $s['bisa'] ? $s['siswa_id'] : 0, $ajuan['siswa'] ?? [])));
+        // Bawaan tercentang: siswa ajuan yang dipilih saja (siswa ajuan lain di perusahaan yang sama tampil, tidak tercentang).
+        $pilihAwal = array_values(array_filter(array_map(static fn (array $s) => $s['bisa'] && $s['ajuan_ini'] ? $s['siswa_id'] : 0, $ajuan['siswa'] ?? [])));
         $sidGet    = (int) $this->request->getGet('siswa');
 
         return view('admin/surat/perpanjangan_form', $this->dasarForm() + [

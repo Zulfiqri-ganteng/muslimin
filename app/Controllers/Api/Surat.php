@@ -358,8 +358,9 @@ class Surat extends BaseApiController
             ], 'Formulir ' . SuratJenis::label($jenis) . '.');
         }
 
-        // Surat Perpanjangan PKL (docs/DESAIN-PERPANJANGAN-PKL.md): ?ajuan_id= satu ajuan (siswa + status perpanjangan + tanggal semula),
-        // ?q= cari ajuan disetujui, tanpa keduanya = siswa yang PKL-nya berakhir ≤ 7 hari & belum diperpanjang.
+        // Surat Perpanjangan PKL (docs/DESAIN-PERPANJANGAN-PKL.md): ?ajuan_id= ajuan itu + semua siswa lain yang PKL di perusahaan yang
+        // sama (bagian 13; status perpanjangan + tanggal semula), ?q= cari (satu hasil per perusahaan), tanpa keduanya = siswa yang
+        // PKL-nya berakhir ≤ 7 hari & belum diperpanjang.
         if ($jenis === SuratJenis::PERPANJANGAN) {
             $lib = new SuratPerpanjangan();
             $aid = (int) $this->request->getGet('ajuan_id');

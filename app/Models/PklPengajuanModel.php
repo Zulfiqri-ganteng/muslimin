@@ -332,10 +332,10 @@ class PklPengajuanModel extends Model
         $in   = implode(',', array_fill(0, count($tingkat), '?'));
         $bind = [$hariIni, $hariIni];
         // Tanggal selesai EFEKTIF: tanggal baru Surat Perpanjangan PKL yang sudah disetujui, selain itu tanggal di ajuan
-        // (Libraries\SuratPerpanjangan::selesaiEfektif; docs/DESAIN-PERPANJANGAN-PKL.md R8).
+        // (Libraries\SuratPerpanjangan::selesaiEfektif; docs/DESAIN-PERPANJANGAN-PKL.md R8). Ajuan = ajuan asal siswa di surat (lintas ajuan).
         $selesai = \App\Libraries\SuratPerpanjangan::tabelAda()
             ? "COALESCE((SELECT pp.selesai_baru FROM pkl_perpanjangan pp JOIN surat_sekolah x ON x.id = pp.surat_id AND x.status = 'disetujui'"
-                . ' JOIN surat_sekolah_siswa xs ON xs.surat_id = x.id WHERE pp.pengajuan_id = p.id AND xs.siswa_id = s.id ORDER BY x.id DESC LIMIT 1), p.tanggal_selesai)'
+                . ' JOIN surat_sekolah_siswa xs ON xs.surat_id = x.id WHERE ' . \App\Libraries\SuratPerpanjangan::sqlAjuanSiswa('xs', 'pp') . ' = p.id AND xs.siswa_id = s.id ORDER BY x.id DESC LIMIT 1), p.tanggal_selesai)'
             : 'p.tanggal_selesai';
         $sql  = "SELECT s.id, s.nama, s.jenis_kelamin, k.id AS kelas_id, k.nama_kelas, k.tingkat,"
             . " p.id AS ajuan_id, p.perusahaan_nama, p.perusahaan_kota, p.tanggal_mulai, p.tanggal_selesai, {$selesai} AS selesai_efektif, p.acc_nama, p.acc_at, a.peran, sr.nomor AS nomor_surat,"

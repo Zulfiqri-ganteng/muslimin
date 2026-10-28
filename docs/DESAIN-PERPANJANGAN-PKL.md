@@ -64,13 +64,14 @@ detail ajuan (tombol "Buat Surat Perpanjangan", terisi otomatis).
 | R3 | Tanggal selesai lama: dari ajuan bila tercatat (sumber `sekolah`, terkunci di form siswa). Kosong → diketik siswa (sumber `siswa`, lencana kuning "diisi siswa — cek") atau staf (sumber `staf`). Wajib ≥ tanggal mulai ajuan bila ada; tahun masuk akal (tahun lalu s.d. tahun depan). Jendela R2 dihitung dari tanggal ini. |
 | R4 | Tanggal selesai baru > tanggal lama. Perpanjangan mulai = tanggal lama + 1 hari. Lama perpanjangan maks **183 hari** (ditolak). Peringatan kuning (tidak memblokir, sama dengan `SuratPkl::peringatanPeriode`): melewati "selesai paling akhir" sekolah, atau total PKL (mulai ajuan → selesai baru) melewati "durasi maks" Pengaturan. |
 | R5 | **Maksimal 1×** per siswa per ajuan: ditolak bila sudah ada baris perpanjangan siswa itu di ajuan itu yang suratnya BELUM dibatalkan ("Kamu sudah pernah diperpanjang: SRT-xxxxx"). Pindah tempat PKL (ajuan lain) = hitungan baru. |
-| R6 | Satu surat per **ajuan + tanggal selesai baru**. Teman/penyusul dengan tanggal sama ikut surat itu selama surat masih bisa diubah (belum bernomor, `SuratSekolah::alasanTakBisaUbah` = null); kalau sudah bernomor → surat baru. Tanggal baru berbeda → surat terpisah. |
-| R7 | Teman: centang teman satu ajuan (bawaan tidak tercentang). Teman yang sudah pernah diperpanjang / punya permintaan aktif tampil redup dengan kode suratnya. Teman yang dicantumkan melihat di "Permintaan suratku": "Namamu dicantumkan oleh temanmu, X." |
+| R6 | Satu surat per **perusahaan + tanggal selesai semula + tanggal selesai baru** (2026-10-28; dulu per ajuan). Teman/penyusul — dari ajuan mana pun di perusahaan itu — dengan tanggal sama ikut surat itu selama surat masih bisa diubah (belum bernomor, status menunggu/dikembalikan); kalau sudah bernomor → surat baru. Tanggal berbeda → surat terpisah. Dicari langsung di `pkl_perpanjangan` (bukan kunci JSON), jadi surat buatan aturan lama ikut terbaca. |
+| R7 | Teman: centang teman yang PKL di **perusahaan yang sama** — satu ajuan maupun ajuan lain (2026-10-28, bagian 13; dulu satu ajuan). Bawaan tidak tercentang. Teman yang sudah pernah diperpanjang / ditarik / beda tanggal selesai (R13) tampil redup dengan alasannya. Teman yang dicantumkan melihat di "Permintaan suratku": "Namamu dicantumkan oleh temanmu, X." |
 | R8 | **Tanggal baru berlaku hanya bila surat berstatus `disetujui`** (sesudah ACC, atau langsung bila Admin mematikan ACC jenis ini). Dihitung lewat JOIN (bagian 4c), tanpa menyalin ke tabel lain. |
 | R9 | `pkl_pengajuan.tanggal_selesai` **tidak ditimpa** — Surat Balasan lama tetap benar; tanggal efektif = hasil hitung R8. Status ajuan tidak berubah. |
 | R10 | Nomor surat: urutan bersama (`SuratNomor`), terbit sekali saat unduh pertama. Ubah data surat hanya selama belum bernomor. |
 | R11 | Hak: `surat_buat/acc/unduh:perpanjangan_pkl`, bawaan & migrasi = sama dengan Surat Balasan; Admin mengubah di Hak Akses. |
-| R12 | Jejak: riwayat surat (sudah ada) + baris `pkl_riwayat` ajuan aksi `perpanjang` ("Perpanjangan PKL s.d. {tgl} diminta — SRT-xxxxx") + Audit Log. |
+| R12 | Jejak: riwayat surat (sudah ada) + baris `pkl_riwayat` ajuan aksi `perpanjang` ("Perpanjangan PKL s.d. {tgl} diminta — SRT-xxxxx") + Audit Log. Surat lintas ajuan: riwayat ditulis di **tiap** ajuan asal siswanya. |
+| R13 | **Satu surat = satu tanggal selesai semula** (keputusan user 2026-10-28 poin 2a). Tanggal semula = tanggal tercatat di ajuan yang dipilih (ajuan pengaju / ajuan yang diklik staf), atau diketik bila belum tercatat. Siswa yang ajuannya mencatat tanggal selesai LAIN ditolak ("buat surat terpisah"); ajuan yang belum mencatat tanggal ikut tanggal surat. |
 
 ## 4. Data — 1 migrasi `2026-10-27-000001_PklPerpanjangan` (idempoten, punya `down()`)
 
@@ -307,6 +308,43 @@ pkl-biaya 130/0 · api-android 19/0 · cek-ui 0 · HTTP sungguhan (rute + filter
 hosting) CSP 0, galat JS 0, HP 390 tidak melebar · Word asli 1 halaman (2 & 5 siswa).
 
 **Deploy (user):** `cd ~/kangmuslim && git pull && php spark migrate` lalu Ctrl+F5. Cadangkan DB dulu (migrasi mengubah ENUM).
+
+## 13. Teman satu PERUSAHAAN, lintas ajuan (2026-10-28)
+
+**Keluhan user:** "siswa hanya bisa ajukan 1 siswa, padahal konsepnya seperti ajuan PKL (ajak teman)". **Akar:** R7 lama = teman hanya
+dari ajuan yang sama. Data salinan hosting (`muslimin_h1025`): 182 ajuan disetujui / 309 siswa; **97 ajuan berisi 1 siswa** (langkah Teman
+tak pernah tampil), 45 di antaranya punya teman di perusahaan yang sama lewat ajuan lain; 25 perusahaan terpecah ke banyak ajuan
+(142 siswa; contoh PT Pabrik Kertas Noree 13 siswa / 11 ajuan); semua ajuan disetujui sudah tertaut master perusahaan. "Gabungkan
+ajuan" bukan jalan keluar (maks 5 siswa per ajuan).
+
+**Keputusan user (semua ikut saran):** 1a teman = semua siswa satu perusahaan · 2a beda tanggal selesai semula → redup, surat terpisah
+(R13) · 3a tanpa batas jumlah (batas umum surat 400) · 4a form staf ikut per perusahaan.
+
+**Data — migrasi `2026-10-28-000001_PerpanjanganLintasAjuan`:** kolom `surat_sekolah_siswa.pengajuan_id` (NULL untuk jenis lain) = ajuan
+asal tiap siswa di surat perpanjangan; data lama diisi dari `pkl_perpanjangan.pengajuan_id` (aturan lama menjamin satu ajuan per surat →
+pasti benar, tanpa data hosting). Pembacaan memakai `COALESCE(ss.pengajuan_id, pp.pengajuan_id)` (`SuratPerpanjangan::sqlAjuanSiswa`), jadi
+server yang belum migrasi tetap jalan dengan aturan lama (`ajuanSeperusahaan` = hanya ajuan itu). `pkl_perpanjangan.pengajuan_id` tetap =
+ajuan yang dipilih (sumber tanggal semula, alamat, mulai PKL). `down()` menolak bila sudah ada siswa lintas ajuan.
+
+**Kode:** `SuratPerpanjangan::ajuanSeperusahaan` (kunci = master perusahaan / nama ternormalisasi, sama dengan `SuratAcara::perusahaan`) ·
+`grup()` / `ajuanForm()` siswa seluruh perusahaan + `ajuan_id`, `ajuan_kode`, `selesai_ajuan`, `ajuan_ini`, `beda`; `jml_ajuan`, `ajuan_ids` ·
+`cari()` satu hasil per perusahaan · `aktif()`/`ditarik()` menerima daftar ajuan · `buat()`/`ubahSurat()` mengunci anggota seluruh
+perusahaan, menolak R13, mencari surat terbuka lewat `suratTerbuka()` (R6), menulis ajuan asal per siswa, riwayat per ajuan ·
+`berakhir()` & `PklPengajuanModel::statusSiswa` memakai ajuan asal siswa · `SuratSekolah` menyimpan `pengajuan_id` per siswa bila kolom
+ada (`kolomAjuanSiswa`, `barisSiswa`).
+
+**Layar:** form siswa langkah 4 "Teman yang juga diperpanjang" = semua teman di perusahaan itu (satu ajuan dulu, lalu urut nama), kalimat
+"PKL di {perusahaan} ({n} siswa) … temanmu tidak perlu mengisi lagi"; redup + keterangan untuk sudah diperpanjang / ditarik / beda tanggal;
+bila tanggal semula diketik, teman yang tanggalnya tercatat diberi keterangan "Tercatat selesai {tgl}". Form staf: semua siswa perusahaan,
+bawaan tercentang hanya siswa ajuan yang dipilih, kode ajuan lain tertulis, siswa beda tanggal → tautan "buat surat terpisah" ke ajuannya;
+hasil cari "{n} siswa dari {m} ajuan".
+
+**API (tanpa endpoint baru, tanpa kolom dihapus):** `GET publik/layanan/perpanjangan` → `teman[]` tambah `satu_ajuan` (bool) &
+`ajuan_kode`; `POST` tetap `teman: [id…]` (boleh id dari ajuan lain di perusahaan yang sama; beda tanggal → 422 `errors.siswa`).
+`GET surat/form/perpanjangan` → `ajuan.siswa[]` tambah `ajuan_id`, `ajuan_kode`, `selesai_ajuan`, `ajuan_ini`, `beda`; `ajuan.jml_ajuan`,
+`ajuan.ajuan_ids`; `hasil[]` satu per perusahaan. `POST surat/perpanjangan` & `surat/{id}/ubah` tetap `siswa: [id…]`.
+
+**Uji:** `dev:uji-perpanjangan` bagian "lintas ajuan" 22 cek + API publik 2 cek → 127/0; fixture Flutter ditulis ulang (17 berkas).
 
 ## 12. Sertifikat PKL — RENCANA (format belum ada)
 

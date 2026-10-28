@@ -57,6 +57,35 @@ final class SuratSekolah
         return self::$kolomSumber;
     }
 
+    private static ?bool $kolomAjuanSiswa = null;
+
+    /** Kolom surat_sekolah_siswa.pengajuan_id sudah ada (migrasi 2026-10-28 Surat Perpanjangan lintas ajuan). */
+    public static function kolomAjuanSiswa(): bool
+    {
+        if (self::$kolomAjuanSiswa === null) {
+            try {
+                self::$kolomAjuanSiswa = db_connect()->fieldExists('pengajuan_id', 'surat_sekolah_siswa');
+            } catch (\Throwable $e) {
+                self::$kolomAjuanSiswa = false;
+            }
+        }
+
+        return self::$kolomAjuanSiswa;
+    }
+
+    /**
+     * Baris surat_sekolah_siswa siap simpan; pengajuan_id (ajuan PKL asal siswa, Surat Perpanjangan) hanya ditulis bila kolomnya ada.
+     *
+     * @param array{siswa_id: int, kelas_id: ?int, hp: ?string, pengajuan_id?: ?int} $s
+     *
+     * @return array<string, mixed>
+     */
+    private static function barisSiswa(int $suratId, array $s, int $urut): array
+    {
+        return ['surat_id' => $suratId, 'siswa_id' => $s['siswa_id'], 'kelas_id' => $s['kelas_id'] ?? null, 'hp' => $s['hp'] ?? null, 'urut' => $urut, 'created_at' => date('Y-m-d H:i:s')]
+            + (self::kolomAjuanSiswa() ? ['pengajuan_id' => $s['pengajuan_id'] ?? null] : []);
+    }
+
     private BaseConnection $db;
 
     public function __construct(?BaseConnection $db = null)
@@ -72,7 +101,8 @@ final class SuratSekolah
      * Buat satu surat (belum bernomor).
      *
      * $data: judul, tanggal_surat (Y-m-d), perusahaan_nama?, pengajuan_id?, isi (array → JSON),
-     *        siswa (list<['siswa_id' => int, 'kelas_id' => ?int, 'hp' => ?string]>, urutan = urutan di surat).
+     *        siswa (list<['siswa_id' => int, 'kelas_id' => ?int, 'hp' => ?string, 'pengajuan_id' => ?int]>, urutan = urutan di surat;
+     *        pengajuan_id per siswa = ajuan asalnya, dipakai Surat Perpanjangan yang memuat siswa dari beberapa ajuan).
      *
      * @param array<string, mixed>      $data
      * @param array<string, mixed>      $konteks
@@ -131,10 +161,7 @@ final class SuratSekolah
                 throw new \RuntimeException('surat tidak tersimpan');
             }
             foreach ($siswa as $i => $s) {
-                $ok = $this->db->table('surat_sekolah_siswa')->insert([
-                    'surat_id' => $id, 'siswa_id' => $s['siswa_id'], 'kelas_id' => $s['kelas_id'], 'hp' => $s['hp'],
-                    'urut' => $i + 1, 'created_at' => $now,
-                ]);
+                $ok = $this->db->table('surat_sekolah_siswa')->insert(self::barisSiswa($id, $s, $i + 1));
                 if (! $ok) {
                     throw new \RuntimeException('siswa #' . $s['siswa_id'] . ' tidak tersimpan');
                 }
@@ -222,7 +249,7 @@ final class SuratSekolah
             if ($siswa !== null) {
                 $this->db->table('surat_sekolah_siswa')->where('surat_id', $id)->delete();
                 foreach ($siswa as $i => $x) {
-                    if (! $this->db->table('surat_sekolah_siswa')->insert(['surat_id' => $id, 'siswa_id' => $x['siswa_id'], 'kelas_id' => $x['kelas_id'], 'hp' => $x['hp'], 'urut' => $i + 1, 'created_at' => date('Y-m-d H:i:s')])) {
+                    if (! $this->db->table('surat_sekolah_siswa')->insert(self::barisSiswa($id, $x, $i + 1))) {
                         throw new \RuntimeException('siswa #' . $x['siswa_id'] . ' tidak tersimpan');
                     }
                 }
@@ -273,7 +300,7 @@ final class SuratSekolah
      * gelombang lain", Surat Izin TKA). Baris siswa lain tidak ditulis ulang (urutan & tanda "dikabari WhatsApp" tetap; urut dirapikan
      * 1..n). Surat yang pernah diunduh otomatis bertanda "perlu cetak ulang" (sidik berubah), nomornya tetap. Riwayat dicatat pemanggil.
      *
-     * @param array{siswa_id: int, kelas_id: ?int, hp: ?string}|null $tambah
+     * @param array{siswa_id: int, kelas_id: ?int, hp: ?string, pengajuan_id?: ?int}|null $tambah pengajuan_id = ajuan asal (Surat Perpanjangan)
      */
     public function aturSiswa(int $id, ?int $keluarkan, ?array $tambah, string $judul): bool
     {
@@ -289,8 +316,7 @@ final class SuratSekolah
                 $this->db->table('surat_sekolah_siswa')->where('surat_id', $id)->where('siswa_id', $keluarkan)->delete();
             }
             if ($tambah !== null && $this->db->table('surat_sekolah_siswa')->where('surat_id', $id)->where('siswa_id', (int) $tambah['siswa_id'])->countAllResults() === 0) {
-                $this->db->table('surat_sekolah_siswa')->insert(['surat_id' => $id, 'siswa_id' => (int) $tambah['siswa_id'], 'kelas_id' => $tambah['kelas_id'] ?? null,
-                    'hp' => $tambah['hp'] ?? null, 'urut' => 9999, 'created_at' => date('Y-m-d H:i:s')]);
+                $this->db->table('surat_sekolah_siswa')->insert(self::barisSiswa($id, ['siswa_id' => (int) $tambah['siswa_id']] + $tambah, 9999));
             }
             foreach ($this->db->table('surat_sekolah_siswa')->select('id')->where('surat_id', $id)->orderBy('urut', 'ASC')->orderBy('id', 'ASC')->get()->getResultArray() as $i => $r) {
                 $this->db->table('surat_sekolah_siswa')->where('id', (int) $r['id'])->update(['urut' => $i + 1]);
@@ -819,7 +845,7 @@ final class SuratSekolah
     /**
      * @param list<mixed> $in
      *
-     * @return list<array{siswa_id: int, kelas_id: ?int, hp: ?string}>
+     * @return list<array{siswa_id: int, kelas_id: ?int, hp: ?string, pengajuan_id?: int}>
      */
     private function rapikanSiswa(array $in): array
     {
@@ -836,7 +862,7 @@ final class SuratSekolah
                 'siswa_id' => $sid,
                 'kelas_id' => is_array($s) ? (((int) ($s['kelas_id'] ?? 0)) ?: null) : null,
                 'hp'       => $hp !== '' ? mb_substr($hp, 0, 25) : null,
-            ];
+            ] + (is_array($s) && ((int) ($s['pengajuan_id'] ?? 0)) > 0 ? ['pengajuan_id' => (int) $s['pengajuan_id']] : []);
         }
 
         return $out;

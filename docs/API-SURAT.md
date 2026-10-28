@@ -184,8 +184,19 @@ Jenis baru bernomor + wajib ACC (bawaan), urutan sesudah Balasan sebelum Penarik
   tanggal semula diketik siswa / melewati batas sekolah (surat itu dilewati ACC massal).
 - Tanggal baru BERLAKU hanya bila surat disetujui; batal ACC / batal surat → tanggal lama berlaku lagi (dihitung, bukan disalin).
 - Permintaan dari siswa: Layanan Siswa web + API publik `publik/layanan/perpanjangan` (docs/API-LAYANAN-SISWA.md).
-- Uji: `php spark dev:uji-perpanjangan` (103 cek: aturan, alur, Word, halaman staf, Layanan Siswa, API staf & publik) — fixture ditulis
-  dengan `UJI_FIXTURE=<folder> php spark dev:uji-perpanjangan`.
+- Uji: `php spark dev:uji-perpanjangan` (127 cek: aturan, alur, lintas ajuan, Word, halaman staf, Layanan Siswa, API staf & publik) — fixture
+  ditulis dengan `UJI_FIXTURE=<folder> php spark dev:uji-perpanjangan`.
+
+**PEMBARUAN 2026-10-28 — siswa satu PERUSAHAAN, lintas ajuan** (docs/DESAIN-PERPANJANGAN-PKL.md bagian 13; tanpa rute baru, kolom lama tetap):
+- `ajuan` (ajuanForm) kini memuat **semua siswa yang PKL di perusahaan yang sama** (ajuan yang dipilih dulu, lalu ajuan lain urut id).
+  Tambahan: `jml_ajuan`, `ajuan_ids[]`; tiap `siswa[]` + `ajuan_id`, `ajuan_kode`, `selesai_ajuan` (tanggal selesai tercatat di ajuannya |
+  null), `ajuan_ini` (bool), `beda` (tanggal selesai tercatat yang BEDA dari `selesai_lama` → `bisa=false`; layar: "buat surat terpisah" =
+  buka form dengan `ajuan_id` siswa itu). Bawaan tercentang di web = siswa `ajuan_ini && bisa`.
+- `hasil[]` (`?q=`) = **satu butir per perusahaan** (ajuan yang cocok paling baru).
+- `POST surat/perpanjangan` / `surat/{id}/ubah`: `siswa[]` boleh dari ajuan mana pun di perusahaan `ajuan_id`. Siswa beda tanggal selesai →
+  **422** `errors.siswa`; siswa perusahaan lain → 422 `errors.siswa`. `ditambah` = ikut surat perusahaan itu yang tanggal semula & barunya sama.
+- `pkl/ajuan/{id}` → `anggota[].perpanjangan` & `selesai_efektif` dihitung dari ajuan asal tiap siswa, jadi ajuan teman juga menampilkan
+  perpanjangan dari surat yang dibuat lewat ajuan lain.
 
 ## Galat
 - **422 isian** (buat/ubah): `data.errors.galat` = LIST kalimat dari library (`periksa()`); `message` = kalimat pertama.
