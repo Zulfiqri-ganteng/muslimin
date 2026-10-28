@@ -224,3 +224,10 @@ Jenis baru bernomor + wajib ACC (bawaan), urutan sesudah Balasan sebelum Penarik
 ## Deploy
 `git pull` saja untuk endpoint lama. Endpoint lapor butuh migrasi `2026-10-17-000002_PklLapor` (`php spark migrate`) — lihat
 `docs/PANDUAN-DEPLOY-HAK-AKSES.md`. Aplikasi Android baru bisa memakai menu ini setelah layar Flutter dibuat (BLUEPRINT-SURAT).
+
+**PEMBARUAN 2026-10-28b — kolom NIS di Word Balasan, Perpanjangan, Penarikan** (permintaan klien; API TIDAK berubah):
+- Tabel siswa ketiga template kini `NO | NAMA | NIS | KELAS | KONSENTRASI KEAHLIAN | NOMOR HANDPHONE` — bentuk & lebar kolom sama dengan
+  Surat Permohonan PKL sekolah (`surat_pkl_binus.docx`). Tetap 1 halaman untuk 5 siswa (dicek Word dengan 5 nama terpanjang data hosting).
+- `POST surat/{id}/unduh` & `surat/unduh-massal` otomatis menghasilkan Word berkolom NIS (perakit sama dengan web). Surat lama yang diunduh
+  ulang ikut berkolom NIS (nomor tetap).
+- `GET surat/{id}` → `siswa[].nis` SUDAH ada sejak awal (tak ada kolom baru). Layar Android boleh menampilkan NIS di daftar siswa detail surat.

@@ -122,7 +122,7 @@ memakai subkueri yang sama sehingga fase "Selesai PKL" ikut tanggal efektif (kol
 
 ## 5. Surat Word `app/Libraries/Surat/perpanjangan_pkl.docx`
 
-Dibuat dari `balasan_pkl.docx` dengan skrip sekali pakai di scratchpad (pola L3–L6, `docs/DESAIN-SURAT-SEKOLAH.md`): kop, kertas
+Dibuat dari `balasan_pkl.docx` dengan skrip sekali pakai di scratchpad (pola L3–L6, `docs/DESAIN-SURAT-SEKOLAH.md`; 2026-10-28: + kolom NIS sesudah NAMA, sama dengan Surat Permohonan PKL): kop, kertas
 21,5×33, Nomor/Lampiran/Perihal, tabel NO | NAMA | KELAS | KONSENTRASI KEAHLIAN | NOMOR HANDPHONE, blok TTD Waka Hubin + Kepsek, NB,
 `${acc_footer}` SAMA persis; hanya badan surat diganti. Metadata penyusun dihapus (repo publik).
 

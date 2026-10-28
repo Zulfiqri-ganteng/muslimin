@@ -2475,14 +2475,18 @@ class UjiSurat extends BaseCommand
             if ($keluar !== '' && $h2['ok']) {
                 file_put_contents(rtrim($keluar, '/\\') . '/hasil_' . $jenis . '.docx', $h2['biner']);
             }
+            // Kolom NIS (permintaan klien 2026-10-28, bentuk = Surat Permohonan PKL sekolah) belum ada di contoh lama: sel judul "NIS"
+            // dibuang dari hasil sebelum dibandingkan, sisanya tetap harus sama persis.
+            $tanpaNis = preg_replace('~<w:tc>(?:(?!</w:tc>).)*?<w:t[^>]*>NIS</w:t>.*?</w:tc>~s', '', $xml, 1);
             $bc  = $this->badanTanpaSiswa($this->xmlBerkas($sumber));
-            $bh  = $this->badanTanpaSiswa($xml);
-            $this->cek($jenis . ': BADAN SURAT sama persis dengan contoh sekolah ("Kepada Yth." … "terima kasih.", data contoh, baris siswa diganti siswa uji)', $bc !== '' && $bc === $bh && $d['perusahaan'] !== '',
+            $bh  = $this->badanTanpaSiswa((string) $tanpaNis);
+            $this->cek($jenis . ': BADAN SURAT sama persis dengan contoh sekolah ("Kepada Yth." … "terima kasih.", data contoh, baris siswa diganti siswa uji; kecuali kolom NIS baru)', $tanpaNis !== null && $bc !== '' && $bc === $bh && $d['perusahaan'] !== '',
                 $bc === $bh ? '' : "\n   contoh: " . mb_substr($bc, 0, 300) . "\n   hasil : " . mb_substr($bh, 0, 300));
             $tbHasil = $this->tabelSiswa($xml)[1];
             $tbAsli  = $this->tabelSiswa($this->xmlBerkas($sumber))[1];
-            $this->cek($jenis . ': tabel siswa berisi baris uji urut (No, Nama, Kelas, Konsentrasi, HP) — jumlah kolom sama dengan contoh', ($tbHasil[1][0] ?? '') === '2'
-                && ($tbHasil[0][1] ?? '') === 'ZZUJI SS 61' && count($tbHasil[0] ?? []) === count($tbAsli[0] ?? [0]), json_encode([$tbHasil, count($tbAsli[0] ?? [])], JSON_UNESCAPED_UNICODE));
+            $this->cek($jenis . ': tabel siswa berisi baris uji urut (No, Nama, NIS, Kelas, Konsentrasi, HP) — kolom contoh + NIS terisi', ($tbHasil[1][0] ?? '') === '2'
+                && ($tbHasil[0][1] ?? '') === 'ZZUJI SS 61' && ($tbHasil[0][2] ?? '') === self::NIS . '61' && ($tbHasil[1][2] ?? '') === self::NIS . '62'
+                && count($tbHasil[0] ?? []) === count($tbAsli[0] ?? [0]) + 1, json_encode([$tbHasil, count($tbAsli[0] ?? [])], JSON_UNESCAPED_UNICODE));
         }
 
         $this->atur(['kepsek_nama' => 'Kepsek Uji, S.T.', 'kontak_surat_nama' => 'Kontak Uji', 'kontak_surat_hp' => '0812000']);

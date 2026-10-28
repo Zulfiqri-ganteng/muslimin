@@ -330,7 +330,8 @@ class UjiPerpanjangan extends BaseCommand
             && str_contains($teks, 'yang berakhir pada tanggal ' . \App\Libraries\IsianBantu::tanggalIndo($lama))
             && str_contains($teks, Lib::lamaTeks($lama, $baru) . ', ' . SuratPkl::periodeTeks(Lib::mulai($lama), $baru))
             && str_contains($teks, 'karena proyek perusahaan diperpanjang.') && str_contains($teks, 'Bapak/Ibu HRD'));
-        $this->cek('isi: siswa, Kepala Sekolah, Waka Hubin, kaki ACC, tanpa penanda ${…} tersisa', str_contains($teks, self::OLEH . ' 1') && str_contains($teks, 'Kepsek Uji, S.T.') && str_contains($teks, 'Hubin Uji, S.Pd.')
+        $this->cek('isi: siswa + NIS-nya (kolom NIS, 2026-10-28), Kepala Sekolah, Waka Hubin, kaki ACC, tanpa penanda ${…} tersisa', str_contains($teks, self::OLEH . ' 1') && str_contains($teks, self::NIS . '1')
+            && str_contains($teks, 'NIS') && str_contains($teks, 'Kepsek Uji, S.T.') && str_contains($teks, 'Hubin Uji, S.Pd.')
             && str_contains($teks, 'disetujui secara elektronik') && ! str_contains($teks, '${'));
         $this->cek('bagian surat yang sama dengan Surat Balasan tetap ada (Lokasi Penempatan, Alamat, NB)', str_contains($teks, 'Lokasi Penempatan') && str_contains($teks, 'NB :') && str_contains($teks, 'Jl. Uji Perpanjangan No. 1'));
     }
