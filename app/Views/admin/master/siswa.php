@@ -16,6 +16,7 @@
  * @var array<int,string>             $kelasOpts   Opsi kelas
  * @var array                         $tingkatList Daftar tingkat sah
  * @var array                         $statusList  Daftar status sah
+ * @var array<string, int>            $periksa     PeriksaSiswa::hasil()['jumlah'] — pemberitahuan data yang perlu diperiksa
  */
 use App\Libraries\SiswaStatus;
 use App\Models\SiswaModel;
@@ -73,20 +74,20 @@ $bagian = static fn (string $judul, string $ket = ''): string => '<p class="bord
     'helpKey'   => 'siswa_v5',
     'helpTitle' => 'Master Siswa',
     'helpKelas' => '',
-    'helpBody'  => '<p>Data siswa lengkap sesuai buku induk: identitas, alamat, sekolah asal, orang tua, wali, dan kelas. Tingkat dan jurusan <b>mengikuti kelas</b> siswa, jadi cukup pilih kelasnya saja.</p>
-        <p class="mt-1">• <b>Biodata dari siswa</b> — siswa bisa mengisi biodatanya sendiri lewat menu <b>Isian Biodata Siswa</b>. Setelah admin menyetujui isiannya, datanya otomatis masuk ke sini dan siswa ditandai lencana hijau <b>Biodata</b>. Pakai saringan <b>Biodata lengkap / belum</b> untuk melihat siapa yang belum.<br>
-        • Data yang sudah masuk tetap bisa <b>diubah manual</b> lewat tombol Ubah.</p>
-        <p class="mt-1">• <b>Import</b> — unduh template, isi di Excel, unggah, periksa di pratinjau, simpan. NIS yang sudah ada akan <b>diperbarui</b>, bukan diduplikat. <b>Sel yang dikosongkan tidak mengubah data lama</b>, jadi aman mengimpor ulang daftar yang hanya berisi NIS, nama, dan kelas.<br>
-        • Kolom <b>Kelas</b> pada file impor diisi <b>nama kelas</b> persis seperti di Master Kelas (mis. <i>X TKJ 1</i>).<br>
-        • <b>Penting:</b> NIS bisa berganti ke NIS asli setelah biodata disetujui. Untuk impor ulang, pakai file hasil <b>Export terbaru</b>, bukan file lama — NIS lama akan dianggap siswa baru.<br>
-        • <b>Filter</b> — memilih kelas/tingkat/status/biodata langsung menyaring tabel (tanpa klik Cari). Pilihan <b>— Tanpa kelas —</b> menampilkan siswa yang belum ditempatkan di kelas.<br>
-        • <b>Detail</b> — klik <b>nama siswa</b> atau tombol <b>Detail</b> di kolom Aksi untuk melihat SEMUA data satu siswa (identitas, kelas, alamat, orang tua, wali, STTB, status biodata &amp; PKL). Dari sana tombol <b>Ubah data</b> membuka form ubah.<br>
-        • <b>Data Sekolah</b> — nama orang tua versi sekolah, nomor &amp; tahun STTB (ijazah SMP) sesuai Daftar Nama Siswa resmi (Format 8355). Kolom ini ada di <b>paling kanan</b> template impor.<br>
-        • <b>Export</b> — mengunduh sesuai pilihan filter (pilih satu kelas = hanya kelas itu), berisi seluruh kolom biodata. Bila isinya lebih dari satu kelas, file Excel berisi tab <b>Semua Kelas</b> + <b>satu tab per kelas</b> (klik nama kelas di bawah layar Excel).</p>
-        <p class="mt-1">• Status <b>Aktif</b> yang dihitung pada grafik jumlah siswa di halaman publik. Siswa lulus/pindah/keluar tetap tersimpan sebagai arsip.<br>
-        • <b>Nonaktifkan</b> — siswa yang lulus, pindah sekolah, atau keluar: statusnya diganti, data &amp; riwayat (PKL, surat, biodata) tetap utuh, dan siswa tidak muncul lagi di formulir siswa. Bisa <b>Aktifkan</b> lagi kapan saja.<br>
-        • <b>Hapus permanen</b> (halaman Detail, atau centang lalu Hapus terpilih) — hanya untuk data salah input yang belum punya data terkait; NIS/NISN-nya langsung bisa dipakai lagi. Siswa yang sudah punya data PKL/surat/biodata tidak bisa dihapus — nonaktifkan saja.<br>
-        • Saringan Status <b>Terhapus (lama)</b> — data yang dulu "dihapus" dengan cara lama: Pulihkan atau Hapus permanen.</p>',
+    'helpBody'  => '<p>Data siswa lengkap sesuai buku induk: identitas, alamat, sekolah asal, orang tua, wali, dan kelas. Tingkat dan jurusan <b>mengikuti kelas</b>, jadi cukup pilih kelasnya saja. Hanya siswa berstatus <b>Aktif</b> yang muncul di formulir siswa (Layanan Siswa, Biodata, PKL) dan dihitung di grafik halaman publik.</p>
+        <p class="mt-2"><b>Tombol di atas tabel</b><br>
+        • <b>Tambah</b> — menambah satu siswa. Isi NIS dan NISN asli (NISN = 10 angka) serta tanggal lahir, supaya siswa bisa masuk Layanan Siswa.<br>
+        • <b>Import</b> — memasukkan banyak siswa sekaligus dari Excel: unduh template → isi → unggah → periksa pratinjau → simpan. NIS yang sudah ada <b>diperbarui</b> (tidak dobel), sel yang dikosongkan tidak mengubah data lama, kolom Kelas diisi nama kelas persis (mis. <i>X TKJ 1</i>). Untuk impor ulang pakai berkas hasil <b>Export terbaru</b>.<br>
+        • <b>Export</b> — mengunduh <b>semua kolom data</b> ke Excel untuk diolah, sesuai saringan yang dipilih (pilih satu kelas = kelas itu saja; lebih dari satu kelas = tab Semua Kelas + satu tab per kelas).<br>
+        • <b>Lainnya → Periksa data siswa</b> — daftar yang perlu dibetulkan: kemungkinan data <b>ganda</b> (satu siswa tercatat dua kali), data <b>tidak sesuai</b> (NIS/NISN tidak wajar, tanggal lahir kosong, siswa tidak bisa masuk Layanan Siswa), dan kelas hasil penempatan otomatis.<br>
+        • <b>Lainnya → Unduh Daftar Nama Siswa resmi</b> — laporan Excel <b>siap cetak</b> dengan bentuk persis berkas "Daftar Nama Siswa" sekolah: semua siswa aktif kelas X, XI, XII per jurusan, dengan kolom resmi dan tempat tanda tangan. Bedanya dengan Export: Export untuk diolah, daftar resmi untuk dicetak/diserahkan.</p>
+        <p class="mt-2"><b>Saringan</b> — memilih kelas, tingkat, status, atau biodata langsung menyaring tabel. <i>— Tanpa kelas —</i> = siswa belum ditempatkan di kelas. Status: Aktif, Tidak aktif (semua), Lulus, Pindah sekolah, Keluar, dan <b>Terhapus (lama)</b> (data yang dulu dihapus dengan cara lama — bisa Pulihkan atau Hapus permanen).</p>
+        <p class="mt-2"><b>Tombol di tiap baris</b><br>
+        • <b>Nonaktifkan</b> — untuk siswa yang lulus, pindah sekolah, atau keluar. Data dan riwayatnya (PKL, surat, biodata) tetap utuh; tombol berganti menjadi <b>Aktifkan</b> bila ingin dikembalikan.<br>
+        • <b>Detail</b> (atau klik nama siswa) — semua data satu siswa. Di sana juga ada tombol <b>Hapus permanen</b>.<br>
+        • <b>Ubah</b> — mengubah data siswa.</p>
+        <p class="mt-2"><b>Menghapus siswa</b> — <b>Hapus permanen</b> (dari halaman Detail, atau centang beberapa siswa lalu <b>Hapus terpilih</b>) hanya bisa untuk data salah input yang <b>belum punya data terkait</b>; NIS/NISN-nya langsung bisa dipakai lagi. Siswa yang sudah punya data PKL, surat, biodata, dll. tidak bisa dihapus — pakai <b>Nonaktifkan</b>.</p>
+        <p class="mt-2"><b>Biodata dari siswa</b> — siswa mengisi biodatanya sendiri lewat menu <b>Isian Biodata Siswa</b>; setelah disetujui datanya masuk ke sini dan siswa ditandai lencana hijau <b>Biodata</b> (saringan Biodata lengkap / belum). Kolom <b>Data sekolah</b> (nama orang tua versi sekolah, nomor &amp; tahun STTB/ijazah SMP) sesuai Daftar Nama Siswa resmi — ada di paling kanan template impor.</p>',
 ]) ?>
 <?= $this->endSection() ?>
 
@@ -122,15 +123,27 @@ $bagian = static fn (string $judul, string $ket = ''): string => '<p class="bord
         'filterLangsung' => true,
         'eksporUrl'      => site_url('admin/master/siswa/export') . ($qsExport !== [] ? '?' . http_build_query($qsExport) : ''),
         'eksporTitle'    => 'Unduh data siswa sesuai filter yang dipilih (mis. satu kelas saja) ke file Excel',
-        'tambahanHtml'   => '<a href="' . site_url('admin/master/siswa/periksa') . '" class="btn btn-netral" title="Kemungkinan data ganda, data tidak sesuai, kelas hasil penempatan otomatis">'
-            . ikon('clipboard-check', 'h-4 w-4') . 'Periksa data</a>'
-            . '<a href="' . site_url('admin/master/siswa/export-resmi') . '" class="btn btn-netral" title="Unduh Daftar Nama Siswa Kelas X, XI, XII dengan format persis berkas sekolah (Format 8355): semua siswa aktif per jurusan, lengkap dengan tanda tangan">'
-            . '<span class="text-green-600 dark:text-green-400">' . ikon('file-lines', 'h-4 w-4') . '</span>Format 8355</a>',
+        // Tombol jarang dipakai disatukan di "Lainnya" supaya deret tombol kanan tidak mendesak saringan (keluhan user 2026-10-29).
+        'tambahanHtml'   => ui_menu_lain([
+            ['label' => 'Periksa data siswa', 'ikon' => 'clipboard-check', 'href' => site_url('admin/master/siswa/periksa')],
+            // Daftar Nama Siswa resmi sekolah (dulu berlabel "Format 8355" = nama lembar di berkas Excel sekolah — membingungkan pengguna).
+            ['label' => 'Unduh Daftar Nama Siswa resmi (siap cetak)', 'ikon' => 'file-lines', 'href' => site_url('admin/master/siswa/export-resmi')],
+        ], ['kecil' => false]),
         'massalUrl'        => site_url('admin/master/siswa/bulk-delete'),
         'massalLabel'      => 'siswa',
         'massalSemua'      => false, // "Hapus semua" tidak tersedia untuk siswa
         'massalPeringatan' => 'Ini HAPUS PERMANEN: hanya siswa yang belum punya data terkait (PKL, surat, biodata, dll.) yang terhapus; selebihnya dilewati — nonaktifkan saja.',
     ]) ?>
+
+    <?php $perluCek = ($periksa['ganda'] ?? 0) + ($periksa['tidak_sesuai'] ?? 0); ?>
+    <?php if (! $terhapus && $perluCek > 0): ?>
+        <?php // Pemberitahuan tipis hanya bila ada data yang perlu dibetulkan (PeriksaSiswa) — pengganti tombol "Periksa data" di bilah alat. ?>
+        <div class="px-4 pt-4"><?= ui_peringatan('awas', '', ['html' => esc(implode(' · ', array_filter([
+            ($periksa['ganda'] ?? 0) > 0 ? $periksa['ganda'] . ' kemungkinan data ganda' : '',
+            ($periksa['tidak_bisa_masuk'] ?? 0) > 0 ? $periksa['tidak_bisa_masuk'] . ' siswa tidak bisa masuk Layanan Siswa' : '',
+            ($periksa['tidak_sesuai'] ?? 0) - ($periksa['tidak_bisa_masuk'] ?? 0) > 0 ? (($periksa['tidak_sesuai'] ?? 0) - ($periksa['tidak_bisa_masuk'] ?? 0)) . ' data perlu dilengkapi' : '',
+        ]))) . ' — <a href="' . site_url('admin/master/siswa/periksa') . '" class="font-semibold underline">Periksa data</a>']) ?></div>
+    <?php endif; ?>
 
     <?php if ($terhapus): ?>
         <div class="px-4 pt-4"><?= ui_peringatan('info', 'Ini data siswa yang dulu "dihapus" dengan cara lama (masih tersimpan, NIS/NISN-nya masih terpakai). Pulihkan bila ternyata siswa masih ada, atau Hapus permanen bila data itu salah input. Hapus permanen hanya bisa bila belum punya data terkait.', ['judul' => 'Terhapus (lama)']) ?></div>
@@ -301,7 +314,7 @@ $bagian = static fn (string $judul, string $ket = ''): string => '<p class="bord
             <?php $kolom('pekerjaan_wali', $label['pekerjaan_wali'], ['max' => 100, 'list' => 'daftar-pekerjaan']) ?>
         </div>
 
-        <?= $bagian('Data sekolah', '(sesuai Daftar Nama Siswa resmi — Format 8355)') ?>
+        <?= $bagian('Data sekolah', '(sesuai Daftar Nama Siswa resmi sekolah)') ?>
         <div class="grid gap-4 sm:grid-cols-2">
             <?php $kolom('nama_orang_tua', SiswaModel::LABEL_SEKOLAH['nama_orang_tua'], ['max' => 150, 'span' => 'sm:col-span-2']) ?>
             <?php $kolom('sttb_nomor', SiswaModel::LABEL_SEKOLAH['sttb_nomor'] . ' (ijazah SMP/MTs)', ['max' => 60]) ?>

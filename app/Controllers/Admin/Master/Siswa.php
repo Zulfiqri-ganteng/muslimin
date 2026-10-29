@@ -111,6 +111,7 @@ class Siswa extends BaseMaster
             'kelasOpts'   => (new KelasModel())->options(),
             'tingkatList' => self::TINGKAT,
             'statusList'  => SiswaModel::STATUS,
+            'periksa'     => PeriksaSiswa::hasil()['jumlah'], // pemberitahuan "data perlu diperiksa" (cache master 'siswa')
         ]);
     }
 
@@ -534,7 +535,7 @@ class Siswa extends BaseMaster
             SiswaExcel8355::kelompokkan(SiswaExcel8355::ambil(db_connect())),
             (new SettingModel())->get()
         );
-        $this->streamXlsx($ss, 'Daftar-Nama-Siswa-Format-8355-' . date('Ymd-His'));
+        $this->streamXlsx($ss, 'Daftar-Nama-Siswa-Resmi-' . date('Ymd-His'));
     }
 
     /** Isi baris data mulai baris 7 (baris 1–5 KOP, baris 6 judul kolom); nomor urut mulai 1 per lembar. */

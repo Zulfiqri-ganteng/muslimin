@@ -296,6 +296,10 @@
   .alat-crud-pilih  { @apply w-auto shrink-0; }   /* dipakai bersama .inp */
   .alat-crud-tombol { @apply flex flex-wrap items-center gap-2 xl:justify-end; }
   .alat-crud-pemisah { @apply mx-1 hidden h-6 w-px bg-gray-200 sm:block dark:bg-gray-700; }
+  /* Bilah alat ber-saringan banyak (≥3, mis. Master Siswa): di lebar laptop tombol turun ke baris sendiri supaya saringan tidak
+     terdesak menumpuk satu-satu (keluhan user 2026-10-29); berdampingan baru di layar sangat lebar. */
+  .alat-crud-padat  { @apply xl:flex-col xl:items-stretch 2xl:flex-row 2xl:items-center; }
+  .alat-crud-padat .alat-crud-tombol { @apply xl:justify-start 2xl:justify-end; }
   .tabel-crud { @apply min-w-full divide-y divide-gray-200 text-left text-sm text-gray-900 dark:divide-gray-600 dark:text-white; }
   .tabel-crud thead { @apply bg-gray-100 dark:bg-gray-700; }
   .tabel-crud thead th { @apply p-4 text-xs font-medium whitespace-nowrap text-gray-600 uppercase dark:text-gray-300; }
