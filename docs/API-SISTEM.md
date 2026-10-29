@@ -115,15 +115,20 @@ pribadi, restore butuh Mode Maintenance + sandi + ketik PULIHKAN dan berjalan be
 
 ```json
 { "data": {
-    "backup": [ { "kunci": "db-20261029-010000-otomatis.sql.gz", "isi": "db", "jenis": "otomatis", "label_jenis": "Otomatis (tiap malam)",
-                  "waktu": "2026-10-29 01:00:00", "ukuran": 266545, "tabel": 106, "oleh": "Terminal (spark)" },
+    "backup": [ { "kunci": "db-20261029-210000-manual.sql.gz", "isi": "db", "jenis": "manual", "label_jenis": "Manual",
+                  "waktu": "2026-10-29 21:00:00", "ukuran": 266545, "tabel": 106, "oleh": "Abil Septian" },
                 { "kunci": "berkas-20261029-210000-manual.zip", "isi": "berkas", "jenis": "manual", "label_jenis": "Manual", …, "tabel": null, "oleh": null } ],
     "total_ukuran": 1234567,
-    "otomatis_terakhir": "2026-10-29 01:00:00",      // null = cron backup belum dipasang
+    "terakhir": "2026-10-29 21:00:00",               // backup DATABASE terbaru (jenis apa pun); null = belum pernah
+    "hari_sejak_terakhir": 0,                        // null = belum pernah
+    "ingatkan_hari": 7,                              // tampilkan pengingat bila hari_sejak_terakhir >= ini
+    "otomatis_terakhir": null,                       // kunci lama; tetap null karena TANPA cron (keputusan user 2026-10-29)
     "disimpan": { "manual": 10, "otomatis": 7, "sebelum-pulihkan": 3 },
     "maintenance_aktif": false
 } }
 ```
+
+Backup dibuat **manual** oleh Admin (tanpa cron). Jenis `otomatis` hanya muncul bila kelak cron dipasang.
 
 `isi`: `db` (database, .sql.gz) | `berkas` (berkas unggahan, .zip). `jenis`: `manual` | `otomatis` | `sebelum-pulihkan` (dibuat otomatis
 sebelum restore). Urut terbaru di atas. Yang lebih lama dari batas `disimpan` dihapus otomatis.

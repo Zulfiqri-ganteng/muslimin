@@ -1,7 +1,8 @@
 # Panduan deploy — Alat Sistem (Backup & Restore, Mode Maintenance, Log Error Hosting, Sesi Aktif)
 
 Untuk server kangmuslim.com (Rumahweb cPanel, akun `kank9494`). Rancangan & isi fitur: `docs/DESAIN-ALAT-SISTEM.md`.
-Ada **1 migrasi baru** (`2026-10-29-000001_SesiAdmin` — tabel `sesi_admin`) dan **1 baris cron baru** (backup harian).
+Ada **1 migrasi baru** (`2026-10-29-000001_SesiAdmin` — tabel `sesi_admin`). **Tanpa cron**: keputusan user 2026-10-29 — backup
+dibuat Admin lewat tombol di Sistem → Backup & Restore (halaman mengingatkan bila backup terakhir sudah ≥ 7 hari).
 
 ## 1. Sebelum menarik kode
 
@@ -9,32 +10,35 @@ Backup database hosting dulu: phpMyAdmin → `kank9494_muslimin` → tab **Ekspo
 
 ## 2. Tarik kode + migrasi (Terminal cPanel)
 
+`public/.htaccess` di hosting sudah diubah cPanel (blok versi PHP dari MultiPHP Manager — JANGAN dibuang, tanpa itu situs bisa jatuh
+ke PHP 7.4). Commit ini juga mengubah berkas itu, jadi `git pull` biasa akan berhenti ("would be overwritten"). Pakai urutan ini:
+
 ```
-cd ~/kangmuslim && git pull origin main && phpm spark migrate
+cd ~/kangmuslim
+cp public/.htaccess ~/htaccess-cadangan.txt
+git stash
+git pull origin main
+git stash pop
+phpm spark migrate
 ```
 
-Harus muncul `Running: … SesiAdmin` lalu `Migrations complete.` (Jangan pakai `php spark` polos — PHP di Terminal = 7.4, mati diam.)
+`git stash pop` harus selesai tanpa kata CONFLICT; sesudahnya `git status` hanya menunjukkan `public/.htaccess` *modified* (wajar —
+blok cPanel). Migrate harus menampilkan `Running: … SesiAdmin` lalu `Migrations complete.` (Jangan `php spark` polos — PHP di
+Terminal = 7.4, mati diam.) Pull berikutnya yang tidak mengubah `.htaccess` cukup `git pull origin main` seperti biasa.
 
 ## 3. Uji backup sekali dari Terminal
 
 ```
-phpm spark backup:buat --manual
+phpm spark backup:buat
 ```
 
 Harus muncul `Backup database: db-…-manual.sql.gz (… KB, 106 tabel)`. Folder `writable/backup/` dibuat otomatis (tidak bisa dibuka
-dari internet, dan tidak ikut git).
+dari internet, dan tidak ikut git). Selanjutnya backup cukup lewat tombol di admin.
 
-## 4. Pasang cron backup harian (cPanel → Cron Jobs)
+## 4. (Tidak dipakai) Cron backup
 
-- Waktu: **Sekali sehari** — menit `0`, jam `1` (01.00 malam).
-- Perintah (salin path PHP yang SAMA dengan cron notifikasi yang sudah ada; alias `phpm` tidak berlaku di cron):
-
-```
-/opt/cpanel/ea-php83/root/usr/bin/php /home/kank9494/kangmuslim/spark backup:buat >/dev/null 2>&1
-```
-
-Disimpan 7 backup otomatis terakhir (yang lebih lama terhapus sendiri). Tambahkan `--berkas` di perintah bila foto & dokumen juga
-ingin dibackup tiap malam.
+Tidak perlu dipasang. Bila kelak ingin backup otomatis: cron harian dengan path PHP lengkap (sama seperti cron notifikasi)
+`… /home/kank9494/kangmuslim/spark backup:buat --otomatis >/dev/null 2>&1` — tersimpan 7 terakhir dengan jenis "Otomatis (terjadwal)".
 
 ## 5. Peramban
 

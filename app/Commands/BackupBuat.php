@@ -7,26 +7,24 @@ use CodeIgniter\CLI\BaseCommand;
 use CodeIgniter\CLI\CLI;
 
 /**
- * Backup lewat Terminal / cron cPanel (docs/DESAIN-ALAT-SISTEM.md F3, docs/PANDUAN-DEPLOY-ALAT-SISTEM.md).
+ * Backup lewat Terminal (docs/DESAIN-ALAT-SISTEM.md F3). Keputusan user 2026-10-29: TANPA cron — backup dibuat Admin lewat tombol
+ * di Sistem → Backup & Restore; perintah ini untuk keadaan darurat / Terminal.
  *
- *   phpm spark backup:buat                 → backup database jenis "otomatis" (untuk cron harian; simpan 7 terakhir)
+ *   phpm spark backup:buat                 → backup database jenis "manual"
  *   phpm spark backup:buat --berkas        → + backup berkas unggahan (.zip)
- *   phpm spark backup:buat --manual        → jenis "manual"
- *
- * Cron (path lengkap PHP 8.3 — alias phpm tidak berlaku di cron), tiap jam 01.00:
- *   0 1 * * * /opt/cpanel/ea-php83/root/usr/bin/php /home/kank9494/kangmuslim/spark backup:buat >/dev/null 2>&1
+ *   phpm spark backup:buat --otomatis      → jenis "otomatis" (HANYA bila kelak dipasang di cron; simpan 7 terakhir)
  */
 class BackupBuat extends BaseCommand
 {
     protected $group       = 'Sistem';
     protected $name        = 'backup:buat';
-    protected $description = 'Buat backup database (+ berkas unggahan dengan --berkas). Bawaan jenis "otomatis" untuk cron.';
-    protected $usage       = 'backup:buat [--berkas] [--manual]';
-    protected $options     = ['--berkas' => 'Ikut backup berkas unggahan (.zip)', '--manual' => 'Catat sebagai backup manual'];
+    protected $description = 'Buat backup database (+ berkas unggahan dengan --berkas). Bawaan jenis "manual".';
+    protected $usage       = 'backup:buat [--berkas] [--otomatis]';
+    protected $options     = ['--berkas' => 'Ikut backup berkas unggahan (.zip)', '--otomatis' => 'Catat sebagai backup otomatis (untuk cron, bila kelak dipakai)'];
 
     public function run(array $params)
     {
-        $jenis = CLI::getOption('manual') !== null ? 'manual' : 'otomatis';
+        $jenis = CLI::getOption('otomatis') !== null ? 'otomatis' : 'manual';
         try {
             $b = BackupSistem::buatDb($jenis, 'Terminal (spark)');
             CLI::write('Backup database: ' . $b['kunci'] . ' (' . number_format($b['ukuran'] / 1024, 0, ',', '.') . ' KB, ' . $b['tabel'] . ' tabel)', 'green');

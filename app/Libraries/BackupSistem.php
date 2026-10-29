@@ -15,7 +15,7 @@ class BackupSistem
     /** Jenis → [label, jumlah yang disimpan per isi (yang lebih lama dihapus otomatis)]. */
     public const JENIS = [
         'manual'           => ['Manual', 10],
-        'otomatis'         => ['Otomatis (tiap malam)', 7],
+        'otomatis'         => ['Otomatis (terjadwal)', 7], // hanya bila kelak dipasang cron backup:buat --otomatis (saat ini tidak dipakai)
         'sebelum-pulihkan' => ['Otomatis sebelum restore', 3],
     ];
 
@@ -95,6 +95,29 @@ class BackupSistem
 
         return $out;
     }
+
+    /** Backup database terbaru (jenis apa pun), atau null. Backup dibuat MANUAL oleh Admin (keputusan user 2026-10-29: tanpa cron). */
+    public static function terakhirDb(): ?array
+    {
+        foreach (self::daftar() as $b) {
+            if ($b['isi'] === 'db') {
+                return $b;
+            }
+        }
+
+        return null;
+    }
+
+    /** Hari sejak backup database terakhir (null = belum pernah). */
+    public static function hariSejakTerakhir(): ?int
+    {
+        $b = self::terakhirDb();
+
+        return $b === null ? null : (int) floor((time() - strtotime($b['waktu'])) / 86400);
+    }
+
+    /** Pengingat lembut bila backup database terakhir lebih lama dari ini (hari). */
+    public const INGATKAN_HARI = 7;
 
     /** Path backup dari kuncinya (hanya nama yang cocok pola & ada di folder), atau null. */
     public static function path(string $kunci): ?string

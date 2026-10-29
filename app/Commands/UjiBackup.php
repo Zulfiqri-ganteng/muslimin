@@ -50,9 +50,10 @@ class UjiBackup extends BaseCommand
     public function run(array $params)
     {
         $db              = db_connect();
-        $this->dir       = WRITEPATH . 'cache' . DIRECTORY_SEPARATOR . 'uji_backup_' . getmypid() . DIRECTORY_SEPARATOR;
+        // Di LUAR writable/cache: restore selesai menjalankan cache()->clean() yang menyapu isi folder cache (termasuk subfolder).
+        $this->dir       = WRITEPATH . 'uji_backup_' . getmypid() . DIRECTORY_SEPARATOR;
         $auditAwal       = (int) ($db->table('audit_log')->selectMax('id', 'm')->get()->getRow()->m ?? 0);
-        $berkasMm        = WRITEPATH . 'cache' . DIRECTORY_SEPARATOR . 'uji_backup_mm_' . getmypid() . '.json';
+        $berkasMm        = $this->dir . 'uji_maintenance.json';
         try {
             $db->query('DROP DATABASE IF EXISTS `' . self::DB_UJI . '`');
             $db->query('CREATE DATABASE `' . self::DB_UJI . '` CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci');
@@ -205,7 +206,7 @@ class UjiBackup extends BaseCommand
         $db   = BackupSistem::buatDb('manual', 'ZZUJI Backup'); // backup asli database percobaan (berkas retensi di atas = tiruan)
         $html = $this->web('index');
         $this->cek('halaman: tombol backup, daftar, Unduh/Pulihkan, peringatan cron & maintenance', is_string($html) && str_contains($html, 'Backup database')
-            && str_contains($html, 'Daftar backup') && str_contains($html, 'Pulihkan') && str_contains($html, 'Backup otomatis belum aktif') && str_contains($html, 'Aktifkan Mode Maintenance dulu'));
+            && str_contains($html, 'Daftar backup') && str_contains($html, 'Pulihkan') && str_contains($html, 'Backup database terakhir') && ! str_contains($html, 'cron') &&str_contains($html, 'Aktifkan Mode Maintenance dulu'));
         $r = $this->web('unduhForm', [], ['kunci' => $db['kunci'] ?? '']);
         $this->cek('halaman unduh meminta sandi', is_string($r) && str_contains($r, 'name="sandi"'));
         $r = $this->web('unduh', ['kunci' => $db['kunci'] ?? '', 'sandi' => 'salah'], [], 'POST');
@@ -253,7 +254,8 @@ class UjiBackup extends BaseCommand
         $this->cek('GET/POST sistem/backup oleh Operator → 403', $this->api($S, 'backup', 'operator')[0] === 403 && $this->api($S, 'buatBackup', 'operator', ['isi' => 'db'])[0] === 403);
         [$k, $j] = $this->api($S, 'backup', 'admin');
         $this->cek('GET sistem/backup → backup[] + total_ukuran + disimpan + maintenance_aktif', $k === 200 && is_array($j['data']['backup'] ?? null) && isset($j['data']['disimpan']['otomatis'])
-            && array_key_exists('otomatis_terakhir', $j['data']));
+            && array_key_exists('otomatis_terakhir', $j['data']) && ($j['data']['terakhir'] ?? null) !== null && ($j['data']['hari_sejak_terakhir'] ?? null) === 0
+            && ($j['data']['ingatkan_hari'] ?? 0) === BackupSistem::INGATKAN_HARI);
         $this->fx['sistem_backup'] = $this->potong($j);
         [$k] = $this->api($S, 'buatBackup', 'admin', ['isi' => 'apa']);
         $this->cek('POST isi tidak dikenal → 422', $k === 422);

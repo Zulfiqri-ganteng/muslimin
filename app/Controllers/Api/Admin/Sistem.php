@@ -197,11 +197,15 @@ class Sistem extends BaseApiController
     {
         $daftar   = BackupSistem::daftar();
         $otomatis = array_values(array_filter($daftar, static fn (array $b): bool => $b['jenis'] === 'otomatis'));
+        $terakhir = BackupSistem::terakhirDb();
 
         return [
             'backup'            => array_map($this->bentukBackup(...), $daftar),
             'total_ukuran'      => array_sum(array_column($daftar, 'ukuran')),
-            'otomatis_terakhir' => $otomatis[0]['waktu'] ?? null,
+            'otomatis_terakhir' => $otomatis[0]['waktu'] ?? null,               // biasanya null: backup dibuat manual (tanpa cron)
+            'terakhir'          => $terakhir['waktu'] ?? null,                   // backup DATABASE terbaru, jenis apa pun
+            'hari_sejak_terakhir' => BackupSistem::hariSejakTerakhir(),
+            'ingatkan_hari'     => BackupSistem::INGATKAN_HARI,
             'disimpan'          => array_map(static fn (array $j): int => $j[1], BackupSistem::JENIS),
             'maintenance_aktif' => ModeMaintenance::aktif(),
         ];

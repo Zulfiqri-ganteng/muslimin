@@ -80,7 +80,9 @@ Keputusan user: (1) hanya **Admin** tetap bisa bekerja, (2) **Android ikut ditut
   tersimpan; COMMIT di akhir tiap langkah); berkas terpotong = gagal; sesudah selesai: cache dibersihkan + hitung migrasi belum jalan.
 - Web `Admin\Backup` (`admin/sistem/backup…`): buat, unduh (ketik sandi), hapus, pulihkan dari daftar / unggah .sql/.sql.gz (syarat:
   maintenance aktif + sandi + PULIHKAN), halaman kemajuan + `assets/js/admin/pulihkan.js` (fetch POST langkah; dijeda bila maintenance
-  dimatikan). Audit Log. Perintah `backup:buat [--berkas] [--manual]` (cron) & `backup:pulihkan [kunci|path] --ya`.
+  dimatikan). Audit Log. Perintah `backup:buat [--berkas] [--otomatis]` (bawaan jenis manual) & `backup:pulihkan [kunci|path] --ya`.
+- **Keputusan user 2026-10-29: TANPA cron** — backup dibuat Admin lewat tombol. Halaman menampilkan "Backup database terakhir …" dan
+  mengingatkan (kotak kuning) bila sudah ≥ 7 hari (`BackupSistem::INGATKAN_HARI`). Jenis "otomatis" hanya bila kelak dipasang cron.
 - API (Admin): `GET/POST sistem/backup`, `POST sistem/backup/hapus` — unduh & restore hanya web.
 - Uji `dev:uji-backup` 41/0 (CHECKSUM 106 tabel hasil restore = asli; ekspor phpMyAdmin hosting dipulihkan bertahap) + uji HTTP Apache
   (login → backup → restore DB lokal dari backup sendiri → CHECKSUM sama).

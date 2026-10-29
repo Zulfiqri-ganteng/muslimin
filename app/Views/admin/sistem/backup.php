@@ -5,14 +5,15 @@
  *
  * @var list<array> $daftar      BackupSistem::daftar()
  * @var int         $total       ukuran semua backup (byte)
- * @var array|null  $otomatis    backup otomatis terbaru
+ * @var array|null  $terakhir    backup database terbaru (BackupSistem::terakhirDb) — backup dibuat MANUAL, tanpa cron
  * @var bool        $maintenance Mode Maintenance aktif
  */
 use App\Controllers\Admin\Backup;
 use App\Libraries\BackupSistem;
 use App\Libraries\PulihkanBackup;
 
-$tgl = static fn (string $w): string => $w !== '' ? date('d-m-Y H:i', strtotime($w)) : '—';
+$tgl  = static fn (string $w): string => $w !== '' ? date('d-m-Y H:i', strtotime($w)) : '—';
+$hari = BackupSistem::hariSejakTerakhir();
 ?>
 <?= $this->extend('layouts/admin') ?>
 
@@ -43,10 +44,12 @@ $tgl = static fn (string $w): string => $w !== '' ? date('d-m-Y H:i', strtotime(
                 </form>
             </div>
             <p class="hint">Disimpan: <?= BackupSistem::JENIS['manual'][1] ?> backup manual terbaru per jenis. Total ukuran semua backup: <?= esc(Backup::ukuran($total)) ?>.</p>
-            <?php if ($otomatis !== null): ?>
-                <p class="text-sm text-gray-700 dark:text-gray-300">Backup otomatis terakhir: <b><?= esc($tgl($otomatis['waktu'])) ?></b> (<?= BackupSistem::JENIS['otomatis'][1] ?> terakhir disimpan).</p>
+            <?php if ($terakhir === null): ?>
+                <?= ui_peringatan('info', 'Tekan "Backup database" untuk membuat yang pertama. Sebaiknya backup sebelum perubahan besar (impor data, restore, kenaikan kelas) dan rutin seminggu sekali.', ['judul' => 'Belum ada backup database']) ?>
+            <?php elseif ($hari >= BackupSistem::INGATKAN_HARI): ?>
+                <?= ui_peringatan('awas', 'Backup database terakhir ' . $tgl($terakhir['waktu']) . ' (' . $hari . ' hari lalu). Sebaiknya buat backup baru.', ['judul' => 'Backup sudah lama']) ?>
             <?php else: ?>
-                <?= ui_peringatan('awas', 'Belum ada backup otomatis. Pasang cron harian di cPanel: phpm spark backup:buat (lihat docs/PANDUAN-DEPLOY-ALAT-SISTEM.md).', ['judul' => 'Backup otomatis belum aktif']) ?>
+                <p class="text-sm text-gray-700 dark:text-gray-300">Backup database terakhir: <b><?= esc($tgl($terakhir['waktu'])) ?></b> (<?= $hari === 0 ? 'hari ini' : $hari . ' hari lalu' ?>).</p>
             <?php endif; ?>
         </div>
     </section>

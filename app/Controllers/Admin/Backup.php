@@ -17,15 +17,14 @@ class Backup extends BaseController
 {
     public function index()
     {
-        $daftar   = BackupSistem::daftar();
-        $otomatis = array_values(array_filter($daftar, static fn (array $b): bool => $b['jenis'] === 'otomatis'));
+        $daftar = BackupSistem::daftar();
 
         return view('admin/sistem/backup', [
-            'title'      => 'Backup & Restore',
-            'daftar'     => $daftar,
-            'total'      => array_sum(array_column($daftar, 'ukuran')),
-            'otomatis'   => $otomatis[0] ?? null,
-            'maintenance'=> ModeMaintenance::aktif(),
+            'title'       => 'Backup & Restore',
+            'daftar'      => $daftar,
+            'total'       => array_sum(array_column($daftar, 'ukuran')),
+            'terakhir'    => BackupSistem::terakhirDb(),
+            'maintenance' => ModeMaintenance::aktif(),
         ]);
     }
 
