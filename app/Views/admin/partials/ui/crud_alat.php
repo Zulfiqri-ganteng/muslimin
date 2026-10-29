@@ -46,7 +46,7 @@ foreach ($filter as $f) {
                     <label class="alat-crud-kotak">
                         <span class="sr-only">Cari</span>
                         <?= ikon('search', '') ?>
-                        <input type="search" name="q" value="<?= esc($q, 'attr') ?>" placeholder="<?= esc((string) $cari, 'attr') ?>" class="inp">
+                        <input type="search" name="q" value="<?= esc($q, 'attr') ?>" placeholder="<?= esc((string) $cari, 'attr') ?>" enterkeyhint="search" class="inp">
                     </label>
                     <?php foreach ($filter as $f): ?>
                         <select name="<?= esc($f['name'], 'attr') ?>" data-filter<?= $langsung ? ' data-autosubmit' : '' ?> class="inp alat-crud-pilih" aria-label="<?= esc($f['all'], 'attr') ?>">
@@ -61,7 +61,10 @@ foreach ($filter as $f) {
                             <option value="<?= $n ?>"<?= $per === $n ? ' selected' : '' ?>>Tampilkan <?= $n ?></option>
                         <?php endforeach; ?>
                     </select>
-                    <button type="submit" class="btn btn-netral"><?= ikon('search', 'h-4 w-4') ?>Cari</button>
+                    <?php if (! $langsung): ?>
+                        <?php // Saringan langsung: tombol "Cari" dobel dengan kotak cari (Enter / tombol Cari papan ketik HP sudah mengirim) — keluhan user 2026-10-30. ?>
+                        <button type="submit" class="btn btn-netral"><?= ikon('search', 'h-4 w-4') ?>Cari</button>
+                    <?php endif; ?>
                     <?php if ($adaFilter): ?>
                         <a href="<?= esc($baseUrl, 'attr') ?>" class="btn btn-teks"><?= ikon('close', 'h-4 w-4') ?>Reset</a>
                     <?php endif; ?>
