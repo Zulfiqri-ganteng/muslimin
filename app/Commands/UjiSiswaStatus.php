@@ -127,9 +127,12 @@ class UjiSiswaStatus extends BaseCommand
         $html = (string) $this->web('index', ['status' => 'terhapus', 'q' => 'ZZUJI Siswa']);
         $this->cek('saringan "Terhapus (lama)": tampil data terhapus + Pulihkan + Hapus permanen + penjelasan', str_contains($html, 'ZZUJI Siswa C') && str_contains($html, 'Pulihkan')
             && str_contains($html, 'Hapus permanen') && ! str_contains($html, 'ZZUJI Siswa B'));
-        $html = (string) $this->web('index', ['q' => 'ZZUJI Siswa']);
-        $this->cek('daftar biasa: tombol Nonaktifkan (aktif), tanpa tombol Hapus per baris, tanpa "Hapus semua"', str_contains($html, '/nonaktifkan') && ! str_contains($html, 'data-bulk="all"')
-            && ! str_contains($html, 'siswa/delete/' . $this->id['B']) && ! str_contains($html, 'ZZUJI Siswa C'));
+        $html = html_entity_decode((string) $this->web('index', ['q' => 'ZZUJI Siswa']), ENT_QUOTES | ENT_HTML5, 'UTF-8'); // esc(attr) menulis "/" sebagai &#x2F;
+        $this->cek('daftar biasa: tombol Nonaktifkan (aktif), tanpa "Hapus semua", data terhapus tidak tampil', str_contains($html, '/nonaktifkan')
+            && ! str_contains($html, 'data-bulk="all"') && ! str_contains($html, 'ZZUJI Siswa C'));
+        $this->cek('ikon tong sampah "Hapus permanen" HANYA pada siswa tanpa data terkait (A ada, B yang punya catatan terlambat tidak)',
+            str_contains($html, 'siswa/delete/' . $this->id['A']) && ! str_contains($html, 'siswa/delete/' . $this->id['B'])
+            && str_contains($html, 'title="Hapus permanen"') && str_contains($html, 'data-confirm-judul="Hapus permanen?"'));
         $this->web('store', [], ['nis' => 'ZZUJISS-C', 'nama' => 'ZZUJI Siswa D', 'status' => 'aktif'], 'POST');
         $this->cek('tambah siswa dengan NIS milik data terhapus → galat jelas', str_contains((string) (session('errors')['nis'] ?? ''), 'TERHAPUS'), json_encode(session('errors')));
 
@@ -174,6 +177,13 @@ class UjiSiswaStatus extends BaseCommand
         $this->cek('POST status tidak sah → 422', $k === 422);
         [$k, $j] = $this->api('index', null, '', 'GET', ['status' => 'nonaktif', 'q' => 'ZZUJI Siswa']);
         $this->cek('GET daftar ?status=nonaktif → siswa lulus tampil', $k === 200 && in_array('ZZUJI Siswa B', array_column($j['data'] ?? [], 'nama'), true), json_encode(array_column($j['data'] ?? [], 'nama')));
+        $bRow = array_values(array_filter($j['data'] ?? [], static fn (array $r): bool => $r['nama'] === 'ZZUJI Siswa B'))[0] ?? [];
+        db_connect()->table('siswa')->insert(['nis' => 'ZZUJISS-E', 'nama' => 'ZZUJI Siswa E', 'kelas_id' => $this->kelas, 'status' => 'aktif',
+            'created_at' => date('Y-m-d H:i:s')]); // siswa tanpa data terkait (A sudah terhapus oleh uji hapus massal)
+        [, $jA] = $this->api('index', null, '', 'GET', ['q' => 'ZZUJI Siswa E']);
+        $this->cek('GET daftar: bisa_hapus_permanen per baris (B punya data → false, A tanpa data → true)', ($bRow['bisa_hapus_permanen'] ?? null) === false
+            && ($jA['data'][0]['bisa_hapus_permanen'] ?? null) === true, json_encode([$bRow['bisa_hapus_permanen'] ?? null, $jA['data'][0]['bisa_hapus_permanen'] ?? null]));
+        $this->fx['siswa_daftar_bisa_hapus'] = ['status' => 'success', 'ok' => true, 'data' => array_merge([$bRow], array_slice($jA['data'] ?? [], 0, 1))];
         [$k, $j] = $this->api('index', null, '', 'GET', ['status' => 'terhapus', 'q' => 'ZZUJI Siswa']);
         $this->cek('GET daftar ?status=terhapus → hanya data terhapus lama (terhapus=true)', $k === 200 && array_column($j['data'] ?? [], 'nama') === ['ZZUJI Siswa C']
             && ($j['data'][0]['terhapus'] ?? null) === true);

@@ -5,12 +5,15 @@
  * membuka dialog formulir terisi. Hapus = POST + dialog konfirmasi merah kit (data-confirm-jenis="bahaya"). Detail (opsional) = tautan.
  * Panggil: ui_crud_aksi(['row' => $r, 'hapusUrl' => …, 'konfirmasi' => 'Hapus jurusan ini?', 'detailUrl' => …|null]).
  * 'tambahanHtml' = tombol khusus halaman di depan (mis. form "Aktifkan" btn-sukses btn-sm); 'ubah' => false = tanpa tombol Ubah.
+ * 'hapusIkon' => true = tombol hapus hanya ikon tong sampah (label 'hapusLabel' tetap dibacakan & jadi tooltip); 'konfirmasiJudul'.
  *
- * @var array{row?: array<string, mixed>|null, hapusUrl?: string|null, konfirmasi?: string, detailUrl?: string|null, ubah?: bool, tambahanHtml?: string} $ui
+ * @var array{row?: array<string, mixed>|null, hapusUrl?: string|null, konfirmasi?: string, konfirmasiJudul?: string, hapusLabel?: string, hapusIkon?: bool, detailUrl?: string|null, ubah?: bool, tambahanHtml?: string} $ui
  */
-$row      = $ui['row'] ?? null;
-$hapusUrl = $ui['hapusUrl'] ?? null;
-$ubah     = ($ui['ubah'] ?? true) && $row !== null;
+$row        = $ui['row'] ?? null;
+$hapusUrl   = $ui['hapusUrl'] ?? null;
+$ubah       = ($ui['ubah'] ?? true) && $row !== null;
+$hapusLabel = (string) ($ui['hapusLabel'] ?? 'Hapus');
+$hapusIkon  = ! empty($ui['hapusIkon']);
 ?>
 <div class="inline-flex items-center justify-end gap-2">
     <?= $ui['tambahanHtml'] ?? '' ?>
@@ -21,7 +24,7 @@ $ubah     = ($ui['ubah'] ?? true) && $row !== null;
         <button type="button" class="btn btn-utama btn-sm" data-ubah data-row="<?= esc((string) json_encode($row), 'attr') ?>"><?= ikon('edit', 'h-4 w-4') ?>Ubah</button>
     <?php endif; ?>
     <?php if ($hapusUrl): ?>
-        <a href="<?= esc((string) $hapusUrl, 'attr') ?>" class="btn btn-bahaya btn-sm" data-method="post"
-           data-confirm="<?= esc((string) ($ui['konfirmasi'] ?? 'Hapus data ini?'), 'attr') ?>" data-confirm-judul="Hapus data?" data-confirm-ya="Ya, hapus" data-confirm-jenis="bahaya"><?= ikon('trash-bin', 'h-4 w-4') ?>Hapus</a>
+        <a href="<?= esc((string) $hapusUrl, 'attr') ?>" class="btn btn-bahaya btn-sm<?= $hapusIkon ? ' btn-ikon' : '' ?>" data-method="post"<?= $hapusIkon ? ' title="' . esc($hapusLabel, 'attr') . '" aria-label="' . esc($hapusLabel, 'attr') . '"' : '' ?>
+           data-confirm="<?= esc((string) ($ui['konfirmasi'] ?? 'Hapus data ini?'), 'attr') ?>" data-confirm-judul="<?= esc((string) ($ui['konfirmasiJudul'] ?? 'Hapus data?'), 'attr') ?>" data-confirm-ya="Ya, hapus" data-confirm-jenis="bahaya"><?= ikon('trash-bin', 'h-4 w-4') ?><?= $hapusIkon ? '' : esc($hapusLabel) ?></a>
     <?php endif; ?>
 </div>

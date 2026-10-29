@@ -17,6 +17,7 @@
  * @var array                         $tingkatList Daftar tingkat sah
  * @var array                         $statusList  Daftar status sah
  * @var array<string, int>            $periksa     PeriksaSiswa::hasil()['jumlah'] — pemberitahuan data yang perlu diperiksa
+ * @var array<int, bool>              $bisaHapus   id siswa → boleh hapus permanen (tanpa data terkait) — ikon tong sampah per baris
  */
 use App\Libraries\SiswaStatus;
 use App\Models\SiswaModel;
@@ -85,7 +86,8 @@ $bagian = static fn (string $judul, string $ket = ''): string => '<p class="bord
         <p class="mt-2"><b>Tombol di tiap baris</b><br>
         • <b>Nonaktifkan</b> — untuk siswa yang lulus, pindah sekolah, atau keluar. Data dan riwayatnya (PKL, surat, biodata) tetap utuh; tombol berganti menjadi <b>Aktifkan</b> bila ingin dikembalikan.<br>
         • <b>Detail</b> (atau klik nama siswa) — semua data satu siswa. Di sana juga ada tombol <b>Hapus permanen</b>.<br>
-        • <b>Ubah</b> — mengubah data siswa.</p>
+        • <b>Ubah</b> — mengubah data siswa.<br>
+        • <b>Ikon tong sampah merah</b> (paling kanan) — <b>Hapus permanen</b>. Ikon ini <b>hanya muncul</b> pada siswa yang boleh dihapus (belum punya data PKL, surat, biodata, dll.). Tidak ada ikonnya = siswa sudah punya data — pakai Nonaktifkan.</p>
         <p class="mt-2"><b>Menghapus siswa</b> — <b>Hapus permanen</b> (dari halaman Detail, atau centang beberapa siswa lalu <b>Hapus terpilih</b>) hanya bisa untuk data salah input yang <b>belum punya data terkait</b>; NIS/NISN-nya langsung bisa dipakai lagi. Siswa yang sudah punya data PKL, surat, biodata, dll. tidak bisa dihapus — pakai <b>Nonaktifkan</b>.</p>
         <p class="mt-2"><b>Biodata dari siswa</b> — siswa mengisi biodatanya sendiri lewat menu <b>Isian Biodata Siswa</b>; setelah disetujui datanya masuk ke sini dan siswa ditandai lencana hijau <b>Biodata</b> (saringan Biodata lengkap / belum). Kolom <b>Data sekolah</b> (nama orang tua versi sekolah, nomor &amp; tahun STTB/ijazah SMP) sesuai Daftar Nama Siswa resmi — ada di paling kanan template impor.</p>',
 ]) ?>
@@ -211,9 +213,15 @@ $bagian = static fn (string $judul, string $ket = ''): string => '<p class="bord
                                         . csrf_field() . '<button type="submit" class="btn btn-sukses btn-sm">' . ikon('check-circle', 'h-4 w-4') . 'Aktifkan</button></form>';
                                 ?>
                                 <?= ui_crud_aksi([
-                                    'row'          => $r,
-                                    'detailUrl'    => $urlDetail,
-                                    'tambahanHtml' => $tombolStatus,
+                                    'row'             => $r,
+                                    'detailUrl'       => $urlDetail,
+                                    'tambahanHtml'    => $tombolStatus,
+                                    // Ikon tong sampah merah HANYA bila boleh dihapus permanen (belum punya data terkait).
+                                    'hapusUrl'        => ($bisaHapus[(int) $r['id']] ?? false) ? site_url('admin/master/siswa/delete/' . (int) $r['id']) : null,
+                                    'hapusIkon'       => true,
+                                    'hapusLabel'      => 'Hapus permanen',
+                                    'konfirmasiJudul' => 'Hapus permanen?',
+                                    'konfirmasi'      => $r['nama'] . ' (NIS ' . $r['nis'] . ') dihapus PERMANEN dari database dan tidak bisa dikembalikan. NIS/NISN-nya bisa dipakai lagi.',
                                 ]) ?>
                             <?php endif; ?>
                         </td>

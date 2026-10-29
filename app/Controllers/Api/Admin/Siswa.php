@@ -261,6 +261,26 @@ class Siswa extends BaseCrud
         ], 'Detail siswa.');
     }
 
+    /**
+     * GET .../siswa — sama dengan BaseCrud::index + `bisa_hapus_permanen` per baris (true = belum punya data terkait → aplikasi
+     * boleh menampilkan ikon tong sampah, sama dengan web). Dihitung hanya untuk baris halaman ini.
+     */
+    public function index(): ResponseInterface
+    {
+        $per  = (int) $this->request->getGet('per');
+        $page = max(1, (int) $this->request->getGet('page'));
+        if (! in_array($per, [10, 20, 30, 40, 50], true)) {
+            $per = 10;
+        }
+        $rows = $this->orderByList($this->applyFilters($this->baseBuilder()))->paginate($per, 'default', $page);
+        $kait = SiswaStatus::keterkaitan(array_map('intval', array_column($rows, 'id')));
+
+        return $this->collection(
+            array_map(fn (array $r): array => $this->transform($r) + ['bisa_hapus_permanen' => ($kait[(int) $r['id']] ?? []) === []], $rows),
+            ['page' => $page, 'perPage' => $per, 'total' => $this->model->pager->getTotal()]
+        );
+    }
+
     // ===================== STATUS & HAPUS (SiswaStatus, 2026-10-29) =====================
 
     /** DELETE .../siswa/{id} — HAPUS PERMANEN; 409 + data.terkait bila siswa sudah punya data terkait (nonaktifkan saja). */

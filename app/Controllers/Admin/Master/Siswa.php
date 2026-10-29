@@ -97,9 +97,15 @@ class Siswa extends BaseMaster
             return ['rows' => $rows, 'total' => $this->model->pager->getTotal()];
         });
 
+        // Ikon hapus permanen per baris hanya untuk siswa tanpa data terkait. Dihitung DI LUAR cache daftar (data PKL/surat/biodata
+        // bisa berubah tanpa membatalkan cache siswa) — hanya baris halaman ini (≤ 50 id).
+        $kait      = SiswaStatus::keterkaitan(array_map('intval', array_column($data['rows'] ?? [], 'id')));
+        $bisaHapus = array_map(static fn (array $k): bool => $k === [], $kait);
+
         return view('admin/master/siswa', [
             'title'       => $this->titleLabel,
             'rows'        => $data['rows'] ?? [],
+            'bisaHapus'   => $bisaHapus,
             'pager'       => $this->storePager($page, $per, (int) ($data['total'] ?? 0)),
             'q'           => $q,
             'kelasId'     => $kelasId,

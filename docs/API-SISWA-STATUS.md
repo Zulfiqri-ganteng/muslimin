@@ -22,6 +22,8 @@ Sebelumnya `DELETE` = hapus lunak (data tersembunyi tetapi NIS/NISN tetap terkun
   **`terhapus`** (HANYA data terhapus lama).
 - Setiap baris siswa (daftar, detail, hasil simpan) mendapat kunci tambahan: `status_label` ("Aktif", "Lulus", "Pindah sekolah",
   "Keluar"), `aktif` (bool), `terhapus` (bool).
+- `GET admin/master/siswa` (daftar): tiap baris juga membawa **`bisa_hapus_permanen`** (bool) — true = belum punya data terkait, jadi
+  ikon tong sampah "Hapus permanen" boleh ditampilkan di baris itu (sama dengan web). Fixture `siswa_daftar_bisa_hapus.json`.
 - `GET admin/master/siswa/{id}` tambahan: `terkait` = `[{label, jumlah}]` dan `bisa_hapus_permanen` (bool = `terkait` kosong).
 - `DELETE admin/master/siswa/{id}` — **hapus permanen**. 200 bila berhasil. **409** bila punya data terkait:
   `{"ok":false,"message":"… TIDAK dihapus karena punya data: Catatan terlambat (1) — pakai Nonaktifkan.","data":{"terkait":[{"label":"Catatan terlambat","jumlah":1}]}}`.
