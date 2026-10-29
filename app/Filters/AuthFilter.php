@@ -3,6 +3,7 @@
 namespace App\Filters;
 
 use App\Libraries\HakAkses;
+use App\Libraries\SesiAktif;
 use App\Models\AdminModel;
 use CodeIgniter\Filters\FilterInterface;
 use CodeIgniter\HTTP\IncomingRequest;
@@ -39,6 +40,8 @@ class AuthFilter implements FilterInterface
         // Auto-logout bila 1 jam tanpa aktivitas.
         $last = (int) $session->get('lastActivity');
         if ($last > 0 && (time() - $last) > self::IDLE_TIMEOUT) {
+            SesiAktif::catatKeluar('habis');
+
             return $this->keluarkan('Sesi berakhir karena tidak ada aktivitas selama 1 jam. Silakan login kembali.');
         }
 
@@ -46,6 +49,12 @@ class AuthFilter implements FilterInterface
         $admin = (new AdminModel())->find((int) (((array) $session->get('admin'))['id'] ?? 0));
         if (! $admin || (int) ($admin['aktif'] ?? 1) !== 1) {
             return $this->keluarkan('Akun Anda sudah tidak aktif. Hubungi admin sekolah.');
+        }
+
+        // Sistem → Sesi Aktif: sesi yang dikeluarkan Admin langsung berhenti; aktivitas dicatat paling sering tiap 5 menit.
+        $ua = $request instanceof IncomingRequest ? (string) $request->getUserAgent()->getAgentString() : '';
+        if (($pesanSesi = SesiAktif::periksa((int) $admin['id'], $request->getIPAddress(), $ua)) !== null) {
+            return $this->keluarkan($pesanSesi);
         }
         unset($admin['password']);
         $session->set('admin', $admin); // nama/peran/foto selalu segar di menu & halaman

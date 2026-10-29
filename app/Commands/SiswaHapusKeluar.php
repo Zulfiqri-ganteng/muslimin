@@ -9,18 +9,20 @@ use CodeIgniter\CLI\CLI;
 use Throwable;
 
 /**
- * Hapus siswa yang sudah KELUAR dari sekolah = siswa di sistem yang TIDAK ada di Daftar Nama Siswa resmi (Excel Format 8355).
+ * Tandai siswa yang sudah KELUAR dari sekolah = siswa di sistem yang TIDAK ada di Daftar Nama Siswa resmi (Excel Format 8355).
  * Dijalankan SETELAH siswa:data-8355 --tulis (supaya semua siswa resmi sudah punya NIS asli).
  *
- *   phpm spark siswa:hapus-keluar                    → LAPORAN SAJA (tidak menghapus apa pun) — selalu jalankan ini dulu
- *   phpm spark siswa:hapus-keluar --tulis            → menghapus (hapus LUNAK: bisa dipulihkan), satu transaksi
- *   phpm spark siswa:hapus-keluar --kecuali 1021,1326 → ID siswa yang JANGAN dihapus
- *   phpm spark siswa:hapus-keluar --paksa 1380        → ID yang ditahan karena "nama mirip" tapi pasti orang lain: tetap dihapus
+ *   phpm spark siswa:hapus-keluar                    → LAPORAN SAJA (tidak mengubah apa pun) — selalu jalankan ini dulu
+ *   phpm spark siswa:hapus-keluar --tulis            → ubah STATUS jadi "keluar" (nonaktif), satu transaksi
+ *   phpm spark siswa:hapus-keluar --kecuali 1021,1326 → ID siswa yang JANGAN diubah
+ *   phpm spark siswa:hapus-keluar --paksa 1380        → ID yang ditahan karena "nama mirip" tapi pasti orang lain: tetap diubah
  *
- * Yang otomatis DITAHAN (tidak dihapus, tertulis di ditahan.csv):
+ * Yang otomatis DITAHAN (tidak diubah, tertulis di ditahan.csv):
  *   - namanya mirip dengan siswa resmi yang belum punya kelas (kemungkinan orang yang sama, ejaannya beda → gabungkan manual dulu);
  *   - masih punya ajuan PKL aktif.
- * Hapus lunak = kolom deleted_at diisi; data tetap ada di database. Cara memulihkan ada di docs/PANDUAN-DATA-SISWA-8355.md.
+ * SEJAK 2026-10-29 (SiswaStatus): TIDAK lagi hapus lunak (deleted_at) — status diganti "keluar", jadi siswa tetap terlihat di Master
+ * Siswa (saringan "Tidak aktif") dan bisa diaktifkan kembali dengan satu tombol. Nama perintah dipertahankan supaya panduan lama tetap
+ * berlaku. Data yang dulu terhapus dengan cara lama: Master Siswa → saringan Status "Terhapus (lama)".
  */
 class SiswaHapusKeluar extends BaseCommand
 {
@@ -28,7 +30,7 @@ class SiswaHapusKeluar extends BaseCommand
 
     protected $group       = 'siswa';
     protected $name        = 'siswa:hapus-keluar';
-    protected $description = 'Hapus (lunak) siswa yang tidak ada di Excel resmi sekolah = sudah keluar. Tanpa --tulis = laporan saja.';
+    protected $description = 'Tandai status "keluar" (nonaktif) siswa yang tidak ada di Excel resmi sekolah. Tanpa --tulis = laporan saja.';
     protected $usage       = 'siswa:hapus-keluar [--tulis] [--file "path.xlsx"] [--kecuali ID,ID] [--paksa ID,ID] [--db nama_database]';
     protected $options     = [
         '--tulis'   => 'Benar-benar menghapus (tanpa ini hanya laporan).',
@@ -95,6 +97,9 @@ class SiswaHapusKeluar extends BaseCommand
             $ditahan  = [];
             foreach ($rencana['dbSaja'] as $i) {
                 $d = $aktif[$i];
+                if (($d['status'] ?? 'aktif') !== 'aktif') {
+                    continue; // sudah tidak aktif (lulus/pindah/keluar) — tidak perlu ditandai lagi
+                }
                 $alasan = null;
                 if (isset($kecuali[(int) $d['id']])) {
                     $alasan = 'dikecualikan lewat --kecuali';
@@ -125,9 +130,9 @@ class SiswaHapusKeluar extends BaseCommand
             CLI::write(sprintf('  %-48s %d', 'Siswa di Excel resmi', count($excel)));
             CLI::write(sprintf('  %-48s %d', 'Siswa di sistem (belum dihapus)', count($aktif)));
             CLI::write(sprintf('  %-48s %d', 'Siswa sistem TIDAK ada di Excel', count($rencana['dbSaja'])));
-            CLI::write(sprintf('  %-48s %d', '  → akan dihapus', count($hapus)), 'red');
+            CLI::write(sprintf('  %-48s %d', '  → akan ditandai KELUAR (nonaktif)', count($hapus)), 'red');
             CLI::write(sprintf('  %-48s %d', '  → ditahan (lihat ditahan.csv)', count($ditahan)), 'yellow');
-            CLI::write(sprintf('  %-48s %d', 'Siswa di sistem setelah dihapus', count($aktif) - count($hapus)), 'green');
+            CLI::write(sprintf('  %-48s %d', 'Siswa di sistem sesudahnya (semua status)', count($aktif)), 'green');
             CLI::write('Laporan CSV: ' . $dirLap, 'light_gray');
 
             if (count($hapus) > self::BATAS_AMAN) {
@@ -157,12 +162,13 @@ class SiswaHapusKeluar extends BaseCommand
             $ids = array_map(static fn ($b) => (int) $b[0], $hapus);
             $now = date('Y-m-d H:i:s');
             $koneksi->transStart();
-            $koneksi->table('siswa')->whereIn('id', $ids)->where('deleted_at', null)->update(['deleted_at' => $now, 'updated_at' => $now]);
+            // Sejak 2026-10-29: status "keluar" (nonaktif, bisa diaktifkan lagi) — BUKAN hapus lunak (lihat SiswaStatus).
+            $koneksi->table('siswa')->whereIn('id', $ids)->where('deleted_at', null)->where('status !=', 'keluar')->update(['status' => 'keluar', 'updated_at' => $now]);
             $n = $koneksi->affectedRows();
             if ($koneksi->tableExists('audit_log')) {
                 $koneksi->table('audit_log')->insert([
-                    'admin_id' => null, 'aksi' => 'delete', 'tabel' => 'siswa', 'record_id' => null,
-                    'deskripsi' => mb_substr('Siswa yang sudah keluar (tidak ada di data resmi sekolah) dihapus lewat perintah: ' . $n . ' siswa', 0, 255),
+                    'admin_id' => null, 'aksi' => 'update', 'tabel' => 'siswa', 'record_id' => null,
+                    'deskripsi' => mb_substr('Siswa yang tidak ada di data resmi sekolah ditandai KELUAR (nonaktif) lewat perintah: ' . $n . ' siswa', 0, 255),
                     'ip_address' => null, 'created_at' => $now,
                 ]);
             }
@@ -175,8 +181,8 @@ class SiswaHapusKeluar extends BaseCommand
             master_data_changed('siswa');
             cache()->delete('stat_siswa');
             cache()->delete('siswa_per_kelas');
-            CLI::write('SELESAI: ' . $n . ' siswa dihapus (hapus lunak). Siswa di sistem sekarang: ' . (count($aktif) - $n) . '.', 'green');
-            CLI::write('Daftar yang dihapus tersimpan di folder cadangan (hapus-keluar-*.csv).', 'light_gray');
+            CLI::write('SELESAI: ' . $n . ' siswa ditandai KELUAR (tidak aktif; bisa diaktifkan lagi di Master Siswa). Siswa aktif sekarang: ' . (count($aktif) - $n) . '.', 'green');
+            CLI::write('Daftarnya tersimpan di folder cadangan (hapus-keluar-*.csv).', 'light_gray');
 
             return EXIT_SUCCESS;
         } catch (Throwable $e) {

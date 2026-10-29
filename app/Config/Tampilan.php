@@ -69,10 +69,10 @@ class Tampilan extends BaseConfig
         ],
         'sistem' => [
             'fase' => 'F10', 'label' => 'Arsip, Info, Sistem & halaman galat',
-            'view'    => ['admin/dokumen', 'admin/pengumuman', 'admin/foto_sekolah', 'admin/akun', 'admin/hak_akses', 'admin/audit', 'admin/profile.php', 'admin/settings.php',
-                'errors/html/_galat.php', 'errors/html/error_404.php', 'errors/html/error_400.php', 'errors/html/production.php'],
-            'url'     => ['admin/dokumen', 'admin/pengumuman', 'admin/foto-sekolah', 'admin/akun', 'admin/hak-akses', 'admin/audit', 'admin/profile', 'admin/settings'],
-            'bersama' => ['errors/html/_galat.php', 'errors/html/error_404.php', 'errors/html/error_400.php', 'errors/html/production.php'],
+            'view'    => ['admin/dokumen', 'admin/pengumuman', 'admin/foto_sekolah', 'admin/akun', 'admin/hak_akses', 'admin/audit', 'admin/sistem', 'admin/profile.php', 'admin/settings.php',
+                'errors/html/_galat.php', 'errors/html/error_404.php', 'errors/html/error_400.php', 'errors/html/production.php', 'errors/html/maintenance.php'],
+            'url'     => ['admin/dokumen', 'admin/pengumuman', 'admin/foto-sekolah', 'admin/akun', 'admin/hak-akses', 'admin/audit', 'admin/sistem', 'admin/profile', 'admin/settings'],
+            'bersama' => ['errors/html/_galat.php', 'errors/html/error_404.php', 'errors/html/error_400.php', 'errors/html/production.php', 'errors/html/maintenance.php'],
         ],
 
         // ===== Halaman PUBLIK (docs/RENCANA-TAMPILAN-PUBLIK.md, konsep rumah.pendidikan.go.id; publik.css Tailwind v4) =====

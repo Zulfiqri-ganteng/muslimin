@@ -4,6 +4,7 @@ namespace App\Controllers\Api\Admin;
 
 use App\Libraries\BiodataForm;
 use App\Libraries\SiswaDetail;
+use App\Libraries\SiswaStatus;
 use App\Models\SiswaModel;
 use CodeIgniter\HTTP\ResponseInterface;
 use CodeIgniter\Model;
@@ -32,7 +33,10 @@ class Siswa extends BaseCrud
 
     protected function baseBuilder()
     {
-        return $this->model->withRelations();
+        // ?status=terhapus = HANYA data yang dulu dihapus dengan cara lama (hapus lunak) — untuk Pulihkan / Hapus permanen.
+        $terhapus = strtolower(trim((string) $this->request->getGet('status'))) === 'terhapus';
+
+        return ($terhapus ? $this->model->onlyDeleted() : $this->model)->withRelations();
     }
 
     protected function applyFilters($builder)
@@ -58,6 +62,8 @@ class Siswa extends BaseCrud
         }
         if (in_array($status, SiswaModel::STATUS, true)) {
             $builder = $builder->where('siswa.status', $status);
+        } elseif ($status === 'nonaktif') { // semua yang tidak aktif: lulus + pindah + keluar
+            $builder = $builder->whereIn('siswa.status', array_keys(SiswaStatus::NONAKTIF));
         }
         // Sama dengan saringan "Biodata lengkap / belum" di web (dari biodata_at).
         $biodata = strtolower(trim((string) $this->request->getGet('biodata')));
@@ -184,7 +190,11 @@ class Siswa extends BaseCrud
         }
         $sekolah['sttb_tahun'] = isset($r['sttb_tahun']) ? (int) $r['sttb_tahun'] : null;
 
-        return $this->transformInti($r) + $biodata + $sekolah;
+        // Status jelas (2026-10-29): label tampil + aktif/terhapus (kunci tambahan; klien lama mengabaikannya).
+        $statusInfo = ['status_label' => SiswaStatus::label((string) ($r['status'] ?? 'aktif')), 'aktif' => ($r['status'] ?? 'aktif') === 'aktif',
+            'terhapus' => ! empty($r['deleted_at'])];
+
+        return $this->transformInti($r) + $biodata + $sekolah + $statusInfo;
     }
 
     /** Kolom inti (bentuk lama — tidak diubah agar klien lama tetap cocok). */
@@ -239,10 +249,96 @@ class Siswa extends BaseCrud
             'baris' => array_map(static fn (array $x): array => ['kunci' => $x[0], 'label' => $x[1], 'nilai' => $x[2]], $b[1]),
         ], $d['bagian']);
 
+        $terkait = SiswaStatus::keterkaitan([(int) $id])[(int) $id] ?? [];
+
         return $this->ok($this->transform($d['siswa']) + [
             'jurusan_nama' => $d['siswa']['jurusan_nama'] ?? null,
             'bagian' => $bagian, 'biodata' => $d['biodata'], 'pkl' => $d['pkl'], 'jejak' => $d['jejak'],
+            // SiswaStatus (2026-10-29): data terkait & boleh tidaknya hapus permanen.
+            'terkait' => array_map(static fn (string $l, int $n): array => ['label' => $l, 'jumlah' => $n], array_keys($terkait), $terkait),
+            'bisa_hapus_permanen' => $terkait === [],
         ], 'Detail siswa.');
+    }
+
+    // ===================== STATUS & HAPUS (SiswaStatus, 2026-10-29) =====================
+
+    /** DELETE .../siswa/{id} — HAPUS PERMANEN; 409 + data.terkait bila siswa sudah punya data terkait (nonaktifkan saja). */
+    public function destroy($id = null): ResponseInterface
+    {
+        $id = (int) $id;
+        $r  = SiswaStatus::hapusPermanen([$id], $this->oleh());
+        if ($r['dihapus'] !== []) {
+            return $this->ok(null, SiswaStatus::pesanHapus($r));
+        }
+        if ($r['ditolak'] === []) {
+            return $this->missing('Siswa tidak ditemukan.');
+        }
+        $terkait = SiswaStatus::keterkaitan([$id])[$id] ?? [];
+
+        return $this->failure(SiswaStatus::pesanHapus($r), 409, [
+            'terkait' => array_map(static fn (string $l, int $n): array => ['label' => $l, 'jumlah' => $n], array_keys($terkait), $terkait),
+        ]);
+    }
+
+    /** POST .../siswa/bulk-delete {ids:[…]} — hapus permanen yang tanpa data terkait; mode "semua" tidak tersedia. */
+    public function bulkDestroy(): ResponseInterface
+    {
+        $in = $this->body();
+        if (($in['mode'] ?? '') === 'all') {
+            return $this->failure('Hapus semua siswa tidak tersedia. Kirim ids siswa yang akan dihapus.', 422);
+        }
+        $ids = array_values(array_filter(array_map('intval', (array) ($in['ids'] ?? []))));
+        if ($ids === []) {
+            return $this->invalid(['ids' => 'Pilih minimal satu siswa.']);
+        }
+        $r = SiswaStatus::hapusPermanen($ids, $this->oleh());
+
+        return $this->ok(['deleted' => count($r['dihapus']), 'dihapus' => count($r['dihapus']), 'ditolak' => $r['ditolak']], SiswaStatus::pesanHapus($r));
+    }
+
+    /** NIS/NISN bentrok → pesan jelas (termasuk pemilik yang sudah terhapus dengan cara lama). */
+    protected function periksa(array $payload): array
+    {
+        $galat = [];
+        foreach (['nis', 'nisn'] as $k) {
+            if (array_key_exists($k, $payload) && ($p = SiswaStatus::pesanBentrok($k, $payload[$k], (int) ($payload['id'] ?? 0))) !== null) {
+                $galat[$k] = $p;
+            }
+        }
+
+        return $galat;
+    }
+
+    /** POST .../siswa/{id}/status {status: aktif|lulus|pindah|keluar, catatan?} — nonaktifkan / aktifkan kembali. */
+    public function status($id = null): ResponseInterface
+    {
+        $in     = $this->body();
+        $status = strtolower(trim((string) ($in['status'] ?? '')));
+        if ($status !== 'aktif' && ! isset(SiswaStatus::NONAKTIF[$status])) {
+            return $this->invalid(['status' => 'Pilih aktif, lulus, pindah, atau keluar.']);
+        }
+        $r = $status === 'aktif' ? SiswaStatus::aktifkan((int) $id, $this->oleh())
+            : SiswaStatus::nonaktifkan((int) $id, $status, (string) ($in['catatan'] ?? ''), $this->oleh());
+        if (! $r['ok']) {
+            return $this->missing($r['pesan']);
+        }
+
+        return $this->ok($this->transform($this->freshRow((int) $id)), $r['pesan']);
+    }
+
+    /** POST .../siswa/{id}/pulihkan — data terhapus lama dikembalikan (status semula). */
+    public function pulihkan($id = null): ResponseInterface
+    {
+        $r = SiswaStatus::pulihkan((int) $id, $this->oleh());
+
+        return $r['ok'] ? $this->ok($this->transform($this->freshRow((int) $id)), $r['pesan']) : $this->missing($r['pesan']);
+    }
+
+    private function oleh(): string
+    {
+        $a = $this->admin() ?? [];
+
+        return (string) (($a['full_name'] ?? '') ?: ($a['username'] ?? 'Admin')) . ' (via mobile)';
     }
 
     /** Ringkasan agregat untuk dashboard admin: GET .../siswa/statistik */

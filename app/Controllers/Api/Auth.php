@@ -7,6 +7,7 @@ use App\Libraries\HakAkses;
 use App\Libraries\HakPeran;
 use App\Libraries\LoginThrottle;
 use App\Libraries\MenuAdmin;
+use App\Libraries\ModeMaintenance;
 use App\Models\AdminModel;
 use App\Models\ApiTokenModel;
 use App\Models\BiometricCredentialModel;
@@ -253,6 +254,10 @@ class Auth extends BaseApiController
                 'Akun ' . HakAkses::label($admin['role'] ?? null) . ' belum bisa dipakai di aplikasi Android. Silakan gunakan situs web.',
                 403
             );
+        }
+        // Mode Maintenance: selama perawatan hanya Admin yang boleh masuk (aplikasi menampilkan layar perawatan dari data.maintenance).
+        if (($pesan = ModeMaintenance::tolakMasuk($admin['role'] ?? null)) !== null) {
+            return $this->failure($pesan, 503, ['maintenance' => ModeMaintenance::untukApi()]);
         }
 
         return null;

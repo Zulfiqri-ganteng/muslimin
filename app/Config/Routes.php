@@ -366,6 +366,12 @@ $routes->group('admin', static function ($routes) {
             $routes->post('siswa/import-preview', 'Admin\Master\Siswa::importPreview');
             $routes->post('siswa/import-commit', 'Admin\Master\Siswa::importCommit');
             $routes->post('siswa/bulk-delete', 'Admin\Master\Siswa::bulkDelete');
+            // Status siswa (SiswaStatus): nonaktifkan = Lulus/Pindah/Keluar, aktifkan lagi, pulihkan data terhapus lama.
+            // Hapus (siswa/delete/{id}, bulk-delete) kini = HAPUS PERMANEN, hanya untuk siswa tanpa data terkait.
+            $routes->get('siswa/(:num)/nonaktifkan', 'Admin\Master\Siswa::nonaktifkanForm/$1');
+            $routes->post('siswa/(:num)/nonaktifkan', 'Admin\Master\Siswa::nonaktifkan/$1');
+            $routes->post('siswa/(:num)/aktifkan', 'Admin\Master\Siswa::aktifkan/$1');
+            $routes->post('siswa/(:num)/pulihkan', 'Admin\Master\Siswa::pulihkan/$1');
 
             // Jabatan
             $routes->get('jabatan', 'Admin\Master\Jabatan::index');
@@ -780,6 +786,33 @@ $routes->group('admin', static function ($routes) {
         $routes->get('audit', 'Admin\AuditLog::index');
         $routes->post('audit/purge', 'Admin\AuditLog::purge');
 
+        // ===== SISTEM → Log Error Hosting (khusus Admin — MenuAdmin 'log_error'; docs/DESAIN-ALAT-SISTEM.md F1) =====
+        $routes->get('sistem/log-error', 'Admin\LogError::index');
+        $routes->get('sistem/log-error/unduh', 'Admin\LogError::unduh');
+        $routes->post('sistem/log-error/bersihkan', 'Admin\LogError::bersihkan');
+
+        // ===== SISTEM → Mode Maintenance (khusus Admin — MenuAdmin 'mode_maintenance'; docs/DESAIN-ALAT-SISTEM.md F2) =====
+        $routes->get('sistem/maintenance', 'Admin\Maintenance::index');
+        $routes->post('sistem/maintenance/nyalakan', 'Admin\Maintenance::nyalakan');
+        $routes->post('sistem/maintenance/matikan', 'Admin\Maintenance::matikan');
+        $routes->get('sistem/maintenance/pratinjau', 'Admin\Maintenance::pratinjau');
+
+        // ===== SISTEM → Backup & Restore (khusus Admin — MenuAdmin 'backup'; docs/DESAIN-ALAT-SISTEM.md F3 & F4) =====
+        $routes->get('sistem/backup', 'Admin\Backup::index');
+        $routes->post('sistem/backup/buat', 'Admin\Backup::buat');
+        $routes->get('sistem/backup/unduh', 'Admin\Backup::unduhForm');
+        $routes->post('sistem/backup/unduh', 'Admin\Backup::unduh');
+        $routes->post('sistem/backup/hapus', 'Admin\Backup::hapus');
+        $routes->get('sistem/backup/pulihkan', 'Admin\Backup::pulihkanForm');
+        $routes->post('sistem/backup/pulihkan', 'Admin\Backup::pulihkan');
+        $routes->get('sistem/backup/pulihkan/([a-f0-9]{16})', 'Admin\Backup::kemajuan/$1');
+        $routes->post('sistem/backup/pulihkan/([a-f0-9]{16})/langkah', 'Admin\Backup::langkah/$1');
+
+        // ===== SISTEM → Sesi Aktif (khusus Admin — MenuAdmin 'sesi_aktif'; docs/DESAIN-ALAT-SISTEM.md F5) =====
+        $routes->get('sistem/sesi', 'Admin\Sesi::index');
+        $routes->post('sistem/sesi/keluarkan-semua', 'Admin\Sesi::keluarkanSemua');
+        $routes->post('sistem/sesi/(web|android)/(:num)/keluarkan', 'Admin\Sesi::keluarkan/$1/$2');
+
         // ===== CETAK / EXPORT KURIKULUM (PDF & Excel) =====
         $routes->get('cetak/jadwal-kelas/(:num)/(:segment)', 'Admin\Cetak::jadwalKelas/$1/$2');
         $routes->get('cetak/jadwal-guru/(:num)/(:segment)', 'Admin\Cetak::jadwalGuru/$1/$2');
@@ -823,6 +856,8 @@ $routes->group('api/v1', ['namespace' => 'App\Controllers\Api', 'filter' => 'cor
     // ---------- APP / OTA (PUBLIK) ----------
     // Bootstrap dipanggil app saat start (info versi + update otomatis).
     $routes->get('app/bootstrap', 'AppController::bootstrap');
+    // Status Mode Maintenance (tetap terbuka saat maintenance; tombol "Coba lagi" layar perawatan) — docs/API-SISTEM.md
+    $routes->get('app/status', 'AppController::status');
     // Daftarkan APK rilis (dipakai skrip release.ps1; auth via header X-Apk-Token).
     $routes->post('app/apk/register', 'AppController::register');
 
@@ -918,6 +953,10 @@ $routes->group('api/v1', ['namespace' => 'App\Controllers\Api', 'filter' => 'cor
         $routes->get('admin/master/siswa/statistik', 'Admin\Siswa::statistik');
         // Siswa — detail lengkap satu siswa (id angka; 'statistik' di atas tidak bentrok)
         $routes->get('admin/master/siswa/(:num)', 'Admin\Siswa::show/$1');
+        // Siswa — status jelas (SiswaStatus, 2026-10-29): nonaktifkan/aktifkan & pulihkan data terhapus lama.
+        // DELETE .../siswa/{id} & bulk-delete kini = HAPUS PERMANEN (409 bila sudah punya data terkait). docs/API-SISWA-STATUS.md
+        $routes->post('admin/master/siswa/(:num)/status', 'Admin\Siswa::status/$1');
+        $routes->post('admin/master/siswa/(:num)/pulihkan', 'Admin\Siswa::pulihkan/$1');
 
         // Guru — jabatan yang disandang (boleh lebih dari satu, satu utama)
         $routes->get('admin/master/guru/(:num)/jabatan', 'Admin\Guru::jabatanGet/$1');
@@ -1049,6 +1088,18 @@ $routes->group('api/v1', ['namespace' => 'App\Controllers\Api', 'filter' => 'cor
         $routes->delete('admin/biodata/isian/(:num)', 'Admin\Biodata::hapus/$1');
         $routes->get('admin/ujian/(:segment)/cetak/daftar-hadir/(:num)', 'Admin\UjianCetak::daftarHadir/$1/$2');
         $routes->get('admin/ujian/(:segment)/cetak/berita-acara/(:num)', 'Admin\UjianCetak::beritaAcara/$1/$2');
+
+        // ---------- SISTEM (KHUSUS ADMIN — Mode Maintenance & Log Error Hosting; kontrak: docs/API-SISTEM.md) ----------
+        $routes->get('sistem/maintenance', 'Admin\Sistem::maintenance');
+        $routes->post('sistem/maintenance', 'Admin\Sistem::simpanMaintenance');
+        $routes->get('sistem/log-error', 'Admin\Sistem::logError');
+        $routes->post('sistem/log-error/bersihkan', 'Admin\Sistem::bersihkanLog');
+        $routes->get('sistem/backup', 'Admin\Sistem::backup');               // daftar (unduh & restore hanya di web)
+        $routes->post('sistem/backup', 'Admin\Sistem::buatBackup');          // {isi: db|berkas}
+        $routes->post('sistem/backup/hapus', 'Admin\Sistem::hapusBackup');   // {kunci}
+        $routes->get('sistem/sesi', 'Admin\Sistem::sesi');
+        $routes->post('sistem/sesi/keluarkan', 'Admin\Sistem::keluarkanSesi');            // {jenis: web|android, id}
+        $routes->post('sistem/sesi/keluarkan-semua', 'Admin\Sistem::keluarkanSemuaSesi'); // kecuali akun sendiri
 
         // ---------- HONOR UJIAN (KHUSUS ADMIN — data gaji; kontrak: docs/API-HONOR.md) ----------
         // Operator & Waka Hubin sudah ditolak penyaring apiauth (hanya awalan 'pkl'); controller memeriksa ulang peran Admin.

@@ -186,6 +186,11 @@ final class MenuAdmin
                 'akun'      => ['Kelola Akun', self::ADMIN, [['admin/akun', 'Kelola Akun', 'user-settings']], ['ket' => 'Khusus Admin: membuat akun dan memilih perannya.']],
                 'hak_akses' => ['Hak Akses', self::ADMIN, [['admin/hak-akses', 'Hak Akses', 'lock']], ['ket' => 'Khusus Admin: mengatur siapa boleh apa.']],
                 'audit'     => ['Audit Log', self::MENU, [['admin/audit', 'Audit Log', 'file-search']]],
+                // Alat perawatan sistem (docs/DESAIN-ALAT-SISTEM.md). Yang belum dibangun = entri "Segera" (hanya Admin yang melihat).
+                'backup'           => ['Backup & Restore', self::ADMIN, [['admin/sistem/backup', 'Backup & Restore', 'archive']], ['api' => ['sistem/backup'], 'ket' => 'Khusus Admin: cadangan database & berkas unggahan, unduh, dan pulihkan (restore).']],
+                'mode_maintenance' => ['Mode Maintenance', self::ADMIN, [['admin/sistem/maintenance', 'Mode Maintenance', 'tools']], ['api' => ['sistem/maintenance'], 'ket' => 'Khusus Admin: menutup sementara situs publik, layanan siswa, dan aplikasi Android.']],
+                'log_error'        => ['Log Error Hosting', self::ADMIN, [['admin/sistem/log-error', 'Log Error Hosting', 'bug']], ['api' => ['sistem/log-error'], 'ket' => 'Khusus Admin: membaca log galat asli server hosting (tanpa cPanel).']],
+                'sesi_aktif'       => ['Sesi Aktif', self::ADMIN, [['admin/sistem/sesi', 'Sesi Aktif', 'users-group']], ['api' => ['sistem/sesi'], 'ket' => 'Khusus Admin: siapa sedang masuk (web & Android) dan mengeluarkannya.']],
                 'profil'    => ['Profil Saya', self::UMUM, [['admin/profile', 'Profil Saya', 'user']]],
                 'pemberitahuan' => ['Pemberitahuan (lonceng)', self::UMUM, [], ['awalan' => ['admin/pemberitahuan'], 'ket' => 'Isi ikon lonceng di bilah atas; disaring hak tiap peran.']],
                 'ui_kit'        => ['Kit Tampilan (alat pengembang)', self::ADMIN, [], ['awalan' => ['admin/ui-kit'], 'ket' => 'Halaman contoh & uji komponen tampilan (admin/ui-kit?uji=1); khusus Admin.']],

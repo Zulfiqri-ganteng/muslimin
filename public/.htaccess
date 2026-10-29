@@ -71,6 +71,11 @@ Options -Indexes
 	</IfModule>
 </IfModule>
 # Aturan prefetch menu (Speculation Rules, dipasang lewat header oleh layouts/admin.php) — wajib bertipe MIME ini agar dibaca Chrome.
+# Log galat PHP buatan cPanel (error_log) tidak boleh dibuka dari internet — dibaca lewat Admin → Log Error Hosting.
+<Files "error_log">
+	Require all denied
+</Files>
+
 <Files "aturan-prefetch.json">
 	ForceType application/speculationrules+json
 </Files>

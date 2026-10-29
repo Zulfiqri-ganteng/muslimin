@@ -10,6 +10,7 @@
  *   baseUrl: string, cari?: string|null, q?: string, filter?: list<array{name: string, value?: string, all: string, options: array<string, string>}>,
  *   per?: int, kiriHtml?: string|null, tambah?: bool, labelTambah?: string, impor?: bool, eksporUrl?: string|null, eksporTitle?: string,
  *   tambahanHtml?: string, massalUrl?: string|null, massalHidden?: array<string, string>, massalLabel?: string, massalPeringatan?: string,
+ *   massalSemua?: bool (false = tanpa tombol "Hapus semua"),
  *   filterLangsung?: bool, hidden?: array<string, string>
  * } $ui
  * 'hidden' (F7) = isian tersembunyi di formulir cari/filter yang ikut terkirim, mis. ['tp' => '2026/2027'] (tahun pelajaran Ujian).
@@ -73,7 +74,9 @@ foreach ($filter as $f) {
             <?php if ($massalUrl): ?>
                 <?php // Muncul saat ada baris dicentang (delegasi global di app.js). Disembunyikan lewat ATRIBUT hidden (kelas inline-flex menang atas kelas hidden). ?>
                 <button type="button" data-bulk="selected" hidden class="btn btn-bahaya"><?= ikon('trash-bin', 'h-4 w-4') ?>Hapus terpilih (<span class="js-bulk-count">0</span>)</button>
-                <button type="button" data-bulk="all" hidden class="btn btn-bahaya"><?= ikon('trash-bin', 'h-4 w-4') ?>Hapus semua</button>
+                <?php if ($ui['massalSemua'] ?? true): ?>
+                    <button type="button" data-bulk="all" hidden class="btn btn-bahaya"><?= ikon('trash-bin', 'h-4 w-4') ?>Hapus semua</button>
+                <?php endif; ?>
             <?php endif; ?>
         </div>
 

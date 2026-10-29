@@ -17,10 +17,13 @@
  * @var array                         $tingkatList Daftar tingkat sah
  * @var array                         $statusList  Daftar status sah
  */
+use App\Libraries\SiswaStatus;
 use App\Models\SiswaModel;
 
 $lencanaStatus = ['aktif' => 'lencana-hijau', 'lulus' => 'lencana-merek', 'pindah' => 'lencana-kuning', 'keluar' => 'lencana-abu'];
-$opsiStatus    = array_combine($statusList, array_map('ucfirst', $statusList));
+// Status: Aktif, "Tidak aktif (semua)" = lulus+pindah+keluar, tiap status nonaktif, dan data terhapus lama (SiswaStatus).
+$opsiStatus    = ['aktif' => 'Aktif', 'nonaktif' => 'Tidak aktif (semua)'] + SiswaStatus::NONAKTIF + ['terhapus' => 'Terhapus (lama)'];
+$terhapus      = $status === 'terhapus';
 $opsiTingkat   = array_combine($tingkatList, array_map(static fn ($t) => 'Kelas ' . $t, $tingkatList));
 $opsiBiodata   = ['lengkap' => 'Biodata lengkap', 'belum' => 'Biodata belum'];
 $adaSaring     = $q !== '' || $kelasId || $tingkat !== '' || $status !== '' || $biodata !== '';
@@ -80,7 +83,10 @@ $bagian = static fn (string $judul, string $ket = ''): string => '<p class="bord
         • <b>Detail</b> — klik <b>nama siswa</b> atau tombol <b>Detail</b> di kolom Aksi untuk melihat SEMUA data satu siswa (identitas, kelas, alamat, orang tua, wali, STTB, status biodata &amp; PKL). Dari sana tombol <b>Ubah data</b> membuka form ubah.<br>
         • <b>Data Sekolah</b> — nama orang tua versi sekolah, nomor &amp; tahun STTB (ijazah SMP) sesuai Daftar Nama Siswa resmi (Format 8355). Kolom ini ada di <b>paling kanan</b> template impor.<br>
         • <b>Export</b> — mengunduh sesuai pilihan filter (pilih satu kelas = hanya kelas itu), berisi seluruh kolom biodata. Bila isinya lebih dari satu kelas, file Excel berisi tab <b>Semua Kelas</b> + <b>satu tab per kelas</b> (klik nama kelas di bawah layar Excel).</p>
-        <p class="mt-1">• Status <b>Aktif</b> yang dihitung pada grafik jumlah siswa di halaman publik. Siswa lulus/pindah/keluar tetap tersimpan sebagai arsip.</p>',
+        <p class="mt-1">• Status <b>Aktif</b> yang dihitung pada grafik jumlah siswa di halaman publik. Siswa lulus/pindah/keluar tetap tersimpan sebagai arsip.<br>
+        • <b>Nonaktifkan</b> — siswa yang lulus, pindah sekolah, atau keluar: statusnya diganti, data &amp; riwayat (PKL, surat, biodata) tetap utuh, dan siswa tidak muncul lagi di formulir siswa. Bisa <b>Aktifkan</b> lagi kapan saja.<br>
+        • <b>Hapus permanen</b> (halaman Detail, atau centang lalu Hapus terpilih) — hanya untuk data salah input yang belum punya data terkait; NIS/NISN-nya langsung bisa dipakai lagi. Siswa yang sudah punya data PKL/surat/biodata tidak bisa dihapus — nonaktifkan saja.<br>
+        • Saringan Status <b>Terhapus (lama)</b> — data yang dulu "dihapus" dengan cara lama: Pulihkan atau Hapus permanen.</p>',
 ]) ?>
 <?= $this->endSection() ?>
 
@@ -118,9 +124,15 @@ $bagian = static fn (string $judul, string $ket = ''): string => '<p class="bord
         'eksporTitle'    => 'Unduh data siswa sesuai filter yang dipilih (mis. satu kelas saja) ke file Excel',
         'tambahanHtml'   => '<a href="' . site_url('admin/master/siswa/export-resmi') . '" class="btn btn-netral" title="Unduh Daftar Nama Siswa Kelas X, XI, XII dengan format persis berkas sekolah (Format 8355): semua siswa aktif per jurusan, lengkap dengan tanda tangan">'
             . '<span class="text-green-600 dark:text-green-400">' . ikon('file-lines', 'h-4 w-4') . '</span>Format 8355</a>',
-        'massalUrl'      => site_url('admin/master/siswa/bulk-delete'),
-        'massalLabel'    => 'siswa',
+        'massalUrl'        => site_url('admin/master/siswa/bulk-delete'),
+        'massalLabel'      => 'siswa',
+        'massalSemua'      => false, // "Hapus semua" tidak tersedia untuk siswa
+        'massalPeringatan' => 'Ini HAPUS PERMANEN: hanya siswa yang belum punya data terkait (PKL, surat, biodata, dll.) yang terhapus; selebihnya dilewati — nonaktifkan saja.',
     ]) ?>
+
+    <?php if ($terhapus): ?>
+        <div class="px-4 pt-4"><?= ui_peringatan('info', 'Ini data siswa yang dulu "dihapus" dengan cara lama (masih tersimpan, NIS/NISN-nya masih terpakai). Pulihkan bila ternyata siswa masih ada, atau Hapus permanen bila data itu salah input. Hapus permanen hanya bisa bila belum punya data terkait.', ['judul' => 'Terhapus (lama)']) ?></div>
+    <?php endif; ?>
 
     <div class="tabel-bungkus">
         <table class="tabel-crud">
@@ -162,14 +174,33 @@ $bagian = static fn (string $judul, string $ket = ''): string => '<p class="bord
                         <td class="text-center"><?= $r['jenis_kelamin'] !== null ? esc($r['jenis_kelamin']) : '<span class="sel-ket">—</span>' ?></td>
                         <td class="whitespace-nowrap"><?= $r['nama_kelas'] !== null ? esc($r['nama_kelas']) : '<span class="sel-ket">Belum ada kelas</span>' ?></td>
                         <td class="sel-ket"><?= $r['jurusan_kode'] !== null ? esc($r['jurusan_kode']) : '—' ?></td>
-                        <td><span class="lencana <?= $lencanaStatus[$r['status']] ?? 'lencana-abu' ?>"><?= esc(ucfirst($r['status'])) ?></span></td>
+                        <td><span class="lencana <?= $terhapus ? 'lencana-merah' : ($lencanaStatus[$r['status']] ?? 'lencana-abu') ?>"><?= $terhapus ? 'Terhapus' : esc(SiswaStatus::label((string) $r['status'])) ?></span></td>
                         <td class="kolom-aksi">
-                            <?= ui_crud_aksi([
-                                'row'        => $r,
-                                'detailUrl'  => $urlDetail,
-                                'hapusUrl'   => site_url('admin/master/siswa/delete/' . $r['id']),
-                                'konfirmasi' => 'Hapus data siswa ' . $r['nama'] . ' (NIS ' . $r['nis'] . ')?',
-                            ]) ?>
+                            <?php if ($terhapus): ?>
+                                <div class="inline-flex items-center justify-end gap-2">
+                                    <form method="post" action="<?= site_url('admin/master/siswa/' . (int) $r['id'] . '/pulihkan') ?>" data-confirm="Pulihkan data <?= esc($r['nama'], 'attr') ?> (NIS <?= esc($r['nis'], 'attr') ?>)? Siswa kembali muncul di daftar dengan status <?= esc(SiswaStatus::label((string) $r['status']), 'attr') ?>." data-confirm-judul="Pulihkan siswa?" data-confirm-ya="Ya, pulihkan">
+                                        <?= csrf_field() ?>
+                                        <button type="submit" class="btn btn-sukses btn-sm"><?= ikon('check-circle', 'h-4 w-4') ?>Pulihkan</button>
+                                    </form>
+                                    <form method="post" action="<?= site_url('admin/master/siswa/delete/' . (int) $r['id']) ?>" data-confirm="<?= esc($r['nama'], 'attr') ?> (NIS <?= esc($r['nis'], 'attr') ?>) dihapus PERMANEN. Hanya bisa bila belum punya data terkait." data-confirm-judul="Hapus permanen?" data-confirm-ya="Ya, hapus permanen" data-confirm-jenis="bahaya">
+                                        <?= csrf_field() ?>
+                                        <button type="submit" class="btn btn-bahaya btn-sm"><?= ikon('trash-bin', 'h-4 w-4') ?>Hapus permanen</button>
+                                    </form>
+                                </div>
+                            <?php else: ?>
+                                <?php
+                                // Satu tombol status per baris: Nonaktifkan (aktif) / Aktifkan (tidak aktif). Hapus permanen ada di halaman Detail & hapus massal.
+                                $tombolStatus = $r['status'] === 'aktif'
+                                    ? '<a href="' . site_url('admin/master/siswa/' . (int) $r['id'] . '/nonaktifkan') . '" class="btn btn-netral btn-sm">' . ikon('user-circle', 'h-4 w-4') . 'Nonaktifkan</a>'
+                                    : '<form method="post" action="' . site_url('admin/master/siswa/' . (int) $r['id'] . '/aktifkan') . '" class="inline" data-confirm="' . esc($r['nama'], 'attr') . ' diaktifkan kembali." data-confirm-judul="Aktifkan kembali?" data-confirm-ya="Ya, aktifkan">'
+                                        . csrf_field() . '<button type="submit" class="btn btn-sukses btn-sm">' . ikon('check-circle', 'h-4 w-4') . 'Aktifkan</button></form>';
+                                ?>
+                                <?= ui_crud_aksi([
+                                    'row'          => $r,
+                                    'detailUrl'    => $urlDetail,
+                                    'tambahanHtml' => $tombolStatus,
+                                ]) ?>
+                            <?php endif; ?>
                         </td>
                     </tr>
                 <?php endforeach; endif; ?>

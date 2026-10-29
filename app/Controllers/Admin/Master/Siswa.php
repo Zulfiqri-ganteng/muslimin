@@ -6,10 +6,12 @@ use App\Libraries\BiodataForm;
 use App\Libraries\HakAkses;
 use App\Libraries\SiswaDetail;
 use App\Libraries\SiswaExcel8355;
+use App\Libraries\SiswaStatus;
 use App\Models\KelasModel;
 use App\Models\SettingModel;
 use App\Models\SiswaModel;
 use CodeIgniter\Database\BaseConnection;
+use CodeIgniter\HTTP\RedirectResponse;
 use CodeIgniter\Model;
 use PhpOffice\PhpSpreadsheet\Cell\Coordinate;
 use PhpOffice\PhpSpreadsheet\Cell\DataType;
@@ -83,7 +85,7 @@ class Siswa extends BaseMaster
         // "v2": bentuk baris berubah (kolom biodata) — jangan membaca cache bentuk lama.
         $kunci = "list|v2|q={$q}|k={$kelasId}|t={$tingkat}|s={$status}|b={$biodata}|per={$per}|p={$page}";
         $data  = $this->cachedList($kunci, function () use ($q, $kelasId, $tingkat, $status, $biodata, $per, $page) {
-            $builder = $this->terapkanSaringan($this->model->withRelations(), $kelasId, $tingkat, $status, $biodata);
+            $builder = $this->terapkanSaringan($this->modelDaftar($status), $kelasId, $tingkat, $status, $biodata);
             if ($q !== '') {
                 $builder = $builder->groupStart()
                     ->like('siswa.nama', $q)->orLike('siswa.nis', $q)->orLike('siswa.nisn', $q)
@@ -114,6 +116,9 @@ class Siswa extends BaseMaster
     public function store()
     {
         $data = $this->collect();
+        if (($bentrok = $this->bentrok($data, 0)) !== []) {
+            return redirect()->back()->withInput()->with('errors', $bentrok);
+        }
         if (! $this->model->insert($data)) {
             return redirect()->back()->withInput()->with('errors', $this->model->errors());
         }
@@ -130,6 +135,9 @@ class Siswa extends BaseMaster
         $data       = $this->collect();
         $data['id'] = $id; // isi placeholder {id} pada rule is_unique saat edit
 
+        if (($bentrok = $this->bentrok($data, $id)) !== []) {
+            return redirect()->back()->withInput()->with('errors', $bentrok);
+        }
         if (! $this->model->update($id, $data)) {
             return redirect()->back()->withInput()->with('errors', $this->model->errors());
         }
@@ -154,7 +162,96 @@ class Siswa extends BaseMaster
             'bolehPkl'   => HakAkses::boleh($peran, 'admin/pkl'),
             'bolehBio'   => HakAkses::boleh($peran, 'admin/biodata'),
             'urlDaftar'  => $this->indexUrl(),
+            'terkait'    => SiswaStatus::keterkaitan([(int) $id])[(int) $id] ?? [],
+            'bolehUbah'  => HakAkses::boleh($peran, 'admin/master/siswa/' . (int) $id . '/aktifkan', 'POST'),
         ]);
+    }
+
+    // ===================== STATUS & HAPUS (SiswaStatus) =====================
+
+    /** POST admin/master/siswa/delete/{id} — HAPUS PERMANEN, hanya bila siswa belum punya data terkait. */
+    public function delete($id): RedirectResponse
+    {
+        $r = SiswaStatus::hapusPermanen([(int) $id], $this->oleh());
+
+        return $r['dihapus'] !== [] ? $this->kembali('success', SiswaStatus::pesanHapus($r))
+            : $this->kembali('error', SiswaStatus::pesanHapus($r) === 'Tidak ada siswa yang dihapus.' ? 'Siswa tidak ditemukan.' : SiswaStatus::pesanHapus($r));
+    }
+
+    /** POST admin/master/siswa/bulk-delete — hapus permanen yang dicentang (tanpa data terkait). "Hapus semua" sengaja ditolak. */
+    public function bulkDelete(): RedirectResponse
+    {
+        if ((string) $this->request->getPost('mode') === 'all') {
+            return $this->kembali('error', 'Hapus semua siswa tidak tersedia. Centang siswa yang akan dihapus, atau nonaktifkan (Lulus/Pindah/Keluar).');
+        }
+        $ids = array_values(array_filter(array_map('intval', (array) $this->request->getPost('ids'))));
+        if ($ids === []) {
+            return $this->kembali('error', 'Tidak ada siswa yang dipilih.');
+        }
+        $r = SiswaStatus::hapusPermanen($ids, $this->oleh());
+
+        return $this->kembali($r['dihapus'] !== [] ? 'success' : 'error', SiswaStatus::pesanHapus($r));
+    }
+
+    /** GET admin/master/siswa/{id}/nonaktifkan — pilih Lulus / Pindah / Keluar + alasan. */
+    public function nonaktifkanForm($id)
+    {
+        $d = SiswaDetail::muat((int) $id);
+        if ($d === null) {
+            return $this->goIndex(null, 'Siswa tidak ditemukan.');
+        }
+
+        return view('admin/master/siswa_nonaktif', ['title' => 'Nonaktifkan siswa', 'd' => $d, 'urlDaftar' => $this->indexUrl()]);
+    }
+
+    /** POST admin/master/siswa/{id}/nonaktifkan */
+    public function nonaktifkan($id): RedirectResponse
+    {
+        $r = SiswaStatus::nonaktifkan((int) $id, (string) $this->request->getPost('status'), (string) $this->request->getPost('catatan'), $this->oleh());
+
+        return $r['ok'] ? redirect()->to(site_url('admin/master/siswa/' . (int) $id))->with('success', $r['pesan'])
+            : redirect()->back()->withInput()->with('error', $r['pesan']);
+    }
+
+    /** POST admin/master/siswa/{id}/aktifkan */
+    public function aktifkan($id): RedirectResponse
+    {
+        $r = SiswaStatus::aktifkan((int) $id, $this->oleh());
+
+        return redirect()->to(previous_url() ?: $this->indexUrl())->with($r['ok'] ? 'success' : 'error', $r['pesan']);
+    }
+
+    /** POST admin/master/siswa/{id}/pulihkan — data terhapus lama dikembalikan. */
+    public function pulihkan($id): RedirectResponse
+    {
+        $r = SiswaStatus::pulihkan((int) $id, $this->oleh());
+
+        return redirect()->to(previous_url() ?: $this->indexUrl())->with($r['ok'] ? 'success' : 'error', $r['pesan']);
+    }
+
+    /** Galat bentrok NIS/NISN dengan pesan jelas (termasuk pemilik yang sudah terhapus). @return array<string, string> */
+    private function bentrok(array $data, int $id): array
+    {
+        $galat = [];
+        foreach (['nis', 'nisn'] as $k) {
+            if (($p = SiswaStatus::pesanBentrok($k, $data[$k] ?? null, $id)) !== null) {
+                $galat[$k] = $p;
+            }
+        }
+
+        return $galat;
+    }
+
+    private function kembali(string $jenis, string $pesan): RedirectResponse
+    {
+        return redirect()->to(previous_url() ?: $this->indexUrl())->with($jenis, $pesan);
+    }
+
+    private function oleh(): string
+    {
+        $a = (array) session('admin');
+
+        return (string) (($a['full_name'] ?? '') ?: ($a['username'] ?? 'Admin'));
     }
 
     /** Isi form tambah/edit (form lengkap: kolom kosong memang berarti dikosongkan). */
@@ -266,9 +363,18 @@ class Siswa extends BaseMaster
         return [
             $kelasId,
             in_array($tingkat, self::TINGKAT, true) ? $tingkat : '',
-            in_array($status, SiswaModel::STATUS, true) ? $status : '',
+            in_array($status, [...SiswaModel::STATUS, ...self::STATUS_KHUSUS], true) ? $status : '',
             in_array($biodata, self::BIODATA, true) ? $biodata : '',
         ];
+    }
+
+    /** Saringan status tambahan: semua yang tidak aktif (lulus/pindah/keluar) & data terhapus lama (hapus lunak). */
+    public const STATUS_KHUSUS = ['nonaktif', 'terhapus'];
+
+    /** Model untuk daftar/ekspor: saringan "terhapus" = HANYA data terhapus lama. */
+    private function modelDaftar(string $status)
+    {
+        return ($status === 'terhapus' ? $this->model->onlyDeleted() : $this->model)->withRelations();
     }
 
     /** Terapkan saringan yang sama untuk daftar & ekspor. */
@@ -282,7 +388,9 @@ class Siswa extends BaseMaster
         if ($tingkat !== '') {
             $builder = $builder->where('kelas.tingkat', $tingkat);
         }
-        if ($status !== '') {
+        if ($status === 'nonaktif') {
+            $builder = $builder->whereIn('siswa.status', array_keys(SiswaStatus::NONAKTIF));
+        } elseif ($status !== '' && $status !== 'terhapus') {
             $builder = $builder->where('siswa.status', $status);
         }
         if ($biodata === 'lengkap') {
@@ -301,7 +409,7 @@ class Siswa extends BaseMaster
         // Ekspor mengikuti filter yang sedang aktif agar admin bisa mengunduh
         // "kelas X TKJ saja" tanpa harus menyaring ulang di Excel.
         [$kelasId, $tingkat, $status, $biodata] = $this->saringan();
-        $rows = $this->terapkanSaringan($this->model->withRelations(), $kelasId, $tingkat, $status, $biodata)
+        $rows = $this->terapkanSaringan($this->modelDaftar($status), $kelasId, $tingkat, $status, $biodata)
             ->orderBy('kelas.tingkat', 'ASC')->orderBy('kelas.nama_kelas', 'ASC')
             ->orderBy('siswa.nama', 'ASC')->findAll();
 

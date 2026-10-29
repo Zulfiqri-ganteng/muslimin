@@ -11,8 +11,14 @@
  * @var string      $galatTeks
  * @var string      $galatIkon  nama ikon Flowbite (resources/ikon.json)
  * @var string|null $galatPesan pesan teknis — hanya diisi di luar production
+ * @var string|null $galatInfo  baris keterangan tambahan dalam kotak (mis. perkiraan selesai maintenance)
+ * @var string|null $galatAksi  HTML tombol pengganti tombol bawaan (sudah di-esc pemanggil)
+ * @var string|null $galatKaki  HTML baris kecil di bawah tombol (sudah di-esc pemanggil)
  */
 $galatPesan = $galatPesan ?? null;
+$galatInfo  = $galatInfo ?? null;
+$galatAksi  = $galatAksi ?? null;
+$galatKaki  = $galatKaki ?? null;
 $alamat     = static fn (string $jalur): string => function_exists('site_url') ? site_url($jalur) : '/' . ltrim($jalur, '/');
 $berkasCss  = 'assets/css/galat.css';
 $alamatCss  = (function_exists('base_url') ? base_url($berkasCss) : '/' . $berkasCss) . '?v=' . @filemtime(FCPATH . $berkasCss);
@@ -36,19 +42,27 @@ $diAdmin    = preg_match('#/admin(?:[/?]|$)#', (string) ($_SERVER['REQUEST_URI']
         <?php endif; ?>
         <h1 class="galat-judul"><?= esc($galatJudul) ?></h1>
         <p class="galat-teks"><?= esc($galatTeks) ?></p>
+        <?php if ($galatInfo !== null && trim($galatInfo) !== ''): ?>
+            <p class="galat-info"><?= esc($galatInfo) ?></p>
+        <?php endif; ?>
 
         <?php if ($galatPesan !== null && trim($galatPesan) !== ''): ?>
             <pre class="galat-pesan"><?= esc($galatPesan) ?></pre>
         <?php endif; ?>
 
         <div class="galat-aksi">
-            <?php if ($diAdmin): ?>
+            <?php if ($galatAksi !== null): ?>
+                <?= $galatAksi ?>
+            <?php elseif ($diAdmin): ?>
                 <a href="<?= esc($alamat('admin'), 'attr') ?>" class="tombol tombol-utama"><?= $gambar('home') ?>Ke Dasbor</a>
                 <a href="<?= esc($alamat('/'), 'attr') ?>" class="tombol tombol-netral"><?= $gambar('school') ?>Beranda situs</a>
             <?php else: ?>
                 <a href="<?= esc($alamat('/'), 'attr') ?>" class="tombol tombol-utama"><?= $gambar('home') ?>Kembali ke Beranda</a>
             <?php endif; ?>
         </div>
+        <?php if ($galatKaki !== null): ?>
+            <p class="galat-kaki"><?= $galatKaki ?></p>
+        <?php endif; ?>
     </main>
 </body>
 </html>

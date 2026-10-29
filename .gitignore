@@ -78,6 +78,13 @@ Vagrantfile
 /writable/uploads/*
 !/writable/uploads/index.html
 
+# Backup database & berkas (Sistem → Backup & Restore) — berisi DATA PRIBADI, JANGAN di-commit (repo PUBLIK).
+/writable/backup/
+
+# Status Mode Maintenance (Sistem → Mode Maintenance) — milik tiap server, jangan sampai ikut git pull.
+/writable/maintenance.json
+/writable/maintenance.json.tmp
+
 /writable/debugbar/*
 !/writable/debugbar/index.html
 
@@ -153,6 +160,7 @@ _modules/*
 # Repo ini PUBLIK. (Ditambahkan 2026-09-25 setelah dbasli.sql sempat ter-push.)
 /database/*.sql
 /database/*.xlsx
+/database/ANALISIS-*.md
 *.sql.gz
 /downloadpublic/
 # Data resmi 1.727 siswa (NISN, tgl lahir, alamat, orang tua) dari sekolah. JANGAN di-commit (repo PUBLIK). Ditambahkan 2026-10-08.

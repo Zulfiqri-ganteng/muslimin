@@ -3,6 +3,7 @@
 namespace App\Controllers\Api;
 
 use App\Libraries\ApkManager;
+use App\Libraries\ModeMaintenance;
 
 /**
  * Endpoint "bootstrap" aplikasi mobile (fluter-muslimin).
@@ -39,10 +40,21 @@ class AppController extends BaseApiController
             'apk_build'           => $apk['build'],
             'apk_size'            => $apk['size'],
 
-            // Maintenance khusus app (opsional; default mati).
-            'maintenance'         => false,
-            'maintenance_message' => 'Aplikasi sedang pemeliharaan. Coba lagi nanti.',
+            // Mode Maintenance (Sistem → Mode Maintenance; BLUEPRINT-SISTEM.md M1). Dua kunci lama dipertahankan untuk
+            // aplikasi yang sudah beredar; rincian di 'maintenance_info' (sama dengan GET app/status).
+            'maintenance'         => ModeMaintenance::aktif(),
+            'maintenance_message' => ModeMaintenance::status()['pesan'],
+            'maintenance_info'    => ModeMaintenance::untukApi(),
         ], 'OK');
+    }
+
+    /**
+     * GET /api/v1/app/status — PUBLIK & tetap terbuka saat maintenance (dipakai tombol "Coba lagi" di layar perawatan).
+     * Ringan: hanya membaca berkas status maintenance, tanpa database.
+     */
+    public function status()
+    {
+        return $this->ok(['maintenance' => ModeMaintenance::untukApi(), 'waktu_server' => date('Y-m-d H:i:s')], 'OK');
     }
 
     /**

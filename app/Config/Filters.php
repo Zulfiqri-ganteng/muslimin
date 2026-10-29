@@ -15,6 +15,7 @@ use App\Filters\AuthFilter;
 use App\Filters\CsrfFilter;
 use App\Filters\ApiAuthFilter;
 use App\Filters\SubdomainHostFilter;
+use App\Filters\MaintenanceFilter;
 
 class Filters extends BaseFilters
 {
@@ -41,6 +42,7 @@ class Filters extends BaseFilters
         'auth'          => AuthFilter::class,
         'apiauth'       => ApiAuthFilter::class,
         'subdomainhost' => SubdomainHostFilter::class,
+        'maintenance'   => MaintenanceFilter::class,
     ];
 
     /**
@@ -79,6 +81,8 @@ class Filters extends BaseFilters
      */
     public array $globals = [
         'before' => [
+            // Mode Maintenance (Sistem → Mode Maintenance): saat aktif hanya Admin yang lewat — paling depan.
+            'maintenance',
             // Subdomain biodata & PKL hanya melayani form masing-masing (lihat filternya).
             'subdomainhost',
             // 'honeypot',

@@ -86,6 +86,9 @@ body {
   overflow-wrap: anywhere;
 }
 .galat-aksi { display: flex; flex-wrap: wrap; justify-content: center; gap: 0.75rem; }
+.galat-info { margin: -1rem 0 2rem; padding: 0.75rem 1rem; border: 1px solid var(--garis); border-radius: 0.5rem; background: var(--kartu); font-size: 0.9375rem; line-height: 1.5; }
+.galat-kaki a { color: var(--redup); }
+.galat-kaki a:hover { color: var(--merek); }
 
 .tombol {
   display: inline-flex;

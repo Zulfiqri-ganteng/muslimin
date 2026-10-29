@@ -57,6 +57,10 @@ class Auth extends BaseController
         if (! HakAkses::dikenal($admin['role'] ?? null)) {
             return redirect()->back()->withInput()->with('error', 'Peran akun Anda tidak dikenali. Hubungi admin sekolah.');
         }
+        // Mode Maintenance: selama perawatan hanya Admin yang boleh masuk.
+        if (($tolak = \App\Libraries\ModeMaintenance::tolakMasuk($admin['role'] ?? null)) !== null) {
+            return redirect()->back()->withInput()->with('error', $tolak);
+        }
 
         // Catat waktu masuk tanpa menyentuh updated_at.
         db_connect()->table('admins')->where('id', (int) $admin['id'])
@@ -70,6 +74,8 @@ class Auth extends BaseController
             'lastActivity' => time(),
             'loginAt'      => time(),
         ]);
+        // Sistem → Sesi Aktif: catat sesi baru (sidik id sesi sesudah regenerate).
+        \App\Libraries\SesiAktif::catatMasuk((int) $admin['id'], $this->request->getIPAddress(), (string) $this->request->getUserAgent()->getAgentString());
 
         // Tiap peran langsung mendarat di halamannya (Hubin → PKL, Admin → dashboard).
         return redirect()->to(site_url(HakAkses::beranda($admin['role'])))
@@ -78,6 +84,7 @@ class Auth extends BaseController
 
     public function logout()
     {
+        \App\Libraries\SesiAktif::catatKeluar('keluar');
         session()->destroy();
         return redirect()->to(site_url('admin/login'))->with('success', 'Anda telah keluar.');
     }

@@ -377,6 +377,11 @@ $js = static fn (string $berkas): string => '<script defer src="' . base_url($be
 
 <!-- ===================== ISI (template: main-content) ===================== -->
 <div class="kerangka-isi">
+    <?php if (\App\Libraries\ModeMaintenance::aktif() && $cur !== 'admin/sistem/maintenance'): ?>
+        <?php // Mode Maintenance aktif: hanya Admin yang sampai di sini — pengingat di semua halaman supaya tidak lupa dimatikan. ?>
+        <div class="px-4 pt-4"><?= ui_peringatan('galat', '', ['judul' => 'Mode Maintenance AKTIF',
+            'html' => 'Situs publik, layanan siswa, dan aplikasi Android sedang ditutup untuk selain Admin. <a href="' . site_url('admin/sistem/maintenance') . '" class="font-semibold underline">Kelola / matikan</a>']) ?></div>
+    <?php endif; ?>
     <main id="isi" tabindex="-1" class="flex-1 <?= $modeCrud ? '' : 'px-4 pt-6 ' ?>focus:outline-hidden"<?= $lihatSaja ? ' data-lihat-saja="1"' : '' ?>>
         <?php // Pesan sukses = toast yang hilang sendiri (di bawah); kotak tetap hanya untuk galat & mode lihat saja. ?>
         <?php $adaPesan = $lihatSaja; ?>

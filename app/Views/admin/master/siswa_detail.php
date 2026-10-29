@@ -7,7 +7,11 @@
  * @var bool   $bolehPkl  peran ini boleh membuka ajuan PKL
  * @var bool   $bolehBio  peran ini boleh membuka Isian Biodata
  * @var string $urlDaftar kembali ke daftar (membawa saringan)
+ * @var array<string, int> $terkait  data terkait siswa (SiswaStatus::keterkaitan) — kosong = boleh hapus permanen
+ * @var bool   $bolehUbah peran ini boleh mengubah status / menghapus
  */
+use App\Libraries\SiswaStatus;
+
 $s             = $d['siswa'];
 $lencanaStatus = ['aktif' => 'lencana-hijau', 'lulus' => 'lencana-merek', 'pindah' => 'lencana-kuning', 'keluar' => 'lencana-abu'];
 $statusPkl     = [
@@ -45,11 +49,46 @@ $baris = static fn (string $label, string $isiHtml): string => '<div class="grid
             </p>
             <div class="mt-2 flex flex-wrap items-center gap-2">
                 <span class="lencana lencana-abu"><?= ! empty($s['nama_kelas']) ? esc($s['nama_kelas']) : 'Belum ada kelas' ?></span>
-                <span class="lencana <?= $lencanaStatus[$s['status']] ?? 'lencana-abu' ?>"><?= esc(ucfirst((string) $s['status'])) ?></span>
+                <span class="lencana <?= $lencanaStatus[$s['status']] ?? 'lencana-abu' ?>"><?= esc(SiswaStatus::label((string) $s['status'])) ?><?= $s['status'] !== 'aktif' ? ' (tidak aktif)' : '' ?></span>
                 <?php if (! empty($s['biodata_at'])): ?><span class="lencana lencana-hijau"><?= ikon('check', 'h-3 w-3') ?>Biodata</span><?php endif; ?>
             </div>
         </div>
     </div>
+
+    <?php if ($bolehUbah): ?>
+    <!-- Status siswa: nonaktifkan / aktifkan / hapus permanen (SiswaStatus) -->
+    <section class="kartu kartu-isi space-y-3" aria-labelledby="judul-status-siswa">
+        <h2 id="judul-status-siswa" class="text-base font-semibold text-gray-900 dark:text-white">Status siswa</h2>
+        <p class="text-sm text-gray-700 dark:text-gray-300">
+            <?php if ($s['status'] === 'aktif'): ?>
+                Siswa <b>aktif</b>. Bila sudah lulus, pindah sekolah, atau keluar, pakai <b>Nonaktifkan</b> — datanya tetap tersimpan sebagai arsip dan siswa tidak muncul lagi di formulir siswa (Layanan Siswa, Biodata, PKL).
+            <?php else: ?>
+                Siswa <b>tidak aktif</b> (<?= esc(SiswaStatus::label((string) $s['status'])) ?>). Datanya tersimpan sebagai arsip; tekan <b>Aktifkan kembali</b> bila keliru.
+            <?php endif; ?>
+        </p>
+        <div class="flex flex-wrap gap-2">
+            <?php if ($s['status'] === 'aktif'): ?>
+                <a href="<?= site_url('admin/master/siswa/' . (int) $s['id'] . '/nonaktifkan') ?>" class="btn btn-netral"><?= ikon('user-circle', 'h-4 w-4') ?>Nonaktifkan</a>
+            <?php else: ?>
+                <form method="post" action="<?= site_url('admin/master/siswa/' . (int) $s['id'] . '/aktifkan') ?>" data-confirm="<?= esc($s['nama'], 'attr') ?> diaktifkan kembali dan muncul lagi di formulir siswa." data-confirm-judul="Aktifkan kembali?" data-confirm-ya="Ya, aktifkan">
+                    <?= csrf_field() ?>
+                    <button type="submit" class="btn btn-sukses"><?= ikon('check-circle', 'h-4 w-4') ?>Aktifkan kembali</button>
+                </form>
+            <?php endif; ?>
+            <?php if ($terkait === []): ?>
+                <form method="post" action="<?= site_url('admin/master/siswa/delete/' . (int) $s['id']) ?>" data-confirm="<?= esc($s['nama'], 'attr') ?> (NIS <?= esc($s['nis'], 'attr') ?>) dihapus PERMANEN dari database dan tidak bisa dikembalikan. NIS/NISN-nya bisa dipakai lagi." data-confirm-judul="Hapus permanen?" data-confirm-ya="Ya, hapus permanen" data-confirm-jenis="bahaya">
+                    <?= csrf_field() ?>
+                    <button type="submit" class="btn btn-bahaya"><?= ikon('trash-bin', 'h-4 w-4') ?>Hapus permanen</button>
+                </form>
+            <?php endif; ?>
+        </div>
+        <?php if ($terkait !== []): ?>
+            <p class="hint">Tidak bisa dihapus permanen karena sudah punya data: <?= esc(SiswaStatus::ringkas($terkait)) ?>. Pakai Nonaktifkan bila siswa sudah tidak bersekolah di sini.</p>
+        <?php else: ?>
+            <p class="hint">Hapus permanen hanya untuk data yang salah input (belum punya data PKL, surat, biodata, dll.).</p>
+        <?php endif; ?>
+    </section>
+    <?php endif; ?>
 
     <!-- Data per bagian -->
     <div class="grid gap-4 md:grid-cols-2">
