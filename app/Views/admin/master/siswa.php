@@ -122,7 +122,9 @@ $bagian = static fn (string $judul, string $ket = ''): string => '<p class="bord
         'filterLangsung' => true,
         'eksporUrl'      => site_url('admin/master/siswa/export') . ($qsExport !== [] ? '?' . http_build_query($qsExport) : ''),
         'eksporTitle'    => 'Unduh data siswa sesuai filter yang dipilih (mis. satu kelas saja) ke file Excel',
-        'tambahanHtml'   => '<a href="' . site_url('admin/master/siswa/export-resmi') . '" class="btn btn-netral" title="Unduh Daftar Nama Siswa Kelas X, XI, XII dengan format persis berkas sekolah (Format 8355): semua siswa aktif per jurusan, lengkap dengan tanda tangan">'
+        'tambahanHtml'   => '<a href="' . site_url('admin/master/siswa/periksa') . '" class="btn btn-netral" title="Kemungkinan data ganda, data tidak sesuai, kelas hasil penempatan otomatis">'
+            . ikon('clipboard-check', 'h-4 w-4') . 'Periksa data</a>'
+            . '<a href="' . site_url('admin/master/siswa/export-resmi') . '" class="btn btn-netral" title="Unduh Daftar Nama Siswa Kelas X, XI, XII dengan format persis berkas sekolah (Format 8355): semua siswa aktif per jurusan, lengkap dengan tanda tangan">'
             . '<span class="text-green-600 dark:text-green-400">' . ikon('file-lines', 'h-4 w-4') . '</span>Format 8355</a>',
         'massalUrl'        => site_url('admin/master/siswa/bulk-delete'),
         'massalLabel'      => 'siswa',

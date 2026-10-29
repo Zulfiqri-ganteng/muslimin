@@ -49,3 +49,31 @@ Per baris: Detail · Ubah · **Nonaktifkan** (aktif) / **Aktifkan** (tidak aktif
 siswa", tombol hanya muncul bila tanpa data terkait) dan centang → Hapus terpilih. "Hapus semua" dihapus. Saringan Status:
 Aktif, Tidak aktif (semua), Lulus, Pindah sekolah, Keluar, Terhapus (lama). Perintah `siswa:hapus-keluar --tulis` kini menandai
 status **keluar** (tidak lagi hapus lunak).
+
+## Periksa Data Siswa (Dashboard "Tugas hari ini") — tambahan 2026-10-29
+
+Pustaka `App\Libraries\PeriksaSiswa` (hanya membaca). Web: Dashboard "Tugas hari ini" + halaman `admin/master/siswa/periksa`
+(tombol "Periksa data" di Master Siswa). Terminal: `phpm spark siswa:periksa`. Fixture: `siswa_periksa.json`.
+
+### GET `admin/master/siswa/periksa`
+
+```json
+{ "data": {
+    "jumlah": { "ganda": 1, "tidak_sesuai": 2, "tidak_bisa_masuk": 1, "penempatan": 62, "tidak_aktif": 3, "terhapus": 70, "tanpa_kelas": 0 },
+    "ganda": [ { "a": {siswa lebih lengkap}, "b": {kemungkinan salah input}, "alasan": "nama berbunyi sama, salah satu data belum lengkap" } ],
+    "tidak_sesuai": [ { "id": 1800, "nama": "…", "nis": "…", "nisn": "…", "tanggal_lahir": null, "kelas": "XI TKJ 5", "status": "aktif",
+                        "masalah": ["NIS tidak wajar", "NISN tidak wajar", "Tanggal lahir kosong", "Tidak bisa masuk Layanan Siswa"], "bisa_masuk": false } ],
+    "penempatan": [ {siswa} ],                       // kelas hasil penempatan otomatis — perlu dicek
+    "tugas": [ { "tingkat": "awas" | "info", "n": 1, "teks": "kemungkinan data siswa ganda (satu siswa tercatat dua kali)",
+                 "bagian": "ganda" | "tidak_sesuai" | "penempatan" | "daftar:status=terhapus" | "daftar:status=nonaktif" | "daftar:kelas_id=tanpa" } ]
+} }
+```
+
+Bentuk {siswa} = `id, nama, nis, nisn, tanggal_lahir, kelas, status`. `tugas` hanya berisi butir yang `n > 0`, urut kepentingan, siap
+ditampilkan sebagai kartu "Tugas hari ini"; `bagian` = tujuan ketukan (bagian layar Periksa, atau daftar siswa dengan saringan itu).
+
+Aturan:
+- **ganda** — nama mirip (huruf saja / bunyi sama / beda 1–2 huruf) di tingkat yang sama (atau tanggal lahir sama) DAN salah satunya
+  belum lengkap (tanggal lahir kosong / NISN tidak sah). Dua data lengkap (NISN sah berbeda) TIDAK dianggap ganda — termasuk anak kembar.
+- **tidak_sesuai** — NIS tidak wajar (bukan 4–12 angka / angka berulang), NISN kosong/tidak sah (bukan 10 angka / berulang), tanggal
+  lahir kosong. `bisa_masuk = false` bila NISN tidak sah DAN tanggal lahir kosong (tidak bisa masuk Layanan Siswa / Biodata).

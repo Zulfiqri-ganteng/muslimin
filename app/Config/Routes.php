@@ -368,6 +368,7 @@ $routes->group('admin', static function ($routes) {
             $routes->post('siswa/bulk-delete', 'Admin\Master\Siswa::bulkDelete');
             // Status siswa (SiswaStatus): nonaktifkan = Lulus/Pindah/Keluar, aktifkan lagi, pulihkan data terhapus lama.
             // Hapus (siswa/delete/{id}, bulk-delete) kini = HAPUS PERMANEN, hanya untuk siswa tanpa data terkait.
+            $routes->get('siswa/periksa', 'Admin\Master\Siswa::periksa'); // Periksa Data Siswa (PeriksaSiswa) — dari Dashboard "Tugas hari ini"
             $routes->get('siswa/(:num)/nonaktifkan', 'Admin\Master\Siswa::nonaktifkanForm/$1');
             $routes->post('siswa/(:num)/nonaktifkan', 'Admin\Master\Siswa::nonaktifkan/$1');
             $routes->post('siswa/(:num)/aktifkan', 'Admin\Master\Siswa::aktifkan/$1');
@@ -955,6 +956,7 @@ $routes->group('api/v1', ['namespace' => 'App\Controllers\Api', 'filter' => 'cor
         $routes->get('admin/master/siswa/(:num)', 'Admin\Siswa::show/$1');
         // Siswa — status jelas (SiswaStatus, 2026-10-29): nonaktifkan/aktifkan & pulihkan data terhapus lama.
         // DELETE .../siswa/{id} & bulk-delete kini = HAPUS PERMANEN (409 bila sudah punya data terkait). docs/API-SISWA-STATUS.md
+        $routes->get('admin/master/siswa/periksa', 'Admin\Siswa::periksaData'); // Periksa Data Siswa + tugas siap tampil (PeriksaSiswa)
         $routes->post('admin/master/siswa/(:num)/status', 'Admin\Siswa::status/$1');
         $routes->post('admin/master/siswa/(:num)/pulihkan', 'Admin\Siswa::pulihkan/$1');
 

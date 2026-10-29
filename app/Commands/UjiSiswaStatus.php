@@ -59,6 +59,7 @@ class UjiSiswaStatus extends BaseCommand
             $this->ujiWeb();
             $this->ujiApi();
             $this->ujiHak();
+            $this->ujiPeriksa();
             $dir = (string) getenv('UJI_FIXTURE');
             if ($dir !== '' && is_dir($dir)) {
                 foreach ($this->fx as $nama => $isi) {
@@ -192,6 +193,64 @@ class UjiSiswaStatus extends BaseCommand
         $this->cek('alamat baru ikut hak Master Siswa (Admin boleh)', HakAkses::boleh('admin', 'admin/master/siswa/1/nonaktifkan') && HakAkses::boleh('admin', 'admin/master/siswa/1/aktifkan', 'POST')
             && HakAkses::boleh('admin', 'admin/master/siswa/1/pulihkan', 'POST'));
         $this->cek('peran tanpa Master Siswa tetap ditolak', HakAkses::boleh('guru', 'admin/master/siswa/1/aktifkan', 'POST') === HakAkses::boleh('guru', 'admin/master/siswa', 'POST'));
+    }
+
+    private function ujiPeriksa(): void
+    {
+        CLI::write('== Periksa Data Siswa (Dashboard "Tugas hari ini") ==', 'yellow');
+        $P = \App\Libraries\PeriksaSiswa::class;
+        $this->cek('NIS wajar / NISN sah (angka berulang & panjang salah ditolak)', $P::nisWajar('242510030') && ! $P::nisWajar('0222222222222222222222222')
+            && ! $P::nisWajar('-') && $P::nisnSah('3091509612') && ! $P::nisnSah('089788655456111111111111') && ! $P::nisnSah('1111111111') && ! $P::nisnSah(null));
+        $s = static fn (int $id, string $nama, ?string $tgl, ?string $nisn, ?string $tingkat = 'XII'): array => ['id' => $id, 'nama' => $nama, 'nis' => (string) $id,
+            'nisn' => $nisn, 'tanggal_lahir' => $tgl, 'tingkat' => $tingkat, 'nama_kelas' => $tingkat . ' TKJ 1', 'status' => 'aktif'];
+        $g = $P::ganda([$s(1, 'Rizka', '2009-01-02', '3091509612'), $s(2, 'Riska', null, '089788655456111111111111')]);
+        $this->cek('data asal ala Rizka/Riska (bunyi sama, satu belum lengkap) → 1 pasangan, data lengkap di kiri', count($g) === 1 && $g[0]['a']['id'] === 1
+            && str_contains($g[0]['alasan'], 'berbunyi sama'), json_encode($g));
+        $this->cek('nama beda 2 huruf (Salsavabila/Salvabila) & spasi beda (Madda Syah/Maddasyah) → terdeteksi',
+            count($P::ganda([$s(3, 'Callista Salsavabila', '2011-05-28', '0114985403', 'X'), $s(4, 'Callista Salvabila', null, '10000000000000', 'X')])) === 1
+            && count($P::ganda([$s(5, 'Muhammad Azamie Madda Syah', '2011-03-11', '0119196132', 'X'), $s(6, 'Muhammad Azamie Maddasyah', null, null, 'X')])) === 1);
+        $this->cek('anak kembar (data lengkap, NISN berbeda, tanggal lahir sama) → BUKAN ganda',
+            $P::ganda([$s(7, 'Raysya Anugrah Pangestu', '2011-05-23', '0119324554', 'X'), $s(8, 'Reysya Anugrah Pangestu', '2011-05-23', '0116612052', 'X')]) === []);
+        $this->cek('nama mirip beda tingkat & tanggal lahir tidak sama → bukan ganda', $P::ganda([$s(9, 'Rizka', '2009-01-02', '3091509612', 'XII'), $s(10, 'Riska', null, null, 'X')]) === []);
+        $m = $P::masalah(['nis' => '0222222222222222222222222', 'nisn' => '2000000000000000000', 'tanggal_lahir' => null]);
+        $this->cek('masalah: NIS & NISN tidak wajar + tanggal lahir kosong + tidak bisa masuk', $m === ['NIS tidak wajar', 'NISN tidak wajar', 'Tanggal lahir kosong', 'Tidak bisa masuk Layanan Siswa'], json_encode($m));
+
+        // Data di database: satu data lengkap + satu isian asal bernama sama di kelas yang sama.
+        $db  = db_connect();
+        $now = date('Y-m-d H:i:s');
+        $db->table('siswa')->insert(['nis' => 'ZZUJISS-P1', 'nisn' => '0990000001', 'nama' => 'ZZUJI Periksa Satu', 'tanggal_lahir' => '2010-01-01', 'kelas_id' => $this->kelas,
+            'status' => 'aktif', 'created_at' => $now, 'updated_at' => $now]);
+        $db->table('siswa')->insert(['nis' => 'ZZUJISS-P2', 'nisn' => '0999999999', 'nama' => 'ZZUJI Periksa Satu', 'kelas_id' => $this->kelas, 'status' => 'aktif',
+            'created_at' => $now, 'updated_at' => $now]);
+        master_data_changed('siswa');
+        $h    = $P::hitung();
+        $saya = array_values(array_filter($h['ganda'], static fn (array $x): bool => $x['a']['nama'] === 'ZZUJI Periksa Satu'));
+        $ts   = array_values(array_filter($h['tidak_sesuai'], static fn (array $x): bool => $x['nis'] === 'ZZUJISS-P2'));
+        $this->cek('database: pasangan ZZUJI terdeteksi + isian asal "tidak bisa masuk"', count($saya) === 1 && $saya[0]['a']['nis'] === 'ZZUJISS-P1'
+            && ($ts[0]['bisa_masuk'] ?? true) === false, json_encode($saya));
+
+        $html = (string) $this->web('periksa');
+        $this->cek('halaman Periksa data: ringkasan + pasangan + tombol Ubah/Detail', str_contains($html, 'Kemungkinan data ganda') && str_contains($html, 'ZZUJI Periksa Satu')
+            && str_contains($html, 'Tidak bisa masuk Layanan Siswa') && str_contains($html, 'Kelas hasil penempatan otomatis'));
+        $request = (new \CodeIgniter\HTTP\IncomingRequest(config('App'), new \CodeIgniter\HTTP\SiteURI(config('App'), 'admin/dashboard'), null, new \CodeIgniter\HTTP\UserAgent()));
+        \Config\Services::injectMock('request', $request);
+        session()->set(['isLoggedIn' => true, 'admin' => ['id' => 1, 'full_name' => 'ZZUJI Admin', 'username' => 'zzuji', 'role' => 'admin']]);
+        $c = new \App\Controllers\Admin\Dashboard();
+        $c->initController($request, service('response'), service('logger'));
+        $dash = mb_strtolower(html_entity_decode((string) $c->index(), ENT_QUOTES | ENT_HTML5, 'UTF-8')); // teks tugas ditulis berhuruf awal kapital
+        $this->cek('Dashboard "Tugas hari ini": butir data ganda & tidak bisa masuk → halaman Periksa data', str_contains($dash, 'kemungkinan data siswa ganda')
+            && str_contains($dash, 'siswa/periksa#ganda') && str_contains($dash, 'tidak bisa masuk layanan siswa'));
+
+        [$k, $j] = $this->api('periksaData', null);
+        $bagian = array_column($j['data']['tugas'] ?? [], 'bagian');
+        $this->cek('API GET siswa/periksa: jumlah + ganda + tidak_sesuai + tugas siap tampil', $k === 200 && ($j['data']['jumlah']['ganda'] ?? 0) >= 1
+            && in_array('ganda', $bagian, true) && isset($j['data']['tidak_sesuai'], $j['data']['penempatan']), json_encode($bagian));
+        // Fixture: hanya baris uji (data siswa laptop tidak ikut).
+        $hanyaUji = static fn (array $l): array => array_values(array_filter($l, static fn (array $x): bool => str_starts_with((string) ($x['a']['nama'] ?? $x['nama'] ?? ''), 'ZZUJI')));
+        $j['data']['ganda']        = $hanyaUji($j['data']['ganda']);
+        $j['data']['tidak_sesuai'] = $hanyaUji($j['data']['tidak_sesuai']);
+        $j['data']['penempatan']   = [];
+        $this->fx['siswa_periksa'] = $j;
     }
 
     // =================================================================

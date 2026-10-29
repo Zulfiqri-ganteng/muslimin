@@ -3,6 +3,7 @@
 namespace App\Controllers\Api\Admin;
 
 use App\Libraries\BiodataForm;
+use App\Libraries\PeriksaSiswa;
 use App\Libraries\SiswaDetail;
 use App\Libraries\SiswaStatus;
 use App\Models\SiswaModel;
@@ -324,6 +325,28 @@ class Siswa extends BaseCrud
         }
 
         return $this->ok($this->transform($this->freshRow((int) $id)), $r['pesan']);
+    }
+
+    /**
+     * GET .../siswa/periksa — Periksa Data Siswa (sama dengan web admin/master/siswa/periksa & butir Dashboard "Tugas hari ini"):
+     * `jumlah` (ganda, tidak_sesuai, tidak_bisa_masuk, penempatan, tidak_aktif, terhapus, tanpa_kelas), `ganda[{a, b, alasan}]`,
+     * `tidak_sesuai[{…siswa, masalah[], bisa_masuk}]`, `penempatan[…siswa]`, `tugas[{tingkat, n, teks, saringan}]` (siap tampil).
+     */
+    public function periksaData(): ResponseInterface
+    {
+        $h = PeriksaSiswa::hitung();
+        $j = $h['jumlah'];
+        $tugas = array_values(array_filter([
+            ['tingkat' => 'awas', 'n' => $j['ganda'], 'teks' => 'kemungkinan data siswa ganda (satu siswa tercatat dua kali)', 'bagian' => 'ganda'],
+            ['tingkat' => 'awas', 'n' => $j['tidak_bisa_masuk'], 'teks' => 'siswa tidak bisa masuk Layanan Siswa (NISN & tanggal lahir belum benar)', 'bagian' => 'tidak_sesuai'],
+            ['tingkat' => 'info', 'n' => $j['tidak_sesuai'] - $j['tidak_bisa_masuk'], 'teks' => 'data siswa perlu dilengkapi (NIS/NISN tidak wajar atau tanggal lahir kosong)', 'bagian' => 'tidak_sesuai'],
+            ['tingkat' => 'info', 'n' => $j['tanpa_kelas'], 'teks' => 'siswa aktif belum punya kelas', 'bagian' => 'daftar:kelas_id=tanpa'],
+            ['tingkat' => 'info', 'n' => $j['penempatan'], 'teks' => 'siswa dengan kelas hasil penempatan otomatis — perlu dicek', 'bagian' => 'penempatan'],
+            ['tingkat' => 'info', 'n' => $j['terhapus'], 'teks' => 'data siswa terhapus (lama) belum dibereskan — pulihkan atau hapus permanen', 'bagian' => 'daftar:status=terhapus'],
+            ['tingkat' => 'info', 'n' => $j['tidak_aktif'], 'teks' => 'siswa tidak aktif (lulus / pindah / keluar)', 'bagian' => 'daftar:status=nonaktif'],
+        ], static fn (array $t): bool => $t['n'] > 0));
+
+        return $this->ok($h + ['tugas' => $tugas], 'Periksa data siswa.');
     }
 
     /** POST .../siswa/{id}/pulihkan — data terhapus lama dikembalikan (status semula). */

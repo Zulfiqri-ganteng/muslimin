@@ -3,6 +3,8 @@
 namespace App\Controllers\Admin;
 
 use App\Controllers\BaseController;
+use App\Libraries\HakAkses;
+use App\Libraries\PeriksaSiswa;
 use App\Libraries\SuratSekolah;
 use App\Libraries\UjianReport;
 use App\Models\AbsensiGuruModel;
@@ -276,8 +278,20 @@ class Dashboard extends BaseController
             $tambah('awas', (int) $u['belum'], 'susulan ' . $u['label'] . ' belum dijadwalkan', 'admin/ujian/' . $u['slug']);
         }
         $tambah('awas', (int) ($modul['lab']['pinjam']['terlambat'] ?? 0), 'peminjaman lab terlambat dikembalikan', 'admin/peminjaman');
+
+        // Periksa Data Siswa (2026-10-29): data ganda / tidak sesuai / tidak aktif / terhapus lama — hanya bagi yang boleh membuka Master Siswa.
+        if (HakAkses::boleh((string) (session('admin')['role'] ?? ''), 'admin/master/siswa')) {
+            $j = PeriksaSiswa::hasil()['jumlah'];
+            $tambah('awas', $j['ganda'], 'kemungkinan data siswa ganda (satu siswa tercatat dua kali)', 'admin/master/siswa/periksa#ganda');
+            $tambah('awas', $j['tidak_bisa_masuk'], 'siswa tidak bisa masuk Layanan Siswa (NISN & tanggal lahir belum benar)', 'admin/master/siswa/periksa#tidak-sesuai');
+            $tambah('info', $j['tidak_sesuai'] - $j['tidak_bisa_masuk'], 'data siswa perlu dilengkapi (NIS/NISN tidak wajar atau tanggal lahir kosong)', 'admin/master/siswa/periksa#tidak-sesuai');
+            $tambah('info', (int) $siswa['tanpa_kelas'], 'siswa aktif belum punya kelas', 'admin/master/siswa?kelas_id=tanpa');
+            $tambah('info', $j['penempatan'], 'siswa dengan kelas hasil penempatan otomatis — perlu dicek', 'admin/master/siswa/periksa#penempatan');
+            $tambah('info', $j['terhapus'], 'data siswa terhapus (lama) belum dibereskan — pulihkan atau hapus permanen', 'admin/master/siswa?status=terhapus');
+            $tambah('info', $j['tidak_aktif'], 'siswa tidak aktif (lulus / pindah / keluar)', 'admin/master/siswa?status=nonaktif');
+        }
+
         $tambah('info', (int) ($modul['lab']['kerusakan']['dilaporkan'] ?? 0), 'laporan kerusakan lab belum diproses', 'admin/kerusakan');
-        $tambah('info', (int) $siswa['tanpa_kelas'], 'siswa aktif belum punya kelas', 'admin/master/siswa');
         $tambah('info', (int) $kur['lebih'], 'guru melebihi batas jam mengajar', 'admin/kurikulum/rekap');
         $tambah('info', (int) $kur['kurang'], 'guru belum memenuhi batas jam', 'admin/kurikulum/rekap');
 

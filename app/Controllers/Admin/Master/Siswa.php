@@ -4,6 +4,7 @@ namespace App\Controllers\Admin\Master;
 
 use App\Libraries\BiodataForm;
 use App\Libraries\HakAkses;
+use App\Libraries\PeriksaSiswa;
 use App\Libraries\SiswaDetail;
 use App\Libraries\SiswaExcel8355;
 use App\Libraries\SiswaStatus;
@@ -164,6 +165,16 @@ class Siswa extends BaseMaster
             'urlDaftar'  => $this->indexUrl(),
             'terkait'    => SiswaStatus::keterkaitan([(int) $id])[(int) $id] ?? [],
             'bolehUbah'  => HakAkses::boleh($peran, 'admin/master/siswa/' . (int) $id . '/aktifkan', 'POST'),
+        ]);
+    }
+
+    /** GET admin/master/siswa/periksa — kemungkinan data ganda, data tidak sesuai, penempatan kelas otomatis (PeriksaSiswa). */
+    public function periksa()
+    {
+        return view('admin/master/siswa_periksa', [
+            'title'     => 'Periksa Data Siswa',
+            'h'         => PeriksaSiswa::hitung(), // halaman ini selalu segar (Dashboard memakai versi cache)
+            'urlDaftar' => $this->indexUrl(),
         ]);
     }
 
