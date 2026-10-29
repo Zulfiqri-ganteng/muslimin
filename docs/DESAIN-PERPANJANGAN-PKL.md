@@ -360,3 +360,4 @@ hasil cari "{n} siswa dari {m} ajuan".
 - **Fase nanti:** S1 data + pengaturan (nomor, penanda tangan, nilai) · S2 template persis format sekolah · S3 terbit massal per kelas /
   per perusahaan + unduh ZIP + QR verifikasi · S4 API + kontrak Flutter.
 - **Rujukan pola:** `Admin\SertifikatUkk` (1 peserta = 1 sertifikat, nomor otomatis), mesin Word `PklDocx`.
+- **2026-10-28: rancangan lengkap pindah ke `docs/DESAIN-SERTIFIKAT-PKL.md`** (fakta data, 9 keputusan, aturan R1–R10, migrasi, API, tahap S1–S5).
