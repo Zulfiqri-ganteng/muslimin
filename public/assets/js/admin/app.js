@@ -141,6 +141,17 @@
         window.location.href = url.toString();
     });
 
+    // <button data-alih-saringan="idPanel"> — bilah alat lentur (ui_crud_alat 'lentur'): di layar sempit membuka/menutup panel
+    // saringan (atribut data-buka; di layar lebar panel selalu tampil lewat CSS).
+    document.addEventListener('click', function (e) {
+        var b = e.target.closest ? e.target.closest('[data-alih-saringan]') : null;
+        var panel = b && document.getElementById(b.getAttribute('data-alih-saringan'));
+        if (!panel) { return; }
+        var buka = panel.getAttribute('data-buka') !== 'true';
+        panel.setAttribute('data-buka', buka ? 'true' : 'false');
+        b.setAttribute('aria-expanded', buka ? 'true' : 'false');
+    });
+
     /** Baca atribut data-* berisi JSON dengan aman. */
     function readJson(root, name, fallback) {
         var raw = root.getAttribute('data-' + name);
@@ -394,9 +405,11 @@
                 this.defaults = readJson(this.$el, 'defaults', {});
                 this.form     = Object.assign({}, this.defaults);
                 // (F5) Tombol Ubah kit (ui_crud_aksi): <button data-ubah data-row="JSON"> — delegasi, tanpa isian Alpine (siap CSP).
+                // Butir "Import" di menu Lainnya (bilah alat lentur, layar sempit): <button data-buka-impor>.
                 akar.addEventListener('click', function (e) {
                     var b = e.target.closest ? e.target.closest('[data-ubah]') : null;
                     if (b && akar.contains(b)) { self.openEditEl(b); }
+                    if (e.target.closest && e.target.closest('[data-buka-impor]')) { self.bukaImpor(); }
                 });
                 if (this.onInit) { this.onInit(); }
             },

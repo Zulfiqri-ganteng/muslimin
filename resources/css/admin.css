@@ -300,6 +300,41 @@
      terdesak menumpuk satu-satu (keluhan user 2026-10-29); berdampingan baru di layar sangat lebar. */
   .alat-crud-padat  { @apply xl:flex-col xl:items-stretch 2xl:flex-row 2xl:items-center; }
   .alat-crud-padat .alat-crud-tombol { @apply xl:justify-start 2xl:justify-end; }
+  /* Bilah alat LENTUR (ui_crud_alat 'lentur', Master Siswa 2026-10-30) — susunan menurut lebar WADAH (ikut menu samping), ambang
+     58rem = 60rem tabel lentur dikurangi padding bilah. Sempit (HP): baris 1 = cari + tombol "Saringan" (panel buka-tutup lewat
+     data-buka, app.js data-alih-saringan); baris 2 = Tambah + Lainnya sama lebar (Import/Export .alat-lentur-lebar disembunyikan,
+     penggantinya butir [data-hanya-sempit] di menu Lainnya); Hapus terpilih satu baris penuh. Lebar: baris 1 = cari … tombol kanan;
+     baris 2 = saringan + Reset … Tampilkan N. Dulu (2026-10-29) HP 6 baris / 329 px, laptop 1280 tiga baris tak rata. */
+  .alat-lentur        { container: alat / inline-size; }
+  .alat-lentur-form   { @apply flex flex-col gap-3; }
+  .alat-lentur-atas   { @apply flex flex-wrap items-center gap-2; }
+  .alat-lentur-atas > .alat-crud-kotak { @apply w-auto min-w-0 flex-1; }
+  .alat-lentur-saring { @apply shrink-0; }
+  .alat-lentur-tombol { @apply flex basis-full flex-wrap items-center gap-2; }
+  .alat-lentur-tombol > * { @apply flex-1; }
+  .alat-lentur-tombol > [data-bulk] { @apply basis-full; }
+  .alat-lentur-tombol > div > .btn { @apply w-full; }   /* tombol "Lainnya" di dalam pembungkus dropdown */
+  .alat-lentur-saringan { @apply grid grid-cols-2 gap-2; }
+  .alat-lentur-saringan[data-buka="false"] { @apply hidden; }
+  @container alat (width < 58rem) {
+    .alat-lentur .alat-lentur-lebar { @apply hidden; }
+  }
+  /* Lebar sedang (tablet, 1024 ber-menu samping): cari + Saringan + Tambah + Lainnya satu baris, tombol selebar isinya. */
+  @container alat (width >= 36rem) {
+    .alat-lentur-tombol { @apply basis-auto flex-nowrap; }
+    .alat-lentur-tombol > *, .alat-lentur-tombol > [data-bulk] { @apply flex-none basis-auto; }
+    .alat-lentur-tombol > div > .btn { @apply w-auto; }
+  }
+  @container alat (width >= 58rem) {
+    .alat-lentur-atas > .alat-crud-kotak { @apply w-80 flex-none; }
+    .alat-lentur .alat-lentur-saring, .alat-lentur [data-hanya-sempit] { @apply hidden; }
+    .alat-lentur-tombol { @apply ms-auto basis-auto flex-nowrap; }
+    .alat-lentur-tombol > *, .alat-lentur-tombol > [data-bulk] { @apply flex-none basis-auto; }
+    .alat-lentur-tombol > div > .btn { @apply w-auto; }
+    .alat-lentur-saringan, .alat-lentur-saringan[data-buka="false"] { @apply flex flex-wrap items-center; }
+    .alat-lentur-saringan > .inp { @apply w-auto; }
+    .alat-lentur-per { @apply ms-auto; }
+  }
   .tabel-crud { @apply min-w-full divide-y divide-gray-200 text-left text-sm text-gray-900 dark:divide-gray-600 dark:text-white; }
   .tabel-crud thead { @apply bg-gray-100 dark:bg-gray-700; }
   .tabel-crud thead th { @apply p-4 text-xs font-medium whitespace-nowrap text-gray-600 uppercase dark:text-gray-300; }
@@ -310,6 +345,41 @@
   .tabel-crud .kolom-aksi { @apply text-right whitespace-nowrap; }
   .sel-judul { @apply text-sm font-semibold text-gray-900 dark:text-white; } /* 2026-10-19: 16 → 14 px (tabel rapat, gaya dashboard profesional) */
   .sel-ket   { @apply text-sm font-normal text-gray-500 dark:text-gray-400; }
+  .aksi-baris  { @apply inline-flex items-center justify-end gap-2; } /* wadah tombol ui_crud_aksi (kelas komponen → bisa ditimpa .tabel-lentur) */
+  .aksi-tempat { @apply invisible; } /* ui_crud_aksi 'hapusTempat': ruang ikon hapus yang tak tampak (tombol antarbaris tetap lurus) */
+  /* Tabel lentur (Master Siswa 2026-10-30): <div class="tabel-bungkus wadah-lentur"><table class="tabel-crud tabel-lentur">. Bila RUANG
+     tabel < 60rem (HP, tablet, laptop ber-zoom besar, diukur dari wadah — bukan layar, jadi ikut lebar menu samping) tiap baris jadi kartu:
+     kolom-cek | sel-utama | sel-status, di bawahnya sel-tambah, lalu kolom-aksi selebar kartu (dulu tombol tersembunyi di geser samping).
+     DOM tetap satu → centang massal app.js & data-ubah tetap jalan. .sel-sub = keterangan di baris bawah sel (lebar) / sebaris "· …"
+     (kartu); .hanya-lebar / .hanya-sempit = sel/isi yang hanya tampil di salah satu bentuk; .label-pilih-semua tampil di kartu saja. */
+  .wadah-lentur { container: lentur / inline-size; }
+  /* Kelas UTILITAS selalu menang atas kelas komponen (lapisan CSS) → sel yang ditata ulang di kartu tidak boleh memakai utilitas
+     tata letak (min-w-*, whitespace-*, gap-*, justify-*); ukurannya di sini. */
+  .tabel-lentur .sel-utama        { @apply min-w-56; }
+  .tabel-lentur .sel-tambah       { @apply whitespace-nowrap; }
+  .tabel-lentur .sel-sub          { @apply block; }
+  .tabel-lentur .hanya-sempit     { @apply hidden; }
+  .tabel-lentur .label-pilih-semua { @apply sr-only; }
+  @container lentur (width < 60rem) {
+    .tabel-lentur, .tabel-lentur thead, .tabel-lentur tbody, .tabel-lentur thead tr { @apply block; }
+    .tabel-lentur thead th { @apply hidden; }
+    .tabel-lentur thead th.kolom-cek { @apply block w-auto px-4 py-2.5 text-sm font-medium normal-case text-gray-700 dark:text-gray-300; }
+    .tabel-lentur .label-pilih-semua { @apply not-sr-only; }
+    .tabel-lentur tbody tr { @apply grid grid-cols-[auto_minmax(0,1fr)_auto] gap-x-3 gap-y-1 px-4 py-3.5; grid-template-areas: "cek utama status" ". tambah tambah" "aksi aksi aksi"; }
+    .tabel-lentur tbody td { @apply p-0; }
+    .tabel-lentur tbody td[colspan] { grid-column: 1 / -1; }
+    .tabel-lentur tbody .kolom-cek  { grid-area: cek; @apply pt-0.5; }
+    .tabel-lentur tbody .sel-utama  { grid-area: utama; @apply min-w-0; }
+    .tabel-lentur tbody .sel-status { grid-area: status; @apply self-start; }
+    .tabel-lentur tbody .sel-tambah { grid-area: tambah; @apply text-sm whitespace-normal; }
+    .tabel-lentur tbody .kolom-aksi { grid-area: aksi; @apply mt-2 text-left whitespace-normal; }
+    .tabel-lentur tbody .kolom-aksi > div { @apply flex flex-wrap justify-start gap-1.5; }
+    .tabel-lentur tbody .kolom-aksi .btn-sm { @apply gap-1.5 px-2.5 text-xs; }
+    .tabel-lentur tbody .kolom-aksi .btn-ikon { @apply px-2.5; }
+    .tabel-lentur .hanya-lebar, .tabel-lentur .aksi-tempat { @apply hidden; }
+    .tabel-lentur .sel-sub, .tabel-lentur .hanya-sempit { @apply inline; }
+    .tabel-lentur .sel-sub::before, .tabel-lentur .hanya-sempit::before { content: " · "; }
+  }
   /* Status bertitik (template: titik hijau "Active" / merah "Offline"): <span class="titik-status titik-status-hijau">Aktif</span> */
   /* Grup tombol (Flowbite "button group"): <div class="grup-tombol"><a aria-current="page">Pagi</a><a>Siang</a></div> — pilihan aktif = warna merek. */
   .grup-tombol { @apply inline-flex rounded-lg shadow-xs; }

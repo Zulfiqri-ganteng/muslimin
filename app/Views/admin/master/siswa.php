@@ -39,6 +39,8 @@ $qsExport   = array_filter([
     'biodata'  => $biodata,
 ], static fn ($v) => $v !== '');
 
+$urlEkspor = site_url('admin/master/siswa/export') . ($qsExport !== [] ? '?' . http_build_query($qsExport) : '');
+
 $label = \App\Libraries\BiodataForm::LABEL;
 
 /** Satu kolom isian dialog. $o: type, max, span (kelas grid), list (id datalist), mode (inputmode). */
@@ -83,11 +85,11 @@ $bagian = static fn (string $judul, string $ket = ''): string => '<p class="bord
         • <b>Lainnya → Periksa data siswa</b> — daftar yang perlu dibetulkan: kemungkinan data <b>ganda</b> (satu siswa tercatat dua kali), data <b>tidak sesuai</b> (NIS/NISN tidak wajar, tanggal lahir kosong, siswa tidak bisa masuk Layanan Siswa), dan kelas hasil penempatan otomatis.<br>
         • <b>Lainnya → Unduh Daftar Nama Siswa resmi</b> — laporan Excel <b>siap cetak</b> dengan bentuk persis berkas "Daftar Nama Siswa" sekolah: semua siswa aktif kelas X, XI, XII per jurusan, dengan kolom resmi dan tempat tanda tangan. Bedanya dengan Export: Export untuk diolah, daftar resmi untuk dicetak/diserahkan.</p>
         <p class="mt-2"><b>Saringan</b> — memilih kelas, tingkat, status, atau biodata langsung menyaring tabel. <i>— Tanpa kelas —</i> = siswa belum ditempatkan di kelas. Status: Aktif, Tidak aktif (semua), Lulus, Pindah sekolah, Keluar, dan <b>Terhapus (lama)</b> (data yang dulu dihapus dengan cara lama — bisa Pulihkan atau Hapus permanen).</p>
-        <p class="mt-2"><b>Tombol di tiap baris</b><br>
-        • <b>Nonaktifkan</b> — untuk siswa yang lulus, pindah sekolah, atau keluar. Data dan riwayatnya (PKL, surat, biodata) tetap utuh; tombol berganti menjadi <b>Aktifkan</b> bila ingin dikembalikan.<br>
+        <p class="mt-2"><b>Tombol di tiap baris</b> (di HP tiap siswa tampil sebagai kartu, tombolnya di bagian bawah kartu)<br>
         • <b>Detail</b> (atau klik nama siswa) — semua data satu siswa. Di sana juga ada tombol <b>Hapus permanen</b>.<br>
         • <b>Ubah</b> — mengubah data siswa.<br>
-        • <b>Ikon tong sampah merah</b> (paling kanan) — <b>Hapus permanen</b>. Ikon ini <b>hanya muncul</b> pada siswa yang boleh dihapus (belum punya data PKL, surat, biodata, dll.). Tidak ada ikonnya = siswa sudah punya data — pakai Nonaktifkan.</p>
+        • <b>Nonaktifkan</b> — untuk siswa yang lulus, pindah sekolah, atau keluar. Data dan riwayatnya (PKL, surat, biodata) tetap utuh; tombol berganti menjadi <b>Aktifkan</b> bila ingin dikembalikan.<br>
+        • <b>Ikon tong sampah merah</b> (paling akhir) — <b>Hapus permanen</b>. Ikon ini <b>hanya muncul</b> pada siswa yang boleh dihapus (belum punya data PKL, surat, biodata, dll.). Tidak ada ikonnya = siswa sudah punya data — pakai Nonaktifkan.</p>
         <p class="mt-2"><b>Menghapus siswa</b> — <b>Hapus permanen</b> (dari halaman Detail, atau centang beberapa siswa lalu <b>Hapus terpilih</b>) hanya bisa untuk data salah input yang <b>belum punya data terkait</b>; NIS/NISN-nya langsung bisa dipakai lagi. Siswa yang sudah punya data PKL, surat, biodata, dll. tidak bisa dihapus — pakai <b>Nonaktifkan</b>.</p>
         <p class="mt-2"><b>Biodata dari siswa</b> — siswa mengisi biodatanya sendiri lewat menu <b>Isian Biodata Siswa</b>; setelah disetujui datanya masuk ke sini dan siswa ditandai lencana hijau <b>Biodata</b> (saringan Biodata lengkap / belum). Kolom <b>Data sekolah</b> (nama orang tua versi sekolah, nomor &amp; tahun STTB/ijazah SMP) sesuai Daftar Nama Siswa resmi — ada di paling kanan template impor.</p>',
 ]) ?>
@@ -113,7 +115,7 @@ $bagian = static fn (string $judul, string $ket = ''): string => '<p class="bord
 
     <?= ui_crud_alat([
         'baseUrl'        => site_url('admin/master/siswa'),
-        'cari'           => 'Cari nama, NIS, atau NISN…',
+        'cari'           => 'Cari nama, NIS, NISN…',
         'q'              => $q,
         'per'            => $per,
         'filter'         => [
@@ -123,10 +125,14 @@ $bagian = static fn (string $judul, string $ket = ''): string => '<p class="bord
             ['name' => 'biodata', 'value' => $biodata, 'all' => 'Semua biodata', 'options' => $opsiBiodata],
         ],
         'filterLangsung' => true,
-        'eksporUrl'      => site_url('admin/master/siswa/export') . ($qsExport !== [] ? '?' . http_build_query($qsExport) : ''),
+        'lentur'         => true, // laptop 2 baris rapi; HP: cari + "Saringan" buka-tutup, Tambah + Lainnya (2026-10-30)
+        'eksporUrl'      => $urlEkspor,
         'eksporTitle'    => 'Unduh data siswa sesuai filter yang dipilih (mis. satu kelas saja) ke file Excel',
         // Tombol jarang dipakai disatukan di "Lainnya" supaya deret tombol kanan tidak mendesak saringan (keluhan user 2026-10-29).
+        // Import & Export ikut masuk Lainnya HANYA di layar sempit (data-hanya-sempit) — di laptop keduanya tombol sendiri.
         'tambahanHtml'   => ui_menu_lain([
+            ['label' => 'Import dari Excel', 'ikon' => 'upload', 'atr' => 'data-hanya-sempit data-buka-impor'],
+            ['label' => 'Export ke Excel', 'ikon' => 'download', 'href' => $urlEkspor, 'atr' => 'data-hanya-sempit data-export-filter="toolbarFilter"'],
             ['label' => 'Periksa data siswa', 'ikon' => 'clipboard-check', 'href' => site_url('admin/master/siswa/periksa')],
             // Daftar Nama Siswa resmi sekolah (dulu berlabel "Format 8355" = nama lembar di berkas Excel sekolah — membingungkan pengguna).
             ['label' => 'Unduh Daftar Nama Siswa resmi (siap cetak)', 'ikon' => 'file-lines', 'href' => site_url('admin/master/siswa/export-resmi')],
@@ -151,16 +157,15 @@ $bagian = static fn (string $judul, string $ket = ''): string => '<p class="bord
         <div class="px-4 pt-4"><?= ui_peringatan('info', 'Ini data siswa yang dulu "dihapus" dengan cara lama (masih tersimpan, NIS/NISN-nya masih terpakai). Pulihkan bila ternyata siswa masih ada, atau Hapus permanen bila data itu salah input. Hapus permanen hanya bisa bila belum punya data terkait.', ['judul' => 'Terhapus (lama)']) ?></div>
     <?php endif; ?>
 
-    <div class="tabel-bungkus">
-        <table class="tabel-crud">
+    <?php // Tabel lentur: ruang sempit (HP, tablet, laptop ber-zoom besar) → tiap baris jadi kartu; DOM sama (centang massal & Ubah tetap jalan). ?>
+    <div class="tabel-bungkus wadah-lentur">
+        <table class="tabel-crud tabel-lentur">
             <thead>
                 <tr>
-                    <th scope="col" class="kolom-cek"><input type="checkbox" class="cek js-check-all" aria-label="Pilih semua siswa di halaman ini"></th>
-                    <th scope="col">NIS</th>
-                    <th scope="col">Nama siswa</th>
+                    <th scope="col" class="kolom-cek"><label class="inline-flex items-center gap-3"><input type="checkbox" class="cek js-check-all"><span class="label-pilih-semua">Pilih semua siswa di halaman ini</span></label></th>
+                    <th scope="col">Siswa</th>
                     <th scope="col" class="text-center">JK</th>
                     <th scope="col">Kelas</th>
-                    <th scope="col">Jurusan</th>
                     <th scope="col">Status</th>
                     <th scope="col" class="kolom-aksi">Aksi</th>
                 </tr>
@@ -168,7 +173,7 @@ $bagian = static fn (string $judul, string $ket = ''): string => '<p class="bord
             <tbody>
                 <?php if (empty($rows)): ?>
                     <tr>
-                        <td colspan="8">
+                        <td colspan="6">
                             <?= ui_kosong(['ikon' => 'user-graduate', 'judul' => $adaSaring ? 'Siswa tidak ditemukan' : 'Belum ada data siswa',
                                 'teks' => $adaSaring ? 'Tidak ada siswa yang cocok dengan saringan ini. Tekan Reset.' : 'Tambah siswa satu per satu, atau Import Excel (lebih cepat untuk satu kelas sekaligus).']) ?>
                         </td>
@@ -176,25 +181,25 @@ $bagian = static fn (string $judul, string $ket = ''): string => '<p class="bord
                 <?php else: foreach ($rows as $r): $urlDetail = site_url('admin/master/siswa/' . (int) $r['id']); ?>
                     <tr>
                         <td class="kolom-cek"><input type="checkbox" class="cek row-check" value="<?= (int) $r['id'] ?>" aria-label="Pilih siswa <?= esc($r['nis'], 'attr') ?>"></td>
-                        <td class="sel-judul whitespace-nowrap"><?= esc($r['nis']) ?></td>
-                        <td class="min-w-48">
-                            <a href="<?= $urlDetail ?>" class="font-medium hover:text-brand-700 hover:underline dark:hover:text-brand-400" title="Lihat detail siswa"><?= esc($r['nama']) ?></a>
-                            <?php if (! empty($r['nisn']) || ! empty($r['biodata_at'])): ?>
-                                <div class="sel-ket">
-                                    <?php if (! empty($r['nisn'])): ?>NISN <?= esc($r['nisn']) ?><?php endif; ?>
-                                    <?php if (! empty($r['biodata_at'])): ?>
-                                        <span class="lencana lencana-hijau ms-1" title="Biodata disahkan <?= esc(date('d/m/Y H:i', strtotime($r['biodata_at'])), 'attr') ?>"><?= ikon('check', 'h-3 w-3') ?>Biodata</span>
-                                    <?php endif; ?>
-                                </div>
-                            <?php endif; ?>
+                        <td class="sel-utama">
+                            <a href="<?= $urlDetail ?>" class="sel-judul hover:text-brand-700 hover:underline dark:hover:text-brand-400" title="Lihat detail siswa"><?= esc($r['nama']) ?></a>
+                            <div class="sel-ket">
+                                NIS <span class="font-medium text-gray-700 dark:text-gray-300"><?= esc($r['nis']) ?></span><?php if (! empty($r['nisn'])): ?> · NISN <?= esc($r['nisn']) ?><?php endif; ?>
+                                <?php if (! empty($r['biodata_at'])): ?>
+                                    <span class="lencana lencana-hijau ms-1" title="Biodata disahkan <?= esc(date('d/m/Y H:i', strtotime($r['biodata_at'])), 'attr') ?>"><?= ikon('check', 'h-3 w-3') ?>Biodata</span>
+                                <?php endif; ?>
+                            </div>
                         </td>
-                        <td class="text-center"><?= $r['jenis_kelamin'] !== null ? esc($r['jenis_kelamin']) : '<span class="sel-ket">—</span>' ?></td>
-                        <td class="whitespace-nowrap"><?= $r['nama_kelas'] !== null ? esc($r['nama_kelas']) : '<span class="sel-ket">Belum ada kelas</span>' ?></td>
-                        <td class="sel-ket"><?= $r['jurusan_kode'] !== null ? esc($r['jurusan_kode']) : '—' ?></td>
-                        <td><span class="lencana <?= $terhapus ? 'lencana-merah' : ($lencanaStatus[$r['status']] ?? 'lencana-abu') ?>"><?= $terhapus ? 'Terhapus' : esc(SiswaStatus::label((string) $r['status'])) ?></span></td>
+                        <td class="hanya-lebar text-center"><?= $r['jenis_kelamin'] !== null ? esc($r['jenis_kelamin']) : '<span class="sel-ket">—</span>' ?></td>
+                        <td class="sel-tambah">
+                            <?= $r['nama_kelas'] !== null ? esc($r['nama_kelas']) : '<span class="sel-ket">Belum ada kelas</span>' ?>
+                            <?php if ($r['jurusan_kode'] !== null): ?><span class="sel-sub sel-ket"><?= esc($r['jurusan_kode']) ?></span><?php endif; ?>
+                            <?php if ($r['jenis_kelamin'] !== null): // JK di kartu (kolom JK disembunyikan saat sempit) ?><span class="hanya-sempit sel-ket"><?= $r['jenis_kelamin'] === 'P' ? 'Perempuan' : 'Laki-laki' ?></span><?php endif; ?>
+                        </td>
+                        <td class="sel-status"><span class="lencana <?= $terhapus ? 'lencana-merah' : ($lencanaStatus[$r['status']] ?? 'lencana-abu') ?>"><?= $terhapus ? 'Terhapus' : esc(SiswaStatus::label((string) $r['status'])) ?></span></td>
                         <td class="kolom-aksi">
                             <?php if ($terhapus): ?>
-                                <div class="inline-flex items-center justify-end gap-2">
+                                <div class="aksi-baris">
                                     <form method="post" action="<?= site_url('admin/master/siswa/' . (int) $r['id'] . '/pulihkan') ?>" data-confirm="Pulihkan data <?= esc($r['nama'], 'attr') ?> (NIS <?= esc($r['nis'], 'attr') ?>)? Siswa kembali muncul di daftar dengan status <?= esc(SiswaStatus::label((string) $r['status']), 'attr') ?>." data-confirm-judul="Pulihkan siswa?" data-confirm-ya="Ya, pulihkan">
                                         <?= csrf_field() ?>
                                         <button type="submit" class="btn btn-sukses btn-sm"><?= ikon('check-circle', 'h-4 w-4') ?>Pulihkan</button>
@@ -206,7 +211,7 @@ $bagian = static fn (string $judul, string $ket = ''): string => '<p class="bord
                                 </div>
                             <?php else: ?>
                                 <?php
-                                // Satu tombol status per baris: Nonaktifkan (aktif) / Aktifkan (tidak aktif). Hapus permanen ada di halaman Detail & hapus massal.
+                                // Urutan tombol: Detail · Ubah · Nonaktifkan/Aktifkan · ikon hapus permanen (ruangnya tetap disisakan agar lurus antarbaris).
                                 $tombolStatus = $r['status'] === 'aktif'
                                     ? '<a href="' . site_url('admin/master/siswa/' . (int) $r['id'] . '/nonaktifkan') . '" class="btn btn-netral btn-sm">' . ikon('user-circle', 'h-4 w-4') . 'Nonaktifkan</a>'
                                     : '<form method="post" action="' . site_url('admin/master/siswa/' . (int) $r['id'] . '/aktifkan') . '" class="inline" data-confirm="' . esc($r['nama'], 'attr') . ' diaktifkan kembali." data-confirm-judul="Aktifkan kembali?" data-confirm-ya="Ya, aktifkan">'
@@ -216,9 +221,11 @@ $bagian = static fn (string $judul, string $ket = ''): string => '<p class="bord
                                     'row'             => $r,
                                     'detailUrl'       => $urlDetail,
                                     'tambahanHtml'    => $tombolStatus,
+                                    'tambahanAkhir'   => true,
                                     // Ikon tong sampah merah HANYA bila boleh dihapus permanen (belum punya data terkait).
                                     'hapusUrl'        => ($bisaHapus[(int) $r['id']] ?? false) ? site_url('admin/master/siswa/delete/' . (int) $r['id']) : null,
                                     'hapusIkon'       => true,
+                                    'hapusTempat'     => true,
                                     'hapusLabel'      => 'Hapus permanen',
                                     'konfirmasiJudul' => 'Hapus permanen?',
                                     'konfirmasi'      => $r['nama'] . ' (NIS ' . $r['nis'] . ') dihapus PERMANEN dari database dan tidak bisa dikembalikan. NIS/NISN-nya bisa dipakai lagi.',
