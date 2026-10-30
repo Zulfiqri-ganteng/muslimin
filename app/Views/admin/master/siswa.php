@@ -77,21 +77,38 @@ $bagian = static fn (string $judul, string $ket = ''): string => '<p class="bord
     'helpKey'   => 'siswa_v5',
     'helpTitle' => 'Master Siswa',
     'helpKelas' => '',
-    'helpBody'  => '<p>Data siswa lengkap sesuai buku induk: identitas, alamat, sekolah asal, orang tua, wali, dan kelas. Tingkat dan jurusan <b>mengikuti kelas</b>, jadi cukup pilih kelasnya saja. Hanya siswa berstatus <b>Aktif</b> yang muncul di formulir siswa (Layanan Siswa, Biodata, PKL) dan dihitung di grafik halaman publik.</p>
-        <p class="mt-2"><b>Tombol di atas tabel</b><br>
-        • <b>Tambah</b> — menambah satu siswa. Isi NIS dan NISN asli (NISN = 10 angka) serta tanggal lahir, supaya siswa bisa masuk Layanan Siswa.<br>
-        • <b>Import</b> — memasukkan banyak siswa sekaligus dari Excel: unduh template → isi → unggah → periksa pratinjau → simpan. NIS yang sudah ada <b>diperbarui</b> (tidak dobel), sel yang dikosongkan tidak mengubah data lama, kolom Kelas diisi nama kelas persis (mis. <i>X TKJ 1</i>). Untuk impor ulang pakai berkas hasil <b>Export terbaru</b>.<br>
-        • <b>Export</b> — mengunduh <b>semua kolom data</b> ke Excel untuk diolah, sesuai saringan yang dipilih (pilih satu kelas = kelas itu saja; lebih dari satu kelas = tab Semua Kelas + satu tab per kelas).<br>
-        • <b>Lainnya → Periksa data siswa</b> — daftar yang perlu dibetulkan: kemungkinan data <b>ganda</b> (satu siswa tercatat dua kali), data <b>tidak sesuai</b> (NIS/NISN tidak wajar, tanggal lahir kosong, siswa tidak bisa masuk Layanan Siswa), dan kelas hasil penempatan otomatis.<br>
-        • <b>Lainnya → Unduh Daftar Nama Siswa resmi</b> — laporan Excel <b>siap cetak</b> dengan bentuk persis berkas "Daftar Nama Siswa" sekolah: semua siswa aktif kelas X, XI, XII per jurusan, dengan kolom resmi dan tempat tanda tangan. Bedanya dengan Export: Export untuk diolah, daftar resmi untuk dicetak/diserahkan.</p>
-        <p class="mt-2"><b>Saringan</b> — memilih kelas, tingkat, status, atau biodata langsung menyaring tabel. <i>— Tanpa kelas —</i> = siswa belum ditempatkan di kelas. Status: Aktif, Tidak aktif (semua), Lulus, Pindah sekolah, Keluar, dan <b>Terhapus (lama)</b> (data yang dulu dihapus dengan cara lama — bisa Pulihkan atau Hapus permanen).</p>
-        <p class="mt-2"><b>Tombol di tiap baris</b> (di HP tiap siswa tampil sebagai kartu, tombolnya di bagian bawah kartu)<br>
-        • <b>Detail</b> (atau klik nama siswa) — semua data satu siswa. Di sana juga ada tombol <b>Hapus permanen</b>.<br>
+    // Panduan ditulis ulang 2026-10-30 sesudah rombak tampilan (bilah alat lentur, kartu HP, kotak kuning) + pertanyaan klien
+    // "kenapa tombol hapus hanya ada di beberapa siswa" — dijawab di bagian tersendiri berbentuk pertanyaan.
+    'helpBody'  => '<p>Halaman ini berisi data semua siswa sesuai buku induk: identitas, alamat, sekolah asal, orang tua, wali, dan kelas. Tingkat dan jurusan <b>mengikuti kelas</b>, jadi cukup pilih kelasnya. Hanya siswa berstatus <b>Aktif</b> yang muncul di formulir siswa (Layanan Siswa, Biodata, PKL) dan dihitung di grafik halaman publik.</p>
+        <p class="mt-3"><b>1. Mencari siswa</b><br>
+        • Ketik nama, NIS, atau NISN di kotak <b>Cari</b>, lalu tekan Enter.<br>
+        • Saringan <b>kelas, tingkat, status, biodata</b> langsung menyaring daftar begitu dipilih. Di HP, tekan tombol <b>Saringan</b> untuk membuka pilihannya (angka di tombol = jumlah saringan yang sedang dipakai).<br>
+        • <b>Reset</b> = hapus semua saringan. <b>Tampilkan 10–50</b> = jumlah siswa per halaman.<br>
+        • Kelas <i>— Tanpa kelas —</i> = siswa yang belum ditempatkan di kelas.</p>
+        <p class="mt-3"><b>2. Tombol di atas daftar</b><br>
+        • <b>Tambah</b> — menambah satu siswa. Isi NIS, NISN asli (10 angka), dan tanggal lahir supaya siswa bisa masuk Layanan Siswa.<br>
+        • <b>Import</b> — memasukkan banyak siswa sekaligus dari Excel: unduh template → isi → unggah → periksa pratinjau → simpan. NIS yang sudah ada <b>diperbarui</b> (tidak dobel), sel kosong tidak mengubah data lama, kolom Kelas diisi nama kelas persis (mis. <i>X TKJ 1</i>). Untuk impor ulang, pakai berkas hasil <b>Export terbaru</b>.<br>
+        • <b>Export</b> — mengunduh <b>semua kolom</b> data siswa ke Excel sesuai saringan yang dipilih (satu kelas = kelas itu saja; lebih dari satu kelas = tab Semua Kelas + satu tab per kelas).<br>
+        • <b>Lainnya → Periksa data siswa</b> — daftar data yang perlu dibetulkan (data ganda, NIS/NISN tidak wajar, tanggal lahir kosong) dan kelas hasil penempatan otomatis.<br>
+        • <b>Lainnya → Unduh Daftar Nama Siswa resmi</b> — Excel <b>siap cetak</b> berbentuk persis berkas "Daftar Nama Siswa" sekolah (siswa aktif kelas X–XII per jurusan, dengan tempat tanda tangan). Export untuk diolah, daftar resmi untuk dicetak/diserahkan.<br>
+        Di HP, <b>Import</b> dan <b>Export</b> ada di dalam tombol <b>Lainnya</b>.</p>
+        <p class="mt-3"><b>3. Tombol di tiap siswa</b> (di HP tiap siswa tampil sebagai kartu, tombolnya di bawah kartu)<br>
+        • <b>Detail</b> (atau klik nama siswa) — melihat semua data satu siswa.<br>
         • <b>Ubah</b> — mengubah data siswa.<br>
-        • <b>Nonaktifkan</b> — untuk siswa yang lulus, pindah sekolah, atau keluar. Data dan riwayatnya (PKL, surat, biodata) tetap utuh; tombol berganti menjadi <b>Aktifkan</b> bila ingin dikembalikan.<br>
-        • <b>Ikon tong sampah merah</b> (paling akhir) — <b>Hapus permanen</b>. Ikon ini <b>hanya muncul</b> pada siswa yang boleh dihapus (belum punya data PKL, surat, biodata, dll.). Tidak ada ikonnya = siswa sudah punya data — pakai Nonaktifkan.</p>
-        <p class="mt-2"><b>Menghapus siswa</b> — <b>Hapus permanen</b> (dari halaman Detail, atau centang beberapa siswa lalu <b>Hapus terpilih</b>) hanya bisa untuk data salah input yang <b>belum punya data terkait</b>; NIS/NISN-nya langsung bisa dipakai lagi. Siswa yang sudah punya data PKL, surat, biodata, dll. tidak bisa dihapus — pakai <b>Nonaktifkan</b>.</p>
-        <p class="mt-2"><b>Biodata dari siswa</b> — siswa mengisi biodatanya sendiri lewat menu <b>Isian Biodata Siswa</b>; setelah disetujui datanya masuk ke sini dan siswa ditandai lencana hijau <b>Biodata</b> (saringan Biodata lengkap / belum). Kolom <b>Data sekolah</b> (nama orang tua versi sekolah, nomor &amp; tahun STTB/ijazah SMP) sesuai Daftar Nama Siswa resmi — ada di paling kanan template impor.</p>',
+        • <b>Nonaktifkan</b> — untuk siswa yang <b>lulus, pindah sekolah, atau keluar</b>. Nama siswa hilang dari formulir siswa, tetapi data dan riwayatnya (PKL, surat, biodata) tetap tersimpan. Tombolnya berganti menjadi <b>Aktifkan</b> bila siswa ingin dikembalikan.<br>
+        • <b>Tong sampah merah</b> — <b>Hapus permanen</b> (hilang selamanya, tidak bisa dikembalikan). Lihat pertanyaan nomor 4.</p>
+        <p class="mt-3"><b>4. Kenapa tombol hapus (tong sampah merah) hanya ada di sebagian siswa?</b><br>
+        Tombol hapus <b>sengaja hanya muncul pada siswa yang belum punya data apa pun</b> di sistem, yaitu belum pernah ikut PKL, belum punya surat atau permintaan surat, belum mengisi biodata, belum punya catatan terlambat, dan bukan peserta UKK atau ujian susulan. Biasanya ini data yang <b>salah ketik atau dobel</b> dan baru saja dimasukkan.<br>
+        Siswa yang <b>sudah punya data tidak bisa dihapus</b>, karena kalau dihapus, data PKL, surat, dan riwayatnya <b>ikut terhapus</b> dan tidak bisa dikembalikan. Untuk siswa seperti ini pakai <b>Nonaktifkan</b>.<br>
+        • Ingin tahu data apa yang membuat siswa tidak bisa dihapus? Buka <b>Detail</b> siswa itu. Di bawah tombolnya tertulis <i>"Tidak bisa dihapus permanen karena sudah punya data: …"</i>.<br>
+        • Menghapus banyak sekaligus: centang beberapa siswa (di HP: <b>Pilih semua siswa di halaman ini</b>), lalu tekan <b>Hapus terpilih</b>. Siswa yang sudah punya data otomatis dilewati.<br>
+        • Sesudah dihapus permanen, NIS/NISN siswa itu bisa langsung dipakai lagi.</p>
+        <p class="mt-3"><b>5. Kotak kuning "Ada data siswa yang perlu dibetulkan"</b><br>
+        Muncul bila ada kemungkinan <b>data ganda</b> (satu siswa tercatat dua kali), siswa yang <b>tidak bisa masuk Layanan Siswa</b> (NISN dan tanggal lahir belum benar), atau data yang <b>perlu dilengkapi</b>. Tekan <b>Periksa data</b> untuk melihat siapa saja dan membetulkannya. Kotak ini hilang sendiri bila semua data sudah benar.</p>
+        <p class="mt-3"><b>6. Status siswa</b><br>
+        Aktif, Tidak aktif (semua), Lulus, Pindah sekolah, Keluar, dan <b>Terhapus (lama)</b>. Terhapus (lama) = data yang dulu "dihapus" dengan cara lama dan masih tersimpan; di sana ada tombol <b>Pulihkan</b> (bila siswa ternyata masih ada) dan <b>Hapus permanen</b>.</p>
+        <p class="mt-3"><b>7. Biodata dari siswa</b><br>
+        Siswa mengisi biodatanya sendiri lewat menu <b>Isian Biodata Siswa</b>. Setelah disetujui, datanya masuk ke sini dan siswa diberi lencana hijau <b>Biodata</b> (saringan Biodata lengkap / belum). Bagian <b>Data sekolah</b> di formulir (nama orang tua versi sekolah, nomor &amp; tahun STTB/ijazah SMP) mengikuti Daftar Nama Siswa resmi; kolomnya ada di paling kanan template impor.</p>',
 ]) ?>
 <?= $this->endSection() ?>
 
