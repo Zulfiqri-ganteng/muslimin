@@ -144,17 +144,27 @@ $bagian = static fn (string $judul, string $ket = ''): string => '<p class="bord
     ]) ?>
 
     <?php $perluCek = ($periksa['ganda'] ?? 0) + ($periksa['tidak_sesuai'] ?? 0); ?>
-    <?php if (! $terhapus && $perluCek > 0): ?>
-        <?php // Pemberitahuan tipis hanya bila ada data yang perlu dibetulkan (PeriksaSiswa) — pengganti tombol "Periksa data" di bilah alat. ?>
-        <div class="px-4 pt-4"><?= ui_peringatan('awas', '', ['html' => esc(implode(' · ', array_filter([
-            ($periksa['ganda'] ?? 0) > 0 ? $periksa['ganda'] . ' kemungkinan data ganda' : '',
-            ($periksa['tidak_bisa_masuk'] ?? 0) > 0 ? $periksa['tidak_bisa_masuk'] . ' siswa tidak bisa masuk Layanan Siswa' : '',
-            ($periksa['tidak_sesuai'] ?? 0) - ($periksa['tidak_bisa_masuk'] ?? 0) > 0 ? (($periksa['tidak_sesuai'] ?? 0) - ($periksa['tidak_bisa_masuk'] ?? 0)) . ' data perlu dilengkapi' : '',
-        ]))) . ' — <a href="' . site_url('admin/master/siswa/periksa') . '" class="font-semibold underline">Periksa data</a>']) ?></div>
+    <?php if (! $terhapus && $perluCek > 0):
+        // Pemberitahuan hanya bila ada data yang perlu dibetulkan (PeriksaSiswa): judul + daftar per jenis masalah + tombol "Periksa data"
+        // (dulu satu kalimat panjang "… · … — Periksa data", dinilai kurang bagus oleh user 2026-10-30). Angka = int, aman tanpa esc.
+        $nGanda      = (int) ($periksa['ganda'] ?? 0);
+        $nTakMasuk   = (int) ($periksa['tidak_bisa_masuk'] ?? 0);
+        $nLengkapi   = (int) ($periksa['tidak_sesuai'] ?? 0) - $nTakMasuk;
+        $butirPeriksa = array_filter([
+            $nGanda > 0 ? '<b>' . $nGanda . '</b> kemungkinan data ganda (satu siswa tercatat dua kali)' : '',
+            $nTakMasuk > 0 ? '<b>' . $nTakMasuk . '</b> siswa tidak bisa masuk Layanan Siswa (NISN dan tanggal lahir belum benar)' : '',
+            $nLengkapi > 0 ? '<b>' . $nLengkapi . '</b> siswa datanya perlu dilengkapi' : '',
+        ]); ?>
+        <div class="p-4"><?= ui_peringatan('awas', '', [
+            'judul' => 'Ada data siswa yang perlu dibetulkan',
+            'html'  => '<div class="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">'
+                . '<ul class="list-disc space-y-0.5 ps-4">' . implode('', array_map(static fn (string $b): string => '<li>' . $b . '</li>', $butirPeriksa)) . '</ul>'
+                . '<a href="' . site_url('admin/master/siswa/periksa') . '" class="btn btn-netral btn-sm shrink-0 self-start sm:self-auto">' . ikon('clipboard-check', 'h-4 w-4') . 'Periksa data</a></div>',
+        ]) ?></div>
     <?php endif; ?>
 
     <?php if ($terhapus): ?>
-        <div class="px-4 pt-4"><?= ui_peringatan('info', 'Ini data siswa yang dulu "dihapus" dengan cara lama (masih tersimpan, NIS/NISN-nya masih terpakai). Pulihkan bila ternyata siswa masih ada, atau Hapus permanen bila data itu salah input. Hapus permanen hanya bisa bila belum punya data terkait.', ['judul' => 'Terhapus (lama)']) ?></div>
+        <div class="p-4"><?= ui_peringatan('info', 'Ini data siswa yang dulu "dihapus" dengan cara lama (masih tersimpan, NIS/NISN-nya masih terpakai). Pulihkan bila ternyata siswa masih ada, atau Hapus permanen bila data itu salah input. Hapus permanen hanya bisa bila belum punya data terkait.', ['judul' => 'Terhapus (lama)']) ?></div>
     <?php endif; ?>
 
     <?php // Tabel lentur: ruang sempit (HP, tablet, laptop ber-zoom besar) → tiap baris jadi kartu; DOM sama (centang massal & Ubah tetap jalan). ?>
