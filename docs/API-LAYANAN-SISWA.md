@@ -22,13 +22,18 @@ Semua alamat di bawah `api/v1/`. Amplop respons sama dengan API lain: `{status, 
 | `GET publik/layanan/saya` | ✔ | `{siswa, surat[], permintaan[]}` |
 | `GET publik/layanan/perpanjangan` | ✔ | bahan formulir (di bawah) · tidak boleh (bukan siswa PKL disetujui / form ditutup) → `409 data.kode = "tidak_boleh"` |
 | `POST publik/layanan/perpanjangan` | ✔ | kirim permintaan → `201 {surat_id, kode: "baru"\|"ikut", kode_surat}` |
+| `GET publik/layanan/surat/{kunci}` | ✔ | bahan formulir `izin_ujian` · `izin_tka` · `pernyataan` · `penarikan` (bagian "Formulir surat" di bawah) · tidak boleh → `409 data.kode = "tidak_boleh"` · kunci lain → `404` |
+| `POST publik/layanan/surat/{kunci}` | ✔ | kirim permintaan (bagian "Formulir surat") |
+
+`saya`, `perpanjangan` (GET) dan `surat/{kunci}` (GET) membawa **`token_baru`**: pakai untuk panggilan berikutnya. Sesi web diperpanjang tiap
+aktivitas; dengan token baru ini siswa yang masih memakai layanan juga tidak dikeluarkan di tengah jalan.
 
 ### `siswa`
 `{id, nama, kelas, tingkat, ajuan: {id, kode, status, perusahaan} | null}` — TANPA NISN / tanggal lahir.
 
 ### `surat[]` (halaman "Layanan Siswa")
 `{kunci, judul, ket, ikon, jenis, siap, boleh, alasan, api, url_web}` — `boleh=false` → tampilkan `alasan`; `api=true` → formulir asli di
-aplikasi (sekarang hanya `perpanjangan`); selain itu buka `url_web` di peramban dalam aplikasi.
+aplikasi (sejak 2026-11-01 kelima surat); selain itu buka `url_web` di peramban dalam aplikasi.
 
 ### `permintaan[]` ("Permintaan suratku")
 `{id, jenis, judul, dibuat, perusahaan, nomor, catatan, status, status_teks, status_kelas, status_ket}` — status: `menunggu` · `diperiksa`
@@ -62,6 +67,25 @@ aplikasi (sekarang hanya `perpanjangan`); selain itu buka `url_web` di peramban 
 - `422 data.errors.{selesai_baru|pilih_tanggal|selesai_lama|alasan|siswa|jendela}` — kalimat siap tampil. `errors.siswa` juga untuk teman
   yang tanggal selesai PKL-nya beda ("Satu surat hanya untuk satu tanggal selesai PKL …").
 - `409 data.kode="sudah"` (sudah pernah diperpanjang) · `409 data.kode="tidak_boleh"` · `401` token · `500` gagal simpan.
+
+## Formulir surat (`publik/layanan/surat/{kunci}`, ditambah 2026-11-01)
+Padanan halaman web `layanan/surat/{kunci}`, memakai fungsi yang sama (`LayananSiswa::form*`, `ajukan*`). Web tidak diubah.
+Uji & fixture: `UJI_FIXTURE=<folder> php spark dev:uji-layanan-surat`; contoh nyata `C:\flutter-muslimin\test\fixtures\layanan_surat\`.
+
+GET selalu memuat `{kunci, judul, ket, siswa, token_baru}`, ditambah:
+
+| Kunci | Isi GET | Isi POST |
+|---|---|---|
+| `izin_ujian` | `jadwal[] {id, label, hari_tanggal, tempat, luar_periode, sudah: {surat_id, kode} \| null}`, `perusahaan {nama, alamat} \| null`, `teman[]` (nama) | `{jadwal_id}` |
+| `izin_tka` | `jadwal[] {id, label, hari_tanggal, tempat, luar_periode}`, `perusahaan`, `saya {penempatan[], jadwal_id, terkunci}`, `teman[] {id, nama, kelas, penempatan[], jadwal_id, terkunci, sendiri}`. `penempatan[] {surat_id, kode, status, label, hari_tanggal, status_teks, bisa_ubah, sendiri, diisikan, teks}`; `teks` = kalimat siap tampil | `{jadwal_id, teman: {siswa_id: jadwal_id}}` — teman yang tidak diubah tidak perlu dikirim |
+| `pernyataan` | `ortu {nama, pekerjaan, alamat, hp}`, `hp_anak`, `aktif {surat_id, kode, status, cetak_ke} \| null`, `dicetak` (true = tidak bisa diperbaiki lagi), `maks {nama, pekerjaan, alamat, hp}` | `{nama, pekerjaan, alamat, hp, hp_anak}` |
+| `penarikan` | `aktif {surat_id, kode, status} \| null` (terisi = tanpa formulir), `perusahaan`, `alasan[] {kode, label}` (+ pilihan "lain" di layar) | `{alasan_pilih: kode \| "lain", alasan_lain, tgl_efektif: "Y-m-d"}` |
+
+Balasan POST:
+- `201 {surat_id, kode: "baru"|"ikut", kode_surat}`: permintaan baru. `200` dengan `kode: "sudah"|"ubah"`: tidak ada permintaan baru. Tampilkan `message`, lalu buka "Permintaan suratku".
+- `422 data.errors.{kolom}`: galat per kolom (`nama`, `alamat`, `hp`, `hp_anak`, `pekerjaan`, `alasan_pilih`, `alasan_lain`, `tgl_efektif`, `umum`); `message` = "Periksa lagi isianmu."
+- `409 data.kode`: `tidak_boleh` (kembali ke halaman siswa + tampilkan `message`), `tolak` / `gagal` (tampilkan `message` di formulir lalu muat ulang bahannya).
+- `401`: token habis, ulangi masuk.
 
 ## Keamanan
 - Token = HMAC-SHA256 (kunci turunan `encryption.key`) atas `{siswa_id, kedaluwarsa}`; tanpa tabel, tidak bisa dipalsukan, kedaluwarsa 30 menit

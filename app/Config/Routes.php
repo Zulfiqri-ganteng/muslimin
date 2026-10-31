@@ -887,6 +887,8 @@ $routes->group('api/v1', ['namespace' => 'App\Controllers\Api', 'filter' => 'cor
     $routes->get('publik/layanan/saya', 'Layanan::saya');
     $routes->get('publik/layanan/perpanjangan', 'Layanan::perpanjangan');
     $routes->post('publik/layanan/perpanjangan', 'Layanan::ajukanPerpanjangan');
+    $routes->get('publik/layanan/surat/(:segment)', 'Layanan::surat/$1');
+    $routes->post('publik/layanan/surat/(:segment)', 'Layanan::ajukanSurat/$1');
 
     // ---------- ADMIN (butuh token) ----------
     $routes->group('', ['filter' => 'apiauth'], static function ($routes) {

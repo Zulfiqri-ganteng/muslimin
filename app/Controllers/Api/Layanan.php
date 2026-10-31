@@ -21,9 +21,14 @@ use CodeIgniter\HTTP\ResponseInterface;
  *   GET  publik/layanan/saya                 (token) profil + layanan surat (boleh/alasan) + "Permintaan suratku"
  *   GET  publik/layanan/perpanjangan         (token) bahan formulir Surat Perpanjangan PKL
  *   POST publik/layanan/perpanjangan         (token) kirim permintaan
+ *   GET  publik/layanan/surat/{kunci}        (token) bahan formulir izin_ujian | izin_tka | pernyataan | penarikan
+ *   POST publik/layanan/surat/{kunci}        (token) kirim permintaan (fungsi yang sama dengan web layanan/surat/{kunci})
  */
 class Layanan extends BaseApiController
 {
+    /** Formulir lewat publik/layanan/surat/{kunci}; perpanjangan punya alamat sendiri. */
+    private const FORM_SURAT = ['izin_ujian', 'izin_tka', 'pernyataan', 'penarikan'];
+
     private LayananSiswa $lib;
     private array $p;
 
@@ -83,10 +88,53 @@ class Layanan extends BaseApiController
             $surat[] = ['kunci' => $kunci, 'judul' => $judul, 'ket' => $ket, 'ikon' => $ikon, 'jenis' => $jenis,
                 'siap' => $kel[$kunci]['siap'], 'boleh' => $kel[$kunci]['boleh'], 'alasan' => $kel[$kunci]['alasan'],
                 // Formulir yang sudah punya API (lainnya dibuka di web layanan/surat/{kunci}).
-                'api' => $kunci === 'perpanjangan', 'url_web' => site_url('layanan/surat/' . $kunci)];
+                'api' => $kunci === 'perpanjangan' || in_array($kunci, self::FORM_SURAT, true), 'url_web' => site_url('layanan/surat/' . $kunci)];
         }
 
-        return $this->ok(['siswa' => $this->profil($s), 'surat' => $surat, 'permintaan' => $this->lib->permintaan((int) $s['id'])], 'Layanan Siswa.');
+        return $this->ok(['siswa' => $this->profil($s), 'surat' => $surat, 'permintaan' => $this->lib->permintaan((int) $s['id'])] + $this->tokenBaru($s), 'Layanan Siswa.');
+    }
+
+    /** GET publik/layanan/surat/{kunci} — bahan yang sama dengan halaman web layanan/surat/{kunci}. */
+    public function surat(string $kunci = ''): ResponseInterface
+    {
+        [$s, $tolak] = $this->siswaUntukSurat($kunci);
+        if ($tolak !== null) {
+            return $tolak;
+        }
+        [$judul, $ket] = LayananSiswa::SURAT[$kunci];
+        $kel = $this->lib->kelayakan($s, $this->p);
+        $isi = match ($kunci) {
+            'izin_tka'   => $this->formTka($s, $kel),
+            'pernyataan' => $this->formPernyataan($s),
+            'penarikan'  => $this->formPenarikan($s),
+            default      => $this->formIzin($s, $kunci, $kel),
+        };
+
+        return $this->ok(['kunci' => $kunci, 'judul' => $judul, 'ket' => $ket, 'siswa' => $this->profil($s)] + $isi + $this->tokenBaru($s), 'Formulir ' . $judul . '.');
+    }
+
+    /** POST publik/layanan/surat/{kunci} — izin_ujian {jadwal_id} · izin_tka {jadwal_id, teman: {siswa_id: jadwal_id}} · pernyataan {nama, pekerjaan, alamat, hp, hp_anak} · penarikan {alasan_pilih, alasan_lain, tgl_efektif}. */
+    public function ajukanSurat(string $kunci = ''): ResponseInterface
+    {
+        [$s, $tolak] = $this->siswaUntukSurat($kunci);
+        if ($tolak !== null) {
+            return $tolak;
+        }
+        $ip = $this->request->getIPAddress();
+        $in = $this->body();
+        $r  = match ($kunci) {
+            'izin_tka'   => $this->lib->ajukanTka((int) $s['id'], $in, $ip, $this->p),
+            'pernyataan' => $this->lib->ajukanPernyataan((int) $s['id'], $in, $ip, $this->p),
+            'penarikan'  => $this->lib->ajukanPenarikan((int) $s['id'], $in, $ip, $this->p),
+            default      => $this->lib->ajukanIzin((int) $s['id'], $kunci, is_scalar($in['jadwal_id'] ?? null) ? (int) $in['jadwal_id'] : 0, $ip, $this->p),
+        };
+        if (! $r['ok']) {
+            return ($r['galat'] ?? []) !== [] ? $this->invalid($r['galat'], $r['pesan']) : $this->failure($r['pesan'], 409, ['kode' => $r['kode']]);
+        }
+        $data = ['surat_id' => (int) ($r['surat_id'] ?? 0), 'kode' => $r['kode'], 'kode_surat' => \App\Models\SuratSekolahModel::kode((int) ($r['surat_id'] ?? 0))];
+
+        // "sudah" & "ubah" tidak membuat permintaan baru.
+        return in_array($r['kode'], ['sudah', 'ubah'], true) ? $this->ok($data, $r['pesan']) : $this->created($data, $r['pesan']);
     }
 
     /** GET publik/layanan/perpanjangan — sama dengan halaman web layanan/surat/perpanjangan. */
@@ -122,7 +170,7 @@ class Layanan extends BaseApiController
             'alasan_saran' => array_map(static fn (array $a, int $i): array => ['kode' => (string) $i, 'kalimat' => $a[0], 'label' => $a[1]], SuratPerpanjangan::ALASAN, array_keys(SuratPerpanjangan::ALASAN)),
             'teman'        => $f['teman'],
             'maks_hari'    => SuratPerpanjangan::MAKS_HARI,
-        ], 'Formulir Surat Perpanjangan PKL.');
+        ] + $this->tokenBaru($s), 'Formulir Surat Perpanjangan PKL.');
     }
 
     /** POST publik/layanan/perpanjangan — {pilih_tanggal: Y-m-d | "lain", selesai_baru?, selesai_lama?, alasan_pilih, alasan_lain?, teman: [id…]} */
@@ -159,6 +207,115 @@ class Layanan extends BaseApiController
         }
 
         return [$s, null];
+    }
+
+    /**
+     * Padanan Controllers\Layanan::siswaUntukSurat: kunci dikenal, token sah, dan surat boleh diminta siswa ini.
+     *
+     * @return array{0: array<string, mixed>|null, 1: ResponseInterface|null}
+     */
+    private function siswaUntukSurat(string $kunci): array
+    {
+        if (! in_array($kunci, self::FORM_SURAT, true)) {
+            return [null, $this->missing('Layanan surat tidak dikenal.')];
+        }
+        [$s, $tolak] = $this->siswaToken();
+        if ($tolak !== null) {
+            return [null, $tolak];
+        }
+        $k = $this->lib->kelayakan($s, $this->p)[$kunci];
+        if (! $k['boleh']) {
+            return [null, $this->failure(LayananSiswa::SURAT[$kunci][0] . ' belum bisa diajukan: ' . $k['alasan'], 409, ['kode' => 'tidak_boleh'])];
+        }
+
+        return [$s, null];
+    }
+
+    /**
+     * Sesi web diperpanjang tiap aktivitas (LayananSiswa::siswaMasuk), token tidak: tiap bacaan membawa token baru supaya siswa yang
+     * masih memakai layanan tidak dikeluarkan di tengah jalan, sama dengan "30 menit tidak aktif" di web.
+     *
+     * @return array{token_baru?: string}
+     */
+    private function tokenBaru(array $s): array
+    {
+        $t = LayananToken::buat((int) $s['id']);
+
+        return $t === null ? [] : ['token_baru' => $t['token']];
+    }
+
+    /** Baris jadwal untuk formulir, tanpa kolom internal. @return array<string, mixed> */
+    private function barisJadwal(array $j): array
+    {
+        return ['id' => (int) $j['id'], 'label' => (string) $j['label'], 'hari_tanggal' => (string) $j['hari_tanggal'], 'tempat' => (string) $j['tempat'], 'luar_periode' => (bool) $j['luar_periode']];
+    }
+
+    /** @return array<string, mixed> */
+    private function formIzin(array $s, string $kunci, array $kel): array
+    {
+        $f = $this->lib->formIzin($s, $kunci, $kel);
+
+        return [
+            'jadwal'     => array_map(fn (array $j): array => $this->barisJadwal($j) + ['sudah' => $j['sudah']], $f['jadwal']),
+            'perusahaan' => $f['perusahaan'],
+            'teman'      => $f['teman'],
+        ];
+    }
+
+    /** @return array<string, mixed> */
+    private function formTka(array $s, array $kel): array
+    {
+        $f = $this->lib->formTka($s, $kel);
+        // `isi` surat tidak dikirim; `teks` = kalimat yang sama dengan view layanan/surat_tka.php.
+        $tempat = static fn (array $ada): array => array_map(static fn (array $t): array => [
+            'surat_id' => $t['surat_id'], 'kode' => $t['kode'], 'status' => $t['status'], 'label' => $t['label'], 'hari_tanggal' => $t['hari_tanggal'], 'status_teks' => $t['status_teks'],
+            'bisa_ubah' => $t['bisa_ubah'], 'sendiri' => $t['sendiri'], 'diisikan' => $t['diisikan'],
+            'teks' => $t['label'] . ' (' . $t['kode'] . ') · ' . $t['status_teks'] . ($t['sendiri'] ? ' · dipilih sendiri' : ($t['diisikan'] !== '' ? ' · diisikan oleh ' . $t['diisikan'] : '')),
+        ], $ada);
+
+        return [
+            'jadwal'     => array_map(fn (array $j): array => $this->barisJadwal($j), $f['jadwal']),
+            'perusahaan' => $f['perusahaan'],
+            'saya'       => ['penempatan' => $tempat($f['saya']['penempatan']), 'jadwal_id' => (int) $f['saya']['jadwal_id'], 'terkunci' => (bool) $f['saya']['terkunci']],
+            'teman'      => array_map(static fn (array $t): array => [
+                'id' => (int) $t['id'], 'nama' => (string) $t['nama'], 'kelas' => (string) $t['kelas'], 'penempatan' => $tempat($t['penempatan']),
+                'jadwal_id' => (int) $t['jadwal_id'], 'terkunci' => (bool) $t['terkunci'], 'sendiri' => (bool) $t['sendiri'],
+            ], $f['teman']),
+        ];
+    }
+
+    /** @return array<string, mixed> */
+    private function formPernyataan(array $s): array
+    {
+        $f = $this->lib->formPernyataan($s);
+        $a = $f['aktif'];
+
+        return [
+            'ortu'    => ['nama' => (string) ($f['ortu']['nama'] ?? ''), 'pekerjaan' => (string) ($f['ortu']['pekerjaan'] ?? ''), 'alamat' => (string) ($f['ortu']['alamat'] ?? ''), 'hp' => (string) ($f['ortu']['hp'] ?? '')],
+            'hp_anak' => (string) $f['hp_anak'],
+            'aktif'   => $a === null ? null : ['surat_id' => $a['surat_id'], 'kode' => $a['kode'], 'status' => $a['status'], 'cetak_ke' => $a['cetak_ke']],
+            // Sudah dicetak sekolah: data tidak bisa diperbaiki lagi dari layanan ini.
+            'dicetak' => $a !== null && $a['cetak_ke'] > 0,
+            'maks'    => LayananSiswa::MAKS_ORTU,
+        ];
+    }
+
+    /** @return array<string, mixed> */
+    private function formPenarikan(array $s): array
+    {
+        $f = $this->lib->formPenarikan($s);
+        $a = $f['aktif'];
+
+        $alasan = [];
+        foreach (LayananSiswa::ALASAN_PENARIKAN as $kode => $label) {
+            $alasan[] = ['kode' => (string) $kode, 'label' => $label];
+        }
+
+        return [
+            'aktif'      => $a === null ? null : ['surat_id' => $a['surat_id'], 'kode' => $a['kode'], 'status' => $a['status']],
+            'perusahaan' => $f['perusahaan'],
+            'alasan'     => $alasan, // + pilihan "lain" di layar
+        ];
     }
 
     /** Profil siswa tanpa NISN/tanggal lahir. @return array<string, mixed> */
