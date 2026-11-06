@@ -866,6 +866,8 @@ $routes->group('api/v1', ['namespace' => 'App\Controllers\Api', 'filter' => 'cor
     $routes->get('home', 'Publik::home');
     // Beranda lengkap konsep rumah pendidikan (B1) — sumber sama dengan situs publik; docs/API-BERANDA-MENU.md
     $routes->get('publik/beranda', 'Publik::beranda');
+    // Dokumen sekolah publik (layanan LY2) = web dokumen-publik; berkas tetap lewat rute web dokumen-publik/{id}/berkas|unduh
+    $routes->get('publik/dokumen', 'Publik::dokumen');
     $routes->get('absensi', 'Publik::absensi');
     // Statistik siswa (agregat saja — tanpa identitas siswa)
     $routes->get('statistik/siswa', 'Publik::statistikSiswa');
@@ -889,6 +891,25 @@ $routes->group('api/v1', ['namespace' => 'App\Controllers\Api', 'filter' => 'cor
     $routes->post('publik/layanan/perpanjangan', 'Layanan::ajukanPerpanjangan');
     $routes->get('publik/layanan/surat/(:segment)', 'Layanan::surat/$1');
     $routes->post('publik/layanan/surat/(:segment)', 'Layanan::ajukanSurat/$1');
+
+    // Lapor diterima PKL (publik, tanpa akun; layanan LY4) = web pkl/lapor — izin kirim = token X-Izin-Token dari cek (Api\LaporPkl).
+    $routes->get('publik/pkl/lapor', 'LaporPkl::index');
+    $routes->get('publik/pkl/lapor/siswa', 'LaporPkl::siswa');
+    $routes->post('publik/pkl/lapor/cek', 'LaporPkl::cek');
+    $routes->post('publik/pkl/lapor/kirim', 'LaporPkl::kirim');
+
+    // Ajukan tempat PKL (publik, tanpa akun; layanan LY5) = web pkl — Api\PklAjukan TURUNAN Controllers\Pkl (aturan sama); izin perbaikan = X-Izin-Token.
+    $routes->get('publik/pkl', 'PklAjukan::index');
+    $routes->get('publik/pkl/siswa', 'PklAjukan::siswa');
+    $routes->get('publik/pkl/perusahaan', 'PklAjukan::perusahaan');
+    $routes->post('publik/pkl/buka', 'PklAjukan::buka');
+    $routes->post('publik/pkl/kirim', 'PklAjukan::kirim');
+
+    // Isi biodata siswa (publik, tanpa akun; layanan LY6) = web biodata — Api\BiodataPublik TURUNAN Controllers\Biodata; izin perbaikan = X-Izin-Token.
+    $routes->get('publik/biodata', 'BiodataPublik::index');
+    $routes->get('publik/biodata/siswa', 'BiodataPublik::siswa');
+    $routes->post('publik/biodata/buka', 'BiodataPublik::buka');
+    $routes->post('publik/biodata/kirim', 'BiodataPublik::kirim');
 
     // ---------- ADMIN (butuh token) ----------
     $routes->group('', ['filter' => 'apiauth'], static function ($routes) {

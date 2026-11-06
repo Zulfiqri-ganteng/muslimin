@@ -60,6 +60,9 @@ final class PklLapor
     private const SESI = 'pkl_lapor_izin';
     private const TTL  = 3600;
 
+    /** Umur izin kirim (sesi web & token aplikasi), detik. */
+    public const TTL_IZIN = self::TTL;
+
     private static ?bool $tabelAda = null;
 
     private BaseConnection $db;
@@ -255,6 +258,25 @@ final class PklLapor
      */
     public function cek(int $siswaId, string $hpIn, string $ip): array
     {
+        $r = $this->buktikan($siswaId, $hpIn, $ip);
+        if ($r['ok']) {
+            $izin = (array) session(self::SESI);
+            $izin[$r['izin']['ajuan']] = $r['izin']['isi'];
+            session()->set(self::SESI, $izin);
+        }
+        unset($r['izin']);
+
+        return $r;
+    }
+
+    /**
+     * Isi cek() TANPA sesi — dipakai API aplikasi (izin dibawa token `LayananToken::buatIzin('pkl-lapor', …)`). 'izin' = [ajuan,
+     * isi] dengan isi sama persis dengan isi sesi web; umur izin = TTL_IZIN detik.
+     *
+     * @return array{ok: bool, http: int, pesan: string, data?: array<string, mixed>, izin?: array{ajuan: int, isi: array<string, mixed>}}
+     */
+    public function buktikan(int $siswaId, string $hpIn, string $ip): array
+    {
         $s = $siswaId > 0 ? $this->db->table('siswa')->select('id, nama, no_hp')->where('id', $siswaId)->where('status', 'aktif')->where('deleted_at', null)->get()->getRowArray() : null;
         if ($s === null) {
             return $this->gagal(404, 'Data siswa tidak ditemukan. Pilih ulang kelas dan namamu.');
@@ -286,11 +308,11 @@ final class PklLapor
         $throttle->clear($kunci, $ip);
 
         $ajuanId = (int) $milik['id'];
-        $izin    = (array) session(self::SESI);
-        $izin[$ajuanId] = ['siswa' => $siswaId, 'nama' => (string) $s['nama'], 'hp' => $hp, 't' => time()];
-        session()->set(self::SESI, $izin);
 
-        return ['ok' => true, 'http' => 200, 'pesan' => 'Nomor HP cocok.', 'data' => $this->ringkasan($ajuanId)];
+        return [
+            'ok' => true, 'http' => 200, 'pesan' => 'Nomor HP cocok.', 'data' => $this->ringkasan($ajuanId),
+            'izin' => ['ajuan' => $ajuanId, 'isi' => ['siswa' => $siswaId, 'nama' => (string) $s['nama'], 'hp' => $hp, 't' => time()]],
+        ];
     }
 
     /**
@@ -326,15 +348,22 @@ final class PklLapor
     /**
      * Siswa mengirim / memperbarui laporan. $in: ajuan_id, tanggal_mulai, tanggal_selesai, alamat (opsional), catatan (opsional).
      *
-     * @param array<string, mixed> $in
+     * [$izinToken] (API aplikasi) = [ajuan, isi] dari token izin; null = izin dari sesi web.
+     *
+     * @param array<string, mixed>      $in
+     * @param array<string, mixed>|null $izinToken
      *
      * @return array{ok: bool, http: int, pesan: string, galat?: array<string, string>, data?: array<string, mixed>}
      */
-    public function kirim(array $in, string $ip): array
+    public function kirim(array $in, string $ip, ?array $izinToken = null): array
     {
         $ajuanId = (int) ($in['ajuan_id'] ?? 0);
-        $izin    = (array) session(self::SESI);
-        $milik   = $izin[$ajuanId] ?? null;
+        if ($izinToken !== null) {
+            $milik = (int) ($izinToken['ajuan'] ?? 0) === $ajuanId ? ($izinToken['isi'] ?? null) : null;
+        } else {
+            $izin  = (array) session(self::SESI);
+            $milik = $izin[$ajuanId] ?? null;
+        }
         if (! is_array($milik) || (time() - (int) ($milik['t'] ?? 0)) > self::TTL) {
             return $this->gagal(403, 'Sesi sudah habis. Pilih namamu dan ketik nomor HP lagi.');
         }

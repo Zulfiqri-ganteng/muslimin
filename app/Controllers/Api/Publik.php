@@ -4,6 +4,7 @@ namespace App\Controllers\Api;
 
 use App\Libraries\LayananPublik;
 use App\Models\AbsensiGuruModel;
+use App\Models\DokumenModel;
 use App\Models\FotoSekolahModel;
 use App\Models\AbsensiHariModel;
 use App\Models\GuruModel;
@@ -323,6 +324,59 @@ class Publik extends BaseApiController
             'sekarang'    => $this->nowContext() + ['waktu' => date('Y-m-d H:i:s')],
             'web'         => ['beranda' => site_url('/'), 'bantuan' => site_url('bantuan'), 'profil' => site_url('profil'), 'pengumuman' => site_url('pengumuman')],
         ], 'Bahan beranda.');
+    }
+
+    /**
+     * GET /api/v1/publik/dokumen?q=&page= — Dokumen sekolah (layanan publik LY2) = web `dokumen-publik` (Berbagi::publik):
+     * hanya dokumen bervisibilitas publik, digerbangi settings.dokumen_publik, cari judul/nama berkas/keterangan, 20 per
+     * halaman, terbaru dulu. Isi baris = partial web `baris_berkas` (ikon, info "PDF · 1,2 MB · tanggal"). Berkas dibuka
+     * (`url_lihat`) dan diunduh (`url_unduh`) lewat rute web publik yang SAMA, supaya hitungan lihat/unduh & log tetap satu jalur.
+     */
+    public function dokumen()
+    {
+        $setting = (new SettingModel())->get();
+        if ((int) ($setting['dokumen_publik'] ?? 0) !== 1) {
+            return $this->failure('Daftar dokumen publik sedang dinonaktifkan oleh sekolah.', 404, ['kode' => 'publik_mati']);
+        }
+
+        helper('dokumen');
+        $q     = trim((string) $this->request->getGet('q'));
+        $page  = max(1, (int) ($this->request->getGet('page') ?? 1));
+        $model = new DokumenModel();
+        $rows  = $model->cariSemua(['q' => $q, 'visibilitas' => 'publik', 'urut' => 'created_at', 'arah' => 'DESC'])
+            ->paginate(20, 'default', $page);
+        $pager = $model->pager;
+
+        // Sama dengan partials/baris_berkas.php (ikon satu warna per jenis berkas).
+        $ikonJenis = [
+            'pdf' => 'file-pdf', 'dokumen' => 'file-word', 'spreadsheet' => 'file-csv', 'presentasi' => 'file-ppt', 'gambar' => 'file-image',
+            'audio' => 'file-music', 'video' => 'file-video', 'arsip' => 'file-zip',
+        ];
+        $items = array_map(static function (array $r) use ($ikonJenis): array {
+            $tautan = ($r['tipe'] ?? 'berkas') === 'tautan';
+            $id     = (int) $r['id'];
+            $info   = array_values(array_filter([
+                strtoupper((string) ($r['ekstensi'] ?: ($tautan ? 'tautan' : $r['kategori']))),
+                $tautan ? 'Tautan ' . (string) $r['penyedia'] : dokumen_ukuran_manusia((int) $r['ukuran']),
+                LayananPublik::tanggal((string) $r['created_at'], false),
+            ]));
+
+            return [
+                'id'          => $id,
+                'judul'       => (string) $r['judul'],
+                'deskripsi'   => trim((string) ($r['deskripsi'] ?? '')),
+                'tipe'        => $tautan ? 'tautan' : 'berkas',
+                'ikon'        => $tautan ? 'link' : ($ikonJenis[(string) $r['kategori']] ?? 'file'),
+                'info'        => implode(' · ', $info),
+                'nama_berkas' => $tautan ? null : (string) ($r['nama_asli'] ?: $r['judul']),
+                'tanggal'     => (string) $r['created_at'],
+                'url'         => $tautan ? (string) $r['url_eksternal'] : null,
+                'url_lihat'   => $tautan ? null : site_url('dokumen-publik/' . $id . '/berkas'),
+                'url_unduh'   => $tautan ? null : site_url('dokumen-publik/' . $id . '/unduh'),
+            ];
+        }, $rows);
+
+        return $this->collection($items, ['page' => $page, 'perPage' => 20, 'total' => $pager ? $pager->getTotal() : count($items)], 'Dokumen sekolah.', ['q' => $q]);
     }
 
     /** @return array{guru: int, kelas: int, mapel: int, siswa: int} angka agregat (sama dengan beranda web; di-cache 30 menit) */

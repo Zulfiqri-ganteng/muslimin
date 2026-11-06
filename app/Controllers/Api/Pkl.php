@@ -25,6 +25,7 @@ use App\Libraries\PklWa;
 use App\Libraries\PklWaKeputusan;
 use App\Libraries\SuratJenis;
 use App\Libraries\SuratPerpanjangan;
+use App\Libraries\SuratWa;
 use App\Models\AuditModel;
 use App\Models\PklPengajuanModel;
 use App\Models\PklPengaturanModel;
@@ -611,10 +612,28 @@ class Pkl extends BaseApiController
             'wa_templat_perbaikan' => PklWaKeputusan::kolomAda() ? PklWaKeputusan::templat('perbaikan', $this->p) : null,
             'wa_templat_tolak'     => PklWaKeputusan::kolomAda() ? PklWaKeputusan::templat('ditolak', $this->p) : null,
             'wa_penanda_keputusan' => PklWaKeputusan::TOKEN,
+            // Tambahan 2026-11-02 (layar aplikasi "Biaya & WhatsApp" = tab web yang sama): templat lain yang ada di tab itu,
+            // teks bawaan untuk "Kembalikan ke pesan bawaan", dan bahan "Contoh hasil". null = kolomnya belum dimigrasi.
+            'wa_templat_balasan'   => SuratWa::kolomAda() ? SuratWa::templat($this->p) : null,
+            'wa_templat_keluar'    => PklWaKeputusan::kolomAda() && PklKeluar::tabelAda() ? PklWaKeputusan::templat('keluar', $this->p) : null,
+            'wa_bawaan'            => [
+                'pesan'     => PklWa::PESAN_BAWAAN,
+                'balasan'   => SuratWa::PESAN_BAWAAN,
+                'perbaikan' => PklWaKeputusan::PESAN_PERBAIKAN,
+                'tolak'     => PklWaKeputusan::PESAN_TOLAK,
+                'keluar'    => PklWaKeputusan::PESAN_KELUAR,
+            ],
+            'wa_contoh'            => [
+                'sekolah' => (string) ((new SettingModel())->get()['school_name'] ?? ''),
+                'tautan'  => config('Pkl')->tautan(),
+            ],
         ], 'Jenis biaya PKL.');
     }
 
-    /** POST pkl/biaya (hak 'pengaturan') — {"biaya": {"spp": {"nama": "…", "nominal": 150000, "aktif": true}}, "wa_pesan": "…"} */
+    /**
+     * POST pkl/biaya (hak 'pengaturan') — {"biaya": {"spp": {"nama": "…", "nominal": 150000, "aktif": true}}, "wa_pesan": "…"}
+     * + opsional wa_pesan_balasan (2026-11-02, aturan sama dengan web), wa_pesan_perbaikan, wa_pesan_tolak, wa_pesan_keluar.
+     */
     public function biayaSimpan(): ResponseInterface
     {
         if (! HakAkses::boleh($this->peran(), 'admin/pkl/pengaturan')) {
@@ -643,6 +662,15 @@ class Pkl extends BaseApiController
                 return $this->invalid(['wa_pesan' => $galat], $galat);
             }
             db_connect()->table('pkl_pengaturan')->where('id', 1)->update(['wa_pesan' => ($pesan === '' || $pesan === PklWa::PESAN_BAWAAN) ? null : $pesan, 'updated_at' => date('Y-m-d H:i:s')]);
+        }
+        // Pesan Surat Balasan siap diambil (SuratWa) — sama dengan Admin\PklBiaya::simpanBiaya (penanda PklWa).
+        if (array_key_exists('wa_pesan_balasan', $in) && SuratWa::kolomAda()) {
+            $pesan = trim((string) $in['wa_pesan_balasan']);
+            $galat = ($pesan !== '' && $pesan !== SuratWa::PESAN_BAWAAN) ? PklWa::periksaPesan($pesan) : null;
+            if ($galat !== null) {
+                return $this->invalid(['wa_pesan_balasan' => $galat], 'Pesan Surat Balasan: ' . $galat);
+            }
+            db_connect()->table('pkl_pengaturan')->where('id', 1)->update(['wa_pesan_balasan' => ($pesan === '' || $pesan === SuratWa::PESAN_BAWAAN) ? null : $pesan, 'updated_at' => date('Y-m-d H:i:s')]);
         }
         foreach (['wa_pesan_perbaikan' => PklWaKeputusan::PESAN_PERBAIKAN, 'wa_pesan_tolak' => PklWaKeputusan::PESAN_TOLAK, 'wa_pesan_keluar' => PklWaKeputusan::PESAN_KELUAR] as $kolom => $bawaan) {
             if (! array_key_exists($kolom, $in) || ! PklWaKeputusan::kolomAda() || ($kolom === 'wa_pesan_keluar' && ! \App\Libraries\PklKeluar::tabelAda())) {

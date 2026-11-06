@@ -10,6 +10,7 @@ use App\Controllers\LaporPkl;
 use App\Libraries\ApiAuth;
 use App\Libraries\HakAkses;
 use App\Libraries\HakPeran;
+use App\Libraries\LayananToken;
 use App\Libraries\LoginThrottle;
 use App\Libraries\MenuAdmin;
 use App\Libraries\PklAjuan;
@@ -128,6 +129,7 @@ class UjiLapor extends BaseCommand
         $this->ujiHalaman();
         $this->ujiPublik();
         $this->ujiApi();
+        $this->ujiApiPublik();
         $this->ujiWa();
         $this->ujiTtdKepsek();
 
@@ -616,6 +618,101 @@ class UjiLapor extends BaseCommand
             ApiAuth::clear();
             $this->setelPeranBawaan();
         }
+    }
+
+    // =================================================================
+    // 5d. API publik Lapor (aplikasi Android, layanan LY4; izin = token X-Izin-Token)
+    // =================================================================
+
+    /**
+     * Panggil Api\LaporPkl (publik, tanpa akun) dengan isi JSON. `--fixture <folder>` → respons disimpan sebagai fixture aplikasi.
+     *
+     * @return array{0: int, 1: array<string, mixed>}
+     */
+    private function apiPublik(string $metode, array $get = [], array $json = [], string $token = '', string $fixture = ''): array
+    {
+        $request = new \CodeIgniter\HTTP\IncomingRequest(config('App'), new \CodeIgniter\HTTP\SiteURI(config('App'), 'api/v1/publik/pkl/lapor'), $json === [] ? null : json_encode($json), new \CodeIgniter\HTTP\UserAgent());
+        \Config\Services::injectMock('request', $request);
+        $request->setGlobal('get', $get);
+        $request->setGlobal('server', ['REMOTE_ADDR' => self::IP]);
+        if ($json !== []) {
+            $request->setHeader('Content-Type', 'application/json');
+        }
+        if ($token !== '') {
+            $request->setHeader(\App\Controllers\Api\LaporPkl::HEADER_IZIN, $token);
+        }
+        $c = new \App\Controllers\Api\LaporPkl();
+        $c->initController($request, service('response'), service('logger'));
+        /** @var ResponseInterface $r */
+        $r   = $c->{$metode}();
+        $isi = json_decode((string) $r->getBody(), true) ?: [];
+        $dir = (string) (CLI::getOption('fixture') ?? '');
+        if ($fixture !== '' && $dir !== '') {
+            $simpan = $isi;
+            if ($fixture === 'lapor_siswa') { // daftar nama sekelas: hanya siswa uji — nama siswa asli tidak boleh masuk fixture
+                $simpan['data'] = array_values(array_filter($isi['data'] ?? [], static fn (array $s): bool => str_starts_with((string) $s['nama'], self::OLEH)));
+            }
+            @mkdir($dir, 0775, true);
+            file_put_contents(rtrim($dir, '/\\') . '/' . $fixture . '.json', json_encode($simpan, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) . "\n");
+        }
+
+        return [$r->getStatusCode(), $isi];
+    }
+
+    private function ujiApiPublik(): void
+    {
+        $this->bagian('API publik aplikasi: publik/pkl/lapor (LY4)');
+        $now = date('Y-m-d H:i:s');
+        foreach ([11, 12] as $n) {
+            $this->db->table('siswa')->insert([
+                'nis' => self::NIS . $n, 'nama' => self::OLEH . ' ' . $n, 'jenis_kelamin' => 'P', 'kelas_id' => $this->kelasId,
+                'no_hp' => $this->hp($n), 'status' => 'aktif', 'tanggal_lahir' => '2010-05-17', 'created_at' => $now, 'updated_at' => $now,
+            ]);
+            $this->s[$n] = (int) $this->db->insertID();
+        }
+        $this->aj['H'] = $this->ajuan($this->s[11], 'ZZUJILP Perusahaan H', [$this->s[12]]);
+
+        [$k, $j] = $this->apiPublik('index', [], [], '', 'lapor_form');
+        $ada = false;
+        foreach ($j['data']['kelas'] ?? [] as $g) {
+            $ada = $ada || in_array($this->kelasId, array_map('intval', array_column($g['kelas'] ?? [], 'id')), true);
+        }
+        $this->cek('GET publik/pkl/lapor: terbuka + kelas per tingkat (berisi kelas uji) + batas panjang', $k === 200 && ($j['data']['terbuka'] ?? false) === true && $ada
+            && (int) ($j['data']['maks_alamat'] ?? 0) === PklLapor::MAKS_ALAMAT && is_bool($j['data']['hasil_ada'] ?? null), json_encode($j['data'] ?? $j));
+        [$k, $j] = $this->apiPublik('siswa', ['kelas_id' => $this->kelasId], [], '', 'lapor_siswa');
+        $st      = array_column($j['data'] ?? [], 'status', 'id');
+        $this->cek('GET siswa: status sama dengan web (kelompok H = boleh)', $k === 200 && ($st[$this->s[11]] ?? '') === 'boleh' && ($st[$this->s[12]] ?? '') === 'boleh');
+        [$k] = $this->apiPublik('siswa');
+        $this->cek('GET siswa tanpa kelas → 422', $k === 422);
+
+        [$k, $j] = $this->apiPublik('cek', [], ['siswa_id' => $this->s[12], 'hp' => '081299998888'], '', 'lapor_cek_salah');
+        $this->cek('POST cek nomor salah → 422 (kalimat web)', $k === 422 && str_contains((string) ($j['message'] ?? ''), 'tidak cocok'), (string) ($j['message'] ?? ''));
+        [$k, $j] = $this->apiPublik('cek', [], ['siswa_id' => $this->s[12], 'hp' => $this->hp(12)], '', 'lapor_cek');
+        $token   = (string) ($j['data']['token'] ?? '');
+        $this->cek('POST cek nomor data siswa → 200 ringkasan + token', $k === 200 && $token !== '' && (int) ($j['data']['ajuan_id'] ?? 0) === $this->aj['H']
+            && count($j['data']['anggota'] ?? []) === 2 && array_key_exists('lapor', $j['data'] ?? []) && $j['data']['lapor'] === null, json_encode($j));
+        $tokenSiswa = (string) (LayananToken::buat($this->s[12])['token'] ?? '');
+        $this->cek('token izin ≠ token Layanan Siswa (tidak saling berlaku)', LayananToken::baca($token) === null && LayananToken::bacaIzin('pkl-lapor', $tokenSiswa) === null && LayananToken::bacaIzin('pkl-ajukan', $token) === null);
+
+        $isi     = ['ajuan_id' => $this->aj['H'], 'hasil' => 'semua', 'tanggal_mulai' => $this->tgl('07-01'), 'tanggal_selesai' => $this->tgl('09-30')];
+        [$k, $j] = $this->apiPublik('kirim', [], $isi, '', 'lapor_kirim_sesi_habis');
+        $this->cek('POST kirim tanpa token → 403 kode sesi_habis', $k === 403 && ($j['data']['kode'] ?? '') === 'sesi_habis');
+        [$k, $j] = $this->apiPublik('kirim', [], ['ajuan_id' => $this->aj['A']] + $isi, $token);
+        $this->cek('POST kirim dengan token ajuan lain → 403 sesi_habis', $k === 403 && ($j['data']['kode'] ?? '') === 'sesi_habis');
+        [$k, $j] = $this->apiPublik('kirim', [], ['ajuan_id' => $this->aj['H'], 'hasil' => 'sebagian', 'diterima' => [], 'tanggal_mulai' => $this->tgl('09-30'), 'tanggal_selesai' => $this->tgl('07-01')], $token, 'lapor_kirim_galat');
+        $this->cek('POST kirim isian salah → 422 galat per kolom (kalimat web)', $k === 422 && isset($j['data']['errors']['diterima'], $j['data']['errors']['tanggal_selesai']), json_encode($j));
+        [$k, $j] = $this->apiPublik('kirim', [], ['ajuan_id' => $this->aj['H'], 'hasil' => 'sebagian', 'diterima' => [$this->s[11]], 'tanggal_mulai' => $this->tgl('07-01'),
+            'tanggal_selesai' => $this->tgl('09-30'), 'alamat' => 'Jl. Industri Raya No. 9, Cikarang, Bekasi 17530', 'catatan' => 'Pembimbing di perusahaan: Bu Sari'], $token, 'lapor_kirim');
+        $l = $this->lapor('H');
+        $this->cek('POST kirim → 200; laporan tersimpan (sebagian; pelapor = siswa pemilik token)', $k === 200 && ($j['data']['hasil'] ?? '') === 'sebagian' && ($j['data']['ulang'] ?? true) === false
+            && ($l['status'] ?? '') === 'baru' && (int) ($l['siswa_id'] ?? 0) === $this->s[12], json_encode($j));
+
+        [$k, $j] = $this->apiPublik('cek', [], ['siswa_id' => $this->s[11], 'hp' => '081299990000'], '', 'lapor_cek_ulang');
+        $token2  = (string) ($j['data']['token'] ?? '');
+        $this->cek('POST cek pengaju (HP di ajuan) → laporan lama ikut (baru, sebagian, diterima)', $k === 200 && ($j['data']['lapor']['status'] ?? '') === 'baru'
+            && ($j['data']['lapor']['hasil'] ?? '') === 'sebagian' && ($j['data']['lapor']['diterima'] ?? []) === [$this->s[11]], json_encode($j['data']['lapor'] ?? $j));
+        [$k, $j] = $this->apiPublik('kirim', [], $isi + ['alamat' => '', 'catatan' => ''], $token2);
+        $this->cek('POST kirim ulang → 200 ulang=true, laporan diperbarui (semua diterima)', $k === 200 && ($j['data']['ulang'] ?? false) === true && ($this->lapor('H')['hasil'] ?? '') === 'semua', json_encode($j));
     }
 
     // =================================================================

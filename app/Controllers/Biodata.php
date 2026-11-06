@@ -32,9 +32,11 @@ class Biodata extends BaseController
     private const SESI_BUKA = 'biodata_buka';
 
     /** Berapa lama izin buka-ulang berlaku (detik). */
-    private const BUKA_TTL = 3600;
+    protected const BUKA_TTL = 3600;
 
-    private array $setting;
+    // protected (bukan private): Api\BiodataPublik (aplikasi Android, LY6) adalah turunan controller ini supaya aturannya SAMA persis;
+    // ia hanya mengganti kait sesi (izinkanBuka, sudahDibuka, kirimSelesai) dengan token dan bentuk JSON-nya.
+    protected array $setting;
 
     public function __construct()
     {
@@ -134,9 +136,7 @@ class Biodata extends BaseController
         }
 
         $throttle->clear($kunci, $ip);
-        $buka      = (array) session(self::SESI_BUKA);
-        $buka[$id] = time();
-        session()->set(self::SESI_BUKA, $buka);
+        $this->izinkanBuka($id);
 
         // Isian lama dibuat sebelum data resmi sekolah masuk: NIS/NISN yang kini tercatat di Master Siswa
         // mengisi kolom yang masih kosong, supaya siswa tinggal memeriksa (dicek SETELAH verifikasi di atas).
@@ -216,15 +216,33 @@ class Biodata extends BaseController
             ], 422);
         }
 
-        $buka = (array) session(self::SESI_BUKA);
-        unset($buka[$id]);
-        session()->set(self::SESI_BUKA, $buka);
-        session()->setFlashdata('biodata_selesai', [
+        return $this->kirimSelesai($id, [
             'nama'   => $data['nama'],
             'kelas'  => $siswa['nama_kelas'],
             'no'     => $no,
             'revisi' => $isian !== null,
         ]);
+    }
+
+    /** Izin kirim ulang isian perbaikan siswa [$siswaId] sesudah NISN/tanggal lahir terbukti (web: sesi, berlaku BUKA_TTL). */
+    protected function izinkanBuka(int $siswaId): void
+    {
+        $buka           = (array) session(self::SESI_BUKA);
+        $buka[$siswaId] = time();
+        session()->set(self::SESI_BUKA, $buka);
+    }
+
+    /**
+     * Isian tersimpan (web: izin buka dicabut, ringkasan [$info] ke halaman selesai lewat flashdata).
+     *
+     * @param array<string, mixed> $info
+     */
+    protected function kirimSelesai(int $siswaId, array $info): ResponseInterface
+    {
+        $buka = (array) session(self::SESI_BUKA);
+        unset($buka[$siswaId]);
+        session()->set(self::SESI_BUKA, $buka);
+        session()->setFlashdata('biodata_selesai', $info);
 
         return $this->json(['ok' => true, 'redirect' => site_url('biodata/selesai')]);
     }
@@ -254,7 +272,7 @@ class Biodata extends BaseController
      *
      * @return array<string, list<array{id:int, nama:string}>>
      */
-    private function daftarKelas(): array
+    protected function daftarKelas(): array
     {
         return master_cache('siswa', 'biodata_kelas|v1', 1800, static function () {
             $rows = db_connect()->table('kelas')
@@ -280,7 +298,7 @@ class Biodata extends BaseController
     }
 
     /** Siswa aktif (belum dihapus) beserta nama kelasnya, atau null. */
-    private function siswaAktif(int $id): ?array
+    protected function siswaAktif(int $id): ?array
     {
         if ($id <= 0) {
             return null;
@@ -299,7 +317,7 @@ class Biodata extends BaseController
      *
      * @return array<string, string>
      */
-    private function cekKeunikan(array $data, int $siswaId): array
+    protected function cekKeunikan(array $data, int $siswaId): array
     {
         $galat = [];
         $db    = db_connect();
@@ -325,14 +343,14 @@ class Biodata extends BaseController
         return $galat;
     }
 
-    private function sudahDibuka(int $id): bool
+    protected function sudahDibuka(int $id): bool
     {
         $waktu = (int) (((array) session(self::SESI_BUKA))[$id] ?? 0);
 
         return $waktu > 0 && (time() - $waktu) <= self::BUKA_TTL;
     }
 
-    private function pesanTerkunci(string $status): string
+    protected function pesanTerkunci(string $status): string
     {
         return $status === 'disetujui'
             ? 'Biodatamu sudah diverifikasi sekolah. Jika ada perubahan, hubungi wali kelas atau operator sekolah.'
@@ -347,7 +365,7 @@ class Biodata extends BaseController
         return site_url($host === strtolower(config('Biodata')->host) ? '/' : 'biodata');
     }
 
-    private function json(array $body, int $status = 200): ResponseInterface
+    protected function json(array $body, int $status = 200): ResponseInterface
     {
         return $this->response
             ->setStatusCode($status)

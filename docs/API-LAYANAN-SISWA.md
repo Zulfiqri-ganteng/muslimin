@@ -87,11 +87,63 @@ Balasan POST:
 - `409 data.kode`: `tidak_boleh` (kembali ke halaman siswa + tampilkan `message`), `tolak` / `gagal` (tampilkan `message` di formulir lalu muat ulang bahannya).
 - `401`: token habis, ulangi masuk.
 
+## LY4 — Lapor Diterima PKL (`publik/pkl/lapor`, ditambah 2026-11-01)
+`Api\LaporPkl` = form web `pkl/lapor` (`Controllers\LaporPkl`); aturan, pesan & penyimpanan SAMA (`Libraries\PklLapor`). Tidak memakai
+token Layanan Siswa: bukti diri lapor = nomor HP (seperti web), dan izin kirimnya (di web: sesi 1 jam) dibawa token **`X-Izin-Token`**
+(`LayananToken::buatIzin('pkl-lapor', …)`, kunci turunan sendiri → tidak berlaku sebagai token Layanan Siswa, dan sebaliknya).
+- `GET publik/pkl/lapor` → `{terbuka, kelas: [{tingkat, kelas: [{id, nama}]}], hasil_ada, maks_alamat, maks_catatan}`; ditutup Admin
+  (`lapor_buka` = 0) → `{terbuka: false}` (tampilkan "Form lapor sedang ditutup" web).
+- `GET publik/pkl/lapor/siswa?kelas_id=` → `[{id, nama, status}]`, status `boleh|sudah_lapor|dikembalikan|selesai|belum_disetujui|ajukan_lagi|belum_ajuan`
+  (lencana & kalimat per status = `pkl-lapor.js` / `pkl/lapor.php`). Tanpa kelas → 422; ditutup → 403 `kode: tutup`.
+- `POST publik/pkl/lapor/cek` `{siswa_id, hp}` → ringkasan ajuan (`ajuan_id, kode, perusahaan, alamat, mulai, selesai, anggota[], balasan,
+  hasil_ada, lapor{status, status_teks, alasan, mulai, selesai, alamat, catatan, pelapor, waktu, hasil, diterima[]}|null`) + `token`,
+  `berlaku_sampai`. Galat = kalimat web (404 siswa, 409 ajuan belum ada/belum disetujui, 422 HP salah, 429 terlalu banyak percobaan);
+  503 bila `encryption.key` kosong.
+- `POST publik/pkl/lapor/kirim` (header `X-Izin-Token`) `{ajuan_id, hasil: semua|sebagian|ditolak, diterima: [siswa_id], tanggal_mulai,
+  tanggal_selesai, alamat, catatan}` → 200 `{kode, perusahaan, periode, pelapor, anggota[], ulang, hasil, hasil_teks, diterima[], ditolak[]}`
+  (isi layar "Laporan terkirim"). 422 `data.errors.{hasil|diterima|tanggal_mulai|tanggal_selesai|alamat|catatan}`; 403 `kode: sesi_habis`
+  (token tidak ada/kedaluwarsa/ajuan lain → ulangi langkah 1); 409 kalimat web (Balasan sudah dibuat, sudah diproses, gagal simpan).
+- Uji: `php spark dev:uji-lapor` bagian 5d (12 cek; `--fixture <folder>` menyimpan respons untuk tes aplikasi).
+
+## LY5 — Ajukan tempat PKL (`publik/pkl`, ditambah 2026-11-01)
+`Api\PklAjukan` = TURUNAN controller web `Controllers\Pkl` (form `pkl`), jadi aturan, pesan & pengamannya sama persis (satu siswa satu
+ajuan, pesan terkunci, batas kiriman per IP, `LoginThrottle` saat buka). Yang berbeda hanya bentuk: isian JSON (dibaca sebagai POST;
+`true` → "1"), amplop API, izin kirim PERBAIKAN = token `X-Izin-Token` (`buatIzin('pkl-ajukan', {ajuan}, 1 jam)`; web: sesi), dan
+ringkasan "terkirim" langsung di respons (web: halaman `pkl/selesai`). Tanggal PKL & tanggal lahir tidak ditanyakan (sama dengan web).
+- `GET publik/pkl` → `{terbuka:true, kelas: [{tingkat, kelas: [{id, nama}]}], maks_siswa, batas_hari, lapor_terbuka}`; ditutup →
+  `{terbuka:false, alasan: belum_dibuka|sudah_ditutup|belum_siap, judul_tutup, pesan_tutup, lapor_terbuka}` (kalimat `pkl/tutup.php`).
+- `GET publik/pkl/siswa?kelas_id=` → `[{id, nama, jk, status: belum|ditolak|menunggu|disetujui|perbaikan|lepas, peran: pengaju|teman|null,
+  batas: Y-m-d|null}]` (lencana & panel per status = `pkl.js` / `pkl/form.php`). 422 tanpa kelas / kelas belum boleh; 403 form tutup.
+- `GET publik/pkl/perusahaan?q=` (≥ 2 huruf) → saran `[{id, nama, alamat, kota, telepon, kontak_nama, kontak_jabatan}]`.
+- `POST publik/pkl/buka` `{siswa_id, hp}` (hanya PENGAJU ajuan `perbaikan`) → `{ajuan_id, perusahaan_*, kontak_*, hp, teman: [{id, nama,
+  kelas, hp}], catatan, token}`; 404/409/422/429 kalimat web; 503 bila `encryption.key` kosong.
+- `POST publik/pkl/kirim` `{siswa_id, perusahaan_nama, perusahaan_alamat, perusahaan_kota, perusahaan_telepon, kontak_nama, kontak_jabatan,
+  hp, pernyataan: "1", teman: [id], teman_hp: {id: hp}, ajuan_id?}` (+ `X-Izin-Token` bila `ajuan_id`) → 200 `{nama, kelas, no, revisi,
+  perusahaan, jumlah, batas, hari}`. 422 `data.errors.{perusahaan_*|kontak_nama|hp|pernyataan|teman|hp_teman_<id>}`; 409 pesan terkunci /
+  teman bentrok (`data.errors.teman`); 403 belum buka / token habis; 429 batas kiriman.
+- Uji: `php spark dev:uji-pkl-publik` (24 cek: 11 jalur web sebagai patokan + 13 jalur API, skenario sama; `--fixture <folder>`).
+
+## LY6 — Isi biodata siswa (`publik/biodata`, ditambah 2026-11-02)
+`Api\BiodataPublik` = TURUNAN controller web `Controllers\Biodata` (form `biodata`), jadi aturan (`BiodataForm`), pesan & pengamannya sama
+persis (satu isian per siswa, NISN/NIS unik, isian terkunci sesudah kirim, buka ulang dengan NISN ATAU tanggal lahir + `LoginThrottle`).
+Yang berbeda hanya bentuk (sama dengan LY5; trait `IsianJsonSebagaiPost` dipakai keduanya): isian JSON dibaca sebagai POST, amplop API,
+izin kirim PERBAIKAN = token `X-Izin-Token` (`buatIzin('biodata-buka', {siswa}, 1 jam)`; web: sesi), ringkasan "terkirim" di respons.
+- `GET publik/biodata` → `{terbuka:true, kelas: [{tingkat, kelas: [{id, nama}]}], sekolah, label, bagian, wajib, agama, status_keluarga,
+  pekerjaan, tahun_lahir: [min, maks], tahun_terima: [min, maks]}` (label/bagian/wajib = `BiodataForm`, pilihan = `SiswaModel`); ditutup →
+  `{terbuka:false, judul_tutup, pesan_tutup}` (kalimat `biodata/tutup.php`).
+- `GET publik/biodata/siswa?kelas_id=` → `[{id, nama, jk, status: belum|menunggu|disetujui|perbaikan}]`.
+- `POST publik/biodata/buka` `{siswa_id, nisn?, tanggal_lahir?}` (cukup salah satu; hanya isian `perbaikan`) → isian lama (kolom server;
+  NIS/NISN resmi mengisi yang masih kosong) + `catatan` + `token`; 404/409/422/429 kalimat web; 503 bila kunci aplikasi kosong.
+- `POST publik/biodata/kirim` (kolom `BiodataForm` + `siswa_id`, `ortu_sama: "1"|"0"`, `ortu_telepon1/2`, `punya_wali: ya|tidak`,
+  `pernyataan: "1"`; + `X-Izin-Token` untuk perbaikan) → 200 `{nama, kelas, no, revisi}`. 422 `data.errors.{kolom|ortu_telepon|punya_wali|
+  pernyataan}`; 409 terkunci; 403 belum buka / token habis.
+- Uji: `php spark dev:uji-biodata-publik` (22 cek: 10 jalur web sebagai patokan + 12 jalur API, skenario sama; `--fixture <folder>`).
+
 ## Keamanan
 - Token = HMAC-SHA256 (kunci turunan `encryption.key`) atas `{siswa_id, kedaluwarsa}`; tanpa tabel, tidak bisa dipalsukan, kedaluwarsa 30 menit
   (`Libraries\LayananToken`). Bukti diri sama dengan web: NISN ATAU tanggal lahir, dibatasi `LoginThrottle` (per siswa + IP).
 - Profil tidak memuat NISN / tanggal lahir. Daftar nama per kelas sama dengan web (id + nama saja).
-- CORS mengizinkan header `X-Layanan-Token`.
+- CORS mengizinkan header `X-Layanan-Token` dan `X-Izin-Token` (izin form lapor PKL, ajukan PKL, biodata).
 
 ## Deploy
 `git pull` + `php spark migrate` (migrasi `2026-10-27-000001_PklPerpanjangan`) + pastikan `encryption.key` terisi di `.env` hosting

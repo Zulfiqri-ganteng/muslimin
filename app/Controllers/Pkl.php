@@ -40,14 +40,16 @@ class Pkl extends BaseController
     private const SESI_BUKA = 'pkl_buka';
 
     /** Berapa lama izin buka-ulang berlaku (detik). */
-    private const BUKA_TTL = 3600;
+    protected const BUKA_TTL = 3600;
 
     /** Banjir kiriman: maksimum ajuan dari satu IP dalam JENDELA_IP detik. Longgar — satu kelas bisa memakai satu WiFi. */
     private const BATAS_IP   = 100;
     private const JENDELA_IP = 600;
 
-    private array $setting;
-    private array $p;
+    // protected (bukan private): Api\PklAjukan (aplikasi Android, LY5) adalah turunan controller ini supaya aturannya SAMA persis;
+    // ia hanya mengganti kait sesi (izinkanBuka, sudahDibuka, kirimSelesai) dengan token dan bentuk JSON-nya.
+    protected array $setting;
+    protected array $p;
 
     public function __construct()
     {
@@ -182,9 +184,7 @@ class Pkl extends BaseController
         }
 
         $throttle->clear($kunci, $ip);
-        $buka               = (array) session(self::SESI_BUKA);
-        $buka[$milik['id']] = time();
-        session()->set(self::SESI_BUKA, $buka);
+        $this->izinkanBuka((int) $milik['id']);
 
         $anggota = $model->anggotaDetail((int) $milik['id']);
         $pengaju = $anggota[0] ?? [];
@@ -276,10 +276,7 @@ class Pkl extends BaseController
             return $this->tolakHasil($hasil, $id, $model);
         }
 
-        $buka = (array) session(self::SESI_BUKA);
-        unset($buka[$hasil['id']]);
-        session()->set(self::SESI_BUKA, $buka);
-        session()->setFlashdata('pkl_selesai', [
+        return $this->kirimSelesai((int) $hasil['id'], [
             'nama'       => $siswa['nama'],
             'kelas'      => $siswa['nama_kelas'],
             'no'         => PklPengajuanModel::kode((int) $hasil['id']),
@@ -289,6 +286,27 @@ class Pkl extends BaseController
             'batas'      => substr((string) PklPengajuanModel::batasKeputusan(date('Y-m-d H:i:s'), PklPengaturanModel::batasHari($this->p)), 0, 10),
             'hari'       => PklPengaturanModel::batasHari($this->p),
         ]);
+    }
+
+    /** Izin kirim ulang ajuan perbaikan [$ajuanId] sesudah HP pengaju terbukti (web: sesi, berlaku BUKA_TTL). */
+    protected function izinkanBuka(int $ajuanId): void
+    {
+        $buka           = (array) session(self::SESI_BUKA);
+        $buka[$ajuanId] = time();
+        session()->set(self::SESI_BUKA, $buka);
+    }
+
+    /**
+     * Ajuan tersimpan (web: izin buka dicabut, ringkasan [$info] ke halaman selesai lewat flashdata).
+     *
+     * @param array<string, mixed> $info
+     */
+    protected function kirimSelesai(int $ajuanId, array $info): ResponseInterface
+    {
+        $buka = (array) session(self::SESI_BUKA);
+        unset($buka[$ajuanId]);
+        session()->set(self::SESI_BUKA, $buka);
+        session()->setFlashdata('pkl_selesai', $info);
 
         return $this->json(['ok' => true, 'redirect' => site_url('pkl/selesai')]);
     }
@@ -318,7 +336,7 @@ class Pkl extends BaseController
      *
      * @return array<string, list<array{id:int, nama:string}>>
      */
-    private function daftarKelas(): array
+    protected function daftarKelas(): array
     {
         $boleh = PklPengaturanModel::tingkatBoleh($this->p);
         if ($boleh === []) {
@@ -350,7 +368,7 @@ class Pkl extends BaseController
     }
 
     /** Kelas bila tingkatnya termasuk yang boleh mengajukan, selain itu null. */
-    private function kelasBoleh(int $kelasId): ?array
+    protected function kelasBoleh(int $kelasId): ?array
     {
         $k = db_connect()->table('kelas')->select('id, nama_kelas, tingkat')
             ->where('id', $kelasId)->where('deleted_at', null)->get()->getRowArray();
@@ -359,7 +377,7 @@ class Pkl extends BaseController
     }
 
     /** Siswa aktif (belum dihapus) di kelas yang boleh mengajukan, lengkap dengan nama kelasnya, atau null. */
-    private function siswaBoleh(int $id): ?array
+    protected function siswaBoleh(int $id): ?array
     {
         if ($id <= 0) {
             return null;
@@ -383,7 +401,7 @@ class Pkl extends BaseController
      *
      * @return array{0: list<array{siswa_id:int, kelas_id:?int, peran:string, hp:?string}>, 1: array<string, string>}
      */
-    private function periksaTeman(array $ids, int $pengajuId, ?int $ajuanSendiri, array $hpTeman = []): array
+    protected function periksaTeman(array $ids, int $pengajuId, ?int $ajuanSendiri, array $hpTeman = []): array
     {
         if ($ids === []) {
             return [[], []];
@@ -414,7 +432,7 @@ class Pkl extends BaseController
     }
 
     /** Ubah hasil gagal PklAjuan menjadi balasan JSON yang ramah. */
-    private function tolakHasil(array $hasil, int $pengajuId, PklPengajuanModel $model): ResponseInterface
+    protected function tolakHasil(array $hasil, int $pengajuId, PklPengajuanModel $model): ResponseInterface
     {
         switch ($hasil['kode'] ?? 'galat') {
             case 'bentrok':
@@ -442,7 +460,7 @@ class Pkl extends BaseController
         }
     }
 
-    private function sudahDibuka(int $ajuanId): bool
+    protected function sudahDibuka(int $ajuanId): bool
     {
         $waktu = (int) (((array) session(self::SESI_BUKA))[$ajuanId] ?? 0);
 
@@ -455,7 +473,7 @@ class Pkl extends BaseController
      *
      * @param array<string, mixed> $milik baris ajuan aktif (PklPengajuanModel::aktifMilik)
      */
-    private function pesanTerkunci(array $milik, int $siswaId = 0): string
+    protected function pesanTerkunci(array $milik, int $siswaId = 0): string
     {
         $kode = isset($milik['id']) ? PklPengajuanModel::kode((int) $milik['id']) : 'ajuanmu';
 
@@ -514,7 +532,7 @@ class Pkl extends BaseController
         return site_url($host === strtolower(config('Pkl')->host) ? '/' : 'pkl');
     }
 
-    private function json(array $body, int $status = 200): ResponseInterface
+    protected function json(array $body, int $status = 200): ResponseInterface
     {
         return $this->response
             ->setStatusCode($status)

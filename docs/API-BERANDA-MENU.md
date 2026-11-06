@@ -63,6 +63,25 @@ sama dengan web (`HakAkses::boleh`):
 - Menu yang layarnya BELUM ada di aplikasi → aplikasi menampilkannya redup "Segera" (aturan user).
 - Tanpa token → 401. Galat lain tidak ada (peran tanpa menu → `grup` hanya berisi Sistem/Profil).
 
+## LY2 — `GET publik/dokumen?q=&page=` (TANPA token; ditambah 2026-11-01)
+`App\Controllers\Api\Publik::dokumen` = halaman web `dokumen-publik` (`Berbagi::publik`): hanya dokumen bervisibilitas **publik**, cari
+judul/nama berkas/keterangan (`q`), **20 per halaman**, terbaru dulu (`cariSemua` yang sama dengan web). Amplop daftar biasa:
+```json
+{"data":[
+  {"id":7,"judul":"…","deskripsi":"","tipe":"berkas","ikon":"file-pdf","info":"PDF · 269 KB · 20 September 2026",
+   "nama_berkas":"….pdf","tanggal":"2026-09-20 11:31:31","url":null,
+   "url_lihat":"…/dokumen-publik/7/berkas","url_unduh":"…/dokumen-publik/7/unduh"},
+  {"id":4,"judul":"…","deskripsi":"…","tipe":"tautan","ikon":"link","info":"TAUTAN · Tautan youtube · 20 September 2026",
+   "nama_berkas":null,"tanggal":"…","url":"https://youtu.be/…","url_lihat":null,"url_unduh":null}],
+ "meta":{"pagination":{"page":1,"per_page":20,"total":2,"total_pages":1},"q":""}}
+```
+- `ikon` & `info` = partial web `baris_berkas` (ikon Flowbite per jenis; "JENIS · ukuran/Tautan penyedia · tanggal").
+- Berkas: **Lihat** = `url_lihat` (dihitung `jml_lihat`, log `pratinjau`), **Unduh** = `url_unduh` (dihitung `jml_unduh`, log `unduh`) —
+  rute web publik yang SAMA, tanpa token; galat di sana = halaman HTML 404 ("Berkas tidak ditemukan", dst.). Tautan: **Buka** = `url`.
+- `dokumen_publik` dimatikan Admin → **404** `{"message":"Daftar dokumen publik sedang dinonaktifkan oleh sekolah.","data":{"kode":"publik_mati"}}`
+  (layanan `dokumen` di `publik/beranda` juga tersembunyi). `total_pages` = 0 bila tidak ada hasil.
+- Uji 2026-11-01 (HTTP lokal): mati → 404; dinyalakan sementara → 2 baris (berkas + tautan), `q=kisi` 1 baris, `q` tanpa hasil 0; dipulihkan.
+
 ## Pengujian
 `php spark dev:uji-api-android` — B1: semua bagian, nama & teks Tentang = sumber web, layanan & status sama dengan web, kelompok/bagian,
 unggulan, sorotan hanya layanan dibuka, foto, pengumuman, tanya-jawab, statistik agregat, saklar jadwal (dimatikan → layanan jadwal

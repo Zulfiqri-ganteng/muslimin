@@ -119,7 +119,7 @@ Terbaca di: `auth/login`, `auth/biometric/login`, `auth/me` → `data.admin.hak_
 | Metode | Endpoint | Hak | Keterangan |
 |---|---|---|---|
 | GET | `pkl/biaya[?semua=1]` | PKL | jenis biaya aktif (`semua=1` + hak `pengaturan`: termasuk nonaktif), `sumber_beasiswa`, `bulan_default`, `maks_jumlah_bulan`, `aturan`, `wa_templat`, `wa_penanda` |
-| POST | `pkl/biaya` | `pengaturan` | `{biaya:{kode:{nama,nominal,aktif}}, wa_pesan?, wa_pesan_perbaikan?, wa_pesan_tolak?}` — sebagian boleh; 422 bila nominal tak sah / semua nonaktif / penanda asing. GET juga memuat `wa_templat_perbaikan`, `wa_templat_tolak`, `wa_penanda_keputusan` |
+| POST | `pkl/biaya` | `pengaturan` | `{biaya:{kode:{nama,nominal,aktif}}, wa_pesan?, wa_pesan_balasan?, wa_pesan_perbaikan?, wa_pesan_tolak?, wa_pesan_keluar?}` — sebagian boleh; 422 bila nominal tak sah / semua nonaktif / penanda asing. GET juga memuat `wa_templat_perbaikan`, `wa_templat_tolak`, `wa_penanda_keputusan`; sejak 2026-11-02 (layar aplikasi "Biaya & WhatsApp") juga `wa_templat_balasan`, `wa_templat_keluar` (null = kolom belum dimigrasi), `wa_bawaan{pesan,balasan,perbaikan,tolak,keluar}` ("Kembalikan ke pesan bawaan"), `wa_contoh{sekolah,tautan}` ("Contoh hasil"); `wa_pesan_balasan` diperiksa dengan penanda PklWa (422 `data.errors.wa_pesan_balasan`) |
 | GET | `pkl/surat/siap?mode=&ids[]=` | `surat` | keadaan biaya tiap siswa sebelum unduh; tiap siswa membawa `bulan_saran` (YYYY-MM: bulan pertama mulai bulan berjalan yang biaya bulanannya belum lengkap — nilai awal pemilih bulan) |
 | POST | `pkl/ajuan/{id}/surat`, `pkl/surat-massal` | `surat` | kini WAJIB memuat biaya (di bawah) |
 | GET | `pkl/ajuan/{id}/pembayaran` | `surat`/`laporan` | catatan biaya per siswa (+ `data.pembayaran` pada detail ajuan) |
