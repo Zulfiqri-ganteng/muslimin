@@ -4,6 +4,8 @@
 /**
  * Unduh Aplikasi Android (2026-11-07; aplikasi belum rilis di Play Store). Isi dari Libraries\AplikasiPublik — SAMA dengan API
  * `publik/aplikasi`: info berkas APK terbaru, tombol unduh, langkah memasang, tanya-jawab, bagikan tautan (WhatsApp, tanpa JS).
+ * Tampilan (2026-11-07 malam): SATU tombol unduh saja (di kartu unduh, bukan juga di kepala halaman), fakta versi/ukuran/tanggal
+ * di kartu yang sama, isi aplikasi singkat, langkah pasang berupa kartu bernomor, kolom samping = bagikan + bantuan.
  *
  * @var array                                   $setting
  * @var array<string, mixed>                    $info      AplikasiPublik::info()
@@ -15,26 +17,30 @@
  */
 use App\Libraries\IsianBantu;
 
-$sekolah = (string) ($setting['school_name'] ?? 'Sekolah');
-$ada     = (bool) $info['tersedia'];
-$tombolUnduh = $ada
-    ? '<a href="' . esc((string) $info['url_unduh'], 'attr') . '" class="tombol tombol-utama tombol-besar" download>' . ikon('download') . 'Unduh aplikasi' . ($info['ukuran_teks'] !== '' ? ' (' . esc($info['ukuran_teks']) . ')' : '') . '</a>'
-    : '';
+$sekolah    = (string) ($setting['school_name'] ?? 'Sekolah');
+$ada        = (bool) $info['tersedia'];
+$versi      = $info['versi'] !== '' ? (string) $info['versi'] : '-';
 $diperbarui = $info['diperbarui'] ? IsianBantu::tanggalIndo(substr((string) $info['diperbarui'], 0, 10)) : '—';
+// Isi aplikasi (fitur yang sudah ada di aplikasi Android sekolah) — ringkas, tanpa janji fitur baru.
+$isiAplikasi = [
+    ['calendar-month', 'Jadwal pelajaran', 'Jadwal kelas dan jadwal mengajar guru, selalu terbaru.'],
+    ['bell', 'Pemberitahuan langsung', 'Kabar sekolah dan pengingat jadwal masuk ke HP.'],
+    ['briefcase', 'PKL & surat sekolah', 'Pantau pengajuan PKL dan surat dari sekolah.'],
+    ['file-lines', 'Pengumuman & dokumen', 'Baca pengumuman dan dokumen resmi sekolah.'],
+];
 ?>
 <?= view('public/partials/pembuka', [
-    'remah'    => [['Aplikasi Android', null]],
-    'ikon'     => 'mobile-phone',
-    'ilu'      => 'aplikasi',
-    'label'    => 'Aplikasi sekolah',
-    'judul'    => 'Aplikasi Android',
-    'ket'      => 'Aplikasi resmi ' . $sekolah . ' untuk HP Android. Belum tersedia di Play Store, jadi dipasang langsung dari berkas di halaman ini.',
-    'aksiHtml' => $tombolUnduh,
+    'remah' => [['Aplikasi Android', null]],
+    'ikon'  => 'mobile-phone',
+    'ilu'   => 'aplikasi',
+    'label' => 'Aplikasi sekolah',
+    'judul' => 'Aplikasi Android',
+    'ket'   => 'Aplikasi resmi ' . $sekolah . ' untuk siswa, orang tua, guru, dan staf. Belum ada di Play Store, jadi dipasang langsung dari halaman ini.',
 ], ['saveData' => false]) ?>
 
 <section class="isi-halaman">
     <div class="wadah grid gap-6 lg:grid-cols-3 lg:items-start">
-        <div class="space-y-6 lg:col-span-2">
+        <div class="space-y-8 lg:col-span-2">
             <?php if (! $ada): ?>
                 <div class="kartu">
                     <div class="kosong">
@@ -47,25 +53,37 @@ $diperbarui = $info['diperbarui'] ? IsianBantu::tanggalIndo(substr((string) $inf
                     </div>
                 </div>
             <?php else: ?>
-                <div class="kartu">
-                    <div class="kartu-kepala">
-                        <div class="min-w-0">
-                            <h2 class="kartu-judul">Aplikasi <?= esc($sekolah) ?></h2>
-                            <p class="kartu-ket">Untuk siswa, orang tua, guru, dan staf.</p>
+                <!-- Kartu unduh: satu-satunya tombol unduh di halaman -->
+                <div class="kartu overflow-hidden">
+                    <div class="kartu-isi flex flex-col gap-5 sm:flex-row sm:items-center">
+                        <span class="flex h-16 w-16 shrink-0 items-center justify-center rounded-2xl bg-brand-50 text-brand-700"><?= ikon('mobile-phone', 'h-8 w-8') ?></span>
+                        <div class="min-w-0 flex-1">
+                            <p class="text-lg font-bold text-teks">Aplikasi <?= esc($sekolah) ?></p>
+                            <p class="mt-0.5 text-sm text-teks-2">Android · Versi <?= esc($versi) ?><?= $info['ukuran_teks'] !== '' ? ' · ' . esc($info['ukuran_teks']) : '' ?> · Diperbarui <?= esc($diperbarui) ?></p>
+                            <p class="mt-2 flex items-center gap-1.5 text-sm text-emerald-800"><?= ikon('check-circle', 'h-4 w-4 shrink-0') ?>Berkas resmi dari sekolah</p>
                         </div>
-                        <span class="label label-buka shrink-0">Versi <?= esc($info['versi'] !== '' ? $info['versi'] : '-') ?></span>
                     </div>
-                    <div class="kartu-isi space-y-4">
-                        <dl class="fakta-grid sm:grid-cols-3">
-                            <div class="fakta"><dt>Versi</dt><dd><?= esc($info['versi'] !== '' ? $info['versi'] : '-') ?><?= $info['build'] > 0 ? ' <span class="font-normal text-teks-2">(build ' . (int) $info['build'] . ')</span>' : '' ?></dd></div>
-                            <div class="fakta"><dt>Ukuran</dt><dd><?= esc($info['ukuran_teks'] !== '' ? $info['ukuran_teks'] : '-') ?></dd></div>
-                            <div class="fakta col-span-2 sm:col-span-1"><dt>Diperbarui</dt><dd><?= esc($diperbarui) ?></dd></div>
-                        </dl>
-                        <a href="<?= esc((string) $info['url_unduh'], 'attr') ?>" class="tombol tombol-utama tombol-besar tombol-blok" download><?= ikon('download') ?>Unduh aplikasi<?= $info['ukuran_teks'] !== '' ? ' (' . esc($info['ukuran_teks']) . ')' : '' ?></a>
-                        <p class="hint">Sebaiknya unduh memakai Wi-Fi. Nama berkas: <b><?= esc((string) $info['nama_berkas']) ?></b>. Hanya untuk HP Android; pengguna iPhone memakai situs ini.</p>
+                    <div class="kartu-isi space-y-3 border-t border-garis">
+                        <a href="<?= esc((string) $info['url_unduh'], 'attr') ?>" class="tombol tombol-utama tombol-besar tombol-blok" download="<?= esc((string) $info['nama_berkas'], 'attr') ?>"><?= ikon('download') ?>Unduh aplikasi<?= $info['ukuran_teks'] !== '' ? ' (' . esc($info['ukuran_teks']) . ')' : '' ?></a>
                         <?php if ($luar !== null): ?>
                             <a href="<?= esc($luar, 'attr') ?>" class="tombol tombol-netral tombol-blok" target="_blank" rel="noopener"><?= ikon('arrow-right') ?>Buka di Play Store / tautan resmi</a>
                         <?php endif; ?>
+                        <p class="hint">Sebaiknya unduh memakai Wi-Fi. Nama berkas: <b><?= esc((string) $info['nama_berkas']) ?></b><?= $info['build'] > 0 ? ' (build ' . (int) $info['build'] . ')' : '' ?>. Hanya untuk HP Android; pengguna iPhone cukup memakai situs ini.</p>
+                    </div>
+                </div>
+
+                <div>
+                    <h2 class="judul-sub mb-4">Isi aplikasi</h2>
+                    <div class="grid gap-3 sm:grid-cols-2">
+                        <?php foreach ($isiAplikasi as [$ik, $jdl, $ket]): ?>
+                            <div class="kartu kartu-isi flex gap-3">
+                                <span class="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-brand-50 text-brand-700"><?= ikon($ik, 'h-5 w-5') ?></span>
+                                <div class="min-w-0">
+                                    <p class="font-semibold text-teks"><?= esc($jdl) ?></p>
+                                    <p class="mt-0.5 text-sm leading-relaxed text-teks-2"><?= esc($ket) ?></p>
+                                </div>
+                            </div>
+                        <?php endforeach; ?>
                     </div>
                 </div>
 
@@ -78,9 +96,9 @@ $diperbarui = $info['diperbarui'] ? IsianBantu::tanggalIndo(substr((string) $inf
 
                 <div>
                     <h2 class="judul-sub mb-4">Cara memasang</h2>
-                    <ol class="kartu kartu-isi space-y-4">
+                    <ol class="grid gap-3 sm:grid-cols-2">
                         <?php foreach ($langkah as $i => $l): ?>
-                            <li class="flex gap-3">
+                            <li class="kartu kartu-isi flex gap-3">
                                 <span class="kartu-langkah-no shrink-0"><?= $i + 1 ?></span>
                                 <div class="min-w-0">
                                     <p class="font-semibold text-teks"><?= esc($l['judul']) ?></p>
@@ -98,7 +116,7 @@ $diperbarui = $info['diperbarui'] ? IsianBantu::tanggalIndo(substr((string) $inf
             </div>
         </div>
 
-        <div class="space-y-6">
+        <aside class="space-y-6 lg:sticky lg:top-24">
             <?php if ($ada): ?>
                 <div class="kartu kartu-isi">
                     <h2 class="kartu-judul">Bagikan ke teman</h2>
@@ -112,12 +130,9 @@ $diperbarui = $info['diperbarui'] ? IsianBantu::tanggalIndo(substr((string) $inf
             <div class="kartu kartu-isi">
                 <h2 class="kartu-judul">Masih kesulitan?</h2>
                 <p class="kartu-ket">Semua layanan tetap bisa dipakai lewat situs ini tanpa memasang aplikasi.</p>
-                <div class="mt-4 grid gap-2">
-                    <a href="<?= site_url('bantuan') ?>" class="tombol tombol-netral tombol-blok"><?= ikon('info-circle') ?>Bantuan &amp; kontak sekolah</a>
-                    <a href="<?= site_url('/') ?>" class="tombol tombol-netral tombol-blok"><?= ikon('arrow-right') ?>Kembali ke beranda</a>
-                </div>
+                <a href="<?= site_url('bantuan') ?>" class="tombol tombol-netral tombol-blok mt-4"><?= ikon('info-circle') ?>Bantuan &amp; kontak sekolah</a>
             </div>
-        </div>
+        </aside>
     </div>
 </section>
 <?= $this->endSection() ?>

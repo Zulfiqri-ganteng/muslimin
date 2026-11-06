@@ -70,7 +70,7 @@ class UjiAplikasiPublik extends BaseCommand
                 ApkManager::writeMeta(['min_build' => 1, 'notes' => "Perbaikan uji.\nBaris kedua.", 'uploaded_at' => '2026-11-07 08:00:00']);
             }
             $info = AplikasiPublik::info();
-            $this->cek('info(): tersedia, berkas contoh, ukuran teks "2 MB", url unduh downloads/apk/', $info['tersedia'] && $info['nama_berkas'] === self::BERKAS
+            $this->cek('info(): tersedia, nama berkas = NAMA SEKOLAH (bukan nama berkas server), ukuran teks "2 MB", url unduh downloads/apk/', $info['tersedia'] && $info['nama_berkas'] === \App\Libraries\AplikasiPublik::namaBerkas() && ! str_contains((string) $info['nama_berkas'], 'zzuji')
                 && $info['ukuran_teks'] === '2 MB' && str_ends_with((string) $info['url_unduh'], 'downloads/apk/' . self::BERKAS), json_encode($info));
             $this->cek('tautan = halaman /aplikasi (Pengaturan kosong)', AplikasiPublik::tautan($tanpaAtur) === site_url('aplikasi'));
             $tile = LayananPublik::semua($tanpaAtur)['aplikasi'] ?? [];
@@ -81,8 +81,9 @@ class UjiAplikasiPublik extends BaseCommand
                 && AplikasiPublik::tautanLuar(['tautan_aplikasi' => 'https://play.google.com/x']) === 'https://play.google.com/x' && AplikasiPublik::tautanLuar(['tautan_aplikasi' => site_url('aplikasi')]) === null);
 
             $html = $this->web();
-            $this->cek('halaman /aplikasi: tombol Unduh (atribut download) + ukuran + nama berkas', str_contains($html, 'downloads/apk/' . self::BERKAS) && str_contains($html, ' download>')
-                && str_contains($html, 'Unduh aplikasi (2 MB)') && str_contains($html, self::BERKAS));
+            $this->cek('halaman /aplikasi: SATU tombol Unduh (atribut download = nama sekolah) + ukuran; nama berkas server tidak ditulis', str_contains($html, 'downloads/apk/' . self::BERKAS)
+                && str_contains($html, 'download="' . \App\Libraries\AplikasiPublik::namaBerkas() . '"') && substr_count($html, 'Unduh aplikasi (2 MB)') === 1 && ! str_contains($html, 'Nama berkas: <b>' . self::BERKAS),
+                json_encode([substr_count($html, 'Unduh aplikasi (2 MB)'), str_contains($html, 'download="' . \App\Libraries\AplikasiPublik::namaBerkas() . '"'), \App\Libraries\AplikasiPublik::namaBerkas(), preg_match('~download="[^"]*"~', $html, $mm) ? $mm[0] : '']));
             $this->cek('… cara memasang 5 langkah + tanya-jawab + bagikan WhatsApp + bantuan', substr_count($html, 'kartu-langkah-no') === 5 && str_contains($html, 'Cara memasang')
                 && str_contains($html, 'https://wa.me/?text=') && str_contains($html, 'Bagikan ke teman') && str_contains($html, site_url('bantuan')));
             if (! $metaAda) {

@@ -41,7 +41,7 @@ final class AplikasiPublik
         }
         $path  = ApkManager::dir() . $file;
         $waktu = (int) (@filemtime($path) ?: 0);
-        $kunci = 'aplikasi_publik_' . md5($file . '|' . $waktu . '|' . (int) @filemtime(ApkManager::metaPath()));
+        $kunci = 'aplikasi_publik2_' . md5($file . '|' . $waktu . '|' . (int) @filemtime(ApkManager::metaPath()) . '|' . self::namaBerkas());
         $simpan = cache($kunci);
         if (is_array($simpan)) {
             return $simpan;
@@ -58,11 +58,22 @@ final class AplikasiPublik
             'diperbarui'  => $diunggah !== '' && strtotime($diunggah) !== false ? date('Y-m-d H:i:s', strtotime($diunggah)) : ($waktu > 0 ? date('Y-m-d H:i:s', $waktu) : null),
             'catatan'     => trim((string) ($meta['notes'] ?? '')),
             'url_unduh'   => (string) $apk['url'],
-            'nama_berkas' => $file,
+            'nama_berkas' => self::namaBerkas(), // nama sekolah, BUKAN nama berkas di server (mis. muslimin-21.apk)
         ];
         cache()->save($kunci, $info, self::CACHE_DETIK);
 
         return $info;
+    }
+
+    /**
+     * Nama berkas yang dilihat pengguna (teks di halaman, API, dan nama simpanan di HP saat diunduh — atribut `download`): nama sekolah
+     * dari Pengaturan Sekolah, mis. "SMK BINA NUSA.apk". Nama berkas di server tidak ditampilkan (klien 2026-11-07).
+     */
+    public static function namaBerkas(): string
+    {
+        $nama = trim((string) preg_replace('/[^\p{L}\p{N} ._-]+/u', '', (string) ((new \App\Models\SettingModel())->get()['school_name'] ?? '')));
+
+        return ($nama !== '' ? $nama : 'Aplikasi Sekolah') . '.apk';
     }
 
     /** 90170663 → "86 MB". */
