@@ -32,7 +32,7 @@ $keterangan = [
     'menunggu'  => 'Ajuan baru dari siswa, menunggu keputusan ACC (oleh ' . \App\Libraries\PklHak::teksPemegang('acc') . '). Yang paling lama menunggu ada di atas.',
     'perbaikan' => 'Sudah dikembalikan ke siswa dan menunggu mereka memperbaiki. Bila siswa kesulitan, Anda bisa mengubah langsung.',
     'disetujui' => 'Sudah di-ACC. Siswa-siswa di sini terkunci dan tidak bisa mengajukan lagi.',
-    'ditolak'   => 'Ditolak. Siswanya sudah bebas dan boleh mengajukan lagi dari awal.',
+    'ditolak'   => 'Ditolak (sekolah atau perusahaan), digabung, atau ditutup otomatis karena lewat batas. Siswanya sudah bebas dan boleh mengajukan lagi dari awal.',
 ];
 $adaSaring = $q !== '' || $kelasId > 0;
 $urlHal = static function (int $hal) use ($status, $q, $kelasId): string {
@@ -82,12 +82,13 @@ $bilahPilih = static function () use ($status): string {
 <?= $this->section('content') ?>
 
 <?= view('admin/partials/help', [
-    'helpKey'   => 'pkl_daftar_v5',
+    'helpKey'   => 'pkl_daftar_v6',
     'helpTitle' => 'Kotak Masuk PKL',
     'helpBody'  => '<p>Pilih tab status di atas. Cari berdasarkan <b>nama perusahaan</b> atau <b>nama siswa</b>, atau saring per kelas. Tekan <b>Periksa</b>/<b>Buka</b> untuk membuka detail dan mengambil keputusan.</p>'
         . '<p class="mt-2">Satu baris = satu <b>perusahaan</b> dengan rombongan siswanya (pengaju + teman satu tempat).</p>'
         . '<ul class="mt-2 list-disc space-y-1 pl-5">'
         . '<li><b>Centang dulu, tombolnya menyusul.</b> Setelah ada ajuan yang dicentang, muncul bilah di bawah: <b>ACC terpilih</b> (tab Menunggu ACC), atau <b>Unduh surat terpilih</b> &amp; <b>Kabari via WhatsApp</b> (tab Disetujui). <b>Batal pilih</b> melepas semua centang. Di HP, centang ada di kiri tiap kartu.</li>'
+        . '<li><b>Aturan otomatis (sejak November 2026)</b> &mdash; siswa tidak lagi terkunci terlalu lama: (1) siswa yang <b>dilaporkan ditolak perusahaan</b> lewat form Lapor langsung dilepas sistem dan bisa mengajukan tempat lain saat itu juga; (2) ajuan <b>Menunggu ACC yang lewat batas keputusan</b> tidak lagi mengunci &mdash; siswanya boleh mengajukan ulang, otomatis keluar dari ajuan lama, dan bila semua anggotanya pergi ajuan lama <b>ditutup otomatis</b> (label abu-abu &quot;Ditutup otomatis&quot;). Kontrol sekolah tetap ada di ACC ajuan barunya.</li>'
         . '<li>Tab <b>Menunggu ACC</b>: kolom <b>Pemeriksaan</b> menandai ajuan <b>Aman</b> (hijau) atau <b>ada peringatan</b> (kuning/merah). <b>ACC semua yang aman</b> (kanan atas) hanya menyetujui yang Aman; sisanya dilewati supaya diperiksa satu per satu.</li>'
         . '<li>Tab <b>Disetujui</b>: <b>Unduh SEMUA surat</b> (kanan atas); <b>Lainnya → Yang belum dicetak / perlu cetak ulang</b>. Sebelum berkas dibuat muncul kotak <b>Catat biaya</b> (Biaya PKL, SPP, Tabungan, OSIS, beasiswa) &mdash; wajib minimal satu centang per siswa; bila semua sudah tercatat, surat langsung terunduh. Yang belum bernomor otomatis diberi nomor sesuai urutan persetujuan. Kabar WhatsApp satu ajuan ada di halaman detailnya.</li>'
         . '</ul>',
@@ -191,7 +192,7 @@ $bilahPilih = static function () use ($status): string {
                                 <td>
                                     <a href="<?= site_url('admin/pkl/' . $id) ?>" class="font-semibold text-gray-900 hover:text-brand-700 dark:text-white dark:hover:text-brand-400"><?= esc($r['perusahaan_nama']) ?></a>
                                     <p class="text-xs text-gray-500 dark:text-gray-400"><?= esc($r['perusahaan_kota'] ?? '') ?><?= $r['sumber'] !== 'siswa' ? ' · ' . ($r['sumber'] === 'staf' ? 'diisi staf' : 'impor') : '' ?><?= (int) $r['kirim_ke'] > 1 ? ' · revisi ke-' . ((int) $r['kirim_ke'] - 1) : '' ?></p>
-                                    <?php if (($r['tolak_sumber'] ?? null) === 'perusahaan'): ?><span class="lencana lencana-merah mt-1">Ditolak perusahaan</span><?php elseif (($r['tolak_sumber'] ?? null) === 'gabung'): ?><span class="lencana lencana-biru mt-1">Digabung ke ajuan lain</span><?php endif; ?>
+                                    <?php if (($r['tolak_sumber'] ?? null) === 'perusahaan'): ?><span class="lencana lencana-merah mt-1">Ditolak perusahaan</span><?php elseif (($r['tolak_sumber'] ?? null) === 'gabung'): ?><span class="lencana lencana-biru mt-1">Digabung ke ajuan lain</span><?php elseif (($r['tolak_sumber'] ?? null) === 'lewat_batas'): ?><span class="lencana lencana-abu mt-1">Ditutup otomatis (lewat batas)</span><?php endif; ?>
                                 </td>
                                 <td>
                                     <p class="font-medium text-gray-900 dark:text-white"><?= esc($r['pengaju'] ?? '—') ?></p>
@@ -253,7 +254,7 @@ $bilahPilih = static function () use ($status): string {
                                 <span class="shrink-0 font-mono text-xs font-semibold text-gray-500 dark:text-gray-400"><?= esc(PklPengajuanModel::kode($id)) ?></span>
                             </div>
                             <p class="mt-0.5 text-sm text-gray-500 dark:text-gray-400"><?= esc($r['pengaju'] ?? '—') ?> (<?= esc($r['pengaju_kelas'] ?? '') ?>)<?= (int) $r['jumlah'] > 1 ? ' + ' . ((int) $r['jumlah'] - 1) . ' teman' : '' ?><?= (int) ($r['jumlah_keluar'] ?? 0) > 0 ? ' · ' . (int) $r['jumlah_keluar'] . ' dikeluarkan' : '' ?></p>
-                            <?php if (($r['tolak_sumber'] ?? null) === 'perusahaan'): ?><p class="mt-1"><span class="lencana lencana-merah">Ditolak perusahaan</span></p><?php elseif (($r['tolak_sumber'] ?? null) === 'gabung'): ?><p class="mt-1"><span class="lencana lencana-biru">Digabung ke ajuan lain</span></p><?php endif; ?>
+                            <?php if (($r['tolak_sumber'] ?? null) === 'perusahaan'): ?><p class="mt-1"><span class="lencana lencana-merah">Ditolak perusahaan</span></p><?php elseif (($r['tolak_sumber'] ?? null) === 'gabung'): ?><p class="mt-1"><span class="lencana lencana-biru">Digabung ke ajuan lain</span></p><?php elseif (($r['tolak_sumber'] ?? null) === 'lewat_batas'): ?><p class="mt-1"><span class="lencana lencana-abu">Ditutup otomatis (lewat batas)</span></p><?php endif; ?>
                             <p class="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-gray-500 dark:text-gray-400">Dikirim <?= esc(date('d-m-Y H:i', strtotime($kirimHp))) ?><?= $sisaHp !== null ? $lencanaSisa($sisaHp) : '' ?></p>
                             <?php if ($status === 'disetujui' && ! empty($r['acc_nama'])): ?><p class="mt-1 text-xs text-gray-500 dark:text-gray-400">Disetujui: <b class="text-gray-700 dark:text-gray-300"><?= esc($r['acc_nama']) ?></b><?= (string) ($r['acc_peran'] ?? '') !== '' && ($r['acc_peran'] ?? '') !== 'impor' ? ' (' . esc(\App\Libraries\HakAkses::label((string) ($r['acc_peran'] ?? ''))) . ')' : '' ?></p><?php endif; ?>
                             <?php if ($status === 'menunggu' && isset($cek[$id])): ?><div class="mt-1.5"><?= $lencanaCek($cek[$id]) ?></div><?php endif; ?>

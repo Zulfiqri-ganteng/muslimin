@@ -5,8 +5,9 @@ namespace App\Libraries;
 /**
  * Log Error Hosting (Sistem → Log Error Hosting; docs/DESAIN-ALAT-SISTEM.md F1): membaca log galat ASLI server tanpa masuk
  * cPanel — log aplikasi CodeIgniter (writable/logs/log-YYYY-MM-DD.log) dan error_log PHP buatan cPanel (bila ada).
- * Hanya membaca; satu-satunya pengubah = bersihkan log aplikasi lama. Berkas dipilih lewat KUNCI dari daftar tetap
- * (bukan path kiriman pengguna), jadi tidak bisa dipakai membaca berkas lain di server.
+ * Pengubah: bersihkan log aplikasi lama (otomatis saat halaman dibuka), HAPUS satu berkas, HAPUS SEMUA (2026-11-07, keluhan:
+ * tombol lama hanya menghapus yang > 30 hari). Berkas dipilih lewat KUNCI dari daftar tetap (bukan path kiriman pengguna), jadi tidak
+ * bisa dipakai membaca/menghapus berkas lain di server.
  */
 class LogGalat
 {
@@ -42,6 +43,10 @@ class LogGalat
      * ke pesan + awal jejak. Pola pertama yang cocok dipakai, jadi yang lebih khusus ditaruh di atas.
      */
     private const PENJELASAN = [
+        'tidak tersedia \d+ menit berturut-turut'
+            => 'Database hosting mati beberapa menit berturut-turut (bukan sekadar dimulai ulang sesaat). Notifikasi jadwal tertunda sampai database pulih. Bila terjadi lagi, cek cPanel → Resource Usage atau tanya Rumahweb.',
+        'notif:kirim dilewati|database sedang tidak tersedia'
+            => 'Database hosting sedang dimulai ulang sebentar (pemeliharaan rutin hosting, biasanya sekitar tengah malam), tepat saat pengirim notifikasi jadwal berjalan. Bukan kesalahan aplikasi dan tidak ada notifikasi yang hilang — putaran menit berikutnya mengirim yang tertunda. Boleh diabaikan lalu dihapus.',
         'too many connections'
             => 'Batas koneksi database hosting penuh (banyak pengunjung bersamaan). Biasanya hilang sendiri; bila sering terjadi, cek cPanel → Resource Usage atau tanya Rumahweb.',
         'mysql server has gone away|lost connection to (?:mysql|server)|real_connect|unable to connect to the database'
@@ -243,6 +248,34 @@ class LogGalat
         }
 
         return $n;
+    }
+
+    /** Hapus SATU berkas log (kunci dari daftar). Berkas yang sedang dipakai akan dibuat lagi oleh server saat ada galat baru. */
+    public function hapus(string $kunci): bool
+    {
+        $path = $this->path($kunci);
+
+        return $path !== null && @unlink($path);
+    }
+
+    /**
+     * Hapus SEMUA berkas log yang tampil (log aplikasi + error_log PHP).
+     *
+     * @return array{terhapus: int, gagal: list<string>} gagal = label berkas yang tidak bisa dihapus (izin berkas di hosting)
+     */
+    public function hapusSemua(): array
+    {
+        $n     = 0;
+        $gagal = [];
+        foreach ($this->berkas() as $b) {
+            if (@unlink($b['path'])) {
+                $n++;
+            } else {
+                $gagal[] = $b['label'];
+            }
+        }
+
+        return ['terhapus' => $n, 'gagal' => $gagal];
     }
 
     // =================================================================

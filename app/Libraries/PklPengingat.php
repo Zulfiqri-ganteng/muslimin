@@ -12,8 +12,8 @@ use CodeIgniter\Database\BaseConnection;
  *
  * Batas = Pengaturan PKL → "Batas keputusan" (PklPengaturanModel::batasHari, bawaan 5 hari), dihitung SAMA dengan tanda merah
  * "terlambat" di halaman PKL (PklPengajuanModel::hitungTerlambat): lewat bila tanggal kirim + N hari < hari ini.
- *   - ajuan : ajuan MENUNGGU yang lewat batas → bagi pemegang hak "ACC ajuan PKL" (bawaan Waka Hubin). Selama menunggu, siswanya
- *             belum bisa mengambil Surat Izin PKL dan tidak bisa mengajukan tempat lain.
+ *   - ajuan : ajuan MENUNGGU yang lewat batas → bagi pemegang hak "ACC ajuan PKL" (bawaan Waka Hubin). Siswanya belum bisa
+ *             mengambil Surat Izin PKL; sejak 2026-11-07 mereka boleh mengajukan ulang (keluar otomatis dari ajuan ini).
  *   - lapor : laporan hasil perusahaan dari siswa yang BELUM diproses lewat batas (dihitung dari kiriman terakhir) → bagi pemegang
  *             hak memproses kotak laporan (Buat/ACC Surat Balasan; di sekolah = Operator). Siswa yang dilaporkan TIDAK diterima
  *             perusahaan baru bebas mengajukan tempat lain setelah laporan itu diproses (PklLapor::proses).

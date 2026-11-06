@@ -21,6 +21,8 @@ use Config\Services;
  * `publik/pkl/*` (Api\PklAjukan, layanan LY5). Keduanya memakai logika yang SAMA, jadi skenario & hasilnya sama:
  *   daftar nama + status, kirim baru (pengaju + teman), kirim ulang ditolak (pesan terkunci), galat per kolom, dikembalikan
  *   staf → buka dengan HP (salah/benar) → kirim perbaikan; tanpa izin buka → ditolak.
+ *   ATURAN LEWAT BATAS (2026-11-07): ajuan menunggu yang lewat batas keputusan → status 'lewat', siswanya boleh mengajukan ulang
+ *   (teman/pengaju keluar otomatis, ajuan lama tertutup bila kosong), juga boleh dipilih sebagai teman; yang belum lewat tetap terkunci.
  * Jalur API: izin buka = token `X-Izin-Token` (bukan sesi). `--fixture <folder>` menyimpan respons API untuk tes aplikasi.
  *
  * Data uji "ZZUJI PP …" (nama), NIS "ZZUJIPP…", IP "10.9.7.9", perusahaan "ZZUJIPP …" — dibuat & dihapus sendiri; Pengaturan PKL
@@ -75,7 +77,7 @@ class UjiPklPublik extends BaseCommand
             'form_buka' => 1, 'form_tutup' => null, 'tingkat' => (string) $k['tingkat'], 'maks_anggota' => 3, 'batas_keputusan_hari' => 5,
         ]);
         $now = date('Y-m-d H:i:s');
-        for ($n = 1; $n <= 6; $n++) {
+        for ($n = 1; $n <= 12; $n++) {
             $this->db->table('siswa')->insert([
                 'nis' => self::NIS . $n, 'nama' => self::OLEH . ' ' . $n, 'jenis_kelamin' => 'L', 'kelas_id' => $this->kelasId,
                 'no_hp' => $this->hp($n), 'status' => 'aktif', 'tanggal_lahir' => '2009-03-03', 'created_at' => $now, 'updated_at' => $now,
@@ -86,6 +88,7 @@ class UjiPklPublik extends BaseCommand
         $this->ujiWeb();
         if (class_exists(\App\Controllers\Api\PklAjukan::class)) {
             $this->ujiApi();
+            $this->ujiLewatBatas();
         } else {
             CLI::write('(Api\PklAjukan belum ada — bagian API dilewati)', 'yellow');
         }
@@ -317,5 +320,75 @@ class UjiPklPublik extends BaseCommand
         $this->cek('POST kirim perbaikan dengan token → 200 revisi, ajuan kembali menunggu', $k === 200 && ($j['data']['revisi'] ?? false) === true
             && ($this->db->table('pkl_pengajuan')->select('status')->where('id', $idAj)->get()->getRowArray()['status'] ?? '') === 'menunggu', json_encode($j));
         $this->cek('API tidak menulis sesi web (izin buka & halaman selesai)', session('pkl_buka') === null && session('pkl_selesai') === null);
+    }
+
+    // =================================================================
+    // Aturan lewat batas keputusan (2026-11-07)
+    // =================================================================
+
+    /** Mundurkan jam kirim ajuan aktif milik siswa $siswaId sejauh $hari hari (meniru ajuan lama). */
+    private function mundurkan(int $siswaId, int $hari): int
+    {
+        $id = (int) ((new PklPengajuanModel())->aktifMilik($siswaId)['id'] ?? 0);
+        $t  = date('Y-m-d H:i:s', strtotime('-' . $hari . ' days'));
+        $this->db->table('pkl_pengajuan')->where('id', $id)->update(['diajukan_at' => $t, 'created_at' => $t]);
+
+        return $id;
+    }
+
+    private function ujiLewatBatas(): void
+    {
+        $this->bagian('Aturan lewat batas keputusan: boleh mengajukan ulang');
+        $hari = 5;
+        $this->cek('lewatBatas: hanya status menunggu & sesudah akhir hari ke-5', PklPengajuanModel::lewatBatas('menunggu', date('Y-m-d H:i:s', strtotime('-6 days')), $hari)
+            && ! PklPengajuanModel::lewatBatas('menunggu', date('Y-m-d H:i:s', strtotime('-5 days')), $hari)
+            && ! PklPengajuanModel::lewatBatas('perbaikan', date('Y-m-d H:i:s', strtotime('-30 days')), $hari)
+            && ! PklPengajuanModel::lewatBatas('disetujui', date('Y-m-d H:i:s', strtotime('-30 days')), $hari));
+
+        // A: pengaju 7 + teman 8.
+        [$k] = $this->web('kirim', [], $this->isian($this->s[7], 'ZZUJIPP Lewat A') + ['teman' => [(string) $this->s[8]], 'teman_hp' => [$this->s[8] => $this->hp(8)]]);
+        $this->cek('ajuan A (7 + teman 8) terkirim', $k === 200);
+        [$k, $j] = $this->web('kirim', [], $this->isian($this->s[7], 'ZZUJIPP Lewat Lain'));
+        $this->cek('belum lewat batas → kirim lagi tetap 409 terkunci', $k === 409, (string) ($j['message'] ?? ''));
+        $idA = $this->mundurkan($this->s[7], 7);
+        [, $j] = $this->web('siswa', ['kelas_id' => $this->kelasId]);
+        $this->cek('lewat batas → status lewat/pengaju & lewat/teman', $this->status($j['data'] ?? [], $this->s[7]) === 'lewat/pengaju' && $this->status($j['data'] ?? [], $this->s[8]) === 'lewat/teman');
+
+        // Teman 8 mengajukan ulang (pengaju B) dengan teman 9 → keluar otomatis dari A; A tetap menunggu bagi 7.
+        [$k, $j] = $this->web('kirim', [], $this->isian($this->s[8], 'ZZUJIPP Lewat B') + ['teman' => [(string) $this->s[9]], 'teman_hp' => [$this->s[9] => $this->hp(9)]]);
+        $kel8 = $this->db->table('pkl_anggota_keluar')->where('pengajuan_id', $idA)->where('siswa_id', $this->s[8])->get()->getRowArray();
+        $a    = $this->db->table('pkl_pengajuan')->where('id', $idA)->get()->getRowArray();
+        $this->cek('teman 8 mengajukan ulang → ok; keluar dari A (ajukan_ulang, sumber sistem); A tetap menunggu, sisa 7', $k === 200 && $kel8 !== null
+            && $kel8['jenis'] === 'ajukan_ulang' && $kel8['sumber'] === 'sistem' && $a['status'] === 'menunggu'
+            && $this->db->table('pkl_anggota')->where('pengajuan_id', $idA)->countAllResults() === 1, json_encode($j));
+        $this->cek('… riwayat A "ajukan_ulang"; riwayat ajuan baru mencatat asal', $this->db->table('pkl_riwayat')->where('pengajuan_id', $idA)->where('aksi', 'ajukan_ulang')->countAllResults() === 1
+            && $this->db->table('pkl_riwayat')->where('aksi', 'kirim')->like('catatan', 'Mengajukan ulang')->like('catatan', PklPengajuanModel::kode($idA))->countAllResults() === 1);
+        $this->cek('… bukan penolakan: riwayat siswa 8 jumlah ditolak 0', (int) ((new \App\Libraries\PklKeluar())->riwayatSiswa($this->s[8])['jumlah_ditolak'] ?? -1) === 0);
+
+        // Pengaju 7 (kini satu-satunya) mengajukan ulang → A ditutup otomatis (lewat_batas), tanpa anggota.
+        [$k] = $this->web('kirim', [], $this->isian($this->s[7], 'ZZUJIPP Lewat C'));
+        $a = $this->db->table('pkl_pengajuan')->where('id', $idA)->get()->getRowArray();
+        $this->cek('pengaju terakhir mengajukan ulang → A DITUTUP otomatis (ditolak, tolak_sumber lewat_batas, 0 anggota)', $k === 200 && $a['status'] === 'ditolak'
+            && $a['tolak_sumber'] === 'lewat_batas' && $this->db->table('pkl_anggota')->where('pengajuan_id', $idA)->countAllResults() === 0
+            && $this->db->table('pkl_riwayat')->where('pengajuan_id', $idA)->where('aksi', 'tutup_otomatis')->countAllResults() === 1, json_encode($a));
+
+        // D: pengaju 5 + teman 6 → lewat → pengaju 5 pergi → teman 6 jadi pengaju.
+        [$k] = $this->web('kirim', [], $this->isian($this->s[5], 'ZZUJIPP Lewat D') + ['teman' => [(string) $this->s[6]], 'teman_hp' => [$this->s[6] => $this->hp(6)]]);
+        $idD = $this->mundurkan($this->s[5], 9);
+        [$k2] = $this->web('kirim', [], $this->isian($this->s[5], 'ZZUJIPP Lewat E'));
+        $sisa = $this->db->table('pkl_anggota')->where('pengajuan_id', $idD)->get()->getResultArray();
+        $this->cek('pengaju 5 pergi → teman 6 otomatis jadi pengaju D (D tetap menunggu)', $k === 200 && $k2 === 200 && count($sisa) === 1
+            && (int) $sisa[0]['siswa_id'] === $this->s[6] && $sisa[0]['peran'] === 'pengaju');
+
+        // API: status 'lewat' sama dengan web.
+        [$k, $j] = $this->api('siswa', ['kelas_id' => $this->kelasId], [], '', 'pkl_siswa_lewat');
+        $this->cek('API GET siswa: status lewat/pengaju untuk siswa 6', $k === 200 && $this->status($j['data'] ?? [], $this->s[6]) === 'lewat/pengaju', json_encode($j['data'] ?? $j));
+
+        // Memilih teman: 6 (lewat batas) boleh; 9 (menunggu, belum lewat) tetap ditolak.
+        [$k, $j] = $this->web('kirim', [], $this->isian($this->s[11], 'ZZUJIPP Lewat F') + ['teman' => [(string) $this->s[9]], 'teman_hp' => [$this->s[9] => $this->hp(9)]]);
+        $this->cek('teman yang menunggu (belum lewat) tetap tidak bisa dipilih → 422', $k === 422 && str_contains((string) ($j['errors']['teman'] ?? ''), 'sudah punya ajuan'), json_encode($j));
+        [$k, $j] = $this->web('kirim', [], $this->isian($this->s[11], 'ZZUJIPP Lewat F') + ['teman' => [(string) $this->s[6]], 'teman_hp' => [$this->s[6] => $this->hp(6)]]);
+        $d = $this->db->table('pkl_pengajuan')->where('id', $idD)->get()->getRowArray();
+        $this->cek('teman lewat batas BOLEH dipilih → ok; D (tinggal 6) ditutup otomatis', $k === 200 && $d['status'] === 'ditolak' && $d['tolak_sumber'] === 'lewat_batas', json_encode($j));
     }
 }

@@ -42,7 +42,8 @@ $galat  = static fn (string $k): string => '<p class="err-msg" x-cloak x-show="e
                 <li>Ajuan PKL-mu sudah <b>disetujui sekolah</b>, dan</li>
                 <li>perusahaan / instansi sudah <b>memberi jawaban</b>: menerima semua, menerima <b>sebagian</b> siswa saja, atau menolak.</li>
             </ul>
-            <p class="mt-2">Isi hasilnya dan tanggal mulai–selesai PKL yang disepakati. Sekolah lalu membuatkan <b>Surat Balasan</b> untuk siswa yang diterima. Cukup <b>satu orang per kelompok</b> yang melapor. Teman yang tidak diterima akan dikeluarkan dari kelompok oleh sekolah dan bisa mengajukan tempat PKL lain.</p>
+            <p class="mt-2">Isi hasilnya dan tanggal mulai–selesai PKL yang disepakati. Sekolah lalu membuatkan <b>Surat Balasan</b> untuk siswa yang diterima. Cukup <b>satu orang per kelompok</b> yang melapor.</p>
+            <p class="mt-2 rounded-md bg-amber-100 px-3 py-2 font-semibold">Ditolak perusahaan? Begitu laporan terkirim, siswa yang tidak diterima <b>langsung keluar dari kelompok</b> dan bisa mengajukan tempat PKL lain saat itu juga &mdash; tidak perlu menunggu sekolah.</p>
         </div>
     </div>
 
@@ -178,12 +179,12 @@ $galat  = static fn (string $k): string => '<p class="err-msg" x-cloak x-show="e
                         </label>
                     </template>
                 </div>
-                <p class="hint mt-2">Teman yang <b>tidak</b> dicentang akan dikeluarkan dari kelompok oleh sekolah (setelah diperiksa), lalu boleh mengajukan tempat PKL lain. Surat Balasan hanya memuat siswa yang diterima.</p>
+                <p class="hint mt-2">Teman yang <b>tidak</b> dicentang <b>langsung dikeluarkan</b> dari kelompok begitu laporan terkirim, lalu boleh mengajukan tempat PKL lain saat itu juga. Surat Balasan hanya memuat siswa yang diterima. Periksa centangnya baik-baik &mdash; yang sudah dikeluarkan tidak bisa kamu kembalikan sendiri.</p>
                 <?= $galat('diterima') ?>
             </div>
 
             <div x-show="f.hasil === 'ditolak'" class="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800">
-                Perusahaan <b>menolak semua</b> anggota kelompok. Setelah sekolah mengonfirmasi, kalian semua boleh mengajukan tempat PKL lain. Tulis alasan dari perusahaan di kolom catatan (bila tahu).
+                Perusahaan <b>menolak semua</b> anggota kelompok. Begitu laporan terkirim, ajuan ini langsung ditandai <b>ditolak perusahaan</b> dan kalian semua <b>langsung bisa mengajukan</b> tempat PKL lain &mdash; tidak perlu menunggu sekolah. Laporan ini tidak bisa dibatalkan sendiri, jadi pastikan benar. Tulis alasan dari perusahaan di kolom catatan (bila tahu).
             </div>
 
             <div class="grid gap-4 sm:grid-cols-2" x-show="f.hasil !== 'ditolak'">

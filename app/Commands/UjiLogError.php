@@ -10,8 +10,9 @@ use CodeIgniter\CLI\CLI;
 /**
  * Uji Sistem → Log Error Hosting (docs/DESAIN-ALAT-SISTEM.md F1):
  *   pustaka LogGalat dengan berkas contoh di folder sementara (log aplikasi CodeIgniter + error_log PHP cPanel): daftar berkas,
- *   kunci asing ditolak, urai baris jejak, kelompok galat sama, penjelasan awam, saringan, berkas besar, UTF-8 rusak, bersihkan;
- *   hak (khusus Admin); halaman & unduh dirender lewat controller memakai log asli laptop (writable/logs, hanya dibaca).
+ *   kunci asing ditolak, urai baris jejak, kelompok galat sama, penjelasan awam, saringan, berkas besar, UTF-8 rusak, bersihkan,
+ *   HAPUS satu & HAPUS SEMUA (2026-11-07, hanya di folder sementara); hak (khusus Admin); halaman & unduh dirender lewat controller
+ *   memakai log asli laptop (writable/logs — dibaca; membuka halaman ikut membersihkan log laptop > 30 hari, sama dengan di hosting).
  *
  *   php spark dev:uji-log-error
  */
@@ -143,17 +144,32 @@ class UjiLogError extends BaseCommand
         $n = $lib->bersihkan(30, '2026-10-29');
         $this->cek('bersihkan >30 hari: hanya log 1 Sep terhapus; log baru & error_log PHP tetap', $n === 1 && ! is_file($this->dir . 'log-2026-09-01.log')
             && is_file($this->dir . 'log-2026-10-20.log') && is_file($this->dir . 'error_log') && is_file($this->dir . 'log-evil.log'), (string) $n);
+
+        // 2026-11-07: penjelasan pesan notif:kirim + hapus satu / hapus semua.
+        $this->cek('penjelasan: pesan lama notif:kirim "database sedang tidak tersedia" = restart rutin, boleh diabaikan',
+            str_contains((string) LogGalat::penjelasan('notif:kirim dilewati: database sedang tidak tersedia; notifikasi menyusul'), 'Boleh diabaikan'));
+        $this->cek('penjelasan: pesan baru "tidak tersedia 3 menit berturut-turut" = mati beberapa menit',
+            str_contains((string) LogGalat::penjelasan('notif:kirim: database hosting tidak tersedia 3 menit berturut-turut'), 'beberapa menit berturut-turut'));
+        $this->cek('hapus kunci asing (../../.env, log-evil.log) → false, tak ada yang terhapus', ! $lib->hapus('../../.env') && ! $lib->hapus('log-evil.log')
+            && is_file($this->dir . 'log-evil.log'));
+        $this->cek('hapus satu berkas (log 20 Okt) → true, berkas hilang, lainnya tetap', $lib->hapus('log-2026-10-20.log') && ! is_file($this->dir . 'log-2026-10-20.log')
+            && is_file($this->dir . 'error_log') && isset($lib->berkas()['log-2026-10-29.log']));
+        $h = $lib->hapusSemua();
+        $this->cek('hapus semua → semua berkas daftar (termasuk error_log PHP) hilang, gagal kosong; berkas di luar daftar tetap', $h['terhapus'] >= 2 && $h['gagal'] === []
+            && $lib->berkas() === [] && ! is_file($this->dir . 'error_log') && is_file($this->dir . 'log-evil.log'), json_encode($h));
     }
 
     private function ujiHak(): void
     {
         CLI::write('== Hak (khusus Admin) ==', 'yellow');
-        $this->cek('Admin boleh buka, unduh, bersihkan', HakAkses::boleh('admin', 'admin/sistem/log-error') && HakAkses::boleh('admin', 'admin/sistem/log-error/unduh')
-            && HakAkses::boleh('admin', 'admin/sistem/log-error/bersihkan', 'POST'));
+        $this->cek('Admin boleh buka, unduh, bersihkan, hapus, hapus semua', HakAkses::boleh('admin', 'admin/sistem/log-error') && HakAkses::boleh('admin', 'admin/sistem/log-error/unduh')
+            && HakAkses::boleh('admin', 'admin/sistem/log-error/bersihkan', 'POST') && HakAkses::boleh('admin', 'admin/sistem/log-error/hapus', 'POST')
+            && HakAkses::boleh('admin', 'admin/sistem/log-error/hapus-semua', 'POST'));
         $tolak = true;
         foreach (['operator', 'hubin', 'guru', ''] as $p) {
             $tolak = $tolak && ! HakAkses::boleh($p, 'admin/sistem/log-error') && ! HakAkses::boleh($p, 'admin/sistem/log-error/unduh')
-                && ! HakAkses::boleh($p, 'admin/sistem/log-error/bersihkan', 'POST');
+                && ! HakAkses::boleh($p, 'admin/sistem/log-error/bersihkan', 'POST') && ! HakAkses::boleh($p, 'admin/sistem/log-error/hapus', 'POST')
+                && ! HakAkses::boleh($p, 'admin/sistem/log-error/hapus-semua', 'POST');
         }
         $this->cek('Operator, Waka Hubin, Guru, tanpa peran ditolak', $tolak);
         $item = array_values(array_filter(array_merge(...array_column(\App\Libraries\MenuAdmin::sidebar(), 'items')), static fn (array $it): bool => $it[0] === 'admin/sistem/log-error'))[0] ?? null;
@@ -165,9 +181,11 @@ class UjiLogError extends BaseCommand
         CLI::write('== Halaman (log asli laptop, hanya dibaca) ==', 'yellow');
         $asli = (new LogGalat())->berkas();
         $html = $this->panggil('index', []);
-        $this->cek('halaman tampil: judul + daftar berkas + tombol Bersihkan',
-            is_string($html) && str_contains($html, 'Log Error Hosting') && str_contains($html, 'Semua berkas log') && str_contains($html, 'Bersihkan &gt;30 hari')
-            && ($asli === [] || str_contains($html, 'Lihat')), is_string($html) ? '' : get_debug_type($html));
+        $asli = (new LogGalat())->berkas(); // sesudah bersih otomatis > 30 hari
+        $this->cek('halaman tampil: judul + daftar berkas + tombol Hapus semua log, Hapus & ikon hapus per baris',
+            is_string($html) && str_contains($html, 'Log Error Hosting') && ($asli === [] || (str_contains($html, 'Semua berkas log') && str_contains($html, 'Hapus semua log')
+            && str_contains($html, 'admin/sistem/log-error/hapus"') && str_contains($html, 'Lihat'))) && ! str_contains($html, 'Bersihkan &gt;30 hari'),
+            is_string($html) ? '' : get_debug_type($html));
         if ($asli !== []) {
             $k    = (string) array_key_last($asli);
             $html = $this->panggil('index', ['berkas' => $k, 'tingkat' => 'berat', 'q' => 'zz-tak-ada-zz']);
@@ -179,14 +197,19 @@ class UjiLogError extends BaseCommand
         $this->cek('unduh kunci asing → dialihkan, bukan berkas', $r instanceof \CodeIgniter\HTTP\RedirectResponse && str_contains($r->getHeaderLine('Location'), 'admin/sistem/log-error'));
         $html = $this->panggil('index', ['berkas' => '../../.env']);
         $this->cek('kunci asing di halaman → pakai berkas terbaru, tanpa galat', is_string($html) && ! str_contains($html, 'encryption.key'));
+        $jml = count((new LogGalat())->berkas());
+        $r   = $this->panggil('hapus', [], ['berkas' => '../../.env']);
+        $this->cek('POST hapus kunci asing → dialihkan + pesan galat, tak ada berkas terhapus', $r instanceof \CodeIgniter\HTTP\RedirectResponse
+            && str_contains((string) session('error'), 'tidak ditemukan') && count((new LogGalat())->berkas()) === $jml && is_file(ROOTPATH . '.env'));
     }
 
-    private function panggil(string $metode, array $get): mixed
+    private function panggil(string $metode, array $get, array $post = []): mixed
     {
         $request = new \CodeIgniter\HTTP\IncomingRequest(config('App'), new \CodeIgniter\HTTP\SiteURI(config('App'), 'admin/sistem/log-error'), null, new \CodeIgniter\HTTP\UserAgent());
         \Config\Services::injectMock('request', $request);
         session()->set('admin', ['id' => 1, 'full_name' => 'ZZUJI Log', 'username' => 'zzujilog', 'role' => 'admin']);
         $request->setGlobal('get', $get);
+        $request->setGlobal('post', $post);
         $c = new \App\Controllers\Admin\LogError();
         $c->initController($request, service('response'), service('logger'));
 

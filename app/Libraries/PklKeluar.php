@@ -34,10 +34,21 @@ final class PklKeluar
         'pindah'             => ['Pindah ke kelompok lain', 'Digabung ke ajuan lain di tempat yang sama (tidak dihitung sebagai penolakan).'],
         'mundur'             => ['Mengundurkan diri', 'Siswa membatalkan sendiri tempat PKL ini.'],
         'lainnya'            => ['Lainnya', 'Alasan lain — tuliskan di kotak alasan.'],
+        // Dicatat SISTEM (2026-11-07): ajuan menunggu lewat batas keputusan, siswanya mengajukan ajuan baru (PklAjuan::lepasLewatBatas).
+        'ajukan_ulang'       => ['Mengajukan ulang (lewat batas)', 'Sekolah belum memutuskan sampai batas waktu, jadi siswa mengajukan ajuan baru. Tidak dihitung sebagai penolakan.'],
     ];
 
     /** Jenis yang TIDAK dihitung sebagai penolakan di riwayat siswa. */
-    public const BUKAN_TOLAK = ['pindah'];
+    public const BUKAN_TOLAK = ['pindah', 'ajukan_ulang'];
+
+    /** Jenis yang hanya dicatat sistem — tidak bisa dipilih staf di tombol "Keluarkan siswa" (web & API). */
+    public const OTOMATIS = ['ajukan_ulang'];
+
+    /** @return array<string, array{0: string, 1: string}> jenis yang boleh dipilih staf */
+    public static function jenisStaf(): array
+    {
+        return array_diff_key(self::JENIS, array_flip(self::OTOMATIS));
+    }
 
     public const MIN_ALASAN = 5;
 
@@ -128,8 +139,8 @@ final class PklKeluar
         if ($ids === []) {
             $galat['siswa_ids'] = 'Pilih siswa yang dikeluarkan.';
         }
-        if (! isset(self::JENIS[$jenis])) {
-            $galat['jenis'] = 'Pilih jenisnya: ' . implode(', ', array_map(static fn (array $j): string => $j[0], self::JENIS)) . '.';
+        if (! isset(self::jenisStaf()[$jenis])) {
+            $galat['jenis'] = 'Pilih jenisnya: ' . implode(', ', array_map(static fn (array $j): string => $j[0], self::jenisStaf())) . '.';
         }
         if (mb_strlen($alasan) < self::MIN_ALASAN) {
             $galat['catatan'] = 'Alasan wajib diisi (minimal ' . self::MIN_ALASAN . ' huruf) — siswa akan membacanya.';
@@ -414,11 +425,13 @@ final class PklKeluar
         $aktif   = null;
         foreach ($b->get()->getResultArray() as $r) {
             $perusahaan = $r['status'] === 'ditolak' && ($r['tolak_sumber'] ?? null) === 'perusahaan';
+            // Aturan 2026-11-07: ditutup sistem karena lewat batas — BUKAN penolakan sekolah.
+            $lewat = $r['status'] === 'ditolak' && ($r['tolak_sumber'] ?? null) === 'lewat_batas';
             $baris = [
                 'jenis' => 'ajuan', 'ajuan_id' => (int) $r['id'], 'kode' => PklPengajuanModel::kode((int) $r['id']), 'perusahaan' => (string) $r['perusahaan_nama'],
-                'status' => (string) $r['status'], 'tolak_sumber' => $perusahaan ? 'perusahaan' : ($r['status'] === 'ditolak' ? 'sekolah' : null),
+                'status' => (string) $r['status'], 'tolak_sumber' => $perusahaan ? 'perusahaan' : ($lewat ? 'lewat_batas' : ($r['status'] === 'ditolak' ? 'sekolah' : null)),
                 'keterangan' => match ($r['status']) {
-                    'ditolak'   => $perusahaan ? 'Ditolak perusahaan' : 'Ditolak sekolah',
+                    'ditolak'   => $perusahaan ? 'Ditolak perusahaan' : ($lewat ? 'Ditutup otomatis (lewat batas)' : 'Ditolak sekolah'),
                     'disetujui' => 'Disetujui' . ($r['acc_nama'] ? ' oleh ' . $r['acc_nama'] : ''),
                     'perbaikan' => 'Dikembalikan untuk diperbaiki',
                     default     => 'Menunggu keputusan ACC',
@@ -446,7 +459,7 @@ final class PklKeluar
             }
         }
         usort($riwayat, static fn (array $x, array $y): int => strcmp($y['waktu'], $x['waktu']) ?: ($y['ajuan_id'] <=> $x['ajuan_id']));
-        $tolak = count(array_filter($riwayat, static fn (array $r): bool => $r['status'] === 'ditolak'
+        $tolak = count(array_filter($riwayat, static fn (array $r): bool => ($r['status'] === 'ditolak' && $r['tolak_sumber'] !== 'lewat_batas')
             || ($r['jenis'] === 'keluar' && ! in_array($r['jenis_keluar'] ?? '', self::BUKAN_TOLAK, true))));
 
         return [

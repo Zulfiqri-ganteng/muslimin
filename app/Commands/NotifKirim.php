@@ -51,18 +51,23 @@ class NotifKirim extends BaseCommand
             cache()->save(NotifJadwal::CACHE_DETAK, time(), 7 * 86400);
         }
 
-        // Database hosting kadang sesaat tak tersedia (restart malam/subuh — terlihat di log 30 Sep–10 Okt 2026, 1× dari
-        // 1.440 putaran/hari). Periksa dulu lewat sambungan polos (tanpa jejak panjang CI di log), coba sekali lagi setelah
-        // 5 detik, dan bila tetap gagal catat SATU baris. Tak ada notifikasi yang hilang: putaran berikutnya menyusul
-        // dalam jendela NotifJadwal::TOLERANSI_MENIT.
-        if (! self::dbSiap()) {
-            sleep(5);
-            if (! self::dbSiap()) {
-                log_message('error', 'notif:kirim dilewati: database sedang tidak tersedia; notifikasi menyusul pada putaran berikutnya (jendela ' . NotifJadwal::TOLERANSI_MENIT . ' menit).');
-                CLI::error('Database belum tersedia — putaran ini dilewati.');
-
-                return EXIT_ERROR;
+        // Database hosting kadang sesaat tak tersedia (restart pemeliharaan sekitar 00.02 — log 30 Okt, 2 & 6 Nov 2026, 1× dari
+        // 1.440 putaran/hari). Periksa dulu lewat sambungan polos (tanpa jejak panjang CI di log) dan coba lagi sampai ±30 detik.
+        // Gangguan SESAAT tidak lagi ditulis ke log (2026-11-07: bukan galat, hanya membuat Log Error Hosting ramai); yang ditulis
+        // hanya bila database tetap mati GAGAL_BERTURUT putaran (menit) berturut-turut = masalah sungguhan. Tak ada notifikasi
+        // yang hilang: putaran berikutnya menyusul dalam jendela NotifJadwal::TOLERANSI_MENIT.
+        if (! self::dbSiapDenganUlang()) {
+            $gagal = (int) (cache()->get(self::CACHE_GAGAL) ?? 0) + 1;
+            cache()->save(self::CACHE_GAGAL, $gagal, 3600);
+            if ($gagal >= self::GAGAL_BERTURUT) {
+                log_message('error', 'notif:kirim: database hosting tidak tersedia ' . $gagal . ' menit berturut-turut; notifikasi jadwal tertunda sampai database pulih. Bila berlanjut, cek cPanel / tanya Rumahweb.');
             }
+            CLI::error('Database belum tersedia — putaran ini dilewati (' . $gagal . 'x berturut-turut).');
+
+            return EXIT_ERROR;
+        }
+        if (cache()->get(self::CACHE_GAGAL) !== null) {
+            cache()->delete(self::CACHE_GAGAL);
         }
 
         $h = NotifJadwal::jalankan($ts, $kering);
@@ -78,6 +83,30 @@ class NotifKirim extends BaseCommand
         }
 
         return EXIT_SUCCESS;
+    }
+
+    /** Jeda (detik) sebelum mencoba lagi bila database belum tersedia — total ±30 detik, aman untuk cron tiap menit. */
+    private const JEDA_ULANG = [5, 10, 15];
+
+    /** Database mati sebanyak ini putaran berturut-turut baru ditulis ke log (sekali kedip tengah malam diabaikan). */
+    public const GAGAL_BERTURUT = 3;
+
+    /** Kunci cache penghitung putaran gagal berturut-turut. */
+    public const CACHE_GAGAL = 'notif_kirim_db_gagal';
+
+    private static function dbSiapDenganUlang(): bool
+    {
+        if (self::dbSiap()) {
+            return true;
+        }
+        foreach (self::JEDA_ULANG as $detik) {
+            sleep($detik);
+            if (self::dbSiap()) {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     /** Sambungan uji ke database TANPA lewat CI — gagal di sini tidak menulis jejak panjang ke log. */

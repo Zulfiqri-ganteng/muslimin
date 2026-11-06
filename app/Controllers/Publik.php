@@ -274,6 +274,25 @@ class Publik extends BaseController
         ]);
     }
 
+    /** Unduh Aplikasi Android (aplikasi belum di Play Store): info APK terbaru, unduh, cara memasang — isi = Libraries\AplikasiPublik. */
+    public function aplikasi()
+    {
+        $setting = $this->settings->get();
+        $info    = \App\Libraries\AplikasiPublik::info();
+
+        return view('public/aplikasi', [
+            'title'       => 'Aplikasi Android',
+            'setting'     => $setting,
+            'info'        => $info,
+            'langkah'     => \App\Libraries\AplikasiPublik::langkah($info['ukuran_teks']),
+            'tanya'       => \App\Libraries\AplikasiPublik::tanyaJawab($setting),
+            'luar'        => \App\Libraries\AplikasiPublik::tautanLuar($setting),
+            'urlHalaman'  => site_url('aplikasi'),
+            'teksBagikan' => \App\Libraries\AplikasiPublik::teksBagikan($setting),
+            'deskripsi'   => 'Unduh aplikasi Android resmi ' . ($setting['school_name'] ?? 'sekolah') . ($info['tersedia'] ? ' versi ' . $info['versi'] . ' (' . $info['ukuran_teks'] . ')' : '') . ' beserta cara memasangnya.',
+        ]);
+    }
+
     // ===================== CETAK PDF PUBLIK =====================
     public function cetakKelas($id)
     {

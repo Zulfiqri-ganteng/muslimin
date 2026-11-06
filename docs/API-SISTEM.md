@@ -105,6 +105,22 @@ Semua parameter opsional. `berkas` = `kunci` dari daftar (kunci lain diabaikan �
 ### POST `sistem/log-error/bersihkan`
 
 Hapus log aplikasi lebih dari 30 hari (log hari ini & error_log PHP tidak pernah dihapus). 200 → `data.terhapus` (angka). Dicatat di Audit Log.
+**Sejak 2026-11-07 ini juga berjalan OTOMATIS setiap `GET sistem/log-error`** (dan saat halaman web dibuka), jadi aplikasi tidak perlu
+menampilkan tombolnya lagi (endpoint tetap ada demi aplikasi lama).
+
+### POST `sistem/log-error/hapus` (BARU 2026-11-07)
+
+Body `{berkas: "<kunci dari berkas[].kunci>"}` → hapus SATU berkas log (log aplikasi atau error_log PHP). 200 `{terhapus: 1, kunci}` +
+`message` "{label} dihapus."; 404 kunci tidak dikenal (sudah terhapus / bukan dari daftar — path kiriman tidak pernah dipakai);
+409 hosting menolak menghapus (izin berkas) → tampilkan `message`. Dicatat di Audit Log "(via mobile)".
+
+### POST `sistem/log-error/hapus-semua` (BARU 2026-11-07)
+
+Tanpa body → hapus SEMUA berkas di daftar (log aplikasi + error_log PHP). 200 `{terhapus: n, gagal: [label…]}`; `message` siap tampil
+("Semua log dihapus (n berkas)." / "Tidak ada log untuk dihapus." / sebagian gagal). Dicatat di Audit Log.
+
+**Pesan baru di log (2026-11-07):** `notif:kirim` tidak lagi menulis "dilewati: database sedang tidak tersedia" untuk gangguan sesaat;
+yang tertulis hanya bila database mati ≥ 3 menit berturut-turut ("…tidak tersedia N menit berturut-turut…", berpenjelasan).
 
 ## 4. Admin — Backup (Bearer, KHUSUS Admin)
 

@@ -4,6 +4,7 @@ namespace App\Controllers\Admin;
 
 use App\Controllers\BaseController;
 use App\Libraries\HakAkses;
+use App\Libraries\WaliKelas;
 use App\Models\AdminModel;
 use App\Models\ApiTokenModel;
 use App\Models\AuditModel;
@@ -44,7 +45,7 @@ class Akun extends BaseController
     public function index()
     {
         $rows = $this->model
-            ->select('id, full_name, email, username, phone, role, aktif, wajib_ganti_sandi, last_login_at, created_at')
+            ->select('id, full_name, email, username, phone, role, aktif, wajib_ganti_sandi, last_login_at, created_at' . (WaliKelas::siap() ? ', guru_id' : ''))
             ->orderBy('aktif', 'DESC')
             ->orderBy('full_name', 'ASC')
             ->findAll();
@@ -66,7 +67,27 @@ class Akun extends BaseController
             'baru'    => session('akun_baru'),  // sandi sementara (sekali tampil)
             'formLama' => session('akun_form'), // isian yang gagal disimpan → modal dibuka lagi
             'sekolah' => (new \App\Models\SettingModel())->get()['school_name'] ?? 'Sekolah',
+            // Wali kelas (2026-11-07): daftar wali + akunnya, pilihan guru di formulir, hasil "Buat akun wali kelas" (sekali tampil).
+            'waliSiap'    => WaliKelas::siap(),
+            'wali'        => (new WaliKelas())->daftarWali(),
+            'guruPilihan' => WaliKelas::siap() ? (new WaliKelas())->pilihanGuru() : [],
+            'waliMassal'  => session('wali_massal'),
+            'urlMasuk'    => site_url('admin/login'),
         ]);
+    }
+
+    /** POST admin/akun/wali-massal — buat akun semua wali kelas yang belum punya akun (akun lama bernama sama cukup dihubungkan). */
+    public function waliMassal(): RedirectResponse
+    {
+        $h = (new WaliKelas())->buatAkunMassal(['oleh' => (string) (session('admin')['full_name'] ?? 'Admin')]);
+        if (! $h['ok']) {
+            return $this->kembali('error', $h['pesan']);
+        }
+        if ($h['dibuat'] !== [] || $h['ditautkan'] !== []) {
+            session()->setFlashdata('wali_massal', ['dibuat' => $h['dibuat'], 'ditautkan' => $h['ditautkan']]);
+        }
+
+        return $this->kembali('success', $h['pesan']);
     }
 
     /** Tambah akun baru; sandi sementara dibuat sistem. */
@@ -89,6 +110,9 @@ class Akun extends BaseController
             'aktif'             => 1,
             'wajib_ganti_sandi' => 1,
         ];
+        if (WaliKelas::siap() && $in['guru_id'] > 0) {
+            $data['guru_id'] = $in['guru_id'];
+        }
 
         try {
             $id = $this->model->skipValidation(true)->insert($data, true);
@@ -131,6 +155,9 @@ class Akun extends BaseController
             'phone'     => $in['phone'] !== '' ? $in['phone'] : null,
             'role'      => $in['role'],
         ];
+        if (WaliKelas::siap()) {
+            $data['guru_id'] = $in['guru_id'] > 0 ? $in['guru_id'] : null;
+        }
 
         $kehilanganAdmin = $target['role'] === 'admin' && (int) $target['aktif'] === 1 && $in['role'] !== 'admin';
         $hasil           = $this->simpanDenganJaga($id, $data, $kehilanganAdmin);
@@ -235,6 +262,8 @@ class Akun extends BaseController
             // diam-diam — dibiarkan agar validasi menolaknya.
             'phone'     => (string) preg_replace('/[\s().-]+/', '', (string) $this->request->getPost('phone')),
             'role'      => trim((string) $this->request->getPost('role')),
+            // Hubungkan ke data guru (0 = tidak) — guru yang wali kelas mendapat menu Kelas Saya.
+            'guru_id'   => (int) $this->request->getPost('guru_id'),
         ];
     }
 
@@ -262,6 +291,14 @@ class Akun extends BaseController
 
         if (! HakAkses::dikenal($in['role'])) {
             $galat['role'] = 'Pilih salah satu peran yang tersedia.';
+        }
+
+        if (($in['guru_id'] ?? 0) > 0 && WaliKelas::siap()) {
+            if (db_connect()->table('guru')->where('id', $in['guru_id'])->where('deleted_at', null)->countAllResults() === 0) {
+                $galat['guru_id'] = 'Data guru yang dipilih tidak ditemukan.';
+            } elseif (($pakai = (new WaliKelas())->dipakaiAkun($in['guru_id'], $id)) !== null) {
+                $galat['guru_id'] = 'Guru itu sudah dihubungkan ke akun ' . $pakai . '. Satu guru hanya untuk satu akun.';
+            }
         }
 
         return $galat;

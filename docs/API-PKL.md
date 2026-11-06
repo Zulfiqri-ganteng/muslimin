@@ -292,3 +292,21 @@ dialog WhatsApp, sidebar). Regresi `php spark dev:uji-pkl` 322/322. Skrip uji la
 hak di atas, ACC/tolak/batal/massal, surat satu & massal (+ cek gambar tanda tangan hanya pada ACC Hubin), tanda tangan, hapus,
 status siswa, profil & sandi sementara, serta jejak riwayat & Audit Log. Lulus 109/109 pada 2026-10-07; data ujinya dibersihkan sendiri.
 Contoh respons nyata untuk tim Flutter: `C:lutter-muslimin	estixturespkl`; kontrak sisi aplikasi: `C:lutter-musliminBLUEPRINT-PKL.md`.
+
+## Pembaruan 2026-11-07 — siswa tidak terkunci terlalu lama (aturan otomatis)
+Keluhan klien: siswa yang ditolak perusahaan / ajuannya lama tak diputuskan tidak bisa mengajukan ulang. Dua aturan baru (web & API sama,
+tanpa migrasi):
+1. **Laporan ditolak perusahaan dilepas otomatis** (`PklLapor::lepasOtomatis`, dipanggil saat siswa mengirim laporan): `ditolak` → ajuan
+   `ditolak` + `tolak_sumber: perusahaan`, laporan `diproses` dengan `diproses_oleh: "Sistem otomatis"`, `diproses_peran: null`;
+   `sebagian` → yang tidak dicentang dikeluarkan (`pkl_anggota_keluar.jenis = ditolak_perusahaan`, `sumber = lapor`), laporan berubah
+   `hasil: semua` dan tetap `baru` (Surat Balasan tetap dibuat staf). Riwayat ajuan: `lapor_proses` oleh `Sistem otomatis (laporan …)`.
+2. **Lewat batas keputusan tidak mengunci** (`PklAjuan::lepasLewatBatas`): anggota ajuan `menunggu` yang lewat `batas_keputusan` boleh
+   mengajukan ulang. Saat ajuan barunya tersimpan, ia keluar dari ajuan lama (`pkl_anggota_keluar.jenis = ajukan_ulang`, `sumber = sistem`,
+   BUKAN penolakan — tidak dihitung di `jumlah_ditolak`/peringatan); pengaju pergi → anggota tersisa paling awal jadi pengaju; tanpa sisa →
+   ajuan lama `ditolak` + **`tolak_sumber: lewat_batas`** (`status_label`: "Ditutup otomatis (lewat batas)").
+Perubahan bentuk API staf: `tolak_sumber` kini bisa `lewat_batas`; riwayat `aksi` baru `ajukan_ulang` ("Siswa mengajukan ulang (lewat
+batas)") & `tutup_otomatis` ("Ditutup otomatis (lewat batas)"); `jenis_keluar` di `pkl/dasar` TIDAK memuat `ajukan_ulang` (hanya sistem);
+riwayat siswa (`pkl/riwayat/{siswa}`) bisa memuat `jenis_keluar: ajukan_ulang` (label "Mengajukan ulang (lewat batas)", warna biru/abu).
+Android: lencana abu "Ditutup otomatis" pada ajuan `tolak_sumber == lewat_batas`; detail ajuan menunggu yang `terlambat == true` tampilkan
+kalimat web: *"Karena sudah lewat batas, siswanya boleh mengajukan ulang…"*. Uji: `dev:uji-pkl-keluar` 134/0, `dev:uji-lapor` 127/0,
+`dev:uji-pkl-publik` 36/0.

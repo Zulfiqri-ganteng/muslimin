@@ -227,6 +227,11 @@ class UjiMaintenance extends BaseCommand
 
         [$k] = $this->api($S, 'logError', 'operator');
         $this->cek('GET sistem/log-error oleh Operator → 403; bersihkan oleh Operator → 403', $k === 403 && $this->api($S, 'bersihkanLog', 'operator')[0] === 403);
+        // 2026-11-07: hapus satu / hapus semua — Operator ditolak; kunci asing → 404 (log asli laptop tidak disentuh).
+        $this->cek('POST sistem/log-error/hapus & hapus-semua oleh Operator → 403', $this->api($S, 'hapusLog', 'operator', ['berkas' => 'x'])[0] === 403
+            && $this->api($S, 'hapusSemuaLog', 'operator', [])[0] === 403);
+        [$k, $j] = $this->api($S, 'hapusLog', 'admin', ['berkas' => '../../.env']);
+        $this->cek('POST sistem/log-error/hapus kunci asing (Admin) → 404, .env tetap ada', $k === 404 && is_file(ROOTPATH . '.env'), json_encode($j));
         [$k, $j] = $this->api($S, 'logError', 'admin');
         $b = $j['data']['berkas'] ?? [];
         $this->cek('GET sistem/log-error Admin → berkas[] (hitung per tingkat) + terpilih + isi.kelompok + daftar tingkat', $k === 200 && is_array($b)

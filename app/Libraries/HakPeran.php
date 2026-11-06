@@ -246,7 +246,8 @@ final class HakPeran
         }
         foreach (MenuAdmin::sidebar() as $g) {
             foreach ($g['items'] as $it) {
-                if (empty($it[4]) && (string) $it[0] !== 'admin/profile' && self::boleh($kode, (string) $it[0])) {
+                // Kelas Saya (wali kelas) terbuka bagi semua peran tetapi isinya per akun — bukan beranda otomatis.
+                if (empty($it[4]) && ! in_array((string) $it[0], ['admin/profile', WaliKelas::ALAMAT], true) && self::boleh($kode, (string) $it[0])) {
                     return (string) $it[0];
                 }
             }
@@ -294,6 +295,17 @@ final class HakPeran
     {
         $akses = self::aksesApi($kode);
         if ($akses === []) {
+            // Peran yang boleh aplikasi tetapi tanpa modul ber-API (mis. Wali Kelas): hanya awalan umum (wali kelas "wali", 2026-11-07).
+            $alamat = self::rapikan($alamat);
+            if (! self::bolehApi($kode) || str_contains($alamat, '..')) {
+                return false;
+            }
+            foreach (config(Peran::class)->umum as $awalan) {
+                if (! str_starts_with((string) $awalan, 'admin/') && self::cocokAwalan($alamat, (string) $awalan)) {
+                    return true;
+                }
+            }
+
             return false;
         }
         if (in_array('*', $akses, true)) {

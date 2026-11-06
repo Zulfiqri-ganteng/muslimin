@@ -123,7 +123,7 @@ $tautanLapor = '<a href="' . site_url('pkl/lapor') . '" class="peringatan pering
                 <li>Nama teman yang PKL di tempat yang sama (maksimal <b><?= $maksAnggota ?></b> siswa per perusahaan, termasuk kamu)</li>
             </ul>
             <p class="mt-2 font-semibold">Satu siswa hanya boleh punya satu ajuan. Jangan mengisi atas nama orang lain.</p>
-            <p class="mt-2 rounded-md bg-amber-100 px-3 py-2 font-semibold">Setelah dikirim, <b>jangan mengajukan ulang</b>. Tunggu keputusan sekolah, paling lambat <b><?= $batasHari ?> hari</b> sejak kamu mengirim.</p>
+            <p class="mt-2 rounded-md bg-amber-100 px-3 py-2 font-semibold">Setelah dikirim, <b>jangan mengajukan ulang</b>. Tunggu keputusan sekolah, paling lambat <b><?= $batasHari ?> hari</b> sejak kamu mengirim. Bila sampai batas itu belum diputuskan, kamu <b>boleh mengajukan ulang</b> di form ini.</p>
         </div>
     </div>
 
@@ -197,10 +197,25 @@ $tautanLapor = '<a href="' . site_url('pkl/lapor') . '" class="peringatan pering
                             <p class="mt-0.5 text-heading-md text-brand-900" x-text="pilih.nama"></p>
                             <p class="text-sm font-medium text-teks-2" x-text="'Kelas ' + namaKelas()"></p>
                             <p x-show="pilih.status === 'ditolak'" class="peringatan peringatan-galat mt-3">
-                                <span>Ajuan PKL-mu sebelumnya <b>ditolak</b>, jadi kamu boleh mengajukan lagi. Tanyakan alasannya ke operator sekolah atau Waka Hubin agar tidak terulang.</span>
+                                <span>Ajuan PKL-mu sebelumnya <b>ditolak</b> (oleh sekolah atau oleh perusahaan), jadi kamu boleh mengajukan lagi. Bila ditolak sekolah, tanyakan alasannya ke operator sekolah atau Waka Hubin agar tidak terulang.</span>
                             </p>
                             <p class="mt-3 text-sm text-teks-2">Benar ini kamu? Pastikan tidak salah pilih nama teman.</p>
                             <button type="button" @click="mulai()" class="tombol tombol-utama tombol-besar tombol-blok mt-3">Ya, ini saya — Mulai isi<?= ikon('arrow-right') ?></button>
+                        </div>
+                    </template>
+
+                    <!-- Menunggu keputusan MELEWATI batas (aturan 2026-11-07): boleh mengajukan ulang, ajuan lama dilepas otomatis saat terkirim -->
+                    <template x-if="pilih && pilih.status === 'lewat'">
+                        <div class="rounded-lg border-2 border-amber-300 bg-amber-50 p-4">
+                            <p class="flex items-center gap-2 font-semibold text-amber-900"><?= ikon('clock') ?><span>Sudah lewat batas &mdash; boleh mengajukan ulang</span></p>
+                            <p class="mt-1 text-heading-md text-amber-900" x-text="pilih.nama"></p>
+                            <p class="text-sm font-medium text-teks-2" x-text="'Kelas ' + namaKelas()"></p>
+                            <p class="mt-2 text-sm text-teks">
+                                Ajuan PKL-mu belum diputuskan sekolah sampai batasnya (<b x-text="tglIndo(pilih.batas)"></b>), jadi kamu <b>boleh mengajukan ulang</b> sekarang.
+                                Setelah ajuan barumu terkirim, namamu otomatis <b>keluar dari ajuan lama</b> (teman lain di ajuan itu tetap menunggu).
+                            </p>
+                            <p class="mt-2 text-sm text-teks-2">Benar ini kamu? Pastikan tidak salah pilih nama teman.</p>
+                            <button type="button" @click="mulai()" class="tombol tombol-utama tombol-besar tombol-blok mt-3">Ya, ini saya &mdash; Ajukan ulang<?= ikon('arrow-right') ?></button>
                         </div>
                     </template>
 
@@ -218,10 +233,15 @@ $tautanLapor = '<a href="' . site_url('pkl/lapor') . '" class="peringatan pering
                                 Namamu <b>didaftarkan oleh temanmu</b> yang PKL di tempat yang sama. Tidak merasa ikut? Hubungi operator sekolah atau Waka Hubin agar namamu dikeluarkan.
                             </p>
                             <p x-show="pilih.status === 'menunggu' && pilih.batas" class="mt-2 rounded-md border border-brand-200 bg-white px-3 py-2 text-sm font-semibold text-brand-900">
-                                Keputusan sekolah paling lambat <span x-text="tglIndo(pilih.batas)"></span>. Lewat tanggal itu belum ada kabar? Hubungi operator sekolah atau Waka Hubin.
+                                Keputusan sekolah paling lambat <span x-text="tglIndo(pilih.batas)"></span>. Bila sampai tanggal itu belum diputuskan, mulai hari berikutnya kamu <b>boleh mengajukan ulang</b> di form ini.
                             </p>
                             <?php if (! empty($laporTerbuka)): ?>
-                                <p x-show="pilih.status === 'disetujui'" class="mt-2 rounded-md border border-emerald-200 bg-white px-3 py-2 text-sm text-emerald-900">Sudah ada jawaban dari perusahaan — diterima atau tidak? <a href="<?= site_url('pkl/lapor') ?>" class="font-semibold underline">Laporkan hasilnya di sini</a>. Yang diterima dibuatkan Surat Balasan; yang tidak diterima bisa mengajukan tempat PKL lain setelah sekolah memproses laporannya.</p>
+                                <div x-show="pilih.status === 'disetujui'" class="mt-3 rounded-md border-2 border-amber-300 bg-amber-50 px-3 py-3 text-sm text-amber-900">
+                                    <p class="font-semibold">Tidak diterima perusahaan dan ingin mengajukan tempat lain?</p>
+                                    <p class="mt-1">Laporkan dulu lewat form <b>Lapor hasil PKL</b>, pilih <b>Semua ditolak</b> (atau <b>Sebagian diterima</b>). Begitu laporan terkirim, siswa yang tidak diterima <b>langsung bisa mengajukan</b> di form ini &mdash; tidak perlu menunggu sekolah.</p>
+                                    <a href="<?= site_url('pkl/lapor') ?>" class="tombol tombol-utama tombol-blok mt-3"><?= ikon('arrow-right') ?>Lapor hasil PKL</a>
+                                    <p class="mt-2 text-amber-800">Diterima perusahaan? Laporkan juga di form yang sama agar sekolah membuatkan Surat Balasan.</p>
+                                </div>
                             <?php else: ?>
                                 <p x-show="pilih.status === 'disetujui'" class="mt-2 rounded-md border border-emerald-200 bg-white px-3 py-2 text-sm text-emerald-900">Tidak diterima perusahaan? Hubungi operator sekolah agar namamu dikeluarkan dari ajuan itu, lalu kamu bisa mengajukan tempat PKL lain.</p>
                             <?php endif; ?>
@@ -235,10 +255,10 @@ $tautanLapor = '<a href="' . site_url('pkl/lapor') . '" class="peringatan pering
                             <p class="flex items-center gap-2 font-semibold text-amber-900"><?= ikon('clock') ?><span>Menunggu sekolah memproses laporan</span></p>
                             <p class="text-heading-md text-amber-900" x-text="pilih.nama"></p>
                             <p class="text-sm text-teks">
-                                Kelompokmu sudah melaporkan bahwa kamu <b>tidak diterima perusahaan</b>. Sekolah belum memproses laporan itu,
-                                jadi namamu masih tercatat di ajuan lama dan kamu <b>belum bisa mengajukan tempat PKL lain</b>.
+                                Kelompokmu sudah melaporkan bahwa kamu <b>tidak diterima perusahaan</b>, tetapi namamu belum terlepas dari ajuan lama,
+                                jadi kamu <b>belum bisa mengajukan tempat PKL lain</b>.
                             </p>
-                            <p class="text-sm text-teks">Minta <b>operator sekolah</b> memproses laporan PKL kelompokmu. Setelah diproses, kamu langsung bisa mengajukan tempat baru di form ini.</p>
+                            <p class="text-sm text-teks"><b>Muat ulang halaman</b> lalu pilih namamu lagi &mdash; biasanya sistem langsung melepasmu. Bila masih muncul, minta <b>operator sekolah</b> memproses laporan PKL kelompokmu.</p>
                         </div>
                     </template>
 
@@ -416,7 +436,7 @@ $tautanLapor = '<a href="' . site_url('pkl/lapor') . '" class="peringatan pering
         <section class="kartu-langkah" x-cloak x-show="step === 4">
             <?= $kepala(5, 'Periksa & Kirim') ?>
             <div class="kartu-langkah-isi">
-                <p class="text-sm leading-relaxed text-teks-2">Periksa sekali lagi. Setelah dikirim, ajuan <b>terkunci</b> dan tidak bisa kamu ubah sendiri. Keputusan Waka Hubin keluar paling lambat <b><?= $batasHari ?> hari</b> setelah kamu mengirim.</p>
+                <p class="text-sm leading-relaxed text-teks-2">Periksa sekali lagi. Setelah dikirim, ajuan <b>terkunci</b> dan tidak bisa kamu ubah sendiri. Keputusan Waka Hubin keluar paling lambat <b><?= $batasHari ?> hari</b> setelah kamu mengirim; bila lewat batas itu belum diputuskan, kamu boleh mengajukan ulang.</p>
 
                 <!-- Siswa -->
                 <div class="overflow-hidden rounded-lg border border-garis">
@@ -454,7 +474,7 @@ $tautanLapor = '<a href="' . site_url('pkl/lapor') . '" class="peringatan pering
                 <label class="pilih-cek" :class="err.pernyataan && 'is-galat'">
                     <input type="checkbox" x-model="f.pernyataan" class="sr-only">
                     <span class="pilih-cek-kotak"></span>
-                    <span class="text-sm text-teks">Saya menyatakan data di atas <b>sudah benar</b>, siap memperbaikinya bila diminta sekolah, dan <b>tidak akan mengajukan ulang</b> — saya menunggu keputusan sekolah (paling lambat <?= $batasHari ?> hari).</span>
+                    <span class="text-sm text-teks">Saya menyatakan data di atas <b>sudah benar</b>, siap memperbaikinya bila diminta sekolah, dan <b>tidak akan mengajukan ulang</b> selama menunggu keputusan sekolah (paling lambat <?= $batasHari ?> hari).</span>
                 </label>
                 <?= $galat('pernyataan') ?>
             </div>

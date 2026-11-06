@@ -77,7 +77,8 @@ final class LayananPublik
         $pkl     = $cekStatus ? self::statusPkl() : ['pkl' => null, 'lapor' => null];
         $status  = static fn (?bool $buka): ?string => $buka === null ? null : ($buka ? self::BUKA : self::TUTUP);
         $cfgPkl  = config('Pkl');
-        $aplikasi = trim((string) ($setting['tautan_aplikasi'] ?? ''));
+        // Pengaturan Sekolah (mis. kelak Play Store) → halaman /aplikasi bila ada berkas APK (2026-11-07) → kosong = tidak tampil.
+        $aplikasi = AplikasiPublik::tautan($setting);
 
         $daftar = [
             'pkl' => [
@@ -256,13 +257,13 @@ final class LayananPublik
             ],
             'aplikasi' => [
                 'judul'    => 'Aplikasi Android',
-                'ket'      => 'Unduh aplikasi sekolah untuk guru dan staf di HP Android.',
+                'ket'      => 'Unduh aplikasi sekolah di HP Android — untuk siswa, orang tua, guru, dan staf.',
                 'ikon'     => 'mobile-phone',
                 'ilu'      => 'aplikasi',
                 'url'      => $aplikasi,
-                'luar'     => true,
-                'kelompok' => ['guru'],
-                'bagian'   => ['guru' => 'Panel sekolah'],
+                'luar'     => $aplikasi !== '' && ! str_starts_with($aplikasi, site_url('aplikasi')),
+                'kelompok' => ['siswa', 'guru', 'orang-tua'],
+                'bagian'   => ['siswa' => 'Jadwal & informasi', 'guru' => 'Panel sekolah', 'orang-tua' => 'Tentang sekolah'],
                 'tampil'   => $aplikasi !== '',
                 'kata'     => 'aplikasi android hp unduh download play store',
             ],

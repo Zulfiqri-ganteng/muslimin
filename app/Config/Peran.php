@@ -81,5 +81,7 @@ class Peran extends BaseConfig
      *
      * @var list<string>
      */
-    public array $umum = ['admin/profile', 'admin/pemberitahuan'];
+    public array $umum = ['admin/profile', 'admin/pemberitahuan',
+        // Wali kelas (2026-11-07): terbuka di penjaga rute; isinya dijaga Libraries\WaliKelas (hanya wali kelas itu / Admin).
+        'admin/kelas-saya', 'wali'];
 }

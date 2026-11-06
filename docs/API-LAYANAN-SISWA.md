@@ -100,8 +100,16 @@ token Layanan Siswa: bukti diri lapor = nomor HP (seperti web), dan izin kirimny
   `berlaku_sampai`. Galat = kalimat web (404 siswa, 409 ajuan belum ada/belum disetujui, 422 HP salah, 429 terlalu banyak percobaan);
   503 bila `encryption.key` kosong.
 - `POST publik/pkl/lapor/kirim` (header `X-Izin-Token`) `{ajuan_id, hasil: semua|sebagian|ditolak, diterima: [siswa_id], tanggal_mulai,
-  tanggal_selesai, alamat, catatan}` → 200 `{kode, perusahaan, periode, pelapor, anggota[], ulang, hasil, hasil_teks, diterima[], ditolak[]}`
-  (isi layar "Laporan terkirim"). 422 `data.errors.{hasil|diterima|tanggal_mulai|tanggal_selesai|alamat|catatan}`; 403 `kode: sesi_habis`
+  tanggal_selesai, alamat, catatan}` → 200 `{kode, perusahaan, periode, pelapor, anggota[], ulang, hasil, hasil_teks, diterima[], ditolak[],
+  bebas[], lepas_otomatis, tautan_ajukan}` (isi layar "Laporan terkirim").
+  **PEMBARUAN 2026-11-07 — LEPAS OTOMATIS:** laporan `ditolak` / `sebagian` langsung melepas siswa yang tidak diterima (tanpa menunggu
+  staf): `ditolak` → ajuan ditandai Ditolak perusahaan & laporan selesai; `sebagian` → yang tidak dicentang dikeluarkan, laporan menjadi
+  `semua` untuk sisa anggota (tetap menunggu Surat Balasan). `bebas` = nama siswa yang baru dilepas (kosong untuk `semua`);
+  `lepas_otomatis` = `bebas` tidak kosong; `tautan_ajukan` = tautan form pengajuan web. Bila `bebas` tidak kosong, layar "Laporan terkirim"
+  WAJIB menampilkan kotak kuning *"Sudah bisa mengajukan tempat PKL lain — {bebas} sudah dikeluarkan dari ajuan ini dan langsung bisa
+  mengajukan tempat PKL baru, tidak perlu menunggu sekolah."* + tombol **Ajukan tempat PKL** (buka layar LY5 di aplikasi). `message`
+  respons sudah memuat kalimatnya. Langkah 2 form: di bawah pilihan **Semua ditolak** / **Sebagian diterima** tampilkan kalimat web
+  (`pkl/lapor.php`): yang tidak diterima langsung dikeluarkan begitu laporan terkirim & tidak bisa dibatalkan sendiri. 422 `data.errors.{hasil|diterima|tanggal_mulai|tanggal_selesai|alamat|catatan}`; 403 `kode: sesi_habis`
   (token tidak ada/kedaluwarsa/ajuan lain → ulangi langkah 1); 409 kalimat web (Balasan sudah dibuat, sudah diproses, gagal simpan).
 - Uji: `php spark dev:uji-lapor` bagian 5d (12 cek; `--fixture <folder>` menyimpan respons untuk tes aplikasi).
 
@@ -112,8 +120,15 @@ ajuan, pesan terkunci, batas kiriman per IP, `LoginThrottle` saat buka). Yang be
 ringkasan "terkirim" langsung di respons (web: halaman `pkl/selesai`). Tanggal PKL & tanggal lahir tidak ditanyakan (sama dengan web).
 - `GET publik/pkl` → `{terbuka:true, kelas: [{tingkat, kelas: [{id, nama}]}], maks_siswa, batas_hari, lapor_terbuka}`; ditutup →
   `{terbuka:false, alasan: belum_dibuka|sudah_ditutup|belum_siap, judul_tutup, pesan_tutup, lapor_terbuka}` (kalimat `pkl/tutup.php`).
-- `GET publik/pkl/siswa?kelas_id=` → `[{id, nama, jk, status: belum|ditolak|menunggu|disetujui|perbaikan|lepas, peran: pengaju|teman|null,
+- `GET publik/pkl/siswa?kelas_id=` → `[{id, nama, jk, status: belum|ditolak|menunggu|lewat|disetujui|perbaikan|lepas, peran: pengaju|teman|null,
   batas: Y-m-d|null}]` (lencana & panel per status = `pkl.js` / `pkl/form.php`). 422 tanpa kelas / kelas belum boleh; 403 form tutup.
+  **PEMBARUAN 2026-11-07 — status `lewat`:** ajuan MENUNGGU yang belum diputuskan sampai `batas` (akhir hari ke-`batas_hari` sejak dikirim).
+  Siswa `lewat` **boleh mengajukan ulang** (lencana kuning "Lewat batas — boleh ajukan ulang"; panel kuning "Sudah lewat batas — boleh
+  mengajukan ulang" + tombol **Ya, ini saya — Ajukan ulang** = mulai isian baru seperti `belum`) dan **boleh dipilih sebagai teman** (sama
+  dengan `belum`/`ditolak`). Saat ajuan baru terkirim, server otomatis mengeluarkannya dari ajuan lama (ajuan lama ditutup bila kosong) —
+  aplikasi tidak perlu melakukan apa pun. `lepas` kini jarang (pelepasan otomatis gagal): kalimatnya "muat ulang lalu pilih namamu lagi".
+  Panel `disetujui`: kotak kuning *"Tidak diterima perusahaan dan ingin mengajukan tempat lain?"* + tombol **Lapor hasil PKL** (layar LY4);
+  panel `menunggu`: *"Bila sampai tanggal itu belum diputuskan, mulai hari berikutnya kamu boleh mengajukan ulang"*.
 - `GET publik/pkl/perusahaan?q=` (≥ 2 huruf) → saran `[{id, nama, alamat, kota, telepon, kontak_nama, kontak_jabatan}]`.
 - `POST publik/pkl/buka` `{siswa_id, hp}` (hanya PENGAJU ajuan `perbaikan`) → `{ajuan_id, perusahaan_*, kontak_*, hp, teman: [{id, nama,
   kelas, hp}], catatan, token}`; 404/409/422/429 kalimat web; 503 bila `encryption.key` kosong.
@@ -121,7 +136,8 @@ ringkasan "terkirim" langsung di respons (web: halaman `pkl/selesai`). Tanggal P
   hp, pernyataan: "1", teman: [id], teman_hp: {id: hp}, ajuan_id?}` (+ `X-Izin-Token` bila `ajuan_id`) → 200 `{nama, kelas, no, revisi,
   perusahaan, jumlah, batas, hari}`. 422 `data.errors.{perusahaan_*|kontak_nama|hp|pernyataan|teman|hp_teman_<id>}`; 409 pesan terkunci /
   teman bentrok (`data.errors.teman`); 403 belum buka / token habis; 429 batas kiriman.
-- Uji: `php spark dev:uji-pkl-publik` (24 cek: 11 jalur web sebagai patokan + 13 jalur API, skenario sama; `--fixture <folder>`).
+- Uji: `php spark dev:uji-pkl-publik` (36 cek: 11 jalur web sebagai patokan + 13 jalur API, skenario sama + 12 cek aturan lewat batas;
+  `--fixture <folder>` → juga `pkl_siswa_lewat.json` berisi status `lewat`).
 
 ## LY6 — Isi biodata siswa (`publik/biodata`, ditambah 2026-11-02)
 `Api\BiodataPublik` = TURUNAN controller web `Controllers\Biodata` (form `biodata`), jadi aturan (`BiodataForm`), pesan & pengamannya sama
@@ -138,6 +154,22 @@ izin kirim PERBAIKAN = token `X-Izin-Token` (`buatIzin('biodata-buka', {siswa}, 
   `pernyataan: "1"`; + `X-Izin-Token` untuk perbaikan) → 200 `{nama, kelas, no, revisi}`. 422 `data.errors.{kolom|ortu_telepon|punya_wali|
   pernyataan}`; 409 terkunci; 403 belum buka / token habis.
 - Uji: `php spark dev:uji-biodata-publik` (22 cek: 10 jalur web sebagai patokan + 12 jalur API, skenario sama; `--fixture <folder>`).
+
+## LY8 — Aplikasi Android: unduh & bagikan (`publik/aplikasi`, ditambah 2026-11-07)
+= halaman web **`/aplikasi`** (aplikasi belum di Play Store). Sumber tunggal `Libraries\AplikasiPublik` (web & API sama). Tanpa token.
+- `GET publik/aplikasi` → 200 `{tersedia, versi, build, ukuran (byte), ukuran_teks ("86 MB"), diperbarui ("Y-m-d H:i:s"|null), catatan
+  (catatan rilis, boleh ""), url_unduh (APK statis downloads/apk/…|null), nama_berkas|null, url_halaman (= situs/aplikasi), teks_bagikan
+  ("Unduh aplikasi Android {sekolah}: {url_halaman}"), play_store (tautan Pengaturan Sekolah bila bukan /aplikasi, selain itu null),
+  langkah: [{judul, isi}] (5 langkah memasang), tanya: [{tanya, jawab}] (6 tanya-jawab)}`. `tersedia: false` (folder APK kosong) →
+  `url_unduh`/`nama_berkas` null, langkah & tanya tetap ada; `message` "Berkas aplikasi belum tersedia.".
+- Info berkas dibaca LANGSUNG dari APK di server (sama dengan `app/bootstrap` untuk pembaruan otomatis), disimpan cache 10 menit.
+- Kalimat layar = web `app/Views/public/aplikasi.php` (judul "Aplikasi Android", kartu versi/ukuran/diperbarui, "Cara memasang",
+  "Pertanyaan yang sering ditanyakan", "Bagikan ke teman": *"Kirim alamat halaman ini, bukan berkas aplikasinya, supaya teman selalu
+  mendapat versi terbaru."*).
+- Tautan "Aplikasi Android" di situs ikut berubah: `publik/beranda` → `sekolah.tautan_aplikasi` = isian Pengaturan Sekolah bila diisi,
+  selain itu `url_halaman` bila ada APK (dulu null bila Pengaturan kosong); layanan `aplikasi` kini untuk kelompok siswa, guru & orang tua.
+- Uji: `php spark dev:uji-aplikasi-publik` (14 cek; APK contoh dibuat sementara lalu dihapus; `--fixture <folder>` →
+  `publik_aplikasi.json`, `publik_aplikasi_kosong.json`).
 
 ## Keamanan
 - Token = HMAC-SHA256 (kunci turunan `encryption.key`) atas `{siswa_id, kedaluwarsa}`; tanpa tabel, tidak bisa dipalsukan, kedaluwarsa 30 menit

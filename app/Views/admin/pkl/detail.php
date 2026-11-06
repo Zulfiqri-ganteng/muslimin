@@ -65,6 +65,7 @@ $labelAksi = [
     'lapor_diterima' => 'Siswa lapor hasil perusahaan', 'lapor_proses' => 'Laporan diterima diproses', 'lapor_kembali' => 'Laporan diterima dikembalikan',
     'keluarkan' => 'Siswa dikeluarkan dari ajuan', 'tolak_perusahaan' => 'Ditolak perusahaan', 'kabari_keluar' => 'Siswa yang dikeluarkan dikabari (WhatsApp)',
     'gabung' => 'Digabung ke ajuan lain', 'gabung_masuk' => 'Menerima siswa dari ajuan lain',
+    'ajukan_ulang' => 'Siswa mengajukan ulang (lewat batas)', 'tutup_otomatis' => 'Ditutup otomatis (lewat batas)',
 ];
 // Peringatan otomatis → jenis peringatan kit + kata awal.
 $jenisPeringatan = ['bahaya' => ['galat', 'Bahaya'], 'awas' => ['awas', 'Periksa'], 'info' => ['info', 'Info']];
@@ -73,11 +74,12 @@ $olehPerusahaan = $status === 'ditolak' && ($a['tolak_sumber'] ?? null) === 'per
 $keluar ??= [];
 $kandidatGabung ??= [];
 $digabung = $status === 'ditolak' && ($a['tolak_sumber'] ?? null) === 'gabung';
+$tutupOtomatis = $status === 'ditolak' && ($a['tolak_sumber'] ?? null) === 'lewat_batas';
 $kabarKeluar ??= [];
 $tolakAnggota ??= [];
 $alasanDialog ??= [];
 $maksAlasan ??= 255;
-$jenisKeluarWarna = ['ditolak_perusahaan' => 'lencana-merah', 'administrasi' => 'lencana-kuning', 'pindah' => 'lencana-biru', 'mundur' => 'lencana-abu', 'lainnya' => 'lencana-abu'];
+$jenisKeluarWarna = ['ditolak_perusahaan' => 'lencana-merah', 'administrasi' => 'lencana-kuning', 'pindah' => 'lencana-biru', 'mundur' => 'lencana-abu', 'lainnya' => 'lencana-abu', 'ajukan_ulang' => 'lencana-biru'];
 $baris = static function (string $label, ?string $isi): string {
     $isi = trim((string) $isi);
 
@@ -96,7 +98,7 @@ $catatanKunci = static fn (string $html): string => '<div class="peringatan peri
 <?= $this->section('content') ?>
 
 <?= view('admin/partials/help', [
-    'helpKey'   => 'pkl_detail_v7',
+    'helpKey'   => 'pkl_detail_v8',
     'helpTitle' => 'Detail Ajuan PKL',
     'helpBody'  => '<p>Periksa dulu <b>peringatan otomatis</b> (merah = bahaya, kuning = periksa, biru = info), lalu putuskan. Tombol utama ada di kartu <b>Keputusan</b>; aksi lain (Tolak, Ditolak perusahaan, Keluarkan siswa, Gabungkan, Ubah, Batalkan persetujuan, Hapus) ada di menu <b>Lainnya</b>, dan pembuatan surat sekolah di menu <b>Buat surat</b> pada kartu Surat.</p>'
         . '<ul class="mt-2 list-disc pl-5 space-y-1">'
@@ -108,7 +110,8 @@ $catatanKunci = static fn (string $html): string => '<div class="peringatan peri
         . '<li><b>Ditolak perusahaan</b> — bila perusahaan menolak SEMUA siswa (juga untuk ajuan yang sudah disetujui, cukup satu langkah). Hanya yang berhak ACC. Status menjadi Ditolak berlabel "oleh perusahaan".</li>'
         . '<li><b>Alasan cepat</b> — di setiap jendela keputusan ada tombol template alasan; klik untuk mengisi kotak alasan, lalu sesuaikan bila perlu. Templatenya diatur di <b>PKL → Template Alasan</b>.</li>'
         . '<li><b>Riwayat siswa</b> — di kartu Siswa terlihat bila seorang siswa pernah ditolak/dikeluarkan di tempat lain; klik <b>Riwayat</b> untuk rinciannya.</li>'
-        . '<li><b>Batas keputusan</b> — keputusan diharapkan paling lambat sekian hari sejak siswa mengirim (diatur di Pengaturan); yang lewat ditandai merah.</li>'
+        . '<li><b>Batas keputusan</b> — keputusan diharapkan paling lambat sekian hari sejak siswa mengirim (diatur di Pengaturan); yang lewat ditandai merah. <b>Kenapa ada siswa yang hilang dari ajuan menunggu?</b> Sesudah lewat batas, siswanya boleh mengajukan ulang; siswa yang mengajukan di ajuan baru otomatis keluar dari ajuan ini (tercatat di Riwayat sebagai &quot;Siswa mengajukan ulang&quot;, bukan penolakan). Bila semua anggotanya pergi, ajuan ditutup otomatis.</li>'
+        . '<li><b>Laporan ditolak perusahaan</b> — bila siswa melapor lewat form Lapor bahwa perusahaan menolak, sistem langsung menandai ajuan &quot;Ditolak perusahaan&quot; (atau mengeluarkan siswa yang tidak diterima) tanpa menunggu staf. Di Riwayat tertulis &quot;Sistem otomatis&quot;.</li>'
         . '<li><b>Surat permohonan</b> (setelah Disetujui) — hanya yang diberi hak <i>unduh surat</i> oleh Admin (sekarang: ' . esc(\App\Libraries\PklHak::teksPemegang('surat')) . '). Sebelum berkas dibuat <u>wajib mencatat biaya</u> yang diterima tiap siswa (Biaya PKL, SPP, Tabungan, OSIS; atau Beasiswa / Keringanan beralasan) — bulannya terpilih otomatis (bulan pertama yang belum lunas). Bila semua siswa sudah tercatat, <b>Unduh surat</b> langsung mengunduh tanpa kotak biaya; untuk mencatat biaya tambahan pakai <b>Catat biaya lain</b>. Nomor ditetapkan sekali; bila data berubah sesudahnya muncul tanda <b>Perlu cetak ulang</b> dan nomor tetap sama. Setelah unduhan selesai, kotak <b>Kabari via WhatsApp</b> muncul bila masih ada siswa yang belum dikabari. Salah catat biaya? Hapus catatannya di kartu <b>Pembayaran siswa</b> (wajib beralasan).</li>'
         . '</ul>',
 ]) ?>
@@ -121,6 +124,7 @@ $catatanKunci = static fn (string $html): string => '<div class="peringatan peri
             <?= view('admin/pkl/_lencana', ['kode' => $fase ?? $status]) ?>
             <?php if ($olehPerusahaan): ?><span class="lencana lencana-merah">oleh perusahaan</span><?php endif; ?>
             <?php if ($digabung): ?><span class="lencana lencana-biru">digabung ke ajuan lain</span><?php endif; ?>
+            <?php if ($tutupOtomatis): ?><span class="lencana lencana-abu">ditutup otomatis (lewat batas)</span><?php endif; ?>
             <?php if ($a['sumber'] !== 'siswa'): ?><span class="lencana lencana-ungu"><?= $a['sumber'] === 'staf' ? 'Diisi staf' : 'Impor data lama' ?></span><?php endif; ?>
             <?php if ((int) $a['kirim_ke'] > 1): ?><span class="lencana lencana-abu">Revisi ke-<?= (int) $a['kirim_ke'] - 1 ?></span><?php endif; ?>
         </div>
@@ -133,7 +137,8 @@ $catatanKunci = static fn (string $html): string => '<div class="peringatan peri
     <!-- Batas keputusan ACC -->
     <?php if ($status === 'menunggu' && ($sisaHari ?? null) !== null): ?>
         <?= ui_peringatan($sisaHari < 0 ? 'galat' : ($sisaHari <= 1 ? 'awas' : 'info'), '', ['html' => '<b>' . ($sisaHari < 0 ? 'TERLAMBAT ' . abs($sisaHari) . ' hari' : ($sisaHari === 0 ? 'HARI INI batasnya' : 'Sisa ' . $sisaHari . ' hari')) . '</b> · '
-            . 'Batas keputusan ACC: <b>' . esc(IsianBantu::tanggalIndo(substr((string) $batasKeputusan, 0, 10))) . '</b> (' . (int) $batasHari . ' hari sejak dikirim siswa ' . esc(date('d-m-Y H:i', strtotime((string) ($a['diajukan_at'] ?? $a['created_at'])))) . ').']) ?>
+            . 'Batas keputusan ACC: <b>' . esc(IsianBantu::tanggalIndo(substr((string) $batasKeputusan, 0, 10))) . '</b> (' . (int) $batasHari . ' hari sejak dikirim siswa ' . esc(date('d-m-Y H:i', strtotime((string) ($a['diajukan_at'] ?? $a['created_at'])))) . ').'
+            . ($sisaHari < 0 ? ' Karena sudah lewat batas, siswanya <b>boleh mengajukan ulang</b>. Siswa yang mengajukan di ajuan baru otomatis keluar dari ajuan ini; bila semuanya pergi, ajuan ini <b>ditutup otomatis</b>. Segera putuskan bila tempat ini masih ingin di-ACC.' : '')]) ?>
     <?php endif; ?>
 
     <!-- Peringatan otomatis -->
@@ -531,7 +536,7 @@ if (! empty($bolehKeluarkan)) {
     $isiKeluar .= '</fieldset><p class="err-msg" data-keluar-semua hidden>Minimal satu siswa harus tersisa. Bila semua ditolak perusahaan, pakai "Ditolak perusahaan"; bila ditolak sekolah, pakai "Tolak".</p>'
         . '<p class="hint">Bila <b>pengaju</b> ikut dikeluarkan, peran pengaju pindah otomatis ke anggota tersisa yang paling awal.</p>'
         . '<fieldset class="space-y-1.5"><legend class="lbl">Jenis <span class="text-red-600 dark:text-red-400">*</span></legend>';
-    foreach (\App\Libraries\PklKeluar::JENIS as $kj => [$labelJ, $ketJ]) {
+    foreach (\App\Libraries\PklKeluar::jenisStaf() as $kj => [$labelJ, $ketJ]) {
         $isiKeluar .= '<label class="flex cursor-pointer items-start gap-2 text-gray-900 dark:text-white"><input type="radio" name="jenis" value="' . esc($kj, 'attr') . '" required class="cek mt-0.5"' . ($kj === 'ditolak_perusahaan' ? ' checked' : '') . '>'
             . '<span><b>' . esc($labelJ) . '</b><br><span class="text-xs text-gray-500 dark:text-gray-400">' . esc($ketJ) . '</span></span></label>';
     }

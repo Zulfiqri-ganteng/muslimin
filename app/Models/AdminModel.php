@@ -16,6 +16,8 @@ class AdminModel extends Model
         'full_name', 'email', 'username', 'password', 'phone', 'photo', 'role',
         // Akun staf bertingkat peran (migrasi 2026-10-06-000001)
         'aktif', 'wajib_ganti_sandi', 'last_login_at',
+        // Wali kelas (migrasi 2026-11-07-000001): akun ↔ data guru
+        'guru_id',
     ];
 
     protected $useTimestamps = true;

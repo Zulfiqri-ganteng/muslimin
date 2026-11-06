@@ -32,7 +32,9 @@ sama di aplikasi. Logika bersama yang dipakai web & API: `LayananPublik::semua/k
 
 Kunci layanan (katalog `LayananPublik::semua`, contoh laptop 2026-10-19): `pkl`, `lapor_pkl`, `biodata`, `jadwal_kelas`, `jadwal_guru`,
 `absensi`, `kesediaan`, `pengumuman`, `masuk`, `profil`, `bantuan`; + `dokumen` bila "dokumen publik" dinyalakan dan `aplikasi` bila
-tautan aplikasi diisi (layanan yang saklarnya mati tidak ikut). Yang sudah punya layar aplikasi (jadwal kelas/guru `jadwal/*`, absensi
+tautan aplikasi diisi ATAU (sejak 2026-11-07) ada berkas APK di server → `url` = halaman web `/aplikasi`, kelompok siswa/guru/orang tua;
+di aplikasi buka layar LY8 "Aplikasi Android" (`GET publik/aplikasi`, docs/API-LAYANAN-SISWA.md), bukan peramban (layanan yang saklarnya
+mati tidak ikut). Yang sudah punya layar aplikasi (jadwal kelas/guru `jadwal/*`, absensi
 `absensi`, form kesediaan `form/*`, `masuk` = layar login, `profil` = layar Profil dari data B1, `pengumuman` = daftar dari B1) dibuka di
 aplikasi; sisanya (`pkl`, `lapor_pkl`, `biodata`, `dokumen`, `bantuan`, …) dibuka di peramban dalam aplikasi memakai `url`. API lama
 `GET home` tetap ada (tidak diubah).

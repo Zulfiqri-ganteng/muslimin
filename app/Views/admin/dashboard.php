@@ -114,35 +114,8 @@ $barisTugas = static function (array $t) use ($tingkatTindakan, $angka): string 
         . '<span class="btn btn-netral btn-sm shrink-0 group-hover:border-brand-300">Kerjakan</span></a></li>';
 };
 $susulanBelum = array_sum(array_map(static fn (array $u): int => (int) $u['belum'], $ujian['kartu']));
-// Ringkasan modul: [judul, ikon, keterangan, keterangan baris 2 | null, alamat]
-$baris = [];
-if ($m = $modul['pkl']) {
-    $s = $m['status'];
-    $baris[] = ['PKL / Prakerin', 'briefcase', $angka($s['menunggu'] ?? 0) . ' menunggu ACC · ' . $angka($s['perbaikan'] ?? 0) . ' perbaikan · ' . $angka($s['disetujui'] ?? 0) . ' disetujui · ' . $angka($s['ditolak'] ?? 0) . ' ditolak',
-        'Siswa sudah PKL ' . $angka($m['siswa']['sudah_pkl'] ?? 0) . ' dari ' . $angka($m['siswa']['total'] ?? 0) . ' (' . (int) ($m['siswa']['persen_pkl'] ?? 0) . '%)', 'admin/pkl'];
-}
-if ($m = $modul['surat']) {
-    $baris[] = ['Surat sekolah', 'envelope', $angka($m['menunggu'] ?? 0) . ' menunggu ACC · ' . $angka($m['belum_unduh'] ?? 0) . ' belum diunduh · ' . $angka($m['dikembalikan'] ?? 0) . ' dikembalikan',
-        $angka($m['semua'] ?? 0) . ' surat tercatat', 'admin/surat'];
-}
-if ($m = $modul['ukk']) {
-    $p = $m['peserta'];
-    $baris[] = ['Uji kompetensi (UKK)', 'award', $angka(array_sum($p)) . ' peserta · ' . $angka($p['lulus'] ?? 0) . ' lulus · ' . $angka($p['tidak_lulus'] ?? 0) . ' tidak lulus',
-        $angka($m['jadwal']) . ' jadwal uji', 'admin/peserta-ukk'];
-}
-if ($m = $modul['lab']) {
-    $baris[] = ['Laboratorium', 'desktop-pc', $angka(array_sum($m['pinjam'])) . ' sedang dipinjam' . (($m['pinjam']['terlambat'] ?? 0) > 0 ? ' (' . $angka($m['pinjam']['terlambat']) . ' terlambat)' : '') . ' · ' . $angka(array_sum($m['kerusakan'])) . ' kerusakan terbuka',
-        null, 'admin/peminjaman'];
-}
-if ($m = $modul['dokumen']) {
-    $mb = static fn (int $b): string => number_format($b / 1048576, $b < 10 * 1048576 ? 1 : 0, ',', '.') . ' MB';
-    $baris[] = ['Arsip dokumen', 'folder-open', $angka($m['jumlah']) . ' dokumen · ' . $mb($m['byte']) . ' dari ' . $mb($m['kuota']) . ' terpakai', null, 'admin/dokumen'];
-}
-if (($m = $modul['biodata']) !== null) {
-    $baris[] = ['Isian biodata siswa', 'profile-card', $angka($m['menunggu'] ?? 0) . ' menunggu · ' . $angka($m['perbaikan'] ?? 0) . ' perbaikan · ' . $angka($m['disetujui'] ?? 0) . ' disetujui', null, 'admin/biodata'];
-}
-$k = $modul['kesediaan'];
-$baris[] = ['Kesediaan guru mengajar', 'clipboard-list', $angka($k['total']) . ' isian · ' . $angka($k['hari_ini']) . ' masuk hari ini · formulir ' . ($k['dibuka'] ? 'dibuka' : 'ditutup'), null, 'admin/submissions'];
+// Ringkasan modul: [judul, ikon, keterangan, keterangan baris 2 | null, alamat] — disusun DashboardData (sama dengan API).
+$baris = (new \App\Libraries\DashboardData())->barisModul($modul);
 
 // Teks aria untuk grafik (pembaca layar membaca angkanya, bukan gambarnya).
 $ariaDaftar = static fn (string $judul, array $daftar, string $satuan): string => $judul . ': ' . implode(', ', array_map(

@@ -29,9 +29,16 @@ use CodeIgniter\Database\BaseConnection;
  *                  dikeluarkan dulu (PklAjuan::keluarkan, jenis ditolak_perusahaan → bebas mengajukan baru, tetap tercatat), lalu
  *                  Surat Balasan dibuat HANYA untuk yang diterima;
  *   - 'ditolak'  = perusahaan menolak semua → tanpa tanggal; staf mengonfirmasi → ajuan "Ditolak perusahaan" (tanpa surat).
- *   Siswa tidak pernah melepas temannya sendiri: pelepasan terjadi saat STAF memproses. Laporan 'sebagian'/'ditolak' hanya diproses
- *   lewat kotak laporan (formulir "Periksa & ubah dulu" dan pembuatan Balasan manual menolaknya, supaya surat tidak memuat siswa
- *   yang ditolak).
+ *   Laporan 'sebagian'/'ditolak' hanya diproses lewat kotak laporan (formulir "Periksa & ubah dulu" dan pembuatan Balasan manual
+ *   menolaknya, supaya surat tidak memuat siswa yang ditolak).
+ *
+ * LEPAS OTOMATIS (2026-11-07, keluhan klien: siswa yang ditolak perusahaan menunggu staf memproses laporan sampai 4 hari):
+ *   siswa yang dilaporkan TIDAK diterima langsung dilepas SISTEM saat laporan terkirim (lepasOtomatis) — tidak menunggu staf:
+ *   - 'ditolak'  → ajuan ditandai "Ditolak perusahaan" & laporan ditandai diproses oleh "Sistem otomatis" (tanpa surat);
+ *   - 'sebagian' → siswa yang tidak dicentang dikeluarkan (jenis ditolak_perusahaan, tetap tercatat), laporan berubah menjadi
+ *                  "semua diterima" untuk anggota tersisa dan TETAP menunggu staf membuat Surat Balasan.
+ *   Kontrol sekolah tetap di ACC ajuan baru siswa tersebut (Hubin melihat peringatan "pernah ditolak perusahaan"). Laporan lama
+ *   yang masih menunggu (sebelum aturan ini / gagal otomatis) dilepas saat form pengajuan membacanya (lepasTertunda).
  */
 final class PklLapor
 {
@@ -482,11 +489,120 @@ final class PklLapor
         (new PklAjuan($this->db))->catat($ajuanId, 'lapor_diterima', $konteks, ($lama === null ? 'Lapor hasil perusahaan' : 'Lapor hasil perusahaan (kirim ulang)') . ': ' . $ringkas . ($alamat !== '' ? '; alamat diperbarui' : ''));
         (new AuditModel())->record($lama === null ? 'create' : 'update', 'pkl_lapor', $idLapor, mb_substr(PklPengajuanModel::kode($ajuanId) . ': siswa ' . $milik['nama'] . ' melapor (' . $a['perusahaan'] . '): ' . $ringkas, 0, 255));
 
-        return ['ok' => true, 'http' => 200, 'pesan' => 'Laporan terkirim.', 'data' => [
+        // Siswa yang tidak diterima langsung dilepas (tanpa menunggu staf) → boleh mengajukan tempat PKL lain saat itu juga.
+        $bebas = $hasil !== 'semua' && $idLapor !== null ? $this->lepasOtomatis((int) $idLapor, $ip) : ['ok' => true, 'bebas' => []];
+
+        return ['ok' => true, 'http' => 200, 'pesan' => 'Laporan terkirim.' . ($bebas['bebas'] !== [] ? ' ' . implode(', ', $bebas['bebas']) . ' sekarang bisa langsung mengajukan tempat PKL lain.' : ''), 'data' => [
             'kode' => PklPengajuanModel::kode($ajuanId), 'perusahaan' => $a['perusahaan'], 'periode' => $periode, 'pelapor' => $milik['nama'],
             'anggota' => array_column($a['siswa'], 'nama'), 'ulang' => $lama !== null,
             'hasil' => $hasil, 'hasil_teks' => self::HASIL[$hasil], 'diterima' => $namaT, 'ditolak' => $namaX,
+            // 2026-11-07: nama siswa yang SUDAH dilepas otomatis (boleh langsung mengajukan lagi) + tautan form pengajuan.
+            'bebas' => $bebas['bebas'], 'lepas_otomatis' => $bebas['bebas'] !== [], 'tautan_ajukan' => config('Pkl')->tautan(),
         ]];
+    }
+
+    /**
+     * LEPAS OTOMATIS laporan $id (status baru, hasil 'ditolak' / 'sebagian') oleh SISTEM — lihat kepala kelas. Aman dipanggil berulang
+     * (laporan yang sudah diproses / tanpa siswa ditolak = tidak ada yang berubah). Kegagalan tidak membatalkan laporan: laporan
+     * tetap menunggu dan staf memprosesnya seperti dulu.
+     *
+     * @return array{ok: bool, bebas: list<string>, pesan?: string} bebas = nama siswa yang baru saja dilepas
+     */
+    public function lepasOtomatis(int $id, string $ip = ''): array
+    {
+        $l = self::kolomHasil() ? $this->muat($id) : null;
+        if ($l === null || $l['status'] !== 'baru' || ! in_array((string) ($l['hasil'] ?? 'semua'), ['ditolak', 'sebagian'], true)) {
+            return ['ok' => true, 'bebas' => []];
+        }
+        $ajuanId = (int) $l['pengajuan_id'];
+        $kode    = PklPengajuanModel::kode($ajuanId);
+        $konteks = [
+            'oleh' => 'Sistem otomatis (laporan ' . ($l['pelapor_nama'] ?: 'siswa') . ')', 'admin_id' => null, 'peran' => null,
+            'ip' => $ip !== '' ? $ip : ($l['ip_address'] ?? null), 'saluran' => 'otomatis', 'sumber' => 'lapor',
+        ];
+        $catatanSiswa = trim((string) ($l['catatan'] ?? ''));
+        $dariLaporan  = 'Laporan siswa ' . ($l['pelapor_nama'] ?: '-') . ' (' . date('d-m-Y', strtotime((string) $l['updated_at'])) . ')' . ($catatanSiswa !== '' ? ': ' . $catatanSiswa : '');
+        $a = (new SuratPkl($this->db))->ajuan([$ajuanId])[0] ?? null; // null = ajuan tidak lagi disetujui
+        if ($a !== null && $a['balasan'] !== null) {
+            return ['ok' => false, 'bebas' => [], 'pesan' => 'Surat Balasan sudah ada — diproses staf.'];
+        }
+
+        if ((string) $l['hasil'] === 'ditolak') {
+            // Klaim atomik seperti proses(): hanya satu pemroses (sistem / staf) yang lolos.
+            $now = date('Y-m-d H:i:s');
+            $this->db->table('pkl_lapor')->where('id', $id)->where('status', 'baru')->update([
+                'status' => 'diproses', 'diproses_oleh' => 'Sistem otomatis', 'diproses_peran' => null, 'diproses_admin_id' => null,
+                'diproses_at' => $now, 'updated_at' => $now,
+            ]);
+            if ($this->db->affectedRows() < 1) {
+                return ['ok' => true, 'bebas' => []];
+            }
+            $statusAjuan = (string) ($this->db->table('pkl_pengajuan')->select('status')->where('id', $ajuanId)->get()->getRowArray()['status'] ?? '');
+            $nama        = [];
+            if (PklPengajuanModel::aktif($statusAjuan)) {
+                $nama = array_column((new PklPengajuanModel())->anggotaDetail($ajuanId), 'nama');
+                $r    = (new PklKeluar($this->db))->ditolakPerusahaan($ajuanId, ['catatan' => 'Perusahaan tidak menerima siswa PKL. ' . $dariLaporan], $konteks, false);
+                if (! $r['ok']) {
+                    $this->db->table('pkl_lapor')->where('id', $id)->update(['status' => 'baru', 'diproses_oleh' => null, 'diproses_at' => null]);
+                    log_message('error', '[PklLapor] lepas otomatis ' . $kode . ' gagal: ' . $r['pesan']);
+
+                    return ['ok' => false, 'bebas' => [], 'pesan' => $r['pesan']];
+                }
+            }
+            (new PklAjuan($this->db))->catat($ajuanId, 'lapor_proses', $konteks, $nama !== []
+                ? 'Laporan "semua ditolak perusahaan" diproses OTOMATIS oleh sistem: ajuan ditandai Ditolak perusahaan, seluruh siswanya langsung bisa mengajukan tempat PKL lain.'
+                : 'Laporan "semua ditolak perusahaan" ditandai selesai otomatis: ajuan sudah berstatus ditolak.');
+            (new AuditModel())->record('update', 'pkl_lapor', $id, mb_substr('Laporan ' . $kode . ' (semua ditolak perusahaan) diproses otomatis oleh sistem', 0, 255));
+
+            return ['ok' => true, 'bebas' => $nama];
+        }
+
+        // 'sebagian' → keluarkan yang tidak diterima; laporan menjadi "semua diterima" bagi sisa anggota & tetap menunggu Surat Balasan.
+        if ($a === null) {
+            return ['ok' => false, 'bebas' => [], 'pesan' => 'Ajuan tidak lagi disetujui — diproses staf.'];
+        }
+        $rinci = self::rincian($l, $a['siswa']);
+        if ($rinci['diterima'] === []) {
+            return ['ok' => false, 'bebas' => [], 'pesan' => 'Siswa yang diterima tidak lagi tercatat — diproses staf.'];
+        }
+        $nama = array_column($rinci['ditolak'], 'nama');
+        if ($rinci['ditolak'] !== []) {
+            $k = (new PklKeluar($this->db))->keluarkan($ajuanId, [
+                'siswa_ids' => array_column($rinci['ditolak'], 'siswa_id'), 'jenis' => 'ditolak_perusahaan',
+                'catatan'   => 'Tidak diterima perusahaan (dikeluarkan otomatis dari laporan siswa). ' . $dariLaporan,
+            ], $konteks, null, false);
+            if (! $k['ok']) {
+                log_message('error', '[PklLapor] lepas otomatis ' . $kode . ' gagal: ' . $k['pesan']);
+
+                return ['ok' => false, 'bebas' => [], 'pesan' => $k['pesan']];
+            }
+        }
+        $this->db->table('pkl_lapor')->where('id', $id)->where('status', 'baru')->update(['hasil' => 'semua', 'diterima' => null]);
+
+        return ['ok' => true, 'bebas' => $nama];
+    }
+
+    /**
+     * Lepas otomatis laporan "sebagian / semua ditolak" yang MASIH MENUNGGU pada ajuan-ajuan ini (laporan sebelum aturan 2026-11-07
+     * atau yang gagal dilepas saat dikirim). Dipanggil form pengajuan saat menemukan siswa berstatus 'lepas'.
+     *
+     * @param list<int> $ajuanIds
+     *
+     * @return int banyak laporan yang berhasil dilepas
+     */
+    public function lepasTertunda(array $ajuanIds, string $ip = ''): int
+    {
+        $ajuanIds = array_values(array_unique(array_filter(array_map('intval', $ajuanIds))));
+        if ($ajuanIds === [] || ! self::kolomHasil()) {
+            return 0;
+        }
+        $n = 0;
+        foreach ($this->db->table('pkl_lapor')->select('id')->whereIn('pengajuan_id', $ajuanIds)->where('status', 'baru')
+            ->whereIn('hasil', ['sebagian', 'ditolak'])->get()->getResultArray() as $r) {
+            $n += $this->lepasOtomatis((int) $r['id'], $ip)['ok'] ? 1 : 0;
+        }
+
+        return $n;
     }
 
     // =================================================================

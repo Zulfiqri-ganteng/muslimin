@@ -28,6 +28,7 @@ $dataBaris = static fn (array $r, int $saya): string => esc(json_encode([
     'email'     => $r['email'],
     'phone'     => (string) ($r['phone'] ?? ''),
     'role'      => $r['role'],
+    'guru_id'   => (int) ($r['guru_id'] ?? 0),
     'aktif'     => (int) $r['aktif'],
     'saya'      => (int) $r['id'] === $saya,
 ], JSON_UNESCAPED_UNICODE), 'attr');
@@ -55,7 +56,7 @@ $tombolAksi = static function (bool $milikSaya, bool $aktif): string {
 ?>
 
 <?= view('admin/partials/help', [
-    'helpKey'   => 'akun',
+    'helpKey'   => 'akun_v2',
     'helpTitle' => 'Kelola Akun Staf',
     'helpBody'  => '<p>Di sini admin menambah akun untuk <b>Operator Sekolah</b> dan <b>Waka Hubin</b>. Satu halaman login untuk semua: sistem mengenali peran dari <b>email</b> akun, lalu menampilkan menu yang sesuai.</p>'
         . '<ul class="mt-2 list-disc pl-5 space-y-1">'
@@ -63,7 +64,15 @@ $tombolAksi = static function (bool $milikSaya, bool $aktif): string {
         . '<li><b>Reset sandi</b> — bila lupa. Sandi lama langsung tidak berlaku dan aplikasi Android milik akun itu keluar otomatis.</li>'
         . '<li><b>Nonaktifkan</b> — untuk staf yang berhenti. Akun tidak dihapus (riwayat tetap utuh) dan <b>langsung</b> tidak bisa masuk, bahkan bila sedang login.</li>'
         . '<li>Anda tidak bisa menonaktifkan, mereset, atau mengubah peran akun Anda sendiri, dan sistem selalu menyisakan minimal satu admin aktif.</li>'
-        . '</ul>',
+        . '</ul>'
+        . '<p class="mt-3 font-semibold">Akun wali kelas</p>'
+        . '<ol class="mt-1 list-decimal space-y-1 pl-5">'
+        . '<li>Kartu <b>Akun wali kelas</b> menunjukkan berapa wali (dari Master Kelas) yang sudah punya akun. Tekan <b>Buat akun wali kelas</b> untuk membuatkan semua yang belum sekaligus.</li>'
+        . '<li>Sesudahnya muncul tabel kuning berisi username &amp; <b>sandi sementara</b> (tampil sekali). Tekan <b>Kirim WA</b> di tiap baris untuk mengirim akunnya ke nomor WhatsApp guru.</li>'
+        . '<li>Akun staf yang sudah ada dan namanya sama dengan guru wali (mis. Waka Hubin yang juga wali kelas) <b>tidak dibuatkan akun baru</b> — cukup dihubungkan, perannya tetap.</li>'
+        . '<li>Menghubungkan manual: buka <b>Ubah</b> pada akun, pilih nama guru di isian <b>Hubungkan ke data guru</b>.</li>'
+        . '</ol>'
+        . '<p class="mt-2"><b>Kenapa ada menu "Kelas Saya" di akun Waka Hubin?</b> Karena akun itu terhubung ke guru yang juga wali kelas. Menu itu hanya berisi kelas yang ia walikan.</p>',
 ]) ?>
 
 <div x-data="akunPage" class="space-y-4"
@@ -89,6 +98,85 @@ $tombolAksi = static function (bool $milikSaya, bool $aktif): string {
             </div>
         <?php endforeach; ?>
     </section>
+
+
+    <!-- Wali kelas (2026-11-07): akun guru wali + hasil "Buat akun wali kelas" (sandi sekali tampil) -->
+    <?php if (! empty($waliMassal['dibuat']) || ! empty($waliMassal['ditautkan'])): ?>
+        <section class="kartu overflow-hidden border-yellow-300 dark:border-yellow-700" aria-labelledby="judul-wali-baru">
+            <div class="kartu-kepala">
+                <div class="min-w-0">
+                    <h2 id="judul-wali-baru" class="kartu-judul">Akun wali kelas baru — catat sekarang</h2>
+                    <p class="kartu-ket">Sandi sementara <b>hanya tampil sekali</b> di halaman ini. Kirim ke tiap wali lewat tombol WhatsApp, atau cetak/foto halaman ini. Mereka wajib mengganti sandi saat pertama masuk.</p>
+                </div>
+            </div>
+            <?php if (! empty($waliMassal['dibuat'])): ?>
+                <div class="tabel-bungkus">
+                    <table class="tabel">
+                        <thead><tr><th scope="col">Wali kelas</th><th scope="col">Kelas</th><th scope="col">Username</th><th scope="col">Sandi sementara</th><th scope="col"><span class="sr-only">Kirim</span></th></tr></thead>
+                        <tbody>
+                            <?php foreach ($waliMassal['dibuat'] as $d):
+                                $teksWa = 'Assalamualaikum ' . $d['nama'] . ', berikut akun wali kelas ' . implode(', ', $d['kelas']) . ' di sistem ' . $sekolah . ".\nAlamat masuk: " . $urlMasuk . "\nUsername: " . $d['username'] . "\nSandi sementara: " . $d['sandi'] . "\nSesudah masuk, Anda diminta mengganti sandi. Menu Kelas Saya berisi data siswa kelas Anda.";
+                                $noWa   = (string) preg_replace('/\D/', '', (string) ($d['no_wa'] ?? ''));
+                                $noWa   = str_starts_with($noWa, '0') ? '62' . substr($noWa, 1) : $noWa; ?>
+                                <tr>
+                                    <td class="font-medium text-gray-900 dark:text-white"><?= esc($d['nama']) ?></td>
+                                    <td><?= esc(implode(', ', $d['kelas'])) ?></td>
+                                    <td class="font-mono"><?= esc($d['username']) ?></td>
+                                    <td class="font-mono font-semibold"><?= esc($d['sandi']) ?></td>
+                                    <td class="whitespace-nowrap text-end"><?php if ($noWa !== ''): ?><a href="https://wa.me/<?= esc($noWa, 'attr') ?>?text=<?= rawurlencode($teksWa) ?>" target="_blank" rel="noopener" class="btn btn-sukses btn-sm"><?= ikon('share-nodes', 'h-4 w-4') ?>Kirim WA</a><?php else: ?><span class="text-xs text-gray-500 dark:text-gray-400">Tanpa no. WA</span><?php endif; ?></td>
+                                </tr>
+                            <?php endforeach; ?>
+                        </tbody>
+                    </table>
+                </div>
+            <?php endif; ?>
+            <?php if (! empty($waliMassal['ditautkan'])): ?>
+                <div class="kartu-isi text-sm">
+                    <p class="font-semibold text-gray-900 dark:text-white">Akun lama yang dihubungkan (peran & sandi tidak berubah):</p>
+                    <ul class="mt-1 list-disc space-y-0.5 pl-5 text-gray-700 dark:text-gray-300">
+                        <?php foreach ($waliMassal['ditautkan'] as $d): ?><li><?= esc($d['nama']) ?> (<?= esc($d['peran']) ?>, <?= esc($d['username']) ?>) — wali <?= esc(implode(', ', $d['kelas'])) ?></li><?php endforeach; ?>
+                    </ul>
+                </div>
+            <?php endif; ?>
+        </section>
+    <?php endif; ?>
+
+    <?php if ($waliSiap && $wali !== []):
+        $belumAkun = count(array_filter($wali, static fn (array $w): bool => $w['akun'] === null)); ?>
+        <section class="kartu overflow-hidden" aria-labelledby="judul-wali">
+            <div class="kartu-kepala">
+                <div class="min-w-0">
+                    <h2 id="judul-wali" class="kartu-judul flex items-center gap-2">Akun wali kelas<span class="lencana <?= $belumAkun > 0 ? 'lencana-kuning' : 'lencana-hijau' ?>"><?= count($wali) - $belumAkun ?>/<?= count($wali) ?> punya akun</span></h2>
+                    <p class="kartu-ket">Wali kelas diambil dari Master Kelas. Akun yang terhubung ke guru wali otomatis mendapat menu <b>Kelas Saya</b>.</p>
+                </div>
+                <?php if ($belumAkun > 0): ?>
+                    <form method="post" action="<?= site_url('admin/akun/wali-massal') ?>" class="inline shrink-0" data-confirm="Buat akun untuk <?= $belumAkun ?> wali kelas yang belum punya akun? Akun staf lama yang namanya sama dengan guru wali hanya dihubungkan (perannya tidak berubah). Sandi sementara tampil sekali sesudahnya." data-confirm-judul="Buat akun wali kelas?" data-confirm-ya="Ya, buat akun">
+                        <?= csrf_field() ?>
+                        <button type="submit" class="btn btn-utama"><?= ikon('users-group', 'h-4 w-4') ?>Buat akun wali kelas (<?= $belumAkun ?>)</button>
+                    </form>
+                <?php endif; ?>
+            </div>
+            <details class="kartu-isi border-t border-gray-200 dark:border-gray-700">
+                <summary class="cursor-pointer text-sm font-semibold text-brand-700 dark:text-brand-400">Lihat daftar wali kelas (<?= count($wali) ?>)</summary>
+                <div class="tabel-bungkus mt-3">
+                    <table class="tabel">
+                        <thead><tr><th scope="col">Kelas</th><th scope="col">Wali kelas</th><th scope="col">Akun</th></tr></thead>
+                        <tbody>
+                            <?php foreach ($wali as $w): ?>
+                                <tr>
+                                    <td><?= esc(implode(', ', $w['kelas'])) ?></td>
+                                    <td class="font-medium text-gray-900 dark:text-white"><?= esc($w['guru_nama']) ?></td>
+                                    <td><?= $w['akun'] !== null
+                                        ? '<span class="font-mono">' . esc($w['akun']['username']) . '</span> <span class="lencana ' . ($w['akun']['aktif'] ? 'lencana-hijau' : 'lencana-abu') . '">' . esc(\App\Libraries\HakAkses::label($w['akun']['role'])) . '</span>'
+                                        : '<span class="lencana lencana-kuning">Belum ada akun</span>' ?></td>
+                                </tr>
+                            <?php endforeach; ?>
+                        </tbody>
+                    </table>
+                </div>
+            </details>
+        </section>
+    <?php endif; ?>
 
     <!-- Daftar akun -->
     <section class="kartu overflow-hidden" aria-labelledby="judul-akun">
@@ -208,6 +296,19 @@ $tombolAksi = static function (bool $milikSaya, bool $aktif): string {
                         <label class="lbl" for="akun-hp">No. HP <span class="font-normal text-gray-500 dark:text-gray-400">(opsional)</span></label>
                         <input id="akun-hp" type="tel" name="phone" x-model="form.phone" maxlength="20" autocomplete="off" inputmode="tel" class="inp" placeholder="08xxxxxxxxxx">
                     </div>
+
+                    <?php if ($waliSiap): ?>
+                        <div>
+                            <label class="lbl" for="akun-guru">Hubungkan ke data guru <span class="font-normal text-gray-500 dark:text-gray-400">(opsional — untuk wali kelas)</span></label>
+                            <select id="akun-guru" name="guru_id" x-model="form.guru_id" class="inp">
+                                <option value="0">— Tidak dihubungkan —</option>
+                                <?php foreach ($guruPilihan as $g): ?>
+                                    <option value="<?= (int) $g['id'] ?>"><?= esc($g['label']) ?></option>
+                                <?php endforeach; ?>
+                            </select>
+                            <p class="hint">Guru yang tercatat sebagai wali di Master Kelas otomatis mendapat menu <b>Kelas Saya</b>, apa pun perannya.</p>
+                        </div>
+                    <?php endif; ?>
 
                     <fieldset>
                         <legend class="lbl">Peran <span class="text-red-600 dark:text-red-400">*</span></legend>

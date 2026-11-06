@@ -211,6 +211,25 @@ class Publik extends BaseApiController
     // ===================== HELPER =====================
 
     /**
+     * GET publik/aplikasi — isi halaman web /aplikasi (layanan LY8, 2026-11-07) untuk layar "Bagikan aplikasi" di aplikasi: info APK
+     * terbaru (versi, build, ukuran, tanggal, catatan rilis, url unduh), alamat halaman untuk dibagikan + teks siap kirim, langkah
+     * memasang & tanya-jawab (kalimat web), tautan Play Store (Pengaturan Sekolah) bila ada. Sumber tunggal: Libraries\AplikasiPublik.
+     */
+    public function aplikasi(): \CodeIgniter\HTTP\ResponseInterface
+    {
+        $s    = (new SettingModel())->get();
+        $info = \App\Libraries\AplikasiPublik::info();
+
+        return $this->ok($info + [
+            'url_halaman'   => site_url('aplikasi'),
+            'teks_bagikan'  => \App\Libraries\AplikasiPublik::teksBagikan($s),
+            'play_store'    => \App\Libraries\AplikasiPublik::tautanLuar($s),
+            'langkah'       => \App\Libraries\AplikasiPublik::langkah($info['ukuran_teks']),
+            'tanya'         => array_map(static fn (array $t): array => ['tanya' => $t[0], 'jawab' => $t[1]], \App\Libraries\AplikasiPublik::tanyaJawab($s)),
+        ], $info['tersedia'] ? 'Aplikasi Android terbaru.' : 'Berkas aplikasi belum tersedia.');
+    }
+
+    /**
      * GET publik/beranda — SEMUA bahan beranda konsep rumah.pendidikan.go.id untuk aplikasi (B1, 2026-10-19), dari sumber yang SAMA
      * dengan situs publik web (Libraries\LayananPublik, Foto Sekolah, Pengumuman, Pengaturan Sekolah): identitas & "Tentang sekolah",
      * foto (banner & galeri), sorotan banner, 4 kelompok pengguna, semua layanan + status buka/tutup, layanan unggulan, statistik &
@@ -289,7 +308,7 @@ class Publik extends BaseApiController
                 'akreditasi'      => $s['school_accreditation'] ?? null,
                 'kepala_sekolah'  => $s['headmaster_name'] ?? null,
                 'wa_bantuan'      => $waNo !== null ? ['nomor' => $wa, 'url' => 'https://wa.me/' . $waNo] : null,
-                'tautan_aplikasi' => trim((string) ($s['tautan_aplikasi'] ?? '')) ?: null,
+                'tautan_aplikasi' => \App\Libraries\AplikasiPublik::tautan($s) ?: null, // 2026-11-07: kosong di Pengaturan → halaman /aplikasi bila ada APK
             ],
             'sorotan'     => $sorotan,
             'foto'        => $foto,

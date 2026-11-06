@@ -34,7 +34,7 @@ $oleh  = static fn (array $r): string => (string) ($r['diproses_oleh'] ?? '') . 
 $tabs  = [
     'baru'         => ['Menunggu diproses', 'Laporan siswa yang belum dibuatkan Surat Balasan. Yang paling lama menunggu ada di atas.'],
     'dikembalikan' => ['Dikembalikan', 'Laporan yang dikembalikan ke siswa dengan alasan. Siswa bisa memperbaiki dan mengirim ulang; laporannya pindah lagi ke "Menunggu diproses".'],
-    'diproses'     => ['Sudah dibuat suratnya', 'Laporan yang sudah dibuatkan Surat Balasan. Terbaru di atas.'],
+    'diproses'     => ['Sudah diproses', 'Laporan yang sudah dibuatkan Surat Balasan, atau laporan "semua ditolak" yang sudah dikonfirmasi (termasuk otomatis oleh sistem). Terbaru di atas.'],
 ];
 $tombolSetujui = $hak['perlu_acc'] ? 'Setujui & buat surat' : 'Buat surat (langsung siap unduh)';
 $dt = 'text-xs text-gray-500 dark:text-gray-400';
@@ -48,14 +48,16 @@ $dt = 'text-xs text-gray-500 dark:text-gray-400';
 <?= $this->section('content') ?>
 
 <?= view('admin/partials/help', [
-    'helpKey'   => 'surat_lapor_v3',
+    'helpKey'   => 'surat_lapor_v4',
     'helpTitle' => 'Lapor Diterima PKL',
     'helpBody'  => '<p>Siswa yang ajuan PKL-nya sudah <b>disetujui</b> melapor lewat tautan form lapor bahwa <b>perusahaan sudah menerimanya</b>, beserta tanggal mulai &amp; selesai PKL (dan alamat perusahaan bila berubah). Dari laporan itu sekolah membuat <b>Surat Balasan PKL</b>.</p>'
         . '<ul class="mt-2 list-disc space-y-1 pl-5">'
         . '<li><b>' . esc($tombolSetujui) . '</b>: surat dibuat dari isian laporan (tanggal surat hari ini)' . ($hak['perlu_acc'] ? ' dan langsung disetujui atas nama Anda, lalu siap diunduh' : '') . '. Tombol ini hanya untuk peran yang diberi hak ' . ($hak['perlu_acc'] ? '<b>ACC Surat Balasan</b> (sekarang: ' . esc($pemegangAcc) . ')' : '<b>Buat Surat Balasan</b>') . '.</li>'
         . ($hak['perlu_acc'] ? '<li><b>Buat &amp; ajukan untuk ACC</b> (di menu <b>Lainnya</b> bila Anda juga boleh menyetujui): surat dibuat lalu menunggu ACC (' . esc($pemegangAcc) . ').</li>' : '')
         . '<li><b>Periksa &amp; ubah dulu</b> (menu <b>Lainnya</b>): membuka formulir Surat Balasan yang sudah terisi dari laporan; ubah bila perlu, lalu simpan. Laporan otomatis ditandai selesai.</li>'
-        . '<li><b>Hasil perusahaan</b>: siswa memilih <b>semua diterima</b>, <b>sebagian diterima</b> (mencentang siapa yang diterima), atau <b>semua ditolak</b>. Laporan <b>sebagian</b>: saat Anda memproses, siswa yang tidak diterima otomatis <b>dikeluarkan</b> dari ajuan (bebas mengajukan tempat lain, tetap tercatat) lalu Surat Balasan hanya memuat siswa yang diterima. Laporan <b>semua ditolak</b>: tekan <b>Konfirmasi ditolak perusahaan</b> — ajuan menjadi Ditolak perusahaan, tanpa surat.</li>'
+        . '<li><b>Hasil perusahaan</b>: siswa memilih <b>semua diterima</b>, <b>sebagian diterima</b> (mencentang siapa yang diterima), atau <b>semua ditolak</b>.</li>'
+        . '<li><b>Sejak November 2026 siswa yang ditolak dilepas OTOMATIS</b> begitu laporan terkirim &mdash; Anda tidak perlu memprosesnya lagi. Laporan <b>semua ditolak</b>: ajuan langsung ditandai Ditolak perusahaan dan laporannya pindah ke tab <b>Sudah diproses</b> (tertulis &quot;Diproses Sistem otomatis&quot;). Laporan <b>sebagian</b>: siswa yang tidak diterima langsung dikeluarkan (bebas mengajukan tempat lain, tetap tercatat), laporannya berubah menjadi <b>semua diterima</b> untuk sisa anggota dan tetap menunggu Anda membuat Surat Balasan.</li>'
+        . '<li><b>Kenapa masih ada laporan &quot;semua ditolak&quot; di tab Menunggu?</b> Jarang terjadi: pelepasan otomatis gagal (mis. data ajuan berubah bersamaan). Proses seperti biasa dengan <b>Konfirmasi ditolak perusahaan</b>.</li>'
         . '<li><b>Kembalikan ke siswa</b> (menu <b>Lainnya</b>): bila isian siswa keliru. Tulis alasannya di jendela yang terbuka &mdash; siswa membacanya saat membuka form lapor lagi, lalu bisa mengirim ulang.</li>'
         . '<li>Siapa yang boleh memproses diatur Admin di <b>Sistem → Hak Akses</b> (hak Buat / ACC Surat Balasan). Tanda tangan Waka Hubin dan Kepala Sekolah tetap tercetak, siapa pun yang meng-ACC.</li>'
         . '</ul>',
@@ -122,6 +124,9 @@ $dt = 'text-xs text-gray-500 dark:text-gray-400';
             [$lpTeks, $lpWarna] = PklLapor::TAMPIL[$r['status']] ?? [$r['status'], 'lencana-abu'];
             $hasil      = (string) ($r['hasil'] ?? 'semua');
             $ditolakSemua = $hasil === 'ditolak';
+            if ($ditolakSemua && $r['status'] === 'diproses') { // tanpa surat: "dikonfirmasi", bukan "Surat Balasan dibuat"
+                [$lpTeks, $lpWarna] = [(string) ($r['diproses_oleh'] ?? '') === 'Sistem otomatis' ? 'Dikonfirmasi otomatis' : 'Dikonfirmasi', 'lencana-hijau'];
+            }
             $sebagian   = $hasil === 'sebagian';
             $dikeluarkan = $sebagian ? $r['siswa_ditolak'] : [];
         ?>

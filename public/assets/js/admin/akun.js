@@ -17,7 +17,7 @@ document.addEventListener('alpine:init', function () {
             mode: 'tambah',
             urlForm: '',
             peranTerkunci: false,
-            form: { full_name: '', email: '', phone: '', role: 'operator' },
+            form: { full_name: '', email: '', phone: '', role: 'operator', guru_id: '0' },
 
             // dialog konfirmasi
             tanyaTerbuka: false,
@@ -48,7 +48,8 @@ document.addEventListener('alpine:init', function () {
                         full_name: lama.full_name || '',
                         email: lama.email || '',
                         phone: lama.phone || '',
-                        role: lama.role || 'operator'
+                        role: lama.role || 'operator',
+                        guru_id: String(lama.guru_id || 0)
                     }, false);
                 }
             },
@@ -60,12 +61,12 @@ document.addEventListener('alpine:init', function () {
             },
 
             tambah: function () {
-                this.bukaForm('tambah', 0, { full_name: '', email: '', phone: '', role: 'operator' }, false);
+                this.bukaForm('tambah', 0, { full_name: '', email: '', phone: '', role: 'operator', guru_id: '0' }, false);
             },
 
             ubah: function (r) {
                 this.bukaForm('ubah', r.id, {
-                    full_name: r.full_name, email: r.email, phone: r.phone, role: r.role
+                    full_name: r.full_name, email: r.email, phone: r.phone, role: r.role, guru_id: String(r.guru_id || 0)
                 }, !!r.saya);
             },
 

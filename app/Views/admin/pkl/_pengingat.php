@@ -19,8 +19,8 @@ $lama  = static fn (int $n): string => $n . ' hari';
         <section class="pengingat-bagian" aria-labelledby="pengingat-ajuan">
             <h4 id="pengingat-ajuan" class="pengingat-judul"><?= ikon('clock', 'h-6 w-6 shrink-0') ?><span><?= (int) $ajuan['n'] ?> ajuan PKL belum di-ACC lebih dari <?= $hari ?> hari</span></h4>
             <p class="pengingat-teks">
-                <b><?= (int) $ajuan['siswa'] ?> siswa</b> menunggu keputusan sekolah melewati batas <?= $hari ?> hari. Selama belum diputuskan, mereka
-                <b>belum bisa mengambil Surat Izin PKL</b> dan <b>tidak bisa mengajukan tempat lain</b>. Putuskan tiap ajuan: ACC, kembalikan untuk diperbaiki, atau tolak.
+                <b><?= (int) $ajuan['siswa'] ?> siswa</b> menunggu keputusan sekolah melewati batas <?= $hari ?> hari. Mereka <b>belum bisa mengambil Surat Izin PKL</b>,
+                dan karena sudah lewat batas mereka kini <b>boleh mengajukan ulang di tempat lain</b> &mdash; ajuan ini bisa kosong/tertutup sendiri. Putuskan tiap ajuan sekarang: ACC, kembalikan untuk diperbaiki, atau tolak.
             </p>
             <div class="tabel-bungkus pengingat-tabel">
                 <table class="tabel">

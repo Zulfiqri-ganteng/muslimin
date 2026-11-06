@@ -59,6 +59,10 @@ final class MenuAdmin
         return [
             ['judul' => null, 'entri' => [
                 'dashboard' => ['Dashboard', self::MENU, [['admin/dashboard', 'Dashboard', 'chart-pie']]],
+                // Wali kelas (2026-11-07): umum di penjaga rute, tampil hanya bagi akun yang gurunya wali kelas (dan Admin) —
+                // Libraries\WaliKelas::itemTampil dipakai menu samping & menu API.
+                'kelas_saya' => ['Kelas Saya (wali kelas)', self::UMUM, [['admin/kelas-saya', 'Kelas Saya', 'users-group']], ['awalan' => ['admin/kelas-saya'],
+                    'ket' => 'Muncul otomatis bagi akun yang dihubungkan ke guru wali kelas (Kelola Akun) dan Admin; isinya hanya kelas yang diwalikan.']],
             ]],
             // ===== BAGIAN KURIKULUM =====
             ['judul' => 'GURU', 'bagian' => 'KURIKULUM', 'ikon' => 'chalkboard-user', 'entri' => [

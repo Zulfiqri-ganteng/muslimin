@@ -16,7 +16,7 @@ $email    = trim((string) ($setting['email'] ?? ''));
 $situs    = trim((string) ($setting['website'] ?? ''));
 $wa       = preg_replace('/\D+/', '', (string) ($setting['wa_bantuan'] ?? ''));
 $waUrl    = $wa !== '' ? 'https://wa.me/' . (str_starts_with($wa, '0') ? '62' . substr($wa, 1) : $wa) : '';
-$aplikasi = trim((string) ($setting['tautan_aplikasi'] ?? ''));
+$aplikasi = \App\Libraries\AplikasiPublik::tautan($setting); // Pengaturan Sekolah → halaman /aplikasi bila ada APK (2026-11-07)
 $tahun    = trim((string) ($setting['academic_year'] ?? ''));
 $alamat   = trim(implode(', ', array_filter([trim((string) ($setting['address'] ?? '')), trim((string) ($setting['city'] ?? '')), trim((string) ($setting['school_postal_code'] ?? ''))])));
 $situsUrl = $situs !== '' ? (preg_match('#^https?://#i', $situs) === 1 ? $situs : 'https://' . $situs) : '';
@@ -75,7 +75,7 @@ $situsUrl = $situs !== '' ? (preg_match('#^https?://#i', $situs) === 1 ? $situs 
                 <p class="kaki-judul"><?= $aplikasi !== '' ? 'Unduh aplikasi' : 'Panel sekolah' ?></p>
                 <div class="mt-4 flex flex-col items-start gap-3">
                     <?php if ($aplikasi !== ''): ?>
-                        <a href="<?= esc($aplikasi, 'attr') ?>" class="kaki-tombol" target="_blank" rel="noopener"><?= ikon('mobile-phone', 'h-5 w-5') ?>Aplikasi Android</a>
+                        <a href="<?= esc($aplikasi, 'attr') ?>" class="kaki-tombol"<?= str_starts_with($aplikasi, site_url('aplikasi')) ? '' : ' target="_blank" rel="noopener"' ?>><?= ikon('mobile-phone', 'h-5 w-5') ?>Aplikasi Android</a>
                     <?php endif; ?>
                     <a href="<?= site_url('admin/login') ?>" class="kaki-tombol"><?= ikon('arrow-right-to-bracket', 'h-5 w-5') ?>Masuk guru &amp; staf</a>
                 </div>

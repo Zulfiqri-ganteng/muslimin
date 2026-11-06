@@ -18,9 +18,10 @@ $saklar = static fn (string $nama, bool $nyala, string $judul, string $ket): str
 <?= $this->section('content') ?>
 
 <?= view('admin/partials/help', [
-    'helpKey'   => 'settings',
+    'helpKey'   => 'settings_v2',
     'helpTitle' => 'Pengaturan Sekolah & Tampilan Publik',
-    'helpBody'  => '<p>Identitas sekolah di sini dipakai pada kop surat, PDF, dan halaman publik. Di bagian bawah ada saklar tampilan publik: <b>Buka pengisian form</b>, <b>Tampilkan jadwal ke publik</b>, dan <b>Tampilkan absensi ke publik</b>. Matikan salah satu untuk menyembunyikan halaman terkait dari pengunjung situs.</p><p class="mt-2">Kartu <b>Situs publik</b> berisi profil singkat sekolah, nomor WhatsApp bantuan, dan tautan unduh aplikasi Android yang tampil di situs publik.</p>',
+    'helpBody'  => '<p>Identitas sekolah di sini dipakai pada kop surat, PDF, dan halaman publik. Di bagian bawah ada saklar tampilan publik: <b>Buka pengisian form</b>, <b>Tampilkan jadwal ke publik</b>, dan <b>Tampilkan absensi ke publik</b>. Matikan salah satu untuk menyembunyikan halaman terkait dari pengunjung situs.</p><p class="mt-2">Kartu <b>Situs publik</b> berisi profil singkat sekolah, nomor WhatsApp bantuan, dan tautan unduh aplikasi Android yang tampil di situs publik.</p>'
+        . '<p class="mt-2"><b>Kenapa tautan aplikasi boleh kosong?</b> Selama aplikasi belum ada di Play Store, situs memakai halaman <b>Unduh Aplikasi</b> (alamat <code>/aplikasi</code>) yang otomatis menampilkan versi terbaru dari server, lengkap dengan cara memasang. Isi kolom ini hanya bila nanti aplikasi sudah rilis di Play Store.</p>',
 ]) ?>
 
 <form method="post" action="<?= site_url('admin/settings') ?>" enctype="multipart/form-data" class="max-w-3xl space-y-4">
@@ -164,7 +165,7 @@ $saklar = static fn (string $nama, bool $nyala, string $judul, string $ket): str
                 <div>
                     <label class="lbl" for="st-aplikasi">Tautan unduh aplikasi Android</label>
                     <input type="url" id="st-aplikasi" name="tautan_aplikasi" value="<?= esc(old('tautan_aplikasi', (string) ($setting['tautan_aplikasi'] ?? '')), 'attr') ?>" maxlength="255" class="inp" placeholder="https://play.google.com/store/apps/details?id=…">
-                    <p class="hint">Tampil sebagai "Unduh aplikasi" di kaki halaman situs publik.</p>
+                    <p class="hint"><b>Boleh dikosongkan.</b> Kosong = situs otomatis memakai halaman <a href="<?= site_url('aplikasi') ?>" target="_blank" rel="noopener" class="font-medium text-brand-700 hover:underline dark:text-brand-400">Unduh Aplikasi</a> (berkas APK dari server). Isi hanya bila aplikasi sudah ada di Play Store. Tampil di kotak "Aplikasi Android" dan kaki halaman situs publik.</p>
                 </div>
             </div>
         </div>

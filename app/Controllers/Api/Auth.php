@@ -198,7 +198,7 @@ class Auth extends BaseApiController
         foreach (MenuAdmin::sidebar() as $g) {
             $item = [];
             foreach ($g['items'] as $it) {
-                if (! HakAkses::boleh($peran, (string) $it[0])) {
+                if (! HakAkses::boleh($peran, (string) $it[0]) || ! \App\Libraries\WaliKelas::itemTampil((string) $it[0], (array) $this->admin())) {
                     continue;
                 }
                 $e      = MenuAdmin::cariAlamat(HakPeran::rapikan((string) $it[0]));
@@ -285,6 +285,9 @@ class Auth extends BaseApiController
             'peran_label' => HakAkses::label($a['role'] ?? null),
             // true = sandi sementara dari admin: aplikasi wajib membuka layar ganti sandi lebih dulu.
             'wajib_ganti_sandi' => (int) ($a['wajib_ganti_sandi'] ?? 0) === 1,
+            // 2026-11-07: true = akun ini wali kelas (lewat guru yang dihubungkan) → aplikasi menampilkan "Kelas Saya"
+            // walau perannya lain (mis. Waka Hubin). Admin melihat semua kelas lewat menu, jadi tidak dihitung di sini.
+            'wali_kelas' => ($a['role'] ?? '') !== 'admin' && (new \App\Libraries\WaliKelas())->kelasAkun((int) ($a['id'] ?? 0)) !== [],
         ];
     }
 }

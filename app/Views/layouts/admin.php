@@ -33,10 +33,10 @@ service('response')->setHeader('Speculation-Rules', '"' . base_url('assets/atura
 // Item: [url, label, ikon (nama Flowbite Icons), persis?, segera?]. Urutan grup & item mengikuti aturan urutan sidebar.
 // Menu tiap peran disaring HakAkses::boleh — aturan yang sama dengan penjaga rute, jadi menu & akses tak mungkin berselisih.
 $peranKini = (string) ($admin['role'] ?? '');
-$groups    = array_values(array_filter(array_map(static function (array $g) use ($peranKini): array {
+$groups    = array_values(array_filter(array_map(static function (array $g) use ($peranKini, $admin): array {
     $g['items'] = array_values(array_filter(
         $g['items'],
-        static fn (array $it): bool => \App\Libraries\HakAkses::boleh($peranKini, $it[0])
+        static fn (array $it): bool => \App\Libraries\HakAkses::boleh($peranKini, $it[0]) && \App\Libraries\WaliKelas::itemTampil($it[0], (array) $admin)
     ));
 
     return $g;

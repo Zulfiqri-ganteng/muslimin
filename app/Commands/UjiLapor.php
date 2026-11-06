@@ -706,11 +706,14 @@ class UjiLapor extends BaseCommand
         $l = $this->lapor('H');
         $this->cek('POST kirim → 200; laporan tersimpan (sebagian; pelapor = siswa pemilik token)', $k === 200 && ($j['data']['hasil'] ?? '') === 'sebagian' && ($j['data']['ulang'] ?? true) === false
             && ($l['status'] ?? '') === 'baru' && (int) ($l['siswa_id'] ?? 0) === $this->s[12], json_encode($j));
+        $this->cek('… respons: siswa yang tidak diterima langsung bebas (data.bebas, lepas_otomatis, tautan_ajukan)', ($j['data']['lepas_otomatis'] ?? false) === true
+            && count($j['data']['bebas'] ?? []) === 1 && ($j['data']['tautan_ajukan'] ?? '') !== '', json_encode($j['data'] ?? $j));
 
         [$k, $j] = $this->apiPublik('cek', [], ['siswa_id' => $this->s[11], 'hp' => '081299990000'], '', 'lapor_cek_ulang');
         $token2  = (string) ($j['data']['token'] ?? '');
-        $this->cek('POST cek pengaju (HP di ajuan) → laporan lama ikut (baru, sebagian, diterima)', $k === 200 && ($j['data']['lapor']['status'] ?? '') === 'baru'
-            && ($j['data']['lapor']['hasil'] ?? '') === 'sebagian' && ($j['data']['lapor']['diterima'] ?? []) === [$this->s[11]], json_encode($j['data']['lapor'] ?? $j));
+        // Aturan 2026-11-07: siswa 12 (tidak dicentang) LANGSUNG dilepas otomatis → laporan menjadi "semua diterima" bagi sisa anggota.
+        $this->cek('POST cek pengaju (HP di ajuan) → laporan lama ikut (baru, kini semua diterima karena yang ditolak sudah dilepas)', $k === 200 && ($j['data']['lapor']['status'] ?? '') === 'baru'
+            && ($j['data']['lapor']['hasil'] ?? '') === 'semua' && array_column($j['data']['anggota'] ?? [], 'siswa_id') === [$this->s[11]], json_encode($j['data'] ?? $j));
         [$k, $j] = $this->apiPublik('kirim', [], $isi + ['alamat' => '', 'catatan' => ''], $token2);
         $this->cek('POST kirim ulang → 200 ulang=true, laporan diperbarui (semua diterima)', $k === 200 && ($j['data']['ulang'] ?? false) === true && ($this->lapor('H')['hasil'] ?? '') === 'semua', json_encode($j));
     }

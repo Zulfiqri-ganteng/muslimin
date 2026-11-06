@@ -139,8 +139,10 @@ document.addEventListener('alpine:init', function () {
                     disetujui: { teks: 'Disetujui', kelas: 'label-buka' },
                     perbaikan: { teks: 'Perlu perbaikan', kelas: 'label-kuning' },
                     ditolak: { teks: 'Ditolak — boleh ajukan lagi', kelas: 'label-merah' },
-                    // Dilaporkan tidak diterima perusahaan; laporannya belum diproses sekolah (masih tercatat di ajuan lama).
-                    lepas: { teks: 'Tidak diterima — tunggu diproses sekolah', kelas: 'label-kuning' },
+                    // Dilaporkan tidak diterima perusahaan tetapi belum terlepas dari ajuan lama (jarang: pelepasan otomatis gagal).
+                    lepas: { teks: 'Tidak diterima — muat ulang', kelas: 'label-kuning' },
+                    // Menunggu keputusan melewati batas (aturan 2026-11-07): boleh mengajukan ulang.
+                    lewat: { teks: 'Lewat batas — boleh ajukan ulang', kelas: 'label-kuning' },
                 }[status] || { teks: '', kelas: '' };
             },
 
@@ -326,7 +328,7 @@ document.addEventListener('alpine:init', function () {
             alasanTak: function (s) {
                 if (this.pilih && s.id === this.pilih.id) { return 'Ini kamu'; }
                 if (this.teman.some(function (t) { return t.id === s.id; })) { return 'Sudah dipilih'; }
-                if (s.status !== 'belum' && s.status !== 'ditolak' && this.temanAsal.indexOf(s.id) === -1) {
+                if (s.status !== 'belum' && s.status !== 'ditolak' && s.status !== 'lewat' && this.temanAsal.indexOf(s.id) === -1) {
                     return this.lencana(s.status).teks;
                 }
                 return '';

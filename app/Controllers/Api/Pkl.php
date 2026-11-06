@@ -96,6 +96,7 @@ class Pkl extends BaseApiController
         'lapor_diterima' => 'Siswa lapor hasil perusahaan', 'lapor_proses' => 'Laporan diterima diproses', 'lapor_kembali' => 'Laporan diterima dikembalikan',
         'keluarkan' => 'Siswa dikeluarkan dari ajuan', 'tolak_perusahaan' => 'Ditolak perusahaan', 'kabari_keluar' => 'Siswa yang dikeluarkan dikabari (WhatsApp)',
         'gabung' => 'Digabung ke ajuan lain', 'gabung_masuk' => 'Menerima siswa dari ajuan lain',
+        'ajukan_ulang' => 'Siswa mengajukan ulang (lewat batas)', 'tutup_otomatis' => 'Ditutup otomatis (lewat batas)',
     ];
 
     /** Label peran penyetuju: peran yang ada di Sistem → Hak Akses + 'impor' (data riwayat). */
@@ -146,7 +147,7 @@ class Pkl extends BaseApiController
             'kelas'         => array_map(static fn (array $k) => ['id' => (int) $k['id'], 'nama' => $k['nama_kelas'], 'tingkat' => $k['tingkat']], $this->model->kelasBersiswa()),
             'hak'           => $this->hakUmum(),
             // Revisi 2026-10-20: jenis siswa dikeluarkan + template alasan (kelompok, jendela → jenis, template berkelompok per jendela).
-            'jenis_keluar'  => array_map(static fn (array $j): array => ['judul' => $j[0], 'keterangan' => $j[1]], PklKeluar::JENIS),
+            'jenis_keluar'  => array_map(static fn (array $j): array => ['judul' => $j[0], 'keterangan' => $j[1]], PklKeluar::jenisStaf()),
             'alasan'        => [
                 'jenis'  => array_map(static fn (array $j): array => ['judul' => $j[0], 'keterangan' => $j[1]], PklAlasan::JENIS),
                 'dialog' => array_combine(array_keys(PklAlasan::DIALOG), array_map(static fn (string $d): array => (new PklAlasan())->untukDialog($d), array_keys(PklAlasan::DIALOG))),
@@ -1266,9 +1267,9 @@ class Pkl extends BaseApiController
             'id'              => (int) $r['id'],
             'kode'            => PklPengajuanModel::kode((int) $r['id']),
             'status'          => $r['status'],
-            'status_label'    => match ($r['tolak_sumber'] ?? null) { 'perusahaan' => 'Ditolak perusahaan', 'gabung' => 'Digabung ke ajuan lain', default => self::LABEL_STATUS[$r['status']] ?? $r['status'] },
-            // 'perusahaan' | 'sekolah' untuk ajuan ditolak (revisi 2026-10-20), null untuk status lain.
-            'tolak_sumber'    => $r['status'] === 'ditolak' ? (in_array($r['tolak_sumber'] ?? null, ['perusahaan', 'gabung'], true) ? $r['tolak_sumber'] : 'sekolah') : null,
+            'status_label'    => match ($r['tolak_sumber'] ?? null) { 'perusahaan' => 'Ditolak perusahaan', 'gabung' => 'Digabung ke ajuan lain', 'lewat_batas' => 'Ditutup otomatis (lewat batas)', default => self::LABEL_STATUS[$r['status']] ?? $r['status'] },
+            // 'perusahaan' | 'gabung' | 'lewat_batas' (2026-11-07) | 'sekolah' untuk ajuan ditolak (revisi 2026-10-20), null untuk status lain.
+            'tolak_sumber'    => $r['status'] === 'ditolak' ? (in_array($r['tolak_sumber'] ?? null, ['perusahaan', 'gabung', 'lewat_batas'], true) ? $r['tolak_sumber'] : 'sekolah') : null,
             'sumber'          => $r['sumber'],
             'perusahaan_nama' => $r['perusahaan_nama'],
             'perusahaan_kota' => $r['perusahaan_kota'] ?? null,

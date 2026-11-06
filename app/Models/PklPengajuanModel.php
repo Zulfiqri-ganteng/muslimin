@@ -63,6 +63,21 @@ class PklPengajuanModel extends Model
     }
 
     /**
+     * Ajuan MENUNGGU yang sudah melewati batas keputusan (akhir hari ke-$hari sejak dikirim) — sejak 2026-11-07 tidak lagi
+     * mengunci anggotanya: mereka boleh mengajukan ulang, dan saat ajuan baru terkirim mereka otomatis dilepas dari ajuan lama
+     * (PklAjuan::lepasLewatBatas). Status lain (perbaikan/disetujui) tidak pernah "lewat batas".
+     */
+    public static function lewatBatas(?string $status, ?string $diajukanAt, int $hari, ?int $sekarang = null): bool
+    {
+        if ($status !== 'menunggu') {
+            return false;
+        }
+        $batas = self::batasKeputusan($diajukanAt, $hari);
+
+        return $batas !== null && strtotime($batas) < ($sekarang ?? time());
+    }
+
+    /**
      * Sisa hari menuju batas keputusan (0 = hari ini batasnya, negatif = terlambat), atau null.
      */
     public static function sisaHari(?string $diajukanAt, int $hari): ?int
@@ -83,10 +98,16 @@ class PklPengajuanModel extends Model
     {
         $sql = "EXISTS (SELECT 1 FROM pkl_anggota ar JOIN pkl_pengajuan pr ON pr.id = ar.pengajuan_id WHERE ar.siswa_id = s.id AND pr.status = 'ditolak')";
         if (\App\Libraries\PklKeluar::tabelAda()) {
-            $sql .= " OR EXISTS (SELECT 1 FROM pkl_anggota_keluar kr WHERE kr.siswa_id = s.id AND kr.jenis <> 'pindah')";
+            $sql .= " OR EXISTS (SELECT 1 FROM pkl_anggota_keluar kr WHERE kr.siswa_id = s.id AND kr.jenis NOT IN (" . self::sqlBukanTolak() . '))';
         }
 
         return $sql;
+    }
+
+    /** Daftar jenis keluar yang BUKAN penolakan (PklKeluar::BUKAN_TOLAK) sebagai literal SQL: 'pindah','ajukan_ulang'. */
+    public static function sqlBukanTolak(): string
+    {
+        return implode(',', array_map(static fn (string $j): string => "'" . $j . "'", \App\Libraries\PklKeluar::BUKAN_TOLAK));
     }
 
     /** SQL jumlah penolakan siswa s (ajuan ditolak + dikeluarkan, kecuali "pindah kelompok"). */
@@ -94,7 +115,7 @@ class PklPengajuanModel extends Model
     {
         $sql = "(SELECT COUNT(*) FROM pkl_anggota ar JOIN pkl_pengajuan pr ON pr.id = ar.pengajuan_id WHERE ar.siswa_id = s.id AND pr.status = 'ditolak')";
         if (\App\Libraries\PklKeluar::tabelAda()) {
-            $sql .= " + (SELECT COUNT(*) FROM pkl_anggota_keluar kr WHERE kr.siswa_id = s.id AND kr.jenis <> 'pindah')";
+            $sql .= " + (SELECT COUNT(*) FROM pkl_anggota_keluar kr WHERE kr.siswa_id = s.id AND kr.jenis NOT IN (" . self::sqlBukanTolak() . '))';
         }
 
         return $sql;
@@ -187,9 +208,11 @@ class PklPengajuanModel extends Model
         }
 
         $rows = $this->db->table('siswa s')
-            ->select('s.id, s.nama, s.status, s.kelas_id, k.nama_kelas, k.tingkat, a.pengajuan_id AS aktif_di')
+            ->select('s.id, s.nama, s.status, s.kelas_id, k.nama_kelas, k.tingkat, a.pengajuan_id AS aktif_di,'
+                . ' p.status AS aktif_status, COALESCE(p.diajukan_at, p.created_at) AS aktif_kirim')
             ->join('kelas k', 'k.id = s.kelas_id', 'left')
             ->join('pkl_anggota a', 'a.siswa_aktif = s.id', 'left')
+            ->join('pkl_pengajuan p', 'p.id = a.pengajuan_id', 'left')
             ->whereIn('s.id', array_map('intval', $ids))
             ->where('s.deleted_at', null)
             ->get()->getResultArray();

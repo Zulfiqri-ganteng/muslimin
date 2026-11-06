@@ -27,7 +27,11 @@ use CodeIgniter\HTTP\ResponseInterface;
  *   - satu siswa satu ajuan AKTIF — dijaga 3 lapis: daftar nama menandai & mengunci
  *     siswa yang sudah aktif, validasi di sini, dan UNIQUE pkl_anggota.siswa_aktif.
  *     Selama ajuan menunggu keputusan Hubin siswa TIDAK boleh mengajukan ulang (pesan
- *     menyebut nomor bukti, jam kirim, dan batas keputusan);
+ *     menyebut nomor bukti, jam kirim, dan batas keputusan). ATURAN LEWAT BATAS (2026-11-07):
+ *     ajuan menunggu yang lewat batas tidak lagi mengunci — siswanya boleh mengajukan ulang dan
+ *     otomatis dilepas dari ajuan lama saat ajuan baru tersimpan (PklAjuan::lepasLewatBatas);
+ *   - siswa yang dilaporkan TIDAK diterima perusahaan (form Lapor) langsung dilepas sistem
+ *     saat laporan terkirim (PklLapor::lepasOtomatis), jadi langsung bisa mengajukan lagi;
  *   - ajuan terkunci setelah kirim; hanya yang dikembalikan staf (`perbaikan`) bisa
  *     dibuka lagi, oleh PENGAJU, dengan nomor HP yang ia isi (dibatasi LoginThrottle);
  *   - daftar nama hanya memuat status — tak pernah data perusahaan atau ajuan orang lain;
@@ -93,17 +97,26 @@ class Pkl extends BaseController
         }
 
         $hari  = PklPengaturanModel::batasHari($this->p);
-        $baris = (new PklPengajuanModel())->daftarSiswaKelas($kelasId);
-        // Laporan "sebagian/semua ditolak perusahaan" yang belum diproses staf: siswa yang ditolak masih tercatat di ajuan disetujui,
-        // jadi statusnya 'lepas' (bukan "Disetujui — tidak perlu mengisi lagi").
-        $tolak = (new PklLapor())->tolakMenunggu(array_column(array_filter($baris, static fn (array $r): bool => $r['aktif'] === 'disetujui'), 'pengajuan_id'));
+        $model = new PklPengajuanModel();
+        $baris = $model->daftarSiswaKelas($kelasId);
+        // Laporan "sebagian/semua ditolak perusahaan" yang belum diproses: siswa yang ditolak masih tercatat di ajuan disetujui.
+        // Sejak 2026-11-07 laporan itu dilepas otomatis — yang masih tertinggal (laporan lama) dilepas di sini, lalu daftar dibaca ulang.
+        $lapor = new PklLapor();
+        $tolak = $lapor->tolakMenunggu(array_column(array_filter($baris, static fn (array $r): bool => $r['aktif'] === 'disetujui'), 'pengajuan_id'));
+        if ($tolak !== [] && $lapor->lepasTertunda(array_keys($tolak), $this->request->getIPAddress()) > 0) {
+            $baris = $model->daftarSiswaKelas($kelasId);
+            $tolak = $lapor->tolakMenunggu(array_column(array_filter($baris, static fn (array $r): bool => $r['aktif'] === 'disetujui'), 'pengajuan_id'));
+        }
         $data  = array_map(static fn (array $r) => [
             'id'     => (int) $r['id'],
             'nama'   => $r['nama'],
             'jk'     => $r['jenis_kelamin'],
-            'status' => $r['aktif'] === 'disetujui' && PklLapor::dilaporkanTolak($tolak, (int) $r['pengajuan_id'], (int) $r['id'])
-                ? 'lepas'
-                : ($r['aktif'] ?? ((int) $r['pernah_ditolak'] === 1 ? 'ditolak' : 'belum')),
+            'status' => match (true) {
+                $r['aktif'] === 'disetujui' && PklLapor::dilaporkanTolak($tolak, (int) $r['pengajuan_id'], (int) $r['id']) => 'lepas',
+                // Menunggu keputusan melewati batas → boleh mengajukan ulang (aturan 2026-11-07).
+                PklPengajuanModel::lewatBatas($r['aktif'], $r['diajukan_at'] ?? null, $hari) => 'lewat',
+                default => $r['aktif'] ?? ((int) $r['pernah_ditolak'] === 1 ? 'ditolak' : 'belum'),
+            },
             'peran'  => $r['aktif'] !== null ? $r['peran'] : null,
             // Hanya tanggal (bukan data ajuan): kapan keputusan sekolah paling lambat keluar.
             'batas'  => $r['aktif'] === 'menunggu' ? substr((string) PklPengajuanModel::batasKeputusan($r['diajukan_at'] ?? null, $hari), 0, 10) : null,
@@ -237,6 +250,14 @@ class Pkl extends BaseController
 
         $ajuanId = (int) $this->request->getPost('ajuan_id');
         $milik   = $model->aktifMilik($id);
+        $hari    = PklPengaturanModel::batasHari($this->p);
+        // Dilaporkan tidak diterima perusahaan tetapi laporannya belum dilepas (laporan lama) → lepas sekarang, lalu baca ulang.
+        if ($ajuanId === 0 && $milik !== null && $milik['status'] === 'disetujui') {
+            $lapor = new PklLapor();
+            if (PklLapor::dilaporkanTolak($lapor->tolakMenunggu([(int) $milik['id']]), (int) $milik['id'], $id) && $lapor->lepasTertunda([(int) $milik['id']], $ip) > 0) {
+                $milik = $model->aktifMilik($id);
+            }
+        }
         if ($ajuanId > 0) {
             if ($milik === null || (int) $milik['id'] !== $ajuanId || $milik['status'] !== 'perbaikan' || $milik['peran'] !== 'pengaju') {
                 return $this->json(['ok' => false, 'message' => 'Ajuan ini tidak sedang dibuka untuk perbaikan.'], 409);
@@ -244,7 +265,8 @@ class Pkl extends BaseController
             if (! $this->sudahDibuka($ajuanId)) {
                 return $this->json(['ok' => false, 'message' => 'Buka ajuanmu dulu dengan nomor HP.'], 403);
             }
-        } elseif ($milik !== null) {
+        } elseif ($milik !== null && ! PklPengajuanModel::lewatBatas((string) $milik['status'], $milik['diajukan_at'] ?? $milik['created_at'] ?? null, $hari)) {
+            // Ajuan menunggu yang LEWAT batas keputusan tidak mengunci: siswa boleh mengajukan ulang, ajuan lama dilepas saat menyimpan.
             return $this->json(['ok' => false, 'message' => $this->pesanTerkunci($milik, $id)], 409);
         }
 
@@ -265,6 +287,8 @@ class Pkl extends BaseController
             'ip'           => $ip,
             'sumber'       => 'siswa',
             'tahun_ajaran' => $this->setting['academic_year'] ?? null,
+            // Aturan lewat batas: anggota yang masih tercatat di ajuan menunggu yang sudah lewat batas dilepas otomatis (PklAjuan).
+            'batas_hari'   => $hari,
         ];
 
         $ajuan = new PklAjuan();
@@ -409,6 +433,7 @@ class Pkl extends BaseController
 
         $info    = (new PklPengajuanModel())->siswaUntukDipilih($ids);
         $boleh   = PklPengaturanModel::tingkatBoleh($this->p);
+        $hari    = PklPengaturanModel::batasHari($this->p);
         $baris   = [];
         $masalah = [];
         foreach ($ids as $tid) {
@@ -419,7 +444,8 @@ class Pkl extends BaseController
                 $masalah[] = 'ada siswa yang tidak ditemukan (muat ulang halaman)';
             } elseif (! in_array($s['tingkat'] ?? '', $boleh, true)) {
                 $masalah[] = $s['nama'] . ' (kelasnya belum boleh mengajukan PKL)';
-            } elseif ($s['aktif_di'] !== null && (int) $s['aktif_di'] !== (int) $ajuanSendiri) {
+            } elseif ($s['aktif_di'] !== null && (int) $s['aktif_di'] !== (int) $ajuanSendiri
+                && ! PklPengajuanModel::lewatBatas($s['aktif_status'] ?? null, $s['aktif_kirim'] ?? null, $hari)) { // lewat batas = boleh ikut
                 $masalah[] = $s['nama'] . ' (sudah punya ajuan PKL)';
             } else {
                 $baris[] = ['siswa_id' => $tid, 'kelas_id' => (int) $s['kelas_id'] ?: null, 'peran' => 'teman', 'hp' => $hpTeman[$tid] ?? null];
@@ -469,7 +495,8 @@ class Pkl extends BaseController
 
     /**
      * Pesan saat siswa mencoba mengajukan padahal ajuannya masih aktif. Menyebut nomor bukti, jam kirim,
-     * dan batas keputusan sekolah supaya siswa tahu harus menunggu — bukan mengajukan ulang.
+     * dan batas keputusan sekolah supaya siswa tahu harus menunggu — bukan mengajukan ulang. (Ajuan menunggu yang sudah
+     * LEWAT batas tidak sampai ke sini: siswanya boleh mengajukan ulang.)
      *
      * @param array<string, mixed> $milik baris ajuan aktif (PklPengajuanModel::aktifMilik)
      */
@@ -481,13 +508,13 @@ class Pkl extends BaseController
         // Jangan menulis "sudah disetujui, tidak perlu mengisi lagi" kepadanya.
         if (($milik['status'] ?? '') === 'disetujui' && $siswaId > 0 && isset($milik['id'])
             && PklLapor::dilaporkanTolak((new PklLapor())->tolakMenunggu([(int) $milik['id']]), (int) $milik['id'], $siswaId)) {
-            return 'Kelompokmu sudah melaporkan bahwa kamu TIDAK diterima perusahaan, tetapi laporan itu belum diproses sekolah. '
-                . 'Sampai diproses, namamu masih tercatat di ajuan ' . $kode . ' sehingga kamu belum bisa mengajukan tempat PKL lain. '
-                . 'Minta operator sekolah memproses laporan PKL kelompokmu; setelah itu kamu langsung bisa mengajukan tempat baru di form ini.';
+            // Biasanya sudah dilepas otomatis (2026-11-07); pesan ini hanya muncul bila pelepasan otomatis gagal.
+            return 'Kelompokmu sudah melaporkan bahwa kamu TIDAK diterima perusahaan, tetapi namamu belum bisa dilepas otomatis dari ajuan ' . $kode . '. '
+                . 'Muat ulang halaman ini lalu coba lagi. Bila masih muncul, minta operator sekolah memproses laporan PKL kelompokmu.';
         }
         // Ajuan disetujui tetapi perusahaan ternyata menolak (belum dilaporkan): jalan keluarnya lapor dulu, bukan menunggu.
         $tidakDiterima = PklLapor::terbuka($this->p)
-            ? ' Tidak diterima perusahaan? Laporkan lewat form Lapor hasil PKL (' . config('Pkl')->tautanLapor() . '); setelah sekolah memprosesnya, kamu bisa mengajukan tempat PKL lain.'
+            ? ' Tidak diterima perusahaan? Laporkan dulu lewat form Lapor hasil PKL (' . config('Pkl')->tautanLapor() . ') dan pilih "Semua ditolak" atau "Sebagian diterima". Begitu laporan terkirim, siswa yang tidak diterima LANGSUNG bisa mengajukan tempat PKL lain di form ini — tidak perlu menunggu sekolah.'
             : ' Tidak diterima perusahaan? Hubungi operator sekolah agar namamu dikeluarkan dari ajuan itu, lalu kamu bisa mengajukan tempat PKL lain.';
 
         // Didaftarkan TEMAN (bukan mengisi sendiri) — mis. keduanya mengisi bersamaan dan temannya mengirim
@@ -503,7 +530,7 @@ class Pkl extends BaseController
             }
 
             return 'Namamu sudah didaftarkan temanmu di ajuan PKL ' . $kode . ' yang sedang menunggu keputusan sekolah. '
-                . 'Kamu tidak perlu dan tidak bisa mengajukan lagi.' . $tidakIkut;
+                . 'Kamu tidak perlu dan belum bisa mengajukan lagi; bila sampai batas waktunya sekolah belum memutuskan, kamu boleh mengajukan ulang di form ini.' . $tidakIkut;
         }
 
         if (($milik['status'] ?? '') === 'disetujui') {
@@ -521,7 +548,7 @@ class Pkl extends BaseController
             . ($kirim ? ' pada ' . IsianBantu::tanggalIndo(substr((string) $kirim, 0, 10)) : '')
             . ' dan ajuanmu sedang menunggu keputusan sekolah'
             . ($batas ? ' (paling lambat ' . IsianBantu::tanggalIndo(substr($batas, 0, 10)) . ')' : '')
-            . '. Jangan mengajukan ulang — tunggu keputusannya. Bila lewat batas belum ada kabar, hubungi operator sekolah atau Waka Hubin.';
+            . '. Jangan mengajukan ulang — tunggu keputusannya. Bila sampai tanggal itu belum ada keputusan, mulai hari berikutnya kamu boleh mengajukan ulang di form ini (ajuan lamamu ditutup otomatis).';
     }
 
     /** Alamat form: beranda bila dibuka lewat subdomain, /pkl bila lewat domain utama. */

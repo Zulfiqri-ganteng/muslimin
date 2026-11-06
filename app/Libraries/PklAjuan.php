@@ -315,6 +315,11 @@ final class PklAjuan
                 }
             }
 
+            $lepas = $this->lepasLewatBatas(array_map(static fn (array $m): int => (int) $m['siswa_id'], $anggota), $id, $konteks, $now);
+            if (! $lepas['ok']) {
+                return $lepas;
+            }
+
             foreach ($anggota as $m) {
                 $gagal = $this->sisipAnggota($id, $m, $data, $now);
                 if ($gagal !== null) {
@@ -322,8 +327,109 @@ final class PklAjuan
                 }
             }
 
-            return $this->catat($id, $konteks['aksi'] ?? 'kirim', $konteks, null) ? ['ok' => true, 'id' => $id] : ['ok' => false, 'kode' => 'galat'];
+            return $this->catat($id, $konteks['aksi'] ?? 'kirim', $konteks, $lepas['teks'])
+                ? ['ok' => true, 'id' => $id, 'dilepas' => $lepas['ajuan']]
+                : ['ok' => false, 'kode' => 'galat'];
         });
+    }
+
+    /**
+     * ATURAN LEWAT BATAS (2026-11-07, permintaan klien): ajuan MENUNGGU yang belum diputuskan sampai batas keputusan
+     * ($konteks['batas_hari'], Pengaturan PKL) tidak lagi mengunci siswanya. Saat siswa itu masuk ajuan baru $tujuanId (sebagai pengaju
+     * atau teman), di DALAM transaksi pemanggil:
+     *   - barisnya di ajuan lama disalin ke pkl_anggota_keluar (jenis 'ajukan_ulang' — bukan penolakan) lalu dihapus → kunci lepas;
+     *   - bila PENGAJU ikut pergi, anggota tersisa yang paling awal menjadi pengaju; ajuan lama tetap menunggu bagi yang tersisa;
+     *   - bila tidak ada anggota tersisa, ajuan lama DITUTUP: status 'ditolak' + tolak_sumber 'lewat_batas' (bukan penolakan siswa,
+     *     sama seperti ajuan yang digabung) + catatan;
+     *   - riwayat ajuan lama mencatatnya (aksi 'ajukan_ulang' / 'tutup_otomatis').
+     * Ajuan yang BELUM lewat batas, atau sudah diputuskan (perbaikan/disetujui), tidak disentuh → sisipAnggota tetap menolak
+     * ('bentrok'). Tanpa $konteks['batas_hari'] (jalur staf/impor) tidak ada yang dilepas.
+     *
+     * @param list<int>            $siswaIds
+     * @param array<string, mixed> $konteks
+     *
+     * @return array{ok: bool, kode?: string, ajuan: list<int>, teks: ?string}
+     */
+    private function lepasLewatBatas(array $siswaIds, int $tujuanId, array $konteks, string $now): array
+    {
+        $hari = (int) ($konteks['batas_hari'] ?? 0);
+        $siswaIds = array_values(array_unique(array_filter($siswaIds)));
+        if ($hari <= 0 || $siswaIds === [] || ! PklKeluar::tabelAda()) {
+            return ['ok' => true, 'ajuan' => [], 'teks' => null];
+        }
+        // Ajuan aktif lain milik siswa-siswa ini (kecuali ajuan tujuan), dikunci agar ACC yang bersamaan menunggu giliran.
+        $aktif = $this->db->query(
+            'SELECT a.pengajuan_id, a.siswa_id FROM pkl_anggota a WHERE a.siswa_aktif IN (' . implode(',', array_fill(0, count($siswaIds), '?')) . ') AND a.pengajuan_id <> ?',
+            array_merge($siswaIds, [$tujuanId])
+        )->getResultArray();
+        $perAjuan = [];
+        foreach ($aktif as $r) {
+            $perAjuan[(int) $r['pengajuan_id']][] = (int) $r['siswa_id'];
+        }
+        $kodeTujuan = PklPengajuanModel::kode($tujuanId);
+        $dilepas    = [];
+        $teks       = [];
+        foreach ($perAjuan as $asalId => $pergi) {
+            $row = $this->db->query('SELECT id, status, diajukan_at, created_at FROM pkl_pengajuan WHERE id = ? FOR UPDATE', [$asalId])->getRowArray();
+            $kirim = $row !== null ? (string) ($row['diajukan_at'] ?? $row['created_at']) : null;
+            if ($row === null || ! PklPengajuanModel::lewatBatas((string) $row['status'], $kirim, $hari)) {
+                continue; // belum lewat batas / sudah diputuskan → biarkan sisipAnggota menolak (bentrok)
+            }
+            $ada = $this->db->query(
+                'SELECT a.id, a.siswa_id, a.peran, a.kelas_id, a.hp, s.nama FROM pkl_anggota a JOIN siswa s ON s.id = a.siswa_id'
+                . ' WHERE a.pengajuan_id = ? ORDER BY (a.peran = \'pengaju\') DESC, a.id ASC',
+                [$asalId]
+            )->getResultArray();
+            $batasTgl = date('d-m-Y', strtotime((string) PklPengajuanModel::batasKeputusan($kirim, $hari)));
+            $alasan   = 'Belum diputuskan sekolah sampai batas ' . $batasTgl . ' (' . $hari . ' hari); siswa mengajukan ulang di ' . $kodeTujuan . '.';
+            $nama     = [];
+            $pengajuPergi = false;
+            foreach ($ada as $a) {
+                if (! in_array((int) $a['siswa_id'], $pergi, true)) {
+                    continue;
+                }
+                $k = $this->sisip('pkl_anggota_keluar', [
+                    'pengajuan_id' => $asalId, 'siswa_id' => (int) $a['siswa_id'], 'kelas_id' => $a['kelas_id'] !== null ? (int) $a['kelas_id'] : null,
+                    'peran' => (string) $a['peran'], 'hp' => $a['hp'], 'jenis' => 'ajukan_ulang', 'alasan' => $alasan, 'status_ajuan' => (string) $row['status'],
+                    'sumber' => 'sistem', 'oleh' => mb_substr((string) ($konteks['oleh'] ?? 'Sistem'), 0, 150), 'admin_id' => $konteks['admin_id'] ?? null,
+                    'peran_staf' => null, 'ip_address' => $konteks['ip'] ?? null, 'created_at' => $now,
+                ]);
+                if (! $k['ok'] || ! $this->jalankan('DELETE FROM pkl_anggota WHERE id = ?', [(int) $a['id']])['ok']) {
+                    return ['ok' => false, 'kode' => 'galat', 'ajuan' => [], 'teks' => null];
+                }
+                $nama[]       = (string) $a['nama'];
+                $pengajuPergi = $pengajuPergi || $a['peran'] === 'pengaju';
+            }
+            if ($nama === []) {
+                continue;
+            }
+            $sisa = array_values(array_filter($ada, static fn (array $a): bool => ! in_array((int) $a['siswa_id'], $pergi, true)));
+            $kodeAsal = PklPengajuanModel::kode($asalId);
+            if ($sisa === []) {
+                $ok = $this->jalankan(
+                    'UPDATE pkl_pengajuan SET status = \'ditolak\', catatan_staf = ?, diputuskan_at = ?, diputuskan_oleh = NULL, updated_at = ?'
+                    . (self::kolomTolakSumber($this->db) ? ', tolak_sumber = \'lewat_batas\'' : '') . ' WHERE id = ?',
+                    [mb_substr('Ditutup otomatis: ' . $alasan, 0, self::maksCatatan()), $now, $now, $asalId]
+                )['ok'] && $this->catat($asalId, 'tutup_otomatis', $konteks, 'Ditutup otomatis oleh sistem — ' . implode(', ', $nama) . ' mengajukan ulang di ' . $kodeTujuan . ' karena ajuan ini belum diputuskan sampai batas ' . $batasTgl . '.');
+            } else {
+                $ok = true;
+                $pengajuBaru = null;
+                if ($pengajuPergi) {
+                    $ok          = $this->jalankan("UPDATE pkl_anggota SET peran = 'pengaju' WHERE id = ?", [(int) $sisa[0]['id']])['ok'];
+                    $pengajuBaru = (string) $sisa[0]['nama'];
+                }
+                $ok = $ok && $this->jalankan('UPDATE pkl_pengajuan SET updated_at = ? WHERE id = ?', [$now, $asalId])['ok']
+                    && $this->catat($asalId, 'ajukan_ulang', $konteks, implode(', ', $nama) . ' keluar otomatis dan mengajukan ulang di ' . $kodeTujuan
+                        . ' (ajuan ini belum diputuskan sampai batas ' . $batasTgl . ')' . ($pengajuBaru !== null ? '; pengaju kini ' . $pengajuBaru : '') . '. Anggota lain tetap menunggu keputusan.');
+            }
+            if (! $ok) {
+                return ['ok' => false, 'kode' => 'galat', 'ajuan' => [], 'teks' => null];
+            }
+            $dilepas[] = $asalId;
+            $teks[]    = implode(', ', $nama) . ' dari ' . $kodeAsal;
+        }
+
+        return ['ok' => true, 'ajuan' => $dilepas, 'teks' => $teks === [] ? null : 'Mengajukan ulang (ajuan lama lewat batas keputusan): ' . implode('; ', $teks)];
     }
 
     /**
@@ -375,6 +481,11 @@ final class PklAjuan
 
             // Anggota: hapus yang dikeluarkan, perbarui yang tetap, tambah yang baru.
             $baruIds = array_map(static fn (array $m) => (int) $m['siswa_id'], $anggota);
+            // Teman BARU yang masih tercatat di ajuan lain yang sudah lewat batas keputusan → dilepas dulu (aturan lewat batas).
+            $lepas = $this->lepasLewatBatas(array_values(array_diff($baruIds, array_map(static fn (array $a): int => (int) $a['siswa_id'], $ada))), $id, $konteks, $now);
+            if (! $lepas['ok']) {
+                return $lepas;
+            }
             $petaAda = [];
             foreach ($ada as $a) {
                 $petaAda[(int) $a['siswa_id']] = (int) $a['id'];
@@ -407,7 +518,7 @@ final class PklAjuan
                 }
             }
 
-            return $this->catat($id, $konteks['aksi'] ?? 'kirim_ulang', $konteks, null) ? ['ok' => true, 'id' => $id] : ['ok' => false, 'kode' => 'galat'];
+            return $this->catat($id, $konteks['aksi'] ?? 'kirim_ulang', $konteks, $lepas['teks']) ? ['ok' => true, 'id' => $id, 'dilepas' => $lepas['ajuan']] : ['ok' => false, 'kode' => 'galat'];
         });
     }
 

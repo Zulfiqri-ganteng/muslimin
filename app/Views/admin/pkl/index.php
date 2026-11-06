@@ -38,7 +38,7 @@ $nMenunggu = (int) ($hitung['menunggu'] ?? 0);
 if ($nMenunggu > 0) {
     $tugas[] = ['inbox', ($terlambat ?? 0) > 0 ? 'merah' : 'kuning',
         $nMenunggu . ' ajuan PKL ' . ($hubin ? 'menunggu keputusan Anda' : 'menunggu ACC'),
-        ($terlambat ?? 0) > 0 ? (int) $terlambat . ' ajuan sudah lewat batas ' . (int) $batasHari . ' hari — segera diputuskan.' : 'Yang paling lama menunggu ada di atas.',
+        ($terlambat ?? 0) > 0 ? (int) $terlambat . ' ajuan sudah lewat batas ' . (int) $batasHari . ' hari — siswanya kini boleh mengajukan ulang; segera putuskan.' : 'Yang paling lama menunggu ada di atas.',
         site_url('admin/pkl/daftar/menunggu'), $hubin ? 'Putuskan' : 'Periksa'];
 }
 if (! empty($laporBaru)) {
@@ -79,12 +79,13 @@ if (! empty($berakhir7)) {
 <?= $this->section('content') ?>
 
 <?= view('admin/partials/help', [
-    'helpKey'   => 'pkl_beranda_v4',
+    'helpKey'   => 'pkl_beranda_v5',
     'helpTitle' => 'Beranda PKL',
     'helpBody'  => '<p>Siswa mengisi ajuan PKL sendiri lewat tautan di HP. Di sini ajuan <b>diperiksa</b> lalu diputuskan. <b>ACC dan tolak dilakukan peran yang diberi hak ACC ajuan PKL</b> oleh Admin (sekarang: ' . esc(\App\Libraries\PklHak::teksPemegang('acc')) . '; diatur di Sistem → Hak Akses); peran yang memegang hak periksa bisa <b>mengembalikan</b> ajuan agar siswa memperbaiki.</p>'
         . '<ul class="mt-2 list-disc pl-5 space-y-1">'
         . '<li><b>Tugas hari ini</b> — daftar pekerjaan yang perlu dikerjakan sekarang (hanya yang ada). Tekan tombol di kanan untuk langsung mengerjakannya.</li>'
-        . '<li><b>Antrean</b> — ajuan yang menunggu keputusan, yang paling lama di atas.</li>'
+        . '<li><b>Antrean</b> — ajuan yang menunggu keputusan, yang paling lama di atas. Yang lewat batas keputusan ditandai merah: siswanya sudah <b>boleh mengajukan ulang</b>, jadi segera putuskan bila tempat itu masih ingin di-ACC.</li>'
+        . '<li><b>Aturan otomatis (sejak November 2026)</b> &mdash; siswa tidak lagi terkunci terlalu lama: (1) siswa yang <b>dilaporkan ditolak perusahaan</b> lewat form Lapor langsung dilepas sistem dan bisa mengajukan tempat lain saat itu juga; (2) ajuan <b>Menunggu ACC yang lewat batas keputusan</b> tidak lagi mengunci &mdash; siswanya boleh mengajukan ulang, otomatis keluar dari ajuan lama, dan bila semua anggotanya pergi ajuan lama <b>ditutup otomatis</b> (label abu-abu &quot;Ditutup otomatis&quot;). Kontrol sekolah tetap ada di ACC ajuan barunya.</li>'
         . '<li><b>Ringkasan</b> (paling bawah) — jumlah ajuan per status dan kemajuan siswa (sudah/belum mengisi, sudah/belum PKL).</li>'
         . '<li><b>Isi atas nama</b> (tombol di kanan atas) — bila siswa tak bisa mengisi sendiri, atau untuk memasukkan data PKL lama.</li>'
         . '<li><b>Persiapan</b> (kartu berlencana kuning, bagi pemegang hak Pengaturan PKL) — daftar yang harus siap sebelum tautan dibagikan. Hilang sendiri bila semuanya siap.</li>'

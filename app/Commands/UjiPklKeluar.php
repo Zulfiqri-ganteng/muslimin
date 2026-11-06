@@ -37,8 +37,8 @@ use CodeIgniter\HTTP\ResponseInterface;
  *      tetap arsip vs jenis lain perlu cetak ulang), riwayat & peringatan saat mengajukan lagi;
  *   3. Ditolak perusahaan: hak ACC, satu langkah dari Disetujui, label, siswa bebas, ACC ulang mengosongkan sumber;
  *   4. Status Siswa / daftar nama / Data Prakerin / Excel: siswa yang dikeluarkan terhitung "pernah ditolak";
- *   5. Lapor Diterima: semua / sebagian / semua ditolak — validasi, proses staf (keluarkan dulu → Balasan hanya yang diterima),
- *      konfirmasi ditolak, penjaga Balasan manual & formulir "Periksa & ubah dulu";
+ *   5. Lapor Diterima: semua / sebagian / semua ditolak — validasi, LEPAS OTOMATIS saat lapor (2026-11-07: yang tidak diterima langsung
+ *      dikeluarkan / ajuan langsung ditolak perusahaan oleh sistem), laporan lama dilepas lepasTertunda, proses staf → Balasan;
  *   6. Kabar WhatsApp siswa yang dikeluarkan + perbaikan galat JSON tandai kabar keputusan;
  *   7. Halaman web (detail, Template Alasan, Riwayat, Status Siswa) + gerbang alamat;
  *   8. API aplikasi (api/v1/pkl/… & api/v1/surat/balasan/laporan).
@@ -472,52 +472,58 @@ class UjiPklKeluar extends BaseCommand
         $this->cek('"sebagian" dengan siswa bukan anggota ditolak', ! $r['ok'] && isset($r['galat']['diterima']));
         $r = $this->laporkan(10, 'D', ['hasil' => 'ngawur']);
         $this->cek('hasil tak dikenal ditolak', ! $r['ok'] && isset($r['galat']['hasil']));
+        // ATURAN 2026-11-07: siswa yang tidak diterima LANGSUNG dilepas sistem saat laporan terkirim (tanpa menunggu staf).
         $r = $this->laporkan(10, 'D', ['hasil' => 'sebagian', 'diterima' => [$this->s[11], $this->s[10]]]);
         $l = $lib->untukAjuan($this->aj['D']);
-        $this->cek('lapor "sebagian" (10 & 11 diterima, 12 tidak) tersimpan', $r['ok'] && $l['hasil'] === 'sebagian' && PklLapor::idDiterima($l) === [$this->s[10], $this->s[11]]
-            && $r['data']['ditolak'] === [self::OLEH . ' 12'], json_encode($r));
-        $this->cek('siswa TIDAK melepas temannya sendiri: siswa 12 masih terkunci sampai staf memproses', $this->aktif(12) !== null);
-
-        // Jalur lain ditolak untuk laporan sebagian.
-        $sp  = new SuratPkl();
-        $per = SuratPkl::periksa(SuratJenis::BALASAN, ['tanggal_surat' => date('Y-m-d'), 'sapaan' => SuratPkl::SAPAAN_BAWAAN, 'periode_mulai' => ((int) date('Y') + 1) . '-07-01', 'periode_selesai' => ((int) date('Y') + 1) . '-09-30']);
-        $b   = $sp->buat(SuratJenis::BALASAN, $per, [$this->aj['D']], [], $this->ctx('operator'), (new PklPengaturanModel())->ambil());
-        $this->cek('Balasan MANUAL untuk ajuan berlaporan "sebagian" ditolak (harus lewat kotak laporan)', ! $b['ok'] && str_contains(implode(' ', $b['gagal']), 'kotak Lapor Diterima'), json_encode($b));
-        $rr = $this->panggil(AdminSuratPkl::class, 'operator', 'balasan', ['lapor' => (string) $l['id']]);
-        $this->cek('formulir "Periksa & ubah dulu" menolak laporan "sebagian"', $rr instanceof RedirectResponse && str_contains((string) session('error'), 'kotak Lapor Diterima'));
+        $k12 = $this->db->table('pkl_anggota_keluar')->where('pengajuan_id', $this->aj['D'])->where('siswa_id', $this->s[12])->get()->getRowArray();
+        $this->cek('lapor "sebagian" (10 & 11 diterima, 12 tidak) → siswa 12 LANGSUNG dikeluarkan otomatis (ditolak perusahaan, dari laporan)', $r['ok']
+            && $r['data']['ditolak'] === [self::OLEH . ' 12'] && $r['data']['bebas'] === [self::OLEH . ' 12'] && $r['data']['lepas_otomatis'] === true
+            && $k12 !== null && $k12['jenis'] === 'ditolak_perusahaan' && $k12['sumber'] === 'lapor' && $this->aktif(12) === null, json_encode($r));
+        $this->cek('… laporan menjadi "semua diterima" untuk sisa anggota & tetap menunggu Surat Balasan', $l['status'] === 'baru' && $l['hasil'] === 'semua'
+            && $l['diterima'] === null && $this->aktif(10) !== null && $this->aktif(11) !== null);
+        $this->cek('… pesan ke siswa: langsung bisa mengajukan', str_contains($r['pesan'], 'langsung mengajukan'));
+        $this->cek('… lepas otomatis aman diulang (tidak ada yang berubah)', $lib->lepasOtomatis((int) $l['id'], self::IP)['bebas'] === []
+            && $this->db->table('pkl_anggota_keluar')->where('pengajuan_id', $this->aj['D'])->countAllResults() === 1);
         $html = $this->halaman(SuratLapor::class, 'operator', 'index');
-        $this->cek('kotak laporan: label "Sebagian diterima (2 dari 3)", siswa 12 dicoret, tanpa tombol "Periksa & ubah dulu"', str_contains($html, 'Sebagian diterima (2 dari 3)')
-            && str_contains($html, 'dikeluarkan saat diproses') && ! str_contains($html, 'admin/surat/balasan?lapor=' . $l['id']));
+        $this->cek('kotak laporan: ajuan D tampil biasa (semua diterima), siswa 12 tidak lagi di daftar', str_contains($html, $l['kode'] ?? PklPengajuanModel::kode($this->aj['D']))
+            && ! str_contains($html, 'Sebagian diterima (2 dari 3)'));
 
         $r = $lib->proses((int) $l['id'], true, $this->ctx('operator'), (new PklPengaturanModel())->ambil());
         $surat = (int) ($r['surat_id'] ?? 0);
         $siswaSurat = array_map('intval', array_column($this->db->table('surat_sekolah_siswa')->select('siswa_id')->where('surat_id', $surat)->orderBy('urut')->get()->getResultArray(), 'siswa_id'));
-        $k12 = $this->db->table('pkl_anggota_keluar')->where('pengajuan_id', $this->aj['D'])->where('siswa_id', $this->s[12])->get()->getRowArray();
-        $this->cek('proses "sebagian": siswa 12 DIKELUARKAN (ditolak perusahaan, dari laporan) lalu Balasan hanya untuk 10 & 11', $r['ok'] && $surat > 0
-            && $siswaSurat === [$this->s[10], $this->s[11]] && $k12 !== null && $k12['jenis'] === 'ditolak_perusahaan' && $k12['sumber'] === 'lapor' && $this->aktif(12) === null, json_encode([$r, $siswaSurat]));
-        $this->cek('… pesan menyebut siswa yang dikeluarkan, laporan diproses', str_contains($r['pesan'], self::OLEH . ' 12 dikeluarkan') && $lib->untukAjuan($this->aj['D'])['status'] === 'diproses');
+        $this->cek('proses kotak: Balasan hanya untuk 10 & 11, laporan diproses', $r['ok'] && $surat > 0 && $siswaSurat === [$this->s[10], $this->s[11]]
+            && $lib->untukAjuan($this->aj['D'])['status'] === 'diproses', json_encode([$r, $siswaSurat]));
 
-        // Semua ditolak.
+        // Semua ditolak → langsung ditolak perusahaan oleh SISTEM, laporan diproses "Sistem otomatis", tanpa surat.
         $r = $this->laporkan(13, 'E', ['hasil' => 'ditolak', 'tanggal_mulai' => '', 'tanggal_selesai' => '', 'catatan' => 'Perusahaan sedang renovasi.']);
         $l = $lib->untukAjuan($this->aj['E']);
-        $this->cek('lapor "semua ditolak" tanpa tanggal tersimpan', $r['ok'] && $l['hasil'] === 'ditolak' && $l['tanggal_mulai'] === null, json_encode($r));
-        $this->aturBalasan(['operator' => ['buat', 'unduh'], 'hubin' => []]);
-        $r = $lib->proses((int) $l['id'], true, $this->ctx('operator'), (new PklPengaturanModel())->ambil());
         $e = (new PklPengajuanModel())->find($this->aj['E']);
-        $this->cek('konfirmasi "semua ditolak" cukup hak memproses kotak (Buat) → ajuan Ditolak perusahaan, tanpa surat', $r['ok'] && $e['status'] === 'ditolak' && $e['tolak_sumber'] === 'perusahaan'
-            && $this->aktif(13) === null && $lib->untukAjuan($this->aj['E'])['status'] === 'diproses' && empty($lib->untukAjuan($this->aj['E'])['surat_id'])
-            && $this->db->table('surat_sekolah')->where('pengajuan_id', $this->aj['E'])->countAllResults() === 0, $r['pesan']);
-        $this->cek('… catatan ajuan memuat catatan siswa', str_contains((string) $e['catatan_staf'], 'renovasi'));
-        $this->aturBalasan(['operator' => ['buat', 'unduh', 'acc'], 'hubin' => []]);
+        $this->cek('lapor "semua ditolak" tanpa tanggal → ajuan LANGSUNG Ditolak perusahaan, siswa bebas, tanpa surat', $r['ok'] && $l['tanggal_mulai'] === null
+            && $e['status'] === 'ditolak' && $e['tolak_sumber'] === 'perusahaan' && $this->aktif(13) === null && $r['data']['bebas'] === [self::OLEH . ' 13']
+            && $this->db->table('surat_sekolah')->where('pengajuan_id', $this->aj['E'])->countAllResults() === 0, json_encode($r));
+        $this->cek('… laporan diproses oleh "Sistem otomatis" (tanpa peran staf), catatan ajuan memuat catatan siswa', $l['status'] === 'diproses'
+            && $l['diproses_oleh'] === 'Sistem otomatis' && $l['diproses_peran'] === null && empty($l['surat_id']) && str_contains((string) $e['catatan_staf'], 'renovasi'));
+        $rw = $this->db->table('pkl_riwayat')->where('pengajuan_id', $this->aj['E'])->where('aksi', 'lapor_proses')->get()->getRowArray();
+        $this->cek('… riwayat ajuan: lapor_proses oleh "Sistem otomatis (laporan …)"', $rw !== null && str_starts_with((string) $rw['oleh'], 'Sistem otomatis') && str_contains((string) $rw['catatan'], 'OTOMATIS'));
+        $r = $lib->proses((int) $l['id'], true, $this->ctx('operator'), (new PklPengaturanModel())->ambil());
+        $this->cek('… staf menekan proses sesudahnya → 409 (sudah diproses), tidak ada yang berubah', ! $r['ok'] && $r['http'] === 409);
+        $html = $this->halaman(SuratLapor::class, 'operator', 'index', ['status' => 'diproses']);
+        $this->cek('… tab Sudah diproses: lencana "Dikonfirmasi otomatis"', str_contains($html, 'Dikonfirmasi otomatis'));
 
-        // Laporan "semua ditolak" pada ajuan yang LEBIH DULU ditandai ditolak perusahaan oleh Hubin → cukup ditandai selesai.
-        $r  = $this->laporkan(17, 'J', ['hasil' => 'ditolak']);
-        (new PklKeluar())->ditolakPerusahaan($this->aj['J'], ['catatan' => 'Perusahaan menolak (kabar telepon).'], $this->ctx('hubin'));
+        // Laporan LAMA (sebelum aturan ini) yang masih menunggu → kotak tetap bisa Konfirmasi; form pengajuan melepasnya (lepasTertunda).
+        $now = date('Y-m-d H:i:s');
+        $this->db->table('pkl_lapor')->insert(['pengajuan_id' => $this->aj['J'], 'siswa_id' => $this->s[17], 'pelapor_nama' => self::OLEH . ' 17', 'hp' => $this->hp(17),
+            'hasil' => 'ditolak', 'status' => 'baru', 'kirim_ke' => 1, 'ip_address' => self::IP, 'created_at' => $now, 'updated_at' => $now]);
         $lJ = $lib->untukAjuan($this->aj['J']);
         $html = $this->halaman(SuratLapor::class, 'operator', 'index');
-        $this->cek('kotak: laporan "semua ditolak" pada ajuan yang sudah ditolak tetap punya tombol Konfirmasi', $r['ok'] && str_contains($html, 'admin/surat/balasan/laporan/' . $lJ['id'] . '/setujui'));
-        $r  = $lib->proses((int) $lJ['id'], true, $this->ctx('operator'), (new PklPengaturanModel())->ambil());
-        $this->cek('… diproses → laporan selesai tanpa galat (ajuan sudah ditolak)', $r['ok'] && str_contains($r['pesan'], 'sudah berstatus ditolak') && $lib->untukAjuan($this->aj['J'])['status'] === 'diproses', $r['pesan']);
+        $this->cek('laporan lama "semua ditolak" menunggu: kotak tetap punya tombol Konfirmasi', str_contains($html, 'admin/surat/balasan/laporan/' . $lJ['id'] . '/setujui'));
+        $n  = $lib->lepasTertunda([$this->aj['J']], self::IP);
+        $eJ = (new PklPengajuanModel())->find($this->aj['J']);
+        $this->cek('… lepasTertunda → ajuan J Ditolak perusahaan, siswa 17 & 18 bebas, laporan diproses sistem', $n === 1 && $eJ['status'] === 'ditolak'
+            && $eJ['tolak_sumber'] === 'perusahaan' && $this->aktif(17) === null && $this->aktif(18) === null && $lib->untukAjuan($this->aj['J'])['diproses_oleh'] === 'Sistem otomatis');
+        $c = $lib->cek($this->s[17], $this->hp(17), self::IP);
+        $this->cek('… siswa yang ajuannya sudah ditolak tidak bisa lapor lagi (409)', ! $c['ok'] && $c['http'] === 409);
+        $this->aturBalasan(['operator' => ['buat', 'unduh', 'acc'], 'hubin' => []]);
 
         // Laporan "semua" tetap seperti dulu + tautkanAjuan hanya untuk "semua".
         $r = $this->laporkan(14, 'H', ['hasil' => 'semua']);
@@ -772,7 +778,8 @@ class UjiPklKeluar extends BaseCommand
                 $baris = $x;
             }
         }
-        $this->cek('GET surat/balasan/laporan: hasil + siswa_diterima/siswa_ditolak', $k === 200 && ($baris['hasil'] ?? '') === 'sebagian' && array_key_exists('siswa_diterima', $baris) && array_key_exists('siswa_ditolak', $baris), json_encode($baris));
+        // Laporan "sebagian" D sudah berubah jadi "semua" (siswa 12 dilepas otomatis saat lapor, aturan 2026-11-07).
+        $this->cek('GET surat/balasan/laporan: hasil + siswa_diterima/siswa_ditolak', $k === 200 && ($baris['hasil'] ?? '') === 'semua' && array_key_exists('siswa_diterima', $baris) && ($baris['siswa_ditolak'] ?? null) === [], json_encode($baris));
         $this->setelPeranBawaan();
     }
 

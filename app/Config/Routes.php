@@ -14,6 +14,7 @@ $routes->get('absensi', 'Publik::absensi');
 // Portal publik konsep rumah.pendidikan.go.id (docs/RENCANA-TAMPILAN-PUBLIK.md)
 $routes->get('cari', 'Publik::cari');
 $routes->get('bantuan', 'Publik::bantuan');
+$routes->get('aplikasi', 'Publik::aplikasi'); // unduh aplikasi Android (belum di Play Store) — 2026-11-07
 $routes->get('siswa', 'Publik::kelompok/siswa');
 $routes->get('guru', 'Publik::kelompok/guru');
 $routes->get('orang-tua', 'Publik::kelompok/orang-tua');
@@ -94,6 +95,8 @@ $routes->group('admin', static function ($routes) {
     $routes->group('', ['filter' => 'auth'], static function ($routes) {
         $routes->get('/', 'Admin\Dashboard::index');
         $routes->get('dashboard', 'Admin\Dashboard::index');
+        // Wali kelas (2026-11-07): umum di penjaga rute, isi dijaga Libraries\WaliKelas
+        $routes->get('kelas-saya', 'Admin\KelasSaya::index');
         // Contoh kit komponen rombak tampilan (F1) — khusus laptop (di hosting 404), hanya Admin. ?uji=1 = uji-diri komponen.
         $routes->get('ui-kit', 'Admin\UiKit::index');
 
@@ -257,6 +260,7 @@ $routes->group('admin', static function ($routes) {
         $routes->post('akun/(:num)', 'Admin\Akun::update/$1', ['filter' => 'csrf']);
         $routes->post('akun/(:num)/reset-sandi', 'Admin\Akun::resetSandi/$1', ['filter' => 'csrf']);
         $routes->post('akun/(:num)/status', 'Admin\Akun::status/$1', ['filter' => 'csrf']);
+        $routes->post('akun/wali-massal', 'Admin\Akun::waliMassal', ['filter' => 'csrf']); // buat akun wali kelas sekaligus (2026-11-07)
 
         // ===== Sistem → Hak Akses (KHUSUS Admin; docs/DESAIN-HAK-AKSES.md) =====
         // Menu per peran, hak rinci PKL & Surat, dan peran. Katalog MenuAdmin menandai 'admin/hak-akses' khusus Admin; controller
@@ -791,6 +795,8 @@ $routes->group('admin', static function ($routes) {
         $routes->get('sistem/log-error', 'Admin\LogError::index');
         $routes->get('sistem/log-error/unduh', 'Admin\LogError::unduh');
         $routes->post('sistem/log-error/bersihkan', 'Admin\LogError::bersihkan');
+        $routes->post('sistem/log-error/hapus', 'Admin\LogError::hapus');
+        $routes->post('sistem/log-error/hapus-semua', 'Admin\LogError::hapusSemua');
 
         // ===== SISTEM → Mode Maintenance (khusus Admin — MenuAdmin 'mode_maintenance'; docs/DESAIN-ALAT-SISTEM.md F2) =====
         $routes->get('sistem/maintenance', 'Admin\Maintenance::index');
@@ -866,6 +872,8 @@ $routes->group('api/v1', ['namespace' => 'App\Controllers\Api', 'filter' => 'cor
     $routes->get('home', 'Publik::home');
     // Beranda lengkap konsep rumah pendidikan (B1) — sumber sama dengan situs publik; docs/API-BERANDA-MENU.md
     $routes->get('publik/beranda', 'Publik::beranda');
+    // Unduh/bagikan aplikasi Android = web /aplikasi (Libraries\AplikasiPublik) — 2026-11-07, layanan LY8.
+    $routes->get('publik/aplikasi', 'Publik::aplikasi');
     // Dokumen sekolah publik (layanan LY2) = web dokumen-publik; berkas tetap lewat rute web dokumen-publik/{id}/berkas|unduh
     $routes->get('publik/dokumen', 'Publik::dokumen');
     $routes->get('absensi', 'Publik::absensi');
@@ -1119,6 +1127,8 @@ $routes->group('api/v1', ['namespace' => 'App\Controllers\Api', 'filter' => 'cor
         $routes->post('sistem/maintenance', 'Admin\Sistem::simpanMaintenance');
         $routes->get('sistem/log-error', 'Admin\Sistem::logError');
         $routes->post('sistem/log-error/bersihkan', 'Admin\Sistem::bersihkanLog');
+        $routes->post('sistem/log-error/hapus', 'Admin\Sistem::hapusLog');
+        $routes->post('sistem/log-error/hapus-semua', 'Admin\Sistem::hapusSemuaLog');
         $routes->get('sistem/backup', 'Admin\Sistem::backup');               // daftar (unduh & restore hanya di web)
         $routes->post('sistem/backup', 'Admin\Sistem::buatBackup');          // {isi: db|berkas}
         $routes->post('sistem/backup/hapus', 'Admin\Sistem::hapusBackup');   // {kunci}
@@ -1370,6 +1380,10 @@ $routes->group('api/v1', ['namespace' => 'App\Controllers\Api', 'filter' => 'cor
         $routes->post('keterlambatan/(:num)/kabari', 'Keterlambatan::kabari/$1');
         $routes->post('keterlambatan/(:num)/hp', 'Keterlambatan::isiHp/$1');
         $routes->post('keterlambatan/(:num)/tautkan', 'Keterlambatan::tautkan/$1');
+
+        // ---------- WALI KELAS (2026-11-07) = web "Kelas Saya"; awalan 'wali' umum, isi dijaga Libraries\WaliKelas — docs/API-WALI-KELAS.md ----------
+        $routes->get('wali/kelas', 'Wali::kelas');
+        $routes->get('wali/kelas/(:num)', 'Wali::detail/$1');
 
         // ---------- SUPERVISI GURU (Admin; peran lain lewat Hak Akses) — docs/API-SUPERVISI.md ----------
         // Gerbang peran: katalog menu 'api' (awalan "supervisi"); hak per aksi dijaga controller dengan aturan web yang sama.

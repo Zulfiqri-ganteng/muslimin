@@ -17,7 +17,9 @@ use CodeIgniter\HTTP\ResponseInterface;
  *   GET  sistem/maintenance            status Mode Maintenance
  *   POST sistem/maintenance            {aktif: bool, pesan?, selesai?: "Y-m-d H:i"} nyalakan/perbarui/matikan
  *   GET  sistem/log-error              ?berkas=&tingkat=&q= daftar berkas log + isi berkas terpilih (galat sama digabung)
- *   POST sistem/log-error/bersihkan    hapus log aplikasi > 30 hari
+ *   POST sistem/log-error/bersihkan    hapus log aplikasi > 30 hari (sejak 2026-11-07 juga otomatis saat GET sistem/log-error)
+ *   POST sistem/log-error/hapus        {berkas: kunci} hapus SATU berkas log (2026-11-07)
+ *   POST sistem/log-error/hapus-semua  hapus SEMUA berkas log: log aplikasi + error_log PHP (2026-11-07)
  */
 class Sistem extends BaseApiController
 {
@@ -50,7 +52,11 @@ class Sistem extends BaseApiController
         if (($e = $this->sebagaiAdmin()) !== null) {
             return $e;
         }
-        $lib     = new LogGalat();
+        $lib = new LogGalat();
+        $tua = $lib->bersihkan(); // sama dengan web: log aplikasi lama dibersihkan otomatis
+        if ($tua > 0) {
+            (new AuditModel())->record('delete', 'log_error', null, 'Log error lebih dari ' . LogGalat::SIMPAN_HARI . ' hari dibersihkan otomatis: ' . $tua . ' berkas (via mobile)');
+        }
         $berkas  = $lib->berkas();
         $kunci   = (string) $this->request->getGet('berkas');
         $kunci   = isset($berkas[$kunci]) ? $kunci : (string) LogGalat::terbaru($berkas);
@@ -86,6 +92,40 @@ class Sistem extends BaseApiController
         (new AuditModel())->record('delete', 'log_error', null, 'Bersihkan log error lebih dari ' . LogGalat::SIMPAN_HARI . ' hari: ' . $n . ' berkas (via mobile)');
 
         return $this->ok(['terhapus' => $n], $n > 0 ? $n . ' berkas log lama dihapus.' : 'Tidak ada log yang lebih tua dari ' . LogGalat::SIMPAN_HARI . ' hari.');
+    }
+
+    /** POST sistem/log-error/hapus {berkas} — hapus satu berkas log. 404 bila kunci tidak dikenal; 409 bila hosting menolak menghapus. */
+    public function hapusLog(): ResponseInterface
+    {
+        if (($e = $this->sebagaiAdmin()) !== null) {
+            return $e;
+        }
+        $kunci = (string) ($this->body()['berkas'] ?? '');
+        $lib   = new LogGalat();
+        $label = (string) ($lib->berkas()[$kunci]['label'] ?? '');
+        if ($label === '') {
+            return $this->failure('Berkas log tidak ditemukan (mungkin sudah dihapus).', 404);
+        }
+        if (! $lib->hapus($kunci)) {
+            return $this->failure($label . ' tidak bisa dihapus (izin berkas di hosting). Hapus lewat cPanel → File Manager.', 409);
+        }
+        (new AuditModel())->record('delete', 'log_error', null, 'Log error dihapus: ' . $kunci . ' (via mobile)');
+
+        return $this->ok(['terhapus' => 1, 'kunci' => $kunci], $label . ' dihapus.');
+    }
+
+    /** POST sistem/log-error/hapus-semua — hapus semua berkas log; data.gagal = label berkas yang ditolak hosting. */
+    public function hapusSemuaLog(): ResponseInterface
+    {
+        if (($e = $this->sebagaiAdmin()) !== null) {
+            return $e;
+        }
+        $h = (new LogGalat())->hapusSemua();
+        (new AuditModel())->record('delete', 'log_error', null, 'Semua log error dihapus: ' . $h['terhapus'] . ' berkas' . ($h['gagal'] !== [] ? ' (gagal: ' . implode(', ', $h['gagal']) . ')' : '') . ' (via mobile)');
+
+        return $this->ok($h, $h['gagal'] !== []
+            ? $h['terhapus'] . ' berkas dihapus; tidak bisa dihapus: ' . implode(', ', $h['gagal']) . '.'
+            : ($h['terhapus'] > 0 ? 'Semua log dihapus (' . $h['terhapus'] . ' berkas).' : 'Tidak ada log untuk dihapus.'));
     }
 
     /** GET sistem/backup — daftar backup (unduh & restore sengaja hanya di web: berkas besar, berisi data pribadi). */
