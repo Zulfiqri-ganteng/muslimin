@@ -99,6 +99,8 @@ $bagian = static fn (string $judul, string $ket = ''): string => '<p class="bord
         • <b>Tong sampah merah</b> — <b>Hapus permanen</b> (hilang selamanya, tidak bisa dikembalikan). Lihat pertanyaan nomor 4.</p>
         <p class="mt-3"><b>4. Kenapa tombol hapus (tong sampah merah) hanya ada di sebagian siswa?</b><br>
         Tombol hapus <b>sengaja hanya muncul pada siswa yang belum punya data apa pun</b> di sistem, yaitu belum pernah ikut PKL, belum punya surat atau permintaan surat, belum mengisi biodata, belum punya catatan terlambat, dan bukan peserta UKK atau ujian susulan. Biasanya ini data yang <b>salah ketik atau dobel</b> dan baru saja dimasukkan.<br>
+        • Pendaftaran UKK atau ujian susulan yang <b>sudah dihapus</b> tidak dihitung, dan ikut dibersihkan saat siswanya dihapus permanen.<br>
+        • Siswa ditolak karena <i>"punya data: Peserta UKK"</i>? Hapus dulu pendaftarannya di menu <b>Uji Kompetensi (UKK) → Peserta UKK</b>, lalu kembali ke sini dan hapus permanen siswanya.<br>
         Siswa yang <b>sudah punya data tidak bisa dihapus</b>, karena kalau dihapus, data PKL, surat, dan riwayatnya <b>ikut terhapus</b> dan tidak bisa dikembalikan. Untuk siswa seperti ini pakai <b>Nonaktifkan</b>.<br>
         • Ingin tahu data apa yang membuat siswa tidak bisa dihapus? Buka <b>Detail</b> siswa itu. Di bawah tombolnya tertulis <i>"Tidak bisa dihapus permanen karena sudah punya data: …"</i>.<br>
         • Menghapus banyak sekaligus: centang beberapa siswa (di HP: <b>Pilih semua siswa di halaman ini</b>), lalu tekan <b>Hapus terpilih</b>. Siswa yang sudah punya data otomatis dilewati.<br>

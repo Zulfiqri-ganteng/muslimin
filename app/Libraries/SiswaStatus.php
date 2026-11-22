@@ -35,18 +35,40 @@ class SiswaStatus
     /** @var list<string>|null */
     private static ?array $tabel = null;
 
+    /** @var list<string> Tabel terkait yang memakai hapus lunak (kolom deleted_at), mis. peserta_ukk, ujian_susulan. */
+    private static array $tabelLunak = [];
+
     /** Semua tabel (selain siswa) yang punya kolom siswa_id. */
     public static function tabelTerkait(): array
     {
         if (self::$tabel === null) {
-            $db          = db_connect();
-            self::$tabel = array_values(array_filter(array_map(static fn (array $r): string => (string) array_values($r)[0], $db->query(
-                'SELECT TABLE_NAME FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = ? AND COLUMN_NAME = ? ORDER BY TABLE_NAME',
-                [$db->getDatabase(), 'siswa_id']
-            )->getResultArray()), static fn (string $t): bool => $t !== 'siswa'));
+            $db   = db_connect();
+            $rows = $db->query(
+                'SELECT c.TABLE_NAME AS t, EXISTS(SELECT 1 FROM information_schema.COLUMNS d WHERE d.TABLE_SCHEMA = c.TABLE_SCHEMA'
+                . ' AND d.TABLE_NAME = c.TABLE_NAME AND d.COLUMN_NAME = ?) AS lunak'
+                . ' FROM information_schema.COLUMNS c WHERE c.TABLE_SCHEMA = ? AND c.COLUMN_NAME = ? ORDER BY c.TABLE_NAME',
+                ['deleted_at', $db->getDatabase(), 'siswa_id']
+            )->getResultArray();
+            $rows             = array_values(array_filter($rows, static fn (array $r): bool => (string) $r['t'] !== 'siswa'));
+            self::$tabel      = array_map(static fn (array $r): string => (string) $r['t'], $rows);
+            self::$tabelLunak = array_map(static fn (array $r): string => (string) $r['t'], array_filter($rows, static fn (array $r): bool => (int) $r['lunak'] === 1));
         }
 
         return self::$tabel;
+    }
+
+    /**
+     * Tabel terkait yang memakai hapus lunak. Baris yang SUDAH DIHAPUS di tabel ini (deleted_at terisi, mis. pendaftaran UKK yang
+     * dihapus di halaman Peserta UKK) bukan penghalang hapus permanen — ikut dibersihkan saat siswa dihapus permanen
+     * (keluhan user 2026-11-22: siswa tetap ditolak "punya data: Peserta UKK (1)" padahal pendaftarannya sudah dihapus).
+     *
+     * @return list<string>
+     */
+    public static function tabelLunak(): array
+    {
+        self::tabelTerkait();
+
+        return self::$tabelLunak;
     }
 
     /**
@@ -63,9 +85,14 @@ class SiswaStatus
         if ($ids === []) {
             return $out;
         }
-        $db = db_connect();
+        $db    = db_connect();
+        $lunak = self::tabelLunak();
         foreach (self::tabelTerkait() as $t) {
-            foreach ($db->table($t)->select('siswa_id, COUNT(*) AS n')->whereIn('siswa_id', $ids)->groupBy('siswa_id')->get()->getResultArray() as $r) {
+            $q = $db->table($t)->select('siswa_id, COUNT(*) AS n')->whereIn('siswa_id', $ids);
+            if (in_array($t, $lunak, true)) {
+                $q->where('deleted_at', null); // yang sudah dihapus tidak dihitung (lihat tabelLunak)
+            }
+            foreach ($q->groupBy('siswa_id')->get()->getResultArray() as $r) {
                 $out[(int) $r['siswa_id']][self::LABEL_TABEL[$t] ?? $t] = (int) $r['n'];
             }
         }
@@ -162,8 +189,21 @@ class SiswaStatus
             }
         }
         if ($hapus !== []) {
+            // Satu transaksi: bersihkan dulu baris yang sudah dihapus (hapus lunak) milik siswa ini — tidak bergantung pada aturan
+            // ON DELETE di database — lalu hapus siswanya. Anak baris itu (nilai/sertifikat UKK) ikut terhapus lewat CASCADE.
+            $sampah = [];
+            $db->transException(true);
+            $db->transStart();
+            foreach (self::tabelLunak() as $t) {
+                $db->table($t)->whereIn('siswa_id', $hapus)->where('deleted_at IS NOT NULL', null, false)->delete();
+                if (($n = $db->affectedRows()) > 0) {
+                    $sampah[] = (self::LABEL_TABEL[$t] ?? $t) . ' terhapus ' . $n;
+                }
+            }
             $db->table('siswa')->whereIn('id', $hapus)->delete();
-            self::catat('delete', count($hapus) === 1 ? $hapus[0] : null, mb_substr('Hapus PERMANEN ' . count($hapus) . ' siswa oleh ' . $oleh . ': ' . implode(', ', $out['dihapus']), 0, 255));
+            $db->transComplete();
+            self::catat('delete', count($hapus) === 1 ? $hapus[0] : null, mb_substr('Hapus PERMANEN ' . count($hapus) . ' siswa oleh ' . $oleh . ': ' . implode(', ', $out['dihapus'])
+                . ($sampah !== [] ? ' (ikut dibersihkan: ' . implode(', ', $sampah) . ')' : ''), 0, 255));
         }
 
         return $out;

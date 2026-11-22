@@ -67,7 +67,9 @@ $peringatanSemua = ($adaFilter
         <p class="mt-3"><b>5. Kenapa tombol Hapus semua tidak langsung terlihat?</b><br>
         Sengaja disembunyikan supaya tidak terpencet tidak sengaja. Tombol baru muncul sesudah kotak di judul kolom dicentang.</p>
         <p class="mt-3"><b>6. Salah hapus, bisa dikembalikan?</b><br>
-        Daftarkan lagi siswanya lewat <b>Daftarkan peserta</b> (paket soal + kelas yang sama). Siswa itu akan muncul lagi dengan <b>nomor peserta baru</b> dan status Terdaftar.</p>',
+        Daftarkan lagi siswanya lewat <b>Daftarkan peserta</b> (paket soal + kelas yang sama). Siswa itu akan muncul lagi dengan <b>nomor peserta baru</b> dan status Terdaftar.</p>
+        <p class="mt-3"><b>7. Ingin menghapus permanen siswanya di Data Siswa?</b><br>
+        Hapus dulu pendaftaran UKK-nya di halaman ini (boleh pakai <b>Hapus semua</b>). Sesudah itu siswa bisa dihapus permanen di <b>Kesiswaan → Data Siswa</b>, asal tidak punya data lain (PKL, surat, biodata, dll.). Nilai dan sertifikat UKK siswa itu ikut terhapus.</p>',
 ]) ?>
 <?= $this->endSection() ?>
 
