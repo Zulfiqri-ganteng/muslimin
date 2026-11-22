@@ -81,6 +81,7 @@ class Dokumen extends BaseController
         $subfolder = $cariGlobal ? [] : $this->folder->anak($folderId);
 
         return view('admin/dokumen/index', [
+            'tautanAktif' => $this->tautanAktif(array_map('intval', array_column($subfolder, 'id')), array_map('intval', array_column($rows, 'id'))),
             'title'      => 'Manajemen Dokumen',
             'rows'       => $rows,
             'pager'      => $pager,
@@ -159,27 +160,38 @@ class Dokumen extends BaseController
 
         $this->audit->record('create', 'dokumen_share', $sid, 'Buat tautan berbagi dokumen ' . $row['judul']);
 
-        return redirect()->to(site_url('admin/dokumen/pratinjau/' . $id))
-            ->with('success', 'Tautan berbagi dibuat. Salin dan kirimkan ke guru yang dituju.');
+        // Tetap di halaman asal (penjelajah atau pratinjau) lalu tampilkan kotak "Tautan siap dibagikan" berisi tombol Salin.
+        return redirect()->to($this->alamatKembali(site_url('admin/dokumen/pratinjau/' . $id)))
+            ->with('tautanBaru', $this->infoTautanBaru($sid, 'berkas', (string) $row['judul']));
     }
 
-    /** Buat tautan berbagi untuk satu folder beserta isinya. */
+    /**
+     * Buat tautan berbagi untuk satu folder beserta isinya (termasuk subfolder).
+     * Dulu sesudah dibuat langsung MEMBUKA folder itu tanpa memperlihatkan tautannya (keluhan user 2026-11-22) — kini tetap di
+     * halaman asal + kotak "Tautan siap dibagikan".
+     */
     public function bagikanFolder(int $id)
     {
         $row = $this->folder->find($id);
         if ($row === null) {
             return $this->kembali(null)->with('error', 'Folder tidak ditemukan.');
         }
+        $asal = $this->alamatKembali($this->urlFolder($row['parent_id'] !== null ? (int) $row['parent_id'] : null));
 
         $sid = $this->buatTautan(['folder_id' => $id]);
 
         if ($sid === null) {
-            return $this->kembali($id)->with('error', 'Tautan gagal dibuat.');
+            return redirect()->to($asal)->with('error', 'Tautan gagal dibuat.');
+        }
+
+        // Tanda "dibagikan" pada folder (kolom visibilitas; dipakai juga oleh API Android).
+        if ($row['visibilitas'] === 'privat') {
+            $this->folder->update($id, ['visibilitas' => 'link']);
         }
 
         $this->audit->record('create', 'dokumen_share', $sid, 'Buat tautan berbagi folder ' . $row['nama']);
 
-        return $this->kembali($id)->with('success', 'Tautan berbagi folder dibuat.');
+        return redirect()->to($asal)->with('tautanBaru', $this->infoTautanBaru($sid, 'folder', (string) $row['nama']));
     }
 
     /** Cabut sebuah tautan (tautan langsung mati, dokumen tetap aman). */
@@ -193,11 +205,107 @@ class Dokumen extends BaseController
         $this->share->update($id, ['aktif' => 0]);
         $this->audit->record('update', 'dokumen_share', $id, 'Cabut tautan berbagi');
 
+        // Folder tanpa tautan aktif lagi → kembali bertanda privat.
+        if ($row['folder_id'] !== null && $this->share->where(['folder_id' => (int) $row['folder_id'], 'aktif' => 1])->countAllResults() === 0) {
+            $this->folder->update((int) $row['folder_id'], ['visibilitas' => 'privat']);
+        }
+
         $balik = $row['dokumen_id'] !== null
             ? site_url('admin/dokumen/pratinjau/' . (int) $row['dokumen_id'])
-            : site_url('admin/dokumen?folder=' . (int) $row['folder_id']);
+            : $this->urlFolder((int) $row['folder_id']);
 
-        return redirect()->to($balik)->with('success', 'Tautan dicabut. Siapa pun yang memegangnya tidak bisa lagi membuka dokumen.');
+        return redirect()->to($this->alamatKembali($balik))->with('success', 'Tautan dicabut. Siapa pun yang memegangnya tidak bisa lagi membuka isinya.');
+    }
+
+    /**
+     * Tautan berbagi yang MASIH BISA DIPAKAI untuk folder & berkas yang tampil di halaman ini (untuk dialog Bagikan & tanda
+     * "Dibagikan"). Yang dicabut, kedaluwarsa, atau jatah unduhnya habis tidak ikut.
+     *
+     * @param list<int> $folderIds
+     * @param list<int> $dokIds
+     *
+     * @return array{folder: array<int, list<array<string, mixed>>>, berkas: array<int, list<array<string, mixed>>>}
+     */
+    private function tautanAktif(array $folderIds, array $dokIds): array
+    {
+        $hasil = ['folder' => [], 'berkas' => []];
+        if ($folderIds === [] && $dokIds === []) {
+            return $hasil;
+        }
+
+        $b = $this->share->where('aktif', 1)->groupStart();
+        if ($folderIds !== []) {
+            $b->whereIn('folder_id', $folderIds);
+        }
+        if ($dokIds !== []) {
+            $folderIds !== [] ? $b->orWhereIn('dokumen_id', $dokIds) : $b->whereIn('dokumen_id', $dokIds);
+        }
+        $rows = $b->groupEnd()->orderBy('created_at', 'DESC')->findAll();
+
+        foreach ($rows as $s) {
+            if ((! empty($s['expired_at']) && strtotime((string) $s['expired_at']) < time())
+                || ($s['maks_unduh'] !== null && (int) $s['jml_unduh'] >= (int) $s['maks_unduh'])) {
+                continue;
+            }
+            $info = ['Dibuat ' . date('d/m/Y', strtotime((string) $s['created_at'])), 'dibuka ' . (int) $s['jml_akses'] . '×'];
+            if (! empty($s['expired_at'])) {
+                $info[] = 'berlaku s/d ' . date('d/m/Y', strtotime((string) $s['expired_at']));
+            }
+            $item = [
+                'url'     => site_url('d/' . $s['token']),
+                'cabut'   => site_url('admin/dokumen/share/' . (int) $s['id'] . '/cabut'),
+                'info'    => implode(' · ', $info),
+                'sandi'   => trim((string) $s['password_hash']) !== '',
+                'unduh'   => (int) $s['boleh_unduh'] === 1,
+                'catatan' => (string) ($s['catatan'] ?? ''),
+            ];
+            if ($s['folder_id'] !== null) {
+                $hasil['folder'][(int) $s['folder_id']][] = $item;
+            } else {
+                $hasil['berkas'][(int) $s['dokumen_id']][] = $item;
+            }
+        }
+
+        return $hasil;
+    }
+
+    /** Isi kotak "Tautan siap dibagikan" (flash) sesudah tautan dibuat. */
+    private function infoTautanBaru(int $shareId, string $jenis, string $nama): array
+    {
+        $s       = $this->share->find($shareId);
+        $url     = site_url('d/' . $s['token']);
+        $sekolah = (string) ((new \App\Models\SettingModel())->get()['school_name'] ?? 'sekolah');
+
+        return [
+            'url'    => $url,
+            'jenis'  => $jenis,
+            'nama'   => $nama,
+            'sandi'  => trim((string) $s['password_hash']) !== '',
+            'unduh'  => (int) $s['boleh_unduh'] === 1,
+            'sampai' => ! empty($s['expired_at']) ? date('d/m/Y', strtotime((string) $s['expired_at'])) : null,
+            'wa'     => 'https://wa.me/?text=' . rawurlencode('Assalamualaikum. Berikut ' . $jenis . ' "' . $nama . '" dari ' . $sekolah . ":\n" . $url),
+        ];
+    }
+
+    /**
+     * Alamat halaman asal dari isian "kembali" formulir — hanya halaman di dalam admin/dokumen (cegah pengalihan ke situs lain);
+     * selain itu memakai $bawaan.
+     */
+    private function alamatKembali(string $bawaan): string
+    {
+        $k    = trim((string) $this->request->getPost('kembali'));
+        $akar = site_url('admin/dokumen');
+        if ($k === '' || preg_match('/[\r\n\\\\]/', $k) || ! str_starts_with($k, $akar)) {
+            return $bawaan;
+        }
+        $sisa = substr($k, strlen($akar));
+
+        return $sisa === '' || in_array($sisa[0], ['?', '/'], true) ? $k : $bawaan;
+    }
+
+    private function urlFolder(?int $folderId): string
+    {
+        return site_url('admin/dokumen') . ($folderId !== null ? '?folder=' . $folderId : '');
     }
 
     /**

@@ -113,3 +113,68 @@ document.addEventListener('alpine:init', function () {
         };
     });
 });
+
+/*
+ * Dialog "Bagikan" (2026-11-22, views admin/dokumen/_bagikan.php): saat tombol Bagikan sebuah folder/berkas diklik, daftar
+ * "Tautan yang masih aktif" diisi dari atribut data-tautan tombol itu ([{url, cabut, info, sandi, unduh, catatan}]) memakai
+ * cetakan <template data-templat-tautan>. Tiap kartu: Salin (Ui.salin), WhatsApp, Buka, Cabut (form POST ber-data-confirm kit).
+ * Tombol tanpa data-tautan (pratinjau) → bagian daftar disembunyikan. Tanpa Alpine & tanpa skrip sebaris (siap CSP).
+ */
+(function () {
+    'use strict';
+
+    var isiDaftarTautan = function (pemicu) {
+        var dlg = document.querySelector('[x-data="dialog"][data-nama="dok-bagikan"]');
+        if (!dlg) { return; }
+        var bagian = dlg.querySelector('[data-bagian-tautan]');
+        var wadah = dlg.querySelector('[data-daftar-tautan]');
+        var templat = dlg.querySelector('template[data-templat-tautan]');
+        if (!bagian || !wadah || !templat || !templat.content.firstElementChild) { return; }
+
+        while (wadah.firstChild) { wadah.removeChild(wadah.firstChild); }
+        var daftar = [];
+        var nama = '';
+        try { daftar = JSON.parse(pemicu.getAttribute('data-tautan') || '[]') || []; } catch (err) { daftar = []; }
+        try { nama = (JSON.parse(pemicu.getAttribute('data-dialog-isi') || '{}') || {}).nama || ''; } catch (err) { nama = ''; }
+        var sekolah = templat.getAttribute('data-sekolah') || '';
+        bagian.hidden = !Array.isArray(daftar) || daftar.length === 0;
+        if (bagian.hidden) { return; }
+
+        daftar.forEach(function (t) {
+            var kartu = templat.content.firstElementChild.cloneNode(true);
+            var cari = function (sel) { return kartu.querySelector(sel); };
+            var isian = cari('[data-t-url]');
+            isian.value = t.url;
+            cari('[data-t-buka]').setAttribute('href', t.url);
+            cari('[data-t-wa]').setAttribute('href', 'https://wa.me/?text=' + encodeURIComponent(
+                'Assalamualaikum. Berikut "' + nama + '"' + (sekolah ? ' dari ' + sekolah : '') + ':\n' + t.url));
+            cari('[data-t-cabut]').setAttribute('action', t.cabut);
+            cari('[data-t-info]').textContent = t.info || '';
+            if (!t.sandi) { cari('[data-t-sandi]').remove(); }
+            if (t.unduh) { cari('[data-t-lihat]').remove(); }
+            if (t.catatan) { cari('[data-t-catatan]').textContent = t.catatan; } else { cari('[data-t-catatan]').remove(); }
+
+            cari('[data-t-salin]').addEventListener('click', function () {
+                var label = this.querySelector('[data-t-label]');
+                var jalan = window.Ui && window.Ui.salin ? window.Ui.salin(t.url) : Promise.reject(new Error('Ui.salin tidak ada'));
+                jalan.then(function () {
+                    if (window.Ui) { window.Ui.toast('Tautan tersalin. Tinggal tempel (paste).', 'sukses'); }
+                    if (label) {
+                        label.textContent = 'Tersalin';
+                        window.setTimeout(function () { label.textContent = 'Salin'; }, 2000);
+                    }
+                }, function () {
+                    isian.focus();
+                    isian.select();
+                    if (window.Ui) { window.Ui.toast('Gagal menyalin otomatis. Tautan sudah ditandai — tekan Ctrl+C.', 'awas'); }
+                });
+            });
+            wadah.appendChild(kartu);
+        });
+    };
+
+    document.addEventListener('click', function (e) {
+        var el = e.target && e.target.closest ? e.target.closest('[data-buka-dialog="dok-bagikan"]') : null;
+        if (el) { isiDaftarTautan(el); }
+    });
+})();

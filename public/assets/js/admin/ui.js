@@ -228,7 +228,13 @@
      * 5. Salin ke papan klip (https / localhost: Clipboard API; selain itu cara lama).
      * ------------------------------------------------------------- */
     var salinKePapan = function (teks) {
-        if (navigator.clipboard && window.isSecureContext) { return navigator.clipboard.writeText(teks); }
+        // (2026-11-22) Clipboard API bisa menolak (mis. halaman sedang tidak difokus) → coba cara lama sebelum menyerah.
+        if (navigator.clipboard && window.isSecureContext) {
+            return navigator.clipboard.writeText(teks).catch(function () { return salinCaraLama(teks); });
+        }
+        return salinCaraLama(teks);
+    };
+    var salinCaraLama = function (teks) {
         return new Promise(function (ok, gagal) {
             var t = document.createElement('textarea');
             t.value = teks;
@@ -314,6 +320,7 @@
         adaKonfirmasi: adaKonfirmasi,
         bukaDialog: function (nama) { kirimAcara(nama, 'buka-dialog'); },
         tutupDialog: function (nama) { kirimAcara(nama, 'tutup-dialog'); },
+        salin: salinKePapan,   // (2026-11-22) Ui.salin(teks) → Promise; dipakai daftar tautan dialog Bagikan (dokumen.js)
     };
 
     /* ---------------------------------------------------------------

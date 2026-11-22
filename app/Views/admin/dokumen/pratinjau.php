@@ -178,43 +178,15 @@ $kepala  = static fn (string $judul, string $ket = ''): string => '<div class="k
     </div>
 </div>
 
-<!-- Dialog: buat tautan berbagi -->
-<?= ui_dialog_buka(['nama' => 'dok-bagikan', 'judul' => 'Bagikan dokumen']) ?>
-<form method="post" action="<?= site_url('admin/dokumen/' . $id . '/bagikan') ?>">
-    <?= csrf_field() ?>
-    <div class="dialog-isi">
-        <p class="text-sm text-gray-500 dark:text-gray-400">Tautan bisa dibuka siapa pun yang memegangnya, tanpa perlu akun. Semua pembatasan di bawah bersifat opsional.</p>
-        <div>
-            <label class="lbl" for="bg-sampai">Berlaku sampai tanggal</label>
-            <input type="date" id="bg-sampai" name="expired_at" class="inp">
-            <p class="hint">Kosongkan bila tautan tidak perlu kedaluwarsa.</p>
-        </div>
-        <div>
-            <label class="lbl" for="bg-sandi">Kata sandi</label>
-            <input type="text" id="bg-sandi" name="sandi" autocomplete="off" placeholder="Kosongkan bila tidak perlu" class="inp">
-        </div>
-        <div>
-            <label class="lbl" for="bg-maks">Batas jumlah unduhan</label>
-            <input type="number" id="bg-maks" name="maks_unduh" min="1" placeholder="Kosongkan = tanpa batas" class="inp">
-        </div>
-        <label class="saklar">
-            <input type="checkbox" name="boleh_unduh" value="1" checked class="peer sr-only">
-            <span class="saklar-jalur"></span>
-            <span class="saklar-label">Boleh diunduh (jika dimatikan, hanya bisa dilihat)</span>
-        </label>
-        <div>
-            <label class="lbl" for="bg-catatan">Catatan internal</label>
-            <input id="bg-catatan" name="catatan" maxlength="255" placeholder="mis. untuk wali kelas XII" class="inp">
-        </div>
-        <?php if ($d['visibilitas'] === 'privat'): ?>
-            <?= ui_peringatan('info', '', ['html' => 'Dokumen ini masih <b>Privat</b>. Setelah tautan dibuat, aksesnya otomatis diubah menjadi <b>Lewat tautan</b> agar penerima benar-benar bisa membukanya.']) ?>
-        <?php endif; ?>
-    </div>
-    <div class="dialog-kaki">
-        <button type="button" class="btn btn-netral" @click="tutup()">Batal</button>
-        <button type="submit" class="btn btn-sukses"><?= ikon('check', 'h-4 w-4') ?>Buat tautan</button>
-    </div>
-</form>
-<?= ui_dialog_tutup() ?>
+<!-- Dialog: buat tautan berbagi + kotak "Tautan siap dibagikan" (bersama penjelajah). Tautan yang sudah ada tampil di panel
+     "Tautan berbagi" halaman ini, jadi tombol Bagikan di sini tidak membawa data-tautan. -->
+<?= view('admin/dokumen/_bagikan', [
+    'kembali'     => site_url('admin/dokumen/pratinjau/' . $id),
+    'aksi'        => site_url('admin/dokumen/' . $id . '/bagikan'),
+    'nama'        => (string) $d['judul'],
+    'catatanHtml' => $d['visibilitas'] === 'privat'
+        ? ui_peringatan('info', '', ['html' => 'Dokumen ini masih <b>Privat</b>. Setelah tautan dibuat, aksesnya otomatis diubah menjadi <b>Lewat tautan</b> agar penerima benar-benar bisa membukanya.'])
+        : '',
+]) ?>
 
 <?= $this->endSection() ?>

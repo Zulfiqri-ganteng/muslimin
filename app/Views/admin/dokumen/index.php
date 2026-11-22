@@ -33,10 +33,29 @@
  * @var int                           $kuotaByte
  * @var int                           $maksByte
  * @var int                           $jmlSampah
+ * @var array{folder: array<int, list<array>>, berkas: array<int, list<array>>} $tautanAktif  Tautan berbagi yang masih aktif
+ *
+ * 2026-11-22 (keluhan user): nama folder terpotong saat sidebar terbuka (tombol aksi yang tersembunyi tetap memakan tempat) →
+ * kartu folder kini bertombol di baris bawah seperti kartu berkas, nama boleh 2 baris. Bagikan folder/berkas lewat dialog
+ * _bagikan.php (tautan aktif + buat baru + kotak "Tautan siap dibagikan"). Pilihan "Akses" folder dibuang dari dialog folder
+ * karena tidak berpengaruh apa pun (folder tak pernah tampil di situs) — diganti tanda "Dibagikan" dari tautan aktif.
  */
 helper('dokumen');
 
 $base = site_url('admin/dokumen');
+// Alamat halaman ini (beserta saringan & halaman) — dikirim balik agar sesudah membuat/mencabut tautan tetap di sini.
+$kembali = current_url() . (($qsKini = (string) service('request')->getUri()->getQuery()) !== '' ? '?' . $qsKini : '');
+
+/** Tombol Bagikan (folder/berkas) → dialog dok-bagikan; membawa daftar tautan aktif untuk ditampilkan dokumen.js. */
+$tombolBagikan = static function (string $aksi, string $nama, array $tautan, bool $berlabel): string {
+    $json = JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES;
+
+    return '<button type="button" class="btn btn-sukses btn-xs' . ($berlabel ? '' : ' btn-ikon') . '" title="Bagikan / salin tautan" aria-label="Bagikan ' . esc($nama, 'attr') . '"'
+        . ' data-buka-dialog="dok-bagikan" data-dialog-aksi="' . esc($aksi, 'attr') . '"'
+        . ' data-dialog-isi="' . esc((string) json_encode(['nama' => $nama], $json), 'attr') . '"'
+        . ' data-tautan="' . esc((string) json_encode(array_values($tautan), $json), 'attr') . '">'
+        . ikon('share-nodes', 'h-4 w-4') . ($berlabel ? 'Bagikan' : '') . '</button>';
+};
 
 /** Tautan penjelajah dengan parameter yang dipertahankan. */
 $url = static function (array $ganti = []) use ($base, $folderId, $q, $kategori, $urut, $arah, $tampilan, $per) {
@@ -100,15 +119,15 @@ $sampul = static function (array $r): ?string {
     return null;
 };
 
-/** Tombol aksi satu dokumen: Unduh · Ubah · Buang ke sampah. */
-$aksiDok = static function (array $r): string {
+/** Tombol aksi satu dokumen: Bagikan · Unduh · Ubah · Buang ke sampah. */
+$aksiDok = static function (array $r) use ($tombolBagikan, $tautanAktif): string {
     $id     = (int) $r['id'];
     $tautan = $r['tipe'] === 'tautan';
     $judul  = esc($r['judul'], 'attr');
     $isi    = ['judul' => $r['judul'], 'deskripsi' => (string) $r['deskripsi'], 'visib' => $r['visibilitas']]
         + ($tautan ? ['url' => (string) $r['url_eksternal']] : []);
 
-    $h = '';
+    $h = $tombolBagikan(site_url('admin/dokumen/' . $id . '/bagikan'), (string) $r['judul'], $tautanAktif['berkas'][$id] ?? [], false);
     if (! $tautan) {
         $h .= '<a href="' . site_url('admin/dokumen/unduh/' . $id) . '" class="btn btn-netral btn-ikon btn-xs" title="Unduh" aria-label="Unduh ' . $judul . '">' . ikon('download', 'h-4 w-4') . '</a>';
     }
@@ -131,19 +150,17 @@ $formBuangFolder = static function (array $f, string $kelasForm = ''): string {
         . csrf_field() . '<button type="submit" class="btn btn-bahaya btn-ikon btn-xs" title="Buang folder" aria-label="Buang folder ' . $nama . '">' . ikon('trash-bin', 'h-4 w-4') . '</button></form>';
 };
 
-/** Tombol aksi satu folder: Ubah · Bagikan · Buang. */
-$aksiFolder = static function (array $f) use ($indukIni, $formBuangFolder): string {
+/** Tombol aksi satu folder: Bagikan (berlabel) · Ubah · Buang (kanan). */
+$aksiFolder = static function (array $f) use ($indukIni, $formBuangFolder, $tombolBagikan, $tautanAktif): string {
     $id   = (int) $f['id'];
     $nama = esc($f['nama'], 'attr');
-    $isi  = ['nama' => $f['nama'], 'deskripsi' => (string) $f['deskripsi'], 'visib' => $f['visibilitas'], 'induk' => $indukIni];
+    $isi  = ['nama' => $f['nama'], 'deskripsi' => (string) $f['deskripsi'], 'induk' => $indukIni];
 
-    return '<button type="button" class="btn btn-netral btn-ikon btn-xs" title="Ubah folder" aria-label="Ubah folder ' . $nama . '"'
+    return $tombolBagikan(site_url('admin/dokumen/folder/' . $id . '/bagikan'), (string) $f['nama'], $tautanAktif['folder'][$id] ?? [], true)
+        . '<button type="button" class="btn btn-netral btn-ikon btn-xs" title="Ubah folder" aria-label="Ubah folder ' . $nama . '"'
         . ' data-buka-dialog="dok-folder-ubah" data-dialog-aksi="' . esc(site_url('admin/dokumen/folder/' . $id), 'attr') . '"'
         . ' data-dialog-isi="' . esc((string) json_encode($isi, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES), 'attr') . '">' . ikon('edit', 'h-4 w-4') . '</button>'
-        . '<form method="post" action="' . site_url('admin/dokumen/folder/' . $id . '/bagikan') . '"'
-        . ' data-confirm="Buat tautan berbagi untuk folder &quot;' . $nama . '&quot; beserta isinya? Siapa pun yang memegang tautannya bisa membuka isi folder." data-confirm-judul="Bagikan folder?" data-confirm-ya="Ya, buat tautan">'
-        . csrf_field() . '<input type="hidden" name="boleh_unduh" value="1"><button type="submit" class="btn btn-sukses btn-ikon btn-xs" title="Bagikan folder" aria-label="Bagikan folder ' . $nama . '">' . ikon('share-nodes', 'h-4 w-4') . '</button></form>'
-        . $formBuangFolder($f);
+        . $formBuangFolder($f, 'ms-auto');
 };
 
 /** Atribut sasaran seret (folder / remah jejak). Kunci: id folder, atau 'akar' untuk folder utama. */
@@ -186,14 +203,25 @@ $judulKosong = $cariGlobal ? 'Tidak ada dokumen yang cocok' : ($subfolder !== []
 <?= $this->section('content') ?>
 
 <?= view('admin/partials/help', [
-    'helpKey'   => 'dokumen_v2',
+    'helpKey'   => 'dokumen_v3',
     'helpTitle' => 'Manajemen Dokumen',
     'helpBody'  => '<p>Simpan berkas kerja (Word, Excel, PowerPoint, PDF, foto, dan lainnya) dalam <b>folder bertingkat</b> seperti Google Drive, lalu buka kembali kapan saja dari komputer maupun HP.</p>
-        <p class="mt-1">• <b>Pindahkan berkas dengan menyeretnya</b> ke folder tujuan — bisa juga ke nama folder di jalur atas untuk memindahkan keluar. Centang beberapa berkas dulu, lalu seret salah satunya, maka semuanya ikut pindah. Di HP: centang berkasnya lalu pakai tombol <b>Pindahkan</b>.<br>
+        <p class="mt-3"><b>1. Membagikan folder atau berkas (salin tautan)</b><br>
+        • Tekan tombol hijau <b>Bagikan</b>: di kartu folder (baris bawah kartu) atau di tiap berkas (ikon hijau). Di tampilan <b>Ikon</b>, arahkan kursor ke folder; untuk berkas, buka berkasnya lalu tekan <b>Bagikan</b> di atas.<br>
+        • Di kotak Bagikan tekan <b>Buat tautan baru</b>. Sesudah itu muncul kotak <b>Tautan siap dibagikan</b> → tekan <b>Salin tautan</b>, lalu tempel (paste) di WhatsApp/email. Atau langsung tekan tombol <b>WhatsApp</b>.<br>
+        • Orang yang menerima tautan bisa membuka <b>tanpa login</b>. Tautan folder membuka <b>seluruh isi folder</b> itu, termasuk subfolder.<br>
+        • Opsi tambahan (tidak wajib): batas tanggal berlaku, kata sandi, batas jumlah unduhan, dan "hanya bisa dilihat".<br>
+        • Lupa tautannya? Tekan <b>Bagikan</b> lagi: tautan yang masih aktif tampil di bagian atas kotak, lengkap dengan tombol <b>Salin</b>. Folder yang sudah punya tautan bertanda <b>Dibagikan</b>.<br>
+        • <b>Cabut</b> = tautan langsung mati. Siapa pun yang memegangnya tidak bisa membuka lagi, dan berkasnya tetap aman.</p>
+        <p class="mt-3"><b>2. Privat, Lewat tautan, Publik (untuk berkas)</b><br>
+        • <b>Privat</b> = hanya bisa dibuka setelah masuk panel ini. Saat berkas privat dibagikan, otomatis berubah menjadi <b>Lewat tautan</b>.<br>
+        • <b>Publik</b> = tampil di halaman Dokumen Sekolah di situs (bila fitur itu dinyalakan di Pengaturan Sekolah).<br>
+        • Folder tidak punya pilihan Akses: folder selalu tertutup, dan dibuka untuk orang lain lewat tombol <b>Bagikan</b>.</p>
+        <p class="mt-3"><b>3. Mengatur berkas</b><br>
+        • <b>Pindahkan berkas dengan menyeretnya</b> ke folder tujuan, atau ke nama folder di jalur atas untuk memindahkan keluar. Centang beberapa berkas dulu, lalu seret salah satunya, maka semuanya ikut pindah. Di HP: centang berkasnya lalu pakai tombol <b>Pindahkan</b>.<br>
         • Tiga <b>tampilan</b> di kanan penyaring: <b>Ikon</b> (padat, seperti penjelajah berkas di komputer), <b>Kotak</b> (kartu besar bergambar), dan <b>Daftar</b> (tabel rinci).<br>
-        • <b>Unggah</b> bisa banyak berkas sekaligus — seret ke kotak unggah atau klik untuk memilih.<br>
-        • <b>Video</b> tidak disimpan di server (memakan ruang); pakai tombol <b>Tambah tautan</b> untuk menempelkan tautan YouTube atau Google Drive.<br>
-        • <b>Privat</b> = hanya bisa dibuka setelah masuk ke panel ini. <b>Lewat tautan</b> &amp; <b>Publik</b> dipakai saat berkas dibagikan ke guru.<br>
+        • <b>Unggah</b> bisa banyak berkas sekaligus: seret ke kotak unggah atau klik untuk memilih.<br>
+        • <b>Video</b> tidak disimpan di server (memakan ruang). Pakai tombol <b>Tambah tautan</b> untuk menempelkan tautan YouTube atau Google Drive.<br>
         • <b>Pencarian</b> berlaku ke seluruh arsip, bukan hanya folder yang sedang dibuka.<br>
         • Berkas yang dihapus masuk <b>Tempat Sampah</b> dulu, jadi masih bisa dipulihkan.</p>',
 ]) ?>
@@ -297,16 +325,19 @@ $judulKosong = $cariGlobal ? 'Tidak ada dokumen yang cocok' : ($subfolder !== []
         <!-- Subfolder (tampilan kotak & daftar; tampilan ikon membaurkannya dengan berkas) -->
         <?php if ($subfolder !== [] && $tampilan !== 'ikon'): ?>
             <div class="grid grid-cols-1 gap-3 border-b border-gray-200 p-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 dark:border-gray-700">
-                <?php foreach ($subfolder as $f): $fid = (int) $f['id']; ?>
+                <?php foreach ($subfolder as $f): $fid = (int) $f['id']; $dibagikan = count($tautanAktif['folder'][$fid] ?? []); ?>
                     <div class="dok-folder dok-sasaran group" <?= $sasaran($fid, (string) $fid) ?>>
-                        <a href="<?= esc($url(['folder' => $fid, 'q' => null]), 'attr') ?>" draggable="false" class="flex min-w-0 flex-1 items-center gap-3">
+                        <a href="<?= esc($url(['folder' => $fid, 'q' => null]), 'attr') ?>" draggable="false" class="flex min-w-0 flex-1 items-start gap-3 p-3" title="Buka folder <?= esc($f['nama'], 'attr') ?>">
                             <?= ikon('folder', 'h-9 w-9 shrink-0 text-yellow-400', 'solid') ?>
-                            <span class="min-w-0">
-                                <span class="block truncate text-sm font-semibold text-gray-900 dark:text-white" title="<?= esc($f['nama'], 'attr') ?>"><?= esc($f['nama']) ?></span>
-                                <span class="block text-xs text-gray-500 dark:text-gray-400"><?= (int) ($isiFolder[$fid] ?? 0) ?> berkas</span>
+                            <span class="min-w-0 flex-1">
+                                <span class="line-clamp-2 text-sm font-semibold break-words text-gray-900 dark:text-white"><?= esc($f['nama']) ?></span>
+                                <span class="mt-1 flex flex-wrap items-center gap-1.5 text-xs text-gray-500 dark:text-gray-400">
+                                    <?= (int) ($isiFolder[$fid] ?? 0) ?> berkas
+                                    <?php if ($dibagikan > 0): ?><span class="lencana lencana-merek"><?= ikon('link', 'h-3 w-3') ?>Dibagikan<?= $dibagikan > 1 ? ' (' . $dibagikan . ')' : '' ?></span><?php endif; ?>
+                                </span>
                             </span>
                         </a>
-                        <div class="dok-sorot flex shrink-0 items-center gap-1"><?= $aksiFolder($f) ?></div>
+                        <div class="flex items-center gap-1.5 border-t border-gray-200 px-3 py-2 dark:border-gray-700"><?= $aksiFolder($f) ?></div>
                     </div>
                 <?php endforeach; ?>
             </div>
@@ -331,7 +362,10 @@ $judulKosong = $cariGlobal ? 'Tidak ada dokumen yang cocok' : ($subfolder !== []
                             <p class="mt-1 line-clamp-2 text-[11px] leading-tight font-medium break-words text-gray-700 dark:text-gray-200"><?= esc($f['nama']) ?></p>
                             <p class="text-[10px] text-gray-500 dark:text-gray-400"><?= (int) ($isiFolder[$fid] ?? 0) ?> berkas</p>
                         </a>
-                        <?= $formBuangFolder($f, 'dok-sorot absolute end-1 top-1') ?>
+                        <div class="dok-sorot absolute end-1 top-1 flex gap-1">
+                            <?= $tombolBagikan(site_url('admin/dokumen/folder/' . $fid . '/bagikan'), (string) $f['nama'], $tautanAktif['folder'][$fid] ?? [], false) ?>
+                            <?= $formBuangFolder($f) ?>
+                        </div>
                     </div>
                 <?php endforeach; ?>
 
@@ -487,10 +521,7 @@ $judulKosong = $cariGlobal ? 'Tidak ada dokumen yang cocok' : ($subfolder !== []
             <label class="lbl" for="dok-fb-ket">Keterangan</label>
             <input id="dok-fb-ket" name="deskripsi" maxlength="255" class="inp">
         </div>
-        <div>
-            <label class="lbl" for="dok-fb-akses">Akses</label>
-            <select id="dok-fb-akses" name="visibilitas" class="inp"><?= $opsiAkses(true) ?></select>
-        </div>
+        <p class="hint">Folder selalu tertutup (hanya admin). Untuk membagikannya ke guru atau umum, pakai tombol <b>Bagikan</b> di kartu folder.</p>
     </div>
     <div class="dialog-kaki">
         <button type="button" class="btn btn-netral" @click="tutup()">Batal</button>
@@ -604,10 +635,6 @@ $judulKosong = $cariGlobal ? 'Tidak ada dokumen yang cocok' : ($subfolder !== []
             <input id="dok-fu-ket" name="deskripsi" data-isi-pemicu="deskripsi" maxlength="255" class="inp">
         </div>
         <div>
-            <label class="lbl" for="dok-fu-akses">Akses</label>
-            <select id="dok-fu-akses" name="visibilitas" data-isi-pemicu="visib" class="inp"><?= $opsiAkses(false) ?></select>
-        </div>
-        <div>
             <label class="lbl" for="dok-fu-induk">Letak folder</label>
             <select id="dok-fu-induk" name="induk_baru" data-isi-pemicu="induk" class="inp">
                 <option value="0">Dokumen (folder utama)</option>
@@ -624,6 +651,8 @@ $judulKosong = $cariGlobal ? 'Tidak ada dokumen yang cocok' : ($subfolder !== []
     </div>
 </form>
 <?= ui_dialog_tutup() ?>
+
+<?= view('admin/dokumen/_bagikan', ['kembali' => $kembali]) ?>
 
 <?= $this->endSection() ?>
 
