@@ -140,8 +140,17 @@ class LaporanUjian extends BaseController
         }
         [$slug, $periode] = $ctx;
         if (! JadwalUjianCetak::adaIsi($periode)) {
+            // 2026-11-23 (keluhan user: ada 1 jadwal tapi dibilang kosong): kolom cetak dibangun dari Master Kelas per shift
+            // (kelas.shift = pagi/siang). Jadwal yang tingkat/jurusan/shift-nya tak cocok kelas mana pun → pesan yang menunjuk sebabnya.
+            $nJadwal = db_connect()->table('ujian_jadwal')->where('periode_id', (int) $periode['id'])->where('deleted_at', null)->countAllResults();
+            $pesan   = $nJadwal === 0
+                ? 'Jadwal ujian periode ini masih kosong. Isi jadwalnya dulu di tab Jadwal Ujian, lalu cetak lagi.'
+                : 'Ada ' . $nJadwal . ' jadwal, tetapi tidak cocok dengan kelas mana pun. Cetak jadwal disusun per kelas menurut Master Kelas: '
+                  . 'pastikan kelas yang diuji (mis. tingkat X jurusan MP) ada dan kolom Shift-nya sama dengan shift jadwal (Pagi/Siang), '
+                  . 'juga tanggal jadwal sudah diisi.';
+
             return redirect()->to(site_url('admin/ujian/' . $slug . '/jadwal') . '?tp=' . rawurlencode($periode['tahun_ajaran']))
-                ->with('error', 'Jadwal ujian periode ini masih kosong. Isi jadwalnya dulu di tab Jadwal Ujian, lalu cetak lagi.');
+                ->with('error', $pesan);
         }
 
         return $ctx;

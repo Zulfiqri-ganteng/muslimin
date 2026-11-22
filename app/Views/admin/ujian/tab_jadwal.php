@@ -173,7 +173,7 @@ foreach ($tingkatList as $t) {
                                 <p class="sel-judul"><?= esc($HARI[(int) date('N', $ts)] ?? '') ?>, <?= date('d/m/Y', $ts) ?></p>
                                 <p class="sel-ket"><?= esc($jam($r['jam_mulai'], $r['jam_selesai'])) ?></p>
                             </td>
-                            <td class="min-w-48">
+                            <td>
                                 <p class="sel-judul"><?= esc($r['nama_mapel'] ?? 'Mapel sudah dihapus') ?></p>
                                 <?php if ($r['kode_mapel']): ?><p class="sel-ket"><?= esc($r['kode_mapel']) ?></p><?php endif; ?>
                             </td>
@@ -192,7 +192,7 @@ foreach ($tingkatList as $t) {
                                 <div class="aksi-baris">
                                     <a href="<?= $base ?>/daftar-hadir/<?= (int) $r['id'] ?><?= $qtp ?>" target="_blank" rel="noopener" class="btn btn-netral btn-sm btn-ikon" title="Cetak daftar hadir" aria-label="Cetak daftar hadir"><?= ikon('printer', 'h-4 w-4') ?></a>
                                     <a href="<?= $base ?>/berita-acara/<?= (int) $r['id'] ?><?= $qtp ?>" target="_blank" rel="noopener" class="btn btn-netral btn-sm btn-ikon" title="Cetak berita acara" aria-label="Cetak berita acara"><?= ikon('file-lines', 'h-4 w-4') ?></a>
-                                    <button type="button" class="btn btn-utama btn-sm" data-ubah data-row="<?= esc((string) json_encode($barisUbah($r)), 'attr') ?>"><?= ikon('edit', 'h-4 w-4') ?>Ubah</button>
+                                    <button type="button" class="btn btn-utama btn-sm btn-ikon" title="Ubah jadwal" aria-label="Ubah jadwal" data-ubah data-row="<?= esc((string) json_encode($barisUbah($r)), 'attr') ?>"><?= ikon('edit', 'h-4 w-4') ?></button>
                                     <?= $formHapus($r, $tak, ' btn-ikon', true) ?>
                                 </div>
                             </td>
