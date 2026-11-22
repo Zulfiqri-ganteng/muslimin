@@ -18,6 +18,8 @@ use App\Models\TeknisiModel;
  */
 class Kerusakan extends BaseController
 {
+    use HapusMassal;
+
     protected KerusakanModel $model;
     protected AuditModel $audit;
 
@@ -34,16 +36,19 @@ class Kerusakan extends BaseController
         return in_array($per, [10, 20, 30, 40, 50], true) ? $per : 10;
     }
 
-    public function index()
+    /** Saringan daftar dari GET (halaman) atau POST (hapus massal). @return array{0: string, 1: string} [q, status] */
+    private function saringan(string $sumber = 'get'): array
     {
-        $q      = trim((string) $this->request->getGet('q'));
-        $status = trim((string) $this->request->getGet('status'));
-        if (! in_array($status, KerusakanModel::STATUS, true)) {
-            $status = '';
-        }
-        $per  = $this->perPage();
-        $page = max(1, (int) ($this->request->getGet('page') ?: 1));
+        $ambil  = fn (string $k) => $sumber === 'post' ? $this->request->getPost($k) : $this->request->getGet($k);
+        $q      = trim((string) $ambil('q'));
+        $status = trim((string) $ambil('status'));
 
+        return [$q, in_array($status, KerusakanModel::STATUS, true) ? $status : ''];
+    }
+
+    /** Daftar tersaring (dipakai halaman & "Hapus semua" supaya isinya sama persis). */
+    private function daftarTersaring(string $q, string $status)
+    {
         $builder = $this->model->withRelations();
         if ($q !== '') {
             $builder = $builder->groupStart()
@@ -53,7 +58,17 @@ class Kerusakan extends BaseController
         if ($status !== '') {
             $builder = $builder->where('kerusakan.status', $status);
         }
-        $rows  = $builder->orderBy('kerusakan.tanggal_lapor', 'DESC')->orderBy('kerusakan.id', 'DESC')
+
+        return $builder;
+    }
+
+    public function index()
+    {
+        [$q, $status] = $this->saringan();
+        $per  = $this->perPage();
+        $page = max(1, (int) ($this->request->getGet('page') ?: 1));
+
+        $rows  = $this->daftarTersaring($q, $status)->orderBy('kerusakan.tanggal_lapor', 'DESC')->orderBy('kerusakan.id', 'DESC')
             ->paginate($per, 'default', $page);
         $pager = $this->model->pager;
 
@@ -134,26 +149,60 @@ class Kerusakan extends BaseController
 
     public function delete($id)
     {
-        $id  = (int) $id;
-        $row = $this->model->find($id);
-        if (! $row) {
+        $id = (int) $id;
+        if (! $this->model->find($id)) {
             return redirect()->to(site_url('admin/kerusakan'))->with('error', 'Data tidak ditemukan.');
         }
+
+        $this->hapusBanyak([$id]);
+        $this->audit->record('delete', 'kerusakan', $id, 'Hapus laporan kerusakan');
+
+        return redirect()->to(site_url('admin/kerusakan'))->with('success', 'Laporan kerusakan dihapus.');
+    }
+
+    /** Hapus massal: "Hapus terpilih" (ids[]) atau "Hapus semua" yang cocok saringan — aturan sama dengan Hapus satuan. */
+    public function bulkDelete()
+    {
+        [$q, $status] = $this->saringan('post');
+        [$mode, $ids] = $this->idHapusMassal(
+            fn () => array_column($this->daftarTersaring($q, $status)->select('kerusakan.id AS id_hapus')->findAll(), 'id_hapus'),
+            fn (array $ids) => array_column($this->model->select('id')->whereIn('id', $ids)->findAll(), 'id')
+        );
+        $kembali = $this->alamatDaftarMassal(site_url('admin/kerusakan'), ['q', 'status']);
+        if ($ids === []) {
+            return redirect()->to($kembali)->with('error', $this->pesanTakAdaDipilih('laporan kerusakan'));
+        }
+
+        $this->hapusBanyak($ids);
+        $this->audit->record('delete', 'kerusakan', null, 'Hapus massal ' . count($ids) . ' laporan kerusakan (' . $mode . ')');
+
+        return redirect()->to($kembali)->with('success', count($ids) . ' laporan kerusakan dihapus.');
+    }
+
+    /**
+     * Hapus laporan kerusakan (satu atau banyak) dalam satu transaksi, lalu aset yang tak lagi punya kerusakan terbuka
+     * dibebaskan dari status 'perbaikan'. Foto lampirannya ikut dihapus.
+     *
+     * @param list<int> $ids
+     */
+    private function hapusBanyak(array $ids): void
+    {
+        $asetIds = array_values(array_unique(array_filter(array_map('intval', array_column(
+            $this->model->select('aset_id')->whereIn('id', $ids)->findAll(),
+            'aset_id'
+        )))));
 
         $db = db_connect();
         $db->transException(true);
         $db->transStart();
-        $this->model->delete($id);
-        if ($row['aset_id']) {
-            $this->bebaskanAset((int) $row['aset_id'], $id);
+        $this->model->delete($ids);
+        foreach ($asetIds as $asetId) {
+            $this->bebaskanAset($asetId, 0); // laporan yang dihapus sudah tak terhitung (hapus lunak)
         }
         $db->transComplete();
 
-        (new \App\Models\LabGambarModel())->hapusUntuk('kerusakan', [$id]);
+        (new \App\Models\LabGambarModel())->hapusUntuk('kerusakan', $ids);
         master_data_changed('aset');
-        $this->audit->record('delete', 'kerusakan', $id, 'Hapus laporan kerusakan');
-
-        return redirect()->to(site_url('admin/kerusakan'))->with('success', 'Laporan kerusakan dihapus.');
     }
 
     /** Set aset 'tersedia' bila statusnya 'perbaikan' dan tak ada kerusakan lain terbuka. */

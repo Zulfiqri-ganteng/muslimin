@@ -18,6 +18,8 @@ use App\Models\TeknisiModel;
  */
 class Peminjaman extends BaseController
 {
+    use HapusMassal;
+
     protected PeminjamanModel $model;
     protected AuditModel $audit;
 
@@ -34,16 +36,19 @@ class Peminjaman extends BaseController
         return in_array($per, [10, 20, 30, 40, 50], true) ? $per : 10;
     }
 
-    public function index()
+    /** Saringan daftar dari GET (halaman) atau POST (hapus massal). @return array{0: string, 1: string} [q, status] */
+    private function saringan(string $sumber = 'get'): array
     {
-        $q      = trim((string) $this->request->getGet('q'));
-        $status = trim((string) $this->request->getGet('status'));
-        if (! in_array($status, PeminjamanModel::STATUS, true)) {
-            $status = '';
-        }
-        $per  = $this->perPage();
-        $page = max(1, (int) ($this->request->getGet('page') ?: 1));
+        $ambil  = fn (string $k) => $sumber === 'post' ? $this->request->getPost($k) : $this->request->getGet($k);
+        $q      = trim((string) $ambil('q'));
+        $status = trim((string) $ambil('status'));
 
+        return [$q, in_array($status, PeminjamanModel::STATUS, true) ? $status : ''];
+    }
+
+    /** Daftar tersaring (dipakai halaman & "Hapus semua" supaya isinya sama persis). */
+    private function daftarTersaring(string $q, string $status)
+    {
         $builder = $this->model->withRelations();
         if ($q !== '') {
             $builder = $builder->groupStart()
@@ -53,7 +58,17 @@ class Peminjaman extends BaseController
         if ($status !== '') {
             $builder = $builder->where('peminjaman.status', $status);
         }
-        $rows  = $builder->orderBy('peminjaman.tanggal_pinjam', 'DESC')->orderBy('peminjaman.id', 'DESC')
+
+        return $builder;
+    }
+
+    public function index()
+    {
+        [$q, $status] = $this->saringan();
+        $per  = $this->perPage();
+        $page = max(1, (int) ($this->request->getGet('page') ?: 1));
+
+        $rows  = $this->daftarTersaring($q, $status)->orderBy('peminjaman.tanggal_pinjam', 'DESC')->orderBy('peminjaman.id', 'DESC')
             ->paginate($per, 'default', $page);
         $pager = $this->model->pager;
 
@@ -166,28 +181,64 @@ class Peminjaman extends BaseController
 
     public function delete($id)
     {
-        $id     = (int) $id;
-        $pinjam = $this->model->find($id);
-        if (! $pinjam) {
+        $id = (int) $id;
+        if (! $this->model->find($id)) {
             return redirect()->to(site_url('admin/peminjaman'))->with('error', 'Data tidak ditemukan.');
         }
 
-        $asetModel = new AsetModel();
-        $db = db_connect();
-        $db->transException(true);
-        $db->transStart();
-        // Bila masih dipinjam, bebaskan asetnya agar tak "nyangkut".
-        if ($pinjam['status'] === 'dipinjam' && $pinjam['aset_id']) {
-            $asetModel->update($pinjam['aset_id'], ['status' => 'tersedia']);
-        }
-        $this->model->delete($id);
-        $db->transComplete();
-
-        (new \App\Models\LabGambarModel())->hapusUntuk('peminjaman', [$id]);
-        master_data_changed('aset');
+        $this->hapusBanyak([$id]);
         $this->audit->record('delete', 'peminjaman', $id, 'Hapus catatan peminjaman');
 
         return redirect()->to(site_url('admin/peminjaman'))->with('success', 'Catatan peminjaman dihapus.');
+    }
+
+    /** Hapus massal: "Hapus terpilih" (ids[]) atau "Hapus semua" yang cocok saringan — aturan sama dengan Hapus satuan. */
+    public function bulkDelete()
+    {
+        [$q, $status] = $this->saringan('post');
+        [$mode, $ids] = $this->idHapusMassal(
+            fn () => array_column($this->daftarTersaring($q, $status)->select('peminjaman.id AS id_hapus')->findAll(), 'id_hapus'),
+            fn (array $ids) => array_column($this->model->select('id')->whereIn('id', $ids)->findAll(), 'id')
+        );
+        $kembali = $this->alamatDaftarMassal(site_url('admin/peminjaman'), ['q', 'status']);
+        if ($ids === []) {
+            return redirect()->to($kembali)->with('error', $this->pesanTakAdaDipilih('catatan peminjaman'));
+        }
+
+        $bebas = $this->hapusBanyak($ids);
+        $this->audit->record('delete', 'peminjaman', null, 'Hapus massal ' . count($ids) . ' catatan peminjaman (' . $mode . ')');
+
+        return redirect()->to($kembali)->with('success', count($ids) . ' catatan peminjaman dihapus.' . ($bebas > 0 ? ' ' . $bebas . ' aset yang masih dipinjam kembali tersedia.' : ''));
+    }
+
+    /**
+     * Hapus catatan peminjaman (satu atau banyak) dalam satu transaksi. Yang masih "dipinjam" membebaskan asetnya dulu agar
+     * tak "nyangkut"; foto lampirannya ikut dihapus.
+     *
+     * @param list<int> $ids
+     *
+     * @return int jumlah aset yang dibebaskan
+     */
+    private function hapusBanyak(array $ids): int
+    {
+        $asetModel = new AsetModel();
+        $bebas     = 0;
+        $db        = db_connect();
+        $db->transException(true);
+        $db->transStart();
+        foreach ($this->model->whereIn('id', $ids)->findAll() as $pinjam) {
+            if ($pinjam['status'] === 'dipinjam' && $pinjam['aset_id']) {
+                $asetModel->update($pinjam['aset_id'], ['status' => 'tersedia']);
+                $bebas++;
+            }
+        }
+        $this->model->delete($ids);
+        $db->transComplete();
+
+        (new \App\Models\LabGambarModel())->hapusUntuk('peminjaman', $ids);
+        master_data_changed('aset');
+
+        return $bebas;
     }
 
     private function collectPinjam(int $asetId): array

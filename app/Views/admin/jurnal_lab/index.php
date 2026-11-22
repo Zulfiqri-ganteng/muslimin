@@ -45,7 +45,8 @@ $kiri = '<form method="get" class="flex min-w-0 flex-1 flex-wrap items-center ga
     'helpKey'   => 'jurnal_lab',
     'helpTitle' => 'Jurnal Pemakaian Lab',
     'helpKelas' => '',
-    'helpBody'  => '<p>Catatan <b>realisasi</b> pemakaian lab tiap sesi: kapan, oleh siapa, kegiatan apa, berapa yang hadir, dan kondisi lab setelah dipakai. Berbeda dari <b>Jadwal Lab</b> (rencana); jurnal ini adalah kenyataannya.</p>',
+    'helpBody'  => '<p>Catatan <b>realisasi</b> pemakaian lab tiap sesi: kapan, oleh siapa, kegiatan apa, berapa yang hadir, dan kondisi lab setelah dipakai. Berbeda dari <b>Jadwal Lab</b> (rencana); jurnal ini adalah kenyataannya.</p>'
+        . ui_panduan_hapus_massal('jurnal', 'Contoh membersihkan jurnal lama: isi <b>Sampai tanggal</b> (mis. akhir tahun ajaran lalu) → <b>Filter</b> → centang judul kolom → <b>Hapus semua</b>.'),
 ]) ?>
 <?= $this->endSection() ?>
 
@@ -57,12 +58,18 @@ $kiri = '<form method="get" class="flex min-w-0 flex-1 flex-wrap items-center ga
     'tambah'       => false,
     'impor'        => false,
     'tambahanHtml' => '<button type="button" class="btn btn-utama" data-buka-dialog="tambah-jurnal">' . ikon('plus', 'h-4 w-4') . 'Tambah jurnal</button>',
+    'massalUrl'      => $base . '/bulk-delete',
+    'massalLabel'    => 'jurnal',
+    'massalHidden'   => ['q' => $q, 'lab_id' => $labId ? (string) $labId : '', 'dari' => $dari, 'sampai' => $sampai],
+    'massalTotal'    => (int) $total,
+    'massalSaringan' => $adaFilter,   // saringan buatan sendiri (kiriHtml) → beri tahu bilah alat
 ]) ?>
 
 <div class="tabel-bungkus">
     <table class="tabel-crud">
         <thead>
             <tr>
+                <th scope="col" class="kolom-cek"><input type="checkbox" class="cek js-check-all" aria-label="Pilih semua jurnal di halaman ini"></th>
                 <th scope="col">Tanggal</th>
                 <th scope="col">Lab</th>
                 <th scope="col">Guru / kelas</th>
@@ -75,7 +82,7 @@ $kiri = '<form method="get" class="flex min-w-0 flex-1 flex-wrap items-center ga
         <tbody>
             <?php if (empty($rows)): ?>
                 <tr>
-                    <td colspan="7">
+                    <td colspan="8">
                         <?= ui_kosong(['ikon' => 'book-open', 'judul' => $adaFilter ? 'Tidak ada jurnal yang cocok' : 'Belum ada jurnal pemakaian',
                             'teks' => $adaFilter ? 'Ubah pencarian/filter, atau tekan Reset.' : 'Catat realisasi pemakaian lab lewat tombol Tambah jurnal.']) ?>
                     </td>
@@ -83,6 +90,7 @@ $kiri = '<form method="get" class="flex min-w-0 flex-1 flex-wrap items-center ga
             <?php else: foreach ($rows as $r):
                 $jm = $jam($r['jam_mulai']); $js = $jam($r['jam_selesai']); ?>
                 <tr>
+                    <td class="kolom-cek"><input type="checkbox" class="cek row-check" value="<?= (int) $r['id'] ?>" aria-label="Pilih jurnal <?= esc($tgl($r['tanggal']), 'attr') ?>"></td>
                     <td class="whitespace-nowrap">
                         <p class="sel-judul"><?= $tgl($r['tanggal']) ?></p>
                         <?php if ($jm): ?><p class="sel-ket"><?= $jm ?><?= $js ? '–' . $js : '' ?></p><?php endif; ?>

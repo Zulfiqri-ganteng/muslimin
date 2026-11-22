@@ -313,25 +313,30 @@ $routes->group('admin', static function ($routes) {
         $routes->post('peminjaman', 'Admin\Peminjaman::store');
         $routes->post('peminjaman/kembalikan/(:num)', 'Admin\Peminjaman::kembalikan/$1');
         $routes->post('peminjaman/delete/(:num)', 'Admin\Peminjaman::delete/$1');
+        $routes->post('peminjaman/bulk-delete', 'Admin\Peminjaman::bulkDelete');
 
         // ===== Laboratorium: Kerusakan & Perbaikan =====
         $routes->get('kerusakan', 'Admin\Kerusakan::index');
         $routes->post('kerusakan', 'Admin\Kerusakan::store');
         $routes->post('kerusakan/status/(:num)', 'Admin\Kerusakan::status/$1');
         $routes->post('kerusakan/delete/(:num)', 'Admin\Kerusakan::delete/$1');
+        $routes->post('kerusakan/bulk-delete', 'Admin\Kerusakan::bulkDelete');
 
         $routes->get('perbaikan', 'Admin\Perbaikan::index');
         $routes->post('perbaikan', 'Admin\Perbaikan::store');
         $routes->post('perbaikan/delete/(:num)', 'Admin\Perbaikan::delete/$1');
+        $routes->post('perbaikan/bulk-delete', 'Admin\Perbaikan::bulkDelete');
 
         // ===== Laboratorium: Jadwal & Jurnal Lab =====
         $routes->get('jadwal-lab', 'Admin\JadwalLab::index');
         $routes->post('jadwal-lab', 'Admin\JadwalLab::store');
         $routes->post('jadwal-lab/delete/(:num)', 'Admin\JadwalLab::delete/$1');
+        $routes->post('jadwal-lab/bulk-delete', 'Admin\JadwalLab::bulkDelete');
 
         $routes->get('jurnal-lab', 'Admin\JurnalLab::index');
         $routes->post('jurnal-lab', 'Admin\JurnalLab::store');
         $routes->post('jurnal-lab/delete/(:num)', 'Admin\JurnalLab::delete/$1');
+        $routes->post('jurnal-lab/bulk-delete', 'Admin\JurnalLab::bulkDelete');
 
         // ===== Laboratorium: Laporan =====
         $routes->get('laporan-lab', 'Admin\LaporanLab::index');

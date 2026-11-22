@@ -45,7 +45,8 @@ $kiri = '<form method="get" class="flex flex-wrap items-center gap-2">'
     'helpTitle' => 'Jadwal Lab',
     'helpKelas' => '',
     'helpBody'  => '<p>Atur jadwal pemakaian tiap laboratorium. Pilih <b>lab</b> untuk mengelola slotnya (satu lab tak bisa dipakai dua kegiatan pada jam yang sama; guru pun tak bisa dijadwalkan di dua lab bersamaan).</p>
-        <p class="mt-1">Pilih <b>guru</b> untuk melihat <b>jadwal praktik guru</b> tersebut lintas lab (tampilan baca saja).</p>',
+        <p class="mt-1">Pilih <b>guru</b> untuk melihat <b>jadwal praktik guru</b> tersebut lintas lab (tampilan baca saja).</p>'
+        . ui_panduan_hapus_massal('slot jadwal', 'Kotak centang & tombol hapus hanya ada saat jadwal ditampilkan <b>per lab</b>. <b>Hapus semua</b> = seluruh slot lab yang sedang dipilih saja (lab lain tidak tersentuh).'),
 ]) ?>
 <?= $this->endSection() ?>
 
@@ -57,6 +58,11 @@ $kiri = '<form method="get" class="flex flex-wrap items-center gap-2">'
     'tambah'       => false,
     'impor'        => false,
     'tambahanHtml' => $modeLab ? '<button type="button" class="btn btn-utama" data-buka-dialog="tambah-jadwal-lab">' . ikon('plus', 'h-4 w-4') . 'Tambah jadwal</button>' : '',
+    // Hapus massal hanya di mode per lab (mode guru = baca saja).
+    'massalUrl'             => $modeLab ? $base . '/bulk-delete' : null,
+    'massalLabel'           => 'slot jadwal',
+    'massalHidden'          => ['lab_id' => (string) $labId],
+    'massalPeringatanSemua' => 'Yang terhapus: SELURUH ' . count($rows) . ' slot jadwal lab "' . ($labOpts[$labId] ?? '-') . '" (lab lain tidak tersentuh).',
 ]) ?>
 
 <?php if ($modeLab || $modeGuru): ?>
@@ -76,6 +82,7 @@ $kiri = '<form method="get" class="flex flex-wrap items-center gap-2">'
         <table class="tabel-crud">
             <thead>
                 <tr>
+                    <?php if ($modeLab): ?><th scope="col" class="kolom-cek"><input type="checkbox" class="cek js-check-all" aria-label="Pilih semua slot jadwal lab ini"></th><?php endif; ?>
                     <th scope="col">Hari</th>
                     <th scope="col">Jam</th>
                     <th scope="col"><?= $modeGuru ? 'Lab' : 'Guru' ?></th>
@@ -85,9 +92,10 @@ $kiri = '<form method="get" class="flex flex-wrap items-center gap-2">'
             </thead>
             <tbody>
                 <?php if (empty($rows)): ?>
-                    <tr><td colspan="5"><?= ui_kosong(['ikon' => 'calendar-week', 'judul' => 'Belum ada jadwal', 'teks' => $modeLab ? 'Tambahkan slot lewat tombol Tambah jadwal.' : 'Guru ini belum punya jadwal praktik di lab.']) ?></td></tr>
+                    <tr><td colspan="<?= $modeLab ? 6 : 4 ?>"><?= ui_kosong(['ikon' => 'calendar-week', 'judul' => 'Belum ada jadwal', 'teks' => $modeLab ? 'Tambahkan slot lewat tombol Tambah jadwal.' : 'Guru ini belum punya jadwal praktik di lab.']) ?></td></tr>
                 <?php else: foreach ($rows as $r): ?>
                     <tr>
+                        <?php if ($modeLab): ?><td class="kolom-cek"><input type="checkbox" class="cek row-check" value="<?= (int) $r['id'] ?>" aria-label="Pilih slot <?= esc(ucfirst(strtolower((string) $r['hari_nama'])) . ' jam ' . (int) $r['jam_ke'], 'attr') ?>"></td><?php endif; ?>
                         <td class="sel-judul"><?= esc(ucfirst(strtolower((string) $r['hari_nama']))) ?></td>
                         <td class="whitespace-nowrap">Jam <?= (int) $r['jam_ke'] ?> <span class="sel-ket">(<?= substr((string) $r['waktu_mulai'], 0, 5) ?>–<?= substr((string) $r['waktu_selesai'], 0, 5) ?>)</span></td>
                         <?php if ($modeGuru): ?>

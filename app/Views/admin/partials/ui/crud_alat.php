@@ -13,6 +13,10 @@
  *   massalSemua?: bool, massalPeringatanSemua?: string, filterLangsung?: bool, hidden?: array<string, string>, lentur?: bool
  * } $ui  massalSemua false = tanpa tombol "Hapus semua". Saringan ≥ 3 → kelas alat-crud-padat (tombol turun ke baris sendiri di lebar laptop).
  * 'massalPeringatanSemua' (2026-11-22, Peserta UKK) = peringatan khusus dialog "Hapus semua" (bila kosong: memakai massalPeringatan).
+ * 'massalTotal' (2026-11-22, hapus massal semua halaman) = jumlah baris yang cocok saringan → kalimat dialog "Hapus semua" dibuat
+ * otomatis ("HANYA N … yang cocok saringan" / "SELURUH N …") + massalPeringatan. 'massalSaringan' (bool) = apakah saringan sedang
+ * dipakai; bawaan dihitung dari q + filter (isi sendiri untuk halaman ber-kiriHtml yang saringannya buatan sendiri).
+ * Controller-nya memakai trait Admin\HapusMassal.
  * 'hidden' (F7) = isian tersembunyi di formulir cari/filter yang ikut terkirim, mis. ['tp' => '2026/2027'] (tahun pelajaran Ujian).
  * 'lentur' (2026-10-30, Master Siswa; butuh 'cari') = susunan menurut lebar wadah: lebar → baris 1 cari … tombol, baris 2 saringan +
  * Reset … Tampilkan N; sempit (HP) → cari + tombol "Saringan" (panel buka-tutup, app.js data-alih-saringan), lalu Tambah + Lainnya.
@@ -41,6 +45,18 @@ foreach ($filter as $f) {
         $adaFilter = true;
         $nSaring++;
     }
+}
+
+// Kalimat dialog "Hapus semua": tulisan sendiri (massalPeringatanSemua) atau otomatis dari massalTotal.
+$massalLabel = (string) ($ui['massalLabel'] ?? 'data');
+$warnSemua   = (string) ($ui['massalPeringatanSemua'] ?? '');
+if ($warnSemua === '' && isset($ui['massalTotal'])) {
+    $nTotal    = (int) $ui['massalTotal'];
+    $saringan  = array_key_exists('massalSaringan', $ui) ? (bool) $ui['massalSaringan'] : $adaFilter;
+    $warnSemua = ($saringan
+            ? 'Saringan/pencarian sedang dipakai, jadi yang terhapus HANYA ' . $nTotal . ' ' . $massalLabel . ' yang cocok (di semua halaman).'
+            : 'Yang terhapus: SELURUH ' . $nTotal . ' ' . $massalLabel . ' (di semua halaman).')
+        . (($ui['massalPeringatan'] ?? '') !== '' ? ' ' . $ui['massalPeringatan'] : '');
 }
 
 // Bagian-bagian bilah (dipakai kedua susunan).
@@ -136,7 +152,7 @@ $tombolKanan = static function (string $kelasLebar) use ($tambah, $labelTambah, 
 
     <?php if ($massalUrl): ?>
         <form method="post" action="<?= esc((string) $massalUrl, 'attr') ?>" class="hidden js-bulk-form"
-              data-label="<?= esc((string) ($ui['massalLabel'] ?? 'data'), 'attr') ?>" data-warn="<?= esc(($ui['massalPeringatan'] ?? '') !== '' ? ' ' . $ui['massalPeringatan'] : '', 'attr') ?>"<?php if (($ui['massalPeringatanSemua'] ?? '') !== ''): ?> data-warn-semua="<?= esc(' ' . $ui['massalPeringatanSemua'], 'attr') ?>"<?php endif; ?>>
+              data-label="<?= esc($massalLabel, 'attr') ?>" data-warn="<?= esc(($ui['massalPeringatan'] ?? '') !== '' ? ' ' . $ui['massalPeringatan'] : '', 'attr') ?>"<?php if ($warnSemua !== ''): ?> data-warn-semua="<?= esc(' ' . $warnSemua, 'attr') ?>"<?php endif; ?>>
             <?= csrf_field() ?>
             <input type="hidden" name="mode" value="">
             <?php foreach ($ui['massalHidden'] ?? [] as $name => $val): ?>

@@ -35,7 +35,8 @@ $total = $pager ? $pager->getTotal() : count($rows);
     'helpTitle' => 'Perbaikan & Maintenance',
     'helpKelas' => '',
     'helpBody'  => '<p>Catat tindakan atas aset: <b>perbaikan</b>, <b>maintenance</b> rutin, atau <b>penggantian komponen</b>. Bila mengisi bagian "Penggantian Komponen", stok sparepart otomatis <b>berkurang</b> (dan dipulihkan bila catatan ini dihapus).</p>
-        <p class="mt-1">Kaitkan ke sebuah <b>kerusakan</b> lalu set status <b>Selesai</b> → kerusakan itu otomatis ditandai selesai & asetnya kembali <b>tersedia</b>.</p>',
+        <p class="mt-1">Kaitkan ke sebuah <b>kerusakan</b> lalu set status <b>Selesai</b> → kerusakan itu otomatis ditandai selesai & asetnya kembali <b>tersedia</b>.</p>'
+        . ui_panduan_hapus_massal('catatan perbaikan', 'Stok sparepart dari komponen yang sempat dipakai otomatis <b>dikembalikan</b>. Foto lampirannya ikut terhapus.'),
 ]) ?>
 <?= $this->endSection() ?>
 
@@ -49,12 +50,18 @@ $total = $pager ? $pager->getTotal() : count($rows);
     'tambah'       => false,
     'impor'        => false,
     'tambahanHtml' => '<button type="button" class="btn btn-utama" data-buka-dialog="catat-perbaikan">' . ikon('plus', 'h-4 w-4') . 'Catat perbaikan</button>',
+    'massalUrl'        => $base . '/bulk-delete',
+    'massalLabel'      => 'catatan perbaikan',
+    'massalHidden'     => ['q' => $q, 'jenis' => $jenis],
+    'massalTotal'      => (int) $total,
+    'massalPeringatan' => 'Stok sparepart yang sempat dipakai otomatis dikembalikan.',
 ]) ?>
 
 <div class="tabel-bungkus">
     <table class="tabel-crud">
         <thead>
             <tr>
+                <th scope="col" class="kolom-cek"><input type="checkbox" class="cek js-check-all" aria-label="Pilih semua catatan di halaman ini"></th>
                 <th scope="col">Aset</th>
                 <th scope="col">Jenis</th>
                 <th scope="col">Tindakan</th>
@@ -66,13 +73,14 @@ $total = $pager ? $pager->getTotal() : count($rows);
         <tbody>
             <?php if (empty($rows)): ?>
                 <tr>
-                    <td colspan="6">
+                    <td colspan="7">
                         <?= ui_kosong(['ikon' => 'hammer', 'judul' => $q !== '' || $jenis !== '' ? 'Tidak ada perbaikan yang cocok' : 'Belum ada catatan perbaikan',
                             'teks' => $q !== '' || $jenis !== '' ? 'Ubah pencarian/filter, atau tekan Reset.' : 'Catat tindakan perbaikan, maintenance, atau penggantian komponen lewat tombol Catat perbaikan.']) ?>
                     </td>
                 </tr>
             <?php else: foreach ($rows as $r): ?>
                 <tr>
+                    <td class="kolom-cek"><input type="checkbox" class="cek row-check" value="<?= (int) $r['id'] ?>" aria-label="Pilih catatan perbaikan <?= esc((string) ($r['nomor_aset'] ?? $r['id']), 'attr') ?>"></td>
                     <td>
                         <p class="font-mono font-semibold text-brand-700 dark:text-brand-400"><?= esc($r['nomor_aset'] ?? '—') ?></p>
                         <p class="sel-ket"><?= esc($r['aset_nama'] ?? '—') ?></p>

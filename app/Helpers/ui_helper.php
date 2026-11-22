@@ -169,6 +169,23 @@ if (! function_exists('ui_partial')) {
         return ui_partial('crud_kaki', $opsi);
     }
 
+    /**
+     * (2026-11-22) Paragraf panduan halaman "Menghapus banyak sekaligus" — seragam di semua halaman ber-hapus massal
+     * (aturan user: perubahan tombol wajib diikuti panduan). $satuan mis. "peminjaman"; $catatan = aturan khusus halaman itu
+     * (HTML tepercaya, mis. "Aset yang masih dipinjam otomatis kembali <b>tersedia</b>.").
+     */
+    function ui_panduan_hapus_massal(string $satuan, string $catatan = ''): string
+    {
+        $s = esc($satuan);
+
+        return '<p class="mt-3"><b>Menghapus banyak sekaligus</b><br>'
+            . '• Centang kotak di depan ' . $s . ' yang ingin dihapus → muncul tombol merah <b>Hapus terpilih (angka)</b> di sebelah kotak cari → tekan, lalu pilih <b>Ya, hapus</b>.<br>'
+            . '• Centang kotak di <b>judul kolom</b> (paling kiri) = pilih semua di halaman ini. Saat semua tercentang, muncul juga tombol <b>Hapus semua</b>.<br>'
+            . '• <b>Hapus semua</b> menghapus ' . $s . ' di <b>semua halaman</b> (bukan hanya yang tampil) yang cocok dengan pencarian/saringan saat ini. Tanpa saringan = seluruh ' . $s . '.<br>'
+            . '• Sebelum terhapus selalu muncul pertanyaan yang menyebut jumlahnya, jadi periksa dulu angkanya.'
+            . ($catatan !== '' ? '<br>• ' . $catatan : '') . '</p>';
+    }
+
     /** Dialog Import Excel (keadaan importOpen milik masterList). Lihat partial ui/crud_impor. */
     function ui_crud_impor(array $opsi): string
     {

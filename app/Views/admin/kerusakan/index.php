@@ -35,7 +35,8 @@ $total = $pager ? $pager->getTotal() : count($rows);
     'helpTitle' => 'Kerusakan Aset',
     'helpKelas' => '',
     'helpBody'  => '<p>Catat laporan kerusakan aset. Saat dilaporkan, status aset otomatis menjadi <b>perbaikan</b>. Ubah status ke <b>Selesai</b> jika sudah beres — aset otomatis kembali <b>tersedia</b> (bila tak ada kerusakan lain).</p>
-        <p class="mt-1">Untuk mencatat <b>tindakan perbaikan</b> (termasuk penggantian komponen yang mengurangi stok sparepart), buka menu <b>Perbaikan</b> lalu kaitkan ke kerusakan ini.</p>',
+        <p class="mt-1">Untuk mencatat <b>tindakan perbaikan</b> (termasuk penggantian komponen yang mengurangi stok sparepart), buka menu <b>Perbaikan</b> lalu kaitkan ke kerusakan ini.</p>'
+        . ui_panduan_hapus_massal('laporan kerusakan', 'Aset yang tak lagi punya kerusakan terbuka otomatis kembali <b>tersedia</b>. Foto lampirannya ikut terhapus.'),
 ]) ?>
 <?= $this->endSection() ?>
 
@@ -50,12 +51,18 @@ $total = $pager ? $pager->getTotal() : count($rows);
     'impor'        => false,
     'tambahanHtml' => '<span class="lencana lencana-kuning py-1">Kerusakan terbuka: ' . (int) $terbuka . '</span>'
         . '<button type="button" class="btn btn-utama" data-buka-dialog="lapor-kerusakan">' . ikon('exclamation-circle', 'h-4 w-4') . 'Lapor kerusakan</button>',
+    'massalUrl'        => $base . '/bulk-delete',
+    'massalLabel'      => 'laporan kerusakan',
+    'massalHidden'     => ['q' => $q, 'status' => $status],
+    'massalTotal'      => (int) $total,
+    'massalPeringatan' => 'Aset yang tak lagi punya kerusakan terbuka otomatis kembali tersedia.',
 ]) ?>
 
 <div class="tabel-bungkus">
     <table class="tabel-crud">
         <thead>
             <tr>
+                <th scope="col" class="kolom-cek"><input type="checkbox" class="cek js-check-all" aria-label="Pilih semua laporan di halaman ini"></th>
                 <th scope="col">Aset</th>
                 <th scope="col">Deskripsi</th>
                 <th scope="col">Tingkat</th>
@@ -67,7 +74,7 @@ $total = $pager ? $pager->getTotal() : count($rows);
         <tbody>
             <?php if (empty($rows)): ?>
                 <tr>
-                    <td colspan="6">
+                    <td colspan="7">
                         <?= ui_kosong(['ikon' => 'tools', 'judul' => $q !== '' || $status !== '' ? 'Tidak ada kerusakan yang cocok' : 'Belum ada laporan kerusakan',
                             'teks' => $q !== '' || $status !== '' ? 'Ubah pencarian/filter, atau tekan Reset.' : 'Laporkan kerusakan aset lewat tombol Lapor kerusakan.']) ?>
                     </td>
@@ -76,6 +83,7 @@ $total = $pager ? $pager->getTotal() : count($rows);
                 $open  = in_array($r['status'], ['dilaporkan', 'diproses'], true);
                 $label = ($r['nomor_aset'] ?? '-') . ' — ' . mb_substr((string) $r['deskripsi'], 0, 40); ?>
                 <tr>
+                    <td class="kolom-cek"><input type="checkbox" class="cek row-check" value="<?= (int) $r['id'] ?>" aria-label="Pilih laporan <?= esc($label, 'attr') ?>"></td>
                     <td>
                         <p class="font-mono font-semibold text-brand-700 dark:text-brand-400"><?= esc($r['nomor_aset'] ?? '—') ?></p>
                         <p class="sel-ket"><?= esc($r['aset_nama'] ?? '—') ?></p>

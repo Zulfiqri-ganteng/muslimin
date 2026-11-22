@@ -21,6 +21,8 @@ use App\Models\MataPelajaranModel;
  */
 class JadwalLab extends BaseController
 {
+    use HapusMassal;
+
     protected JadwalLabModel $model;
     protected AuditModel $audit;
 
@@ -107,6 +109,28 @@ class JadwalLab extends BaseController
 
         return redirect()->to(site_url('admin/jadwal-lab') . ($labId ? '?lab_id=' . $labId : ''))
             ->with('success', 'Jadwal dihapus.');
+    }
+
+    /**
+     * Hapus massal slot jadwal SATU lab (tombol hapus memang hanya ada saat daftar ditampilkan per lab): "Hapus terpilih"
+     * (ids[] milik lab itu) atau "Hapus semua" = seluruh slot lab itu.
+     */
+    public function bulkDelete()
+    {
+        $labId = (int) $this->request->getPost('lab_id');
+        [$mode, $ids] = $this->idHapusMassal(
+            fn () => $labId > 0 ? array_column($this->model->select('id')->where('lab_id', $labId)->findAll(), 'id') : [],
+            fn (array $ids) => $labId > 0 ? array_column($this->model->select('id')->where('lab_id', $labId)->whereIn('id', $ids)->findAll(), 'id') : []
+        );
+        $kembali = $this->alamatDaftarMassal(site_url('admin/jadwal-lab'), ['lab_id']);
+        if ($ids === []) {
+            return redirect()->to($kembali)->with('error', $this->pesanTakAdaDipilih('slot jadwal'));
+        }
+
+        $this->model->delete($ids);
+        $this->audit->record('delete', 'jadwal_lab', null, 'Hapus massal ' . count($ids) . ' slot jadwal lab (' . $mode . ', lab #' . $labId . ')');
+
+        return redirect()->to($kembali)->with('success', count($ids) . ' slot jadwal dihapus.');
     }
 
     /** Opsi hari aktif [id => nama]. */

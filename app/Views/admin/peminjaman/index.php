@@ -39,7 +39,8 @@ $ringkas = '<span class="lencana lencana-merek py-1">Sedang dipinjam: ' . (int) 
     'helpBody'  => '<p>Catat peminjaman barang lab. Saat dipinjam, status aset otomatis menjadi <b>dipinjam</b> (tak bisa dipinjam ganda). Peminjam boleh siapa saja (guru/siswa/umum) — cukup ketik namanya.</p>
         <p class="mt-1">• Klik <b>Kembalikan</b> pada baris untuk memproses pengembalian: isi tanggal & kondisi barang, status aset otomatis kembali <b>tersedia</b>.<br>
         • Barang yang <b>hilang</b> bisa ditandai saat pengembalian (aset ditarik dari daftar; bisa dipulihkan lewat Master Aset).<br>
-        • Baris <b>Terlambat</b> = masih dipinjam melewati tanggal rencana kembali.</p>',
+        • Baris <b>Terlambat</b> = masih dipinjam melewati tanggal rencana kembali.</p>'
+        . ui_panduan_hapus_massal('catatan peminjaman', 'Catatan yang masih <b>dipinjam</b> boleh ikut dihapus: asetnya otomatis kembali <b>tersedia</b>. Foto lampirannya ikut terhapus.'),
 ]) ?>
 <?= $this->endSection() ?>
 
@@ -53,12 +54,19 @@ $ringkas = '<span class="lencana lencana-merek py-1">Sedang dipinjam: ' . (int) 
     'tambah'       => false,
     'impor'        => false,
     'tambahanHtml' => $ringkas . '<button type="button" class="btn btn-utama" data-buka-dialog="pinjam-barang">' . ikon('plus', 'h-4 w-4') . 'Pinjamkan barang</button>',
+    // Hapus massal (trait HapusMassal di controller): saringan ikut terkirim → "Hapus semua" = yang cocok saringan.
+    'massalUrl'        => $base . '/bulk-delete',
+    'massalLabel'      => 'catatan peminjaman',
+    'massalHidden'     => ['q' => $q, 'status' => $status],
+    'massalTotal'      => (int) $total,
+    'massalPeringatan' => 'Aset yang masih dipinjam otomatis kembali tersedia.',
 ]) ?>
 
 <div class="tabel-bungkus">
     <table class="tabel-crud">
         <thead>
             <tr>
+                <th scope="col" class="kolom-cek"><input type="checkbox" class="cek js-check-all" aria-label="Pilih semua peminjaman di halaman ini"></th>
                 <th scope="col">Aset</th>
                 <th scope="col">Peminjam</th>
                 <th scope="col">Tgl pinjam</th>
@@ -70,7 +78,7 @@ $ringkas = '<span class="lencana lencana-merek py-1">Sedang dipinjam: ' . (int) 
         <tbody>
             <?php if (empty($rows)): ?>
                 <tr>
-                    <td colspan="6">
+                    <td colspan="7">
                         <?= ui_kosong(['ikon' => 'briefcase', 'judul' => $q !== '' || $status !== '' ? 'Tidak ada peminjaman yang cocok' : 'Belum ada peminjaman',
                             'teks' => $q !== '' || $status !== '' ? 'Ubah pencarian/filter, atau tekan Reset.' : 'Klik Pinjamkan barang untuk mencatat peminjaman.']) ?>
                     </td>
@@ -89,6 +97,7 @@ $ringkas = '<span class="lencana lencana-merek py-1">Sedang dipinjam: ' . (int) 
                 }
                 ?>
                 <tr class="<?= $late ? 'bg-red-50 dark:bg-red-900/20' : '' ?>">
+                    <td class="kolom-cek"><input type="checkbox" class="cek row-check" value="<?= (int) $r['id'] ?>" aria-label="Pilih peminjaman <?= esc((string) ($r['aset_nama'] ?? $r['id']), 'attr') ?>"></td>
                     <td>
                         <p class="font-mono font-semibold text-brand-700 dark:text-brand-400"><?= esc($r['nomor_aset'] ?? '—') ?></p>
                         <p class="sel-ket"><?= esc($r['aset_nama'] ?? '—') ?></p>

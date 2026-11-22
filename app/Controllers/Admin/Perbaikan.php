@@ -21,6 +21,8 @@ use App\Models\TeknisiModel;
  */
 class Perbaikan extends BaseController
 {
+    use HapusMassal;
+
     protected PerbaikanModel $model;
     protected AuditModel $audit;
 
@@ -37,17 +39,19 @@ class Perbaikan extends BaseController
         return in_array($per, [10, 20, 30, 40, 50], true) ? $per : 10;
     }
 
-    public function index()
+    /** Saringan daftar dari GET (halaman) atau POST (hapus massal). @return array{0: string, 1: string} [q, jenis] */
+    private function saringan(string $sumber = 'get'): array
     {
-        $q     = trim((string) $this->request->getGet('q'));
-        $jenis = trim((string) $this->request->getGet('jenis'));
-        if (! in_array($jenis, PerbaikanModel::JENIS, true)) {
-            $jenis = '';
-        }
-        $per  = $this->perPage();
-        $page = max(1, (int) ($this->request->getGet('page') ?: 1));
+        $ambil = fn (string $k) => $sumber === 'post' ? $this->request->getPost($k) : $this->request->getGet($k);
+        $q     = trim((string) $ambil('q'));
+        $jenis = trim((string) $ambil('jenis'));
 
-        // Query khusus: ikut membawa komponen yang diganti (bila ada).
+        return [$q, in_array($jenis, PerbaikanModel::JENIS, true) ? $jenis : ''];
+    }
+
+    /** Daftar tersaring (dipakai halaman & "Hapus semua" supaya isinya sama persis). Ikut membawa komponen yang diganti. */
+    private function daftarTersaring(string $q, string $jenis)
+    {
         $builder = $this->model
             ->select('perbaikan.*, aset.nama AS aset_nama, aset.nomor_aset, teknisi.nama AS teknisi_nama, sp.nama AS komponen_nama, sm.jumlah AS komponen_jumlah, sp.satuan AS komponen_satuan')
             ->join('aset', 'aset.id = perbaikan.aset_id', 'left')
@@ -62,7 +66,17 @@ class Perbaikan extends BaseController
         if ($jenis !== '') {
             $builder = $builder->where('perbaikan.jenis', $jenis);
         }
-        $rows  = $builder->orderBy('perbaikan.tanggal', 'DESC')->orderBy('perbaikan.id', 'DESC')
+
+        return $builder;
+    }
+
+    public function index()
+    {
+        [$q, $jenis] = $this->saringan();
+        $per  = $this->perPage();
+        $page = max(1, (int) ($this->request->getGet('page') ?: 1));
+
+        $rows  = $this->daftarTersaring($q, $jenis)->orderBy('perbaikan.tanggal', 'DESC')->orderBy('perbaikan.id', 'DESC')
             ->paginate($per, 'default', $page);
         $pager = $this->model->pager;
 
@@ -157,34 +171,62 @@ class Perbaikan extends BaseController
 
     public function delete($id)
     {
-        $id  = (int) $id;
-        $row = $this->model->find($id);
-        if (! $row) {
+        $id = (int) $id;
+        if (! $this->model->find($id)) {
             return redirect()->to(site_url('admin/perbaikan'))->with('error', 'Data tidak ditemukan.');
         }
 
+        $this->hapusBanyak([$id]);
+        $this->audit->record('delete', 'perbaikan', $id, 'Hapus catatan perbaikan (stok komponen dipulihkan)');
+
+        return redirect()->to(site_url('admin/perbaikan'))->with('success', 'Catatan perbaikan dihapus, stok komponen dipulihkan.');
+    }
+
+    /** Hapus massal: "Hapus terpilih" (ids[]) atau "Hapus semua" yang cocok saringan — aturan sama dengan Hapus satuan. */
+    public function bulkDelete()
+    {
+        [$q, $jenis] = $this->saringan('post');
+        [$mode, $ids] = $this->idHapusMassal(
+            fn () => array_column($this->daftarTersaring($q, $jenis)->select('perbaikan.id AS id_hapus')->findAll(), 'id_hapus'),
+            fn (array $ids) => array_column($this->model->select('id')->whereIn('id', $ids)->findAll(), 'id')
+        );
+        $kembali = $this->alamatDaftarMassal(site_url('admin/perbaikan'), ['q', 'jenis']);
+        if ($ids === []) {
+            return redirect()->to($kembali)->with('error', $this->pesanTakAdaDipilih('catatan perbaikan'));
+        }
+
+        $this->hapusBanyak($ids);
+        $this->audit->record('delete', 'perbaikan', null, 'Hapus massal ' . count($ids) . ' catatan perbaikan (' . $mode . ', stok komponen dipulihkan)');
+
+        return redirect()->to($kembali)->with('success', count($ids) . ' catatan perbaikan dihapus, stok komponen dipulihkan.');
+    }
+
+    /**
+     * Hapus catatan perbaikan (satu atau banyak) dalam satu transaksi: stok komponen yang sempat dikeluarkan dikembalikan,
+     * mutasinya dihapus, lalu catatannya. Foto lampirannya ikut dihapus.
+     *
+     * @param list<int> $ids
+     */
+    private function hapusBanyak(array $ids): void
+    {
         $sparepartModel = new SparepartModel();
         $mutasiModel    = new SparepartMutasiModel();
 
         $db = db_connect();
         $db->transException(true);
         $db->transStart();
-        // Pulihkan stok dari komponen yang sempat dikeluarkan.
-        foreach ($mutasiModel->where('perbaikan_id', $id)->where('tipe', 'keluar')->findAll() as $m) {
+        foreach ($mutasiModel->whereIn('perbaikan_id', $ids)->where('tipe', 'keluar')->findAll() as $m) {
             $sp = $sparepartModel->find($m['sparepart_id']);
             if ($sp) {
                 $sparepartModel->update($m['sparepart_id'], ['stok' => (int) $sp['stok'] + (int) $m['jumlah']]);
             }
             $mutasiModel->delete($m['id']);
         }
-        $this->model->delete($id);
+        $this->model->delete($ids);
         $db->transComplete();
 
-        (new \App\Models\LabGambarModel())->hapusUntuk('perbaikan', [$id]);
+        (new \App\Models\LabGambarModel())->hapusUntuk('perbaikan', $ids);
         master_data_changed('aset', 'sparepart');
-        $this->audit->record('delete', 'perbaikan', $id, 'Hapus catatan perbaikan (stok komponen dipulihkan)');
-
-        return redirect()->to(site_url('admin/perbaikan'))->with('success', 'Catatan perbaikan dihapus, stok komponen dipulihkan.');
     }
 
     private function collect(int $asetId): array
