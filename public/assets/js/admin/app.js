@@ -331,6 +331,8 @@
         var mode  = btn.getAttribute('data-bulk');
         var label = form.getAttribute('data-label') || 'data';
         var warn  = form.getAttribute('data-warn') || '';
+        // Peringatan khusus "Hapus semua" (mis. Peserta UKK: hanya yang cocok dengan saringan); bila tak ada, pakai data-warn.
+        var warnSemua = form.hasAttribute('data-warn-semua') ? form.getAttribute('data-warn-semua') : warn;
 
         form.querySelectorAll('input[name="ids[]"]').forEach(function (n) { n.remove(); });
 
@@ -344,7 +346,7 @@
         var checked = Array.prototype.slice.call(document.querySelectorAll('.row-check:checked'));
         var janji;
         if (mode === 'all') {
-            janji = tanya('Hapus semua ' + label + '?', 'Tindakan ini menghapus SELURUH daftar dan tidak dapat dibatalkan.' + warn, 'Ya, hapus semua');
+            janji = tanya('Hapus semua ' + label + '?', 'Tindakan ini menghapus SELURUH daftar dan tidak dapat dibatalkan.' + warnSemua, 'Ya, hapus semua');
         } else {
             if (checked.length === 0) {
                 if (window.Ui && window.Ui.toast) { window.Ui.toast('Centang dulu data yang ingin dihapus.', 'awas'); } else { window.alert('Centang dulu data yang ingin dihapus.'); }

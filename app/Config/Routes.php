@@ -566,6 +566,7 @@ $routes->group('admin', static function ($routes) {
         $routes->post('peserta-ukk/daftarkan', 'Admin\PesertaUkk::daftarkanStore');
         $routes->post('peserta-ukk/status/(:num)', 'Admin\PesertaUkk::status/$1');
         $routes->post('peserta-ukk/delete/(:num)', 'Admin\PesertaUkk::delete/$1');
+        $routes->post('peserta-ukk/bulk-delete', 'Admin\PesertaUkk::bulkDelete');
 
         // ===== UKK: Jadwal + Penugasan Penguji =====
         $routes->get('jadwal-ukk', 'Admin\JadwalUkk::index');

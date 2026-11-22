@@ -33,6 +33,11 @@ $jumlahBaris = $pager ? $pager->getTotal() : count($rows);
 $ringkas = '<span class="lencana lencana-abu py-1">Total: ' . (int) $total . '</span>'
     . '<span class="lencana lencana-hijau py-1">Lulus: ' . (int) $lulus . '</span>'
     . '<span class="lencana lencana-merah py-1">Tidak lulus: ' . (int) $tidakLulus . '</span>';
+// Dialog "Hapus semua": sebutkan persis berapa & yang mana yang terhapus (saringan aktif = hanya yang cocok saringan).
+$peringatanSemua = ($adaFilter
+        ? 'Saringan sedang dipakai, jadi yang terhapus HANYA ' . (int) $jumlahBaris . ' peserta yang cocok dengan saringan ini (di semua halaman).'
+        : 'Yang terhapus: SELURUH ' . (int) $jumlahBaris . ' peserta UKK dari semua paket soal. Untuk menghapus satu paket soal saja, pilih paketnya dulu di saringan.')
+    . ' Siswanya bisa didaftarkan lagi lewat tombol Daftarkan peserta.';
 ?>
 <?= $this->extend('layouts/admin') ?>
 <?= $this->section('tata') ?>crud<?= $this->endSection() ?>
@@ -42,12 +47,27 @@ $ringkas = '<span class="lencana lencana-abu py-1">Total: ' . (int) $total . '</
     'helpKey'   => 'peserta_ukk',
     'helpTitle' => 'Peserta UKK',
     'helpKelas' => '',
-    'helpBody'  => '<p>Daftar siswa yang mengikuti Uji Kompetensi Keahlian per paket soal. Klik <b>Daftarkan Peserta</b>
-        untuk mendaftarkan satu kelas sekaligus — pilih paket soal + kelas, sistem otomatis menyembunyikan siswa yang
-        sudah terdaftar, lalu centang siswa yang ikut.</p>
-        <p class="mt-1">• Nomor peserta dibuat otomatis (format <code>UKK-{KODE PAKET}-001</code>).<br>
-        • Status <b>Lulus/Tidak Lulus</b> normalnya terisi otomatis setelah penilaian selesai, tapi bisa diubah manual
-        di sini bila perlu.</p>',
+    'helpBody'  => '<p>Daftar siswa yang mengikuti Uji Kompetensi Keahlian (UKK) per paket soal.</p>
+        <p class="mt-3"><b>1. Mencari peserta</b><br>
+        • Ketik nama, NIS, atau nomor peserta di kotak <b>Cari</b>, lalu tekan Enter.<br>
+        • Pilihan <b>Semua paket soal</b> dan <b>Semua status</b> langsung menyaring daftar begitu dipilih. <b>Reset</b> = hapus saringan.<br>
+        • <b>Tampilkan 10–50</b> = jumlah peserta per halaman. Angka <b>Total / Lulus / Tidak lulus</b> mengikuti paket soal yang dipilih.</p>
+        <p class="mt-3"><b>2. Mendaftarkan peserta</b><br>
+        • Tekan tombol biru <b>Daftarkan peserta</b> (kanan atas) → pilih paket soal + kelas → centang siswa yang ikut → simpan. Satu kelas bisa didaftarkan sekaligus.<br>
+        • Siswa yang sudah terdaftar di paket soal itu otomatis disembunyikan, jadi tidak bisa dobel.<br>
+        • Nomor peserta dibuat otomatis (format <code>UKK-{KODE PAKET}-001</code>).</p>
+        <p class="mt-3"><b>3. Tombol di tiap peserta</b> (kolom Aksi paling kanan; di HP geser tabel ke kanan)<br>
+        • <b>Status</b> (biru) — mengubah status manual: Terdaftar, Hadir, Tidak hadir, Lulus, Tidak lulus. Lulus/Tidak lulus normalnya terisi otomatis sesudah penilaian.<br>
+        • <b>Hapus</b> (merah) — menghapus pendaftaran satu peserta.</p>
+        <p class="mt-3"><b>4. Menghapus banyak peserta sekaligus</b><br>
+        • Centang kotak di depan nama peserta yang ingin dihapus → muncul tombol merah <b>Hapus terpilih (angka)</b> di sebelah kotak cari → tekan, lalu pilih <b>Ya, hapus</b>.<br>
+        • Centang kotak di <b>judul kolom</b> (paling kiri, sebelah "No. peserta") = pilih semua peserta di halaman ini. Saat semua tercentang, muncul juga tombol <b>Hapus semua</b>.<br>
+        • <b>Hapus semua</b> menghapus semua peserta di <b>semua halaman</b> (bukan hanya 10 yang tampil), mengikuti saringan yang sedang dipakai. Contoh: pilih paket soal <i>0001</i> dulu → centang judul kolom → <b>Hapus semua</b> = hanya peserta paket 0001 yang terhapus. Tanpa saringan = seluruh peserta UKK terhapus.<br>
+        • Sebelum terhapus selalu muncul pertanyaan yang menyebut jumlahnya, jadi periksa dulu angkanya.</p>
+        <p class="mt-3"><b>5. Kenapa tombol Hapus semua tidak langsung terlihat?</b><br>
+        Sengaja disembunyikan supaya tidak terpencet tidak sengaja. Tombol baru muncul sesudah kotak di judul kolom dicentang.</p>
+        <p class="mt-3"><b>6. Salah hapus, bisa dikembalikan?</b><br>
+        Daftarkan lagi siswanya lewat <b>Daftarkan peserta</b> (paket soal + kelas yang sama). Siswa itu akan muncul lagi dengan <b>nomor peserta baru</b> dan status Terdaftar.</p>',
 ]) ?>
 <?= $this->endSection() ?>
 
@@ -65,12 +85,19 @@ $ringkas = '<span class="lencana lencana-abu py-1">Total: ' . (int) $total . '</
     'tambah'         => false,
     'impor'          => false,
     'tambahanHtml'   => $ringkas . '<a href="' . site_url('admin/peserta-ukk/daftarkan') . '" class="btn btn-utama">' . ikon('plus', 'h-4 w-4') . 'Daftarkan peserta</a>',
+    // Hapus massal (pola Master Data, delegasi global app.js). Saringan ikut terkirim → "Hapus semua" = semua yang cocok saringan.
+    'massalUrl'             => $base . '/bulk-delete',
+    'massalLabel'           => 'peserta',
+    'massalHidden'          => ['q' => $q, 'paket_soal_id' => $paketId > 0 ? (string) $paketId : '', 'status' => $status],
+    'massalPeringatan'      => 'Siswanya bisa didaftarkan lagi lewat tombol Daftarkan peserta.',
+    'massalPeringatanSemua' => $peringatanSemua,
 ]) ?>
 
 <div class="tabel-bungkus">
     <table class="tabel-crud">
         <thead>
             <tr>
+                <th scope="col" class="kolom-cek"><input type="checkbox" class="cek js-check-all" aria-label="Pilih semua peserta di halaman ini"></th>
                 <th scope="col">No. peserta</th>
                 <th scope="col">Siswa</th>
                 <th scope="col">Paket soal</th>
@@ -83,13 +110,14 @@ $ringkas = '<span class="lencana lencana-abu py-1">Total: ' . (int) $total . '</
         <tbody>
             <?php if (empty($rows)): ?>
                 <tr>
-                    <td colspan="7">
+                    <td colspan="8">
                         <?= ui_kosong(['ikon' => 'user-graduate', 'judul' => $adaFilter ? 'Tidak ada peserta yang cocok' : 'Belum ada peserta terdaftar',
                             'teks' => $adaFilter ? 'Ubah pencarian/filter, atau tekan Reset.' : 'Klik Daftarkan peserta untuk memulai.']) ?>
                     </td>
                 </tr>
             <?php else: foreach ($rows as $r): ?>
                 <tr>
+                    <td class="kolom-cek"><input type="checkbox" class="cek row-check" value="<?= (int) $r['id'] ?>" aria-label="Pilih peserta <?= esc($r['siswa_nama'] ?? (string) $r['id'], 'attr') ?>"></td>
                     <td class="font-mono font-semibold whitespace-nowrap text-brand-700 dark:text-brand-400"><?= esc($r['no_peserta'] ?? '—') ?></td>
                     <td>
                         <p class="sel-judul"><?= esc($r['siswa_nama'] ?? '—') ?></p>

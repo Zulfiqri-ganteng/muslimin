@@ -36,17 +36,27 @@ class PesertaUkk extends BaseController
         return in_array($per, [10, 20, 30, 40, 50], true) ? $per : 10;
     }
 
-    public function index()
+    /**
+     * Saringan daftar (cari, paket soal, status) dari GET (halaman) atau POST (hapus massal "Hapus semua").
+     *
+     * @return array{0: string, 1: int, 2: string} [q, paketId, status]
+     */
+    private function saringan(string $sumber = 'get'): array
     {
-        $q           = trim((string) $this->request->getGet('q'));
-        $paketId     = (int) $this->request->getGet('paket_soal_id');
-        $status      = trim((string) $this->request->getGet('status'));
+        $ambil   = fn (string $k) => $sumber === 'post' ? $this->request->getPost($k) : $this->request->getGet($k);
+        $q       = trim((string) $ambil('q'));
+        $paketId = (int) $ambil('paket_soal_id');
+        $status  = trim((string) $ambil('status'));
         if (! in_array($status, PesertaUkkModel::STATUS, true)) {
             $status = '';
         }
-        $per  = $this->perPage();
-        $page = max(1, (int) ($this->request->getGet('page') ?: 1));
 
+        return [$q, $paketId, $status];
+    }
+
+    /** Daftar peserta + relasi, sudah disaring (dipakai halaman & "Hapus semua" agar isinya sama persis). */
+    private function daftarTersaring(string $q, int $paketId, string $status)
+    {
         $builder = $this->model->withRelations();
         if ($q !== '') {
             $builder = $builder->groupStart()
@@ -59,7 +69,17 @@ class PesertaUkk extends BaseController
         if ($status !== '') {
             $builder = $builder->where('peserta_ukk.status', $status);
         }
-        $rows  = $builder->orderBy('siswa.nama', 'ASC')->paginate($per, 'default', $page);
+
+        return $builder;
+    }
+
+    public function index()
+    {
+        [$q, $paketId, $status] = $this->saringan();
+        $per  = $this->perPage();
+        $page = max(1, (int) ($this->request->getGet('page') ?: 1));
+
+        $rows  = $this->daftarTersaring($q, $paketId, $status)->orderBy('siswa.nama', 'ASC')->paginate($per, 'default', $page);
         $pager = $this->model->pager;
 
         $ringkasanBuilder = fn () => $paketId > 0 ? $this->model->where('paket_soal_id', $paketId) : $this->model;
@@ -181,5 +201,48 @@ class PesertaUkk extends BaseController
         $this->audit->record('delete', 'peserta_ukk', $id, 'Hapus pendaftaran peserta UKK');
 
         return redirect()->to(site_url('admin/peserta-ukk'))->with('success', 'Pendaftaran peserta dihapus.');
+    }
+
+    /**
+     * Hapus massal pendaftaran (sama seperti tombol Hapus per baris: soft delete; siswa bisa didaftarkan lagi).
+     * mode "selected" = ids[] yang dicentang; mode "all" = SEMUA peserta yang cocok dengan saringan saat ini
+     * (cari/paket soal/status dikirim ulang lewat isian tersembunyi) — tanpa saringan berarti seluruh peserta.
+     */
+    public function bulkDelete()
+    {
+        [$q, $paketId, $status] = $this->saringan('post');
+        $saringAktif = array_filter(['q' => $q, 'paket_soal_id' => $paketId > 0 ? $paketId : '', 'status' => $status], static fn ($v) => $v !== '');
+        $kembali     = site_url('admin/peserta-ukk') . ($saringAktif !== [] ? '?' . http_build_query($saringAktif) : '');
+
+        $mode = (string) $this->request->getPost('mode');
+        if ($mode === 'all') {
+            $ids = array_map('intval', array_column(
+                $this->daftarTersaring($q, $paketId, $status)->select('peserta_ukk.id')->findAll(),
+                'id'
+            ));
+        } else {
+            $mode = 'selected';
+            $ids  = array_values(array_unique(array_filter(array_map('intval', (array) $this->request->getPost('ids')))));
+            if ($ids !== []) {
+                // Hanya id yang benar-benar ada & belum terhapus.
+                $ids = array_map('intval', array_column($this->model->select('id')->whereIn('id', $ids)->findAll(), 'id'));
+            }
+        }
+        if ($ids === []) {
+            return redirect()->to($kembali)->with('error', 'Tidak ada peserta yang dipilih untuk dihapus.');
+        }
+
+        $db = db_connect();
+        $db->transException(true);
+        $db->transStart();
+        foreach (array_chunk($ids, 500) as $potong) {
+            $this->model->delete($potong);
+        }
+        $db->transComplete();
+
+        master_data_changed('peserta_ukk');
+        $this->audit->record('delete', 'peserta_ukk', null, 'Hapus massal ' . count($ids) . ' pendaftaran peserta UKK (' . ($mode === 'all' ? 'semua' : 'terpilih') . ')');
+
+        return redirect()->to($kembali)->with('success', count($ids) . ' pendaftaran peserta dihapus.');
     }
 }

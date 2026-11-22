@@ -10,8 +10,9 @@
  *   baseUrl: string, cari?: string|null, q?: string, filter?: list<array{name: string, value?: string, all: string, options: array<string, string>}>,
  *   per?: int, kiriHtml?: string|null, tambah?: bool, labelTambah?: string, impor?: bool, eksporUrl?: string|null, eksporTitle?: string,
  *   tambahanHtml?: string, massalUrl?: string|null, massalHidden?: array<string, string>, massalLabel?: string, massalPeringatan?: string,
- *   massalSemua?: bool, filterLangsung?: bool, hidden?: array<string, string>, lentur?: bool
+ *   massalSemua?: bool, massalPeringatanSemua?: string, filterLangsung?: bool, hidden?: array<string, string>, lentur?: bool
  * } $ui  massalSemua false = tanpa tombol "Hapus semua". Saringan ≥ 3 → kelas alat-crud-padat (tombol turun ke baris sendiri di lebar laptop).
+ * 'massalPeringatanSemua' (2026-11-22, Peserta UKK) = peringatan khusus dialog "Hapus semua" (bila kosong: memakai massalPeringatan).
  * 'hidden' (F7) = isian tersembunyi di formulir cari/filter yang ikut terkirim, mis. ['tp' => '2026/2027'] (tahun pelajaran Ujian).
  * 'lentur' (2026-10-30, Master Siswa; butuh 'cari') = susunan menurut lebar wadah: lebar → baris 1 cari … tombol, baris 2 saringan +
  * Reset … Tampilkan N; sempit (HP) → cari + tombol "Saringan" (panel buka-tutup, app.js data-alih-saringan), lalu Tambah + Lainnya.
@@ -135,7 +136,7 @@ $tombolKanan = static function (string $kelasLebar) use ($tambah, $labelTambah, 
 
     <?php if ($massalUrl): ?>
         <form method="post" action="<?= esc((string) $massalUrl, 'attr') ?>" class="hidden js-bulk-form"
-              data-label="<?= esc((string) ($ui['massalLabel'] ?? 'data'), 'attr') ?>" data-warn="<?= esc(($ui['massalPeringatan'] ?? '') !== '' ? ' ' . $ui['massalPeringatan'] : '', 'attr') ?>">
+              data-label="<?= esc((string) ($ui['massalLabel'] ?? 'data'), 'attr') ?>" data-warn="<?= esc(($ui['massalPeringatan'] ?? '') !== '' ? ' ' . $ui['massalPeringatan'] : '', 'attr') ?>"<?php if (($ui['massalPeringatanSemua'] ?? '') !== ''): ?> data-warn-semua="<?= esc(' ' . $ui['massalPeringatanSemua'], 'attr') ?>"<?php endif; ?>>
             <?= csrf_field() ?>
             <input type="hidden" name="mode" value="">
             <?php foreach ($ui['massalHidden'] ?? [] as $name => $val): ?>
