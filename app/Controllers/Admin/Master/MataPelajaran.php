@@ -114,6 +114,7 @@ class MataPelajaran extends BaseMaster
         return [
             'kode_mapel' => strtoupper(trim((string) $this->request->getPost('kode_mapel'))),
             'nama_mapel' => trim((string) $this->request->getPost('nama_mapel')),
+            'nama_ujian' => trim((string) $this->request->getPost('nama_ujian')) ?: null,
             'kelompok'   => trim((string) $this->request->getPost('kelompok')) ?: null,
             'jp_default' => (int) ($this->request->getPost('jp_default') ?: 2),
         ];
@@ -156,17 +157,17 @@ class MataPelajaran extends BaseMaster
         $sheet = $this->sheetWithHeader(
             $ss,
             'Master Mapel',
-            ['No', 'Kode Mapel', 'Nama Mapel', 'Kelompok', 'JP / Minggu'],
-            ['A' => 5, 'B' => 14, 'C' => 36, 'D' => 22, 'E' => 12]
+            ['No', 'Kode Mapel', 'Nama Mapel', 'Kelompok', 'JP / Minggu', 'Nama di Jadwal Ujian'],
+            ['A' => 5, 'B' => 14, 'C' => 36, 'D' => 22, 'E' => 12, 'F' => 36]
         );
 
         $r = 2;
         foreach ($rows as $i => $d) {
-            $sheet->fromArray([$i + 1, $d['kode_mapel'], $d['nama_mapel'], $d['kelompok'], $d['jp_default']], null, 'A' . $r, true);
+            $sheet->fromArray([$i + 1, $d['kode_mapel'], $d['nama_mapel'], $d['kelompok'], $d['jp_default'], $d['nama_ujian']], null, 'A' . $r, true);
             $r++;
         }
 
-        $this->streamXlsx($ss, 'Master-Mapel-' . date('Ymd-His'), 'E');
+        $this->streamXlsx($ss, 'Master-Mapel-' . date('Ymd-His'), 'F');
     }
 
     public function template()
@@ -175,10 +176,10 @@ class MataPelajaran extends BaseMaster
         $sheet = $this->sheetWithHeader(
             $ss,
             'Template Mapel',
-            ['Kode Mapel', 'Nama Mapel', 'Kelompok', 'JP / Minggu'],
-            ['A' => 14, 'B' => 36, 'C' => 22, 'D' => 12]
+            ['Kode Mapel', 'Nama Mapel', 'Kelompok', 'JP / Minggu', 'Nama di Jadwal Ujian'],
+            ['A' => 14, 'B' => 36, 'C' => 22, 'D' => 12, 'E' => 36]
         );
-        $sheet->fromArray(['PD', 'Pemrograman Dasar', 'Kejuruan', 8], null, 'A2', true);
+        $sheet->fromArray(['PD', 'Pemrograman Dasar', 'Kejuruan', 8, 'PEMROGRAMAN DASAR'], null, 'A2', true);
 
         $this->streamXlsx($ss, 'Template-Import-Mapel');
     }
@@ -192,6 +193,8 @@ class MataPelajaran extends BaseMaster
             ['key' => 'nama_mapel', 'label' => 'Nama Mapel',  'type' => 'text',     'required' => true, 'width' => 280],
             ['key' => 'kelompok',   'label' => 'Kelompok',    'type' => 'datalist', 'options' => $this->kelompokList(), 'width' => 180],
             ['key' => 'jp_default', 'label' => 'JP / Minggu', 'type' => 'number',   'width' => 100],
+            // (2026-11-22) kolom TERAKHIR agar template lama (4 kolom) tetap terbaca.
+            ['key' => 'nama_ujian', 'label' => 'Nama di Jadwal Ujian', 'type' => 'text', 'width' => 240],
         ];
     }
 
@@ -218,6 +221,9 @@ class MataPelajaran extends BaseMaster
             'nama_mapel' => $nama,
             'kelompok'   => trim((string) ($row['kelompok'] ?? '')) ?: null,
             'jp_default' => (int) ($row['jp_default'] ?? 2) ?: 2,
-        ];
+        ] + (
+            // Sel kosong (atau template lama tanpa kolom ini) TIDAK menghapus nama di jadwal yang sudah diisi.
+            trim((string) ($row['nama_ujian'] ?? '')) !== '' ? ['nama_ujian' => trim((string) $row['nama_ujian'])] : []
+        );
     }
 }

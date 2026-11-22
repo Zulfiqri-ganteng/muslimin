@@ -226,7 +226,9 @@ abstract class BaseMaster extends BaseController
         $field = $this->matchField();
         $model = $this->softDelete ? $this->model->withDeleted() : $this->model;
 
-        return $model->where($field, $payload[$field])->first();
+        // findAll(1), BUKAN first(): first() + withDeleted() membuat CI4 menyisipkan "GROUP BY <tabel>.id" pada SELECT * yang
+        // DITOLAK MySQL mode ketat (ONLY_FULL_GROUP_BY) → impor semua Master gagal di server ketat (ditemukan uji F6 2026-11-23).
+        return $model->where($field, $payload[$field])->findAll(1)[0] ?? null;
     }
 
     /** Baca file Excel yang diunggah → array baris assoc. Null bila gagal (flash diset). */

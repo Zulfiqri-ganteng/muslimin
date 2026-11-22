@@ -53,6 +53,8 @@ class Jurusan extends BaseMaster
         $data = [
             'kode' => strtoupper(trim((string) $this->request->getPost('kode'))),
             'nama' => trim((string) $this->request->getPost('nama')),
+            'label_ujian' => strtoupper(trim((string) $this->request->getPost('label_ujian'))) ?: null,
+            'urutan_ujian' => ctype_digit(trim((string) $this->request->getPost('urutan_ujian'))) ? (int) $this->request->getPost('urutan_ujian') : null,
         ];
 
         if (! $this->model->insert($data)) {
@@ -71,6 +73,8 @@ class Jurusan extends BaseMaster
         $data = [
             'kode' => strtoupper(trim((string) $this->request->getPost('kode'))),
             'nama' => trim((string) $this->request->getPost('nama')),
+            'label_ujian' => strtoupper(trim((string) $this->request->getPost('label_ujian'))) ?: null,
+            'urutan_ujian' => ctype_digit(trim((string) $this->request->getPost('urutan_ujian'))) ? (int) $this->request->getPost('urutan_ujian') : null,
             'id'   => $id, // isi placeholder {id} pada rule is_unique saat edit
         ];
 
@@ -99,13 +103,13 @@ class Jurusan extends BaseMaster
         $sheet = $this->sheetWithHeader(
             $ss,
             'Master Jurusan',
-            ['No', 'Kode', 'Nama Jurusan'],
-            ['A' => 5, 'B' => 14, 'C' => 40]
+            ['No', 'Kode', 'Nama Jurusan', 'Label di Jadwal Ujian', 'Urutan di Jadwal Ujian'],
+            ['A' => 5, 'B' => 14, 'C' => 40, 'D' => 22, 'E' => 22]
         );
 
         $r = 2;
         foreach ($rows as $i => $d) {
-            $sheet->fromArray([$i + 1, $d['kode'], $d['nama']], null, 'A' . $r, true);
+            $sheet->fromArray([$i + 1, $d['kode'], $d['nama'], $d['label_ujian'], $d['urutan_ujian']], null, 'A' . $r, true);
             $r++;
         }
 
@@ -118,10 +122,10 @@ class Jurusan extends BaseMaster
         $sheet = $this->sheetWithHeader(
             $ss,
             'Template Jurusan',
-            ['Kode', 'Nama Jurusan'],
-            ['A' => 14, 'B' => 40]
+            ['Kode', 'Nama Jurusan', 'Label di Jadwal Ujian', 'Urutan di Jadwal Ujian'],
+            ['A' => 14, 'B' => 40, 'C' => 22, 'D' => 22]
         );
-        $sheet->fromArray(['TKJT', 'Teknik Komputer Jaringan & Telekomunikasi'], null, 'A2', true);
+        $sheet->fromArray(['TKJT', 'Teknik Komputer Jaringan & Telekomunikasi', 'TKJ', 3], null, 'A2', true);
 
         $this->streamXlsx($ss, 'Template-Import-Jurusan');
     }
@@ -133,6 +137,9 @@ class Jurusan extends BaseMaster
         return [
             ['key' => 'kode', 'label' => 'Kode',         'type' => 'text', 'required' => true, 'width' => 130],
             ['key' => 'nama', 'label' => 'Nama Jurusan', 'type' => 'text', 'required' => true, 'width' => 320],
+            // (2026-11-22) kolom TERAKHIR agar template lama (2 kolom) tetap terbaca.
+            ['key' => 'label_ujian', 'label' => 'Label di Jadwal Ujian', 'type' => 'text', 'width' => 160],
+            ['key' => 'urutan_ujian', 'label' => 'Urutan di Jadwal Ujian', 'type' => 'number', 'width' => 120],
         ];
     }
 
@@ -154,6 +161,11 @@ class Jurusan extends BaseMaster
             return null;
         }
 
-        return ['kode' => $kode, 'nama' => $nama];
+        // Sel label kosong (atau template lama) TIDAK menghapus label yang sudah diisi.
+        $label = strtoupper(trim((string) ($row['label_ujian'] ?? '')));
+
+        $urut  = trim((string) ($row['urutan_ujian'] ?? ''));
+
+        return ['kode' => $kode, 'nama' => $nama] + ($label !== '' ? ['label_ujian' => $label] : []) + (ctype_digit($urut) ? ['urutan_ujian' => (int) $urut] : []);
     }
 }

@@ -93,7 +93,12 @@ foreach ($tingkatList as $t) {
         'labelTambah'    => 'Tambah jadwal',
         'eksporUrl'      => $base . '/jadwal/export' . $qtp,
         'eksporTitle'    => 'Keluarkan jadwal ujian periode ini ke file Excel',
-        'tambahanHtml'   => '<a href="' . $base . '/pembuat-soal' . $qtp . '" class="btn btn-netral" title="Tugaskan guru pembuat soal per jadwal (dasar honor Pembuatan Soal)">' . ikon('pen-nib', 'h-4 w-4') . 'Pembuat soal</a>',
+        // F2 cetak jadwal (2026-11-22): Jadwal Ujian berbentuk matriks persis berkas contoh sekolah (lembar PAGI & SIANG).
+        'tambahanHtml'   => ui_menu_lain([
+            ['label' => 'Jadwal Ujian (Excel)', 'ikon' => 'file-csv', 'href' => $base . '/cetak-jadwal/excel' . $qtp],
+            ['label' => 'Jadwal Ujian (PDF)', 'ikon' => 'file-pdf', 'href' => $base . '/cetak-jadwal/pdf' . $qtp, 'atr' => 'target="_blank" rel="noopener"'],
+        ], ['label' => 'Cetak jadwal', 'kecil' => false])
+            . '<a href="' . $base . '/pembuat-soal' . $qtp . '" class="btn btn-netral" title="Tugaskan guru pembuat soal per jadwal (dasar honor Pembuatan Soal)">' . ikon('pen-nib', 'h-4 w-4') . 'Pembuat soal</a>',
     ]) ?>
 
     <?php if (! $rows): ?>

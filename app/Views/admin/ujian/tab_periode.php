@@ -79,6 +79,45 @@ $kartu = [
                     <label class="lbl" for="pr-ket">Keterangan</label>
                     <input type="text" id="pr-ket" name="keterangan" maxlength="255" value="<?= esc($old('keterangan', $periode['keterangan']), 'attr') ?>" placeholder="Catatan internal, mis. nomor SK panitia" class="inp">
                 </div>
+
+                <?php // F1 cetak jadwal (2026-11-22): dipakai cetakan Jadwal Ujian & Jadwal Pengawas. ?>
+                <fieldset class="space-y-4 border-t border-gray-200 pt-4 dark:border-gray-700">
+                    <legend class="sr-only">Untuk cetakan jadwal</legend>
+                    <div>
+                        <h3 class="text-sm font-semibold text-gray-900 dark:text-white">Untuk cetakan Jadwal Ujian &amp; Jadwal Pengawas</h3>
+                        <p class="hint mt-0.5">Semua boleh dikosongkan; yang kosong memakai nilai bawaan yang tertulis di bawah tiap isian.</p>
+                    </div>
+                    <div class="grid gap-4 sm:grid-cols-2">
+                        <div class="sm:col-span-2">
+                            <label class="lbl" for="pr-ketua">Ketua panitia</label>
+                            <input type="text" id="pr-ketua" name="ketua_panitia" maxlength="150" list="pr-ketua-opsi" value="<?= esc($old('ketua_panitia', $periode['ketua_panitia'] ?? ''), 'attr') ?>" placeholder="mis. Muslimin, S.Kom" class="inp">
+                            <datalist id="pr-ketua-opsi">
+                                <?php foreach ($ringkas['namaGuru'] ?? [] as $ng): ?><option value="<?= esc($ng, 'attr') ?>"></option><?php endforeach; ?>
+                            </datalist>
+                            <p class="hint">Nama di tanda tangan "Ketua Panitia" pada Jadwal Pengawas. Ketik atau pilih dari daftar guru.</p>
+                        </div>
+                        <div>
+                            <label class="lbl" for="pr-sus-jam-mulai">Jam mulai ujian susulan</label>
+                            <input type="time" id="pr-sus-jam-mulai" name="susulan_jam_mulai" value="<?= esc(substr((string) $old('susulan_jam_mulai', $periode['susulan_jam_mulai'] ?? ''), 0, 5), 'attr') ?>" class="inp">
+                            <p class="hint">Kosong = 07.00.</p>
+                        </div>
+                        <div>
+                            <label class="lbl" for="pr-sus-jam-selesai">Jam selesai ujian susulan</label>
+                            <input type="time" id="pr-sus-jam-selesai" name="susulan_jam_selesai" value="<?= esc(substr((string) $old('susulan_jam_selesai', $periode['susulan_jam_selesai'] ?? ''), 0, 5), 'attr') ?>" class="inp">
+                            <p class="hint">Kosong = 12.00. Dipakai di baris "UJIAN SUSULAN" Jadwal Ujian.</p>
+                        </div>
+                        <div>
+                            <label class="lbl" for="pr-ruang-pagi">Jumlah ruang ujian pagi</label>
+                            <input type="number" id="pr-ruang-pagi" name="ruang_pagi" min="1" max="200" value="<?= esc((string) $old('ruang_pagi', $periode['ruang_pagi'] ?? ''), 'attr') ?>" placeholder="<?= (int) ($ringkas['kelasShift']['pagi'] ?? 0) ?>" class="inp">
+                            <p class="hint">Kosong = jumlah kelas pagi (<?= (int) ($ringkas['kelasShift']['pagi'] ?? 0) ?> kelas = <?= (int) ($ringkas['kelasShift']['pagi'] ?? 0) ?> ruang).</p>
+                        </div>
+                        <div>
+                            <label class="lbl" for="pr-ruang-siang">Jumlah ruang ujian siang</label>
+                            <input type="number" id="pr-ruang-siang" name="ruang_siang" min="1" max="200" value="<?= esc((string) $old('ruang_siang', $periode['ruang_siang'] ?? ''), 'attr') ?>" placeholder="<?= (int) ($ringkas['kelasShift']['siang'] ?? 0) ?>" class="inp">
+                            <p class="hint">Kosong = jumlah kelas siang (<?= (int) ($ringkas['kelasShift']['siang'] ?? 0) ?> kelas = <?= (int) ($ringkas['kelasShift']['siang'] ?? 0) ?> ruang). Menentukan jumlah kolom RUANG di Jadwal Pengawas.</p>
+                        </div>
+                    </div>
+                </fieldset>
             </div>
 
             <div class="kartu-kaki flex flex-wrap items-center gap-3">

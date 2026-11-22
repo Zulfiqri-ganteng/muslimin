@@ -3,6 +3,8 @@
 namespace App\Controllers\Admin;
 
 use App\Controllers\BaseController;
+use App\Libraries\JadwalPengawasCetak;
+use App\Libraries\JadwalUjianCetak;
 use App\Libraries\UjianCetak;
 use App\Models\UjianJadwalModel;
 use App\Models\UjianPeriodeModel;
@@ -101,6 +103,111 @@ class LaporanUjian extends BaseController
             'application/pdf',
             true
         );
+    }
+
+    // =================================================================
+    // Jadwal Ujian berbentuk matriks (F2 cetak jadwal, 2026-11-22) — meniru berkas contoh sekolah
+    // =================================================================
+
+    public function jadwalUjianExcel(string $slug = '')
+    {
+        $ctx = $this->konteksJadwalUjian($slug);
+        if (! is_array($ctx)) {
+            return $ctx;
+        }
+        [$slug, $periode] = $ctx;
+
+        $this->kirimXlsx(JadwalUjianCetak::spreadsheet($periode), $this->namaJadwalUjian($slug, $periode));
+    }
+
+    public function jadwalUjianPdf(string $slug = '')
+    {
+        $ctx = $this->konteksJadwalUjian($slug);
+        if (! is_array($ctx)) {
+            return $ctx;
+        }
+        [$slug, $periode] = $ctx;
+
+        $this->kirim(JadwalUjianCetak::pdf($periode), $this->namaJadwalUjian($slug, $periode) . '.pdf', 'application/pdf', true);
+    }
+
+    /** konteks() + tolak bila jadwal periode ini masih kosong (pesan jelas, bukan berkas kosong). */
+    private function konteksJadwalUjian(string $slug)
+    {
+        $ctx = $this->konteks($slug);
+        if (! is_array($ctx)) {
+            return $ctx;
+        }
+        [$slug, $periode] = $ctx;
+        if (! JadwalUjianCetak::adaIsi($periode)) {
+            return redirect()->to(site_url('admin/ujian/' . $slug . '/jadwal') . '?tp=' . rawurlencode($periode['tahun_ajaran']))
+                ->with('error', 'Jadwal ujian periode ini masih kosong. Isi jadwalnya dulu di tab Jadwal Ujian, lalu cetak lagi.');
+        }
+
+        return $ctx;
+    }
+
+    private function namaJadwalUjian(string $slug, array $periode): string
+    {
+        return 'Jadwal-Ujian-' . strtoupper($slug) . '-' . str_replace('/', '-', (string) $periode['tahun_ajaran']);
+    }
+
+    // =================================================================
+    // Jadwal Pengawas per ruang (F5 cetak jadwal, 2026-11-22) — meniru berkas contoh sekolah
+    // =================================================================
+
+    public function jadwalPengawasExcel(string $slug = '')
+    {
+        $ctx = $this->konteksPengawas($slug);
+        if (! is_array($ctx)) {
+            return $ctx;
+        }
+        [$slug, $periode] = $ctx;
+
+        $this->kirimXlsx(JadwalPengawasCetak::spreadsheet($periode), $this->namaPengawas($slug, $periode));
+    }
+
+    public function jadwalPengawasPdf(string $slug = '')
+    {
+        $ctx = $this->konteksPengawas($slug);
+        if (! is_array($ctx)) {
+            return $ctx;
+        }
+        [$slug, $periode] = $ctx;
+
+        $this->kirim(JadwalPengawasCetak::pdf($periode), $this->namaPengawas($slug, $periode) . '.pdf', 'application/pdf', true);
+    }
+
+    public function kodePengawasPdf(string $slug = '')
+    {
+        $ctx = $this->konteksPengawas($slug);
+        if (! is_array($ctx)) {
+            return $ctx;
+        }
+        [$slug, $periode] = $ctx;
+
+        $this->kirim(JadwalPengawasCetak::pdfKode($periode), 'Kode-Pengawas-' . strtoupper($slug) . '-' . str_replace('/', '-', (string) $periode['tahun_ajaran']) . '.pdf', 'application/pdf', true);
+    }
+
+    /** konteks() + tolak bila jadwal pengawas periode ini masih kosong. */
+    private function konteksPengawas(string $slug)
+    {
+        $ctx = $this->konteks($slug);
+        if (! is_array($ctx)) {
+            return $ctx;
+        }
+        [$slug, $periode] = $ctx;
+        if (! JadwalPengawasCetak::adaIsi($periode)) {
+            return redirect()->to(site_url('admin/ujian/' . $slug . '/jadwal-pengawas') . '?tp=' . rawurlencode($periode['tahun_ajaran']))
+                ->with('error', 'Jadwal pengawas periode ini masih kosong. Tekan Generate otomatis (atau isi manual) dulu, lalu cetak lagi.');
+        }
+
+        return $ctx;
+    }
+
+    private function namaPengawas(string $slug, array $periode): string
+    {
+        return 'Jadwal-Pengawas-' . strtoupper($slug) . '-' . str_replace('/', '-', (string) $periode['tahun_ajaran']);
     }
 
     // =================================================================

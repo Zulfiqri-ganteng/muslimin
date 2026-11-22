@@ -37,6 +37,7 @@ $honorLabel    = ['draf' => 'Draf', 'final' => 'Final', 'dikunci' => 'Dikunci'];
 $lencana = [
     'periode'        => $periodeTerisi ? [null, 'ok'] : ['atur', 'perlu'],
     'jadwal'         => (int) $ringkas['jadwal'] > 0 ? [(string) (int) $ringkas['jadwal'], 'ok'] : ['kosong', 'perlu'],
+    'jadwal-pengawas' => (int) ($ringkas['pengawasRuang'] ?? 0) > 0 ? [(string) (int) $ringkas['pengawasRuang'], 'ok'] : ['kosong', 'kosong'],
     'ketidakhadiran' => (int) $ringkas['tidakHadir'] > 0 ? [(string) (int) $ringkas['tidakHadir'], 'ok'] : ['0', 'kosong'],
     'susulan'        => $susulanBelum > 0 ? [$susulanBelum . ' belum', 'perlu'] : ((int) $ringkas['tidakHadir'] > 0 ? [null, 'ok'] : ['0', 'kosong']),
     'honor'          => ($ringkas['honorStatus'] ?? null) !== null ? [$honorLabel[$ringkas['honorStatus']] ?? $ringkas['honorStatus'], $ringkas['honorStatus'] === 'draf' ? 'perlu' : 'ok'] : ['belum', 'kosong'],
@@ -44,7 +45,7 @@ $lencana = [
 $warnaLencana = ['ok' => 'lencana-hijau', 'kosong' => 'lencana-abu', 'perlu' => 'lencana-kuning'];
 
 // Panel yang sudah digarap; sisanya memakai panel "belum tersedia".
-$panelSiap = ['periode', 'jadwal', 'ketidakhadiran', 'susulan', 'rekap', 'honor'];
+$panelSiap = ['periode', 'jadwal', 'jadwal-pengawas', 'ketidakhadiran', 'susulan', 'rekap', 'honor'];
 $panelView = in_array($tab, $panelSiap, true) ? 'admin/ujian/tab_' . $tab : 'admin/ujian/tab_belum';
 
 $panelData = [
@@ -72,6 +73,12 @@ if ($tab === 'rekap') {
         'perTanggal'       => $perTanggal,
         'siswaTerbanyak'   => $siswaTerbanyak,
     ];
+}
+if ($tab === 'jadwal-pengawas') {
+    // F3 cetak jadwal (2026-11-22): data dari App\Libraries\JadwalPengawas::dataTab() (kunci ber-awalan pg).
+    foreach (['pgShifts', 'pgShift', 'pgSesi', 'pgRuang', 'pgIsi', 'pgTerisi', 'pgTotalSel', 'pgGuru', 'pgTerpilih', 'pgSaran', 'pgKode', 'pgBeban'] as $kunciPg) {
+        $panelData[$kunciPg] = $$kunciPg ?? null;
+    }
 }
 if ($tab === 'susulan') {
     $panelData += [
@@ -141,8 +148,9 @@ if ($tab === 'jadwal') {
     'helpTitle' => 'Menu Ujian',
     'helpBody'  => '<p>Halaman pendataan pelaksanaan asesmen sumatif. Tiap jenis ujian punya satu periode
         per tahun pelajaran, dan periode tahun berjalan <b>dibuat otomatis</b> — tidak perlu ditambah manual.</p>
-        <p class="mt-1">• <b>Periode</b> — atur tanggal pelaksanaan, tanggal ujian susulan, dan status.<br>
-        • <b>Jadwal Ujian</b> — daftar mapel yang diujikan per tingkat.<br>
+        <p class="mt-1">• <b>Periode</b> — atur tanggal pelaksanaan, tanggal ujian susulan, dan status. Bagian <b>Untuk cetakan Jadwal Ujian &amp; Jadwal Pengawas</b> berisi nama Ketua Panitia (tanda tangan), jam ujian susulan, dan jumlah ruang pagi/siang (kosong = jumlah kelas tiap shift).<br>
+        • <b>Jadwal Ujian</b> — daftar mapel yang diujikan per tingkat. Tombol <b>Cetak jadwal</b> → <b>Excel</b> atau <b>PDF</b> menghasilkan jadwal berbentuk tabel per hari seperti berkas sekolah: satu lembar <b>PAGI</b> dan satu lembar <b>SIANG</b>, kolom = kelas (mis. X MPLB), baris ISTIRAHAT dibuat otomatis dari jeda jam, baris terakhir UJIAN SUSULAN (tanggal &amp; jam dari tab Periode). Nama mapel yang tercetak diatur di Master Mapel ("Nama di jadwal ujian"); tulisan &amp; urutan kolom jurusan di Master Jurusan.<br>
+        • <b>Jadwal Pengawas</b> — pengawas per <b>ruang</b> untuk setiap sesi (hari &amp; jam diambil dari Jadwal Ujian; jumlah ruang dari Periode). Langkah: 1) centang guru pengawas (kodenya = Kode Guru di Master Guru) lalu Simpan — guru yang tercatat dua kali di Master Guru (nama sama, kode beda) hanya boleh dicentang salah satu kodenya, 2) tekan <b>Generate otomatis</b> — sistem mengisi semua ruang secara merata (tak ada guru di dua tempat sekaligus, sesi beruntun dijaga orang yang sama, sesudah istirahat pengawas pindah ruang), 3) periksa, ubah kode bila perlu, lalu Simpan. Generate ulang = susunan baru. Ringkasan <b>beban per guru</b> ada di bawah grid. 4) tombol <b>Cetak</b> → <b>Excel</b> (lembar Pagi, Siang, dan Kode Pengawas, seperti berkas sekolah; tanda tangan Kepala Sekolah &amp; Ketua Panitia ada di bawah tabel, di luar area cetak seperti contoh) atau <b>PDF</b> (jadwal Pagi &amp; Siang, dan daftar kode terpisah). Nama Ketua Panitia diisi di tab Periode.<br>
         • <b>Ketidakhadiran</b> — centang siswa yang tidak hadir; otomatis masuk daftar susulan.<br>
         • <b>Ujian Susulan</b> — jadwalkan dan tandai selesai.</p>
         <p class="mt-1">Tahun pelajaran mengikuti <b>Pengaturan Sekolah</b>. Ganti tahun di sana, periode baru

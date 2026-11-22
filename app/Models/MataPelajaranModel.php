@@ -9,7 +9,7 @@ class MataPelajaranModel extends Model
     protected $table          = 'mata_pelajaran';
     protected $primaryKey     = 'id';
     protected $returnType     = 'array';
-    protected $allowedFields  = ['kode_mapel', 'nama_mapel', 'kelompok', 'jp_default'];
+    protected $allowedFields  = ['kode_mapel', 'nama_mapel', 'nama_ujian', 'kelompok', 'jp_default'];
     protected $useTimestamps  = true;
     protected $createdField   = 'created_at';
     protected $updatedField   = 'updated_at';
@@ -22,6 +22,7 @@ class MataPelajaranModel extends Model
         'nama_mapel' => 'required|max_length[150]',
         'kelompok'   => 'permit_empty|max_length[50]',
         'jp_default' => 'permit_empty|is_natural',
+        'nama_ujian' => 'permit_empty|max_length[150]', // nama di cetakan jadwal ujian (kosong = nama_mapel)
     ];
     protected $validationMessages = [
         'kode_mapel' => ['is_unique' => 'Kode mapel sudah dipakai.', 'required' => 'Kode mapel wajib diisi.'],

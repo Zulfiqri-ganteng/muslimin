@@ -620,6 +620,17 @@ $routes->group('admin', static function ($routes) {
         $routes->post('ujian/(:segment)/susulan/(:num)/hapus', 'Admin\Ujian::hapusSusulan/$1/$2');
         $routes->get('ujian/(:segment)/laporan/pdf', 'Admin\LaporanUjian::pdf/$1');
         $routes->get('ujian/(:segment)/laporan/excel', 'Admin\LaporanUjian::excel/$1');
+        // Jadwal Ujian berbentuk matriks persis contoh sekolah (F2 cetak jadwal 2026-11-22)
+        $routes->get('ujian/(:segment)/cetak-jadwal/excel', 'Admin\LaporanUjian::jadwalUjianExcel/$1');
+        $routes->get('ujian/(:segment)/cetak-jadwal/pdf', 'Admin\LaporanUjian::jadwalUjianPdf/$1');
+        // Jadwal Pengawas per ruang (F3): daftar guru pengawas + grid (tampilan = tab jadwal-pengawas lewat pola generik GET)
+        $routes->post('ujian/(:segment)/jadwal-pengawas/guru', 'Admin\UjianPengawasRuang::simpanGuru/$1');
+        $routes->post('ujian/(:segment)/jadwal-pengawas/simpan', 'Admin\UjianPengawasRuang::simpanGrid/$1');
+        $routes->post('ujian/(:segment)/jadwal-pengawas/generate', 'Admin\UjianPengawasRuang::generate/$1');
+        // Cetak Jadwal Pengawas persis contoh sekolah (F5)
+        $routes->get('ujian/(:segment)/cetak-pengawas/excel', 'Admin\LaporanUjian::jadwalPengawasExcel/$1');
+        $routes->get('ujian/(:segment)/cetak-pengawas/pdf', 'Admin\LaporanUjian::jadwalPengawasPdf/$1');
+        $routes->get('ujian/(:segment)/cetak-pengawas/kode-pdf', 'Admin\LaporanUjian::kodePengawasPdf/$1');
         $routes->get('ujian/(:segment)/daftar-hadir/(:num)', 'Admin\LaporanUjian::daftarHadir/$1/$2');
         $routes->get('ujian/(:segment)/berita-acara/(:num)', 'Admin\LaporanUjian::beritaAcara/$1/$2');
         $routes->get('ujian/(:segment)/pengawas/(:num)', 'Admin\Ujian::pengawas/$1/$2');

@@ -20,6 +20,8 @@ class UjianPeriodeModel extends Model
         'jenis', 'tahun_ajaran', 'semester', 'nama',
         'tanggal_mulai', 'tanggal_selesai', 'susulan_mulai', 'susulan_selesai',
         'status', 'keterangan',
+        // F1 cetak jadwal (2026-11-22): blok ttd jadwal pengawas, jam baris UJIAN SUSULAN, jumlah ruang per shift.
+        'ketua_panitia', 'susulan_jam_mulai', 'susulan_jam_selesai', 'ruang_pagi', 'ruang_siang',
     ];
 
     protected $useTimestamps  = true;
@@ -64,6 +66,11 @@ class UjianPeriodeModel extends Model
         'susulan_mulai'   => 'permit_empty|valid_date[Y-m-d]',
         'susulan_selesai' => 'permit_empty|valid_date[Y-m-d]',
         'status'          => 'permit_empty|in_list[draft,berjalan,selesai]',
+        'ketua_panitia'       => 'permit_empty|max_length[150]',
+        'susulan_jam_mulai'   => 'permit_empty|regex_match[/^\d{2}:\d{2}(:\d{2})?$/]',
+        'susulan_jam_selesai' => 'permit_empty|regex_match[/^\d{2}:\d{2}(:\d{2})?$/]',
+        'ruang_pagi'          => 'permit_empty|is_natural|less_than_equal_to[200]',
+        'ruang_siang'         => 'permit_empty|is_natural|less_than_equal_to[200]',
     ];
     protected $validationMessages = [
         'jenis'        => ['required' => 'Jenis ujian wajib dipilih.'],
@@ -200,5 +207,21 @@ class UjianPeriodeModel extends Model
         }
 
         return $out;
+    }
+
+    /** Jumlah kelas aktif di satu shift (pagi/siang) — bawaan jumlah ruang ujian (contoh sekolah: 1 ruang = 1 kelas). */
+    public static function jumlahKelasShift(string $shift): int
+    {
+        return in_array($shift, ['pagi', 'siang'], true)
+            ? (int) db_connect()->table('kelas')->where('deleted_at', null)->where('shift', $shift)->countAllResults()
+            : 0;
+    }
+
+    /** Jumlah ruang ujian satu shift untuk periode ini: isian Periode, bila kosong = jumlah kelas di shift itu. */
+    public static function jumlahRuang(array $periode, string $shift): int
+    {
+        $isi = (int) ($periode['ruang_' . $shift] ?? 0);
+
+        return $isi > 0 ? $isi : self::jumlahKelasShift($shift);
     }
 }

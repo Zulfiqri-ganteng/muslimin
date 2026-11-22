@@ -38,6 +38,7 @@ class Ujian extends BaseController
     public const TAB = [
         'periode'        => 'Periode',
         'jadwal'         => 'Jadwal Ujian',
+        'jadwal-pengawas' => 'Jadwal Pengawas', // F3 cetak jadwal (2026-11-22): pengawas per ruang per sesi
         'ketidakhadiran' => 'Ketidakhadiran',
         'susulan'        => 'Ujian Susulan',
         'rekap'          => 'Rekap',
@@ -106,6 +107,9 @@ class Ujian extends BaseController
 
         if ($tab === 'jadwal') {
             $data += $this->dataJadwal((int) $periode['id']);
+        }
+        if ($tab === 'jadwal-pengawas') {
+            $data += \App\Libraries\JadwalPengawas::dataTab($periode, (string) $this->request->getGet('shift'));
         }
         if ($tab === 'ketidakhadiran') {
             $data += $this->dataKetidakhadiran($periode);
@@ -1015,6 +1019,12 @@ class Ujian extends BaseController
             'susulan_selesai' => $this->tanggal('susulan_selesai'),
             'status'          => (string) $this->request->getPost('status'),
             'keterangan'      => $this->teks('keterangan', 255),
+            // F1 cetak jadwal (2026-11-22)
+            'ketua_panitia'       => $this->teks('ketua_panitia', 150),
+            'susulan_jam_mulai'   => $this->jam('susulan_jam_mulai'),
+            'susulan_jam_selesai' => $this->jam('susulan_jam_selesai'),
+            'ruang_pagi'          => $this->jumlahRuang('ruang_pagi'),
+            'ruang_siang'         => $this->jumlahRuang('ruang_siang'),
         ];
 
         if (! in_array($data['status'], UjianPeriodeModel::STATUS, true)) {
@@ -1022,6 +1032,9 @@ class Ujian extends BaseController
         }
 
         $salah = $this->periksaUrutanTanggal($data);
+        if ($data['susulan_jam_mulai'] !== null && $data['susulan_jam_selesai'] !== null && $data['susulan_jam_selesai'] <= $data['susulan_jam_mulai']) {
+            $salah[] = 'Jam selesai ujian susulan harus sesudah jam mulainya.';
+        }
         if ($salah !== []) {
             return redirect()->to($kembali)->withInput()->with('errors', $salah);
         }
@@ -1114,6 +1127,10 @@ class Ujian extends BaseController
             'tidakHadir'  => array_sum($status),
             'statusList'  => $status,
             'alasanList'  => $susulan->ringkasanAlasan($periodeId),
+            // F1 cetak jadwal (2026-11-22): petunjuk jumlah ruang bawaan + saran nama Ketua Panitia.
+            'kelasShift'  => ['pagi' => UjianPeriodeModel::jumlahKelasShift('pagi'), 'siang' => UjianPeriodeModel::jumlahKelasShift('siang')],
+            'pengawasRuang' => \App\Libraries\JadwalPengawas::jumlahTerisi($periodeId), // lencana tab Jadwal Pengawas
+            'namaGuru'    => array_column($db->table('guru')->select('nama')->where('deleted_at', null)->orderBy('nama', 'ASC')->get()->getResultArray(), 'nama'),
         ];
     }
 
@@ -1136,6 +1153,14 @@ class Ujian extends BaseController
         $d = \DateTimeImmutable::createFromFormat('Y-m-d', $v);
 
         return ($d && $d->format('Y-m-d') === $v) ? $v : null;
+    }
+
+    /** Ambil field jumlah ruang 1–200; kosong/tidak valid jadi NULL (= jumlah kelas di shift itu). */
+    private function jumlahRuang(string $field): ?int
+    {
+        $v = trim((string) $this->request->getPost($field));
+
+        return ctype_digit($v) && (int) $v >= 1 && (int) $v <= 200 ? (int) $v : null;
     }
 
     /** Ambil field jam "HH:MM"; kosong/tidak valid jadi NULL, disimpan "HH:MM:00". */

@@ -30,13 +30,18 @@ foreach ($allGuru as $id => $label) {
         <p class="mt-1">• <b>Import (memasukkan data)</b> — unggah Excel, baris akan <b>ditambahkan otomatis</b> (kode mapel yang sama diperbarui).<br>
         • <b>Export (mengeluarkan data)</b> — mengunduh seluruh mapel yang ada menjadi file Excel.<br>
         • <b>Hapus terpilih / Hapus semua</b> — centang baris atau hapus seluruh data sekaligus.</p>
-        <p class="mt-1">Tombol <b>Atur guru</b> menentukan guru mana saja yang <b>berkompetensi</b> mengajar mapel tersebut, dipakai saat membuat <b>Penugasan</b>.</p>',
+        <p class="mt-1">Tombol <b>Atur guru</b> menentukan guru mana saja yang <b>berkompetensi</b> mengajar mapel tersebut, dipakai saat membuat <b>Penugasan</b>.</p>
+        <p class="mt-3"><b>Nama di jadwal ujian</b><br>
+        • Nama yang dicetak di <b>Jadwal Ujian</b> (menu Ujian), mis. "Pendidikan Agama Islam &amp; Budi Pekerti" ditulis <b>PAI &amp; BUDI PEKERTI</b>, "Pendidikan Jasmani, Olahraga dan Kesehatan" ditulis <b>PENJASKESOR</b>.<br>
+        • Cukup diisi sekali, dipakai di semua ujian (ASTS, ASAS, ASAT). Tulis persis seperti yang ingin tercetak (huruf besar/kecil ikut).<br>
+        • Boleh sama untuk beberapa mapel, mis. Dasar-dasar AKL, MPLB, dan TJKT sama-sama <b>DASAR-DASAR PROGRAM KEAHLIAN</b>.<br>
+        • Kosong = memakai nama mapel biasa. Bisa diisi banyak sekaligus lewat <b>Import</b> (kolom terakhir "Nama di Jadwal Ujian"; sel kosong tidak menghapus isi lama).</p>',
 ]) ?>
 <?= $this->endSection() ?>
 
 <?= $this->section('content') ?>
 <div x-data="mapelPage" data-base="<?= site_url('admin/master/mapel') ?>" data-entity="mata pelajaran"
-     data-defaults="<?= esc(json_encode(['kode_mapel' => '', 'nama_mapel' => '', 'kelompok' => '', 'jp_default' => 2]), 'attr') ?>"
+     data-defaults="<?= esc(json_encode(['kode_mapel' => '', 'nama_mapel' => '', 'nama_ujian' => '', 'kelompok' => '', 'jp_default' => 2]), 'attr') ?>"
      data-all-guru="<?= esc(json_encode($guruJs), 'attr') ?>"
      data-komp-map="<?= esc(json_encode($kompMap ?: new \stdClass()), 'attr') ?>">
 
@@ -78,7 +83,10 @@ foreach ($allGuru as $id => $label) {
                     <tr>
                         <td class="kolom-cek"><input type="checkbox" class="cek row-check" value="<?= (int) $r['id'] ?>" aria-label="Pilih mapel <?= esc($r['kode_mapel'], 'attr') ?>"></td>
                         <td class="sel-judul whitespace-nowrap"><?= esc($r['kode_mapel']) ?></td>
-                        <td class="font-medium"><?= esc($r['nama_mapel']) ?></td>
+                        <td>
+                            <p class="font-medium"><?= esc($r['nama_mapel']) ?></p>
+                            <?php if (($r['nama_ujian'] ?? '') !== '' && $r['nama_ujian'] !== null): ?><p class="sel-ket">Di jadwal ujian: <?= esc($r['nama_ujian']) ?></p><?php endif; ?>
+                        </td>
                         <td class="sel-ket"><?= esc($r['kelompok'] ?: '—') ?></td>
                         <td class="sel-ket whitespace-nowrap"><?= esc($r['jp_default']) ?> JP</td>
                         <td>
@@ -114,6 +122,11 @@ foreach ($allGuru as $id => $label) {
             <div class="sm:col-span-2">
                 <label class="lbl" for="mapel-nama">Nama mapel <span class="text-red-600 dark:text-red-400">*</span></label>
                 <input type="text" id="mapel-nama" name="nama_mapel" x-model="form.nama_mapel" maxlength="150" required class="inp">
+            </div>
+            <div class="sm:col-span-2">
+                <label class="lbl" for="mapel-nama-ujian">Nama di jadwal ujian</label>
+                <input type="text" id="mapel-nama-ujian" name="nama_ujian" x-model="form.nama_ujian" maxlength="150" class="inp" placeholder="mis. PAI &amp; BUDI PEKERTI">
+                <p class="hint">Yang tercetak di Jadwal Ujian. Kosongkan bila sama dengan nama mapel.</p>
             </div>
             <div class="sm:col-span-2">
                 <label class="lbl" for="mapel-kelompok">Kelompok</label>

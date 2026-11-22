@@ -9,7 +9,7 @@ class JurusanModel extends Model
     protected $table          = 'jurusan';
     protected $primaryKey     = 'id';
     protected $returnType     = 'array';
-    protected $allowedFields  = ['kode', 'nama'];
+    protected $allowedFields  = ['kode', 'nama', 'label_ujian', 'urutan_ujian'];
     protected $useTimestamps  = true;
     protected $createdField   = 'created_at';
     protected $updatedField   = 'updated_at';
@@ -20,6 +20,8 @@ class JurusanModel extends Model
         'id'   => 'permit_empty|is_natural',
         'kode' => 'required|max_length[20]|is_unique[jurusan.kode,id,{id}]',
         'nama' => 'required|max_length[100]',
+        'label_ujian' => 'permit_empty|max_length[50]', // label di judul kolom jadwal ujian (kosong = kode)
+        'urutan_ujian' => 'permit_empty|is_natural|less_than_equal_to[999]', // urutan kolom di jadwal ujian
     ];
     protected $validationMessages = [
         'kode' => ['is_unique' => 'Kode jurusan sudah dipakai.', 'required' => 'Kode wajib diisi.'],
