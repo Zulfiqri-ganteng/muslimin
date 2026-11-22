@@ -64,11 +64,13 @@ $barisUbah = static fn (array $r): array => [
     'keterangan'  => $r['keterangan'] ?? '',
 ];
 // Form Hapus: periode_id wajib ikut (Ujian::hapusJadwal memeriksa periode dari POST).
-$formHapus = static function (array $r, int $tak, string $kelas) use ($base, $periode): string {
+// $ikonSaja (tabel laptop) = tombol ikon tempat sampah saja, label lewat title/aria-label.
+$formHapus = static function (array $r, int $tak, string $kelas, bool $ikonSaja = false) use ($base, $periode): string {
     return '<form method="post" action="' . $base . '/jadwal/' . (int) $r['id'] . '/hapus" class="inline">' . csrf_field()
         . '<input type="hidden" name="periode_id" value="' . (int) $periode['id'] . '">'
-        . '<button type="submit" class="btn btn-bahaya btn-sm' . $kelas . '" data-confirm="' . esc('Hapus jadwal ini?' . ($tak > 0 ? ' ' . $tak . ' catatan ketidakhadiran TETAP tersimpan, hanya dilepas dari jadwal ini.' : '') . ' Penugasan pengawasnya ikut terhapus.', 'attr') . '"'
-        . ' data-confirm-judul="Hapus jadwal?" data-confirm-ya="Ya, hapus" data-confirm-jenis="bahaya">' . ikon('trash-bin', 'h-4 w-4') . 'Hapus</button></form>';
+        . '<button type="submit" class="btn btn-bahaya btn-sm' . $kelas . '"' . ($ikonSaja ? ' title="Hapus jadwal" aria-label="Hapus jadwal"' : '')
+        . ' data-confirm="' . esc('Hapus jadwal ini?' . ($tak > 0 ? ' ' . $tak . ' catatan ketidakhadiran TETAP tersimpan, hanya dilepas dari jadwal ini.' : '') . ' Penugasan pengawasnya ikut terhapus.', 'attr') . '"'
+        . ' data-confirm-judul="Hapus jadwal?" data-confirm-ya="Ya, hapus" data-confirm-jenis="bahaya">' . ikon('trash-bin', 'h-4 w-4') . ($ikonSaja ? '' : 'Hapus') . '</button></form>';
 };
 $lencanaJumlah = static fn (int $n): string => $n > 0 ? 'lencana-merek' : 'lencana-abu';
 $tingkatOpsi = [];
@@ -89,16 +91,22 @@ foreach ($tingkatList as $t) {
         ],
         'per'            => $per,
         'filterLangsung' => true,
+        // Rapi tampilan (2026-11-23, keluhan user): pola Master Siswa — laptop 2 baris (cari … tombol / saringan … Tampilkan N);
+        // HP: cari + "Saringan" buka-tutup, lalu Tambah + menu. Cetak jadwal & Pembuat soal disatukan di SATU menu supaya deret
+        // tombol kanan tidak berdesakan; Import & Export ikut masuk menu HANYA di layar sempit (data-hanya-sempit).
+        'lentur'         => true,
         'hidden'         => ['tp' => $tp],
         'labelTambah'    => 'Tambah jadwal',
         'eksporUrl'      => $base . '/jadwal/export' . $qtp,
         'eksporTitle'    => 'Keluarkan jadwal ujian periode ini ke file Excel',
         // F2 cetak jadwal (2026-11-22): Jadwal Ujian berbentuk matriks persis berkas contoh sekolah (lembar PAGI & SIANG).
         'tambahanHtml'   => ui_menu_lain([
-            ['label' => 'Jadwal Ujian (Excel)', 'ikon' => 'file-csv', 'href' => $base . '/cetak-jadwal/excel' . $qtp],
-            ['label' => 'Jadwal Ujian (PDF)', 'ikon' => 'file-pdf', 'href' => $base . '/cetak-jadwal/pdf' . $qtp, 'atr' => 'target="_blank" rel="noopener"'],
-        ], ['label' => 'Cetak jadwal', 'kecil' => false])
-            . '<a href="' . $base . '/pembuat-soal' . $qtp . '" class="btn btn-netral" title="Tugaskan guru pembuat soal per jadwal (dasar honor Pembuatan Soal)">' . ikon('pen-nib', 'h-4 w-4') . 'Pembuat soal</a>',
+            ['label' => 'Cetak Jadwal Ujian (Excel)', 'ikon' => 'file-csv', 'href' => $base . '/cetak-jadwal/excel' . $qtp],
+            ['label' => 'Cetak Jadwal Ujian (PDF)', 'ikon' => 'file-pdf', 'href' => $base . '/cetak-jadwal/pdf' . $qtp, 'atr' => 'target="_blank" rel="noopener"'],
+            ['label' => 'Guru pembuat soal', 'ikon' => 'pen-nib', 'href' => $base . '/pembuat-soal' . $qtp],
+            ['label' => 'Import dari Excel', 'ikon' => 'upload', 'atr' => 'data-hanya-sempit data-buka-impor'],
+            ['label' => 'Export ke Excel', 'ikon' => 'download', 'href' => $base . '/jadwal/export' . $qtp, 'atr' => 'data-hanya-sempit data-export-filter="toolbarFilter"'],
+        ], ['label' => 'Cetak & lainnya', 'kecil' => false]),
     ]) ?>
 
     <?php if (! $rows): ?>
@@ -142,14 +150,13 @@ foreach ($tingkatList as $t) {
             <table class="tabel-crud">
                 <thead>
                     <tr>
-                        <th scope="col">Hari / tanggal</th>
-                        <th scope="col">Jam</th>
+                        <th scope="col">Waktu</th>
                         <th scope="col">Mata pelajaran</th>
                         <th scope="col">Sasaran</th>
                         <th scope="col">Ruang</th>
-                        <th scope="col" class="text-center">Pengawas</th>
-                        <th scope="col" class="text-center">Pembuat soal</th>
-                        <th scope="col" class="text-center">Tidak hadir</th>
+                        <th scope="col" class="whitespace-nowrap text-center">Pengawas</th>
+                        <th scope="col" class="whitespace-nowrap text-center">Pembuat soal</th>
+                        <th scope="col" class="whitespace-nowrap text-center">Tidak hadir</th>
                         <th scope="col" class="kolom-aksi">Aksi</th>
                     </tr>
                 </thead>
@@ -161,29 +168,32 @@ foreach ($tingkatList as $t) {
                         $tak = (int) ($jmlTakHadir[$r['id']] ?? 0);
                         ?>
                         <tr>
-                            <td>
-                                <p class="sel-judul"><?= esc($HARI[(int) date('N', $ts)] ?? '') ?></p>
-                                <p class="sel-ket"><?= date('d/m/Y', $ts) ?></p>
+                            <?php // Hari, tanggal & jam satu kolom "Waktu" (dulu 2 kolom → tabel terlalu lebar, kolom Aksi terdesak). ?>
+                            <td class="whitespace-nowrap">
+                                <p class="sel-judul"><?= esc($HARI[(int) date('N', $ts)] ?? '') ?>, <?= date('d/m/Y', $ts) ?></p>
+                                <p class="sel-ket"><?= esc($jam($r['jam_mulai'], $r['jam_selesai'])) ?></p>
                             </td>
-                            <td class="whitespace-nowrap"><?= esc($jam($r['jam_mulai'], $r['jam_selesai'])) ?></td>
-                            <td>
+                            <td class="min-w-48">
                                 <p class="sel-judul"><?= esc($r['nama_mapel'] ?? 'Mapel sudah dihapus') ?></p>
                                 <?php if ($r['kode_mapel']): ?><p class="sel-ket"><?= esc($r['kode_mapel']) ?></p><?php endif; ?>
                             </td>
                             <td class="whitespace-nowrap">
-                                <span class="font-medium text-gray-900 dark:text-white">Tingkat <?= esc($r['tingkat']) ?></span><?php if ($r['jurusan_kode']): ?><span class="text-gray-500 dark:text-gray-400"> · <?= esc($r['jurusan_kode']) ?></span><?php endif; ?>
-                                <span class="lencana <?= $warnaShift[$r['shift']] ?? $warnaShift['semua'] ?> ms-1"><?= esc($labelShift[$r['shift']] ?? $r['shift']) ?></span>
+                                <p class="sel-judul">Tingkat <?= esc($r['tingkat']) ?><?php if ($r['jurusan_kode']): ?><span class="font-normal text-gray-500 dark:text-gray-400"> · <?= esc($r['jurusan_kode']) ?></span><?php endif; ?></p>
+                                <p class="mt-1"><span class="lencana <?= $warnaShift[$r['shift']] ?? $warnaShift['semua'] ?>"><?= esc($labelShift[$r['shift']] ?? $r['shift']) ?></span></p>
                             </td>
-                            <td><?= esc($r['ruang'] ?: '—') ?></td>
+                            <td class="whitespace-nowrap"><?= esc($r['ruang'] ?: '—') ?></td>
                             <td class="text-center"><a href="<?= $base ?>/pengawas/<?= (int) $r['id'] ?>" class="lencana <?= $lencanaJumlah($jml) ?> hover:underline" title="Kelola pengawas" aria-label="Kelola pengawas (<?= $jml ?> orang)"><?= ikon('users', 'h-3.5 w-3.5') ?><?= $jml ?></a></td>
                             <td class="text-center"><a href="<?= $base ?>/pembuat-soal<?= $qtp ?>" class="lencana <?= $lencanaJumlah($pbs) ?> hover:underline" title="Atur pembuat soal" aria-label="Atur pembuat soal (<?= $pbs ?> orang)"><?= ikon('pen-nib', 'h-3.5 w-3.5') ?><?= $pbs ?></a></td>
                             <td class="text-center"><span class="<?= $tak > 0 ? 'font-semibold text-yellow-700 dark:text-yellow-400' : 'text-gray-500 dark:text-gray-400' ?>"><?= $tak ?></span></td>
+                            <?php // Aksi satu deret rata: [cetak daftar hadir] [cetak berita acara] [Ubah] [hapus] — ikon kotak seragam (btn-ikon).
+                            // Dulu aksi-baris bersarang di dalam div lain + tombol Hapus berlabel → lebar tak rata. Menu tarik-turun sengaja
+                            // TIDAK dipakai di baris: .tabel-bungkus overflow-x-auto memotong menu di baris paling bawah. ?>
                             <td class="kolom-aksi">
-                                <div class="inline-flex items-center justify-end gap-2">
-                                    <a href="<?= $base ?>/daftar-hadir/<?= (int) $r['id'] ?><?= $qtp ?>" target="_blank" rel="noopener" class="btn btn-netral btn-sm" title="Cetak daftar hadir" aria-label="Cetak daftar hadir"><?= ikon('printer', 'h-4 w-4') ?></a>
-                                    <a href="<?= $base ?>/berita-acara/<?= (int) $r['id'] ?><?= $qtp ?>" target="_blank" rel="noopener" class="btn btn-netral btn-sm" title="Cetak berita acara" aria-label="Cetak berita acara"><?= ikon('file-lines', 'h-4 w-4') ?></a>
-                                    <?= ui_crud_aksi(['row' => $barisUbah($r)]) ?>
-                                    <?= $formHapus($r, $tak, '') ?>
+                                <div class="aksi-baris">
+                                    <a href="<?= $base ?>/daftar-hadir/<?= (int) $r['id'] ?><?= $qtp ?>" target="_blank" rel="noopener" class="btn btn-netral btn-sm btn-ikon" title="Cetak daftar hadir" aria-label="Cetak daftar hadir"><?= ikon('printer', 'h-4 w-4') ?></a>
+                                    <a href="<?= $base ?>/berita-acara/<?= (int) $r['id'] ?><?= $qtp ?>" target="_blank" rel="noopener" class="btn btn-netral btn-sm btn-ikon" title="Cetak berita acara" aria-label="Cetak berita acara"><?= ikon('file-lines', 'h-4 w-4') ?></a>
+                                    <button type="button" class="btn btn-utama btn-sm" data-ubah data-row="<?= esc((string) json_encode($barisUbah($r)), 'attr') ?>"><?= ikon('edit', 'h-4 w-4') ?>Ubah</button>
+                                    <?= $formHapus($r, $tak, ' btn-ikon', true) ?>
                                 </div>
                             </td>
                         </tr>
