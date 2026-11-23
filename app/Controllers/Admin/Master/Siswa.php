@@ -7,6 +7,7 @@ use App\Libraries\HakAkses;
 use App\Libraries\PeriksaSiswa;
 use App\Libraries\SiswaDetail;
 use App\Libraries\SiswaExcel8355;
+use App\Libraries\SiswaImpor;
 use App\Libraries\SiswaStatus;
 use App\Models\KelasModel;
 use App\Models\SettingModel;
@@ -687,6 +688,334 @@ class Siswa extends BaseMaster
     protected function matchField(): string
     {
         return 'nis';
+    }
+
+    // ===================== IMPOR: PRATINJAU PERUBAHAN (2026-11-23) =====================
+    //
+    // Keluhan klien: Export → isi No. Telepon Orang Tua → Import = pratinjau macet. Sebab: (1) kolom dibaca menurut URUTAN sehingga
+    // berkas Export (kop + kolom No + urutan lain) bergeser; (2) pratinjau menggambar 1.700 baris × 41 kotak isian; (3) simpan mengirim
+    // tiap sel sebagai isian → terpotong max_input_vars. Sekarang: kolom dicocokkan menurut JUDUL (SiswaImpor), pratinjau hanya
+    // menampilkan siswa yang BERUBAH (lama → baru) + siswa baru, dan hasilnya disimpan di berkas sementara server (token) sehingga
+    // tombol Simpan cukup mengirim token. Aturan lama tetap: sel kosong tidak mengubah data.
+
+    /** Batas umur berkas pratinjau (detik) — lewat dari ini harus unggah ulang. */
+    private const IMPOR_UMUR = 7200;
+
+    /** Kolom angka-bulat (dibandingkan sebagai angka saat mencari perubahan). */
+    private const KOLOM_ANGKA = ['kelas_id', 'tahun_masuk', 'anak_ke', 'sttb_tahun'];
+
+    /** Kolom nomor telepon: angka 0 di depan yang dibuang Excel (0812… → 812…) dikembalikan. */
+    private const KOLOM_HP = ['no_hp', 'no_hp_wali', 'ortu_telepon'];
+
+    public function importPreview()
+    {
+        $file = $this->request->getFile('file');
+        if (! $file || ! $file->isValid()) {
+            return $this->goIndex(null, 'File tidak valid.');
+        }
+        if (! in_array(strtolower($file->getExtension()), ['xlsx', 'xls'], true)) {
+            return $this->goIndex(null, 'File harus berformat Excel (.xlsx / .xls).');
+        }
+
+        $baca = SiswaImpor::baca($file->getTempName(), SiswaImpor::petaJudul($this->kolomImpor(), $this->aliasJudulImpor()));
+        if (! $baca['ok']) {
+            return $this->goIndex(null, $baca['pesan'] ?? 'File tidak terbaca.');
+        }
+
+        [$item, $sama, $galat] = $this->hitungPerubahan($baca);
+
+        // Simpan rencana di berkas sementara (bukan di formulir) — tombol Simpan cukup mengirim token.
+        $token = '';
+        if ($item !== []) {
+            $dir = WRITEPATH . 'impor/';
+            if (! is_dir($dir)) {
+                @mkdir($dir, 0775, true);
+            }
+            foreach (glob($dir . 'siswa_*.json') ?: [] as $lama) {
+                if (@filemtime($lama) < time() - self::IMPOR_UMUR) {
+                    @unlink($lama);
+                }
+            }
+            $token = bin2hex(random_bytes(16));
+            file_put_contents($dir . 'siswa_' . $token . '.json', json_encode([
+                'admin' => (int) (session('admin')['id'] ?? 0),
+                'item'  => array_map(static fn (array $it): array => array_diff_key($it, ['lama' => 0]), $item),
+            ], JSON_UNESCAPED_UNICODE));
+        }
+
+        $label = [];
+        foreach ($this->kolomImpor() as $k) {
+            $label[$k['key']] = $k['label'];
+        }
+        $label['kelas_id'] = 'Kelas';
+        $kelasNama = [];
+        foreach ((new KelasModel())->select('id, nama_kelas')->findAll() as $k) {
+            $kelasNama[(int) $k['id']] = $k['nama_kelas'];
+        }
+
+        return view('admin/master/siswa_impor', [
+            'title'     => 'Pratinjau Impor Siswa',
+            'item'      => $item,
+            'sama'      => $sama,
+            'galat'     => $galat,
+            'baca'      => ['lembar' => $baca['lembar'], 'baris' => $baca['baris'], 'siswa' => count($baca['urut']), 'kolom' => $baca['kolom']],
+            'label'     => $label,
+            'kelasNama' => $kelasNama,
+            'token'     => $token,
+            'namaFile'  => $file->getClientName(),
+            'commitUrl' => site_url($this->routeBase . '/import-commit'),
+            'backUrl'   => $this->indexUrl(),
+        ]);
+    }
+
+    public function importCommit(): RedirectResponse
+    {
+        $token = (string) $this->request->getPost('token');
+        if (! preg_match('/^[a-f0-9]{32}$/', $token)) {
+            return $this->goIndex(null, 'Data impor tidak ditemukan — unggah ulang berkasnya.');
+        }
+        $path = WRITEPATH . 'impor/siswa_' . $token . '.json';
+        if (! is_file($path) || @filemtime($path) < time() - self::IMPOR_UMUR) {
+            return $this->goIndex(null, 'Pratinjau impor sudah kedaluwarsa atau sudah disimpan — unggah ulang berkasnya bila perlu.');
+        }
+        $rencana = json_decode((string) file_get_contents($path), true);
+        @unlink($path); // sekali pakai: tombol Simpan yang ditekan dua kali tidak menyimpan dua kali
+        if (! is_array($rencana) || (int) ($rencana['admin'] ?? -1) !== (int) (session('admin')['id'] ?? 0)) {
+            return $this->goIndex(null, 'Data impor tidak sah — unggah ulang berkasnya.');
+        }
+
+        $ins = $upd = 0;
+        $galat = [];
+        $db = db_connect();
+        $db->transStart();
+        foreach ((array) ($rencana['item'] ?? []) as $it) {
+            $nis = (string) ($it['nis'] ?? '');
+            if (($it['jenis'] ?? '') === 'baru') {
+                // NIS bisa saja sudah ditambahkan orang lain sejak pratinjau dibuat → jangan gandakan.
+                if ($this->model->withDeleted()->where('nis', $nis)->countAllResults() > 0) {
+                    $galat[] = 'NIS ' . $nis . ' sudah ada (ditambahkan setelah pratinjau) — dilewati.';
+
+                    continue;
+                }
+                if ($this->model->insert((array) $it['data'])) {
+                    $ins++;
+                } else {
+                    $galat[] = 'NIS ' . $nis . ': ' . implode(' ', $this->model->errors());
+                }
+
+                continue;
+            }
+            $id   = (int) ($it['id'] ?? 0);
+            $data = (array) ($it['data'] ?? []) + ['id' => $id]; // id = isian placeholder is_unique
+            $pulih = ! empty($it['pulih']);
+            if ($pulih) {
+                $data['deleted_at'] = null;
+                $this->model->protect(false);
+            }
+            $ok = $id > 0 && $this->model->update($id, $data);
+            if ($pulih) {
+                $this->model->protect(true);
+            }
+            if ($ok) {
+                $upd++;
+            } else {
+                $galat[] = 'NIS ' . $nis . ': ' . implode(' ', $this->model->errors() ?: ['gagal disimpan']);
+            }
+        }
+        $db->transComplete();
+        if ($db->transStatus() === false) {
+            $galat[] = 'Sebagian gagal disimpan karena kesalahan database.';
+        }
+
+        master_data_changed($this->module);
+        $this->audit->record('import', $this->auditTable, null, "Import siswa: +{$ins} baru, {$upd} diperbarui");
+        $msg = "Import selesai: {$ins} siswa baru, {$upd} siswa diperbarui.";
+        if ($galat !== []) {
+            return $this->goIndex(null, $msg . ' | ' . count($galat) . ' gagal: ' . implode(' ', array_slice($galat, 0, 5)));
+        }
+
+        return $this->goIndex($msg);
+    }
+
+    /**
+     * Judul kolom berkas hasil Export & label buku induk → kunci impor (pelengkap template/label kolomImpor).
+     *
+     * @return array<string, string>
+     */
+    private function aliasJudulImpor(): array
+    {
+        $alias = ['Nama Siswa' => 'nama', 'JK' => 'jenis_kelamin', 'Tanggal Lahir' => 'tanggal_lahir', 'Alamat' => 'alamat', 'No HP Siswa' => 'no_hp', 'Kelas' => 'kelas',
+            'Nama Kelas' => 'kelas', 'Tahun Masuk' => 'tahun_masuk', 'Status' => 'status', 'Keterangan' => 'keterangan'];
+        foreach (BiodataForm::LABEL as $key => $judul) {
+            $alias[$judul] = $key;
+        }
+        foreach (SiswaModel::LABEL_SEKOLAH as $key => $judul) {
+            $alias[$judul] = $key;
+        }
+
+        return $alias;
+    }
+
+    /**
+     * Gabung nilai antar-lembar → payload → bandingkan dengan data sekarang.
+     *
+     * @param array<string, mixed> $baca hasil SiswaImpor::baca()
+     *
+     * @return array{0: list<array<string, mixed>>, 1: int, 2: list<string>}  [daftar perubahan/siswa baru, jumlah yang sama, catatan]
+     */
+    private function hitungPerubahan(array $baca): array
+    {
+        $lama    = [];
+        $tanpaNol = [];
+        foreach (db_connect()->table('siswa')->get()->getResultArray() as $r) {
+            $nis = trim((string) $r['nis']);
+            $lama[$nis] = $r;
+            $k = ltrim($nis, '0');
+            $tanpaNol[$k] = array_key_exists($k, $tanpaNol) ? null : $nis; // null = ambigu (dua NIS sama tanpa 0 depan)
+        }
+        $kelasNama = [];
+        foreach ((new KelasModel())->select('id, nama_kelas')->findAll() as $k) {
+            $kelasNama[(int) $k['id']] = $k['nama_kelas'];
+        }
+        $label = [];
+        foreach ($this->kolomImpor() as $k) {
+            $label[$k['key']] = $k['label'];
+        }
+
+        $item  = [];
+        $sama  = 0;
+        $galat = $baca['galat'];
+        $line  = 0;
+        foreach ($baca['urut'] as $nisBerkas) {
+            $line++;
+            $nisBerkas = (string) $nisBerkas;
+            // NIS yang angka 0 depannya dibuang Excel tetap menemukan siswanya (bila tak ambigu).
+            $nis = isset($lama[$nisBerkas]) ? $nisBerkas : ($tanpaNol[ltrim($nisBerkas, '0')] ?? $nisBerkas);
+            $db0 = $lama[$nis] ?? null;
+
+            $row = ['nis' => $nis];
+            foreach ($baca['nilai'][$nisBerkas] as $key => $set) {
+                if ($key === 'nis') {
+                    continue;
+                }
+                $calon = array_map('strval', array_keys($set));
+                if (count($calon) <= 1) {
+                    $row[$key] = $calon[0] ?? '';
+
+                    continue;
+                }
+                // Nilai berbeda di beberapa lembar (mis. lembar "Semua Kelas" & lembar kelas): ambil yang BERBEDA dari data sekarang.
+                $kini = $key === 'kelas' ? ($kelasNama[(int) ($db0['kelas_id'] ?? 0)] ?? '') : trim((string) ($db0[$key] ?? ''));
+                $beda = array_values(array_filter($calon, static fn (string $v): bool => $v !== $kini));
+                if (count($beda) === 1) {
+                    $row[$key] = $beda[0];
+                } elseif ($beda === []) {
+                    $row[$key] = $kini;
+                } else {
+                    $galat[] = 'NIS ' . $nis . ': kolom ' . ($label[$key] ?? $key) . ' berisi nilai berbeda di beberapa lembar (' . implode(' / ', $beda) . ') — kolom ini tidak diubah.';
+                    $row[$key] = '';
+                }
+            }
+            if (trim((string) ($row['nama'] ?? '')) === '') {
+                if ($db0 === null) {
+                    $galat[] = 'NIS ' . $nis . ': Nama Siswa kosong — dilewati.';
+
+                    continue;
+                }
+                $row['nama'] = $db0['nama']; // siswa lama: nama kosong di berkas = tidak diubah
+            }
+            $row = $this->rapikanNomorImpor($row, $db0, $galat, $label);
+
+            $err = null;
+            $this->importNote = '';
+            $payload = $this->normalizeImportRow($row, $line, $err);
+            if ($payload === null) {
+                if ($err !== null) {
+                    $galat[] = 'NIS ' . $nis . ': ' . preg_replace('/^Baris \d+: /', '', $err);
+                }
+
+                continue;
+            }
+            if (trim((string) ($row['kelas'] ?? '')) !== '' && ! isset($payload['kelas_id'])) {
+                $galat[] = 'NIS ' . $nis . ' (' . $payload['nama'] . '): kelas "' . $row['kelas'] . '" tidak ada di Master Kelas — kelasnya tidak diubah.';
+            }
+
+            if ($db0 === null) {
+                $item[] = ['jenis' => 'baru', 'nis' => $nis, 'nama' => $payload['nama'], 'data' => $payload];
+
+                continue;
+            }
+            $ubah = [];
+            foreach ($payload as $f => $v) {
+                if ($f !== 'nis' && ! $this->samaNilaiImpor($f, $db0[$f] ?? null, $v)) {
+                    $ubah[$f] = $v;
+                }
+            }
+            $pulih = ! empty($db0['deleted_at']);
+            if ($ubah === [] && ! $pulih) {
+                $sama++;
+
+                continue;
+            }
+            $item[] = ['jenis' => 'ubah', 'id' => (int) $db0['id'], 'nis' => $nis, 'nama' => (string) $db0['nama'], 'pulih' => $pulih,
+                'data' => $ubah, 'lama' => array_intersect_key($db0, $ubah)];
+        }
+
+        return [$item, $sama, array_values(array_unique($galat))];
+    }
+
+    /**
+     * Rapikan kolom nomor dari Excel: angka 0 depan yang hilang dipulihkan (dibandingkan data lama; No HP 8xxx → 08xxx; NISN 10 digit),
+     * nomor yang rusak jadi teks notasi ilmiah ditolak per sel.
+     *
+     * @param array<string, string>      $row
+     * @param array<string, mixed>|null  $db0
+     * @param list<string>               $galat
+     * @param array<string, string>      $label
+     *
+     * @return array<string, string>
+     */
+    private function rapikanNomorImpor(array $row, ?array $db0, array &$galat, array $label): array
+    {
+        foreach (self::KOLOM_TEKS as $k) {
+            $v = trim((string) ($row[$k] ?? ''));
+            if ($v === '' || $k === 'nis') {
+                continue;
+            }
+            if (preg_match('/^\d+(?:[.,]\d+)?e\+?\d+$/i', $v)) {
+                $galat[] = 'NIS ' . $row['nis'] . ': kolom ' . ($label[$k] ?? $k) . ' berisi "' . $v . '" (angka rusak oleh Excel) — tidak diubah. Ketik ulang nomornya sebagai teks.';
+                $row[$k] = '';
+
+                continue;
+            }
+            if (ctype_digit($v) && $db0 !== null) {
+                $d = trim((string) ($db0[$k] ?? ''));
+                if ($d !== '' && ctype_digit($d) && ltrim($d, '0') === ltrim($v, '0')) {
+                    $row[$k] = $d; // sama dengan data lama, hanya 0 depannya hilang
+
+                    continue;
+                }
+            }
+            if (in_array($k, self::KOLOM_HP, true) && preg_match('/^8\d{8,12}$/', $v)) {
+                $row[$k] = '0' . $v;
+            } elseif ($k === 'nisn' && ctype_digit($v) && strlen($v) < 10) {
+                $row[$k] = str_pad($v, 10, '0', STR_PAD_LEFT);
+            }
+        }
+
+        return $row;
+    }
+
+    /** Nilai lama (DB) dan nilai impor sama? Kosong hanya sama dengan kosong; kolom angka dibandingkan sebagai angka. */
+    private function samaNilaiImpor(string $kolom, mixed $lama, mixed $baru): bool
+    {
+        $o = $lama === null ? '' : trim((string) $lama);
+        $n = $baru === null ? '' : trim((string) $baru);
+        if ($o === '' || $n === '') {
+            return $o === $n;
+        }
+
+        return in_array($kolom, self::KOLOM_ANGKA, true) ? (int) $o === (int) $n : $o === $n;
     }
 
     /**

@@ -771,24 +771,26 @@
                     this.rows.push(blank);
                 },
                 removeRow: function (i) { this.rows.splice(i, 1); },
-                // Bangun input tersembunyi rows[i][key] tepat sebelum submit.
+                // Kirim SEMUA baris sebagai SATU isian JSON "rows_json" tepat sebelum submit (2026-11-23). Dulu tiap sel = satu
+                // isian rows[i][key] → ratusan baris × puluhan kolom melewati batas max_input_vars PHP (±1.000) dan sisanya
+                // terpotong diam-diam. Penerima: App\Libraries\ImporPost::baris().
                 prepare: function () {
                     var box = this.$refs.payload;
                     var cols = this.cols;
                     box.innerHTML = '';
-                    var n = 0;
+                    var data = [];
                     this.rows.forEach(function (row) {
                         var isEmpty = cols.every(function (k) { return !String(row[k] === undefined || row[k] === null ? '' : row[k]).trim(); });
                         if (isEmpty) { return; }
-                        cols.forEach(function (k) {
-                            var inp = document.createElement('input');
-                            inp.type  = 'hidden';
-                            inp.name  = 'rows[' + n + '][' + k + ']';
-                            inp.value = (row[k] === undefined || row[k] === null) ? '' : row[k];
-                            box.appendChild(inp);
-                        });
-                        n++;
+                        var o = {};
+                        cols.forEach(function (k) { o[k] = (row[k] === undefined || row[k] === null) ? '' : String(row[k]); });
+                        data.push(o);
                     });
+                    var inp = document.createElement('input');
+                    inp.type  = 'hidden';
+                    inp.name  = 'rows_json';
+                    inp.value = JSON.stringify(data);
+                    box.appendChild(inp);
                 },
             };
         });

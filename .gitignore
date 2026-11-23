@@ -81,6 +81,9 @@ Vagrantfile
 # Backup database & berkas (Sistem → Backup & Restore) — berisi DATA PRIBADI, JANGAN di-commit (repo PUBLIK).
 /writable/backup/
 
+# Rencana pratinjau impor Master Siswa (berisi DATA PRIBADI siswa, dihapus otomatis ≤ 2 jam) — jangan di-commit (repo PUBLIK).
+/writable/impor/
+
 # Status Mode Maintenance (Sistem → Mode Maintenance) — milik tiap server, jangan sampai ikut git pull.
 /writable/maintenance.json
 /writable/maintenance.json.tmp

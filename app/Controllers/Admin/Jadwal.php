@@ -720,7 +720,7 @@ class Jadwal extends BaseController
     /** Simpan hasil impor (upsert per slot kelas+hari+jam). */
     public function importCommit()
     {
-        $rows = (array) $this->request->getPost('rows');
+        $rows = \App\Libraries\ImporPost::baris($this->request); // satu isian JSON (anti batas max_input_vars)
         if (empty($rows)) {
             return redirect()->to(site_url('admin/jadwal'))->with('error', 'Tidak ada data untuk disimpan.');
         }

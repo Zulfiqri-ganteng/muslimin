@@ -122,7 +122,7 @@ class UjianBerkas extends BaseController
         }
         $kembali = $this->urlTab($slug, 'jadwal', $periode['tahun_ajaran']);
 
-        $rows = (array) $this->request->getPost('rows');
+        $rows = \App\Libraries\ImporPost::baris($this->request); // satu isian JSON (anti batas max_input_vars)
         if ($rows === []) {
             return redirect()->to($kembali)->with('error', 'Tidak ada data untuk disimpan.');
         }

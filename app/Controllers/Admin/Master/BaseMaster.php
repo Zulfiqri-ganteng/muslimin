@@ -302,7 +302,7 @@ abstract class BaseMaster extends BaseController
 
     public function importCommit(): RedirectResponse
     {
-        $rows = (array) $this->request->getPost('rows');
+        $rows = \App\Libraries\ImporPost::baris($this->request); // satu isian JSON (anti batas max_input_vars), bentuk lama tetap diterima
         if ($rows === []) {
             return $this->goIndex(null, 'Tidak ada data untuk disimpan.');
         }

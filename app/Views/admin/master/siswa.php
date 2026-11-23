@@ -87,7 +87,7 @@ $bagian = static fn (string $judul, string $ket = ''): string => '<p class="bord
         • Kelas <i>— Tanpa kelas —</i> = siswa yang belum ditempatkan di kelas.</p>
         <p class="mt-3"><b>2. Tombol di atas daftar</b><br>
         • <b>Tambah</b> — menambah satu siswa. Isi NIS, NISN asli (10 angka), dan tanggal lahir supaya siswa bisa masuk Layanan Siswa.<br>
-        • <b>Import</b> — memasukkan banyak siswa sekaligus dari Excel: unduh template → isi → unggah → periksa pratinjau → simpan. NIS yang sudah ada <b>diperbarui</b> (tidak dobel), sel kosong tidak mengubah data lama, kolom Kelas diisi nama kelas persis (mis. <i>X TKJ 1</i>). Untuk impor ulang, pakai berkas hasil <b>Export terbaru</b>.<br>
+        • <b>Import</b> — memasukkan atau <b>memperbarui</b> banyak siswa sekaligus dari Excel. Dua cara: (1) unduh template → isi → unggah; atau (2) <b>Export</b> → ubah/isi kolom yang perlu di Excel (mis. <b>No. Telepon Orang Tua</b>) → simpan → Import berkas itu apa adanya (kop sekolah, kolom No, dan banyak lembar dibaca otomatis; mengisi di lembar Semua Kelas atau lembar kelas sama saja). Pratinjau hanya menampilkan siswa yang <b>berubah</b> (lama → baru) dan siswa baru; tekan Simpan bila sudah benar. NIS yang sudah ada <b>diperbarui</b> (tidak dobel), sel kosong tidak mengubah data lama, kolom Kelas diisi nama kelas persis (mis. <i>X TKJ 1</i>). Angka 0 di depan nomor HP yang dihapus Excel dikembalikan otomatis.<br>
         • <b>Export</b> — mengunduh <b>semua kolom</b> data siswa ke Excel sesuai saringan yang dipilih (satu kelas = kelas itu saja; lebih dari satu kelas = tab Semua Kelas + satu tab per kelas).<br>
         • <b>Lainnya → Periksa data siswa</b> — daftar data yang perlu dibetulkan (data ganda, NIS/NISN tidak wajar, tanggal lahir kosong) dan kelas hasil penempatan otomatis.<br>
         • <b>Lainnya → Unduh Daftar Nama Siswa resmi</b> — Excel <b>siap cetak</b> berbentuk persis berkas "Daftar Nama Siswa" sekolah (siswa aktif kelas X–XII per jurusan, dengan tempat tanda tangan). Export untuk diolah, daftar resmi untuk dicetak/diserahkan.<br>
@@ -400,7 +400,7 @@ $bagian = static fn (string $judul, string $ket = ''): string => '<p class="bord
         'judul'       => 'Import Siswa',
         'aksi'        => site_url('admin/master/siswa/import-preview'),
         'templateUrl' => site_url('admin/master/siswa/template'),
-        'catatan'     => '<b>Import = memasukkan data.</b> Unggah Excel sesuai template — cocok untuk memasukkan satu kelas (mis. 50 siswa) sekaligus. Data tampil dalam <b>pratinjau yang bisa diedit</b> sebelum disimpan. <b>NIS</b> yang sudah ada akan diperbarui, bukan diduplikat — dan <b>sel yang kosong tidak mengubah data lama</b> (biodata yang sudah diisi siswa aman). Kolom <b>Kelas</b> diisi nama kelas persis seperti di Master Kelas. Kolom biodata (orang tua, wali, dsb.) ada di <b>bagian kanan</b> template.',
+        'catatan'     => '<b>Import = memasukkan / memperbarui data.</b> Unggah Excel sesuai template, <b>atau berkas hasil Export</b> yang sudah diubah (mis. diisi No. Telepon Orang Tua) — kolom dikenali dari judulnya. Pratinjau menampilkan <b>hanya siswa yang berubah</b> (lama → baru) dan siswa baru sebelum disimpan. <b>NIS</b> yang sudah ada akan diperbarui, bukan diduplikat — dan <b>sel yang kosong tidak mengubah data lama</b> (biodata yang sudah diisi siswa aman). Kolom <b>Kelas</b> diisi nama kelas persis seperti di Master Kelas. Kolom biodata (orang tua, wali, dsb.) ada di <b>bagian kanan</b> template.',
     ]) ?>
 </div>
 <?= $this->endSection() ?>
