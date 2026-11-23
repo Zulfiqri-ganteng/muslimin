@@ -174,10 +174,6 @@ class Ujian extends BaseController
             'keterangan'  => $this->teks('keterangan', 255),
         ];
 
-        if (! in_array($data['shift'], UjianJadwalModel::SHIFT, true)) {
-            $data['shift'] = 'semua';
-        }
-
         $salah = $this->periksaJadwal($data);
         if ($salah !== []) {
             return redirect()->to($kembali)->withInput()->with('errors', $salah);
@@ -898,7 +894,7 @@ class Ujian extends BaseController
             'mapelOpts'    => (new MataPelajaranModel())->options(),
             'jurusanOpts'  => (new JurusanModel())->options(),
             'tingkatList'  => UjianJadwalModel::TINGKAT,
-            'shiftList'    => UjianJadwalModel::SHIFT,
+            'shiftList'    => UjianJadwalModel::SHIFT_PILIH, // form: hanya Pagi / Siang (2026-11-23)
         ];
     }
 
@@ -934,6 +930,10 @@ class Ujian extends BaseController
         }
         if (! in_array($data['tingkat'], UjianJadwalModel::TINGKAT, true)) {
             $salah[] = 'Tingkat wajib dipilih (X, XI, atau XII).';
+        }
+        // 2026-11-23 (klien): tidak ada lagi "Pagi & Siang" — satu jadwal = satu shift, sama seperti lembar cetaknya.
+        if (! in_array($data['shift'], UjianJadwalModel::SHIFT_PILIH, true)) {
+            $salah[] = 'Shift wajib dipilih: Pagi atau Siang.';
         }
         if (! $data['tanggal']) {
             $salah[] = 'Tanggal ujian wajib diisi.';

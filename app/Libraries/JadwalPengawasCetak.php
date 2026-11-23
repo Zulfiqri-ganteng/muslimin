@@ -347,21 +347,24 @@ class JadwalPengawasCetak
         $tipis  = '0.75pt solid #000';
         $baris  = '';
         $daftar = self::daftarKode($periode);
+        // Tinggi ditaruh di SEL, bukan <tr>: dompdf mengabaikan height pada <tr> (audit 2026-11-23: baris jadi ±15pt, tabel ±13%
+        // lebih pendek dari Excel). 17,5pt baris Excel − 0,9pt garis = 16,6pt (pola sama dengan htmlLembar).
+        $tg = 'height:16.6pt;';
         foreach ($daftar as $p) {
-            $baris .= '<tr style="height:16.6pt"><td></td><td></td>'
-                . '<td style="border:' . $tipis . ';text-align:center;font-family:\'Times New Roman\',Times,serif;font-weight:bold;font-size:12pt">' . esc($p['kode']) . '</td>'
+            $baris .= '<tr><td style="' . $tg . '"></td><td></td>'
+                . '<td style="' . $tg . 'border:' . $tipis . ';text-align:center;font-family:\'Times New Roman\',Times,serif;font-weight:bold;font-size:12pt">' . esc($p['kode']) . '</td>'
                 // Tak dilipat (di Excel sel nama tidak dilipat; nama panjang tetap satu baris).
-                . '<td style="border:' . $tipis . ';font-family:\'Times New Roman\',Times,serif;font-weight:bold;font-size:12pt;padding-left:2pt;white-space:nowrap;overflow:hidden">' . esc($p['nama']) . '</td>'
-                . '<td style="text-align:right;font-size:11pt;padding-right:2pt">1</td></tr>';
+                . '<td style="' . $tg . 'border:' . $tipis . ';font-family:\'Times New Roman\',Times,serif;font-weight:bold;font-size:12pt;padding-left:2pt;white-space:nowrap;overflow:hidden">' . esc($p['nama']) . '</td>'
+                . '<td style="' . $tg . 'text-align:right;font-size:11pt;padding-right:2pt">1</td></tr>';
         }
         $kolom = '<tr>' . implode('', array_map(static fn (float $w): string => '<td style="width:' . $w . 'pt;height:0;padding:0;border:0;font-size:0;line-height:0"></td>', [$pt(8.43), $pt(8.43), $pt(10.6), $pt(34.1), $pt(8.43)])) . '</tr>';
         $html  = '<div style="padding:' . round(0.35 * 72, 1) . 'pt ' . round(0.70 * 72, 1) . 'pt 0 ' . round(1.01 * 72, 1) . 'pt">'
             . '<table style="border-collapse:collapse;line-height:1.0">' . $kolom
-            . '<tr style="height:30pt"><td></td><td></td>'
-            . '<td style="border:' . $tipis . ';background:#' . self::MAGENTA . ';text-align:center;font-weight:bold;font-size:12pt">Kode<br>Pengawas</td>'
-            . '<td style="border:' . $tipis . ';background:#' . self::MAGENTA . ';text-align:center;font-weight:bold;font-size:12pt">Nama Pengawas</td><td></td></tr>'
+            . '<tr><td style="height:30.1pt"></td><td></td>'
+            . '<td style="height:30.1pt;border:' . $tipis . ';background:#' . self::MAGENTA . ';text-align:center;font-weight:bold;font-size:12pt">Kode<br>Pengawas</td>'
+            . '<td style="height:30.1pt;border:' . $tipis . ';background:#' . self::MAGENTA . ';text-align:center;font-weight:bold;font-size:12pt">Nama Pengawas</td><td></td></tr>'
             . $baris
-            . '<tr style="height:14pt"><td></td><td></td><td></td><td></td><td style="text-align:right;font-size:11pt;padding-right:2pt">' . count($daftar) . '</td></tr>'
+            . '<tr><td style="height:15pt"></td><td></td><td></td><td></td><td style="height:15pt;text-align:right;font-size:11pt;padding-right:2pt">' . count($daftar) . '</td></tr>'
             . '</table></div>';
 
         return JadwalUjianCetak::renderPdf(self::bungkus($html, 'legal portrait'), 'legal', 'portrait')[0];

@@ -40,7 +40,7 @@ $defaults = [
     'mapel_id'    => '',
     'tingkat'     => '',
     'jurusan_id'  => '',
-    'shift'       => 'semua',
+    'shift'       => '', // wajib dipilih: Pagi atau Siang (2026-11-23, tanpa "Pagi & Siang")
     'tanggal'     => $periode['tanggal_mulai'] ?: date('Y-m-d'),
     'jam_mulai'   => '',
     'jam_selesai' => '',
@@ -56,7 +56,8 @@ $barisUbah = static fn (array $r): array => [
     'mapel_id'    => (string) ($r['mapel_id'] ?? ''),
     'tingkat'     => $r['tingkat'],
     'jurusan_id'  => (string) ($r['jurusan_id'] ?? ''),
-    'shift'       => $r['shift'],
+    // Data lama "Pagi & Siang" (semua) → kosong: saat diubah, pengguna wajib memilih Pagi atau Siang.
+    'shift'       => in_array($r['shift'], ['pagi', 'siang'], true) ? $r['shift'] : '',
     'tanggal'     => $r['tanggal'],
     'jam_mulai'   => $r['jam_mulai'] ? substr((string) $r['jam_mulai'], 0, 5) : '',
     'jam_selesai' => $r['jam_selesai'] ? substr((string) $r['jam_selesai'], 0, 5) : '',
@@ -228,8 +229,9 @@ foreach ($tingkatList as $t) {
                 </select>
             </div>
             <div>
-                <label class="lbl" for="uj-shift">Shift</label>
-                <select id="uj-shift" name="shift" x-model="form.shift" class="inp">
+                <label class="lbl" for="uj-shift">Shift <span class="text-red-600 dark:text-red-400">*</span></label>
+                <select id="uj-shift" name="shift" x-model="form.shift" required class="inp">
+                    <option value="" disabled>— Pilih Pagi atau Siang —</option>
                     <?php foreach ($shiftList as $s): ?>
                         <option value="<?= esc($s, 'attr') ?>"><?= esc($labelShift[$s] ?? $s) ?></option>
                     <?php endforeach; ?>
@@ -261,8 +263,9 @@ foreach ($tingkatList as $t) {
         </div>
         <div class="grid gap-4 sm:grid-cols-2">
             <div>
-                <label class="lbl" for="uj-ruang">Ruang</label>
-                <input type="text" id="uj-ruang" name="ruang" x-model="form.ruang" maxlength="100" placeholder="mis. R1–R8 atau Aula" class="inp">
+                <label class="lbl" for="uj-ruang">Ruang <span class="font-normal text-gray-500 dark:text-gray-400">(opsional, hanya catatan)</span></label>
+                <input type="text" id="uj-ruang" name="ruang" x-model="form.ruang" maxlength="100" placeholder="boleh dikosongkan" class="inp">
+                <p class="hint">Tidak ikut tercetak di Jadwal Ujian/Pengawas. Ruang pengawas diatur lewat Jumlah ruang di tab Periode.</p>
             </div>
             <div>
                 <label class="lbl" for="uj-ket">Keterangan</label>
@@ -279,7 +282,7 @@ foreach ($tingkatList as $t) {
         'judul'       => 'Import jadwal ujian',
         'aksi'        => $base . '/jadwal/import-preview' . $qtp,
         'templateUrl' => $base . '/jadwal/template' . $qtp,
-        'catatan'     => 'Kolom: <b>Kode Mapel</b>, Tingkat, Kode Jurusan, Shift, Tanggal, Jam Mulai, Jam Selesai, Ruang, Keterangan. Mapel &amp; jurusan dicocokkan lewat <b>kode</b>-nya. Baris dengan mapel, tingkat, jurusan, shift, dan ruang yang sama akan <b>diperbarui</b>, bukan digandakan — jadi berkas boleh diunggah ulang setelah diperbaiki.',
+        'catatan'     => 'Kolom: <b>Kode Mapel</b>, Tingkat, Kode Jurusan, <b>Shift (wajib: pagi atau siang)</b>, Tanggal, Jam Mulai, Jam Selesai, Ruang (boleh kosong), Keterangan. Mapel &amp; jurusan dicocokkan lewat <b>kode</b>-nya. Baris dengan mapel, tingkat, jurusan, shift, dan ruang yang sama akan <b>diperbarui</b>, bukan digandakan — jadi berkas boleh diunggah ulang setelah diperbaiki.',
     ]) ?>
 </div>
 <script defer src="<?= base_url('assets/js/admin/ujian/jadwal.js') ?>?v=<?= @filemtime(FCPATH . 'assets/js/admin/ujian/jadwal.js') ?>" <?= csp_script_nonce() ?>></script>

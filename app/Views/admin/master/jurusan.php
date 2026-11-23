@@ -25,13 +25,14 @@
         <p class="mt-3"><b>Label di jadwal ujian</b><br>
         • Tulisan jurusan di judul kolom <b>Jadwal Ujian</b> (menu Ujian). Mis. jurusan berkode <b>MP</b> ditulis <b>MPLB</b>, kode <b>AK</b> ditulis <b>AKL</b>, sehingga judul kolom menjadi "XII MPLB", "XI AKL".<br>
         • Kosong = memakai kode jurusan. Cukup diisi sekali, dipakai di semua ujian.<br>
-        • <b>Urutan di jadwal ujian</b> = urutan kolom jurusan di Jadwal Ujian dalam satu tingkat, angka kecil di kiri. Mis. MPLB/MP = 1, AKL/AK = 2, TKJ = 3 → "X MPLB, X AKL, X TKJ". Kosong = di paling kanan.</p>',
+        • <b>Urutan pagi</b> = urutan kolom jurusan di lembar <b>PAGI</b> Jadwal Ujian dalam satu tingkat, angka kecil di kiri. Mis. MPLB/MP = 1, AKL/AK = 2, TKJ = 3 → "X MPLB, X AKL, X TKJ". Kosong = di paling kanan.<br>
+        • <b>Urutan siang</b> = urutan kolom di lembar <b>SIANG</b>, bila berbeda dari pagi. Mis. contoh sekolah siang "XI MPLB, XI TKJ, XI AKL" → MPLB/MP = 1, TKJ = 2, AKL/AK = 3. Kosong = sama dengan urutan pagi.</p>',
 ]) ?>
 <?= $this->endSection() ?>
 
 <?= $this->section('content') ?>
 <div x-data="masterList" data-base="<?= site_url('admin/master/jurusan') ?>" data-entity="jurusan"
-     data-defaults="<?= esc(json_encode(['kode' => '', 'nama' => '', 'label_ujian' => '', 'urutan_ujian' => '']), 'attr') ?>">
+     data-defaults="<?= esc(json_encode(['kode' => '', 'nama' => '', 'label_ujian' => '', 'urutan_ujian' => '', 'urutan_ujian_siang' => '']), 'attr') ?>">
 
     <?= ui_crud_alat([
         'baseUrl'     => site_url('admin/master/jurusan'),
@@ -68,7 +69,7 @@
                         <td class="kolom-cek"><input type="checkbox" class="cek row-check" value="<?= (int) $r['id'] ?>" aria-label="Pilih jurusan <?= esc($r['kode'], 'attr') ?>"></td>
                         <td class="sel-judul whitespace-nowrap"><?= esc($r['kode']) ?></td>
                         <td><?= esc($r['nama']) ?></td>
-                        <td class="sel-ket"><?= ($r['label_ujian'] ?? '') !== '' && $r['label_ujian'] !== null ? esc($r['label_ujian']) : '<span title="Kosong = memakai kode">' . esc($r['kode']) . '</span>' ?><?= ($r['urutan_ujian'] ?? null) !== null ? ' <span class="lencana lencana-abu" title="Urutan kolom di jadwal ujian">urutan ' . (int) $r['urutan_ujian'] . '</span>' : '' ?></td>
+                        <td class="sel-ket"><?= ($r['label_ujian'] ?? '') !== '' && $r['label_ujian'] !== null ? esc($r['label_ujian']) : '<span title="Kosong = memakai kode">' . esc($r['kode']) . '</span>' ?><?= ($r['urutan_ujian'] ?? null) !== null ? ' <span class="lencana lencana-abu" title="Urutan kolom di lembar pagi jadwal ujian (juga siang bila urutan siang kosong)">pagi ' . (int) $r['urutan_ujian'] . '</span>' : '' ?><?= ($r['urutan_ujian_siang'] ?? null) !== null ? ' <span class="lencana lencana-abu" title="Urutan kolom di lembar siang jadwal ujian">siang ' . (int) $r['urutan_ujian_siang'] . '</span>' : '' ?></td>
                         <td class="kolom-aksi">
                             <?= ui_crud_aksi([
                                 'row'        => $r,
@@ -98,10 +99,17 @@
             <input type="text" id="jurusan-label-ujian" name="label_ujian" x-model="form.label_ujian" maxlength="50" class="inp uppercase" placeholder="mis. MPLB">
             <p class="hint">Tulisan jurusan di judul kolom Jadwal Ujian. Kosongkan bila sama dengan kode.</p>
         </div>
-        <div>
-            <label class="lbl" for="jurusan-urutan-ujian">Urutan di jadwal ujian</label>
-            <input type="number" id="jurusan-urutan-ujian" name="urutan_ujian" x-model="form.urutan_ujian" min="0" max="999" class="inp" placeholder="mis. 1">
-            <p class="hint">Urutan kolom di Jadwal Ujian (angka kecil di kiri). Kosong = paling kanan.</p>
+        <div class="grid gap-4 sm:grid-cols-2">
+            <div>
+                <label class="lbl" for="jurusan-urutan-ujian">Urutan di jadwal ujian (pagi)</label>
+                <input type="number" id="jurusan-urutan-ujian" name="urutan_ujian" x-model="form.urutan_ujian" min="0" max="999" class="inp" placeholder="mis. 1">
+                <p class="hint">Urutan kolom lembar Pagi (angka kecil di kiri). Kosong = paling kanan.</p>
+            </div>
+            <div>
+                <label class="lbl" for="jurusan-urutan-siang">Urutan di jadwal ujian (siang)</label>
+                <input type="number" id="jurusan-urutan-siang" name="urutan_ujian_siang" x-model="form.urutan_ujian_siang" min="0" max="999" class="inp" placeholder="sama dengan pagi">
+                <p class="hint">Isi hanya bila urutan lembar Siang berbeda. Kosong = ikut urutan pagi.</p>
+            </div>
         </div>
     <?= ui_crud_form_tutup() ?>
 

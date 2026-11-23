@@ -42,7 +42,8 @@ class JadwalUjianCetak
 
     private const HARI = [1 => 'SENIN', 2 => 'SELASA', 3 => 'RABU', 4 => 'KAMIS', 5 => "JUM'AT", 6 => 'SABTU', 7 => 'MINGGU'];
 
-    private const BULAN = [1 => 'Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun', 'Jul', 'Agu', 'Sep', 'Okt', 'Nov', 'Des'];
+    /** Singkatan bulan seperti tampilan d-mmm-yy di Excel klien (contoh: "1-Dec-26", bukan "1-Des-26") — audit 2026-11-23. */
+    private const BULAN = [1 => 'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 
     /**
      * Ukuran per lembar meniru contoh (lebar kolom Excel, tinggi baris pt, skala cetak %, margin inci atas/bawah/kiri/kanan).
@@ -69,14 +70,15 @@ class JadwalUjianCetak
 
     /**
      * Kolom kelompok kelas satu shift: tingkat + label jurusan (label_ujian, kosong = kode), diurutkan tingkat lalu
-     * jurusan.urutan_ujian (kosong = paling kanan) lalu label.
+     * urutan jurusan (lembar siang: urutan_ujian_siang bila diisi, selain itu urutan_ujian; kosong = paling kanan) lalu label.
+     * Urutan siang terpisah (2026-11-23): contoh sekolah pagi "XII AKL, XII TKJ" tetapi siang "XI TKJ, XI AKL".
      *
      * @return list<array{tingkat: string, label: string, judul: string}>
      */
     public static function kolom(string $shift): array
     {
         $rows = db_connect()->table('kelas k')
-            ->select('k.tingkat, j.kode, j.label_ujian, j.urutan_ujian')
+            ->select('k.tingkat, j.kode, j.label_ujian, j.urutan_ujian, j.urutan_ujian_siang')
             ->join('jurusan j', 'j.id = k.jurusan_id AND j.deleted_at IS NULL', 'left')
             ->where('k.deleted_at', null)->where('k.shift', $shift)
             ->get()->getResultArray();
@@ -85,7 +87,8 @@ class JadwalUjianCetak
         foreach ($rows as $r) {
             $label = self::labelJurusan($r['label_ujian'] ?? null, $r['kode'] ?? null);
             $kunci = $r['tingkat'] . '|' . $label;
-            $urut  = $r['urutan_ujian'] !== null ? (int) $r['urutan_ujian'] : 9999;
+            $urutX = $shift === 'siang' && ($r['urutan_ujian_siang'] ?? null) !== null ? $r['urutan_ujian_siang'] : $r['urutan_ujian'];
+            $urut  = $urutX !== null ? (int) $urutX : 9999;
             if (! isset($grup[$kunci]) || $urut < $grup[$kunci]['urut']) {
                 $grup[$kunci] = ['tingkat' => (string) $r['tingkat'], 'label' => $label, 'judul' => trim($r['tingkat'] . ' ' . $label), 'urut' => $urut];
             }
@@ -317,6 +320,10 @@ class JadwalUjianCetak
                 'font' => ['bold' => true, 'size' => 12],
                 'fill' => ['fillType' => Fill::FILL_SOLID, 'startColor' => ['rgb' => self::KUNING_KEPALA]],
             ]);
+            // Persis contoh: tiga baris susulan DISEMBUNYIKAN (ada di berkas, tidak tampil & tidak tercetak) — audit 2026-11-23.
+            for ($b = $awal; $b <= $akhir; $b++) {
+                $ws->getRowDimension($b)->setVisible(false);
+            }
             $r = $akhir + 1;
         }
         $akhirTabel = max(7, $r - 1);
@@ -517,9 +524,10 @@ class JadwalUjianCetak
 
         $dompdf = new Dompdf($options);
         $fm     = $dompdf->getFontMetrics();
-        foreach (['normal' => 'Carlito-Regular.ttf', 'bold' => 'Carlito-Bold.ttf'] as $tebal => $berkas) {
+        // Miring dipakai "Istirahat" di Jadwal Pengawas — tanpa Carlito-Italic dompdf memakai DejaVu (huruf lain, lebih besar).
+        foreach ([['normal', 'normal', 'Carlito-Regular.ttf'], ['bold', 'normal', 'Carlito-Bold.ttf'], ['normal', 'italic', 'Carlito-Italic.ttf']] as [$tebal, $gaya, $berkas]) {
             if (is_file($dirHuruf . $berkas)) {
-                $fm->registerFont(['family' => 'Calibri', 'weight' => $tebal, 'style' => 'normal'], $dirHuruf . $berkas);
+                $fm->registerFont(['family' => 'Calibri', 'weight' => $tebal, 'style' => $gaya], $dirHuruf . $berkas);
             }
         }
         $dompdf->loadHtml($html);
@@ -557,7 +565,7 @@ class JadwalUjianCetak
         return $a === '' && $b === '' ? '-' : trim($a . ' - ' . $b, ' -');
     }
 
-    /** "30-Nov-26" (bulan Indonesia, seperti tampilan d-mmm-yy di Excel berbahasa Indonesia). */
+    /** "30-Nov-26" / "1-Dec-26" (sama dengan tampilan sel tanggal d-mmm-yy di Excel contoh sekolah). */
     public static function tanggalTeks(string $tanggal): string
     {
         $t = strtotime($tanggal);

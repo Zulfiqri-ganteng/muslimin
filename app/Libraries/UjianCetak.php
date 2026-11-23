@@ -50,7 +50,7 @@ class UjianCetak
             ['key' => 'mapel',       'label' => 'Kode Mapel',           'type' => 'datalist', 'required' => true, 'width' => 140],
             ['key' => 'tingkat',     'label' => 'Tingkat',              'type' => 'select', 'options' => UjianJadwalModel::TINGKAT, 'required' => true, 'width' => 90],
             ['key' => 'jurusan',     'label' => 'Kode Jurusan',         'type' => 'datalist', 'width' => 120],
-            ['key' => 'shift',       'label' => 'Shift',                'type' => 'select', 'options' => UjianJadwalModel::SHIFT, 'width' => 100],
+            ['key' => 'shift',       'label' => 'Shift',                'type' => 'select', 'options' => UjianJadwalModel::SHIFT_PILIH, 'required' => true, 'width' => 100],
             ['key' => 'tanggal',     'label' => 'Tanggal (YYYY-MM-DD)', 'type' => 'text', 'required' => true, 'width' => 150],
             ['key' => 'jam_mulai',   'label' => 'Jam Mulai',            'type' => 'text', 'width' => 100],
             ['key' => 'jam_selesai', 'label' => 'Jam Selesai',          'type' => 'text', 'width' => 100],

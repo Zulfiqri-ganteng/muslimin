@@ -29,6 +29,12 @@ class UjianJadwalModel extends Model
     public const TINGKAT = ['X', 'XI', 'XII'];
     public const SHIFT   = ['pagi', 'siang', 'semua'];
 
+    /**
+     * Shift yang boleh DIPILIH di form & import web (permintaan klien 2026-11-23: "pagi ya pagi, siang ya siang" — pilihan
+     * "Pagi & Siang" dihapus). Nilai 'semua' tetap sah di DB (data lama, API Android) dan tetap dibaca semua cetakan.
+     */
+    public const SHIFT_PILIH = ['pagi', 'siang'];
+
     protected $validationRules = [
         'id'          => 'permit_empty|is_natural',
         'periode_id'  => 'required|is_natural',

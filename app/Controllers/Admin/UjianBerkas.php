@@ -265,12 +265,13 @@ class UjianBerkas extends BaseController
             $jurusanId = (int) $jurusan['id'];
         }
 
+        // 2026-11-23 (klien): sama dengan form — shift wajib pagi ATAU siang (tidak ada lagi "semua"/kosong).
         $shift = strtolower(trim((string) ($row['shift'] ?? '')));
         if ($shift === '') {
-            $shift = 'semua';
+            return $tolak('shift kosong (isi pagi atau siang).');
         }
-        if (! in_array($shift, UjianJadwalModel::SHIFT, true)) {
-            return $tolak("shift \"{$shift}\" tidak dikenal (isi pagi, siang, atau semua).");
+        if (! in_array($shift, UjianJadwalModel::SHIFT_PILIH, true)) {
+            return $tolak("shift \"{$shift}\" tidak dikenal (isi pagi atau siang).");
         }
 
         $tanggal = $this->tanggalImpor((string) ($row['tanggal'] ?? ''));
