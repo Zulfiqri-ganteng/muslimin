@@ -22,9 +22,10 @@ class UjianPengawasRuang extends BaseController
         }
         [$periode, $kembali] = $ctx;
 
-        $r = JadwalPengawas::simpanGuru($periode, (array) $this->request->getPost('guru_ids'));
+        // pengganti[guru_id] = angka pengawas dari admin (hanya guru yang kodenya tak berangka/bentrok) — klien 2026-11-23.
+        $r = JadwalPengawas::simpanGuru($periode, (array) $this->request->getPost('guru_ids'), (array) $this->request->getPost('pengganti'));
         if (! $r['ok']) {
-            return redirect()->to($kembali . '#guru-pengawas')->with('error', $r['pesan']);
+            return redirect()->to($kembali . '#guru-pengawas')->withInput()->with('error', $r['pesan']);
         }
         (new AuditModel())->record('update', 'ujian_pengawas_guru', (int) $periode['id'], 'Daftar guru pengawas ' . (new UjianPeriodeModel())->label($periode) . ': ' . $r['jumlah'] . ' guru');
 
@@ -67,6 +68,27 @@ class UjianPengawasRuang extends BaseController
         (new AuditModel())->record('update', 'ujian_pengawas_ruang', (int) $periode['id'], 'Generate jadwal pengawas (' . implode('+', $shifts) . ') ' . (new UjianPeriodeModel())->label($periode) . ': ' . json_encode($r['terisi']));
 
         return redirect()->to($kembali . '#grid-pengawas')->with(($r['kosong'] ?? 0) > 0 ? 'error' : 'success', $r['pesan']);
+    }
+
+    /** Ubah jumlah ruang shift yang sedang dibuka (klien 2026-11-23: mis. 21 → 22, bisa kurang bisa nambah). */
+    public function ruang(string $slug = '')
+    {
+        $ctx = $this->konteks($slug);
+        if (! is_array($ctx)) {
+            return $ctx;
+        }
+        [$periode, $kembali] = $ctx;
+        $shift = (string) $this->request->getPost('shift');
+        $v     = trim((string) $this->request->getPost('jumlah'));
+
+        $r = ctype_digit($v) ? JadwalPengawas::ubahJumlahRuang($periode, $shift, (int) $v) : ['ok' => false, 'pesan' => 'Jumlah ruang harus angka 1 sampai 200.'];
+        if (! $r['ok']) {
+            return redirect()->to($kembali . '#grid-pengawas')->with('error', $r['pesan']);
+        }
+        master_data_changed('ujian_periode');
+        (new AuditModel())->record('update', 'ujian_periode', (int) $periode['id'], 'Jumlah ruang ' . $shift . ' ' . (new UjianPeriodeModel())->label($periode) . ' = ' . (int) $v);
+
+        return redirect()->to($kembali . '#grid-pengawas')->with('success', $r['pesan']);
     }
 
     /**

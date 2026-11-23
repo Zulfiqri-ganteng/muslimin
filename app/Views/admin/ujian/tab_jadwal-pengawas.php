@@ -30,6 +30,9 @@
 $centang   =array_flip($pgTerpilih !== [] ? $pgTerpilih : ($pgSaran['ids'] ?? []));
 $berkode   = array_values(array_filter($pgGuru, static fn (array $g): bool => $g['kode'] !== ''));
 $tanpaKode = count($pgGuru) - count($berkode);
+$pgMasalah = $pgMasalah ?? [];
+$nPerluAngka = count(array_filter($pgGuru, static fn (array $g): bool => ($g['masalah'] ?? '') !== ''));
+$lamaGanti = old('pengganti'); // angka pengganti sebelum ditolak
 $lama      = old('sel'); // isian sebelum ditolak (dikembalikan bersama pesan galat)
 $nilaiSel  = static function (string $kunci, int $ruang) use ($lama, $pgIsi): string {
     if (is_array($lama)) {
@@ -42,14 +45,14 @@ $hariNama  = [1 => 'SENIN', 2 => 'SELASA', 3 => 'RABU', 4 => 'KAMIS', 5 => "JUM'
 ?>
 
 <div class="space-y-4">
-    <?= ui_peringatan('info', '', ['html' => 'Atur <b>pengawas per ruang</b> untuk setiap sesi ujian. Sesi (hari &amp; jam) diambil otomatis dari tab <b>Jadwal Ujian</b>; jumlah ruang dari tab <b>Periode</b>. Langkah: <b>1)</b> centang guru pengawas lalu Simpan, <b>2)</b> tekan <b>Generate otomatis</b> (atau isi kode guru manual), <b>3)</b> periksa &amp; ubah bila perlu lalu Simpan, <b>4)</b> tombol <b>Cetak</b> → Excel (lembar Pagi, Siang, Kode Pengawas) atau PDF, berbentuk seperti berkas sekolah.']) ?>
+    <?= ui_peringatan('info', '', ['html' => 'Atur <b>pengawas per ruang</b> untuk setiap sesi ujian. Sesi (hari &amp; jam) diambil otomatis dari tab <b>Jadwal Ujian</b>; <b>jumlah ruang</b> bisa diubah di kartu nomor 2. Kode pengawas selalu <b>angka</b>: angka di depan Kode Guru (mis. 13a → 13). Langkah: <b>1)</b> centang guru pengawas lalu Simpan, <b>2)</b> tekan <b>Generate otomatis</b> (atau isi kode manual), <b>3)</b> periksa &amp; ubah bila perlu lalu Simpan, <b>4)</b> tombol <b>Cetak</b> → Excel (lembar Pagi, Siang, Kode Pengawas) atau PDF, berbentuk seperti berkas sekolah.']) ?>
 
     <!-- ===== 1. Guru pengawas ===== -->
     <section id="guru-pengawas" class="kartu" aria-labelledby="judul-guru-pengawas">
         <div class="kartu-kepala">
             <div>
                 <h2 id="judul-guru-pengawas" class="kartu-judul">1. Guru pengawas</h2>
-                <p class="kartu-ket"><?= count($pgTerpilih) ?> guru dipilih untuk ujian ini. Kode diambil dari <b>Kode Guru</b> di Master Guru.</p>
+                <p class="kartu-ket"><?= count($pgTerpilih) ?> guru dipilih untuk ujian ini. Kode pengawas = <b>angka</b> di depan Kode Guru, hurufnya dibuang (13a → 13, 36(1) → 36). Kode Guru untuk KBM tidak berubah.</p>
             </div>
         </div>
         <form method="post" action="<?= esc($base, 'attr') ?>/jadwal-pengawas/guru" x-data="daftarCentang" data-satuan="guru dipilih" @change="hitungCentang()">
@@ -63,6 +66,9 @@ $hariNama  = [1 => 'SENIN', 2 => 'SELASA', 3 => 'RABU', 4 => 'KAMIS', 5 => "JUM'
                 <?php if ($tanpaKode > 0): ?>
                     <p class="hint"><?= $tanpaKode ?> guru belum punya Kode Guru sehingga tidak bisa dipilih — isi kodenya di <a class="font-medium text-brand-700 underline dark:text-brand-400" href="<?= site_url('admin/master/guru') ?>">Master Guru</a>.</p>
                 <?php endif; ?>
+                <?php if ($nPerluAngka > 0): ?>
+                    <?= ui_peringatan('awas', '', ['html' => '<b>' . $nPerluAngka . ' guru perlu angka pengganti</b> — Kode Guru-nya tidak berangka, atau angkanya sama dengan guru lain (orang berbeda, mis. 15 &amp; 15A). Isi angka di <b>kotak samping namanya</b> (angka yang belum dipakai guru lain), lalu Simpan. Angka tersimpan dan dipakai lagi di ujian berikutnya. Bila hanya satu dari dua guru berangka sama yang ikut mengawasi, cukup centang dia saja.']) ?>
+                <?php endif; ?>
                 <div class="rounded-lg border border-gray-200 dark:border-gray-700">
                     <label class="flex cursor-pointer items-center gap-2 border-b border-gray-200 bg-gray-50 px-4 py-2.5 text-sm font-medium text-gray-900 dark:border-gray-700 dark:bg-gray-700 dark:text-white">
                         <input type="checkbox" class="cek" @change="pilihSemuaCentang($event)">
@@ -70,17 +76,36 @@ $hariNama  = [1 => 'SENIN', 2 => 'SELASA', 3 => 'RABU', 4 => 'KAMIS', 5 => "JUM'
                         <span class="ms-auto text-xs font-normal text-gray-500 dark:text-gray-300" x-text="teksCentang()"></span>
                     </label>
                     <div class="panel-gulir grid max-h-96 grid-cols-1 gap-x-4 p-2 sm:grid-cols-2 xl:grid-cols-3">
-                        <?php foreach ($pgGuru as $g): $adaKode = $g['kode'] !== ''; ?>
-                            <label class="flex items-center gap-2 rounded-lg px-2 py-1.5 text-sm <?= $adaKode ? 'cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700/60' : 'opacity-60' ?>">
-                                <?php if ($adaKode): ?>
-                                    <input type="checkbox" name="guru_ids[]" value="<?= (int) $g['id'] ?>" data-centang class="cek"<?= isset($centang[$g['id']]) ? ' checked' : '' ?>>
-                                <?php else: ?>
-                                    <input type="checkbox" class="cek" disabled aria-label="Tanpa kode">
+                        <?php foreach ($pgGuru as $g):
+                            $adaKode    = $g['kode'] !== '';
+                            $masalahG   = $g['masalah'] ?? '';
+                            // Kotak angka pengganti: hanya guru yang kodenya tak berangka / angkanya bentrok, atau sudah punya pengganti.
+                            $perluKotak = $adaKode && ($masalahG !== '' || ($g['pengganti'] ?? '') !== '');
+                            $nilaiGanti = is_array($lamaGanti) && array_key_exists($g['id'], $lamaGanti) ? (string) $lamaGanti[$g['id']] : (string) ($g['pengganti'] ?? '');
+                            $judulKbm   = $adaKode && $g['kode'] !== ($g['nomor'] ?? '') ? 'Kode Guru KBM: ' . $g['kode'] : '';
+                        ?>
+                            <div class="flex items-center gap-2 rounded-lg px-2 py-1.5 text-sm <?= $adaKode ? 'hover:bg-gray-50 dark:hover:bg-gray-700/60' : 'opacity-60' ?>">
+                                <label class="flex min-w-0 flex-1 items-center gap-2 <?= $adaKode ? 'cursor-pointer' : '' ?>">
+                                    <?php if ($adaKode): ?>
+                                        <input type="checkbox" name="guru_ids[]" value="<?= (int) $g['id'] ?>" data-centang class="cek"<?= isset($centang[$g['id']]) ? ' checked' : '' ?>>
+                                    <?php else: ?>
+                                        <input type="checkbox" class="cek" disabled aria-label="Tanpa kode">
+                                    <?php endif; ?>
+                                    <span class="w-10 shrink-0 font-mono font-semibold text-brand-700 dark:text-brand-400"<?= $judulKbm !== '' ? ' title="' . esc($judulKbm, 'attr') . '"' : '' ?>><?= ! $adaKode ? '—' : (($g['nomor'] ?? '') !== '' ? esc($g['nomor']) : '?') ?></span>
+                                    <span class="min-w-0 flex-1 truncate text-gray-900 dark:text-white" title="<?= esc($g['nama'] . ($judulKbm !== '' ? ' — ' . $judulKbm : ''), 'attr') ?>"><?= esc($g['nama']) ?><?php if ($judulKbm !== ''): ?> <span class="text-xs text-gray-500 dark:text-gray-400">(<?= esc($g['kode']) ?>)</span><?php endif; ?></span>
+                                </label>
+                                <?php if ($perluKotak): ?>
+                                    <input type="text" name="pengganti[<?= (int) $g['id'] ?>]" value="<?= esc($nilaiGanti, 'attr') ?>" inputmode="numeric" maxlength="4" autocomplete="off" placeholder="angka" class="inp-sel"
+                                           aria-label="Angka pengawas untuk <?= esc($g['nama'], 'attr') ?>" title="Angka pengawas pengganti (kosong = pakai angka dari Kode Guru)">
                                 <?php endif; ?>
-                                <span class="w-10 shrink-0 font-mono font-semibold text-brand-700 dark:text-brand-400"><?= $adaKode ? esc($g['kode']) : '—' ?></span>
-                                <span class="min-w-0 flex-1 truncate text-gray-900 dark:text-white" title="<?= esc($g['nama'], 'attr') ?>"><?= esc($g['nama']) ?></span>
-                                <?php if ($g['ganda']): ?><span class="lencana lencana-kuning" title="Kode ini dipakai lebih dari satu guru di Master Guru">kode ganda</span><?php endif; ?>
-                            </label>
+                                <?php if ($masalahG === 'tanpa-angka'): ?>
+                                    <span class="lencana lencana-kuning" title="Kode Guru tidak diawali angka — isi angka di kotak">isi angka</span>
+                                <?php elseif ($masalahG === 'bentrok'): ?>
+                                    <span class="lencana lencana-kuning" title="Angka <?= esc($g['nomor'], 'attr') ?> juga dipakai guru lain (orang berbeda)">angka sama</span>
+                                <?php elseif ($g['ganda']): ?>
+                                    <span class="lencana lencana-kuning" title="Kode ini dipakai lebih dari satu guru di Master Guru">kode ganda</span>
+                                <?php endif; ?>
+                            </div>
                         <?php endforeach; ?>
                     </div>
                 </div>
@@ -97,8 +122,19 @@ $hariNama  = [1 => 'SENIN', 2 => 'SELASA', 3 => 'RABU', 4 => 'KAMIS', 5 => "JUM'
         <div class="kartu-kepala flex-wrap gap-3">
             <div>
                 <h2 id="judul-grid-pengawas" class="kartu-judul">2. Pengawas per ruang</h2>
-                <p class="kartu-ket">Terisi <b><?= (int) $pgTerisi ?></b> dari <?= (int) $pgTotalSel ?> sel (<?= (int) $pgRuang ?> ruang). Ketik <b>kode guru</b> di tiap ruang; kosong = belum ada pengawas.</p>
+                <p class="kartu-ket">Terisi <b><?= (int) $pgTerisi ?></b> dari <?= (int) $pgTotalSel ?> sel (<?= (int) $pgRuang ?> ruang). Ketik <b>angka pengawas</b> di tiap ruang; kosong = belum ada pengawas.</p>
             </div>
+            <?php // 2026-11-23 (klien): jumlah ruang bisa ditambah/dikurangi langsung di sini (sama dengan isian di tab Periode). ?>
+            <form method="post" action="<?= esc($base, 'attr') ?>/jadwal-pengawas/ruang" class="flex items-center gap-2"
+                  data-confirm="Ubah jumlah ruang <?= esc($pgShift, 'attr') ?>? Bila dikurangi, pengawas di ruang yang dihapus ikut dikosongkan; bila ditambah, ruang baru masih kosong (Generate ulang atau isi manual)." data-confirm-judul="Ubah jumlah ruang?" data-confirm-ya="Ya, ubah">
+                <?= csrf_field() ?>
+                <input type="hidden" name="tp" value="<?= esc($tp, 'attr') ?>">
+                <input type="hidden" name="shift" value="<?= esc($pgShift, 'attr') ?>">
+                <label class="whitespace-nowrap text-sm text-gray-700 dark:text-gray-300" for="pg-jumlah-ruang">Jumlah ruang <?= esc($pgShift) ?></label>
+                <input type="number" id="pg-jumlah-ruang" name="jumlah" min="1" max="200" required value="<?= (int) $pgRuang ?>" class="inp w-20"
+                       title="Bawaan = jumlah kelas <?= esc($pgShift, 'attr') ?> (<?= (int) ($pgKelasShift ?? 0) ?>)">
+                <button type="submit" class="btn btn-netral">Ubah</button>
+            </form>
             <?php if ($pgTerisi > 0 || array_sum($pgBeban ?? []) > 0): ?>
                 <?php // F5: cetak persis berkas contoh sekolah (Excel 3 lembar, PDF jadwal Pagi+Siang, PDF daftar kode). ?>
                 <div class="ms-auto">
@@ -124,6 +160,11 @@ $hariNama  = [1 => 'SENIN', 2 => 'SELASA', 3 => 'RABU', 4 => 'KAMIS', 5 => "JUM'
         <?php elseif ($pgKode === []): ?>
             <?= ui_kosong(['ikon' => 'users', 'judul' => 'Belum ada guru pengawas', 'teks' => 'Centang dan simpan daftar guru pengawas di kartu nomor 1 dulu.']) ?>
         <?php else: ?>
+            <?php if ($pgMasalah !== []): ?>
+                <div class="px-4 pt-4 md:px-6">
+                    <?= ui_peringatan('galat', '', ['html' => '<b>Angka pengawas belum beres</b> — Generate, simpan, dan cetak ditahan sampai dibetulkan di kartu nomor 1:<br>• ' . implode('<br>• ', array_map('esc', $pgMasalah))]) ?>
+                </div>
+            <?php endif; ?>
             <!-- F4: Generate otomatis (pola contoh sekolah; aturan di JadwalPengawas::generate) -->
             <form method="post" action="<?= esc($base, 'attr') ?>/jadwal-pengawas/generate" class="flex flex-wrap items-center gap-2 border-b border-gray-200 bg-gray-50 px-4 py-3 md:px-6 dark:border-gray-700 dark:bg-gray-800"
                   data-confirm="Generate akan MENGGANTI seluruh isi jadwal pengawas shift yang dipilih dengan susunan baru (shift lain tidak berubah). Lanjutkan?" data-confirm-judul="Generate jadwal pengawas?" data-confirm-ya="Ya, generate">
@@ -177,7 +218,7 @@ $hariNama  = [1 => 'SENIN', 2 => 'SELASA', 3 => 'RABU', 4 => 'KAMIS', 5 => "JUM'
                                             <?php for ($r = 1; $r <= $pgRuang; $r++): ?>
                                                 <td class="!p-0.5">
                                                     <input type="text" name="sel[<?= esc($b['kunci'], 'attr') ?>][<?= $r ?>]" value="<?= esc($nilaiSel($b['kunci'], $r), 'attr') ?>"
-                                                           list="dl-pengawas" maxlength="20" autocomplete="off" inputmode="text" class="inp-sel"
+                                                           list="dl-pengawas" maxlength="4" autocomplete="off" inputmode="numeric" class="inp-sel"
                                                            aria-label="Kode pengawas ruang <?= $r ?>, <?= esc(($hariNama[(int) date('N', strtotime($h['tanggal']))] ?? '') . ' jam ke-' . (int) $b['jamKe'], 'attr') ?>">
                                                 </td>
                                             <?php endfor; ?>

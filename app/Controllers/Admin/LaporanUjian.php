@@ -210,6 +210,12 @@ class LaporanUjian extends BaseController
             return redirect()->to(site_url('admin/ujian/' . $slug . '/jadwal-pengawas') . '?tp=' . rawurlencode($periode['tahun_ajaran']))
                 ->with('error', 'Jadwal pengawas periode ini masih kosong. Tekan Generate otomatis (atau isi manual) dulu, lalu cetak lagi.');
         }
+        // 2026-11-23: cetakan hanya angka — angka kosong/kembar membuat jadwal ambigu, jadi cetak ditahan sampai dibereskan.
+        $masalah = \App\Libraries\JadwalPengawas::masalahNomor((int) $periode['id']);
+        if ($masalah !== []) {
+            return redirect()->to(site_url('admin/ujian/' . $slug . '/jadwal-pengawas') . '?tp=' . rawurlencode($periode['tahun_ajaran']) . '#guru-pengawas')
+                ->with('error', 'Angka pengawas belum beres, cetak ditahan: ' . implode(' ', $masalah) . ' Isi angka pengganti di kartu nomor 1.');
+        }
 
         return $ctx;
     }

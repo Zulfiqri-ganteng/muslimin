@@ -57,7 +57,7 @@ class JadwalPengawasCetak
         $nRuang  = \App\Models\UjianPeriodeModel::jumlahRuang($periode, $shift);
         $kodeDari = [];
         foreach (JadwalPengawas::semuaGuru() as $g) {
-            $kodeDari[$g['id']] = $g['kode'];
+            $kodeDari[$g['id']] = $g['nomor']; // ANGKA pengawas, tanpa huruf (klien 2026-11-23)
         }
         $tugas = JadwalPengawas::penugasan($pid, $shift);
 
@@ -120,16 +120,17 @@ class JadwalPengawasCetak
         return ['Kepala Sekolah ' . $sekolah, trim((string) ($set['headmaster_name'] ?? '')), 'Ketua Panitia ' . $singkat, trim((string) ($periode['ketua_panitia'] ?? ''))];
     }
 
-    /** Pengawas terdaftar untuk lembar KODE PENGAWAS (urut kode). @return list<array{kode: string, nama: string}> */
+    /** Pengawas terdaftar untuk lembar KODE PENGAWAS (angka pengawas, urut angka seperti contoh). @return list<array{kode: string, nama: string}> */
     public static function daftarKode(array $periode): array
     {
         $pilih = array_flip(JadwalPengawas::guruTerpilih((int) $periode['id']));
         $out   = [];
         foreach (JadwalPengawas::semuaGuru() as $g) {
-            if (isset($pilih[$g['id']]) && $g['kode'] !== '') {
-                $out[] = ['kode' => $g['kode'], 'nama' => $g['nama']];
+            if (isset($pilih[$g['id']]) && $g['nomor'] !== '') {
+                $out[] = ['kode' => $g['nomor'], 'nama' => $g['nama']];
             }
         }
+        usort($out, static fn (array $a, array $b): int => [(int) $a['kode'], $a['nama']] <=> [(int) $b['kode'], $b['nama']]);
 
         return $out;
     }

@@ -627,6 +627,7 @@ $routes->group('admin', static function ($routes) {
         $routes->post('ujian/(:segment)/jadwal-pengawas/guru', 'Admin\UjianPengawasRuang::simpanGuru/$1');
         $routes->post('ujian/(:segment)/jadwal-pengawas/simpan', 'Admin\UjianPengawasRuang::simpanGrid/$1');
         $routes->post('ujian/(:segment)/jadwal-pengawas/generate', 'Admin\UjianPengawasRuang::generate/$1');
+        $routes->post('ujian/(:segment)/jadwal-pengawas/ruang', 'Admin\UjianPengawasRuang::ruang/$1'); // jumlah ruang per shift (2026-11-23)
         // Cetak Jadwal Pengawas persis contoh sekolah (F5)
         $routes->get('ujian/(:segment)/cetak-pengawas/excel', 'Admin\LaporanUjian::jadwalPengawasExcel/$1');
         $routes->get('ujian/(:segment)/cetak-pengawas/pdf', 'Admin\LaporanUjian::jadwalPengawasPdf/$1');

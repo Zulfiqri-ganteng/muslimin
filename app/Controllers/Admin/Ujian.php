@@ -1044,6 +1044,9 @@ class Ujian extends BaseController
                 ->with('errors', $this->model->errors() ?: ['Periode gagal disimpan.']);
         }
 
+        // Jumlah ruang dikurangi → isi pengawas di ruang yang hilang dihapus (tak tersisa tersembunyi) — 2026-11-23.
+        \App\Libraries\JadwalPengawas::rapikanRuang(array_merge($periode, $data));
+
         master_data_changed('ujian_periode');
         $this->audit->record(
             'update',
