@@ -3,6 +3,8 @@
 namespace App\Controllers\Api\Admin;
 
 use App\Controllers\Api\BaseApiController;
+use App\Libraries\IstirahatUjian;
+use App\Libraries\JadwalPengawas;
 use App\Models\AuditModel;
 use App\Models\GuruModel;
 use App\Models\UjianJadwalModel;
@@ -156,13 +158,19 @@ class UjianJadwal extends BaseApiController
                 'bentrok' => array_map([$this, 'transform'], $bentrok),
             ]);
         }
+        // Sama dengan web (2026-11-24): jam ujian tidak boleh menabrak istirahat yang diatur admin.
+        if (($tolak = IstirahatUjian::tolakJadwal($data)) !== null) {
+            return $this->failure($tolak, 409);
+        }
 
-        $simpan = $id > 0 ? $this->model->update($id, $data) : $this->model->insert($data);
+        $sebelum = JadwalPengawas::potretSesi((int) $periode['id']);
+        $simpan  = $id > 0 ? $this->model->update($id, $data) : $this->model->insert($data);
         if ($simpan === false) {
             return $this->invalid($this->model->errors() ?: ['jadwal' => 'Jadwal gagal disimpan.']);
         }
 
-        $newId = $id > 0 ? $id : (int) $this->model->getInsertID();
+        $newId   = $id > 0 ? $id : (int) $this->model->getInsertID();
+        $selaras = JadwalPengawas::kalimatSelaras(JadwalPengawas::selaraskan((int) $periode['id'], $sebelum)); // pengawas ruang ikut pindah (sama dengan web)
         master_data_changed('ujian_jadwal');
         $this->audit->record(
             $id > 0 ? 'update' : 'create',
@@ -174,8 +182,8 @@ class UjianJadwal extends BaseApiController
         $baris = $this->transform($this->fresh($newId));
 
         return $id > 0
-            ? $this->ok($baris, 'Jadwal ujian diperbarui.')
-            : $this->created($baris, 'Jadwal ujian ditambahkan.');
+            ? $this->ok($baris, 'Jadwal ujian diperbarui.' . $selaras)
+            : $this->created($baris, 'Jadwal ujian ditambahkan.' . $selaras);
     }
 
     /**
@@ -207,6 +215,7 @@ class UjianJadwal extends BaseApiController
         $db = db_connect();
         $db->transException(true);
         $db->transStart();
+        $sebelum = JadwalPengawas::potretSesi((int) $periode['id']);
 
         $pengawas->where('jadwal_id', $id)->delete();
         if ($db->tableExists('ujian_pembuat_soal')) {
@@ -214,6 +223,7 @@ class UjianJadwal extends BaseApiController
         }
         $susulan->where('jadwal_id', $id)->set('jadwal_id', null)->update();
         $this->model->delete($id);
+        $selaras = JadwalPengawas::kalimatSelaras(JadwalPengawas::selaraskan((int) $periode['id'], $sebelum));
 
         $db->transComplete();
 
@@ -223,7 +233,7 @@ class UjianJadwal extends BaseApiController
         return $this->ok([
             'susulan_dilepas'  => $jmlSusulan,
             'pengawas_dihapus' => $jmlPengawas,
-        ], 'Jadwal ujian dihapus.');
+        ], 'Jadwal ujian dihapus.' . $selaras);
     }
 
     /** Kelas sasaran satu sesi (tingkat + jurusan + shift yang cocok). */

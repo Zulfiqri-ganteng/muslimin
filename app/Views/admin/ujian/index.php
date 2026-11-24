@@ -76,7 +76,7 @@ if ($tab === 'rekap') {
 }
 if ($tab === 'jadwal-pengawas') {
     // F3 cetak jadwal (2026-11-22): data dari App\Libraries\JadwalPengawas::dataTab() (kunci ber-awalan pg).
-    foreach (['pgShifts', 'pgShift', 'pgSesi', 'pgRuang', 'pgIsi', 'pgTerisi', 'pgTotalSel', 'pgGuru', 'pgTerpilih', 'pgSaran', 'pgKode', 'pgBeban', 'pgMasalah', 'pgKelasShift'] as $kunciPg) {
+    foreach (['pgShifts', 'pgShift', 'pgSesi', 'pgRuang', 'pgIsi', 'pgTerisi', 'pgTotalSel', 'pgGuru', 'pgTerpilih', 'pgSaran', 'pgKode', 'pgBeban', 'pgMasalah', 'pgKelasShift', 'pgUbah'] as $kunciPg) {
         $panelData[$kunciPg] = $$kunciPg ?? null;
     }
 }
@@ -137,25 +137,96 @@ if ($tab === 'jadwal') {
         'jurusanOpts' => $jurusanOpts,
         'tingkatList' => $tingkatList,
         'shiftList'   => $shiftList,
+        'istirahat'   => $istirahat ?? [],  // bagian Istirahat + baris sisipan di daftar (2026-11-24)
+        'istSisipan'  => $istSisipan ?? [],
     ];
 }
 ?>
 <?= $this->extend('layouts/admin') ?>
 <?= $this->section('content') ?>
 
-<?= view('admin/partials/help', [
-    'helpKey'   => 'ujian_v1',
-    'helpTitle' => 'Menu Ujian',
-    'helpBody'  => '<p>Halaman pendataan pelaksanaan asesmen sumatif. Tiap jenis ujian punya satu periode
-        per tahun pelajaran, dan periode tahun berjalan <b>dibuat otomatis</b> — tidak perlu ditambah manual.</p>
-        <p class="mt-1">• <b>Periode</b> — atur tanggal pelaksanaan, tanggal ujian susulan, dan status. Bagian <b>Untuk cetakan Jadwal Ujian &amp; Jadwal Pengawas</b> berisi nama Ketua Panitia (tanda tangan), jam ujian susulan, dan jumlah ruang pagi/siang (kosong = jumlah kelas tiap shift).<br>
-        • <b>Jadwal Ujian</b> — daftar mapel yang diujikan per tingkat. Saat menambah jadwal, <b>Shift wajib dipilih Pagi atau Siang</b> (satu jadwal = satu shift, sama seperti lembar cetaknya; ujian yang sama untuk pagi dan siang dibuat dua baris). Isian <b>Ruang</b> hanya catatan dan boleh dikosongkan — tidak ikut tercetak; ruang di Jadwal Pengawas diatur lewat jumlah ruang di Periode. Menu <b>Cetak &amp; lainnya</b> → <b>Cetak Jadwal Ujian (Excel)</b> atau <b>(PDF)</b> menghasilkan jadwal berbentuk tabel per hari seperti berkas sekolah: satu lembar <b>PAGI</b> dan satu lembar <b>SIANG</b>, kolom = kelas (mis. X MPLB), baris ISTIRAHAT dibuat otomatis dari jeda jam, baris UJIAN SUSULAN ikut tersimpan tetapi disembunyikan, persis berkas contoh (tanggal &amp; jam dari tab Periode). Nama mapel yang tercetak diatur di Master Mapel ("Nama di jadwal ujian"); tulisan &amp; urutan kolom jurusan (urutan pagi dan siang boleh beda) di Master Jurusan.<br>
-        • <b>Jadwal Pengawas</b> — pengawas per <b>ruang</b> untuk setiap sesi (hari &amp; jam diambil dari Jadwal Ujian). <b>Jumlah ruang</b> bisa ditambah/dikurangi langsung di kartu nomor 2 (mis. 22 ruang; sama dengan isian di Periode). Kode pengawas selalu <b>angka</b> = angka di depan Kode Guru, hurufnya dibuang (13a → 13, 36(1) → 36); Kode Guru KBM tidak berubah. Guru yang kodenya tanpa angka, atau angkanya sama dengan guru lain (mis. 15 &amp; 15A beda orang), diberi <b>kotak angka pengganti</b> — isi sekali, tersimpan untuk ujian berikutnya. Langkah: 1) centang guru pengawas lalu Simpan — guru yang tercatat dua kali di Master Guru (nama sama, kode beda) hanya boleh dicentang salah satu kodenya, 2) tekan <b>Generate otomatis</b> — sistem mengisi semua ruang secara merata (tak ada guru di dua tempat sekaligus, sesi beruntun dijaga orang yang sama, sesudah istirahat pengawas pindah ruang), 3) periksa, ubah kode bila perlu, lalu Simpan. Generate ulang = susunan baru. Ringkasan <b>beban per guru</b> ada di bawah grid. 4) tombol <b>Cetak</b> → <b>Excel</b> (lembar Pagi, Siang, dan Kode Pengawas, seperti berkas sekolah; tanda tangan Kepala Sekolah &amp; Ketua Panitia ada di bawah tabel, di luar area cetak seperti contoh) atau <b>PDF</b> (jadwal Pagi &amp; Siang, dan daftar kode terpisah). Nama Ketua Panitia diisi di tab Periode.<br>
-        • <b>Ketidakhadiran</b> — centang siswa yang tidak hadir; otomatis masuk daftar susulan.<br>
-        • <b>Ujian Susulan</b> — jadwalkan dan tandai selesai.</p>
-        <p class="mt-1">Tahun pelajaran mengikuti <b>Pengaturan Sekolah</b>. Ganti tahun di sana, periode baru
-        akan dibuat otomatis dan data tahun lama tetap tersimpan.</p>',
-]) ?>
+<?php
+// Panduan halaman (permintaan user 2026-11-24: dijelaskan sederhana supaya sekolah paham cara pakainya). Jadwal Ujian & Jadwal Pengawas
+// punya panduan sendiri berisi langkah 1-2-3; tab lain memakai ringkasan menu.
+$daftarUrut  = static fn (array $butir): string => '<ol class="mt-1 list-decimal space-y-1 pl-5"><li>' . implode('</li><li>', $butir) . '</li></ol>';
+$daftarTitik = static fn (array $butir): string => '<ul class="mt-1 list-disc space-y-1 pl-5"><li>' . implode('</li><li>', $butir) . '</li></ul>';
+$subJudul    = static fn (string $t): string => '<p class="mt-3 font-semibold text-gray-900 dark:text-white">' . $t . '</p>';
+$panduan = [
+    'jadwal' => ['ujian_jadwal_v1', 'Cara pakai Jadwal Ujian',
+        $daftarUrut([
+            '<b>Isi jadwal.</b> Tekan <b>Tambah jadwal</b> → pilih mapel, tingkat, shift (Pagi/Siang), tanggal, jam mulai dan jam selesai → <b>Simpan</b>. Kalau banyak, isi lewat Excel dengan <b>Import</b>.',
+            '<b>Cek istirahat.</b> Istirahat muncul sendiri bila ada jeda. Contoh: ujian 07.00–08.30 lalu 09.10–10.40, istirahatnya 08.30–09.10. Mau jam lain? Buka bagian <b>Istirahat</b> di atas daftar → <b>Atur istirahat</b>. Bisa untuk satu hari atau semua hari.',
+            '<b>Cetak.</b> Tekan <b>Cetak &amp; lainnya</b> → <b>Cetak Jadwal Ujian</b> (Excel atau PDF).',
+        ])
+        . $subJudul('Arti tombol')
+        . $daftarTitik([
+            '<b>Pensil</b> = ubah, <b>tong sampah</b> = hapus.',
+            '<b>Jam berpanah</b> (di bagian Istirahat) = kembali ke istirahat otomatis.',
+            '<b>Baris kuning</b> di daftar = jam istirahat.',
+        ])
+        . $subJudul('Kalau ada masalah')
+        . $daftarTitik([
+            '<b>Istirahat tidak muncul</b> → baca tulisan kuning di bagian Istirahat, sebabnya ditulis di situ.',
+            '<b>Muncul pesan "menabrak"</b> → geser dulu jam ujiannya, baru pasang istirahat (atau sebaliknya).',
+            '<b>Jadwal tidak ikut tercetak</b> → cek di Master Kelas: tingkat, jurusan, dan shift kelasnya harus sama dengan jadwal.',
+            '<b>Jam ujian diubah</b> → pengawas yang sudah terisi ikut pindah setelah <b>semua</b> jadwal di jam itu diubah.',
+            '<b>Jadwal terakhir di suatu jam dihapus</b> → pengawas di jam itu ikut terhapus.',
+        ])
+        . $subJudul('Yang perlu diketahui')
+        . $daftarTitik([
+            'Satu jadwal = satu shift. Ujian yang sama untuk pagi dan siang dibuat dua kali.',
+            'Isian <b>Ruang</b> hanya catatan, tidak ikut tercetak.',
+            'Nama mapel di cetakan diatur di <b>Master Mapel</b> ("Nama di jadwal ujian"). Nama dan urutan kolom kelas diatur di <b>Master Jurusan</b>. Ujian susulan diatur di tab <b>Periode</b>.',
+        ])],
+    'jadwal-pengawas' => ['ujian_jadwal_pengawas_v1', 'Cara pakai Jadwal Pengawas',
+        $daftarUrut([
+            '<b>Isi Jadwal Ujian dulu.</b> Hari, jam, dan istirahat di sini mengikuti Jadwal Ujian.',
+            '<b>Pilih guru.</b> Di kartu nomor 1, centang guru yang mengawasi → <b>Simpan daftar guru</b>.',
+            '<b>Cek jumlah ruang</b> di kartu nomor 2. Kalau beda, ganti angkanya → <b>Ubah</b>. Pagi dan Siang diatur sendiri-sendiri.',
+            '<b>Tekan Generate otomatis.</b> Semua ruang terisi merata, tidak ada guru yang dobel.',
+            '<b>Periksa.</b> Mau ganti? Klik angkanya → pilih guru → <b>Simpan</b>.',
+            '<b>Cetak.</b> Tekan <b>Cetak</b> → Excel atau PDF.',
+        ])
+        . $subJudul('Arti tampilan')
+        . $daftarTitik([
+            '<b>Angka</b> = kode guru pengawas. Arahkan kursor ke angka untuk melihat namanya.',
+            '<b>Kotak kuning</b> = belum ada pengawas.',
+            '<b>R1, R2, …</b> = ruang 1, ruang 2, dan seterusnya.',
+        ])
+        . $subJudul('Mengubah dan menghapus')
+        . $daftarTitik([
+            '<b>Klik angka</b> atau <b>pensil</b> = ubah pengawas satu jam ujian.',
+            '<b>Ubah semua</b> = ketik semua angka sekaligus seperti di Excel.',
+            '<b>Tong sampah</b> = hapus satu jam ujian. <b>Hapus hari ini</b> = satu hari. <b>Hapus semua pagi/siang</b> = satu shift.',
+            'Menghapus pengawas <b>tidak</b> menghapus jadwal ujian dan daftar guru.',
+        ])
+        . $subJudul('Kalau ada masalah')
+        . $daftarTitik([
+            '<b>Masih ada kotak kuning setelah Generate</b> → guru yang dicentang kurang dari jumlah ruang. Tambah guru, lalu Generate lagi.',
+            '<b>Tulisan "isi angka" atau "angka sama"</b> di samping nama guru → isi angka lain di kotaknya, lalu Simpan daftar guru.',
+            '<b>Guru tercatat dua kali</b> (nama sama, kode beda) → centang salah satu saja.',
+            '<b>Generate lagi</b> akan mengganti semua isian shift itu dengan susunan baru.',
+            '<b>Jam atau istirahat salah</b> → betulkan di tab Jadwal Ujian. Setelah istirahat diubah, Generate lagi bila ingin pengawas pindah ruang sesudah istirahat yang baru.',
+        ])
+        . $subJudul('Yang perlu diketahui')
+        . $daftarTitik([
+            'Kode pengawas selalu angka: huruf di Kode Guru dibuang (13a jadi 13). Kode Guru untuk KBM tidak berubah.',
+            'Nama Ketua Panitia diisi di tab <b>Periode</b>. Di Excel, tanda tangan ada di bawah tabel, di luar area cetak seperti berkas contoh sekolah.',
+            'Di bawah tabel ada <b>beban mengawasi per guru</b> untuk mengecek pembagiannya.',
+        ])],
+];
+[$kunciPanduan, $judulPanduan, $isiPanduan] = $panduan[$tab] ?? ['ujian_v1', 'Menu Ujian',
+    '<p>Satu halaman untuk satu ujian. Periode tahun berjalan <b>dibuat otomatis</b>, tidak perlu ditambah. Isi dari kiri ke kanan:</p>'
+    . $daftarTitik([
+        '<b>Periode</b> — tanggal ujian, tanggal susulan, status, nama Ketua Panitia, jam susulan, dan jumlah ruang pagi/siang (kosong = jumlah kelas).',
+        '<b>Jadwal Ujian</b> — mapel, hari, jam, dan istirahat. Panduan lengkapnya ada di tab itu.',
+        '<b>Jadwal Pengawas</b> — guru pengawas tiap ruang. Panduan lengkapnya ada di tab itu.',
+        '<b>Ketidakhadiran</b> — centang siswa yang tidak hadir; otomatis masuk daftar susulan.',
+        '<b>Ujian Susulan</b> — jadwalkan, lalu tandai selesai.',
+    ])
+    . '<p class="mt-2">Tahun pelajaran mengikuti <b>Pengaturan Sekolah</b>. Data tahun lama tetap tersimpan.</p>'];
+?>
+<?= view('admin/partials/help', ['helpKey' => $kunciPanduan, 'helpTitle' => $judulPanduan, 'helpBody' => $isiPanduan]) ?>
 
 <div class="mb-4 space-y-4">
     <!-- ===== Kepala: identitas periode ===== -->

@@ -3,6 +3,8 @@
 namespace App\Controllers\Admin;
 
 use App\Controllers\BaseController;
+use App\Libraries\IstirahatUjian;
+use App\Libraries\JadwalPengawas;
 use App\Libraries\UjianCetak;
 use App\Models\AuditModel;
 use App\Models\JurusanModel;
@@ -136,6 +138,7 @@ class UjianBerkas extends BaseController
         $db = db_connect();
         $db->transException(true);
         $db->transStart();
+        $sebelum = JadwalPengawas::potretSesi((int) $periode['id']);
 
         foreach ($rows as $i => $row) {
             $nomor = $i + 1;
@@ -159,6 +162,11 @@ class UjianBerkas extends BaseController
                     . ' pada ' . date('d/m/Y', strtotime((string) $b['tanggal']));
                 continue;
             }
+            if (($tolak = IstirahatUjian::tolakJadwal($data)) !== null) {
+                $lewat++;
+                $galat[] = "Baris {$nomor}: {$tolak}";
+                continue;
+            }
 
             if ($ada) {
                 $model->update($ada['id'], $data);
@@ -169,6 +177,7 @@ class UjianBerkas extends BaseController
             }
         }
 
+        $selaras = JadwalPengawas::selaraskan((int) $periode['id'], $sebelum); // jam berubah lewat impor → pengawas ruang ikut (tahap 3)
         $db->transComplete();
 
         master_data_changed('ujian_jadwal');
@@ -176,10 +185,10 @@ class UjianBerkas extends BaseController
             'import',
             'ujian_jadwal',
             null,
-            'Impor jadwal ' . $this->model->label($periode) . ": +{$baru} baru, {$ubah} diperbarui, {$lewat} dilewati"
+            'Impor jadwal ' . $this->model->label($periode) . ": +{$baru} baru, {$ubah} diperbarui, {$lewat} dilewati" . JadwalPengawas::kalimatSelaras($selaras)
         );
 
-        $pesan = "Impor selesai: {$baru} baru, {$ubah} diperbarui, {$lewat} dilewati.";
+        $pesan = "Impor selesai: {$baru} baru, {$ubah} diperbarui, {$lewat} dilewati." . JadwalPengawas::kalimatSelaras($selaras);
         if ($galat !== []) {
             return redirect()->to($kembali)
                 ->with('error', $pesan)
@@ -292,6 +301,9 @@ class UjianBerkas extends BaseController
         }
         if ($selesai !== null && $mulai === null) {
             return $tolak('jam selesai diisi tapi jam mulai kosong.');
+        }
+        if ($mulai !== null && $selesai === null) {
+            return $tolak('jam mulai diisi tapi jam selesai kosong.');
         }
         if ($mulai !== null && $selesai !== null && $selesai <= $mulai) {
             return $tolak('jam selesai harus lebih besar dari jam mulai.');

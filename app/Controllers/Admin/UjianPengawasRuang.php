@@ -8,7 +8,8 @@ use App\Models\AuditModel;
 use App\Models\UjianPeriodeModel;
 
 /**
- * Aksi tab "Jadwal Pengawas" (F3 cetak jadwal, 2026-11-22): simpan daftar guru pengawas & grid pengawas per ruang. Tampilan tab
+ * Aksi tab "Jadwal Pengawas" (F3 cetak jadwal, 2026-11-22): simpan daftar guru pengawas & grid pengawas per ruang; ubah satu sesi &
+ * hapus per sesi/hari/shift (tombol Ubah & Hapus, klien 2026-11-24). Tampilan tab
  * disajikan Admin\Ujian::jenis() (tab 'jadwal-pengawas'); aturan bisnis di App\Libraries\JadwalPengawas. Controller terpisah supaya
  * Admin\Ujian (±1.150 baris) tidak makin gemuk — pola LaporanUjian/UjianBerkas.
  */
@@ -43,9 +44,51 @@ class UjianPengawasRuang extends BaseController
 
         $r = JadwalPengawas::simpanGrid($periode, $shift, (array) $this->request->getPost('sel'));
         if (! $r['ok']) {
-            return redirect()->to($kembali . '#grid-pengawas')->withInput()->with('errors', array_merge([$r['pesan']], $r['galat'] ?? []));
+            return redirect()->to($kembali . '&ubah=1#grid-pengawas')->withInput()->with('errors', array_merge([$r['pesan']], $r['galat'] ?? []));
         }
         (new AuditModel())->record('update', 'ujian_pengawas_ruang', (int) $periode['id'], 'Jadwal pengawas ' . $shift . ' ' . (new UjianPeriodeModel())->label($periode) . ': ' . $r['terisi'] . ' sel');
+
+        return redirect()->to($kembali . '#grid-pengawas')->with('success', $r['pesan']);
+    }
+
+    /** Tombol Ubah per sesi: hanya pengawas sesi itu yang diganti (sesi[ruang] = angka pengawas). */
+    public function simpanSesi(string $slug = '')
+    {
+        $ctx = $this->konteks($slug);
+        if (! is_array($ctx)) {
+            return $ctx;
+        }
+        [$periode, $kembali] = $ctx;
+        $shift = (string) $this->request->getPost('shift');
+        $kunci = (string) $this->request->getPost('kunci');
+
+        $r = JadwalPengawas::simpanGrid($periode, $shift, [$kunci => (array) $this->request->getPost('sesi')], $kunci);
+        if (! $r['ok']) {
+            return redirect()->to($kembali . '#grid-pengawas')->withInput()->with('errors', array_merge([$r['pesan']], $r['galat'] ?? []));
+        }
+        (new AuditModel())->record('update', 'ujian_pengawas_ruang', (int) $periode['id'], 'Ubah pengawas ' . $shift . ' sesi ' . $kunci . ' ' . (new UjianPeriodeModel())->label($periode) . ': ' . $r['terisi'] . ' ruang');
+
+        return redirect()->to($kembali . '#grid-pengawas')->with('success', $r['pesan']);
+    }
+
+    /** Tombol Hapus: kosongkan pengawas satu sesi, satu hari, atau satu shift. */
+    public function kosongkan(string $slug = '')
+    {
+        $ctx = $this->konteks($slug);
+        if (! is_array($ctx)) {
+            return $ctx;
+        }
+        [$periode, $kembali] = $ctx;
+        $shift   = (string) $this->request->getPost('shift');
+        $cakupan = (string) $this->request->getPost('cakupan');
+
+        $r = JadwalPengawas::kosongkan($periode, $shift, $cakupan);
+        if (! $r['ok']) {
+            return redirect()->to($kembali . '#grid-pengawas')->with('error', $r['pesan']);
+        }
+        if ($r['hapus'] > 0) {
+            (new AuditModel())->record('delete', 'ujian_pengawas_ruang', (int) $periode['id'], 'Hapus pengawas ' . $shift . ' (' . $cakupan . ') ' . (new UjianPeriodeModel())->label($periode) . ': ' . $r['hapus'] . ' sel');
+        }
 
         return redirect()->to($kembali . '#grid-pengawas')->with('success', $r['pesan']);
     }

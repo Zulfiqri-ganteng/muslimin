@@ -623,9 +623,13 @@ $routes->group('admin', static function ($routes) {
         // Jadwal Ujian berbentuk matriks persis contoh sekolah (F2 cetak jadwal 2026-11-22)
         $routes->get('ujian/(:segment)/cetak-jadwal/excel', 'Admin\LaporanUjian::jadwalUjianExcel/$1');
         $routes->get('ujian/(:segment)/cetak-jadwal/pdf', 'Admin\LaporanUjian::jadwalUjianPdf/$1');
+        // Istirahat ujian (2026-11-24): atur / hapus / kembalikan otomatis — bagian Istirahat di tab Jadwal Ujian
+        $routes->post('ujian/(:segment)/istirahat', 'Admin\UjianIstirahat::simpan/$1');
         // Jadwal Pengawas per ruang (F3): daftar guru pengawas + grid (tampilan = tab jadwal-pengawas lewat pola generik GET)
         $routes->post('ujian/(:segment)/jadwal-pengawas/guru', 'Admin\UjianPengawasRuang::simpanGuru/$1');
         $routes->post('ujian/(:segment)/jadwal-pengawas/simpan', 'Admin\UjianPengawasRuang::simpanGrid/$1');
+        $routes->post('ujian/(:segment)/jadwal-pengawas/sesi', 'Admin\UjianPengawasRuang::simpanSesi/$1'); // Ubah satu sesi (2026-11-24)
+        $routes->post('ujian/(:segment)/jadwal-pengawas/kosongkan', 'Admin\UjianPengawasRuang::kosongkan/$1'); // Hapus per sesi/hari/shift (2026-11-24)
         $routes->post('ujian/(:segment)/jadwal-pengawas/generate', 'Admin\UjianPengawasRuang::generate/$1');
         $routes->post('ujian/(:segment)/jadwal-pengawas/ruang', 'Admin\UjianPengawasRuang::ruang/$1'); // jumlah ruang per shift (2026-11-23)
         // Cetak Jadwal Pengawas persis contoh sekolah (F5)

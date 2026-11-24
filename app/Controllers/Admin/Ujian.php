@@ -9,6 +9,8 @@ use App\Libraries\HonorHitung;
 use App\Libraries\HonorKoreksi;
 use App\Libraries\HonorPengaturan;
 use App\Libraries\HonorPeriksa;
+use App\Libraries\IstirahatUjian;
+use App\Libraries\JadwalPengawas;
 use App\Libraries\UjianReport;
 use App\Models\AuditModel;
 use App\Models\GuruModel;
@@ -106,10 +108,11 @@ class Ujian extends BaseController
         ];
 
         if ($tab === 'jadwal') {
-            $data += $this->dataJadwal((int) $periode['id']);
+            $data += $this->dataJadwal($periode);
         }
         if ($tab === 'jadwal-pengawas') {
-            $data += \App\Libraries\JadwalPengawas::dataTab($periode, (string) $this->request->getGet('shift'));
+            $data += \App\Libraries\JadwalPengawas::dataTab($periode, (string) $this->request->getGet('shift'))
+                + ['pgUbah' => $this->request->getGet('ubah') === '1']; // "Ubah semua": grid jadi kotak isian (2026-11-24)
         }
         if ($tab === 'ketidakhadiran') {
             $data += $this->dataKetidakhadiran($periode);
@@ -184,24 +187,33 @@ class Ujian extends BaseController
             return redirect()->to($kembali)->withInput()
                 ->with('errors', $this->pesanBentrok($bentrok));
         }
+        // Jam ujian tidak boleh menabrak istirahat yang diatur (2026-11-24); istirahat otomatis mengikuti jadwal, tak pernah menolak.
+        if (($tolak = IstirahatUjian::tolakJadwal($data)) !== null) {
+            return redirect()->to($kembali)->withInput()->with('errors', [$tolak]);
+        }
 
-        $simpan = $id > 0 ? $model->update($id, $data) : $model->insert($data);
+        $sebelum = JadwalPengawas::potretSesi((int) $periode['id']);
+        $simpan  = $id > 0 ? $model->update($id, $data) : $model->insert($data);
         if ($simpan === false) {
             return redirect()->to($kembali)->withInput()
                 ->with('errors', $model->errors() ?: ['Jadwal gagal disimpan.']);
         }
+        $idBaru = $id > 0 ? $id : (int) $model->getInsertID();
+        // Jam/tanggal berubah → pengawas ruang ikut pindah (tahap 3, 2026-11-24).
+        $selaras = JadwalPengawas::selaraskan((int) $periode['id'], $sebelum);
 
         master_data_changed('ujian_jadwal');
         $this->audit->record(
             $id > 0 ? 'update' : 'create',
             'ujian_jadwal',
-            $id > 0 ? $id : (int) $model->getInsertID(),
+            $idBaru,
             ($id > 0 ? 'Ubah' : 'Tambah') . ' jadwal ujian ' . $this->model->label($periode)
-                . ' — ' . $data['tingkat'] . ' ' . $data['tanggal']
+                . ' — ' . $data['tingkat'] . ' ' . $data['tanggal'] . JadwalPengawas::kalimatSelaras($selaras)
         );
 
         return redirect()->to($kembali)
-            ->with('success', $id > 0 ? 'Jadwal ujian diperbarui.' : 'Jadwal ujian ditambahkan.');
+            ->with('success', ($id > 0 ? 'Jadwal ujian diperbarui.' : 'Jadwal ujian ditambahkan.') . JadwalPengawas::kalimatSelaras($selaras)
+                . ($lama !== null ? JadwalPengawas::catatanSisa((int) $periode['id'], $lama, $data) : ''));
     }
 
     /**
@@ -244,6 +256,7 @@ class Ujian extends BaseController
         $db = db_connect();
         $db->transException(true);
         $db->transStart();
+        $sebelum = JadwalPengawas::potretSesi((int) $periode['id']);
 
         $pengawas->where('jadwal_id', $id)->delete();       // pivot: hapus permanen
         if ($db->tableExists('ujian_pembuat_soal')) {
@@ -251,6 +264,7 @@ class Ujian extends BaseController
         }
         $susulan->where('jadwal_id', $id)->set('jadwal_id', null)->update();
         $model->delete($id);                                 // soft delete
+        $selaras = JadwalPengawas::selaraskan((int) $periode['id'], $sebelum); // jadwal terakhir di jam itu → pengawas ruangnya ikut (tahap 3)
 
         $db->transComplete();
 
@@ -260,10 +274,10 @@ class Ujian extends BaseController
             'ujian_jadwal',
             $id,
             'Hapus jadwal ujian ' . $this->model->label($periode)
-                . " (lepas {$jmlSusulan} catatan ketidakhadiran, hapus {$jmlPengawas} pengawas)"
+                . " (lepas {$jmlSusulan} catatan ketidakhadiran, hapus {$jmlPengawas} pengawas)" . JadwalPengawas::kalimatSelaras($selaras)
         );
 
-        $pesan = 'Jadwal ujian dihapus.';
+        $pesan = 'Jadwal ujian dihapus.' . JadwalPengawas::kalimatSelaras($selaras);
         if ($jmlSusulan > 0) {
             $pesan .= " {$jmlSusulan} catatan ketidakhadiran tetap tersimpan, hanya dilepas dari jadwal ini.";
         }
@@ -847,10 +861,11 @@ class Ujian extends BaseController
         return $pesan;
     }
 
-    /** Data untuk tab Jadwal: baris terfilter + opsi dropdown + ringkasan. */
-    private function dataJadwal(int $periodeId): array
+    /** Data untuk tab Jadwal: baris terfilter + opsi dropdown + ringkasan + istirahat. */
+    private function dataJadwal(array $periode): array
     {
-        $model = new UjianJadwalModel();
+        $periodeId = (int) $periode['id'];
+        $model     = new UjianJadwalModel();
 
         $filter = [
             'q'          => trim((string) $this->request->getGet('q')),
@@ -870,7 +885,16 @@ class Ujian extends BaseController
 
         $ids = array_column($rows, 'id');
 
+        // Istirahat (2026-11-24): ringkasan per hari + baris sisipan di daftar, di tempatnya menurut jam.
+        $istirahat = IstirahatUjian::ringkas($periode);
+        $sebelum   = null; // baris terakhir halaman sebelumnya (batas sisipan di halaman ini)
+        if ($page > 1 && $rows !== []) {
+            $sebelum = $this->builderJadwal($model, $periodeId, $filter)->findAll(1, ($page - 1) * $per - 1)[0] ?? null;
+        }
+
         return [
+            'istirahat'    => $istirahat,
+            'istSisipan'   => $filter['q'] === '' ? $this->sisipanIstirahat($istirahat, $rows, $sebelum, $page * $per >= $total) : [],
             'rows'         => $rows,
             'pager'        => $pager,
             'filter'       => $filter,
@@ -896,6 +920,56 @@ class Ujian extends BaseController
             'tingkatList'  => UjianJadwalModel::TINGKAT,
             'shiftList'    => UjianJadwalModel::SHIFT_PILIH, // form: hanya Pagi / Siang (2026-11-23)
         ];
+    }
+
+    /**
+     * Istirahat yang disisipkan di daftar jadwal: [urutan baris => daftar istirahat SEBELUM baris itu] (urutan = jumlah baris →
+     * sesudah baris terakhir). Daftar berurut tanggal + jam mulai, jadi istirahat masuk sebelum jadwal pertama yang jamnya sesudah itu.
+     * Antarhalaman tidak dobel: yang tampil hanya istirahat sesudah baris terakhir halaman sebelumnya s/d baris terakhir halaman ini
+     * (halaman terakhir: s/d habis). Hanya hari + shift yang jadwalnya ada di halaman ini (mengikuti saringan).
+     *
+     * @return array<int, list<array<string, mixed>>>
+     */
+    private function sisipanIstirahat(array $istirahat, array $rows, ?array $sebelum, bool $terakhir): array
+    {
+        if ($rows === []) {
+            return [];
+        }
+        $kunci = static fn (array $r): string => $r['tanggal'] . ' ' . ($r['jam_mulai'] ?? '');
+        $hari  = [];
+        foreach ($rows as $r) {
+            foreach ($r['shift'] === 'semua' ? IstirahatUjian::SHIFT : [$r['shift']] as $s) {
+                $hari[$s . '|' . $r['tanggal']] = true;
+            }
+        }
+        $batasAwal  = $sebelum !== null ? $kunci($sebelum) : null;
+        $batasAkhir = $terakhir ? null : $kunci($rows[count($rows) - 1]);
+        $out        = [];
+        foreach ($istirahat as $h) {
+            if (! isset($hari[$h['shift'] . '|' . $h['tanggal']])) {
+                continue;
+            }
+            foreach ($h['jam'] as $j) {
+                $k = $h['tanggal'] . ' ' . $j['mulai'];
+                if (($batasAwal !== null && $k <= $batasAwal) || ($batasAkhir !== null && $k > $batasAkhir)) {
+                    continue;
+                }
+                $posisi = count($rows);
+                foreach ($rows as $i => $r) {
+                    if ($kunci($r) >= $k) {
+                        $posisi = $i;
+                        break;
+                    }
+                }
+                $out[$posisi][] = $h + ['mulai' => $j['mulai'], 'selesai' => $j['selesai'], 'urut' => $k];
+            }
+        }
+        foreach ($out as &$daftar) {
+            usort($daftar, static fn (array $a, array $b): int => strcmp($a['urut'], $b['urut']));
+        }
+        unset($daftar);
+
+        return $out;
     }
 
     /** Builder segar bertfilter — dipakai dua kali (hitung total & paginasi). */
@@ -940,6 +1014,10 @@ class Ujian extends BaseController
         }
         if ($data['jam_selesai'] && ! $data['jam_mulai']) {
             $salah[] = 'Jam selesai diisi tapi jam mulai kosong.';
+        }
+        // 2026-11-24: tanpa jam selesai, jeda istirahat tak bisa dihitung & bentrok jam tak terdeteksi.
+        if ($data['jam_mulai'] && ! $data['jam_selesai']) {
+            $salah[] = 'Jam mulai diisi tapi jam selesai kosong.';
         }
         if ($data['jam_mulai'] && $data['jam_selesai'] && $data['jam_selesai'] <= $data['jam_mulai']) {
             $salah[] = 'Jam selesai harus lebih besar dari jam mulai.';

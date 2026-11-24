@@ -437,6 +437,9 @@
   .inp-sel { @apply block w-12 rounded border border-gray-300 bg-white px-0.5 py-1 text-center font-mono text-sm text-gray-900 focus:border-brand-500 focus:ring-1 focus:ring-brand-500 focus:outline-none dark:border-gray-600 dark:bg-gray-700 dark:text-white; }
   /* Panah datalist Chrome memakan ruang sehingga kode 3 huruf ("12A") terpotong; saran tetap muncul saat mengetik. */
   .inp-sel::-webkit-calendar-picker-indicator { display: none !important; }
+  /* (2026-11-24) Sel pengawas mode lihat (tombol; klik = ubah sesi itu). Kosong = latar kuning supaya terlihat. */
+  .sel-lihat { @apply block w-9 cursor-pointer rounded px-0.5 py-1.5 text-center font-mono text-sm text-gray-900 hover:bg-brand-100 focus-visible:ring-2 focus-visible:ring-brand-500 focus-visible:outline-none dark:text-white dark:hover:bg-gray-600; }
+  .sel-lihat[data-kosong] { @apply bg-yellow-50 text-yellow-700 dark:bg-yellow-900/20 dark:text-yellow-400; }
   .dok-baris  { @apply transition; }
   .dok-butir[data-terpilih], .dok-baris[data-terpilih] { @apply bg-brand-50 dark:bg-gray-700; }
   .dok-butir[data-terpilih], .dok-kartu[data-terpilih] { @apply ring-2 ring-brand-500; }

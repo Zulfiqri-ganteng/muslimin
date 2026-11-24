@@ -444,10 +444,11 @@ class JadwalPengawas
 
     /**
      * Simpan grid satu shift (seluruh isi shift itu diganti). Isian: [kunci sesi => [ruang => KODE]]; sel kosong = belum diisi.
+     * $hanyaKunci (2026-11-24, tombol Ubah per sesi) = hanya sesi itu yang diganti; sesi lain tidak disentuh, aturan ceknya sama.
      *
      * @return array{ok: bool, pesan: string, galat?: list<string>, terisi?: int}
      */
-    public static function simpanGrid(array $periode, string $shift, array $isian): array
+    public static function simpanGrid(array $periode, string $shift, array $isian, ?string $hanyaKunci = null): array
     {
         if (! in_array($shift, ['pagi', 'siang'], true)) {
             return ['ok' => false, 'pesan' => 'Shift tidak dikenal.'];
@@ -467,6 +468,12 @@ class JadwalPengawas
             }
         }
         $label = static fn (array $s, int $ruang): string => JadwalUjianCetak::tanggalTeks($s['tanggal']) . ' jam ke-' . $s['jamKe'] . ' ruang ' . $ruang;
+        if ($hanyaKunci !== null) {
+            if (! isset($sesiAda[$hanyaKunci])) {
+                return ['ok' => false, 'pesan' => 'Sesi ini sudah tidak ada di jadwal ujian (jamnya mungkin baru diubah). Muat ulang halaman, lalu coba lagi.'];
+            }
+            $isian = [$hanyaKunci => (array) ($isian[$hanyaKunci] ?? [])];
+        }
 
         $galat = [];
         $baris = [];
@@ -498,13 +505,42 @@ class JadwalPengawas
             }
         }
 
-        // Bentrok dengan tugas di shift LAIN pada jam yang beririsan.
         $kodeDari = [];
         foreach ($kodeKe as $k => $g) {
             $kodeDari[$g['id']] = $k;
         }
-        $lain = db_connect()->table('ujian_pengawas_ruang')->select('tanggal, jam_mulai, jam_selesai, ruang, guru_id, shift')
-            ->where('periode_id', $pid)->where('shift !=', $shift)->get()->getResultArray();
+        // Sesi LAIN di shift ini yang jamnya beririsan (mis. 07.00–08.30 dan 07.00–09.10): orang yang sama hanya boleh di ruang yang sama.
+        $perGuru = []; // guru_id|tanggal → daftar tugas (baru = dari isian ini)
+        foreach ($baris as $b) {
+            $perGuru[$b['guru_id'] . '|' . $b['tanggal']][] = $b + ['baru' => true];
+        }
+        if ($hanyaKunci !== null) {
+            foreach (self::penugasan($pid, $shift) as $k => $perRuang) {
+                if ($k === $hanyaKunci || ! isset($sesiAda[$k])) {
+                    continue;
+                }
+                foreach ($perRuang as $ru => $gid) {
+                    $perGuru[$gid . '|' . $sesiAda[$k]['tanggal']][] = ['jam_mulai' => $sesiAda[$k]['mulai'], 'jam_selesai' => $sesiAda[$k]['selesai'], 'tanggal' => $sesiAda[$k]['tanggal'],
+                        'ruang' => $ru, 'guru_id' => $gid, 'baru' => false];
+                }
+            }
+        }
+        foreach ($perGuru as $tugas) {
+            foreach ($tugas as $i => $a) {
+                foreach (array_slice($tugas, $i + 1) as $c) {
+                    if (($a['baru'] || $c['baru']) && $a['ruang'] !== $c['ruang'] && $a['jam_mulai'] !== null && $c['jam_mulai'] !== null
+                        && [$a['jam_mulai'], $a['jam_selesai']] !== [$c['jam_mulai'], $c['jam_selesai']]
+                        && UjianJadwalModel::jamBerimpit($a['jam_mulai'], $a['jam_selesai'], $c['jam_mulai'], $c['jam_selesai'])) {
+                        $galat[] = 'Kode ' . ($kodeDari[$a['guru_id']] ?? '?') . ' dipakai di dua ruang pada jam yang beririsan: ruang ' . $a['ruang'] . ' (' . JadwalUjianCetak::waktu($a['jam_mulai'], $a['jam_selesai'])
+                            . ') dan ruang ' . $c['ruang'] . ' (' . JadwalUjianCetak::waktu($c['jam_mulai'], $c['jam_selesai']) . '), ' . JadwalUjianCetak::tanggalTeks($a['tanggal']) . '.';
+                    }
+                }
+            }
+        }
+
+        // Bentrok dengan tugas di shift LAIN pada jam yang beririsan.
+        $lain = self::tabelSah($pid)->select('p.tanggal, p.jam_mulai, p.jam_selesai, p.ruang, p.guru_id, p.shift')
+            ->where('p.shift !=', $shift)->get()->getResultArray();
         foreach ($baris as $b) {
             foreach ($lain as $l) {
                 if ((int) $l['guru_id'] === $b['guru_id'] && $l['tanggal'] === $b['tanggal'] && UjianJadwalModel::jamBerimpit($b['jam_mulai'], $b['jam_selesai'], $l['jam_mulai'], $l['jam_selesai'])) {
@@ -522,14 +558,78 @@ class JadwalPengawas
         $db = db_connect();
         $db->transException(true);
         $db->transStart();
-        $db->table('ujian_pengawas_ruang')->where('periode_id', $pid)->where('shift', $shift)->delete();
+        $lama = $db->table('ujian_pengawas_ruang')->where('periode_id', $pid)->where('shift', $shift);
+        if ($hanyaKunci !== null) {
+            $s = $sesiAda[$hanyaKunci];
+            $lama->where('tanggal', $s['tanggal'])->where('jam_mulai', $s['mulai'])->where('jam_selesai', $s['selesai']);
+        }
+        $lama->delete();
         if ($baris !== []) {
             $now = date('Y-m-d H:i:s');
             $db->table('ujian_pengawas_ruang')->insertBatch(array_map(static fn (array $b): array => $b + ['created_at' => $now, 'updated_at' => $now], $baris));
         }
         $db->transComplete();
+        if ($hanyaKunci !== null) {
+            $s = $sesiAda[$hanyaKunci];
+
+            return ['ok' => true, 'pesan' => 'Pengawas ' . $shift . ' ' . self::labelSesi($s['tanggal'], $s['mulai'], $s['selesai'], $s['jamKe']) . ' disimpan (' . count($baris) . ' dari ' . $nRuang . ' ruang terisi).', 'terisi' => count($baris)];
+        }
 
         return ['ok' => true, 'pesan' => 'Jadwal pengawas ' . $shift . ' disimpan (' . count($baris) . ' sel terisi).', 'terisi' => count($baris)];
+    }
+
+    /** "SENIN 30-Nov-26 jam ke-1 (07.00 - 08.30)". */
+    public static function labelSesi(string $tanggal, ?string $mulai, ?string $selesai, ?int $jamKe): string
+    {
+        return JadwalUjianCetak::namaHari($tanggal) . ' ' . JadwalUjianCetak::tanggalTeks($tanggal) . ($jamKe !== null ? ' jam ke-' . $jamKe : '') . ' (' . JadwalUjianCetak::waktu($mulai, $selesai) . ')';
+    }
+
+    /**
+     * Hapus penugasan pengawas (tombol Hapus, klien 2026-11-24). Jadwal ujian & daftar guru pengawas tidak disentuh. Selalu boleh,
+     * juga saat angka pengawas belum beres. Hapus hari/shift ikut membersihkan sisa sesi yang jamnya sudah tak ada di jadwal.
+     *
+     * @param string $cakupan "sesi|TTTT-BB-HH|mulai|selesai" (kunci sesi), "hari|TTTT-BB-HH", atau "shift"
+     *
+     * @return array{ok: bool, pesan: string, hapus: int}
+     */
+    public static function kosongkan(array $periode, string $shift, string $cakupan): array
+    {
+        $tolak = static fn (string $p): array => ['ok' => false, 'pesan' => $p, 'hapus' => 0];
+        if (! in_array($shift, ['pagi', 'siang'], true)) {
+            return $tolak('Shift tidak dikenal.');
+        }
+        $bagian  = explode('|', $cakupan);
+        $tanggal = $bagian[1] ?? '';
+        $jumlah  = ['sesi' => 4, 'hari' => 2, 'shift' => 1][$bagian[0]] ?? 0;
+        if ($jumlah !== count($bagian)) {
+            return $tolak('Pilihan hapus tidak dikenal. Muat ulang halaman, lalu coba lagi.');
+        }
+        $tgl = \DateTimeImmutable::createFromFormat('Y-m-d', $tanggal);
+        if ($bagian[0] !== 'shift' && (! $tgl || $tgl->format('Y-m-d') !== $tanggal)) {
+            return $tolak('Tanggal tidak dikenal. Muat ulang halaman, lalu coba lagi.');
+        }
+        $db = db_connect();
+        $b  = $db->table('ujian_pengawas_ruang')->where('periode_id', (int) $periode['id'])->where('shift', $shift);
+        if ($bagian[0] === 'sesi') {
+            foreach ([2, 3] as $i) {
+                if ($bagian[$i] !== '' && preg_match('/^\d{2}:\d{2}:\d{2}$/', $bagian[$i]) !== 1) {
+                    return $tolak('Jam sesi tidak dikenal. Muat ulang halaman, lalu coba lagi.');
+                }
+            }
+            $b->where('tanggal', $tanggal)->where('jam_mulai', $bagian[2] !== '' ? $bagian[2] : null)->where('jam_selesai', $bagian[3] !== '' ? $bagian[3] : null);
+            $apa = self::labelSesi($tanggal, $bagian[2], $bagian[3], null);
+        } elseif ($bagian[0] === 'hari') {
+            $b->where('tanggal', $tanggal);
+            $apa = JadwalUjianCetak::namaHari($tanggal) . ' ' . JadwalUjianCetak::tanggalTeks($tanggal);
+        } else {
+            $apa = 'semua hari';
+        }
+        $b->delete();
+        $n = (int) $db->affectedRows();
+
+        return ['ok' => true, 'hapus' => $n, 'pesan' => $n > 0
+            ? 'Pengawas ' . $shift . ' ' . $apa . ' dihapus (' . $n . ' sel dikosongkan). Jadwal ujian tidak berubah.'
+            : 'Pengawas ' . $shift . ' ' . $apa . ' memang sudah kosong.'];
     }
 
     /**
@@ -548,20 +648,27 @@ class JadwalPengawas
         foreach ($semua as $g) {
             $idKeKode[$g['id']] = $g['nomor']; // grid menampilkan ANGKA pengawas (2026-11-23)
         }
-        $isi = [];
-        foreach (self::penugasan($pid, $shift) as $kunci => $perRuang) {
-            foreach ($perRuang as $ruang => $gid) {
-                $isi[$kunci][$ruang] = $idKeKode[$gid] ?? '';
-            }
-        }
-        $sesi  = self::sesi($periode, $shift);
-        $nSesi = 0;
+        $sesi   = self::sesi($periode, $shift);
+        $nSesi  = 0;
+        $tampil = []; // kunci sesi yang tampil di grid
         foreach ($sesi as $h) {
             foreach ($h['baris'] as $b) {
-                $nSesi += $b['jenis'] === 'sesi' ? 1 : 0;
+                if ($b['jenis'] === 'sesi') {
+                    $nSesi++;
+                    $tampil[$b['kunci']] = true;
+                }
             }
         }
         $nRuang = UjianPeriodeModel::jumlahRuang($periode, $shift);
+        // Angka "Terisi" = persis kotak yang terlihat berisi (2026-11-24): sesi & ruang yang tampil, guru yang masih ada.
+        $isi = [];
+        foreach (self::penugasan($pid, $shift) as $kunci => $perRuang) {
+            foreach ($perRuang as $ruang => $gid) {
+                if (isset($tampil[$kunci]) && $ruang >= 1 && $ruang <= $nRuang && ($idKeKode[$gid] ?? '') !== '') {
+                    $isi[$kunci][$ruang] = $idKeKode[$gid];
+                }
+            }
+        }
 
         return [
             'pgShifts'   => $shifts,
@@ -619,8 +726,8 @@ class JadwalPengawas
         $db       = db_connect();
         $beban    = array_fill_keys($pool, 0);
         $tugas    = []; // guru_id → list [tanggal, mulai, selesai]
-        $tetap    = $db->table('ujian_pengawas_ruang')->select('tanggal, jam_mulai, jam_selesai, guru_id')->where('periode_id', $pid);
-        $tetap->whereNotIn('shift', $shifts);
+        $tetap    = self::tabelSah($pid)->select('p.tanggal, p.jam_mulai, p.jam_selesai, p.guru_id');
+        $tetap->whereNotIn('p.shift', $shifts);
         foreach ($tetap->get()->getResultArray() as $t) {
             $g = (int) $t['guru_id'];
             $beban[$g] = ($beban[$g] ?? 0) + 1;
@@ -780,7 +887,7 @@ class JadwalPengawas
     public static function beban(int $periodeId): array
     {
         $out = [];
-        foreach (db_connect()->table('ujian_pengawas_ruang')->select('guru_id, COUNT(*) AS n')->where('periode_id', $periodeId)->groupBy('guru_id')->get()->getResultArray() as $r) {
+        foreach (self::tabelSah($periodeId)->select('p.guru_id, COUNT(*) AS n')->groupBy('p.guru_id')->get()->getResultArray() as $r) {
             $out[(int) $r['guru_id']] = (int) $r['n'];
         }
 
@@ -790,6 +897,261 @@ class JadwalPengawas
     /** Jumlah sel jadwal pengawas terisi (untuk lencana tab). */
     public static function jumlahTerisi(int $periodeId): int
     {
-        return (int) db_connect()->table('ujian_pengawas_ruang')->where('periode_id', $periodeId)->countAllResults();
+        return (int) self::tabelSah($periodeId)->countAllResults();
+    }
+
+    /**
+     * Penugasan periode ini yang sesinya (shift + tanggal + jam) MASIH ADA di jadwal ujian. Sisa sesi yang jamnya sudah diubah/dihapus
+     * tidak boleh ikut terhitung terisi, beban, atau bentrok (2026-11-24). Alias tabel: p.
+     */
+    private static function tabelSah(int $periodeId): \CodeIgniter\Database\BaseBuilder
+    {
+        $db = db_connect();
+        $j  = $db->prefixTable('ujian_jadwal');
+
+        return $db->table('ujian_pengawas_ruang p')->where('p.periode_id', $periodeId)
+            ->where("EXISTS (SELECT 1 FROM {$j} j WHERE j.periode_id = p.periode_id AND j.deleted_at IS NULL AND j.tanggal = p.tanggal"
+                . " AND (j.shift = p.shift OR j.shift = 'semua') AND j.jam_mulai <=> p.jam_mulai AND j.jam_selesai <=> p.jam_selesai)", null, false);
+    }
+
+    // =================================================================
+    //  Pengawas IKUT jadwal ujian (tahap 3, 2026-11-24)
+    // =================================================================
+
+    /**
+     * Sesi menurut jadwal ujian apa adanya (tanpa melihat kecocokan kelas): [shift][kunci sesi] => daftar id jadwal. Diambil SEBELUM
+     * jadwal diubah/diimpor/dihapus lalu diberikan ke selaraskan() supaya diketahui jadwal sesi lama pindah ke mana.
+     *
+     * @return array<string, array<string, list<int>>>
+     */
+    public static function potretSesi(int $periodeId): array
+    {
+        $out = ['pagi' => [], 'siang' => []];
+        foreach (db_connect()->table('ujian_jadwal')->select('id, shift, tanggal, jam_mulai, jam_selesai')->where('periode_id', $periodeId)
+            ->where('deleted_at', null)->where('tanggal IS NOT NULL', null, false)->orderBy('id', 'ASC')->get()->getResultArray() as $r) {
+            foreach ($r['shift'] === 'semua' ? ['pagi', 'siang'] : [(string) $r['shift']] as $s) {
+                if (isset($out[$s])) {
+                    $out[$s][self::kunci((string) $r['tanggal'], $r['jam_mulai'], $r['jam_selesai'])][] = (int) $r['id'];
+                }
+            }
+        }
+
+        return $out;
+    }
+
+    /**
+     * Selaraskan penugasan pengawas dengan jadwal ujian — dipanggil sesudah jadwal ditambah/diubah/dihapus/diimpor (web & API).
+     * Penugasan melekat pada JAM (shift + tanggal + jam), bukan mapel, jadi sesi yang jamnya masih dipakai jadwal lain tidak disentuh.
+     * Sesi yang jamnya sudah TIDAK ADA lagi di jadwal:
+     *   - pengawasnya PINDAH ke sesi pengganti yang masih kosong di shift yang sama: sesi tujuan jadwalnya (menurut $sebelum), atau sesi
+     *     di hari yang sama yang jamnya beririsan;
+     *   - guru yang jadi bentrok di jam baru dikosongkan (tidak pernah dipaksakan);
+     *   - tak ada sesi pengganti → penugasannya dihapus.
+     *
+     * @param array<string, array<string, list<int>>>|null $sebelum potretSesi() sebelum perubahan
+     *
+     * @return array{pindah: int, bentrok: int, hapus: int, rinci: list<string>}
+     */
+    public static function selaraskan(int $periodeId, ?array $sebelum = null): array
+    {
+        $hasil = ['pindah' => 0, 'bentrok' => 0, 'hapus' => 0, 'rinci' => []];
+        $db    = db_connect();
+        $grup  = ['pagi' => [], 'siang' => []]; // shift → kunci → baris penugasan
+        foreach ($db->table('ujian_pengawas_ruang')->select('id, shift, tanggal, jam_mulai, jam_selesai, ruang, guru_id')->where('periode_id', $periodeId)
+            ->orderBy('tanggal', 'ASC')->orderBy('jam_mulai', 'ASC')->orderBy('ruang', 'ASC')->get()->getResultArray() as $r) {
+            $grup[$r['shift']][self::kunci((string) $r['tanggal'], $r['jam_mulai'], $r['jam_selesai'])][] = $r;
+        }
+        $kini  = self::potretSesi($periodeId);
+        $lepas = []; // [shift, kunci lama, kunci tujuan|null]
+        $tugas = []; // guru_id → tugas yang tetap berlaku (untuk cek bentrok)
+        foreach ($grup as $shift => $perKunci) {
+            $hilang = [];
+            foreach ($perKunci as $kunci => $baris) {
+                if (! isset($kini[$shift][$kunci])) {
+                    $hilang[] = (string) $kunci;
+
+                    continue;
+                }
+                foreach ($baris as $b) {
+                    $tugas[(int) $b['guru_id']][] = [$shift, (string) $b['tanggal'], $b['jam_mulai'], $b['jam_selesai'], (int) $b['ruang']];
+                }
+            }
+            if ($hilang === []) {
+                continue;
+            }
+            // Sesi tujuan yang mungkin: ada di jadwal dan belum punya pengawas.
+            $kosong = array_diff_key($kini[$shift], $perKunci);
+            $posisi = []; // id jadwal → kunci sekarang
+            foreach ($kini[$shift] as $k => $ids) {
+                foreach ($ids as $id) {
+                    $posisi[$id] = (string) $k;
+                }
+            }
+            foreach ($hilang as $kunci) {
+                $tuju = self::sesiPengganti($kunci, $kosong, $posisi, $sebelum[$shift][$kunci] ?? []);
+                if ($tuju !== null) {
+                    unset($kosong[$tuju]);
+                }
+                $lepas[] = [$shift, $kunci, $tuju];
+            }
+        }
+        if ($lepas === []) {
+            return $hasil;
+        }
+
+        $buang = [];
+        $baru  = [];
+        $now   = date('Y-m-d H:i:s');
+        foreach ($lepas as [$shift, $kunci, $tuju]) {
+            $pindah = 0;
+            foreach ($grup[$shift][$kunci] as $b) {
+                $buang[] = (int) $b['id'];
+                if ($tuju === null) {
+                    $hasil['hapus']++;
+
+                    continue;
+                }
+                [$tgl, $m, $s] = explode('|', $tuju);
+                $m   = $m !== '' ? $m : null;
+                $s   = $s !== '' ? $s : null;
+                $gid = (int) $b['guru_id'];
+                if (self::bentrokTugas($tugas[$gid] ?? [], $shift, $tgl, $m, $s, (int) $b['ruang'])) {
+                    $hasil['bentrok']++;
+
+                    continue;
+                }
+                $tugas[$gid][] = [$shift, $tgl, $m, $s, (int) $b['ruang']];
+                $baru[]        = ['periode_id' => $periodeId, 'shift' => $shift, 'tanggal' => $tgl, 'jam_mulai' => $m, 'jam_selesai' => $s, 'ruang' => (int) $b['ruang'], 'guru_id' => $gid, 'created_at' => $now, 'updated_at' => $now];
+                $pindah++;
+            }
+            if ($pindah > 0) {
+                [$t0, $m0, $s0] = explode('|', $kunci);
+                [$t1, $m1, $s1] = explode('|', $tuju);
+                $hasil['pindah'] += $pindah;
+                $hasil['rinci'][] = $shift . ' ' . self::labelSesi($t0, $m0, $s0, null) . ' → ' . ($t1 !== $t0 ? JadwalUjianCetak::namaHari($t1) . ' ' . JadwalUjianCetak::tanggalTeks($t1) . ' ' : '')
+                    . JadwalUjianCetak::waktu($m1, $s1) . ' (' . $pindah . ' ruang)';
+            }
+        }
+
+        $db->transException(true);
+        $db->transStart();
+        foreach (array_chunk($buang, 500) as $potong) {
+            $db->table('ujian_pengawas_ruang')->whereIn('id', $potong)->delete();
+        }
+        foreach (array_chunk($baru, 500) as $potong) {
+            $db->table('ujian_pengawas_ruang')->insertBatch($potong);
+        }
+        $db->transComplete();
+
+        return $hasil;
+    }
+
+    /** Kalimat hasil selaraskan() untuk pesan sesudah aksi; '' bila tak ada yang berubah. */
+    public static function kalimatSelaras(array $r): string
+    {
+        $k = '';
+        if ($r['pindah'] > 0) {
+            $tampil = array_slice($r['rinci'], 0, 3);
+            $k .= ' Pengawas ikut pindah: ' . implode('; ', $tampil) . (count($r['rinci']) > 3 ? '; dan ' . (count($r['rinci']) - 3) . ' sesi lain' : '') . '.';
+        }
+        if ($r['bentrok'] > 0) {
+            $k .= ' ' . $r['bentrok'] . ' ruang dikosongkan karena gurunya bentrok di jam baru — isi lagi di Jadwal Pengawas.';
+        }
+        if ($r['hapus'] > 0) {
+            $k .= ' ' . $r['hapus'] . ' isian pengawas dihapus karena jam ujiannya sudah tidak ada.';
+        }
+
+        return $k;
+    }
+
+    /**
+     * Catatan bila jam satu jadwal diubah tetapi jadwal lain masih memakai jam lama: pengawas belum ikut pindah. '' bila tak perlu.
+     *
+     * @param array<string, mixed> $lama baris jadwal sebelum diubah
+     * @param array<string, mixed> $baru isian baru
+     */
+    public static function catatanSisa(int $periodeId, array $lama, array $baru): string
+    {
+        $k0 = self::kunci((string) $lama['tanggal'], $lama['jam_mulai'], $lama['jam_selesai']);
+        $k1 = self::kunci((string) $baru['tanggal'], $baru['jam_mulai'], $baru['jam_selesai']);
+        if ($lama['shift'] !== $baru['shift'] || $k0 === $k1 || ! in_array($lama['shift'], ['pagi', 'siang'], true)) {
+            return '';
+        }
+        $sisa = count(self::potretSesi($periodeId)[$lama['shift']][$k0] ?? []);
+        if ($sisa === 0 || ! isset(self::penugasan($periodeId, (string) $lama['shift'])[$k0])) {
+            return '';
+        }
+
+        return ' Masih ada ' . $sisa . ' jadwal di jam lama (' . JadwalUjianCetak::waktu($lama['jam_mulai'], $lama['jam_selesai']) . '); pengawasnya ikut pindah setelah semuanya diubah.';
+    }
+
+    /**
+     * Sesi pengganti untuk sesi yang hilang: (1) sesi tujuan jadwalnya bila di hari yang sama atau dituju ≥ 2 jadwal, (2) sesi kosong
+     * di hari yang sama yang jamnya paling beririsan, (3) sesi tujuan jadwalnya di hari lain, (4) jadwalnya pindah tetapi sesi tujuannya
+     * sudah berpengawas (mis. semua jam digeser satu sesi) → sesi kosong terdekat di hari tujuan itu. null = tak ada.
+     *
+     * @param array<string, list<int>> $kosong sesi tanpa pengawas
+     * @param array<int, string>       $posisi id jadwal → kunci sesi sekarang
+     * @param list<int>                $ids    id jadwal yang dulu ada di sesi ini
+     */
+    private static function sesiPengganti(string $kunci, array $kosong, array $posisi, array $ids): ?string
+    {
+        [$tgl, $mulai, $selesai] = explode('|', $kunci);
+        $hitung = [];
+        foreach ($ids as $id) {
+            if (isset($posisi[$id])) {
+                $hitung[$posisi[$id]] = ($hitung[$posisi[$id]] ?? 0) + 1;
+            }
+        }
+        arsort($hitung);
+        $tujuan = $hitung !== [] ? (string) array_key_first($hitung) : null;
+        $jarak  = static fn (string $k): int => abs(strtotime('1970-01-01 ' . (explode('|', $k)[1] ?: '00:00:00')) - strtotime('1970-01-01 ' . ($mulai ?: '00:00:00')))
+            + abs(strtotime('1970-01-01 ' . (explode('|', $k)[2] ?: '00:00:00')) - strtotime('1970-01-01 ' . ($selesai ?: '00:00:00')));
+        $terdekat = static function (array $calon) use ($jarak): ?string {
+            usort($calon, static fn (string $a, string $b): int => [$jarak($a), $a] <=> [$jarak($b), $b]);
+
+            return $calon[0] ?? null;
+        };
+        $calonHari = static fn (string $t): array => array_values(array_filter(array_map('strval', array_keys($kosong)), static fn (string $k): bool => str_starts_with($k, $t . '|')));
+
+        if ($tujuan !== null && isset($kosong[$tujuan]) && (str_starts_with($tujuan, $tgl . '|') || $hitung[$tujuan] >= 2)) {
+            return $tujuan;
+        }
+        $beririsan = $mulai === '' ? null : $terdekat(array_values(array_filter($calonHari($tgl), static function (string $k) use ($mulai, $selesai): bool {
+            [, $m, $s] = explode('|', $k);
+
+            return $m !== '' && UjianJadwalModel::jamBerimpit($mulai, $selesai, $m, $s);
+        })));
+        if ($beririsan !== null) {
+            return $beririsan;
+        }
+        if ($tujuan === null) {
+            return null;
+        }
+
+        return isset($kosong[$tujuan]) ? $tujuan : $terdekat($calonHari(explode('|', $tujuan)[0]));
+    }
+
+    /**
+     * Tugas baru ini bentrok dengan tugas guru yang sudah ada? (aturan sama dengan simpanGrid: beririsan di shift lain, atau di shift
+     * yang sama tetapi ruangnya beda)
+     *
+     * @param list<array{0: string, 1: string, 2: ?string, 3: ?string, 4: int}> $ada
+     */
+    private static function bentrokTugas(array $ada, string $shift, string $tanggal, ?string $mulai, ?string $selesai, int $ruang): bool
+    {
+        foreach ($ada as [$s2, $t2, $m2, $e2, $r2]) {
+            if ($t2 !== $tanggal) {
+                continue;
+            }
+            if ($s2 === $shift && ($r2 === $ruang || $mulai === null || $m2 === null)) {
+                continue;
+            }
+            if (UjianJadwalModel::jamBerimpit($mulai, $selesai, $m2, $e2)) {
+                return true;
+            }
+        }
+
+        return false;
     }
 }

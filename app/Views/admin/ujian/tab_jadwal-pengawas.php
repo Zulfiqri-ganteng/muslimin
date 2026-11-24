@@ -4,10 +4,13 @@
  * berkas contoh sekolah "jadwal pengawas.xlsx"). Dua kartu:
  *  1. Guru pengawas: centang guru yang ikut diatur (kode = Kode Guru di Master Guru; tanpa kode tak bisa dipilih). Belum ada daftar →
  *     centang disalin dari periode lain yang terakhir disimpan (pgSaran) dan baru berlaku setelah "Simpan daftar guru".
- *  2. Grid per shift: baris = hari × jam ke- (istirahat ditampilkan), kolom = RUANG 1..N, isi = KODE guru (satu <datalist> dipakai
- *     semua kotak supaya halaman tetap ringan). Simpan = ganti seluruh isi shift itu; aturan & pengecekan bentrok di
- *     App\Libraries\JadwalPengawas::simpanGrid(). Tombol Generate otomatis (F4) di atas grid → JadwalPengawas::generate(); di
- *     bawah grid ringkasan beban per guru (cek kemerataan).
+ *  2. Grid per shift: baris = hari × jam ke- (istirahat ditampilkan), kolom = RUANG 1..N, isi = KODE guru. Dua mode (tombol Ubah &
+ *     Hapus, klien 2026-11-24):
+ *       - LIHAT (bawaan): angka; klik angka / ikon pensil = dialog ubah satu sesi (pilih guru per ruang, JadwalPengawas::simpanGrid
+ *         dengan $hanyaKunci); tong sampah = hapus satu sesi; juga hapus per hari & per shift (JadwalPengawas::kosongkan).
+ *       - UBAH SEMUA (?ubah=1, atau isian ditolak): kotak isian seluruh grid (satu <datalist> dipakai semua kotak supaya ringan);
+ *         Simpan = ganti seluruh isi shift itu. Tombol hapus/Generate/cetak disembunyikan supaya ketikan tidak hilang.
+ *     Tombol Generate otomatis (F4) di atas grid → JadwalPengawas::generate(); di bawah grid ringkasan beban per guru.
  * @var array<int, int> $pgBeban
  * Siap CSP: tanpa skrip sebaris; daftar centang = komponen kit daftarCentang.
  *
@@ -26,6 +29,7 @@
  * @var list<int> $pgTerpilih
  * @var array{label: string, ids: list<int>}|null $pgSaran
  * @var array<string, array{id: int, nama: string}> $pgKode
+ * @var bool $pgUbah mode "Ubah semua" (?ubah=1)
  */
 $centang   =array_flip($pgTerpilih !== [] ? $pgTerpilih : ($pgSaran['ids'] ?? []));
 $berkode   = array_values(array_filter($pgGuru, static fn (array $g): bool => $g['kode'] !== ''));
@@ -41,11 +45,24 @@ $nilaiSel  = static function (string $kunci, int $ruang) use ($lama, $pgIsi): st
 
     return (string) ($pgIsi[$kunci][$ruang] ?? '');
 };
+$ubahSemua = is_array($lama) || ! empty($pgUbah); // ditolak saat simpan grid → tetap di mode ubah dengan isian terakhir
+$urlShift  = static fn (string $s): string => $base . '/jadwal-pengawas' . $qtp . '&shift=' . $s;
+// Isian ubah satu sesi yang ditolak → dialog terbuka lagi dengan pilihan terakhir.
+$lamaSesi  = is_string(old('kunci')) && is_array(old('sesi')) ? ['kunci' => (string) old('kunci'), 'isi' => old('sesi')] : null;
+$isiHari   = []; // tanggal → jumlah sel terisi (tombol "Hapus hari ini" hanya bila ada isinya)
+foreach ($pgIsi as $kunciIsi => $perRuang) {
+    $tglIsi           = explode('|', (string) $kunciIsi)[0];
+    $isiHari[$tglIsi] = ($isiHari[$tglIsi] ?? 0) + count($perRuang);
+}
+// Tombol hapus: semuanya mengirim formulir "form-kosongkan" (cakupan = sesi|… / hari|… / shift).
+$tombolHapus = static fn (string $cakupan, string $isi, string $kelas, string $label, string $tanya, string $judul): string => '<button type="submit" form="form-kosongkan" name="cakupan" value="' . esc($cakupan, 'attr')
+    . '" class="btn ' . $kelas . '" title="' . esc($label, 'attr') . '" aria-label="' . esc($label, 'attr') . '" data-confirm="' . esc($tanya, 'attr') . '" data-confirm-judul="' . esc($judul, 'attr')
+    . '" data-confirm-ya="Ya, hapus" data-confirm-jenis="bahaya">' . $isi . '</button>';
 $hariNama  = [1 => 'SENIN', 2 => 'SELASA', 3 => 'RABU', 4 => 'KAMIS', 5 => "JUM'AT", 6 => 'SABTU', 7 => 'MINGGU'];
 ?>
 
 <div class="space-y-4">
-    <?= ui_peringatan('info', '', ['html' => 'Atur <b>pengawas per ruang</b> untuk setiap sesi ujian. Sesi (hari &amp; jam) diambil otomatis dari tab <b>Jadwal Ujian</b>; <b>jumlah ruang</b> bisa diubah di kartu nomor 2. Kode pengawas selalu <b>angka</b>: angka di depan Kode Guru (mis. 13a → 13). Langkah: <b>1)</b> centang guru pengawas lalu Simpan, <b>2)</b> tekan <b>Generate otomatis</b> (atau isi kode manual), <b>3)</b> periksa &amp; ubah bila perlu lalu Simpan, <b>4)</b> tombol <b>Cetak</b> → Excel (lembar Pagi, Siang, Kode Pengawas) atau PDF, berbentuk seperti berkas sekolah.']) ?>
+    <?= ui_peringatan('info', '', ['html' => '<b>1.</b> Centang guru → Simpan daftar guru &nbsp;·&nbsp; <b>2.</b> Generate otomatis &nbsp;·&nbsp; <b>3.</b> Periksa, klik angka untuk mengubah &nbsp;·&nbsp; <b>4.</b> Cetak. Hari, jam, dan istirahat mengikuti tab <b>Jadwal Ujian</b>.']) ?>
 
     <!-- ===== 1. Guru pengawas ===== -->
     <section id="guru-pengawas" class="kartu" aria-labelledby="judul-guru-pengawas">
@@ -122,9 +139,10 @@ $hariNama  = [1 => 'SENIN', 2 => 'SELASA', 3 => 'RABU', 4 => 'KAMIS', 5 => "JUM'
         <div class="kartu-kepala flex-wrap gap-3">
             <div>
                 <h2 id="judul-grid-pengawas" class="kartu-judul">2. Pengawas per ruang</h2>
-                <p class="kartu-ket">Terisi <b><?= (int) $pgTerisi ?></b> dari <?= (int) $pgTotalSel ?> sel (<?= (int) $pgRuang ?> ruang). Ketik <b>angka pengawas</b> di tiap ruang; kosong = belum ada pengawas.</p>
+                <p class="kartu-ket">Terisi <b><?= (int) $pgTerisi ?></b> dari <?= (int) $pgTotalSel ?> sel (<?= (int) $pgRuang ?> ruang). <?= $ubahSemua ? 'Ketik <b>angka pengawas</b> di tiap ruang; kosong = belum ada pengawas.' : 'Angka = kode pengawas; kuning = belum ada pengawas.' ?></p>
             </div>
             <?php // 2026-11-23 (klien): jumlah ruang bisa ditambah/dikurangi langsung di sini (sama dengan isian di tab Periode). ?>
+            <?php if (! $ubahSemua): ?>
             <form method="post" action="<?= esc($base, 'attr') ?>/jadwal-pengawas/ruang" class="flex items-center gap-2"
                   data-confirm="Ubah jumlah ruang <?= esc($pgShift, 'attr') ?>? Bila dikurangi, pengawas di ruang yang dihapus ikut dikosongkan; bila ditambah, ruang baru masih kosong (Generate ulang atau isi manual)." data-confirm-judul="Ubah jumlah ruang?" data-confirm-ya="Ya, ubah">
                 <?= csrf_field() ?>
@@ -135,7 +153,8 @@ $hariNama  = [1 => 'SENIN', 2 => 'SELASA', 3 => 'RABU', 4 => 'KAMIS', 5 => "JUM'
                        title="Bawaan = jumlah kelas <?= esc($pgShift, 'attr') ?> (<?= (int) ($pgKelasShift ?? 0) ?>)">
                 <button type="submit" class="btn btn-netral">Ubah</button>
             </form>
-            <?php if ($pgTerisi > 0 || array_sum($pgBeban ?? []) > 0): ?>
+            <?php endif; ?>
+            <?php if (! $ubahSemua && ($pgTerisi > 0 || array_sum($pgBeban ?? []) > 0)): ?>
                 <?php // F5: cetak persis berkas contoh sekolah (Excel 3 lembar, PDF jadwal Pagi+Siang, PDF daftar kode). ?>
                 <div class="ms-auto">
                     <?= ui_menu_lain([
@@ -165,6 +184,7 @@ $hariNama  = [1 => 'SENIN', 2 => 'SELASA', 3 => 'RABU', 4 => 'KAMIS', 5 => "JUM'
                     <?= ui_peringatan('galat', '', ['html' => '<b>Angka pengawas belum beres</b> — Generate, simpan, dan cetak ditahan sampai dibetulkan di kartu nomor 1:<br>• ' . implode('<br>• ', array_map('esc', $pgMasalah))]) ?>
                 </div>
             <?php endif; ?>
+            <?php if (! $ubahSemua): ?>
             <!-- F4: Generate otomatis (pola contoh sekolah; aturan di JadwalPengawas::generate) -->
             <form method="post" action="<?= esc($base, 'attr') ?>/jadwal-pengawas/generate" class="flex flex-wrap items-center gap-2 border-b border-gray-200 bg-gray-50 px-4 py-3 md:px-6 dark:border-gray-700 dark:bg-gray-800"
                   data-confirm="Generate akan MENGGANTI seluruh isi jadwal pengawas shift yang dipilih dengan susunan baru (shift lain tidak berubah). Lanjutkan?" data-confirm-judul="Generate jadwal pengawas?" data-confirm-ya="Ya, generate">
@@ -181,6 +201,120 @@ $hariNama  = [1 => 'SENIN', 2 => 'SELASA', 3 => 'RABU', 4 => 'KAMIS', 5 => "JUM'
                 <button type="submit" class="btn btn-sukses"><?= ikon('play', 'h-4 w-4') ?>Generate otomatis</button>
                 <p class="hint basis-full sm:basis-auto sm:flex-1">Mengisi semua ruang dari daftar guru secara <b>merata</b>; tak ada guru di dua tempat sekaligus; sesi beruntun dijaga orang yang sama; sesudah istirahat pengawas pindah ruang. Hasilnya tetap bisa diubah manual di bawah.</p>
             </form>
+            <?php endif; ?>
+
+            <?php if (! $ubahSemua): ?>
+            <!-- Mode lihat: ubah & hapus per sesi / hari / shift (klien 2026-11-24) -->
+            <div class="flex flex-wrap items-center gap-2 px-4 py-3 md:px-6">
+                <p class="min-w-0 flex-1 basis-64 text-sm text-gray-500 dark:text-gray-400">Tekan <b>angka</b> atau ikon pensil untuk mengubah pengawas satu sesi, tong sampah untuk menghapusnya. Arahkan kursor ke angka untuk melihat nama guru.</p>
+                <a href="<?= esc($urlShift($pgShift) . '&ubah=1', 'attr') ?>#grid-pengawas" class="btn btn-utama"><?= ikon('edit', 'h-4 w-4') ?>Ubah semua</a>
+                <?php if ($pgTerisi > 0): ?>
+                    <?= $tombolHapus('shift', ikon('trash-bin', 'h-4 w-4') . 'Hapus semua ' . esc($pgShift), 'btn-bahaya', 'Hapus semua pengawas ' . $pgShift,
+                        'Semua pengawas shift ' . $pgShift . ' (' . (int) $pgTerisi . ' sel) dihapus. Jadwal ujian, daftar guru pengawas, dan shift lain tidak berubah. Tidak bisa dibatalkan.', 'Hapus semua pengawas ' . $pgShift . '?') ?>
+                <?php endif; ?>
+            </div>
+            <form id="form-kosongkan" method="post" action="<?= esc($base, 'attr') ?>/jadwal-pengawas/kosongkan">
+                <?= csrf_field() ?>
+                <input type="hidden" name="tp" value="<?= esc($tp, 'attr') ?>">
+                <input type="hidden" name="shift" value="<?= esc($pgShift, 'attr') ?>">
+            </form>
+            <div x-data="pengawasGrid" data-ruang="<?= (int) $pgRuang ?>"<?= $lamaSesi !== null ? ' data-lama="' . esc((string) json_encode($lamaSesi), 'attr') . '"' : '' ?>>
+                <div class="tabel-bungkus border-t border-gray-200 dark:border-gray-700">
+                    <table class="tabel text-sm">
+                        <thead>
+                            <tr>
+                                <th scope="col" class="whitespace-nowrap">Hari / tgl</th>
+                                <th scope="col" class="whitespace-nowrap !px-2 text-center">Jam ke</th>
+                                <th scope="col" class="whitespace-nowrap !px-2">Waktu</th>
+                                <th scope="col" class="!px-2 text-center">Aksi</th>
+                                <?php for ($r = 1; $r <= $pgRuang; $r++): ?>
+                                    <th scope="col" class="!px-1 text-center">R<?= $r ?></th>
+                                <?php endfor; ?>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <?php foreach ($pgSesi as $h):
+                                $jml   = count($h['baris']);
+                                $nHari = $hariNama[(int) date('N', strtotime($h['tanggal']))] ?? '';
+                                $tglH  = \App\Libraries\JadwalUjianCetak::tanggalTeks($h['tanggal']);
+                            ?>
+                                <?php foreach ($h['baris'] as $j => $b):
+                                    $adaSesi = $b['jenis'] === 'sesi';
+                                    $isiSesi = $adaSesi ? ($pgIsi[$b['kunci']] ?? []) : [];
+                                    $judulS  = $nHari . ' ' . $tglH . ' · jam ke-' . (int) $b['jamKe'] . ' · ' . $b['waktu'];
+                                ?>
+                                    <tr class="<?= $j === 0 ? 'border-t-2 border-gray-300 dark:border-gray-600' : '' ?>"<?= $adaSesi ? ' data-sesi="' . esc($b['kunci'], 'attr') . '" data-judul="' . esc($judulS, 'attr') . '" data-isi="' . esc((string) json_encode((object) $isiSesi), 'attr') . '"' : '' ?>>
+                                        <?php if ($j === 0): ?>
+                                            <td rowspan="<?= $jml ?>" class="whitespace-nowrap align-top font-semibold text-gray-900 dark:text-white">
+                                                <?= esc($nHari) ?><br>
+                                                <span class="text-xs font-normal text-gray-500 dark:text-gray-400"><?= esc($tglH) ?></span>
+                                                <?php if (($isiHari[$h['tanggal']] ?? 0) > 0): ?>
+                                                    <div class="mt-1"><?= $tombolHapus('hari|' . $h['tanggal'], ikon('trash-bin', 'h-3.5 w-3.5') . 'Hapus hari ini', 'btn-teks btn-xs -ms-3 font-normal', 'Hapus pengawas ' . $pgShift . ' ' . $nHari . ' ' . $tglH,
+                                                        'Semua pengawas ' . $pgShift . ' hari ' . $nHari . ' ' . $tglH . ' (' . (int) $isiHari[$h['tanggal']] . ' sel) dihapus. Jadwal ujian tidak berubah.', 'Hapus pengawas hari ini?') ?></div>
+                                                <?php endif; ?>
+                                            </td>
+                                        <?php endif; ?>
+                                        <td class="!px-2 text-center"><?= $b['jamKe'] !== null ? (int) $b['jamKe'] : '' ?></td>
+                                        <td class="whitespace-nowrap !px-2"><?= esc($b['waktu']) ?></td>
+                                        <?php if (! $adaSesi): ?>
+                                            <td colspan="<?= (int) $pgRuang + 1 ?>" class="bg-gray-50 text-center text-xs text-gray-500 dark:bg-gray-700/50 dark:text-gray-400">Istirahat</td>
+                                        <?php else: ?>
+                                            <td class="!px-2">
+                                                <div class="flex gap-1.5">
+                                                    <button type="button" class="btn btn-utama btn-xs btn-ikon" data-ubah-sesi title="Ubah pengawas sesi ini" aria-label="Ubah pengawas <?= esc($judulS, 'attr') ?>"><?= ikon('edit', 'h-4 w-4') ?></button>
+                                                    <?php if ($isiSesi !== []): ?>
+                                                        <?= $tombolHapus('sesi|' . $b['kunci'], ikon('trash-bin', 'h-4 w-4'), 'btn-bahaya btn-xs btn-ikon', 'Hapus pengawas ' . $judulS,
+                                                            'Pengawas ' . $pgShift . ' ' . $judulS . ' (' . count($isiSesi) . ' ruang) dihapus. Jadwal ujian tidak berubah.', 'Hapus pengawas sesi ini?') ?>
+                                                    <?php endif; ?>
+                                                </div>
+                                            </td>
+                                            <?php for ($r = 1; $r <= $pgRuang; $r++):
+                                                $kodeS = (string) ($isiSesi[$r] ?? '');
+                                                $namaS = $kodeS !== '' ? (string) ($pgKode[$kodeS]['nama'] ?? '') : '';
+                                                $ketS  = 'Ruang ' . $r . ': ' . ($kodeS === '' ? 'belum ada pengawas' : $kodeS . ($namaS !== '' ? ' — ' . $namaS : ''));
+                                            ?>
+                                                <td class="!p-0.5"><button type="button" class="sel-lihat" data-ubah-sesi data-ruang="<?= $r ?>"<?= $kodeS === '' ? ' data-kosong' : '' ?> title="<?= esc($ketS, 'attr') ?>" aria-label="<?= esc('Ubah ' . $ketS . ', ' . $judulS, 'attr') ?>"><?= $kodeS === '' ? '–' : esc($kodeS) ?></button></td>
+                                            <?php endfor; ?>
+                                        <?php endif; ?>
+                                    </tr>
+                                <?php endforeach; ?>
+                            <?php endforeach; ?>
+                        </tbody>
+                    </table>
+                </div>
+
+                <!-- Satu baris isian ruang (disalin pengawas.js per ruang) -->
+                <template id="tpl-pengawas-ruang">
+                    <div>
+                        <label class="lbl"></label>
+                        <select class="inp">
+                            <option value="">— kosong —</option>
+                            <?php foreach ($pgKode as $kode => $g): ?><option value="<?= esc((string) $kode, 'attr') ?>"><?= esc($kode . ' — ' . $g['nama']) ?></option><?php endforeach; ?>
+                        </select>
+                        <p class="err-msg" hidden></p>
+                    </div>
+                </template>
+                <?= ui_dialog_buka(['nama' => 'ubah-pengawas', 'judul' => 'Ubah pengawas ' . $pgShift, 'ukuran' => 'lg']) ?>
+                <form method="post" action="<?= esc($base, 'attr') ?>/jadwal-pengawas/sesi">
+                    <?= csrf_field() ?>
+                    <input type="hidden" name="tp" value="<?= esc($tp, 'attr') ?>">
+                    <input type="hidden" name="shift" value="<?= esc($pgShift, 'attr') ?>">
+                    <input type="hidden" name="kunci" :value="kunci">
+                    <div class="dialog-isi">
+                        <p class="text-sm font-semibold text-gray-900 dark:text-white" x-text="judul"></p>
+                        <div id="pg-daftar-ruang" class="grid gap-4 sm:grid-cols-2"></div>
+                        <p class="hint">Hanya sesi ini yang berubah. Satu guru tidak boleh di dua ruang pada jam yang sama, dan tidak boleh bentrok dengan tugasnya di shift lain.</p>
+                    </div>
+                    <div class="dialog-kaki">
+                        <button type="button" class="btn btn-netral" @click="tutup()">Batal</button>
+                        <button type="submit" class="btn btn-utama"><?= ikon('check', 'h-4 w-4') ?>Simpan</button>
+                    </div>
+                </form>
+                <?= ui_dialog_tutup() ?>
+            </div>
+            <script defer src="<?= base_url('assets/js/admin/ujian/pengawas.js') ?>?v=<?= @filemtime(FCPATH . 'assets/js/admin/ujian/pengawas.js') ?>" <?= csp_script_nonce() ?>></script>
+            <?php else: ?>
+            <!-- Mode ubah semua: kotak isian seluruh grid -->
             <form method="post" action="<?= esc($base, 'attr') ?>/jadwal-pengawas/simpan">
                 <?= csrf_field() ?>
                 <input type="hidden" name="tp" value="<?= esc($tp, 'attr') ?>">
@@ -231,9 +365,11 @@ $hariNama  = [1 => 'SENIN', 2 => 'SELASA', 3 => 'RABU', 4 => 'KAMIS', 5 => "JUM'
                 </div>
                 <div class="kartu-kaki flex flex-wrap items-center gap-3">
                     <button type="submit" class="btn btn-utama"><?= ikon('check', 'h-4 w-4') ?>Simpan pengawas <?= esc($pgShift) ?></button>
-                    <p class="text-xs text-gray-500 dark:text-gray-400">Satu guru tidak boleh di dua ruang pada jam yang sama, dan tidak boleh bentrok dengan tugasnya di shift lain — sistem menolak dan menyebut selnya.</p>
+                    <a href="<?= esc($urlShift($pgShift), 'attr') ?>#grid-pengawas" class="btn btn-netral"><?= ikon('close', 'h-4 w-4') ?>Batal</a>
+                    <p class="min-w-0 flex-1 basis-64 text-xs text-gray-500 dark:text-gray-400">Satu guru tidak boleh di dua ruang pada jam yang sama, dan tidak boleh bentrok dengan tugasnya di shift lain — sistem menolak dan menyebut selnya.</p>
                 </div>
             </form>
+            <?php endif; ?>
 
             <?php // F4: beban mengawasi per guru (semua shift) — supaya kemerataan bisa dicek sendiri. ?>
             <div class="border-t border-gray-200 px-4 py-3 md:px-6 dark:border-gray-700">

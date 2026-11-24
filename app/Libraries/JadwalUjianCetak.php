@@ -23,7 +23,8 @@ use PhpOffice\PhpSpreadsheet\Worksheet\Worksheet;
  *  - satu lembar per shift (pagi, siang) yang punya kelas; judul 3 baris; kepala NO | HARI / TANGGAL | WAKTU | <SHIFT>/KELAS/
  *    kolom kelompok kelas (tingkat + label jurusan, mis. "X MPLB"); isi = nama mapel (Master Mapel "Nama di jadwal ujian");
  *  - baris = hari (sel HARI di baris pertama, tanggal d-mmm-yy digabung di baris sisanya) × sesi jam; baris ISTIRAHAT kuning
- *    dibuat otomatis dari jeda waktu antar sesi; baris penutup "UJIAN SUSULAN" (tanggal & jam dari Periode);
+ *    dari pengaturan admin (tab Jadwal Ujian → Istirahat) atau otomatis dari jeda waktu antar sesi (IstirahatUjian); baris penutup
+ *    "UJIAN SUSULAN" (tanggal & jam dari Periode);
  *  - Calibri, garis luar & pemisah hari tebal (medium), dalam tipis; kepala kuning #FFE699; A4 mendatar; area cetak
  *    TANPA kolom NO dan TANPA blok susulan (persis contoh) — PDF = tampilan cetak itu.
  */
@@ -130,25 +131,24 @@ class JadwalUjianCetak
             }
         }
 
+        // Istirahat: diatur admin per shift + hari, atau (belum diatur) otomatis dari jeda jam — IstirahatUjian::susun (2026-11-24).
+        $atur = $peta !== [] ? IstirahatUjian::pengaturan((int) $periode['id'])[$shift] ?? [] : [];
         $hari = [];
         foreach ($peta as $tanggal => $slots) {
-            uksort($slots, static fn (string $a, string $b): int => strcmp($a, $b));
-            $baris  = [];
-            $akhir  = null; // jam selesai terbesar sejauh ini → celah = ISTIRAHAT
-            foreach ($slots as $slot => $isi) {
-                [$mulai, $selesai] = explode('|', $slot);
-                if ($akhir !== null && $mulai !== '' && $mulai > $akhir) {
-                    $baris[] = ['jenis' => 'istirahat', 'waktu' => self::waktu($akhir, $mulai), 'mulai' => $akhir, 'selesai' => $mulai, 'sel' => array_fill(0, count($kolom), 'ISTIRAHAT')];
+            $baris = [];
+            foreach (IstirahatUjian::susun(array_keys($slots), $atur[$tanggal] ?? null) as $b) {
+                if ($b['jenis'] === 'istirahat') {
+                    $baris[] = ['jenis' => 'istirahat', 'waktu' => self::waktu($b['mulai'], $b['selesai']), 'mulai' => $b['mulai'], 'selesai' => $b['selesai'], 'sel' => array_fill(0, count($kolom), 'ISTIRAHAT')];
+
+                    continue;
                 }
+                $isi = $slots[$b['slot']];
                 $sel = [];
                 foreach (array_keys($kolom) as $i) {
                     $sel[] = isset($isi[$i]) ? implode(' / ', array_keys($isi[$i])) : '';
                 }
                 // mulai/selesai mentah ("07:00:00") dipakai Jadwal Pengawas (JadwalPengawas::sesi) — sesi keduanya pasti sama.
-                $baris[] = ['jenis' => 'sesi', 'waktu' => self::waktu($mulai, $selesai), 'mulai' => $mulai, 'selesai' => $selesai, 'sel' => $sel];
-                if ($selesai !== '' && ($akhir === null || $selesai > $akhir)) {
-                    $akhir = $selesai;
-                }
+                $baris[] = ['jenis' => 'sesi', 'waktu' => self::waktu($b['mulai'], $b['selesai']), 'mulai' => $b['mulai'], 'selesai' => $b['selesai'], 'sel' => $sel];
             }
             $hari[] = ['tanggal' => (string) $tanggal, 'baris' => $baris];
         }
@@ -556,7 +556,7 @@ class JadwalUjianCetak
     }
 
     /** "07.00 - 08.30" (jam kosong → "-"). */
-    private static function waktu(?string $mulai, ?string $selesai): string
+    public static function waktu(?string $mulai, ?string $selesai): string
     {
         $j = static fn (?string $x): string => $x !== null && $x !== '' ? str_replace(':', '.', substr($x, 0, 5)) : '';
         $a = $j($mulai);

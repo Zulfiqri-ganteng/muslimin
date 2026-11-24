@@ -20,6 +20,8 @@
  * @var array<int,string>    $jurusanOpts
  * @var array<int,string>    $tingkatList
  * @var array<int,string>    $shiftList
+ * @var list<array>          $istirahat   IstirahatUjian::ringkas() — bagian Istirahat (2026-11-24)
+ * @var array<int,list<array>> $istSisipan baris ISTIRAHAT sebelum baris jadwal ke-n (kunci = jumlah baris → sesudah baris terakhir)
  * @var array<string,mixed>  $periode
  * @var string               $base
  * @var string               $tp
@@ -70,15 +72,57 @@ $formHapus = static function (array $r, int $tak, string $kelas, bool $ikonSaja 
     return '<form method="post" action="' . $base . '/jadwal/' . (int) $r['id'] . '/hapus" class="inline">' . csrf_field()
         . '<input type="hidden" name="periode_id" value="' . (int) $periode['id'] . '">'
         . '<button type="submit" class="btn btn-bahaya btn-sm' . $kelas . '"' . ($ikonSaja ? ' title="Hapus jadwal" aria-label="Hapus jadwal"' : '')
-        . ' data-confirm="' . esc('Hapus jadwal ini?' . ($tak > 0 ? ' ' . $tak . ' catatan ketidakhadiran TETAP tersimpan, hanya dilepas dari jadwal ini.' : '') . ' Penugasan pengawasnya ikut terhapus.', 'attr') . '"'
+        . ' data-confirm="' . esc('Hapus jadwal ini?' . ($tak > 0 ? ' ' . $tak . ' catatan ketidakhadiran TETAP tersimpan, hanya dilepas dari jadwal ini.' : '') . ' Penugasan pengawasnya ikut terhapus. Bila ini jadwal terakhir di jam itu, isi Jadwal Pengawas jam itu juga ikut terhapus.', 'attr') . '"'
         . ' data-confirm-judul="Hapus jadwal?" data-confirm-ya="Ya, hapus" data-confirm-jenis="bahaya">' . ikon('trash-bin', 'h-4 w-4') . ($ikonSaja ? '' : 'Hapus') . '</button></form>';
 };
 $lencanaJumlah = static fn (int $n): string => $n > 0 ? 'lencana-merek' : 'lencana-abu';
+
+// ---- Istirahat (2026-11-24) ----
+$istirahat  = $istirahat ?? [];
+$istSisipan = $istSisipan ?? [];
+// Satu hari istirahat → JSON (sudah di-esc) untuk dialog "Atur istirahat".
+$dataIst = static function (array $h): string {
+    $r = ['hari' => $h['shift'] . '|' . $h['tanggal'], 'mode' => 'atur'];
+    foreach (array_slice($h['jam'], 0, \App\Libraries\IstirahatUjian::MAKS) as $n => $j) {
+        $r['m' . ($n + 1)] = substr($j['mulai'], 0, 5);
+        $r['s' . ($n + 1)] = substr($j['selesai'], 0, 5);
+    }
+
+    return esc((string) json_encode($r), 'attr');
+};
+$tombolIst = static fn (array $h, string $kelas, string $isi): string => '<button type="button" class="btn btn-netral btn-sm' . $kelas . '" title="Ubah istirahat" aria-label="'
+    . esc('Ubah istirahat ' . $h['shift'] . ' ' . $h['hari'] . ' ' . $h['tgl'], 'attr') . '" data-atur-istirahat data-row="' . $dataIst($h) . '">' . ikon('edit', 'h-4 w-4') . $isi . '</button>';
+$ketIst = static fn (array $h): string => $h['mode'] === 'otomatis' ? 'otomatis' : 'diatur';
+// Baris ISTIRAHAT di tabel (laptop) dan kartu (HP) — di tempatnya menurut jam.
+$istTabel = static function (array $daftar) use ($jam, $labelShift, $warnaShift, $tombolIst, $ketIst): string {
+    $h = '';
+    foreach ($daftar as $i) {
+        $h .= '<tr class="bg-yellow-50 dark:bg-yellow-900/20"><td class="whitespace-nowrap"><p class="sel-judul">' . esc($i['hari'] . ', ' . $i['tgl']) . '</p><p class="sel-ket">' . esc($jam($i['mulai'], $i['selesai'])) . '</p></td>'
+            . '<td><p class="sel-judul">ISTIRAHAT</p></td>'
+            . '<td class="whitespace-nowrap"><span class="lencana ' . $warnaShift[$i['shift']] . '">' . esc($labelShift[$i['shift']]) . '</span></td>'
+            . '<td colspan="4"><span class="sel-ket">' . esc($ketIst($i)) . '</span></td>'
+            . '<td class="kolom-aksi"><div class="aksi-baris">' . $tombolIst($i, ' btn-ikon', '') . '</div></td></tr>';
+    }
+
+    return $h;
+};
+$istKartu = static function (array $daftar) use ($jam, $labelShift, $warnaShift, $tombolIst, $ketIst): string {
+    $h = '';
+    foreach ($daftar as $i) {
+        $h .= '<div class="flex items-center justify-between gap-3 bg-yellow-50 p-4 dark:bg-yellow-900/20"><div class="min-w-0"><p class="font-semibold text-gray-900 dark:text-white">ISTIRAHAT <span class="lencana ' . $warnaShift[$i['shift']] . ' ms-1">' . esc($labelShift[$i['shift']]) . '</span></p>'
+            . '<p class="mt-0.5 text-xs text-gray-500 dark:text-gray-400">' . esc($i['hari'] . ', ' . $i['tgl'] . ' · ' . $jam($i['mulai'], $i['selesai']) . ' · ' . $ketIst($i)) . '</p></div>'
+            . $tombolIst($i, '', 'Ubah') . '</div>';
+    }
+
+    return $h;
+};
 $tingkatOpsi = [];
 foreach ($tingkatList as $t) {
     $tingkatOpsi[$t] = 'Tingkat ' . $t;
 }
 ?>
+
+<?= view('admin/ujian/_istirahat', ['base' => $base, 'tp' => $tp, 'istirahat' => $istirahat, 'dataIst' => $dataIst, 'labelShift' => $labelShift, 'warnaShift' => $warnaShift]) ?>
 
 <div x-data="ujianJadwal" data-base="<?= $base ?>/jadwal" data-entity="jadwal ujian" data-defaults="<?= esc((string) json_encode($defaults), 'attr') ?>" class="kartu overflow-hidden">
 
@@ -105,6 +149,7 @@ foreach ($tingkatList as $t) {
             ['label' => 'Cetak Jadwal Ujian (Excel)', 'ikon' => 'file-csv', 'href' => $base . '/cetak-jadwal/excel' . $qtp],
             ['label' => 'Cetak Jadwal Ujian (PDF)', 'ikon' => 'file-pdf', 'href' => $base . '/cetak-jadwal/pdf' . $qtp, 'atr' => 'target="_blank" rel="noopener"'],
             ['label' => 'Guru pembuat soal', 'ikon' => 'pen-nib', 'href' => $base . '/pembuat-soal' . $qtp],
+            ...(array_filter($istirahat, static fn (array $h): bool => $h['adaJadwal']) !== [] ? [['label' => 'Atur istirahat', 'ikon' => 'clock', 'atr' => 'data-atur-istirahat data-row="{}"']] : []),
             ['label' => 'Import dari Excel', 'ikon' => 'upload', 'atr' => 'data-hanya-sempit data-buka-impor'],
             ['label' => 'Export ke Excel', 'ikon' => 'download', 'href' => $base . '/jadwal/export' . $qtp, 'atr' => 'data-hanya-sempit data-export-filter="toolbarFilter"'],
         ], ['label' => 'Cetak & lainnya', 'kecil' => false]),
@@ -116,12 +161,13 @@ foreach ($tingkatList as $t) {
     <?php else: ?>
         <!-- Kartu (HP): tabel lebar tak muat di layar sempit, jadi tiap jadwal tampil sebagai kartu dengan tombol berlabel -->
         <div class="divide-y divide-gray-200 md:hidden dark:divide-gray-700">
-            <?php foreach ($rows as $r):
+            <?php foreach ($rows as $urutK => $r):
                 $tsK  = strtotime((string) $r['tanggal']);
                 $jmlK = (int) ($jmlPengawas[$r['id']] ?? 0);
                 $pbsK = (int) ($jmlPembuat[$r['id']] ?? 0);
                 $takK = (int) ($jmlTakHadir[$r['id']] ?? 0);
                 ?>
+                <?= $istKartu($istSisipan[$urutK] ?? []) ?>
                 <div class="p-4">
                     <div class="flex items-start justify-between gap-3">
                         <div class="min-w-0">
@@ -144,6 +190,7 @@ foreach ($tingkatList as $t) {
                     </div>
                 </div>
             <?php endforeach; ?>
+            <?= $istKartu($istSisipan[count($rows)] ?? []) ?>
         </div>
 
         <!-- Tabel (laptop) -->
@@ -162,12 +209,13 @@ foreach ($tingkatList as $t) {
                     </tr>
                 </thead>
                 <tbody>
-                    <?php foreach ($rows as $r):
+                    <?php foreach ($rows as $urut => $r):
                         $ts  = strtotime((string) $r['tanggal']);
                         $jml = (int) ($jmlPengawas[$r['id']] ?? 0);
                         $pbs = (int) ($jmlPembuat[$r['id']] ?? 0);
                         $tak = (int) ($jmlTakHadir[$r['id']] ?? 0);
                         ?>
+                        <?= $istTabel($istSisipan[$urut] ?? []) ?>
                         <tr>
                             <?php // Hari, tanggal & jam satu kolom "Waktu" (dulu 2 kolom → tabel terlalu lebar, kolom Aksi terdesak). ?>
                             <td class="whitespace-nowrap">
@@ -199,6 +247,7 @@ foreach ($tingkatList as $t) {
                             </td>
                         </tr>
                     <?php endforeach; ?>
+                    <?= $istTabel($istSisipan[count($rows)] ?? []) ?>
                 </tbody>
             </table>
         </div>
@@ -258,7 +307,7 @@ foreach ($tingkatList as $t) {
             </div>
             <div>
                 <label class="lbl" for="uj-selesai">Jam selesai</label>
-                <input type="time" id="uj-selesai" name="jam_selesai" x-model="form.jam_selesai" class="inp">
+                <input type="time" id="uj-selesai" name="jam_selesai" x-model="form.jam_selesai" :required="form.jam_mulai !== ''" class="inp">
             </div>
         </div>
         <div class="grid gap-4 sm:grid-cols-2">
@@ -275,6 +324,7 @@ foreach ($tingkatList as $t) {
         <p class="hint">
             Mapel yang sama di jam sama boleh dibuat lebih dari satu baris (ujian paralel beda ruang).
             Yang ditolak hanya dua <b>mapel berbeda</b> pada tingkat, shift, dan jam yang beririsan.
+            <b>Istirahat</b> tidak perlu ditambahkan sebagai jadwal: dihitung dari jeda jam, atau diatur di bagian Istirahat.
         </p>
     <?= ui_crud_form_tutup() ?>
 
