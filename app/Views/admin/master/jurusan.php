@@ -17,6 +17,7 @@
 <?= $this->section('bantuan') ?>
 <?= view('admin/partials/help', [
     'helpKey'   => 'jurusan',
+    'helpCari'  => 'kode atau nama jurusan',
     'helpTitle' => 'Master Jurusan',
     'helpKelas' => '',
     'helpBody'  => '<p>Kompetensi keahlian sekolah (mis. TKJT, MPLB, AKL). Jurusan dipakai untuk mengelompokkan <b>Kelas</b> dan ditampilkan pada laporan/jadwal.</p>

@@ -33,6 +33,7 @@ $total = $pager ? $pager->getTotal() : count($rows);
 <?= $this->section('bantuan') ?>
 <?= view('admin/partials/help', [
     'helpKey'   => 'jadwal_ukk',
+    'helpCari'  => 'paket soal atau tempat uji',
     'helpTitle' => 'Jadwal UKK',
     'helpKelas' => '',
     'helpBody'  => '<p>Buat jadwal pelaksanaan UKK per paket soal (tanggal, sesi, dan tempat uji). Setelah jadwal

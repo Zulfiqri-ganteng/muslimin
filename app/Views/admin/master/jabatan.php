@@ -34,6 +34,7 @@ $adaSaring = $q !== '' || $kategori !== '';
 <?= $this->section('bantuan') ?>
 <?= view('admin/partials/help', [
     'helpKey'   => 'jabatan',
+    'helpCari'  => 'kode atau nama jabatan',
     'helpTitle' => 'Master Jabatan',
     'helpKelas' => '',
     'helpBody'  => '<p>Daftar jabatan yang disandang guru — <b>bebas dibuat sendiri</b> (Kurikulum, Guru MTK, Ketua Program, Pembina OSIS, dsb.). Satu guru boleh menyandang beberapa jabatan sekaligus; diatur di <b>Master Guru</b>.</p>

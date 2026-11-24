@@ -222,7 +222,7 @@ $judulKosong = $cariGlobal ? 'Tidak ada dokumen yang cocok' : ($subfolder !== []
         • Tiga <b>tampilan</b> di kanan penyaring: <b>Ikon</b> (padat, seperti penjelajah berkas di komputer), <b>Kotak</b> (kartu besar bergambar), dan <b>Daftar</b> (tabel rinci).<br>
         • <b>Unggah</b> bisa banyak berkas sekaligus: seret ke kotak unggah atau klik untuk memilih.<br>
         • <b>Video</b> tidak disimpan di server (memakan ruang). Pakai tombol <b>Tambah tautan</b> untuk menempelkan tautan YouTube atau Google Drive.<br>
-        • <b>Pencarian</b> berlaku ke seluruh arsip, bukan hanya folder yang sedang dibuka.<br>
+        • <b>Pencarian</b> langsung menyaring saat diketik (minimal 2 huruf) dan berlaku ke seluruh arsip, bukan hanya folder yang sedang dibuka.<br>
         • Berkas yang dihapus masuk <b>Tempat Sampah</b> dulu, jadi masih bisa dipulihkan.</p>',
 ]) ?>
 
@@ -270,7 +270,7 @@ $judulKosong = $cariGlobal ? 'Tidak ada dokumen yang cocok' : ($subfolder !== []
                     <label class="alat-crud-kotak">
                         <span class="sr-only">Cari dokumen</span>
                         <?= ikon('search', '') ?>
-                        <input type="search" name="q" value="<?= esc($q, 'attr') ?>" placeholder="Cari di seluruh arsip…" class="inp">
+                        <input type="search" name="q" value="<?= esc($q, 'attr') ?>" placeholder="Cari di seluruh arsip…" enterkeyhint="search" autocomplete="off" data-cari-langsung="2" class="inp">
                     </label>
                     <select name="kategori" data-autosubmit class="inp alat-crud-pilih" aria-label="Jenis berkas">
                         <option value="">Semua jenis</option>
@@ -288,7 +288,6 @@ $judulKosong = $cariGlobal ? 'Tidak ada dokumen yang cocok' : ($subfolder !== []
                         <option value="DESC"<?= $arah === 'DESC' ? ' selected' : '' ?>>Turun</option>
                         <option value="ASC"<?= $arah === 'ASC' ? ' selected' : '' ?>>Naik</option>
                     </select>
-                    <button type="submit" class="btn btn-netral btn-sm"><?= ikon('search', 'h-4 w-4') ?>Cari</button>
                 </form>
 
                 <div class="alat-crud-tombol" role="group" aria-label="Pilihan tampilan">

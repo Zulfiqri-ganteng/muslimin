@@ -25,6 +25,7 @@ $adaSaring    = $q !== '' || $peran !== '';
 <?= $this->section('bantuan') ?>
 <?= view('admin/partials/help', [
     'helpKey'   => 'teknisi',
+    'helpCari'  => 'kode atau nama teknisi',
     'helpTitle' => 'Master Teknisi / Penanggung Jawab',
     'helpKelas' => '',
     'helpBody'  => '<p>Daftar teknisi & penanggung jawab laboratorium. Bisa berupa <b>staf non-guru</b>; kalau kebetulan seorang guru, boleh <b>ditautkan</b> ke datanya.</p>

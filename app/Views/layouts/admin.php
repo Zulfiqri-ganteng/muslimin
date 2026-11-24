@@ -461,6 +461,7 @@ if ($galatFlash !== '') {
       // Alpine versi CSP (tanpa eval) di seluruh panel admin; Alpine biasa (alpine.min.js) kini hanya dipakai halaman publik. ?>
 <?= $js('assets/js/admin/ui.js') ?>
 <?= $this->renderSection('scripts') ?>
+<?= $js('assets/js/admin/cari-langsung.js') ?>
 <?= $js('assets/js/admin/app.js') ?>
 <?= $js('assets/js/vendor/alpine-collapse.min.js') ?>
 <?= $js('assets/js/vendor/alpine-csp.min.js') ?>

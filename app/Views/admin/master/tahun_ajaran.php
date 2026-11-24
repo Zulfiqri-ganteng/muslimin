@@ -16,6 +16,7 @@
 <?= $this->section('bantuan') ?>
 <?= view('admin/partials/help', [
     'helpKey'   => 'tahun_ajaran',
+    'helpCari'  => 'tahun ajaran',
     'helpTitle' => 'Master Tahun Ajaran',
     'helpKelas' => '',
     'helpBody'  => '<p>Daftar tahun ajaran + semester (mis. 2026/2027 Ganjil). Ini jadi acuan waktu untuk modul <b>Kurikulum &amp; Pembelajaran</b> (KKM, Struktur Kurikulum, Penilaian, dst).</p>

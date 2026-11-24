@@ -32,6 +32,7 @@ $bobot = [['bobot_persiapan', 'Persiapan'], ['bobot_proses', 'Proses'], ['bobot_
 <?= $this->section('bantuan') ?>
 <?= view('admin/partials/help', [
     'helpKey'   => 'paket_soal_ukk',
+    'helpCari'  => 'kode atau nama paket soal',
     'helpTitle' => 'Master Paket Soal UKK',
     'helpKelas' => '',
     'helpBody'  => '<p>Paket soal Uji Kompetensi Keahlian (UKK), lengkap dengan berkas <b>Kisi-kisi</b> &amp; <b>Jobsheet</b> (PDF, maks 10 MB).</p>

@@ -293,6 +293,9 @@
   .alat-crud-kotak  { @apply relative w-full sm:w-64 xl:w-80; }
   .alat-crud-kotak > svg { @apply pointer-events-none absolute start-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-500 dark:text-gray-400; }
   .alat-crud-kotak > .inp { @apply ps-9; }
+  /* Pencarian langsung (cari-langsung.js): ikon berdenyut + daftar sedikit redup selama hasil baru dimuat. */
+  [data-memuat] > svg, [data-memuat] > span > svg { @apply animate-pulse text-brand-600 dark:text-brand-400; }
+  [data-cari-memuat] > :is(.alat-crud, form[role='search']) ~ * { @apply opacity-60 transition-opacity; }
   .alat-crud-pilih  { @apply w-auto shrink-0; }   /* dipakai bersama .inp */
   .alat-crud-tombol { @apply flex flex-wrap items-center gap-2 xl:justify-end; }
   .alat-crud-pemisah { @apply mx-1 hidden h-6 w-px bg-gray-200 sm:block dark:bg-gray-700; }

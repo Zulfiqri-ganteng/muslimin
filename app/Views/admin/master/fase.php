@@ -15,6 +15,7 @@
 <?= $this->section('bantuan') ?>
 <?= view('admin/partials/help', [
     'helpKey'   => 'fase',
+    'helpCari'  => 'kode atau nama fase',
     'helpTitle' => 'Master Fase',
     'helpKelas' => '',
     'helpBody'  => '<p>Fase Kurikulum Merdeka (A-F) — dasar pengelompokan <b>Capaian Pembelajaran</b> per mata pelajaran. Untuk SMK umumnya dipakai <b>Fase E</b> (kelas X) dan <b>Fase F</b> (kelas XI-XII).</p>

@@ -39,6 +39,7 @@ $qsExport = array_filter([
 <?= $this->section('bantuan') ?>
 <?= view('admin/partials/help', [
     'helpKey'   => 'aset',
+    'helpCari'  => 'nomor aset, nama, atau merk',
     'helpTitle' => 'Master Aset / Inventaris',
     'helpKelas' => '',
     'helpBody'  => '<p>Seluruh barang/inventaris lab beserta <b>nomor aset</b>, <b>kondisi</b>, dan lokasinya (lab). Kosongkan Nomor aset saat menambah untuk <b>penomoran otomatis</b> (format <i>KODELAB-KAT-001</i>).</p>

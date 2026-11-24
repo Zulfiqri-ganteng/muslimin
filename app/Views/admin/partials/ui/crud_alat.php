@@ -22,6 +22,10 @@
  * Reset … Tampilkan N; sempit (HP) → cari + tombol "Saringan" (panel buka-tutup, app.js data-alih-saringan), lalu Tambah + Lainnya.
  * Import & Export disembunyikan saat sempit → halaman menaruh butir pengganti di menu Lainnya dengan atribut data-hanya-sempit
  * (Import: data-buka-impor; Export: data-export-filter="toolbarFilter").
+ * CARI LANGSUNG (2026-11-24, permintaan klien): kotak cari ber-data-cari-langsung → daftar menyaring saat diketik (min. 2 huruf;
+ * assets/js/admin/cari-langsung.js) dan pilihan saringan langsung berlaku, jadi tombol "Cari" tidak ada lagi di semua halaman.
+ * 'filterLangsung' kini hanya mengatur Export ikut saringan yang tampil (data-export-filter); isi false secara tegas = pilihan saringan
+ * tidak langsung berlaku + tombol Cari tampil (tak ada halaman yang memakainya).
  */
 $baseUrl     = (string) ($ui['baseUrl'] ?? '');
 $cari        = $ui['cari'] ?? null;
@@ -35,7 +39,8 @@ $impor       = (bool) ($ui['impor'] ?? true);
 $eksporUrl   = $ui['eksporUrl'] ?? null;
 $eksporTitle = (string) ($ui['eksporTitle'] ?? 'Keluarkan semua data ke file Excel');
 $massalUrl   = $ui['massalUrl'] ?? null;
-$langsung    = (bool) ($ui['filterLangsung'] ?? false);
+$langsung    = (bool) ($ui['filterLangsung'] ?? true);
+$eksporIkut  = (bool) ($ui['filterLangsung'] ?? false); // Export ikut saringan yang tampil: hanya halaman yang memintanya
 $lentur      = ! empty($ui['lentur']) && $cari !== null;
 
 $adaFilter = $q !== '';
@@ -61,7 +66,7 @@ if ($warnSemua === '' && isset($ui['massalTotal'])) {
 
 // Bagian-bagian bilah (dipakai kedua susunan).
 $kotakCari = static fn (): string => '<label class="alat-crud-kotak"><span class="sr-only">Cari</span>' . ikon('search', '')
-    . '<input type="search" name="q" value="' . esc($q, 'attr') . '" placeholder="' . esc((string) $cari, 'attr') . '" enterkeyhint="search" class="inp"></label>';
+    . '<input type="search" name="q" value="' . esc($q, 'attr') . '" placeholder="' . esc((string) $cari, 'attr') . '" enterkeyhint="search" autocomplete="off" data-cari-langsung="2" class="inp"></label>';
 $pilihan = static function (string $kelas) use ($filter, $langsung): string {
     $h = '';
     foreach ($filter as $f) {
@@ -87,10 +92,10 @@ $tombolReset = static fn (): string => $adaFilter ? '<a href="' . esc($baseUrl, 
 // Muncul saat ada baris dicentang (delegasi global di app.js). Disembunyikan lewat ATRIBUT hidden (kelas inline-flex menang atas kelas hidden).
 $tombolMassal = static fn (): string => ! $massalUrl ? '' : '<button type="button" data-bulk="selected" hidden class="btn btn-bahaya">' . ikon('trash-bin', 'h-4 w-4') . 'Hapus terpilih (<span class="js-bulk-count">0</span>)</button>'
     . (($ui['massalSemua'] ?? true) ? '<button type="button" data-bulk="all" hidden class="btn btn-bahaya">' . ikon('trash-bin', 'h-4 w-4') . 'Hapus semua</button>' : '');
-$tombolKanan = static function (string $kelasLebar) use ($tambah, $labelTambah, $impor, $eksporUrl, $eksporTitle, $langsung, $cari, $ui): string {
+$tombolKanan = static function (string $kelasLebar) use ($tambah, $labelTambah, $impor, $eksporUrl, $eksporTitle, $eksporIkut, $cari, $ui): string {
     return ($tambah ? '<button type="button" class="btn btn-utama" @click="openAdd()">' . ikon('plus', 'h-4 w-4') . esc($labelTambah) . '</button>' : '')
         . ($impor ? '<button type="button" class="btn btn-netral' . $kelasLebar . '" @click="bukaImpor()">' . ikon('upload', 'h-4 w-4') . 'Import</button>' : '')
-        . ($eksporUrl ? '<a href="' . esc((string) $eksporUrl, 'attr') . '"' . ($langsung && $cari !== null ? ' data-export-filter="toolbarFilter"' : '') . ' title="' . esc($eksporTitle, 'attr') . '" class="btn btn-netral' . $kelasLebar . '">' . ikon('download', 'h-4 w-4') . 'Export</a>' : '')
+        . ($eksporUrl ? '<a href="' . esc((string) $eksporUrl, 'attr') . '"' . ($eksporIkut && $cari !== null ? ' data-export-filter="toolbarFilter"' : '') . ' title="' . esc($eksporTitle, 'attr') . '" class="btn btn-netral' . $kelasLebar . '">' . ikon('download', 'h-4 w-4') . 'Export</a>' : '')
         . ($ui['tambahanHtml'] ?? '');
 };
 ?>
@@ -132,7 +137,7 @@ $tombolKanan = static function (string $kelasLebar) use ($tambah, $labelTambah, 
                     <?= $pilihan(' alat-crud-pilih') ?>
                     <?= $pilihPer(' alat-crud-pilih') ?>
                     <?php if (! $langsung): ?>
-                        <?php // Saringan langsung: tombol "Cari" dobel dengan kotak cari (Enter / tombol Cari papan ketik HP sudah mengirim) — keluhan user 2026-10-30. ?>
+                        <?php // Hanya bila halaman meminta saringan TIDAK langsung; selain itu daftar menyaring sendiri saat diketik/dipilih. ?>
                         <button type="submit" class="btn btn-netral"><?= ikon('search', 'h-4 w-4') ?>Cari</button>
                     <?php endif; ?>
                     <?= $tombolReset() ?>

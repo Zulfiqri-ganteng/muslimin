@@ -22,6 +22,7 @@ $adaSaring = $q !== '' || $status !== '';
 <?= $this->section('bantuan') ?>
 <?= view('admin/partials/help', [
     'helpKey'   => 'guru_v2',
+    'helpCari'  => 'nama, kode, atau NIP',
     'helpTitle' => 'Master Guru',
     'helpKelas' => '',
     'helpBody'  => '<p>Daftar semua guru pengajar. Tambah satu per satu, atau gunakan tombol di kanan atas:</p>

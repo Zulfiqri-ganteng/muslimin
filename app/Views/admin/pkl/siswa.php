@@ -48,6 +48,7 @@ $urlExcel  = site_url('admin/pkl/siswa/excel') . '?' . http_build_query(array_fi
 
 <?= view('admin/partials/help', [
     'helpKey'   => 'pkl_siswa_v2',
+    'helpCari'  => 'nama siswa',
     'helpTitle' => 'Status Siswa PKL',
     'helpBody'  => '<p>Status dihitung <b>otomatis</b> dari ajuan dan tanggal hari ini; tidak ada yang diketik manual.</p>'
         . '<ul class="mt-2 list-disc pl-5 space-y-1">'
@@ -60,7 +61,7 @@ $urlExcel  = site_url('admin/pkl/siswa/excel') . '?' . http_build_query(array_fi
 
 <?= view('admin/pkl/_nav', ['tab' => $tab, 'hitungTab' => $hitungTab]) ?>
 
-<div class="space-y-4">
+<div id="wilayah-pkl-siswa" class="space-y-4">
     <?php if ($tingkat === []): ?>
         <?= ui_peringatan('awas', '', ['html' => '<b>Tingkat yang boleh mengajukan belum diatur</b>, jadi belum ada siswa yang dihitung.'
             . ($bolehPengaturan ? ' <a href="' . site_url('admin/pkl/pengaturan') . '" class="font-semibold underline">Atur di Pengaturan PKL</a>.' : '')]) ?>
@@ -97,7 +98,7 @@ $urlExcel  = site_url('admin/pkl/siswa/excel') . '?' . http_build_query(array_fi
                 <label class="alat-crud-kotak">
                     <span class="sr-only">Cari nama</span>
                     <?= ikon('search', '') ?>
-                    <input type="search" name="q" value="<?= esc($q, 'attr') ?>" placeholder="Cari nama siswa…" class="inp">
+                    <input type="search" name="q" value="<?= esc($q, 'attr') ?>" placeholder="Cari nama siswa…" enterkeyhint="search" autocomplete="off" data-cari-langsung="2" data-cari-wilayah="#wilayah-pkl-siswa" class="inp">
                 </label>
                 <select name="kelas_id" data-autosubmit class="inp alat-crud-pilih" aria-label="Kelas">
                     <option value="">Semua kelas</option>
@@ -106,7 +107,6 @@ $urlExcel  = site_url('admin/pkl/siswa/excel') . '?' . http_build_query(array_fi
                 <select name="fase" data-autosubmit class="inp alat-crud-pilih" aria-label="Status">
                     <?php foreach ($opsiFase as $v => $l): ?><option value="<?= esc($v, 'attr') ?>"<?= $v === $fase ? ' selected' : '' ?>><?= esc($l) ?></option><?php endforeach; ?>
                 </select>
-                <button type="submit" class="btn btn-netral"><?= ikon('search', 'h-4 w-4') ?>Terapkan</button>
                 <?php if ($adaSaring): ?><a href="<?= site_url('admin/pkl/siswa') ?>" class="btn btn-teks"><?= ikon('close', 'h-4 w-4') ?>Reset</a><?php endif; ?>
             </form>
         </div>

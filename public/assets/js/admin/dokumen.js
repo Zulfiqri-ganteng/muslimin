@@ -23,7 +23,11 @@ document.addEventListener('alpine:init', function () {
             dndTarget: null,
             pindahTerbuka: false,
 
-            init: function () { akar = this.$el; },
+            init: function () {
+                var self = this;
+                akar = this.$el;
+                document.addEventListener('cari-selesai', function () { self.batalPilih(); }); // daftar diganti pencarian langsung → pilihan lama dilepas
+            },
 
             adaPilihan: function () { return this.pilih.length > 0; },
             sedangSeret: function () { return this.dndIds.length > 0; },

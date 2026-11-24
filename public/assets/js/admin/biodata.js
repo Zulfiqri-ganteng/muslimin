@@ -17,6 +17,8 @@ document.addEventListener('alpine:init', function () {
                 if (aktif && nav.scrollWidth > nav.clientWidth) {
                     nav.scrollLeft = aktif.offsetLeft - (nav.clientWidth - aktif.clientWidth) / 2;
                 }
+                var self = this;
+                document.addEventListener('cari-selesai', function () { self.hitung(); }); // daftar diganti pencarian langsung → hitung ulang centang
             },
 
             salin: function (teks, kunci) {

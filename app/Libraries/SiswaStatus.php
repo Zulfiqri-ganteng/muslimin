@@ -42,16 +42,19 @@ class SiswaStatus
     public static function tabelTerkait(): array
     {
         if (self::$tabel === null) {
-            $db   = db_connect();
-            $rows = $db->query(
-                'SELECT c.TABLE_NAME AS t, EXISTS(SELECT 1 FROM information_schema.COLUMNS d WHERE d.TABLE_SCHEMA = c.TABLE_SCHEMA'
-                . ' AND d.TABLE_NAME = c.TABLE_NAME AND d.COLUMN_NAME = ?) AS lunak'
-                . ' FROM information_schema.COLUMNS c WHERE c.TABLE_SCHEMA = ? AND c.COLUMN_NAME = ? ORDER BY c.TABLE_NAME',
-                ['deleted_at', $db->getDatabase(), 'siswa_id']
-            )->getResultArray();
-            $rows             = array_values(array_filter($rows, static fn (array $r): bool => (string) $r['t'] !== 'siswa'));
-            self::$tabel      = array_map(static fn (array $r): string => (string) $r['t'], $rows);
-            self::$tabelLunak = array_map(static fn (array $r): string => (string) $r['t'], array_filter($rows, static fn (array $r): bool => (int) $r['lunak'] === 1));
+            // Satu kali baca (2026-11-24): dulu subkueri EXISTS ke information_schema dijalankan ulang per tabel — di server berisi banyak
+            // database halaman Master Siswa menunggu ±8 detik. Hasilnya sama.
+            $db    = db_connect();
+            $kolom = []; // tabel → kolom (siswa_id / deleted_at) yang dimilikinya
+            foreach ($db->query(
+                'SELECT TABLE_NAME AS t, COLUMN_NAME AS k FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = ? AND COLUMN_NAME IN (?, ?) ORDER BY TABLE_NAME',
+                [$db->getDatabase(), 'siswa_id', 'deleted_at']
+            )->getResultArray() as $r) {
+                $kolom[(string) $r['t']][(string) $r['k']] = true;
+            }
+            $terkait          = array_filter($kolom, static fn (array $k, string $t): bool => isset($k['siswa_id']) && $t !== 'siswa', ARRAY_FILTER_USE_BOTH);
+            self::$tabel      = array_map('strval', array_keys($terkait));
+            self::$tabelLunak = array_map('strval', array_keys(array_filter($terkait, static fn (array $k): bool => isset($k['deleted_at']))));
         }
 
         return self::$tabel;

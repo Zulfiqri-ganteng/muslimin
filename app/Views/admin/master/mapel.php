@@ -24,6 +24,7 @@ foreach ($allGuru as $id => $label) {
 <?= $this->section('bantuan') ?>
 <?= view('admin/partials/help', [
     'helpKey'   => 'mapel',
+    'helpCari'  => 'nama atau kode mapel',
     'helpTitle' => 'Master Mata Pelajaran',
     'helpKelas' => '',
     'helpBody'  => '<p>Daftar mata pelajaran beserta <b>JP/minggu standar</b> (jumlah jam pelajaran yang dibutuhkan tiap minggu, mis. Pemrograman Dasar = 8 JP).</p>

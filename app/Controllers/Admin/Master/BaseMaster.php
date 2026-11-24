@@ -103,9 +103,16 @@ abstract class BaseMaster extends BaseController
         return max(1, (int) ($this->request->getGet('page') ?: 1));
     }
 
-    /** Cache daftar milik modul ini (invalid otomatis saat data berubah). */
+    /**
+     * Cache daftar milik modul ini (invalid otomatis saat data berubah). Hasil PENCARIAN tidak disimpan: dengan pencarian langsung
+     * (2026-11-24) tiap potongan kata menjadi satu berkas cache yang hampir tak pernah dipakai lagi (berkas menumpuk di hosting).
+     */
     protected function cachedList(string $key, callable $producer)
     {
+        if (trim((string) $this->request->getGet('q')) !== '') {
+            return $producer();
+        }
+
         return master_cache($this->module, $key, 3600, $producer);
     }
 

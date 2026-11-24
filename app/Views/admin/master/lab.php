@@ -24,6 +24,7 @@ $adaSaring    = $q !== '' || $jenis !== '';
 <?= $this->section('bantuan') ?>
 <?= view('admin/partials/help', [
     'helpKey'   => 'lab',
+    'helpCari'  => 'kode, nama, atau ruang lab',
     'helpTitle' => 'Master Laboratorium',
     'helpKelas' => '',
     'helpBody'  => '<p>Data laboratorium sekolah (mis. Lab Komputer 1, Lab Jaringan). Tiap lab bisa punya <b>penanggung jawab</b> dari Master Teknisi.</p>

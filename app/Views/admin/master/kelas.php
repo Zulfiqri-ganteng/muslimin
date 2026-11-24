@@ -21,6 +21,7 @@ $adaSaring = $q !== '' || $tingkat !== '' || $shift !== '';
 <?= $this->section('bantuan') ?>
 <?= view('admin/partials/help', [
     'helpKey'   => 'kelas_v2',
+    'helpCari'  => 'nama kelas',
     'helpTitle' => 'Master Kelas / Rombel',
     'helpKelas' => '',
     'helpBody'  => '<p>Daftar rombongan belajar (mis. X TKJT 1). Tetapkan <b>tingkat</b> (X/XI/XII), <b>jurusan</b>, <b>wali kelas</b>, dan <b>shift</b>.</p>

@@ -21,6 +21,7 @@ $total = $pager ? $pager->getTotal() : count($rows);
 <?= $this->section('bantuan') ?>
 <?= view('admin/partials/help', [
     'helpKey'   => 'sertifikat_ukk',
+    'helpCari'  => 'nomor sertifikat, nama, atau NIS',
     'helpTitle' => 'Sertifikat UKK',
     'helpKelas' => '',
     'helpBody'  => '<p>Terbitkan sertifikat untuk peserta yang sudah berstatus <b>Lulus</b> (lihat Peserta UKK / hasil

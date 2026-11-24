@@ -33,6 +33,8 @@ document.addEventListener('alpine:init', function () {
                     try { r = JSON.parse(b.getAttribute('data-row') || '{}'); } catch (err) { r = {}; }
                     if (b.hasAttribute('data-jadwalkan')) { self.bukaSatu(r); } else { self.bukaStatus(r); }
                 });
+                // Pencarian langsung mengganti daftar: yang tak terlihat lagi tidak boleh ikut terpilih (sama dengan halaman dimuat ulang).
+                document.addEventListener('cari-selesai', function () { self.pilih = []; });
             },
 
             // "Pilih semua" — hanya kotak centang baris (bukan isian tersembunyi ids[] di dialog).

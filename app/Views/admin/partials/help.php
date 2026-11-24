@@ -11,6 +11,8 @@
  * @var string $helpTitle judul panduan
  * @var string $helpBody  isi HTML panduan
  * @var string $helpKelas (opsional) kelas jarak pembungkus; bawaan mb-5 (mode CRUD: "" karena sudah di kepala halaman)
+ * @var string $helpCari  (opsional) apa yang bisa dicari di halaman ini, mis. "nama, NIS, atau NISN" → satu baris "Mencari" yang seragam
+ *                        (pencarian langsung saat mengetik, 2026-11-24)
  */
 ?>
 <div x-data="helpCard" data-help-key="<?= esc($helpKey, 'attr') ?>" class="<?= esc($helpKelas ?? 'mb-5', 'attr') ?>">
@@ -27,6 +29,7 @@
             <div class="min-w-0 flex-1 text-sm leading-relaxed text-gray-600 dark:text-gray-300">
                 <p class="mb-1 font-bold text-brand-800 dark:text-white"><?= esc($helpTitle) ?></p>
                 <?= $helpBody ?>
+                <?php if (($helpCari ?? '') !== ''): ?><p class="mt-3"><b>Mencari:</b> ketik <?= esc($helpCari) ?> (minimal 2 huruf) di kotak cari. Daftar langsung menyaring sendiri, tidak perlu menekan apa pun. Kosongkan kotaknya untuk menampilkan semua lagi.</p><?php endif; ?>
             </div>
             <button type="button" @click="closeHelp()" class="tombol-tutup -my-1 -me-1" title="Sembunyikan panduan" aria-label="Sembunyikan panduan">
                 <?= ikon('close', 'h-4 w-4') ?>

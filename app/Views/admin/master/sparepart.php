@@ -16,6 +16,7 @@
 <?= $this->section('bantuan') ?>
 <?= view('admin/partials/help', [
     'helpKey'   => 'sparepart',
+    'helpCari'  => 'kode, nama, atau kategori',
     'helpTitle' => 'Master Sparepart',
     'helpKelas' => '',
     'helpBody'  => '<p>Stok suku cadang lab (RAM, SSD, PSU, kabel, dsb). Isi <b>Stok minimum</b> untuk penanda stok menipis (baris ditandai merah bila stok ≤ minimum).</p>

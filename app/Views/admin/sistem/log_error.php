@@ -40,6 +40,7 @@ $waktu = static fn (string $w): string => $w === '' ? '—' : (($pilih['jenis'] 
 
 <?= view('admin/partials/help', [
     'helpKey'   => 'log_error_v2',
+    'helpCari'  => 'kata yang ada di galat',
     'helpTitle' => 'Log Error Hosting',
     'helpBody'  => '<p>Catatan galat <b>asli dari server hosting</b>, tanpa perlu membuka cPanel. Galat yang sama digabung menjadi satu baris beserta berapa kali terjadi dan jamnya. Untuk galat yang sudah dikenal ada penjelasan singkat di kotak <b>Artinya</b> (mis. database hosting sesaat dimulai ulang = bukan kesalahan aplikasi).</p>'
         . '<ol class="mt-2 list-decimal space-y-1 pl-5">'
@@ -58,7 +59,7 @@ $waktu = static fn (string $w): string => $w === '' ? '—' : (($pilih['jenis'] 
     </section>
 <?php else: ?>
 
-<section class="kartu overflow-hidden" aria-labelledby="judul-isi-log">
+<section id="wilayah-log" class="kartu overflow-hidden" aria-labelledby="judul-isi-log">
     <div class="kartu-kepala">
         <div class="min-w-0">
             <h2 id="judul-isi-log" class="kartu-judul"><?= esc($pilih['label']) ?></h2>
@@ -91,9 +92,8 @@ $waktu = static fn (string $w): string => $w === '' ? '—' : (($pilih['jenis'] 
             <label class="alat-crud-kotak">
                 <span class="sr-only">Cari kata di galat</span>
                 <?= ikon('search', '') ?>
-                <input type="search" name="q" value="<?= esc($q, 'attr') ?>" placeholder="Cari kata…" class="inp">
+                <input type="search" name="q" value="<?= esc($q, 'attr') ?>" placeholder="Cari kata…" enterkeyhint="search" autocomplete="off" data-cari-langsung="2" data-cari-wilayah="#wilayah-log" class="inp">
             </label>
-            <button type="submit" class="btn btn-netral"><?= ikon('search', 'h-4 w-4') ?>Cari</button>
             <?php if ($adaSaring): ?><a href="<?= site_url('admin/sistem/log-error') . '?berkas=' . rawurlencode($kunci) ?>" class="btn btn-teks"><?= ikon('close', 'h-4 w-4') ?>Reset</a><?php endif; ?>
         </form>
     </div>

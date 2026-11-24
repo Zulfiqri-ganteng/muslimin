@@ -32,6 +32,7 @@ $total = $pager ? $pager->getTotal() : count($rows);
 <?= $this->section('bantuan') ?>
 <?= view('admin/partials/help', [
     'helpKey'   => 'perbaikan',
+    'helpCari'  => 'aset atau tindakan',
     'helpTitle' => 'Perbaikan & Maintenance',
     'helpKelas' => '',
     'helpBody'  => '<p>Catat tindakan atas aset: <b>perbaikan</b>, <b>maintenance</b> rutin, atau <b>penggantian komponen</b>. Bila mengisi bagian "Penggantian Komponen", stok sparepart otomatis <b>berkurang</b> (dan dipulihkan bila catatan ini dihapus).</p>

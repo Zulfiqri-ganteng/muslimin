@@ -51,7 +51,7 @@
             beritahuLihat();
         }
     }, true);
-    document.addEventListener('DOMContentLoaded', function () {
+    function redupkanLihatSaja() {
         var m = document.querySelector('[data-lihat-saja]');
         if (!m) { return; }
         Array.prototype.forEach.call(m.querySelectorAll('form'), function (f) {
@@ -62,7 +62,9 @@
                 b.classList.add('opacity-50', 'cursor-not-allowed');
             });
         });
-    });
+    }
+    document.addEventListener('DOMContentLoaded', redupkanLihatSaja);
+    document.addEventListener('cari-selesai', redupkanLihatSaja); // isi daftar diganti oleh pencarian langsung (cari-langsung.js)
 
     // <a data-confirm="Yakin?"> — batalkan klik bila user menolak. Bila halaman memuat dialog konfirmasi kit (ui.js +
     // ui_konfirmasi(), rombak tampilan F1/F3), dialog itulah yang bertanya — di sini dilewati agar tidak bertanya dua kali.
@@ -321,6 +323,8 @@
             updateBulkUI();
         }
     });
+
+    document.addEventListener('cari-selesai', updateBulkUI); // daftar baru = belum ada yang dicentang
 
     document.addEventListener('click', function (e) {
         var btn = e.target.closest('[data-bulk]');

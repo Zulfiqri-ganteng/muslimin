@@ -81,7 +81,7 @@ $bagian = static fn (string $judul, string $ket = ''): string => '<p class="bord
     // "kenapa tombol hapus hanya ada di beberapa siswa" — dijawab di bagian tersendiri berbentuk pertanyaan.
     'helpBody'  => '<p>Halaman ini berisi data semua siswa sesuai buku induk: identitas, alamat, sekolah asal, orang tua, wali, dan kelas. Tingkat dan jurusan <b>mengikuti kelas</b>, jadi cukup pilih kelasnya. Hanya siswa berstatus <b>Aktif</b> yang muncul di formulir siswa (Layanan Siswa, Biodata, PKL) dan dihitung di grafik halaman publik.</p>
         <p class="mt-3"><b>1. Mencari siswa</b><br>
-        • Ketik nama, NIS, atau NISN di kotak <b>Cari</b>, lalu tekan Enter.<br>
+        • Ketik nama, NIS, atau NISN di kotak <b>Cari</b> (minimal 2 huruf) — daftar <b>langsung menyaring</b> saat diketik, tidak perlu menekan apa pun. Kosongkan kotaknya untuk menampilkan semua lagi.<br>
         • Saringan <b>kelas, tingkat, status, biodata</b> langsung menyaring daftar begitu dipilih. Di HP, tekan tombol <b>Saringan</b> untuk membuka pilihannya (angka di tombol = jumlah saringan yang sedang dipakai).<br>
         • <b>Reset</b> = hapus semua saringan. <b>Tampilkan 10–50</b> = jumlah siswa per halaman.<br>
         • Kelas <i>— Tanpa kelas —</i> = siswa yang belum ditempatkan di kelas.</p>

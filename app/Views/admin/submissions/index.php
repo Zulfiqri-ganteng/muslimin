@@ -22,6 +22,7 @@ $qs     = $status !== '' ? '?status=' . rawurlencode($status) : '';
 <?= $this->section('bantuan') ?>
 <?= view('admin/partials/help', [
     'helpKey'   => 'kesediaan',
+    'helpCari'  => 'nama, NIP/NUPTK, atau mapel',
     'helpTitle' => 'Data Kesediaan Guru',
     'helpKelas' => '',
     'helpBody'  => '<p>Rekap isian formulir kesediaan mengajar yang dikirim guru (preferensi mapel, hari/jam tersedia, tugas tambahan). Data ini bisa <b>diimpor menjadi Master Guru</b> lewat menu Guru ▸ Import ▸ Impor dari Data Kesediaan.</p>

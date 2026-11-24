@@ -104,6 +104,7 @@ $v = static fn (string $p): string => base_url($p) . '?v=' . @filemtime(FCPATH .
 
 <?= view('admin/partials/help', [
     'helpKey'   => 'biodata_v2',
+    'helpCari'  => 'nama atau NISN siswa',
     'helpTitle' => 'Isian Biodata Siswa',
     'helpBody'  => '<p>Siswa mengisi biodatanya sendiri lewat tautan (tanpa login): <b>pilih kelas → pilih nama → isi → kirim</b>. Satu siswa hanya bisa mengirim <b>satu kali</b>; NISN tidak bisa dipakai dua siswa.</p>
         <p class="mt-1">• <b>Cara pakai:</b> nyalakan saklar <b>Form DIBUKA</b> → <b>Bagikan ke WA</b> → periksa isian yang masuk lewat tombol <b>Periksa Sekarang</b>.<br>
@@ -286,7 +287,7 @@ $v = static fn (string $p): string => base_url($p) . '?v=' . @filemtime(FCPATH .
         </nav>
 
         <?php if ($tab !== 'kelas'): ?>
-            <form method="get" action="<?= site_url('admin/biodata') ?>" data-noload class="flex flex-col gap-2 border-b border-gray-200 bg-gray-50 px-4 py-3 sm:flex-row dark:border-gray-700 dark:bg-gray-800/60">
+            <form method="get" action="<?= site_url('admin/biodata') ?>" data-noload role="search" class="flex flex-col gap-2 border-b border-gray-200 bg-gray-50 px-4 py-3 sm:flex-row dark:border-gray-700 dark:bg-gray-800/60">
                 <input type="hidden" name="tab" value="<?= esc($tab, 'attr') ?>">
                 <select name="kelas_id" data-autosubmit class="inp sm:w-48" aria-label="Saring kelas">
                     <option value="">Semua kelas</option>
@@ -296,14 +297,11 @@ $v = static fn (string $p): string => base_url($p) . '?v=' . @filemtime(FCPATH .
                 </select>
                 <div class="relative min-w-0 flex-1">
                     <span class="pointer-events-none absolute inset-y-0 start-0 flex items-center ps-3 text-gray-500 dark:text-gray-400"><?= ikon('search', 'h-4 w-4') ?></span>
-                    <input type="search" name="q" value="<?= esc($q, 'attr') ?>" placeholder="Cari nama atau NISN…" aria-label="Cari nama atau NISN" class="inp ps-9">
+                    <input type="search" name="q" value="<?= esc($q, 'attr') ?>" placeholder="Cari nama atau NISN…" aria-label="Cari nama atau NISN" enterkeyhint="search" autocomplete="off" data-cari-langsung="2" data-cari-wilayah="#daftar" class="inp ps-9">
                 </div>
-                <div class="flex gap-2">
-                    <button type="submit" class="btn btn-utama flex-1 sm:flex-none"><?= ikon('search', 'h-4 w-4') ?>Cari</button>
-                    <?php if ($kelasId > 0 || $q !== ''): ?>
-                        <a href="<?= site_url('admin/biodata') . '?tab=' . $tab ?>" class="btn btn-netral flex-1 sm:flex-none"><?= ikon('close', 'h-4 w-4') ?>Reset</a>
-                    <?php endif; ?>
-                </div>
+                <?php if ($kelasId > 0 || $q !== ''): ?>
+                    <a href="<?= site_url('admin/biodata') . '?tab=' . $tab ?>" class="btn btn-netral"><?= ikon('close', 'h-4 w-4') ?>Reset</a>
+                <?php endif; ?>
             </form>
         <?php endif; ?>
 

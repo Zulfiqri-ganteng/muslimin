@@ -16,6 +16,7 @@
 <?= $this->section('bantuan') ?>
 <?= view('admin/partials/help', [
     'helpKey'   => 'tempat_uji',
+    'helpCari'  => 'kode, nama, atau alamat',
     'helpTitle' => 'Master Tempat Uji UKK',
     'helpKelas' => '',
     'helpBody'  => '<p>Lokasi pelaksanaan Uji Kompetensi Keahlian (UKK). Boleh <b>lab sekolah</b> (tautkan ke Master Laboratorium) atau <b>lokasi luar</b> seperti bengkel/kantor mitra DUDI.</p>

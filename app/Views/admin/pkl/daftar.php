@@ -84,7 +84,7 @@ $bilahPilih = static function () use ($status): string {
 <?= view('admin/partials/help', [
     'helpKey'   => 'pkl_daftar_v6',
     'helpTitle' => 'Kotak Masuk PKL',
-    'helpBody'  => '<p>Pilih tab status di atas. Cari berdasarkan <b>nama perusahaan</b> atau <b>nama siswa</b>, atau saring per kelas. Tekan <b>Periksa</b>/<b>Buka</b> untuk membuka detail dan mengambil keputusan.</p>'
+    'helpBody'  => '<p>Pilih tab status di atas. Ketik <b>nama perusahaan</b> atau <b>nama siswa</b> (minimal 2 huruf) — daftar langsung menyaring — atau saring per kelas. Tekan <b>Periksa</b>/<b>Buka</b> untuk membuka detail dan mengambil keputusan.</p>'
         . '<p class="mt-2">Satu baris = satu <b>perusahaan</b> dengan rombongan siswanya (pengaju + teman satu tempat).</p>'
         . '<ul class="mt-2 list-disc space-y-1 pl-5">'
         . '<li><b>Centang dulu, tombolnya menyusul.</b> Setelah ada ajuan yang dicentang, muncul bilah di bawah: <b>ACC terpilih</b> (tab Menunggu ACC), atau <b>Unduh surat terpilih</b> &amp; <b>Kabari via WhatsApp</b> (tab Disetujui). <b>Batal pilih</b> melepas semua centang. Di HP, centang ada di kiri tiap kartu.</li>'
@@ -96,7 +96,7 @@ $bilahPilih = static function () use ($status): string {
 
 <?= view('admin/pkl/_nav', ['tab' => $tab, 'hitungTab' => $hitungTab]) ?>
 
-<section class="kartu overflow-hidden" aria-labelledby="judul-daftar-pkl">
+<section id="wilayah-pkl" class="kartu overflow-hidden" aria-labelledby="judul-daftar-pkl">
     <div class="kartu-kepala">
         <div class="min-w-0">
             <h2 id="judul-daftar-pkl" class="kartu-judul flex items-center gap-2"><?= esc($title) ?><span class="lencana lencana-abu"><?= (int) $total ?></span></h2>
@@ -120,7 +120,7 @@ $bilahPilih = static function () use ($status): string {
             <label class="alat-crud-kotak">
                 <span class="sr-only">Cari</span>
                 <?= ikon('search', '') ?>
-                <input type="search" name="q" value="<?= esc($q, 'attr') ?>" placeholder="Cari perusahaan atau nama siswa…" class="inp">
+                <input type="search" name="q" value="<?= esc($q, 'attr') ?>" placeholder="Cari perusahaan atau nama siswa…" enterkeyhint="search" autocomplete="off" data-cari-langsung="2" data-cari-wilayah="#wilayah-pkl" class="inp">
             </label>
             <select name="kelas_id" data-autosubmit class="inp alat-crud-pilih" aria-label="Kelas">
                 <option value="">Semua kelas</option>
@@ -128,7 +128,6 @@ $bilahPilih = static function () use ($status): string {
                     <option value="<?= (int) $k['id'] ?>"<?= (int) $k['id'] === $kelasId ? ' selected' : '' ?>><?= esc($k['nama_kelas']) ?></option>
                 <?php endforeach; ?>
             </select>
-            <button type="submit" class="btn btn-netral"><?= ikon('search', 'h-4 w-4') ?>Cari</button>
             <?php if ($adaSaring): ?>
                 <a href="<?= site_url('admin/pkl/daftar/' . $status) ?>" class="btn btn-teks"><?= ikon('close', 'h-4 w-4') ?>Reset</a>
             <?php endif; ?>

@@ -15,6 +15,7 @@
 <?= $this->section('bantuan') ?>
 <?= view('admin/partials/help', [
     'helpKey'   => 'penguji_eksternal',
+    'helpCari'  => 'kode, nama, atau instansi',
     'helpTitle' => 'Master Penguji Eksternal',
     'helpKelas' => '',
     'helpBody'  => '<p>Penguji UKK dari <b>luar sekolah</b> (DUDI/industri/asosiasi profesi) — bukan guru, jadi disimpan di tabel tersendiri.</p>

@@ -27,11 +27,12 @@ $tautanHal = $pager ? trim((string) $pager->only(['q', 'aksi', 'tabel'])->links(
 
 <?= view('admin/partials/help', [
     'helpKey'   => 'audit',
+    'helpCari'  => 'keterangan aktivitas',
     'helpTitle' => 'Audit Log',
     'helpBody'  => '<p>Jejak seluruh aktivitas admin (tambah/ubah/hapus/import) pada data sistem — beserta waktu, pelaku, dan alamat IP. Berguna untuk pelacakan & akuntabilitas. Gunakan tombol bersihkan untuk membuang log lama agar database tetap ringan.</p>',
 ]) ?>
 
-<section class="kartu overflow-hidden" aria-labelledby="judul-audit">
+<section id="wilayah-audit" class="kartu overflow-hidden" aria-labelledby="judul-audit">
     <div class="kartu-kepala">
         <h2 id="judul-audit" class="kartu-judul flex items-center gap-2">Riwayat aktivitas<span class="lencana lencana-abu"><?= (int) $total ?></span></h2>
     </div>
@@ -41,7 +42,7 @@ $tautanHal = $pager ? trim((string) $pager->only(['q', 'aksi', 'tabel'])->links(
             <label class="alat-crud-kotak">
                 <span class="sr-only">Cari keterangan</span>
                 <?= ikon('search', '') ?>
-                <input type="search" name="q" value="<?= esc($q, 'attr') ?>" placeholder="Cari keterangan…" class="inp">
+                <input type="search" name="q" value="<?= esc($q, 'attr') ?>" placeholder="Cari keterangan…" enterkeyhint="search" autocomplete="off" data-cari-langsung="2" data-cari-wilayah="#wilayah-audit" class="inp">
             </label>
             <select name="aksi" data-autosubmit class="inp alat-crud-pilih" aria-label="Aksi">
                 <option value="">Semua aksi</option>
@@ -55,7 +56,6 @@ $tautanHal = $pager ? trim((string) $pager->only(['q', 'aksi', 'tabel'])->links(
                     <option value="<?= esc($t, 'attr') ?>"<?= $tabel === $t ? ' selected' : '' ?>><?= esc($t) ?></option>
                 <?php endforeach; ?>
             </select>
-            <button type="submit" class="btn btn-netral"><?= ikon('search', 'h-4 w-4') ?>Cari</button>
             <?php if ($adaSaring): ?><a href="<?= site_url('admin/audit') ?>" class="btn btn-teks"><?= ikon('close', 'h-4 w-4') ?>Reset</a><?php endif; ?>
         </form>
     </div>

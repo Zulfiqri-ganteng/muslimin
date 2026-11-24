@@ -61,13 +61,14 @@ $permintaanAda = array_filter($permintaanSiswa ?? [], static fn (array $n): bool
 
 <?= $this->section('aksi') ?>
 <?php // Buku agenda surat keluar: semua surat sesuai saringan yang sedang tampil (bukan hanya halaman ini). ?>
-<a href="<?= site_url('admin/surat/excel') . '?' . http_build_query(array_filter($f)) ?>" title="Unduh daftar ini (semua halaman) sebagai Excel buku agenda surat keluar" class="btn btn-netral"><?= ikon('download', 'h-4 w-4') ?>Excel buku agenda</a>
+<a id="surat-excel" data-cari-ikut href="<?= site_url('admin/surat/excel') . '?' . http_build_query(array_filter($f)) ?>" title="Unduh daftar ini (semua halaman) sebagai Excel buku agenda surat keluar" class="btn btn-netral"><?= ikon('download', 'h-4 w-4') ?>Excel buku agenda</a>
 <?= $this->endSection() ?>
 
 <?= $this->section('content') ?>
 
 <?= view('admin/partials/help', [
     'helpKey'   => 'surat_daftar_v4',
+    'helpCari'  => 'nomor, judul, perusahaan, atau nama siswa',
     'helpTitle' => 'Daftar Surat Sekolah',
     'helpBody'  => '<p>Di sini tercatat <b>semua surat sekolah</b> (Izin Ujian ASTS/ASAS/ASAT, Izin TKA, Pernyataan Orang Tua PKL, Surat Balasan, Penarikan, dan Perpanjangan PKL) beserta status dan nomornya. Pilih tab status di atas, atau saring menurut jenis, tahun, dan kata kunci (nomor, judul, atau nama perusahaan). Pembuat, yang meng-ACC, dan jumlah unduhan ada di halaman tiap surat (tombol <b>Buka</b>).</p>'
         . '<ul class="mt-2 list-disc space-y-1 pl-5">'
@@ -125,6 +126,7 @@ $permintaanAda = array_filter($permintaanSiswa ?? [], static fn (array $n): bool
     </section>
 <?php endif; ?>
 
+<div id="wilayah-surat">
 <?= view('admin/surat/_nav', ['hitung' => $hitung, 'f' => $f]) ?>
 
 <section class="kartu overflow-hidden" aria-labelledby="judul-daftar-surat">
@@ -156,7 +158,7 @@ $permintaanAda = array_filter($permintaanSiswa ?? [], static fn (array $n): bool
             <label class="alat-crud-kotak">
                 <span class="sr-only">Cari</span>
                 <?= ikon('search', '') ?>
-                <input type="search" name="q" value="<?= esc($f['q'], 'attr') ?>" placeholder="Cari nomor, judul, perusahaan, atau nama siswa…" class="inp">
+                <input type="search" name="q" value="<?= esc($f['q'], 'attr') ?>" placeholder="Cari nomor, judul, perusahaan, atau nama siswa…" enterkeyhint="search" autocomplete="off" data-cari-langsung="2" data-cari-wilayah="#wilayah-surat" class="inp">
             </label>
             <select name="jenis" data-autosubmit class="inp alat-crud-pilih" aria-label="Jenis surat">
                 <option value="">Semua jenis</option>
@@ -177,7 +179,6 @@ $permintaanAda = array_filter($permintaanSiswa ?? [], static fn (array $n): bool
                     <option value="staf"<?= $f['asal'] === 'staf' ? ' selected' : '' ?>>Dibuat staf</option>
                 </select>
             <?php endif; ?>
-            <button type="submit" class="btn btn-netral"><?= ikon('search', 'h-4 w-4') ?>Cari</button>
             <?php if (! empty($f['ganda'])): ?><span class="lencana lencana-kuning self-center">Hanya surat TKA dengan siswa ganda</span><?php endif; ?>
             <?php if ($f['jenis'] !== '' || $f['tahun'] > 0 || $f['q'] !== '' || $f['asal'] !== '' || ! empty($f['ganda'])): ?>
                 <a href="<?= site_url('admin/surat') . ($f['status'] !== '' ? '?status=' . urlencode($f['status']) : '') ?>" class="btn btn-teks"><?= ikon('close', 'h-4 w-4') ?>Reset</a>
@@ -315,6 +316,7 @@ $permintaanAda = array_filter($permintaanSiswa ?? [], static fn (array $n): bool
         <?php endif; ?>
     <?php endif; ?>
 </section>
+</div>
 
 <?php if (! empty($kabarWaJenis)): ?><?= view('admin/surat/_wa') ?><?php endif; ?>
 

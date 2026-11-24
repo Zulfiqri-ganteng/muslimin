@@ -34,6 +34,7 @@ $ringkas = '<span class="lencana lencana-merek py-1">Sedang dipinjam: ' . (int) 
 <?= $this->section('bantuan') ?>
 <?= view('admin/partials/help', [
     'helpKey'   => 'peminjaman',
+    'helpCari'  => 'aset atau nama peminjam',
     'helpTitle' => 'Peminjaman & Pengembalian',
     'helpKelas' => '',
     'helpBody'  => '<p>Catat peminjaman barang lab. Saat dipinjam, status aset otomatis menjadi <b>dipinjam</b> (tak bisa dipinjam ganda). Peminjam boleh siapa saja (guru/siswa/umum) — cukup ketik namanya.</p>

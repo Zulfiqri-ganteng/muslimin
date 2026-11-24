@@ -32,6 +32,7 @@ $total = $pager ? $pager->getTotal() : count($rows);
 <?= $this->section('bantuan') ?>
 <?= view('admin/partials/help', [
     'helpKey'   => 'kerusakan',
+    'helpCari'  => 'aset atau deskripsi',
     'helpTitle' => 'Kerusakan Aset',
     'helpKelas' => '',
     'helpBody'  => '<p>Catat laporan kerusakan aset. Saat dilaporkan, status aset otomatis menjadi <b>perbaikan</b>. Ubah status ke <b>Selesai</b> jika sudah beres — aset otomatis kembali <b>tersedia</b> (bila tak ada kerusakan lain).</p>

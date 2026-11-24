@@ -49,7 +49,7 @@ $peringatanSemua = ($adaFilter
     'helpKelas' => '',
     'helpBody'  => '<p>Daftar siswa yang mengikuti Uji Kompetensi Keahlian (UKK) per paket soal.</p>
         <p class="mt-3"><b>1. Mencari peserta</b><br>
-        • Ketik nama, NIS, atau nomor peserta di kotak <b>Cari</b>, lalu tekan Enter.<br>
+        • Ketik nama, NIS, atau nomor peserta di kotak <b>Cari</b> (minimal 2 huruf) — daftar <b>langsung menyaring</b> saat diketik. Kosongkan kotaknya untuk menampilkan semua lagi.<br>
         • Pilihan <b>Semua paket soal</b> dan <b>Semua status</b> langsung menyaring daftar begitu dipilih. <b>Reset</b> = hapus saringan.<br>
         • <b>Tampilkan 10–50</b> = jumlah peserta per halaman. Angka <b>Total / Lulus / Tidak lulus</b> mengikuti paket soal yang dipilih.</p>
         <p class="mt-3"><b>2. Mendaftarkan peserta</b><br>

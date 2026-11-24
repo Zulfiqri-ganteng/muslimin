@@ -29,11 +29,11 @@ foreach ($labOpts as $id => $nama) {
 }
 $kiri = '<form method="get" class="flex min-w-0 flex-1 flex-wrap items-center gap-2" role="search">'
     . '<label class="alat-crud-kotak"><span class="sr-only">Cari</span>' . ikon('search', '')
-    . '<input type="search" name="q" value="' . esc($q, 'attr') . '" placeholder="Kegiatan / guru / lab…" class="inp"></label>'
+    . '<input type="search" name="q" value="' . esc($q, 'attr') . '" placeholder="Kegiatan / guru / lab…" enterkeyhint="search" autocomplete="off" data-cari-langsung="2" class="inp"></label>'
     . '<select name="lab_id" data-autosubmit class="inp alat-crud-pilih" aria-label="Saring lab">' . $opsiLab . '</select>'
     . '<label class="sr-only" for="jr-dari">Dari tanggal</label><input type="date" id="jr-dari" name="dari" value="' . esc($dari, 'attr') . '" class="inp alat-crud-pilih" title="Dari tanggal">'
     . '<label class="sr-only" for="jr-sampai">Sampai tanggal</label><input type="date" id="jr-sampai" name="sampai" value="' . esc($sampai, 'attr') . '" class="inp alat-crud-pilih" title="Sampai tanggal">'
-    . '<button type="submit" class="btn btn-netral">' . ikon('search', 'h-4 w-4') . 'Filter</button>'
+    . '<button type="submit" class="btn btn-netral" title="Terapkan rentang tanggal">' . ikon('calendar-month', 'h-4 w-4') . 'Filter</button>'
     . ($adaFilter ? '<a href="' . $base . '" class="btn btn-teks">' . ikon('close', 'h-4 w-4') . 'Reset</a>' : '')
     . '</form>';
 ?>
@@ -43,6 +43,7 @@ $kiri = '<form method="get" class="flex min-w-0 flex-1 flex-wrap items-center ga
 <?= $this->section('bantuan') ?>
 <?= view('admin/partials/help', [
     'helpKey'   => 'jurnal_lab',
+    'helpCari'  => 'kegiatan, guru, atau lab',
     'helpTitle' => 'Jurnal Pemakaian Lab',
     'helpKelas' => '',
     'helpBody'  => '<p>Catatan <b>realisasi</b> pemakaian lab tiap sesi: kapan, oleh siapa, kegiatan apa, berapa yang hadir, dan kondisi lab setelah dipakai. Berbeda dari <b>Jadwal Lab</b> (rencana); jurnal ini adalah kenyataannya.</p>'

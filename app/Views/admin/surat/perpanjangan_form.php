@@ -58,11 +58,10 @@ $pilihUrl = static fn (int $aid, int $sid = 0): string => site_url($alamat) . '?
 <?php if ($ajuan === null): ?>
     <!-- Mode pilih: cari, atau pilih dari daftar PKL yang segera berakhir -->
     <section class="kartu">
-        <?= $kepala('1', 'Pilih siswa', 'Ketik nama siswa, nama tempat PKL, atau nomor ajuan (PKL-00123).') ?>
-        <div class="kartu-isi space-y-4">
+        <?= $kepala('1', 'Pilih siswa', 'Ketik nama siswa, nama tempat PKL, atau nomor ajuan (PKL-00123) — hasilnya langsung muncul.') ?>
+        <div id="wilayah-perpanjangan" class="kartu-isi space-y-4">
             <form method="get" action="<?= site_url($alamat) ?>" class="flex flex-col gap-2 sm:flex-row" role="search">
-                <input type="search" name="q" value="<?= esc($q, 'attr') ?>" minlength="2" required class="inp sm:flex-1" placeholder="Contoh: Siti Aminah, PT Maju Jaya, PKL-00123" aria-label="Cari siswa atau tempat PKL" autofocus>
-                <button type="submit" class="btn btn-utama"><?= ikon('search', 'h-4 w-4') ?>Cari</button>
+                <input type="search" name="q" value="<?= esc($q, 'attr') ?>" enterkeyhint="search" autocomplete="off" data-cari-langsung="2" data-cari-wilayah="#wilayah-perpanjangan" class="inp sm:flex-1" placeholder="Contoh: Siti Aminah, PT Maju Jaya, PKL-00123" aria-label="Cari siswa atau tempat PKL" autofocus>
             </form>
 
             <?php if ($q !== ''): ?>

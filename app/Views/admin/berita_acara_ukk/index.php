@@ -21,6 +21,7 @@ $total = $pager ? $pager->getTotal() : count($rows);
 <?= $this->section('bantuan') ?>
 <?= view('admin/partials/help', [
     'helpKey'   => 'berita_acara_ukk',
+    'helpCari'  => 'nomor BA atau paket soal',
     'helpTitle' => 'Berita Acara UKK',
     'helpKelas' => '',
     'helpBody'  => '<p>Buat berita acara resmi pelaksanaan UKK untuk satu jadwal. Nomor dibuat otomatis (format

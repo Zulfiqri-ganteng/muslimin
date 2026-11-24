@@ -226,7 +226,8 @@ $panduan = [
     ])
     . '<p class="mt-2">Tahun pelajaran mengikuti <b>Pengaturan Sekolah</b>. Data tahun lama tetap tersimpan.</p>'];
 ?>
-<?= view('admin/partials/help', ['helpKey' => $kunciPanduan, 'helpTitle' => $judulPanduan, 'helpBody' => $isiPanduan]) ?>
+<?= view('admin/partials/help', ['helpKey' => $kunciPanduan, 'helpTitle' => $judulPanduan, 'helpBody' => $isiPanduan,
+    'helpCari' => ['jadwal' => 'mata pelajaran atau ruang', 'susulan' => 'nama atau NIS siswa'][$tab] ?? '']) ?>
 
 <div class="mb-4 space-y-4">
     <!-- ===== Kepala: identitas periode ===== -->

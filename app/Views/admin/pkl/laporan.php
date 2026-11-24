@@ -37,13 +37,14 @@ $tandaBeasiswa = static fn (string $teks): string => '<span class="inline-flex i
 <?= $this->extend('layouts/admin') ?>
 
 <?= $this->section('aksi') ?>
-<a href="<?= site_url('admin/pkl/laporan/excel') . ($queryUnduh !== '' ? '?' . esc($queryUnduh, 'attr') : '') ?>" class="btn btn-netral"><?= ikon('download', 'h-4 w-4') ?>Unduh Excel<?= $adaSaringan ? ' (sesuai saringan)' : '' ?></a>
+<a id="lp-excel" data-cari-ikut href="<?= site_url('admin/pkl/laporan/excel') . ($queryUnduh !== '' ? '?' . esc($queryUnduh, 'attr') : '') ?>" class="btn btn-netral"><?= ikon('download', 'h-4 w-4') ?>Unduh Excel<?= $adaSaringan ? ' (sesuai saringan)' : '' ?></a>
 <?= $this->endSection() ?>
 
 <?= $this->section('content') ?>
 
 <?= view('admin/partials/help', [
     'helpKey'   => 'pkl_laporan_v2',
+    'helpCari'  => 'nama, NIS, perusahaan, atau nomor surat',
     'helpTitle' => 'Laporan Pembayaran PKL',
     'helpBody'  => '<p>Daftar siswa yang suratnya sudah diterbitkan beserta <b>biaya yang sudah dicatat</b> (dicatat saat surat diunduh &mdash; tidak ada input terpisah).</p>'
         . '<ul class="mt-2 list-disc pl-5 space-y-1">'
@@ -58,7 +59,7 @@ $tandaBeasiswa = static fn (string $teks): string => '<span class="inline-flex i
 
 <?= view('admin/pkl/_nav', ['tab' => $tab, 'hitungTab' => $hitungTab]) ?>
 
-<div class="space-y-4">
+<div id="wilayah-laporan-pkl" class="space-y-4">
     <!-- Ringkasan (U6: satu kartu; angka sama dengan dulu tujuh kotak) -->
     <section class="kartu kartu-isi" aria-label="Ringkasan pembayaran">
         <dl class="grid grid-cols-2 gap-x-6 gap-y-4 sm:grid-cols-4 lg:grid-cols-7">
@@ -80,7 +81,7 @@ $tandaBeasiswa = static fn (string $teks): string => '<span class="inline-flex i
     <form method="get" class="kartu kartu-isi grid gap-4 sm:grid-cols-2 lg:grid-cols-4" role="search">
         <div class="sm:col-span-2">
             <label class="lbl" for="lp-q">Cari</label>
-            <input type="search" id="lp-q" name="q" value="<?= esc($f['q'], 'attr') ?>" placeholder="Cari nama, NIS, perusahaan, no. surat…" class="inp">
+            <input type="search" id="lp-q" name="q" value="<?= esc($f['q'], 'attr') ?>" placeholder="Cari nama, NIS, perusahaan, no. surat…" enterkeyhint="search" autocomplete="off" data-cari-langsung="2" data-cari-wilayah="#wilayah-laporan-pkl" class="inp">
         </div>
         <div>
             <label class="lbl" for="lp-status">Status</label>
@@ -93,7 +94,7 @@ $tandaBeasiswa = static fn (string $teks): string => '<span class="inline-flex i
             <button type="submit" class="btn btn-utama"><?= ikon('search', 'h-4 w-4') ?>Terapkan</button>
             <?php if ($adaSaringan): ?><a href="<?= site_url('admin/pkl/laporan') ?>" class="btn btn-teks"><?= ikon('close', 'h-4 w-4') ?>Reset</a><?php endif; ?>
         </div>
-        <details class="sm:col-span-2 lg:col-span-4"<?= ($f['kelas_id'] > 0 || $f['jurusan'] !== '' || $f['dari'] !== '' || $f['sampai'] !== '' || $f['beasiswa']) ? ' open' : '' ?>>
+        <details id="lp-lipatan" class="sm:col-span-2 lg:col-span-4"<?= ($f['kelas_id'] > 0 || $f['jurusan'] !== '' || $f['dari'] !== '' || $f['sampai'] !== '' || $f['beasiswa']) ? ' open' : '' ?>>
             <summary class="inline-flex cursor-pointer list-none items-center gap-1 text-sm font-medium text-brand-700 hover:underline dark:text-brand-400"><?= ikon('adjustments-horizontal', 'h-4 w-4') ?>Saringan lain (kelas, jurusan, tanggal, beasiswa)</summary>
             <div class="mt-3 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
             <div>
